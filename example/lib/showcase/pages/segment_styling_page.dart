@@ -211,6 +211,7 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
               enablePan: _optionsController.enablePan,
+              tooltip: TooltipConfig(),
             ),
           ),
         );

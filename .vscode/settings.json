@@ -30,5 +30,8 @@
     "titleBar.inactiveForeground": "#e7e7e799"
   },
   "peacock.color": "#832561",
-  "cmake.sourceDirectory": "X:/Cloud Storage/Dropbox/Repositories/Flutter/braven_chart_plus/.example/linux"
+  "cmake.sourceDirectory": "X:/Cloud Storage/Dropbox/Repositories/Flutter/braven_chart_plus/.example/linux",
+  "dart.flutterDeviceId": "chrome",
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false
 }

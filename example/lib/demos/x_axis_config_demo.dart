@@ -6,6 +6,9 @@
 //
 // Note: This demo focuses on XAxisPainter functionality which uses XAxisConfig.
 // BravenChartPlus now accepts XAxisConfig directly.
+//
+// This demo imports internal implementation files to directly test XAxisPainter.
+// ignore_for_file: implementation_imports
 
 import 'package:braven_charts/src/models/data_range.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';

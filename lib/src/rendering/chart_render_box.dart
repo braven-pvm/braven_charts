@@ -735,6 +735,18 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  /// Computes Y-bounds for each series by series ID.
+  ///
+  /// Used for threshold annotations with perSeries normalization mode.
+  /// Delegates to [MultiAxisManager.computeSeriesBounds].
+  Map<String, DataRange> _computeSeriesBounds({bool forPainting = false}) {
+    return _multiAxisManager.computeSeriesBounds(
+      transform: _transform,
+      originalTransform: _originalTransform,
+      forPainting: forPainting,
+    );
+  }
+
   /// Gets effective axis bindings by deriving bindings from series properties.
   ///
   /// Delegates to [MultiAxisManager.getEffectiveBindings].
@@ -2042,6 +2054,15 @@ class ChartRenderBox extends RenderBox {
         .toList()
       ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
+    // Compute series bounds for threshold annotations in perSeries mode
+    // This ensures threshold lines are positioned correctly when each series
+    // has its own Y-axis range (FR-008)
+    // NOTE: Bounds are keyed by SERIES ID (not axis ID) for user-friendly API
+    Map<String, DataRange>? thresholdSeriesBounds;
+    if (_multiAxisManager.isMultiAxisNormalizationActive()) {
+      thresholdSeriesBounds = _computeSeriesBounds(forPainting: true);
+    }
+
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
     for (final element in foregroundElements) {
       // [DEBUG OUTPUT REMOVED] Per-element painting - was firing at 60fps
@@ -2056,6 +2077,19 @@ class ChartRenderBox extends RenderBox {
           element.updateTransform(_transform!);
         } else if (element is ThresholdAnnotationElement) {
           element.updateTransform(_transform!);
+          // For perSeries mode: update axis bounds for correct Y-value normalization
+          // Use seriesId from annotation if specified, otherwise use first available series
+          if (thresholdSeriesBounds != null &&
+              thresholdSeriesBounds.isNotEmpty &&
+              element.annotation.axis == AnnotationAxis.y) {
+            final seriesId = element.annotation.seriesId;
+            final axisBoundsToUse = seriesId != null
+                ? thresholdSeriesBounds[seriesId]
+                : thresholdSeriesBounds.values.first;
+            element.updateAxisBounds(axisBoundsToUse);
+          } else {
+            element.updateAxisBounds(null);
+          }
         } else if (element is TrendAnnotationElement) {
           element.updateTransform(_transform!);
         } else if (element is PinAnnotationElement) {

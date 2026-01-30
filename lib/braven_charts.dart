@@ -23,6 +23,24 @@
 
 library;
 
+// Agentic Charts - AI-powered chart generation
+// Hide ChartType from chart_configuration to avoid conflict with core models/chart_type.dart
+export 'src/agentic/models/chart_configuration.dart' hide ChartType;
+export 'src/agentic/models/conversation.dart';
+export 'src/agentic/models/message.dart';
+export 'src/agentic/providers/anthropic_provider.dart';
+export 'src/agentic/providers/llm_provider.dart';
+export 'src/agentic/services/agent_service.dart';
+export 'src/agentic/services/data_store.dart';
+export 'src/agentic/tools/calculate_metric_tool.dart';
+export 'src/agentic/tools/create_chart_tool.dart';
+export 'src/agentic/tools/modify_chart_tool.dart';
+export 'src/agentic/tools/tool_registry.dart';
+export 'src/agentic/widgets/chat_interface.dart';
+// AI Integration
+export 'src/ai/chart_agent_interface.dart';
+export 'src/ai/chart_config_builder.dart';
+export 'src/ai/chart_tool_schema.dart';
 // Axis - Auto-detection
 export 'src/axis/normalization_detector.dart';
 export 'src/axis/range_ratio_calculator.dart';
@@ -70,4 +88,5 @@ export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
 // Theming
+export 'src/theming/components/grid_style.dart';
 export 'src/theming/components/scrollbar_config.dart';

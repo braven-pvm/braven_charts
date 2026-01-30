@@ -12,6 +12,7 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/data_range.dart';
 import '../models/enums.dart';
 import '../models/legend_style.dart';
 import 'resize_handle_element.dart';
@@ -1762,19 +1763,34 @@ class TextAnnotationElement extends ChartElement {
 /// A chart element that renders a threshold annotation line.
 ///
 /// Draws a horizontal or vertical reference line at a fixed axis value.
+///
+/// For multi-axis charts with perSeries normalization, the threshold value
+/// must be normalized using the appropriate axis bounds. Pass [axisBounds]
+/// to enable this normalization.
 class ThresholdAnnotationElement extends ChartElement {
   ThresholdAnnotationElement({
     required this.annotation,
     required this.transform,
+    this.axisBounds,
   })  : _isSelected = false,
         _isHovered = false,
-        _currentTransform = transform;
+        _currentTransform = transform,
+        _axisBounds = axisBounds;
 
   final ThresholdAnnotation annotation;
   final ChartTransform transform;
   ChartTransform _currentTransform;
   bool _isSelected;
   bool _isHovered;
+
+  /// Optional axis bounds for perSeries normalization.
+  ///
+  /// When provided (in perSeries normalization mode), the threshold [value]
+  /// is normalized using these bounds before converting to screen coordinates.
+  /// This ensures thresholds appear at the correct position when each series
+  /// has its own Y-axis range.
+  final DataRange? axisBounds;
+  DataRange? _axisBounds;
 
   /// Temporary value during drag operations (in data coordinates).
   double? _tempValue;
@@ -1797,6 +1813,34 @@ class ThresholdAnnotationElement extends ChartElement {
     _currentTransform = newTransform;
   }
 
+  /// Update axis bounds for perSeries normalization.
+  void updateAxisBounds(DataRange? newBounds) {
+    _axisBounds = newBounds;
+  }
+
+  /// Converts a Y data value to plot Y coordinate.
+  ///
+  /// When [_axisBounds] is set (perSeries normalization mode), the value
+  /// is first normalized to 0-1 range using axis bounds, then mapped to
+  /// the plot height. This ensures threshold lines appear at the correct
+  /// position when each series has its own Y-axis range.
+  ///
+  /// For X-axis values or when axisBounds is null, uses standard transform.
+  double _valueToPlotY(double value) {
+    final bounds = _axisBounds;
+    if (bounds != null && bounds.span > 0) {
+      // PerSeries mode: normalize value to 0-1, then map to screen
+      // Formula matches MultiAxisPainter:
+      //   normalizedY = (value - min) / (max - min)
+      //   screenY = plotHeight - (normalizedY * plotHeight)  [inverted Y]
+      final normalizedY = (value - bounds.min) / bounds.span;
+      return _currentTransform.plotHeight * (1.0 - normalizedY);
+    } else {
+      // Standard mode: use transform directly
+      return _currentTransform.dataToPlot(0, value).dy;
+    }
+  }
+
   @override
   String get id => annotation.id;
 
@@ -1807,7 +1851,8 @@ class ThresholdAnnotationElement extends ChartElement {
         20.0; // 20px margin on each side of line for easier clicking
 
     if (annotation.axis == AnnotationAxis.y) {
-      final plotY = _currentTransform.dataToPlot(0, value).dy;
+      // Use _valueToPlotY for perSeries normalization support
+      final plotY = _valueToPlotY(value);
       return Rect.fromLTWH(
         0,
         plotY - annotation.lineWidth / 2 - hitMargin,
@@ -1835,7 +1880,8 @@ class ThresholdAnnotationElement extends ChartElement {
     // Calculate line position (same as paint())
     Offset start, end;
     if (annotation.axis == AnnotationAxis.y) {
-      final plotY = _currentTransform.dataToPlot(0, value).dy;
+      // Use _valueToPlotY for perSeries normalization support
+      final plotY = _valueToPlotY(value);
       start = Offset(0, plotY);
       end = Offset(_currentTransform.plotWidth, plotY);
     } else {
@@ -1968,8 +2014,8 @@ class ThresholdAnnotationElement extends ChartElement {
     // Calculate line position
     Offset start, end;
     if (annotation.axis == AnnotationAxis.y) {
-      // Horizontal line
-      final plotY = _currentTransform.dataToPlot(0, value).dy;
+      // Horizontal line - use _valueToPlotY for perSeries normalization support
+      final plotY = _valueToPlotY(value);
       start = Offset(0, plotY);
       end = Offset(_currentTransform.plotWidth, plotY);
     } else {
@@ -2333,6 +2379,7 @@ class ThresholdAnnotationElement extends ChartElement {
     final copy = ThresholdAnnotationElement(
       annotation: annotation,
       transform: _currentTransform,
+      axisBounds: _axisBounds,
     );
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;

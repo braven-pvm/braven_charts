@@ -890,6 +890,7 @@ class ThresholdAnnotation extends ChartAnnotation {
     super.zIndex,
     required this.axis,
     required this.value,
+    this.seriesId,
     this.lineColor = Colors.black,
     this.lineWidth = 1.0,
     this.dashPattern,
@@ -906,6 +907,24 @@ class ThresholdAnnotation extends ChartAnnotation {
 
   /// The axis value where the threshold line is drawn.
   final double value;
+
+  /// Optional series ID for multi-axis charts with perSeries normalization.
+  ///
+  /// When specified, the threshold value is normalized using the Y-range
+  /// of the referenced series. If null, the first available series bounds
+  /// are used.
+  ///
+  /// Example: If you have "power" and "heartrate" series with different
+  /// Y-ranges, and want a threshold at 200W on the power series scale:
+  /// ```dart
+  /// ThresholdAnnotation(
+  ///   axis: AnnotationAxis.y,
+  ///   value: 200,  // 200 watts
+  ///   seriesId: 'power',  // Use power series Y-range for normalization
+  ///   lineColor: Colors.red,
+  /// )
+  /// ```
+  final String? seriesId;
 
   /// The color of the threshold line.
   final Color lineColor;
@@ -944,6 +963,7 @@ class ThresholdAnnotation extends ChartAnnotation {
     int? zIndex,
     AnnotationAxis? axis,
     double? value,
+    String? seriesId,
     Color? lineColor,
     double? lineWidth,
     List<double>? dashPattern,
@@ -960,6 +980,7 @@ class ThresholdAnnotation extends ChartAnnotation {
       zIndex: zIndex ?? this.zIndex,
       axis: axis ?? this.axis,
       value: value ?? this.value,
+      seriesId: seriesId ?? this.seriesId,
       lineColor: lineColor ?? this.lineColor,
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,

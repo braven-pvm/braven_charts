@@ -1,0 +1,742 @@
+# LLM Tool Contracts: Agentic Charts
+
+**Feature**: 003-agentic-charts  
+**Date**: 2026-01-25  
+**Format**: OpenAPI-style YAML schemas
+
+## Tool Registry
+
+| Tool | Purpose | Priority |
+|------|---------|----------|
+| `describe_data` | Discover columns/fields in loaded data | P1 |
+| `load_data` | Load data from file/URL/inline | P1 |
+| `create_chart` | Create a new chart | P1 |
+| `modify_chart` | Modify existing chart | P1 |
+| `process_data` | Apply transformations | P2 |
+| `calculate_metric` | Compute scalar metrics | P2 |
+| `add_annotation` | Add chart annotations | P2 |
+| `export_chart` | Export as image/config | P3 |
+
+---
+
+## Tool Definitions
+
+### describe_data
+
+Discover columns and metadata from loaded data.
+
+```yaml
+name: describe_data
+description: |
+  Analyze loaded data to discover available columns, data types, and statistics.
+  Call this after loading a file to understand what data is available for charting.
+  
+input_schema:
+  type: object
+  required:
+    - data_id
+  properties:
+    data_id:
+      type: string
+      description: The UUID reference to previously loaded data (from load_data result)
+
+output_schema:
+  type: object
+  properties:
+    file_name:
+      type: string
+    file_type:
+      type: string
+      enum: [fit, csv, json]
+    row_count:
+      type: integer
+    columns:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          type:
+            type: string
+            enum: [number, string, datetime, boolean]
+          nullable:
+            type: boolean
+          stats:
+            type: object
+            properties:
+              min:
+                type: number
+              max:
+                type: number
+              mean:
+                type: number
+              null_count:
+                type: integer
+          sample_values:
+            type: array
+    time_range:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+```
+
+---
+
+### load_data
+
+Load data from a file attachment, URL, or inline content.
+
+```yaml
+name: load_data
+description: |
+  Load data from a file attachment, URL, or inline JSON/CSV content.
+  Returns a data_id reference for use with other tools.
+  For file attachments, use the file_id from the user's uploaded files.
+  
+input_schema:
+  type: object
+  required:
+    - source
+  properties:
+    source:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [file, url, inline]
+          description: The type of data source
+        file_id:
+          type: string
+          description: File attachment ID (for type=file)
+        url:
+          type: string
+          format: uri
+          description: HTTP/HTTPS URL to fetch (for type=url)
+        content:
+          type: string
+          description: Inline JSON or CSV content (for type=inline)
+        format:
+          type: string
+          enum: [fit, csv, json, auto]
+          description: Data format (auto-detected if not specified)
+
+output_schema:
+  type: object
+  properties:
+    data_id:
+      type: string
+      description: UUID reference for use with other tools
+    row_count:
+      type: integer
+    column_count:
+      type: integer
+    columns:
+      type: array
+      items:
+        type: string
+    time_range:
+      type: object
+      nullable: true
+```
+
+---
+
+### create_chart
+
+Create a new chart visualization.
+
+```yaml
+name: create_chart
+description: |
+  Create a new chart from data. Specify chart type, series, axes, and styling.
+  Returns a chart_id for future modifications.
+  
+input_schema:
+  type: object
+  required:
+    - chart_type
+    - series
+  properties:
+    chart_type:
+      type: string
+      enum: [line, area, bar, scatter]
+      description: Type of chart to create
+    title:
+      type: string
+      description: Chart title
+    subtitle:
+      type: string
+      description: Chart subtitle
+    series:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required:
+          - id
+        properties:
+          id:
+            type: string
+            description: Unique series identifier
+          name:
+            type: string
+            description: Display name for legend
+          data_id:
+            type: string
+            description: Reference to loaded data
+          data_column:
+            type: string
+            description: Column name for Y values
+          x_column:
+            type: string
+            description: Column name for X values (defaults to index or timestamp)
+          color:
+            type: string
+            description: Hex color (e.g., "#FF6B00") or named color
+          stroke_width:
+            type: number
+            minimum: 0.5
+            maximum: 10
+          stroke_dash:
+            type: array
+            items:
+              type: number
+            description: Dash pattern (e.g., [5, 3])
+          fill_opacity:
+            type: number
+            minimum: 0
+            maximum: 1
+          marker_style:
+            type: string
+            enum: [none, circle, square, triangle, diamond]
+          marker_size:
+            type: number
+          interpolation:
+            type: string
+            enum: [linear, bezier, stepped, monotone]
+          show_points:
+            type: boolean
+          # AMENDMENT (2026-01-25): Type-discriminated properties
+          # Line/Area specific
+          tension:
+            type: number
+            minimum: 0
+            maximum: 1
+            description: Bezier curve smoothing factor (0=straight, 1=very smooth). Default 0.25
+          data_point_marker_radius:
+            type: number
+            minimum: 1
+            maximum: 20
+            description: Radius of data point markers when show_points=true. Default 3.0
+          # Bar chart specific (one of bar_width_percent or bar_width_pixels recommended for bar charts)
+          bar_width_percent:
+            type: number
+            minimum: 0.1
+            maximum: 1.0
+            description: Bar width as percentage of available space (0.1-1.0). Default 0.7 if not specified
+          bar_width_pixels:
+            type: number
+            minimum: 1
+            maximum: 200
+            description: Fixed bar width in pixels. Alternative to bar_width_percent
+          bar_min_width:
+            type: number
+            minimum: 1
+            description: Minimum bar width in pixels. Default 4.0
+          bar_max_width:
+            type: number
+            maximum: 500
+            description: Maximum bar width in pixels. Default 100.0
+          # Scatter chart specific
+          marker_radius:
+            type: number
+            minimum: 1
+            maximum: 50
+            description: Scatter plot marker radius. Default 5.0
+          y_axis_id:
+            type: string
+            description: Which Y-axis to use (for multi-axis charts)
+          unit:
+            type: string
+            description: Unit label (e.g., "W", "bpm")
+          visible:
+            type: boolean
+            default: true
+    x_axis:
+      type: object
+      properties:
+        label:
+          type: string
+        unit:
+          type: string
+        type:
+          type: string
+          enum: [numeric, time, category]
+        min:
+          type: number
+        max:
+          type: number
+        auto_range:
+          type: boolean
+          default: true
+        tick_format:
+          type: string
+        tick_rotation:
+          type: number
+        show_grid_lines:
+          type: boolean
+        grid_color:
+          type: string
+    y_axes:
+      type: array
+      maxItems: 4
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          label:
+            type: string
+          unit:
+            type: string
+          position:
+            type: string
+            enum: [left, right]
+          min:
+            type: number
+          max:
+            type: number
+          auto_range:
+            type: boolean
+            default: true
+          include_zero:
+            type: boolean
+          color:
+            type: string
+          show_grid_lines:
+            type: boolean
+    style:
+      type: object
+      properties:
+        background_color:
+          type: string
+        show_grid:
+          type: boolean
+        grid_color:
+          type: string
+        grid_opacity:
+          type: number
+        show_legend:
+          type: boolean
+        legend_position:
+          type: string
+          enum: [top, bottom, left, right]
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        padding_top:
+          type: number
+        padding_bottom:
+          type: number
+        padding_left:
+          type: number
+        padding_right:
+          type: number
+    interactions:
+      type: object
+      properties:
+        enable_pan:
+          type: boolean
+        pan_direction:
+          type: string
+          enum: [horizontal, vertical, both]
+        enable_zoom:
+          type: boolean
+        zoom_direction:
+          type: string
+          enum: [horizontal, vertical, both]
+        enable_scrollbars:
+          type: boolean
+        show_crosshair:
+          type: boolean
+        crosshair_style:
+          type: string
+          enum: [full, horizontal, vertical]
+        show_tooltip:
+          type: boolean
+        animate_on_load:
+          type: boolean
+
+output_schema:
+  type: object
+  properties:
+    chart_id:
+      type: string
+      description: Unique chart identifier for future modifications
+    success:
+      type: boolean
+    message:
+      type: string
+```
+
+---
+
+### modify_chart
+
+Modify an existing chart in-place.
+
+```yaml
+name: modify_chart
+description: |
+  Modify an existing chart without recreating it. Only specify properties to change.
+  Unspecified properties retain their current values.
+  
+input_schema:
+  type: object
+  required:
+    - chart_id
+  properties:
+    chart_id:
+      type: string
+      description: The chart to modify
+    title:
+      type: string
+    subtitle:
+      type: string
+    series_updates:
+      type: array
+      description: Updates to specific series by ID
+      items:
+        type: object
+        required:
+          - id
+        properties:
+          id:
+            type: string
+          color:
+            type: string
+          stroke_width:
+            type: number
+          visible:
+            type: boolean
+          # ... other series properties
+    add_series:
+      type: array
+      description: New series to add
+      items:
+        $ref: '#/components/schemas/SeriesConfig'
+    remove_series:
+      type: array
+      description: Series IDs to remove
+      items:
+        type: string
+    x_axis:
+      $ref: '#/components/schemas/XAxisConfig'
+    y_axes:
+      type: array
+      items:
+        $ref: '#/components/schemas/YAxisConfig'
+    style:
+      $ref: '#/components/schemas/StyleConfig'
+    interactions:
+      $ref: '#/components/schemas/InteractionConfig'
+
+output_schema:
+  type: object
+  properties:
+    chart_id:
+      type: string
+    success:
+      type: boolean
+    changes_applied:
+      type: array
+      items:
+        type: string
+```
+
+---
+
+### process_data
+
+Apply transformations to loaded data.
+
+```yaml
+name: process_data
+description: |
+  Apply transformations to data (rolling averages, filtering, resampling, etc.).
+  Returns a new data_id with the transformed data.
+  
+input_schema:
+  type: object
+  required:
+    - data_id
+    - operations
+  properties:
+    data_id:
+      type: string
+    operations:
+      type: array
+      items:
+        oneOf:
+          - type: object
+            required: [type, columns]
+            properties:
+              type:
+                const: select_columns
+              columns:
+                type: array
+                items:
+                  type: string
+          - type: object
+            required: [type, column, window_seconds, reducer]
+            properties:
+              type:
+                const: rolling_window
+              column:
+                type: string
+              window_seconds:
+                type: number
+              reducer:
+                type: string
+                enum: [mean, max, min, sum]
+          - type: object
+            required: [type, column, window_seconds, reducer]
+            properties:
+              type:
+                const: fixed_window
+              column:
+                type: string
+              window_seconds:
+                type: number
+              reducer:
+                type: string
+                enum: [mean, max, min, sum]
+          - type: object
+            required: [type, interval_seconds]
+            properties:
+              type:
+                const: resample
+              interval_seconds:
+                type: number
+              method:
+                type: string
+                enum: [interpolate, last, mean]
+          - type: object
+            required: [type, column]
+            properties:
+              type:
+                const: normalize
+              column:
+                type: string
+              method:
+                type: string
+                enum: [min_max, z_score]
+          - type: object
+            required: [type, column]
+            properties:
+              type:
+                const: clip
+              column:
+                type: string
+              min:
+                type: number
+              max:
+                type: number
+
+output_schema:
+  type: object
+  properties:
+    data_id:
+      type: string
+      description: New data reference with transformed data
+    row_count:
+      type: integer
+```
+
+---
+
+### calculate_metric
+
+Compute scalar sport science metrics.
+
+```yaml
+name: calculate_metric
+description: |
+  Calculate sport science metrics like Normalized Power, TSS, or statistical measures.
+  Returns computed scalar values.
+  
+input_schema:
+  type: object
+  required:
+    - data_id
+    - column
+    - metric
+  properties:
+    data_id:
+      type: string
+    column:
+      type: string
+      description: Column to calculate metric from (e.g., "power")
+    metric:
+      type: string
+      enum:
+        - normalized_power
+        - intensity_factor
+        - training_stress_score
+        - variability_index
+        - efficiency_factor
+        - mean
+        - max
+        - min
+        - stdev
+        - percentile
+    ftp:
+      type: number
+      description: Functional Threshold Power (required for IF, TSS)
+    lthr:
+      type: number
+      description: Lactate Threshold Heart Rate (for EF)
+    percentile_value:
+      type: number
+      minimum: 0
+      maximum: 100
+      description: Percentile to calculate (for percentile metric)
+
+output_schema:
+  type: object
+  properties:
+    metric:
+      type: string
+    value:
+      type: number
+    unit:
+      type: string
+    formatted_value:
+      type: string
+    context:
+      type: object
+      description: Additional context (e.g., FTP used, duration)
+```
+
+---
+
+### add_annotation
+
+Add annotations to an existing chart.
+
+```yaml
+name: add_annotation
+description: |
+  Add annotations like reference lines, zones, or labels to a chart.
+  
+input_schema:
+  type: object
+  required:
+    - chart_id
+    - annotation
+  properties:
+    chart_id:
+      type: string
+    annotation:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [horizontal_line, vertical_line, region, point_marker, text_label]
+        y_value:
+          type: number
+          description: Y position (for horizontal_line)
+        x_value:
+          type: number
+          description: X position (for vertical_line)
+        x_start:
+          type: number
+        x_end:
+          type: number
+        y_start:
+          type: number
+        y_end:
+          type: number
+        color:
+          type: string
+        stroke_width:
+          type: number
+        dash:
+          type: array
+          items:
+            type: number
+        fill_color:
+          type: string
+        fill_opacity:
+          type: number
+        label:
+          type: string
+        label_position:
+          type: string
+          enum: [start, center, end]
+        show_value:
+          type: boolean
+
+output_schema:
+  type: object
+  properties:
+    annotation_id:
+      type: string
+    success:
+      type: boolean
+```
+
+---
+
+### export_chart
+
+Export chart as image or configuration.
+
+```yaml
+name: export_chart
+description: |
+  Export a chart as a PNG image or JSON configuration.
+  
+input_schema:
+  type: object
+  required:
+    - chart_id
+    - format
+  properties:
+    chart_id:
+      type: string
+    format:
+      type: string
+      enum: [png, svg, json]
+    resolution:
+      type: string
+      enum: [standard, high, publication]
+      default: high
+      description: Image resolution (300 DPI for publication)
+
+output_schema:
+  type: object
+  properties:
+    format:
+      type: string
+    file_name:
+      type: string
+    download_url:
+      type: string
+      description: URL or data URI for download
+    config_json:
+      type: object
+      description: Chart configuration (for format=json)
+```
