@@ -11,6 +11,7 @@ dependencies:
   braven_charts:
     path: ../../
   anthropic_sdk_dart: ^0.2.0
+  http: ^1.2.0
   uuid: ^4.0.0
   equatable: ^2.0.5
   meta: ^1.11.0

@@ -40,23 +40,77 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   String? _apiKey;
   AgentSession? _session;
+  String _selectedProvider = 'anthropic'; // 'anthropic' or 'grok'
+  String _selectedModel = 'claude-sonnet-4-20250514';
+
+  // Available models per provider
+  static const Map<String, List<({String id, String name, String description})>> _availableModels = {
+    'anthropic': [
+      (id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Best balance of speed and capability'),
+      (id: 'claude-opus-4-20250514', name: 'Claude Opus 4', description: 'Most capable, best for complex tasks'),
+    ],
+    'grok': [
+      // Grok 4 series (2M context)
+      (id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Fast Reasoning', description: 'Latest with reasoning (2M context)'),
+      (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast', description: 'Latest without reasoning (2M context)'),
+      (id: 'grok-4-fast-reasoning', name: 'Grok 4 Fast Reasoning', description: 'Fast with reasoning (2M context)'),
+      (id: 'grok-4-fast-non-reasoning', name: 'Grok 4 Fast', description: 'Fast without reasoning (2M context)'),
+      (id: 'grok-4-0709', name: 'Grok 4', description: 'Grok 4 base (256K context)'),
+      // Grok 3 series (131K context)
+      (id: 'grok-3', name: 'Grok 3', description: 'Full Grok 3 (131K context)'),
+      (id: 'grok-3-mini', name: 'Grok 3 Mini', description: 'Lighter Grok 3 (131K context)'),
+      // Specialized
+      (id: 'grok-code-fast-1', name: 'Grok Code Fast', description: 'Code-optimized (256K context)'),
+      (id: 'grok-2-vision-1212', name: 'Grok 2 Vision', description: 'Vision-capable (32K context)'),
+    ],
+  };
 
   @override
   void initState() {
     super.initState();
-    final envApiKey = const String.fromEnvironment('ANTHROPIC_API_KEY');
-    if (envApiKey.isNotEmpty) {
-      _setApiKey(envApiKey);
+    // Check for Anthropic API key first
+    final anthropicKey = const String.fromEnvironment('ANTHROPIC_API_KEY');
+    if (anthropicKey.isNotEmpty) {
+      _selectedProvider = 'anthropic';
+      _selectedModel = 'claude-sonnet-4-20250514';
+      _setApiKey(anthropicKey);
+      return;
     }
+    // Check for Grok API key
+    final grokKey = const String.fromEnvironment('GROK_API_KEY');
+    if (grokKey.isNotEmpty) {
+      _selectedProvider = 'grok';
+      _selectedModel = 'grok-4-fast-non-reasoning';
+      _setApiKey(grokKey);
+    }
+  }
+
+  void _onProviderChanged(String provider) {
+    setState(() {
+      _selectedProvider = provider;
+      // Set default model for the selected provider
+      _selectedModel = _availableModels[provider]!.first.id;
+    });
   }
 
   void _setApiKey(String apiKey) {
     _session?.dispose();
-    final config = LLMConfig(
-      apiKey: apiKey,
-      model: 'claude-sonnet-4-20250514',
-    );
-    final llmProvider = AnthropicAdapter(config);
+
+    final LLMProvider llmProvider;
+    if (_selectedProvider == 'grok') {
+      final config = LLMConfig(
+        apiKey: apiKey,
+        model: _selectedModel,
+      );
+      llmProvider = GrokAdapter(config);
+    } else {
+      final config = LLMConfig(
+        apiKey: apiKey,
+        model: _selectedModel,
+      );
+      llmProvider = AnthropicAdapter(config);
+    }
+
     // Create session first, then pass getActiveChart callback to ModifyChartTool
     late final AgentSessionImpl session;
     session = AgentSessionImpl(
@@ -113,6 +167,11 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   }
 
   Widget _buildApiKeyInput() {
+    final isGrok = _selectedProvider == 'grok';
+    final providerName = isGrok ? 'Grok (xAI)' : 'Anthropic';
+    final hintText = isGrok ? 'xai-...' : 'sk-ant-...';
+    final consoleUrl = isGrok ? 'console.x.ai' : 'console.anthropic.com';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Braven Agent Demo'),
@@ -134,9 +193,9 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Anthropic API Key Required',
-                    style: TextStyle(
+                  Text(
+                    '$providerName API Key Required',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -144,17 +203,76 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Enter your Anthropic API key to start the demo.',
+                    'Select your LLM provider and enter your API key.',
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  // Provider selector
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment<String>(
+                        value: 'anthropic',
+                        label: Text('Anthropic'),
+                        icon: Icon(Icons.auto_awesome),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'grok',
+                        label: Text('Grok'),
+                        icon: Icon(Icons.psychology),
+                      ),
+                    ],
+                    selected: {_selectedProvider},
+                    onSelectionChanged: (Set<String> selection) {
+                      _onProviderChanged(selection.first);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Model selector
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedModel,
+                    decoration: const InputDecoration(
+                      labelText: 'Model',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.memory),
+                    ),
+                    items: _availableModels[_selectedProvider]!
+                        .map((model) => DropdownMenuItem<String>(
+                              value: model.id,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(model.name),
+                                  Text(
+                                    model.description,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (String? value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedModel = value;
+                        });
+                      }
+                    },
+                    selectedItemBuilder: (BuildContext context) {
+                      return _availableModels[_selectedProvider]!.map((model) => Text(model.name)).toList();
+                    },
                   ),
                   const SizedBox(height: 24),
                   TextField(
                     controller: _apiKeyController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'API Key',
-                      hintText: 'sk-ant-...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.vpn_key),
+                      hintText: hintText,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.vpn_key),
                     ),
                     obscureText: true,
                     onSubmitted: (_) => _handleApiKeySubmit(),
@@ -169,9 +287,9 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Get a key at console.anthropic.com',
-                    style: TextStyle(
+                  Text(
+                    'Get a key at $consoleUrl',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
                     ),
@@ -242,9 +360,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(SessionState state) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty ||
-        state.status == ActivityStatus.thinking ||
-        state.status == ActivityStatus.calling_tool) {
+    if (text.isEmpty || state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool) {
       return;
     }
 
@@ -269,9 +385,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: activeChart == null
-                  ? const _ChartPlaceholder()
-                  : const ChartRenderer().render(activeChart),
+              child: activeChart == null ? const _ChartPlaceholder() : const ChartRenderer().render(activeChart),
             ),
           ],
         ),
@@ -280,16 +394,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatPanel(SessionState state) {
-    final isProcessing = state.status == ActivityStatus.thinking ||
-        state.status == ActivityStatus.calling_tool;
+    final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
     final messages = state.history;
     final itemCount = messages.length + (isProcessing ? 1 : 0);
     _maybeScroll(itemCount);
 
     return Column(
       children: [
-        if (state.status == ActivityStatus.error && state.errorMessage != null)
-          _ErrorBanner(message: state.errorMessage!),
+        if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -297,8 +409,7 @@ class _ChatScreenState extends State<ChatScreen> {
             itemCount: itemCount,
             itemBuilder: (context, index) {
               if (index >= messages.length) {
-                if (state.status == ActivityStatus.calling_tool &&
-                    state.activeTool != null) {
+                if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
                   return _ToolExecutionBubble(
                     toolName: state.activeTool!.name,
                   );
