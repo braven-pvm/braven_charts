@@ -666,7 +666,7 @@ void main() {
         );
 
         // Should use Grok's default model instead of Anthropic's
-        expect(capturedBody?['model'], equals('grok-3'));
+        expect(capturedBody?['model'], equals('grok-4-fast-non-reasoning'));
       });
     });
 

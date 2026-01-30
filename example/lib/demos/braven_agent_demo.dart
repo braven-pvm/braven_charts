@@ -317,30 +317,15 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
+  final FocusNode _inputFocusNode = FocusNode();
   int _lastItemCount = 0;
-  bool _hasInput = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _messageController.addListener(_handleInputChanged);
-  }
 
   @override
   void dispose() {
-    _messageController.removeListener(_handleInputChanged);
     _messageController.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
-  }
-
-  void _handleInputChanged() {
-    final hasInput = _messageController.text.trim().isNotEmpty;
-    if (hasInput != _hasInput) {
-      setState(() {
-        _hasInput = hasInput;
-      });
-    }
   }
 
   void _scrollToBottom() {
@@ -423,7 +408,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         _ChatInputBar(
           controller: _messageController,
-          enabled: _hasInput && !isProcessing,
+          focusNode: _inputFocusNode,
+          isProcessing: isProcessing,
           onSend: () => _sendMessage(state),
         ),
       ],
@@ -508,12 +494,14 @@ class _ChartPlaceholder extends StatelessWidget {
 class _ChatInputBar extends StatelessWidget {
   const _ChatInputBar({
     required this.controller,
-    required this.enabled,
+    required this.focusNode,
+    required this.isProcessing,
     required this.onSend,
   });
 
   final TextEditingController controller;
-  final bool enabled;
+  final FocusNode focusNode;
+  final bool isProcessing;
   final VoidCallback onSend;
 
   @override
@@ -527,10 +515,15 @@ class _ChatInputBar extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: controller,
+                focusNode: focusNode,
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
-                onSubmitted: (_) => enabled ? onSend() : null,
+                onSubmitted: (_) {
+                  if (!isProcessing && controller.text.trim().isNotEmpty) {
+                    onSend();
+                  }
+                },
                 decoration: const InputDecoration(
                   hintText: 'Ask the agent to create a chart...',
                   border: OutlineInputBorder(),
@@ -538,9 +531,17 @@ class _ChatInputBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: enabled ? onSend : null,
-              icon: const Icon(Icons.send),
+            // Use ListenableBuilder so only the button rebuilds when text changes
+            ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) {
+                final hasInput = controller.text.trim().isNotEmpty;
+                final enabled = hasInput && !isProcessing;
+                return IconButton.filled(
+                  onPressed: enabled ? onSend : null,
+                  icon: const Icon(Icons.send),
+                );
+              },
             ),
           ],
         ),

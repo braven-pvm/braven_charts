@@ -69,24 +69,41 @@ class SeriesConfig with EquatableMixin {
   /// Whether to show individual data points.
   final bool showPoints;
 
-  /// ID of the Y-axis this series is bound to.
+  /// Position for an INLINE Y-axis created specifically for this series.
   ///
-  /// Used for multi-axis charts to associate series with specific axes.
+  /// Use this with [yAxisLabel], [yAxisUnit], [yAxisColor], [yAxisMin], [yAxisMax]
+  /// to define a dedicated Y-axis for this series inline.
+  ///
+  /// MUTUALLY EXCLUSIVE with [yAxisId] - use one or the other:
+  /// - Use [yAxisId] to reference a SHARED axis defined in the chart's yAxes array.
+  /// - Use [yAxisPosition] (with its companions) to define an INLINE axis.
+  ///
+  /// Values: 'left', 'right', 'leftOuter', 'rightOuter'
   final String? yAxisPosition;
 
-  /// Label for the Y-axis when using per-series axis configuration.
+  /// Label for the INLINE Y-axis (used with [yAxisPosition]).
+  ///
+  /// Ignored if [yAxisId] is set.
   final String? yAxisLabel;
 
-  /// Unit string for the Y-axis (e.g., '°C', 'km/h').
+  /// Unit string for the INLINE Y-axis (used with [yAxisPosition]).
+  ///
+  /// Ignored if [yAxisId] is set.
   final String? yAxisUnit;
 
-  /// Color for the Y-axis line and labels.
+  /// Color for the INLINE Y-axis (used with [yAxisPosition]).
+  ///
+  /// Ignored if [yAxisId] is set.
   final String? yAxisColor;
 
-  /// Minimum value for the Y-axis range.
+  /// Minimum value for the INLINE Y-axis range (used with [yAxisPosition]).
+  ///
+  /// Ignored if [yAxisId] is set.
   final double? yAxisMin;
 
-  /// Maximum value for the Y-axis range.
+  /// Maximum value for the INLINE Y-axis range (used with [yAxisPosition]).
+  ///
+  /// Ignored if [yAxisId] is set.
   final double? yAxisMax;
 
   /// Bar width as a percentage of available space (0.0 to 1.0).
@@ -109,9 +126,14 @@ class SeriesConfig with EquatableMixin {
   /// Only applies to bar charts.
   final double? barMaxWidth;
 
-  /// ID of the Y-axis this series is bound to.
+  /// Reference to a SHARED Y-axis defined in the chart's yAxes array.
   ///
-  /// Links to [YAxisConfig.id] for multi-axis charts.
+  /// Links to [YAxisConfig.id] for multi-axis charts where multiple series
+  /// share the same Y-axis configuration.
+  ///
+  /// MUTUALLY EXCLUSIVE with [yAxisPosition] - use one or the other:
+  /// - Use [yAxisId] to reference a SHARED axis defined in the chart's yAxes array.
+  /// - Use [yAxisPosition] (with its companions) to define an INLINE axis.
   final String? yAxisId;
 
   /// Whether this series is visible on the chart.
@@ -162,22 +184,14 @@ class SeriesConfig with EquatableMixin {
     return SeriesConfig(
       id: json['id'] as String,
       name: json['name'] as String?,
-      data: (json['data'] as List<dynamic>)
-          .map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      data: (json['data'] as List<dynamic>).map((e) => DataPoint.fromJson(e as Map<String, dynamic>)).toList(),
       color: json['color'] as String?,
       strokeWidth: (json['strokeWidth'] as num?)?.toDouble() ?? 2.0,
-      strokeDash: (json['strokeDash'] as List<dynamic>?)
-          ?.map((e) => (e as num).toDouble())
-          .toList(),
+      strokeDash: (json['strokeDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
       fillOpacity: (json['fillOpacity'] as num?)?.toDouble() ?? 0.0,
-      markerStyle: json['markerStyle'] != null
-          ? MarkerStyle.values.byName(json['markerStyle'] as String)
-          : MarkerStyle.none,
+      markerStyle: json['markerStyle'] != null ? MarkerStyle.values.byName(json['markerStyle'] as String) : MarkerStyle.none,
       markerSize: (json['markerSize'] as num?)?.toDouble() ?? 4.0,
-      interpolation: json['interpolation'] != null
-          ? Interpolation.values.byName(json['interpolation'] as String)
-          : Interpolation.linear,
+      interpolation: json['interpolation'] != null ? Interpolation.values.byName(json['interpolation'] as String) : Interpolation.linear,
       tension: (json['tension'] as num?)?.toDouble() ?? 0.4,
       showPoints: json['showPoints'] as bool? ?? false,
       yAxisPosition: json['yAxisPosition'] as String?,
@@ -323,6 +337,5 @@ class SeriesConfig with EquatableMixin {
       ];
 
   @override
-  String toString() =>
-      'SeriesConfig(id: $id, name: $name, data: ${data.length} points)';
+  String toString() => 'SeriesConfig(id: $id, name: $name, data: ${data.length} points)';
 }

@@ -75,12 +75,34 @@ enum AxisType {
 /// Position of Y-axis on the chart.
 ///
 /// Used for multi-axis charts to position Y-axes on left or right sides.
+/// Multi-axis charts support up to 4 Y-axes simultaneously, positioned
+/// in a specific layout order from left to right:
+///
+/// ```
+/// [leftOuter] [left] | Chart Area | [right] [rightOuter]
+/// ```
 enum AxisPosition {
-  /// Y-axis positioned on the left side.
+  /// Leftmost axis (far left of plot area).
+  ///
+  /// Use for a secondary axis on the left side when [left] is already
+  /// occupied by the primary axis.
+  leftOuter,
+
+  /// Primary left axis (adjacent to plot area left edge).
+  ///
+  /// This is the standard position for the main Y-axis in most charts.
   left,
 
-  /// Y-axis positioned on the right side.
+  /// Primary right axis (adjacent to plot area right edge).
+  ///
+  /// Use for a secondary axis when displaying two data series with
+  /// different scales or units.
   right,
+
+  /// Rightmost axis (far right of plot area).
+  ///
+  /// Use for a tertiary/quaternary axis when [right] is already occupied.
+  rightOuter,
 }
 
 /// Normalization mode for multi-series charts.

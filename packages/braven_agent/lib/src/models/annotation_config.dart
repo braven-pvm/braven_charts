@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'enums.dart';
 
@@ -118,20 +119,57 @@ class AnnotationConfig with EquatableMixin {
   /// Creates an [AnnotationConfig] from a JSON map.
   ///
   /// Parses all fields including enum values.
+  /// Sanitizes seriesId by trimming whitespace and trailing punctuation.
+  /// Handles LLM malformed JSON where value is embedded in seriesId string.
   factory AnnotationConfig.fromJson(Map<String, dynamic> json) {
+    // Get initial values
+    double? value = (json['value'] as num?)?.toDouble();
+    String? seriesId = json['seriesId'] as String?;
+
+    // Sanitize seriesId - LLMs sometimes include trailing commas or whitespace
+    if (seriesId != null) {
+      seriesId = seriesId.trim();
+      // Remove trailing punctuation that LLMs sometimes include
+      while (seriesId!.isNotEmpty && (seriesId.endsWith(',') || seriesId.endsWith('.') || seriesId.endsWith(';'))) {
+        seriesId = seriesId.substring(0, seriesId.length - 1).trim();
+      }
+      if (seriesId.isEmpty) seriesId = null;
+
+      // Check for malformed JSON where value is embedded in seriesId
+      // Pattern: "usage','value':1.4," or "usage","value":1.4
+      if (seriesId != null && seriesId.contains('value')) {
+        // Try to extract value from malformed string like: "usage','value':1.4,"
+        final valueMatch = RegExp(r'''['":]?value['":]?\s*[:=]?\s*([0-9.]+)''').firstMatch(seriesId);
+        if (valueMatch != null && value == null) {
+          final extractedValue = double.tryParse(valueMatch.group(1)!);
+          if (extractedValue != null) {
+            value = extractedValue;
+            debugPrint('[AnnotationConfig] Recovered value=$value from malformed seriesId');
+          }
+        }
+      }
+
+      // Reject obviously malformed seriesId (contains JSON syntax)
+      if (seriesId != null &&
+          (seriesId.contains('"') || seriesId.contains("'") || seriesId.contains(':') || seriesId.contains('{') || seriesId.contains('}'))) {
+        // This is malformed JSON - extract just the first word as a best-effort
+        final match = RegExp(r'^[a-zA-Z0-9_-]+').firstMatch(seriesId);
+        seriesId = match?.group(0);
+        if (seriesId != null) {
+          debugPrint('[AnnotationConfig] Extracted seriesId="$seriesId" from malformed input');
+        }
+      }
+    }
+
     return AnnotationConfig(
       type: AnnotationType.values.byName(json['type'] as String),
-      orientation: json['orientation'] != null
-          ? Orientation.values.byName(json['orientation'] as String)
-          : null,
-      value: (json['value'] as num?)?.toDouble(),
+      orientation: json['orientation'] != null ? Orientation.values.byName(json['orientation'] as String) : null,
+      value: value,
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
-      position: json['position'] != null
-          ? AnnotationPosition.values.byName(json['position'] as String)
-          : null,
+      position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
@@ -139,7 +177,7 @@ class AnnotationConfig with EquatableMixin {
       fontSize: (json['fontSize'] as num?)?.toDouble(),
       lineWidth: (json['lineWidth'] as num?)?.toDouble(),
       dashPattern: (json['dashPattern'] as List<dynamic>?)?.cast<double>(),
-      seriesId: json['seriesId'] as String?,
+      seriesId: seriesId,
     );
   }
 

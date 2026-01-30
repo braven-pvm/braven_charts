@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import '../models/annotation_config.dart';
 import '../models/chart_configuration.dart';
 import '../models/chart_style_config.dart';
@@ -164,7 +166,8 @@ class ModifyChartTool extends AgentTool {
                     },
                     'yAxisId': {
                       'type': 'string',
-                      'description': 'ID of the Y-axis this series should use (for multi-axis charts).',
+                      'description': 'Reference to a SHARED Y-axis defined in yAxes[]. '
+                          'MUTUALLY EXCLUSIVE with yAxisPosition/yAxisLabel/yAxisUnit/yAxisColor/yAxisMin/yAxisMax.',
                     },
                     'unit': {
                       'type': 'string',
@@ -230,27 +233,27 @@ class ModifyChartTool extends AgentTool {
                     'yAxisPosition': {
                       'type': 'string',
                       'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                      'description': 'Position of the Y-axis for this series in multi-axis charts.',
+                      'description': 'Position for INLINE Y-axis. MUTUALLY EXCLUSIVE with yAxisId.',
                     },
                     'yAxisLabel': {
                       'type': 'string',
-                      'description': 'Label for the Y-axis associated with this series.',
+                      'description': 'Label for INLINE Y-axis (used with yAxisPosition).',
                     },
                     'yAxisUnit': {
                       'type': 'string',
-                      'description': 'Unit for the Y-axis associated with this series.',
+                      'description': 'Unit for INLINE Y-axis (used with yAxisPosition).',
                     },
                     'yAxisColor': {
                       'type': 'string',
-                      'description': 'Color for the Y-axis associated with this series.',
+                      'description': 'Color for INLINE Y-axis (used with yAxisPosition).',
                     },
                     'yAxisMin': {
                       'type': 'number',
-                      'description': 'Minimum value for the Y-axis scale.',
+                      'description': 'Min value for INLINE Y-axis (used with yAxisPosition).',
                     },
                     'yAxisMax': {
                       'type': 'number',
-                      'description': 'Maximum value for the Y-axis scale.',
+                      'description': 'Max value for INLINE Y-axis (used with yAxisPosition).',
                     },
                     'visible': {
                       'type': 'boolean',
@@ -322,19 +325,20 @@ class ModifyChartTool extends AgentTool {
                       'description': 'Style of markers at data points',
                     },
                     'markerSize': {'type': 'number', 'minimum': 0, 'description': 'Marker size in pixels'},
-                    'yAxisId': {'type': 'string', 'description': 'Y-axis to use for this series'},
+                    'yAxisId': {'type': 'string', 'description': 'SHARED axis reference (mutually exclusive with yAxisPosition)'},
                     'unit': {'type': 'string', 'description': 'Unit of measurement'},
                     'visible': {'type': 'boolean', 'description': 'Whether series is visible'},
                     'legendVisible': {'type': 'boolean', 'description': 'Whether to show in legend'},
                     'yAxisPosition': {
                       'type': 'string',
-                      'enum': ['left', 'right', 'leftOuter', 'rightOuter']
+                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                      'description': 'INLINE axis position (mutually exclusive with yAxisId)',
                     },
-                    'yAxisLabel': {'type': 'string', 'description': 'Y-axis label'},
-                    'yAxisUnit': {'type': 'string', 'description': 'Y-axis unit'},
-                    'yAxisColor': {'type': 'string', 'description': 'Y-axis color (hex)'},
-                    'yAxisMin': {'type': 'number', 'description': 'Y-axis minimum value'},
-                    'yAxisMax': {'type': 'number', 'description': 'Y-axis maximum value'},
+                    'yAxisLabel': {'type': 'string', 'description': 'INLINE axis label'},
+                    'yAxisUnit': {'type': 'string', 'description': 'INLINE axis unit'},
+                    'yAxisColor': {'type': 'string', 'description': 'INLINE axis color (hex)'},
+                    'yAxisMin': {'type': 'number', 'description': 'INLINE axis minimum value'},
+                    'yAxisMax': {'type': 'number', 'description': 'INLINE axis maximum value'},
                     'barWidthPercent': {'type': 'number', 'minimum': 0, 'maximum': 1},
                     'barWidthPixels': {'type': 'number', 'minimum': 0},
                     'barMinWidth': {'type': 'number', 'minimum': 0},
@@ -418,8 +422,8 @@ class ModifyChartTool extends AgentTool {
                 'type': 'array',
                 'description': 'Annotations to display on the chart. REPLACES all existing annotations. '
                     'To REMOVE ALL ANNOTATIONS, set this to an empty array: []. '
-                    'Supports: referenceLine (horizontal/vertical line), zone (shaded region), '
-                    'textLabel (text at position), marker (point marker).',
+                    'IMPORTANT for perSeries normalization: horizontal annotations MUST include seriesId '
+                    'to specify which series data range to use for positioning.',
                 'items': {
                   'type': 'object',
                   'properties': {
@@ -431,7 +435,9 @@ class ModifyChartTool extends AgentTool {
                     },
                     'value': {
                       'type': 'number',
-                      'description': 'Value for referenceLine (Y value for horizontal, X for vertical)',
+                      'description': 'Value for referenceLine. For horizontal lines, this is the Y-axis value '
+                          'in the SAME UNITS as the target series data. In perSeries mode, '
+                          'seriesId determines which series range to use.',
                     },
                     'minValue': {
                       'type': 'number',
@@ -502,7 +508,9 @@ class ModifyChartTool extends AgentTool {
                     },
                     'seriesId': {
                       'type': 'string',
-                      'description': 'Series ID to bind annotation to (required for perSeries normalization mode)',
+                      'description': 'REQUIRED for perSeries normalization: ID of the series whose data range '
+                          'determines annotation positioning. Must match a series.id value exactly. '
+                          'Without this, horizontal annotations appear at zero in perSeries mode.',
                     },
                   },
                   'required': ['type'],
@@ -569,25 +577,52 @@ class ModifyChartTool extends AgentTool {
         'required': ['modifications'],
       };
 
+  /// Helper to log tool errors with full context
+  ToolResult _logError(String message, Map<String, dynamic> input) {
+    debugPrint('=== MODIFY_CHART TOOL ERROR ===');
+    debugPrint('Error: $message');
+    debugPrint('Raw input JSON:');
+    try {
+      debugPrint(const JsonEncoder.withIndent('  ').convert(input));
+    } catch (e) {
+      debugPrint('Failed to encode input: $e');
+      debugPrint('Input type: ${input.runtimeType}');
+      debugPrint('Input keys: ${input.keys.toList()}');
+    }
+    debugPrint('=== END MODIFY_CHART ERROR ===');
+    return ToolResult(output: message, isError: true);
+  }
+
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
+    // Log raw input for debugging
+    debugPrint('=== MODIFY_CHART TOOL CALLED ===');
+    debugPrint('Raw input:');
+    try {
+      debugPrint(const JsonEncoder.withIndent('  ').convert(input));
+    } catch (e) {
+      debugPrint('Failed to encode input: $e');
+      debugPrint('Input type: ${input.runtimeType}');
+    }
+    debugPrint('================================');
+
     // Get the active chart from the callback
     final activeChart = _getActiveChart();
     if (activeChart == null) {
-      return const ToolResult(
-        output: 'Error: No active chart to modify. '
-            'Please use create_chart first to create a chart.',
-        isError: true,
+      return _logError(
+        'Error: No active chart to modify. '
+        'Please use create_chart first to create a chart.',
+        input,
       );
     }
 
     // Validate modifications object
     final modifications = input['modifications'] as Map<String, dynamic>?;
     if (modifications == null) {
-      return const ToolResult(
-        output: 'Error: modifications is required. Please provide an object '
-            'with the chart properties you want to change.',
-        isError: true,
+      return _logError(
+        'Error: modifications is required. Please provide an object '
+        'with the chart properties you want to change.',
+        input,
       );
     }
 
@@ -598,10 +633,10 @@ class ModifyChartTool extends AgentTool {
       try {
         chartType = ChartType.values.byName(typeInput);
       } catch (_) {
-        return ToolResult(
-          output: 'Error: Invalid chart type "$typeInput". '
-              'Valid types are: line, area, bar, scatter.',
-          isError: true,
+        return _logError(
+          'Error: Invalid chart type "$typeInput". '
+          'Valid types are: line, area, bar, scatter.',
+          input,
         );
       }
     }
@@ -613,10 +648,10 @@ class ModifyChartTool extends AgentTool {
       try {
         legendPosition = LegendPosition.values.byName(legendPositionInput);
       } catch (_) {
-        return ToolResult(
-          output: 'Error: Invalid legend position "$legendPositionInput". '
-              'Valid positions are: top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight.',
-          isError: true,
+        return _logError(
+          'Error: Invalid legend position "$legendPositionInput". '
+          'Valid positions are: top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight.',
+          input,
         );
       }
     }
@@ -628,10 +663,10 @@ class ModifyChartTool extends AgentTool {
       try {
         normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
-        return ToolResult(
-          output: 'Error: Invalid normalization mode "$normalizationModeInput". '
-              'Valid modes are: none, auto, perSeries.',
-          isError: true,
+        return _logError(
+          'Error: Invalid normalization mode "$normalizationModeInput". '
+          'Valid modes are: none, auto, perSeries.',
+          input,
         );
       }
     }
@@ -690,9 +725,58 @@ class ModifyChartTool extends AgentTool {
     final annotationsInput = modifications['annotations'] as List?;
     if (annotationsInput != null) {
       annotations = <AnnotationConfig>[];
-      for (final annotationMap in annotationsInput) {
+      debugPrint('Parsing ${annotationsInput.length} annotations...');
+      for (int i = 0; i < annotationsInput.length; i++) {
+        final annotationMap = annotationsInput[i];
+        debugPrint('Annotation $i raw: ${jsonEncode(annotationMap)}');
         final map = Map<String, dynamic>.from(annotationMap as Map);
-        annotations.add(AnnotationConfig.fromJson(map));
+        final parsed = AnnotationConfig.fromJson(map);
+        debugPrint('Annotation $i parsed: type=${parsed.type}, value=${parsed.value}, seriesId=${parsed.seriesId}');
+        annotations.add(parsed);
+      }
+
+      // Validate annotation seriesId references against updated series
+      final validSeriesIds = updatedSeries.map((s) => s.id).toSet();
+      for (final annotation in annotations) {
+        if (annotation.seriesId != null && !validSeriesIds.contains(annotation.seriesId)) {
+          return _logError(
+            'Error: Annotation references non-existent series '
+            '"${annotation.seriesId}". '
+            'Valid series IDs are: ${validSeriesIds.join(", ")}. '
+            'The seriesId must exactly match a series id from the series array.',
+            input,
+          );
+        }
+      }
+
+      // Determine effective normalization mode
+      final effectiveNormMode = normalizationMode ?? activeChart.normalizationMode;
+
+      // Validate horizontal annotations have seriesId in perSeries mode
+      if (effectiveNormMode == NormalizationModeConfig.perSeries) {
+        for (final annotation in annotations) {
+          if (annotation.type == AnnotationType.referenceLine && annotation.orientation != Orientation.vertical && annotation.seriesId == null) {
+            return _logError(
+              'Error: Horizontal referenceLine annotation requires '
+              '"seriesId" in perSeries normalization mode. '
+              'Without seriesId, the annotation cannot be positioned correctly. '
+              'Add seriesId matching one of: ${validSeriesIds.join(", ")}',
+              input,
+            );
+          }
+        }
+      }
+
+      // Validate referenceLine annotations have a value
+      for (final annotation in annotations) {
+        if (annotation.type == AnnotationType.referenceLine && annotation.value == null) {
+          return _logError(
+            'Error: referenceLine annotation requires a "value" property. '
+            'The value should be in the same units as the target series data. '
+            'Example: for a power series with range 0-500W, value: 200 draws a line at 200W.',
+            input,
+          );
+        }
       }
     }
 
