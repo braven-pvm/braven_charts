@@ -74,19 +74,23 @@ void main() {
 
       group('properties content', () {
         test('has modifications property', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications = properties['modifications'] as Map<String, dynamic>;
+          final properties =
+              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications =
+              properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -94,22 +98,29 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications = properties['modifications'] as Map<String, dynamic>;
+            final properties =
+                tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications =
+                properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
-          test('updateSeries additionalProperties have type property with enum', () {
-            final updateSeriesAdditionalProps = modProps['updateSeries']['additionalProperties'] as Map;
-            final seriesProps = updateSeriesAdditionalProps['properties'] as Map;
+          test('updateSeries additionalProperties have type property with enum',
+              () {
+            final updateSeriesAdditionalProps =
+                modProps['updateSeries']['additionalProperties'] as Map;
+            final seriesProps =
+                updateSeriesAdditionalProps['properties'] as Map;
             expect(seriesProps, contains('type'));
             expect(seriesProps['type']['type'], equals('string'));
             expect(seriesProps['type']['enum'], isA<List>());
           });
 
           test('updateSeries type enum includes all chart types', () {
-            final updateSeriesAdditionalProps = modProps['updateSeries']['additionalProperties'] as Map;
-            final seriesProps = updateSeriesAdditionalProps['properties'] as Map;
+            final updateSeriesAdditionalProps =
+                modProps['updateSeries']['additionalProperties'] as Map;
+            final seriesProps =
+                updateSeriesAdditionalProps['properties'] as Map;
             final enumValues = seriesProps['type']['enum'] as List;
             expect(enumValues, contains('line'));
             expect(enumValues, contains('area'));
@@ -283,9 +294,11 @@ void main() {
           });
 
           expect(
-            result.output.toLowerCase().contains('no active chart') || result.output.toLowerCase().contains('create_chart'),
+            result.output.toLowerCase().contains('no active chart') ||
+                result.output.toLowerCase().contains('create_chart'),
             isTrue,
-            reason: 'Error message should indicate no active chart and suggest create_chart',
+            reason:
+                'Error message should indicate no active chart and suggest create_chart',
           );
         });
 
@@ -367,7 +380,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.bar));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type,
+              equals(ChartType.bar));
         });
 
         test('can change series type from line to area', () async {
@@ -380,7 +394,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.area));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type,
+              equals(ChartType.area));
         });
 
         test('can change series type from line to scatter', () async {
@@ -393,7 +408,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.scatter));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type,
+              equals(ChartType.scatter));
         });
 
         test('returns error for invalid series type value', () async {
@@ -531,7 +547,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -555,7 +572,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
@@ -575,7 +593,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries =
+              chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -669,7 +688,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
@@ -686,7 +706,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
@@ -702,7 +723,8 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });
@@ -877,7 +899,10 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.series.any((s) => s.id == 'new_data' && s.type == ChartType.area), isTrue);
+          expect(
+              chart.series
+                  .any((s) => s.id == 'new_data' && s.type == ChartType.area),
+              isTrue);
           expect(chart.title, equals('Multi-Modification Chart'));
           expect(chart.series.any((s) => s.id == 'new_data'), isTrue);
         });

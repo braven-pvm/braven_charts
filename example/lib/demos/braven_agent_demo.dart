@@ -48,24 +48,65 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   String _selectedModel = 'claude-sonnet-4-20250514';
 
   // Available models per provider
-  static const Map<String, List<({String id, String name, String description})>> _availableModels = {
+  static const Map<String, List<({String id, String name, String description})>>
+      _availableModels = {
     'anthropic': [
-      (id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Best balance of speed and capability'),
-      (id: 'claude-opus-4-20250514', name: 'Claude Opus 4', description: 'Most capable, best for complex tasks'),
+      (
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        description: 'Best balance of speed and capability'
+      ),
+      (
+        id: 'claude-opus-4-20250514',
+        name: 'Claude Opus 4',
+        description: 'Most capable, best for complex tasks'
+      ),
     ],
     'grok': [
       // Grok 4 series (2M context)
-      (id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Fast Reasoning', description: 'Latest with reasoning (2M context)'),
-      (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast', description: 'Latest without reasoning (2M context)'),
-      (id: 'grok-4-fast-reasoning', name: 'Grok 4 Fast Reasoning', description: 'Fast with reasoning (2M context)'),
-      (id: 'grok-4-fast-non-reasoning', name: 'Grok 4 Fast', description: 'Fast without reasoning (2M context)'),
-      (id: 'grok-4-0709', name: 'Grok 4', description: 'Grok 4 base (256K context)'),
+      (
+        id: 'grok-4-1-fast-reasoning',
+        name: 'Grok 4.1 Fast Reasoning',
+        description: 'Latest with reasoning (2M context)'
+      ),
+      (
+        id: 'grok-4-1-fast-non-reasoning',
+        name: 'Grok 4.1 Fast',
+        description: 'Latest without reasoning (2M context)'
+      ),
+      (
+        id: 'grok-4-fast-reasoning',
+        name: 'Grok 4 Fast Reasoning',
+        description: 'Fast with reasoning (2M context)'
+      ),
+      (
+        id: 'grok-4-fast-non-reasoning',
+        name: 'Grok 4 Fast',
+        description: 'Fast without reasoning (2M context)'
+      ),
+      (
+        id: 'grok-4-0709',
+        name: 'Grok 4',
+        description: 'Grok 4 base (256K context)'
+      ),
       // Grok 3 series (131K context)
       (id: 'grok-3', name: 'Grok 3', description: 'Full Grok 3 (131K context)'),
-      (id: 'grok-3-mini', name: 'Grok 3 Mini', description: 'Lighter Grok 3 (131K context)'),
+      (
+        id: 'grok-3-mini',
+        name: 'Grok 3 Mini',
+        description: 'Lighter Grok 3 (131K context)'
+      ),
       // Specialized
-      (id: 'grok-code-fast-1', name: 'Grok Code Fast', description: 'Code-optimized (256K context)'),
-      (id: 'grok-2-vision-1212', name: 'Grok 2 Vision', description: 'Vision-capable (32K context)'),
+      (
+        id: 'grok-code-fast-1',
+        name: 'Grok Code Fast',
+        description: 'Code-optimized (256K context)'
+      ),
+      (
+        id: 'grok-2-vision-1212',
+        name: 'Grok 2 Vision',
+        description: 'Vision-capable (32K context)'
+      ),
     ],
   };
 
@@ -266,7 +307,9 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                       }
                     },
                     selectedItemBuilder: (BuildContext context) {
-                      return _availableModels[_selectedProvider]!.map((model) => Text(model.name)).toList();
+                      return _availableModels[_selectedProvider]!
+                          .map((model) => Text(model.name))
+                          .toList();
                     },
                   ),
                   const SizedBox(height: 24),
@@ -321,7 +364,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
-  GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
+  GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey =
+      GlobalKey<ChartSnapshotWrapperState>();
   int? _lastCapturedChartHash;
   int? _currentChartKeyHash;
 
@@ -339,7 +383,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(SessionState state) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool) {
+    if (text.isEmpty ||
+        state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool) {
       return;
     }
 
@@ -417,13 +463,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatPanel(SessionState state) {
-    final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
+    final isProcessing = state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool;
     final messages = state.history;
     final itemCount = messages.length + (isProcessing ? 1 : 0);
 
     return Column(
       children: [
-        if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
+        if (state.status == ActivityStatus.error && state.errorMessage != null)
+          _ErrorBanner(message: state.errorMessage!),
         Expanded(
           child: ListView.builder(
             // Reversed ListView: items are built from bottom to top
@@ -437,7 +485,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
               if (reversedIndex >= messages.length) {
                 // This is the processing indicator (last item visually)
-                if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
+                if (state.status == ActivityStatus.calling_tool &&
+                    state.activeTool != null) {
                   return _ToolExecutionBubble(
                     toolName: state.activeTool!.name,
                   );
@@ -616,7 +665,8 @@ class _MessageBubbleState extends State<_MessageBubble> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
-          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             // Role badge
             _RoleBadge(role: widget.message.role),
@@ -625,7 +675,8 @@ class _MessageBubbleState extends State<_MessageBubble> {
             ...widget.message.content.asMap().entries.map((entry) {
               final index = entry.key;
               final content = entry.value;
-              final isExpanded = _expandedContent[index] ?? _defaultExpanded(content);
+              final isExpanded =
+                  _expandedContent[index] ?? _defaultExpanded(content);
               return _ContentBlock(
                 content: content,
                 isUser: isUser,
@@ -721,7 +772,9 @@ class _ContentBlock extends StatelessWidget {
         ),
       // Show images for system messages (chart snapshots), hide for assistant
       ImageContent(:final data, :final mediaType) =>
-        messageRole == MessageRole.assistant ? const SizedBox.shrink() : _ImageBlock(data: data, mediaType: mediaType),
+        messageRole == MessageRole.assistant
+            ? const SizedBox.shrink()
+            : _ImageBlock(data: data, mediaType: mediaType),
       BinaryContent(:final filename) => _CollapsibleBlock(
           typeLabel: 'File',
           summary: filename ?? 'Binary data',
@@ -827,7 +880,8 @@ class _CollapsibleBlock extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: isError ? Colors.red.shade700 : Colors.grey.shade600,
+                      color:
+                          isError ? Colors.red.shade700 : Colors.grey.shade600,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1003,7 +1057,8 @@ class _ImageBlock extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       mediaType,
-                      style: const TextStyle(fontSize: 10, color: Colors.white70),
+                      style:
+                          const TextStyle(fontSize: 10, color: Colors.white70),
                     ),
                   ],
                 ),

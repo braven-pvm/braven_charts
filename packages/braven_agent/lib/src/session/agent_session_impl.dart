@@ -62,10 +62,12 @@ class AgentSessionImpl implements AgentSession {
   final String _systemPrompt;
 
   /// State notifier for reactive UI updates.
-  final ValueNotifier<SessionState> _state = ValueNotifier<SessionState>(const SessionState());
+  final ValueNotifier<SessionState> _state =
+      ValueNotifier<SessionState>(const SessionState());
 
   /// Stream controller for emitting events.
-  final StreamController<AgentEvent> _eventController = StreamController<AgentEvent>.broadcast();
+  final StreamController<AgentEvent> _eventController =
+      StreamController<AgentEvent>.broadcast();
 
   /// UUID generator for message IDs.
   static const Uuid _uuid = Uuid();
@@ -142,7 +144,8 @@ class AgentSessionImpl implements AgentSession {
         );
 
         // Check for tool use in response
-        final toolUseContents = response.message.content.whereType<ToolUseContent>().toList();
+        final toolUseContents =
+            response.message.content.whereType<ToolUseContent>().toList();
 
         if (toolUseContents.isNotEmpty) {
           // Add assistant message with tool use to history
@@ -299,7 +302,9 @@ class AgentSessionImpl implements AgentSession {
 
   /// Handles errors by setting state and emitting events.
   void _handleError(Object error) {
-    final message = error is Exception ? error.toString().replaceFirst('Exception: ', '') : error.toString();
+    final message = error is Exception
+        ? error.toString().replaceFirst('Exception: ', '')
+        : error.toString();
 
     _state.value = _state.value.copyWithCleared(
       status: ActivityStatus.error,

@@ -66,7 +66,8 @@ abstract class ChartAgentInterface {
   ///
   /// Use [ChartToolSchema.toAnthropicFormat()] or [ChartToolSchema.toOpenAIFormat()]
   /// depending on your LLM provider.
-  List<Map<String, dynamic>> get toolDefinitions => ChartToolSchema.toAnthropicFormat();
+  List<Map<String, dynamic>> get toolDefinitions =>
+      ChartToolSchema.toAnthropicFormat();
 
   /// Processes a tool call from the LLM and returns a chart widget if applicable.
   ///
@@ -130,7 +131,8 @@ class DefaultChartAgent implements ChartAgentInterface {
   ChartModifiedCallback? onChartModified;
 
   @override
-  List<Map<String, dynamic>> get toolDefinitions => ChartToolSchema.toAnthropicFormat();
+  List<Map<String, dynamic>> get toolDefinitions =>
+      ChartToolSchema.toAnthropicFormat();
 
   @override
   Future<Widget?> processToolCall(
@@ -147,7 +149,8 @@ class DefaultChartAgent implements ChartAgentInterface {
 
   Widget _handleCreateChart(Map<String, dynamic> args) {
     final result = ChartConfigBuilder.fromJson(args);
-    final chartId = result.chartId ?? 'chart_${DateTime.now().millisecondsSinceEpoch}';
+    final chartId =
+        result.chartId ?? 'chart_${DateTime.now().millisecondsSinceEpoch}';
 
     _charts[chartId] = result;
 

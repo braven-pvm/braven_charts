@@ -191,16 +191,26 @@ class SeriesConfig with EquatableMixin {
   factory SeriesConfig.fromJson(Map<String, dynamic> json) {
     return SeriesConfig(
       id: json['id'] as String,
-      type: json['type'] != null ? ChartType.values.byName(json['type'] as String) : ChartType.line,
+      type: json['type'] != null
+          ? ChartType.values.byName(json['type'] as String)
+          : ChartType.line,
       name: json['name'] as String?,
-      data: (json['data'] as List<dynamic>).map((e) => DataPoint.fromJson(e as Map<String, dynamic>)).toList(),
+      data: (json['data'] as List<dynamic>)
+          .map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
+          .toList(),
       color: json['color'] as String?,
       strokeWidth: (json['strokeWidth'] as num?)?.toDouble() ?? 2.0,
-      strokeDash: (json['strokeDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
+      strokeDash: (json['strokeDash'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
       fillOpacity: (json['fillOpacity'] as num?)?.toDouble() ?? 0.0,
-      markerStyle: json['markerStyle'] != null ? MarkerStyle.values.byName(json['markerStyle'] as String) : MarkerStyle.none,
+      markerStyle: json['markerStyle'] != null
+          ? MarkerStyle.values.byName(json['markerStyle'] as String)
+          : MarkerStyle.none,
       markerSize: (json['markerSize'] as num?)?.toDouble() ?? 4.0,
-      interpolation: json['interpolation'] != null ? Interpolation.values.byName(json['interpolation'] as String) : Interpolation.linear,
+      interpolation: json['interpolation'] != null
+          ? Interpolation.values.byName(json['interpolation'] as String)
+          : Interpolation.linear,
       tension: (json['tension'] as num?)?.toDouble() ?? 0.4,
       showPoints: json['showPoints'] as bool? ?? false,
       yAxisPosition: json['yAxisPosition'] as String?,
@@ -350,5 +360,6 @@ class SeriesConfig with EquatableMixin {
       ];
 
   @override
-  String toString() => 'SeriesConfig(id: $id, name: $name, data: ${data.length} points)';
+  String toString() =>
+      'SeriesConfig(id: $id, name: $name, data: ${data.length} points)';
 }

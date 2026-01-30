@@ -243,7 +243,8 @@ void main() {
   // ============================================================
   group('AgentSessionImpl', () {
     group('construction', () {
-      test('accepts required dependencies: LLMProvider, tools, systemPrompt', () {
+      test('accepts required dependencies: LLMProvider, tools, systemPrompt',
+          () {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool();
@@ -502,7 +503,8 @@ void main() {
         sub2.cancel();
       });
 
-      test('events stream allows listener after previous listener cancelled', () async {
+      test('events stream allows listener after previous listener cancelled',
+          () async {
         // Arrange
         final mockProvider = MockLLMProvider();
         final session = AgentSessionImpl(
@@ -587,12 +589,16 @@ void main() {
         expect(history.length, greaterThanOrEqualTo(1));
 
         // Find the user message
-        final userMessages = history.where((m) => m.role == MessageRole.user).toList();
+        final userMessages =
+            history.where((m) => m.role == MessageRole.user).toList();
         expect(userMessages, isNotEmpty);
 
         // Check the prompt is in the content
         final userMessage = userMessages.first;
-        final textContent = userMessage.content.whereType<TextContent>().map((c) => c.text).join();
+        final textContent = userMessage.content
+            .whereType<TextContent>()
+            .map((c) => c.text)
+            .join();
         expect(textContent, contains('Create a line chart'));
       });
 
@@ -646,7 +652,8 @@ void main() {
 
         // Assert
         final history = session.state.value.history;
-        final assistantMessages = history.where((m) => m.role == MessageRole.assistant).toList();
+        final assistantMessages =
+            history.where((m) => m.role == MessageRole.assistant).toList();
         expect(assistantMessages, isNotEmpty);
       });
 
@@ -1019,7 +1026,8 @@ void main() {
     // Chart Creation Tests
     // ============================================================
     group('chart creation', () {
-      test('updates activeChart when tool result contains ChartConfiguration', () async {
+      test('updates activeChart when tool result contains ChartConfiguration',
+          () async {
         // Arrange
         final mockProvider = MockLLMProvider();
         final chart = createTestChart(id: 'new_chart', title: 'New Chart');

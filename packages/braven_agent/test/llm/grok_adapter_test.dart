@@ -10,12 +10,14 @@ import 'package:http/testing.dart';
 
 /// Mock HTTP client that supports streaming responses.
 class StreamingMockClient extends http.BaseClient {
-  final Future<http.StreamedResponse> Function(http.BaseRequest request) _handler;
+  final Future<http.StreamedResponse> Function(http.BaseRequest request)
+      _handler;
 
   StreamingMockClient(this._handler);
 
   @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) => _handler(request);
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      _handler(request);
 }
 
 /// Mock tool for testing tool conversion.
@@ -157,7 +159,8 @@ void main() {
 
         // Verify headers
         expect(capturedHeaders?['Content-Type'], equals('application/json'));
-        expect(capturedHeaders?['Authorization'], equals('Bearer test-api-key'));
+        expect(
+            capturedHeaders?['Authorization'], equals('Bearer test-api-key'));
 
         // Verify body structure
         expect(capturedBody?['model'], equals('grok-3'));
@@ -212,7 +215,8 @@ void main() {
         expect(response.message.role, equals(MessageRole.assistant));
         expect(response.message.content.length, equals(1));
         expect(response.message.content.first, isA<TextContent>());
-        expect((response.message.content.first as TextContent).text, equals('Here is your response.'));
+        expect((response.message.content.first as TextContent).text,
+            equals('Here is your response.'));
         expect(response.inputTokens, equals(15));
         expect(response.outputTokens, equals(8));
         expect(response.stopReason, equals('end_turn'));
@@ -324,7 +328,8 @@ void main() {
         final tool = tools.first as Map<String, dynamic>;
         expect(tool['type'], equals('function'));
         expect(tool['function']['name'], equals('test_tool'));
-        expect(tool['function']['description'], equals('A test tool for unit testing.'));
+        expect(tool['function']['description'],
+            equals('A test tool for unit testing.'));
         expect(capturedBody?['tool_choice'], equals('auto'));
       });
 
@@ -459,7 +464,8 @@ void main() {
         expect(content[0]['type'], equals('text'));
         expect(content[0]['text'], equals('What is in this image?'));
         expect(content[1]['type'], equals('image_url'));
-        expect(content[1]['image_url']['url'], equals('data:image/png;base64,base64data'));
+        expect(content[1]['image_url']['url'],
+            equals('data:image/png;base64,base64data'));
       });
 
       test('handles provider options', () async {
@@ -542,7 +548,8 @@ void main() {
               ),
             ],
           ),
-          throwsA(predicate((e) => e is Exception && e.toString().contains('Invalid API key'))),
+          throwsA(predicate((e) =>
+              e is Exception && e.toString().contains('Invalid API key'))),
         );
       });
 
@@ -573,7 +580,8 @@ void main() {
               ),
             ],
           ),
-          throwsA(predicate((e) => e is Exception && e.toString().contains('Rate limit exceeded'))),
+          throwsA(predicate((e) =>
+              e is Exception && e.toString().contains('Rate limit exceeded'))),
         );
       });
 
@@ -621,7 +629,8 @@ void main() {
           ],
         );
 
-        expect(capturedUrl, equals('https://custom.api.com/v1/chat/completions'));
+        expect(
+            capturedUrl, equals('https://custom.api.com/v1/chat/completions'));
       });
 
       test('uses default model when config has Anthropic default', () async {
@@ -676,9 +685,12 @@ void main() {
         final mockClient = StreamingMockClient((request) async {
           // Schedule adding data after returning
           Future.microtask(() async {
-            streamController.add(utf8.encode('data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n'));
-            streamController.add(utf8.encode('data: {"choices":[{"delta":{"content":" world"},"finish_reason":null}]}\n\n'));
-            streamController.add(utf8.encode('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
+            streamController.add(utf8.encode(
+                'data: {"choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}\n\n'));
+            streamController.add(utf8.encode(
+                'data: {"choices":[{"delta":{"content":" world"},"finish_reason":null}]}\n\n'));
+            streamController.add(utf8.encode(
+                'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'));
             streamController.add(utf8.encode('data: [DONE]\n\n'));
             await streamController.close();
           });

@@ -76,7 +76,8 @@ class GrokAdapter implements LLMProvider {
   ///
   /// The [config] must contain a valid API key.
   /// An optional [client] can be provided for testing purposes.
-  GrokAdapter(this._config, {http.Client? client}) : _client = client ?? http.Client();
+  GrokAdapter(this._config, {http.Client? client})
+      : _client = client ?? http.Client();
 
   @override
   String get id => 'grok';
@@ -154,7 +155,8 @@ class GrokAdapter implements LLMProvider {
       // Track current tool call state for streaming
       final toolCallBuffers = <int, _ToolCallBuffer>{};
 
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
         buffer += chunk;
 
         // Process complete SSE lines
@@ -225,7 +227,9 @@ class GrokAdapter implements LLMProvider {
     ];
 
     final body = <String, dynamic>{
-      'model': effectiveConfig.model == LLMConfig.defaultModel ? defaultModel : effectiveConfig.model,
+      'model': effectiveConfig.model == LLMConfig.defaultModel
+          ? defaultModel
+          : effectiveConfig.model,
       'messages': messages,
       'max_tokens': effectiveConfig.maxTokens,
       'temperature': effectiveConfig.temperature,
@@ -579,7 +583,8 @@ class GrokAdapter implements LLMProvider {
 
     // Check for auth errors
     if (response.statusCode == 401 || response.statusCode == 403) {
-      throw Exception('Invalid API key. Please check your Grok API key and try again.');
+      throw Exception(
+          'Invalid API key. Please check your Grok API key and try again.');
     }
 
     throw Exception('Grok API error: $message');
@@ -599,7 +604,8 @@ class GrokAdapter implements LLMProvider {
 
     // Check for auth errors
     if (statusCode == 401 || statusCode == 403) {
-      throw Exception('Invalid API key. Please check your Grok API key and try again.');
+      throw Exception(
+          'Invalid API key. Please check your Grok API key and try again.');
     }
 
     throw Exception('Grok API error: $message');

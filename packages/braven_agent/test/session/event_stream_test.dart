@@ -189,7 +189,8 @@ Future<void> flushEventQueue() => Future<void>.delayed(Duration.zero);
 
 void main() {
   group('AgentSessionImpl event stream', () {
-    test('emits ThinkingEvent with description when transform starts', () async {
+    test('emits ThinkingEvent with description when transform starts',
+        () async {
       final mockProvider = MockLLMProvider();
       final session = AgentSessionImpl(
         llmProvider: mockProvider,
@@ -262,7 +263,8 @@ void main() {
       expect(endEvents.first.success, isTrue);
     });
 
-    test('emits ToolEndEvent with success=false when tool returns error', () async {
+    test('emits ToolEndEvent with success=false when tool returns error',
+        () async {
       final mockProvider = MockLLMProvider();
       final mockTool = MockAgentTool(name: 'create_chart');
       mockTool.nextResult = const ToolResult(
@@ -388,7 +390,8 @@ void main() {
       expect(createEvents, isEmpty);
     });
 
-    test('emits ErrorEvent with message and originalError on LLM error', () async {
+    test('emits ErrorEvent with message and originalError on LLM error',
+        () async {
       final mockProvider = MockLLMProvider()
         ..shouldThrow = true
         ..nextError = Exception('Boom');
@@ -489,7 +492,10 @@ void main() {
       await flushEventQueue();
 
       final orderedTypes = events
-          .where((event) => event is ThinkingEvent || event is ToolStartEvent || event is ToolEndEvent)
+          .where((event) =>
+              event is ThinkingEvent ||
+              event is ToolStartEvent ||
+              event is ToolEndEvent)
           .map((event) => event.runtimeType)
           .toList();
 
@@ -505,7 +511,8 @@ void main() {
       );
     });
 
-    test('ToolStartEvent and ToolEndEvent carry correct toolName per tool', () async {
+    test('ToolStartEvent and ToolEndEvent carry correct toolName per tool',
+        () async {
       final mockProvider = MockLLMProvider();
       final createTool = MockAgentTool(name: 'create_chart');
       final modifyTool = MockAgentTool(name: 'modify_chart');

@@ -65,7 +65,8 @@ class ChartSnapshotService {
     double pixelRatio = 2.0,
   }) async {
     try {
-      final boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
 
       if (boundary == null) {
         return null;
@@ -164,7 +165,8 @@ class ChartSnapshotWrapperState extends State<ChartSnapshotWrapper> {
   /// Returns `null` if capture fails.
   Future<Uint8List?> captureBytes({double pixelRatio = 2.0}) async {
     try {
-      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = _boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
 
       if (boundary == null) return null;
 

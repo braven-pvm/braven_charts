@@ -129,7 +129,10 @@ class AnnotationConfig with EquatableMixin {
     if (seriesId != null) {
       seriesId = seriesId.trim();
       // Remove trailing punctuation that LLMs sometimes include
-      while (seriesId!.isNotEmpty && (seriesId.endsWith(',') || seriesId.endsWith('.') || seriesId.endsWith(';'))) {
+      while (seriesId!.isNotEmpty &&
+          (seriesId.endsWith(',') ||
+              seriesId.endsWith('.') ||
+              seriesId.endsWith(';'))) {
         seriesId = seriesId.substring(0, seriesId.length - 1).trim();
       }
       if (seriesId.isEmpty) seriesId = null;
@@ -138,7 +141,8 @@ class AnnotationConfig with EquatableMixin {
       // Pattern: "usage','value':1.4," or "usage","value":1.4
       if (seriesId != null && seriesId.contains('value')) {
         // Try to extract value from malformed string like: "usage','value':1.4,"
-        final valueMatch = RegExp(r'''['":]?value['":]?\s*[:=]?\s*([0-9.]+)''').firstMatch(seriesId);
+        final valueMatch = RegExp(r'''['":]?value['":]?\s*[:=]?\s*([0-9.]+)''')
+            .firstMatch(seriesId);
         if (valueMatch != null && value == null) {
           final extractedValue = double.tryParse(valueMatch.group(1)!);
           if (extractedValue != null) {
@@ -149,7 +153,11 @@ class AnnotationConfig with EquatableMixin {
 
       // Reject obviously malformed seriesId (contains JSON syntax)
       if (seriesId != null &&
-          (seriesId.contains('"') || seriesId.contains("'") || seriesId.contains(':') || seriesId.contains('{') || seriesId.contains('}'))) {
+          (seriesId.contains('"') ||
+              seriesId.contains("'") ||
+              seriesId.contains(':') ||
+              seriesId.contains('{') ||
+              seriesId.contains('}'))) {
         // This is malformed JSON - extract just the first word as a best-effort
         final match = RegExp(r'^[a-zA-Z0-9_-]+').firstMatch(seriesId);
         seriesId = match?.group(0);
@@ -158,13 +166,17 @@ class AnnotationConfig with EquatableMixin {
 
     return AnnotationConfig(
       type: AnnotationType.values.byName(json['type'] as String),
-      orientation: json['orientation'] != null ? Orientation.values.byName(json['orientation'] as String) : null,
+      orientation: json['orientation'] != null
+          ? Orientation.values.byName(json['orientation'] as String)
+          : null,
       value: value,
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
-      position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
+      position: json['position'] != null
+          ? AnnotationPosition.values.byName(json['position'] as String)
+          : null,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
