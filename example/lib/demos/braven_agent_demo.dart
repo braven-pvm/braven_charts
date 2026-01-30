@@ -242,7 +242,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(SessionState state) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool) {
+    if (text.isEmpty ||
+        state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool) {
       return;
     }
 
@@ -267,7 +269,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: activeChart == null ? const _ChartPlaceholder() : const ChartRenderer().render(activeChart),
+              child: activeChart == null
+                  ? const _ChartPlaceholder()
+                  : const ChartRenderer().render(activeChart),
             ),
           ],
         ),
@@ -276,14 +280,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatPanel(SessionState state) {
-    final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
+    final isProcessing = state.status == ActivityStatus.thinking ||
+        state.status == ActivityStatus.calling_tool;
     final messages = state.history;
     final itemCount = messages.length + (isProcessing ? 1 : 0);
     _maybeScroll(itemCount);
 
     return Column(
       children: [
-        if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
+        if (state.status == ActivityStatus.error && state.errorMessage != null)
+          _ErrorBanner(message: state.errorMessage!),
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -291,7 +297,8 @@ class _ChatScreenState extends State<ChatScreen> {
             itemCount: itemCount,
             itemBuilder: (context, index) {
               if (index >= messages.length) {
-                if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
+                if (state.status == ActivityStatus.calling_tool &&
+                    state.activeTool != null) {
                   return _ToolExecutionBubble(
                     toolName: state.activeTool!.name,
                   );

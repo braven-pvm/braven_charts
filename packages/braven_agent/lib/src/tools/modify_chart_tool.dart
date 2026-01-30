@@ -18,6 +18,11 @@ import 'tool_result.dart';
 /// new charts from scratch, ModifyChartTool updates specific properties while
 /// preserving unchanged ones.
 ///
+/// Register this tool on an [AgentSessionImpl] so the LLM can update the
+/// current chart after it has been created. It is intended for partial
+/// updates such as changing titles, adding/removing series, or tweaking
+/// styling/interaction options.
+///
 /// The tool uses a callback architecture where it queries the active chart
 /// from the session at execution time, ensuring it always works with the
 /// current chart state.
@@ -53,6 +58,9 @@ import 'tool_result.dart';
 /// - `output`: String describing the modification result
 /// - `data`: [ChartConfiguration] object with applied modifications
 /// - `isError`: true if no active chart exists or input validation fails
+///
+/// When no active chart is available, the tool returns a helpful error
+/// explaining that `create_chart` must be called first.
 class ModifyChartTool extends AgentTool {
   /// Default color palette for series that don't specify their own color.
   static const List<String> _defaultColors = [

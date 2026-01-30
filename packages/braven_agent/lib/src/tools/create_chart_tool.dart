@@ -14,8 +14,13 @@ import 'tool_result.dart';
 
 /// Tool for creating chart configurations from LLM input.
 ///
-/// This tool allows the LLM to create interactive charts by providing
+/// This tool lets an LLM produce a complete [ChartConfiguration] by supplying
 /// structured input including data series, chart type, and styling options.
+/// It is typically registered on an [AgentSessionImpl] so the model can call
+/// it during `transform()`.
+///
+/// Use this tool when there is no active chart yet or when you want a
+/// full replacement configuration from a prompt.
 ///
 /// ## Example Usage (LLM perspective)
 ///
@@ -42,6 +47,9 @@ import 'tool_result.dart';
 /// - `output`: JSON string of the created chart configuration
 /// - `data`: [ChartConfiguration] object for programmatic use
 /// - `isError`: true if input validation fails
+///
+/// This tool validates required fields and returns user-friendly errors
+/// instead of throwing exceptions.
 class CreateChartTool extends AgentTool {
   /// Default color palette for series that don't specify their own color.
   static const List<String> _defaultColors = [

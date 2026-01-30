@@ -7,8 +7,19 @@ import '../models/models.dart' as models;
 
 /// Renders chart configurations into Flutter widgets.
 ///
-/// Converts [models.ChartConfiguration] models from the braven_agent package
-/// into [charts.BravenChartPlus] widgets using the braven_charts library.
+/// Converts [models.ChartConfiguration] objects from the braven_agent package
+/// into [charts.BravenChartPlus] widgets provided by the braven_charts library.
+/// This is the bridge between LLM-produced configuration models and on-screen
+/// rendering.
+///
+/// The renderer accepts two input shapes:
+/// - A strongly typed [models.ChartConfiguration]
+/// - A JSON-style [Map<String, dynamic>] that can be parsed into a config
+///
+/// If parsing fails or the shape is unsupported, a friendly error widget is
+/// returned instead of throwing.
+///
+/// Supported chart types: line, area, bar, scatter.
 ///
 /// ## Example
 ///
@@ -16,12 +27,6 @@ import '../models/models.dart' as models;
 /// final renderer = const ChartRenderer();
 /// final widget = renderer.render(chartConfiguration);
 /// ```
-///
-/// The renderer supports:
-/// - Direct [models.ChartConfiguration] objects
-/// - JSON maps that will be parsed into [models.ChartConfiguration]
-///
-/// All chart types are supported: line, area, bar, and scatter.
 class ChartRenderer {
   /// Creates a const [ChartRenderer].
   const ChartRenderer();
