@@ -68,7 +68,6 @@ class ChartSnapshotService {
       final boundary = boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
 
       if (boundary == null) {
-        debugPrint('ChartSnapshotService: Boundary not found');
         return null;
       }
 
@@ -87,7 +86,6 @@ class ChartSnapshotService {
         mediaType: 'image/png',
       );
     } catch (e) {
-      debugPrint('ChartSnapshotService: Failed to capture from boundary: $e');
       return null;
     }
   }
@@ -114,10 +112,6 @@ class ChartSnapshotService {
   }) async {
     // Off-screen rendering is complex and unreliable
     // Return null and let the caller use captureFromBoundary instead
-    debugPrint(
-      'ChartSnapshotService: Off-screen capture not supported. '
-      'Use captureFromBoundary() with a mounted RepaintBoundary instead.',
-    );
     return null;
   }
 }
@@ -180,7 +174,6 @@ class ChartSnapshotWrapperState extends State<ChartSnapshotWrapper> {
 
       return byteData?.buffer.asUint8List();
     } catch (e) {
-      debugPrint('ChartSnapshotWrapper: Capture failed: $e');
       return null;
     }
   }

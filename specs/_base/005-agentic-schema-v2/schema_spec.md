@@ -87,7 +87,7 @@ When `normalizationMode: "none"` or `"auto"`:
 {
   "id": "string (required, unique within chart)",
   "name": "string (display name)",
-  "type": "line" | "area" | "bar" | "scatter",
+  "type": "line" | "area" | "bar" | "scatter" | "step",
 
   "data": [
     { "x": "number", "y": "number" }
@@ -535,6 +535,8 @@ Add a series and remove another:
 | V003 | Duplicate series `id`                                         | Error: series IDs must be unique                     |
 | V004 | Duplicate annotation `id`                                     | Error: annotation IDs must be unique                 |
 
+**Note:** V005-V009 reserved for future chart-level validation rules.
+
 ### Series Validation (on modify)
 
 | Rule | Condition                                        | Action                                                           |
@@ -542,6 +544,8 @@ Add a series and remove another:
 | V010 | `update.series[].id` not found in existing chart | Error: cannot update non-existent series "{id}"                  |
 | V011 | `remove.series` contains non-existent ID         | Error: cannot remove non-existent series "{id}"                  |
 | V012 | `add.series[].id` already exists                 | Error: series "{id}" already exists, use update.series to modify |
+
+**Note:** V013-V019 reserved for future series validation rules.
 
 ### Annotation Validation
 
@@ -552,6 +556,8 @@ Add a series and remove another:
 | V020 | `update.annotations[].id` not found in chart  | Error: cannot update non-existent annotation "{id}"          |
 | V021 | `remove.annotations` contains non-existent ID | Error: cannot remove non-existent annotation "{id}"          |
 | V022 | Agent supplies `id` on create/add             | Warning: id is system-generated, supplied id will be ignored |
+
+**Note:** V023-V029 reserved for future annotation ID validation rules.
 
 **seriesId Validation (ALWAYS - when seriesId is provided):**
 
@@ -567,6 +573,8 @@ Add a series and remove another:
 | V032 | `type: "marker"` without `seriesId`                                                                      | Error: marker annotation requires seriesId                          |
 | V033 | `type: "referenceLine"` + `orientation: "horizontal"` + `normalizationMode: "perSeries"` + no `seriesId` | Error: horizontal referenceLine requires seriesId in perSeries mode |
 | V034 | `type: "zone"` + `orientation: "horizontal"` + `normalizationMode: "perSeries"` + no `seriesId`          | Error: horizontal zone requires seriesId in perSeries mode          |
+
+**Note:** V035-V039 reserved for future reference validation rules.
 
 **Type-specific Validation:**
 
@@ -599,8 +607,10 @@ Add a series and remove another:
 
 **Backward compatibility:**
 
-- v1 flat fields will be supported during transition with deprecation warnings
-- After transition period, v1 fields will be removed
+- ⚠️ **BREAKING CHANGE**: No backward compatibility. This is a clean break.
+- v1 flat fields (`yAxisPosition`, `yAxisLabel`, etc.) are NOT supported
+- v1 reference patterns (`yAxisId`, `yAxes[]`) are NOT supported
+- Requires major version bump (see spec.md Assumptions section)
 
 ---
 

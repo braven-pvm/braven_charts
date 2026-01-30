@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -76,8 +74,7 @@ class AgentService {
             );
             _appendMessage(streamingMessage);
           } else {
-            streamingMessage =
-                streamingMessage.copyWith(textContent: streamingBuffer);
+            streamingMessage = streamingMessage.copyWith(textContent: streamingBuffer);
             _replaceMessage(streamingMessage);
           }
         }
@@ -118,18 +115,12 @@ class AgentService {
         if (!responseAlreadyAdded) {
           _appendMessage(response);
         }
-        responseAlreadyAdded =
-            false; // Reset for next iteration - subsequent responses need to be added
+        responseAlreadyAdded = false; // Reset for next iteration - subsequent responses need to be added
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
-          // DEBUG: Log tool call input from agent
-          debugPrint('=== TOOL CALL: ${call.toolName} ===');
-          _debugPrintJson('Tool input', call.arguments);
-
           try {
-            final result =
-                await _toolRegistry.execute(call.toolName, call.arguments);
+            final result = await _toolRegistry.execute(call.toolName, call.arguments);
 
             String? createdChartId;
 
@@ -139,9 +130,7 @@ class AgentService {
 
               // CRITICAL: Ensure the chart object has the ID set
               // This is essential for in-place modifications to work correctly
-              final chartWithId = result.id == null
-                  ? result.copyWith(id: createdChartId)
-                  : result;
+              final chartWithId = result.id == null ? result.copyWith(id: createdChartId) : result;
 
               // Store in chartStore so ModifyChartTool can access it
               chartStore.store(chartWithId, id: createdChartId);
@@ -160,11 +149,9 @@ class AgentService {
               toolResults.add(result);
             } else {
               // CRITICAL: If result is ChartConfiguration, use chartWithId (with ID set), not original result
-              final resultToStore =
-                  (result is ChartConfiguration && createdChartId != null)
-                      ? chartStore.get(createdChartId) ??
-                          result // Get the version with ID from chartStore
-                      : result;
+              final resultToStore = (result is ChartConfiguration && createdChartId != null)
+                  ? chartStore.get(createdChartId) ?? result // Get the version with ID from chartStore
+                  : result;
               toolResults.add(
                 ToolResult(
                   toolCallId: call.id,
@@ -173,16 +160,10 @@ class AgentService {
                 ),
               );
             }
-          } catch (e, stackTrace) {
-            // CRITICAL: Always add a tool_result even on error
+          } catch (e) {
+            // Always add a tool_result even on error
             // The API requires every tool_use to have a corresponding tool_result
-            // This is NOT hiding errors - it's proper LLM tool protocol:
-            // 1. Log full details for developers
-            // 2. Return error to LLM so it can respond appropriately
-            debugPrint('=== TOOL ERROR: ${call.toolName} ===');
-            debugPrint('Error: $e');
-            debugPrint('Stack trace: $stackTrace');
-            debugPrint('Tool arguments: ${call.arguments}');
+            // Return error to LLM so it can respond appropriately
             toolResults.add(
               ToolResult(
                 toolCallId: call.id,
@@ -229,10 +210,8 @@ class AgentService {
     final isUser = message.role == MessageRole.user;
     conversation.value = current.copyWith(
       messages: updatedMessages,
-      totalInputTokens:
-          isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
-      totalOutputTokens:
-          isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
+      totalInputTokens: isUser ? current.totalInputTokens + 1 : current.totalInputTokens,
+      totalOutputTokens: isUser ? current.totalOutputTokens : current.totalOutputTokens + 1,
     );
   }
 
@@ -263,18 +242,4 @@ class AgentService {
 
   /// Whether redo is possible
   bool get canRedoChart => history.canRedo;
-
-  /// Debug helper: print JSON with formatting
-  void _debugPrintJson(String label, Map<String, dynamic> json) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(json);
-      debugPrint('$label:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('$label: [Failed to serialize: $e]');
-    }
-  }
 }

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:braven_charts/braven_charts.dart' as charts;
 import 'package:flutter/material.dart';
 
@@ -57,10 +55,6 @@ class ChartRenderer {
   }
 
   Widget _renderConfiguration(models.ChartConfiguration config) {
-    // DEBUG: Log chart configuration being rendered
-    debugPrint('=== RENDERING CHART ===');
-    _debugPrintChartJson(config);
-
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
@@ -96,7 +90,6 @@ class ChartRenderer {
           final sharedAxis = yAxesLookup[seriesConfig.yAxisId!];
           if (sharedAxis != null) {
             yAxisConfig = _convertYAxisConfig(sharedAxis);
-            debugPrint('Resolved yAxisId "${seriesConfig.yAxisId}" to axis: ${sharedAxis.label}');
           }
         }
 
@@ -135,14 +128,6 @@ class ChartRenderer {
 
       // Convert AnnotationConfig to ChartAnnotation
       final annotations = _convertAnnotations(config.annotations);
-
-      // DEBUG: Log annotation conversion
-      debugPrint('=== ANNOTATION CONVERSION ===');
-      debugPrint('Input annotations: ${config.annotations.length}');
-      debugPrint('Converted annotations: ${annotations.length}');
-      for (final a in annotations) {
-        debugPrint('  - ${a.runtimeType}: ${a.id}');
-      }
 
       // Build X-axis config - wire all properties from config
       // Explicit min/max values are passed through verbatim (no padding applied)
@@ -387,12 +372,6 @@ class ChartRenderer {
         final isHorizontal = config.orientation != models.Orientation.vertical;
         final value = config.value;
         final lineWidth = config.lineWidth ?? 2.0;
-
-        // Warn if value is missing - LLM should always provide this
-        if (value == null) {
-          debugPrint('WARNING: referenceLine annotation missing "value" property - defaulting to 0.0. '
-              'LLM should provide a value in the same units as the target series data.');
-        }
 
         return charts.ThresholdAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
@@ -702,19 +681,5 @@ class ChartRenderer {
         style: TextStyle(fontSize: 14, color: Colors.red.shade900),
       ),
     );
-  }
-
-  /// Debug helper: print chart configuration as JSON
-  void _debugPrintChartJson(models.ChartConfiguration config) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(config.toJson());
-      debugPrint('Chart JSON:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('Chart JSON: [Failed to serialize: $e]');
-    }
   }
 }

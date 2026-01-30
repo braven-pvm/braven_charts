@@ -17,7 +17,7 @@ Complete redesign of the agentic chart schema to fix structural issues with Y-ax
 - New `get_chart` tool for querying chart state with IDs
 - Restructured `modify_chart` with explicit `update`/`add`/`remove` sections
 - Deep merge semantics for nested objects, replace for scalars and arrays
-- 44 validation rules (V001-V044) for schema correctness
+- 20 validation rules (V001-V044, with reserved ranges) for schema correctness
 
 ## Technical Context
 

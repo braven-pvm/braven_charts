@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/annotation_config.dart';
@@ -561,35 +560,13 @@ class CreateChartTool extends AgentTool {
         'required': ['prompt', 'series'],
       };
 
-  /// Helper to log tool errors with full context
+  /// Helper to return tool error result
   ToolResult _logError(String message, Map<String, dynamic> input) {
-    debugPrint('=== CREATE_CHART TOOL ERROR ===');
-    debugPrint('Error: $message');
-    debugPrint('Raw input JSON:');
-    try {
-      debugPrint(const JsonEncoder.withIndent('  ').convert(input));
-    } catch (e) {
-      debugPrint('Failed to encode input: $e');
-      debugPrint('Input type: ${input.runtimeType}');
-      debugPrint('Input keys: ${input.keys.toList()}');
-    }
-    debugPrint('=== END CREATE_CHART ERROR ===');
     return ToolResult(output: message, isError: true);
   }
 
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
-    // Log raw input for debugging
-    debugPrint('=== CREATE_CHART TOOL CALLED ===');
-    debugPrint('Raw input:');
-    try {
-      debugPrint(const JsonEncoder.withIndent('  ').convert(input));
-    } catch (e) {
-      debugPrint('Failed to encode input: $e');
-      debugPrint('Input type: ${input.runtimeType}');
-    }
-    debugPrint('================================');
-
     // Validate required fields
     final prompt = input['prompt'] as String?;
     if (prompt == null || prompt.isEmpty) {
@@ -667,20 +644,14 @@ class CreateChartTool extends AgentTool {
       series.add(SeriesConfig.fromJson(seriesMap));
     }
 
-    // Log parsed series IDs
-    debugPrint('Parsed series IDs: ${series.map((s) => s.id).toList()}');
-
     // Parse annotations if provided
     final annotations = <AnnotationConfig>[];
     final annotationsInput = input['annotations'] as List?;
     if (annotationsInput != null) {
-      debugPrint('Parsing ${annotationsInput.length} annotations...');
       for (int i = 0; i < annotationsInput.length; i++) {
         final annotationMap = annotationsInput[i];
-        debugPrint('Annotation $i raw: ${jsonEncode(annotationMap)}');
         final map = Map<String, dynamic>.from(annotationMap as Map);
         final parsed = AnnotationConfig.fromJson(map);
-        debugPrint('Annotation $i parsed: type=${parsed.type}, value=${parsed.value}, seriesId=${parsed.seriesId}');
         annotations.add(parsed);
       }
     }

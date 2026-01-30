@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
@@ -31,10 +29,6 @@ class ChartRenderer {
   }
 
   Widget _renderConfiguration(agentic.ChartConfiguration config) {
-    // DEBUG: Log chart configuration being rendered
-    debugPrint('=== RENDERING CHART ===');
-    _debugPrintChartJson(config);
-
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
@@ -79,13 +73,11 @@ class ChartRenderer {
         // Map to the appropriate concrete series type based on chart type
         // For dataPointMarkerRadius, fall back to markerSize if not explicitly set
         // This allows the LLM to use "markerSize" as a generic property
-        final effectiveMarkerRadius = seriesConfig.dataPointMarkerRadius ??
-            (seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null);
+        final effectiveMarkerRadius = seriesConfig.dataPointMarkerRadius ?? (seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null);
 
         // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
         // This improves UX: LLM setting markerSize expects markers to appear
-        final effectiveShowPoints =
-            seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+        final effectiveShowPoints = seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
 
         return _createSeriesForType(
           config.type,
@@ -270,8 +262,7 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   LegendStyle _buildLegendStyle(agentic.ChartConfiguration config) {
     // Theme for base style
-    final useDark = config.useDarkTheme == true ||
-        (config.theme?.toLowerCase() ?? 'light') == 'dark';
+    final useDark = config.useDarkTheme == true || (config.theme?.toLowerCase() ?? 'light') == 'dark';
     final baseStyle = useDark ? LegendStyle.dark : LegendStyle.light;
 
     // Check explicit legendPosition first
@@ -348,8 +339,7 @@ class ChartRenderer {
   ///
   /// When tooltip or crosshair is enabled, uses CrosshairDisplayMode.tracking
   /// which is required for perSeries normalization mode to work correctly.
-  InteractionConfig? _buildInteractionConfig(
-      agentic.ChartConfiguration config) {
+  InteractionConfig? _buildInteractionConfig(agentic.ChartConfiguration config) {
     if (config.interactions == null) {
       return null; // Let BravenChartPlus use its default
     }
@@ -376,9 +366,7 @@ class ChartRenderer {
       enableZoom: enableZoom,
       crosshair: CrosshairConfig(
         enabled: crosshairEnabled,
-        displayMode: useTrackingMode
-            ? CrosshairDisplayMode.tracking
-            : CrosshairDisplayMode.standard,
+        displayMode: useTrackingMode ? CrosshairDisplayMode.tracking : CrosshairDisplayMode.standard,
       ),
       tooltip: TooltipConfig(enabled: tooltipEnabled),
     );
@@ -430,8 +418,7 @@ class ChartRenderer {
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           axis: isHorizontal ? AnnotationAxis.y : AnnotationAxis.x,
           value: value,
-          seriesId:
-              config.seriesId, // Required for perSeries normalization mode
+          seriesId: config.seriesId, // Required for perSeries normalization mode
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,
@@ -737,19 +724,5 @@ class ChartRenderer {
         style: TextStyle(fontSize: 14, color: Colors.red.shade900),
       ),
     );
-  }
-
-  /// Debug helper: print chart configuration as JSON
-  void _debugPrintChartJson(agentic.ChartConfiguration config) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(config.toJson());
-      debugPrint('Chart JSON:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('Chart JSON: [Failed to serialize: $e]');
-    }
   }
 }

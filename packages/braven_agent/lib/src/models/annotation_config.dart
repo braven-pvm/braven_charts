@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 import 'enums.dart';
 
@@ -144,7 +143,6 @@ class AnnotationConfig with EquatableMixin {
           final extractedValue = double.tryParse(valueMatch.group(1)!);
           if (extractedValue != null) {
             value = extractedValue;
-            debugPrint('[AnnotationConfig] Recovered value=$value from malformed seriesId');
           }
         }
       }
@@ -155,9 +153,6 @@ class AnnotationConfig with EquatableMixin {
         // This is malformed JSON - extract just the first word as a best-effort
         final match = RegExp(r'^[a-zA-Z0-9_-]+').firstMatch(seriesId);
         seriesId = match?.group(0);
-        if (seriesId != null) {
-          debugPrint('[AnnotationConfig] Extracted seriesId="$seriesId" from malformed input');
-        }
       }
     }
 

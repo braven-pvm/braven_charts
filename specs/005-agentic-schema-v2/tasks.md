@@ -113,12 +113,16 @@
 - [ ] T042 [P] [US2] Write failing test for V010 error (update non-existent series) in `packages/braven_agent/test/validation/schema_validator_test.dart`
 - [ ] T043 [P] [US2] Write failing test for V011 error (remove non-existent series) in `packages/braven_agent/test/validation/schema_validator_test.dart`
 - [ ] T044 [P] [US2] Write failing test for V012 error (add duplicate series) in `packages/braven_agent/test/validation/schema_validator_test.dart`
-- [ ] T045 [P] [US2] Write failing test for V020-V022 annotation validation in `packages/braven_agent/test/validation/schema_validator_test.dart`
+- [ ] T045 [P] [US2] Write failing test for V020 error (update non-existent annotation) in `packages/braven_agent/test/validation/schema_validator_test.dart`
+- [ ] T045a [P] [US2] Write failing test for V021 error (remove non-existent annotation) in `packages/braven_agent/test/validation/schema_validator_test.dart`
+- [ ] T045b [P] [US2] Write failing test for V022 warning (agent-supplied annotation id ignored) in `packages/braven_agent/test/validation/schema_validator_test.dart`
 
 ### Implementation for User Story 2
 
 - [ ] T046 [US2] Implement V010-V012 (series modify validation) in `packages/braven_agent/lib/src/validation/schema_validator.dart`
-- [ ] T047 [US2] Implement V020-V022 (annotation modify validation) in `packages/braven_agent/lib/src/validation/schema_validator.dart`
+- [ ] T047 [US2] Implement V020 (update non-existent annotation) in `packages/braven_agent/lib/src/validation/schema_validator.dart`
+- [ ] T047a [US2] Implement V021 (remove non-existent annotation) in `packages/braven_agent/lib/src/validation/schema_validator.dart`
+- [ ] T047b [US2] Implement V022 (agent-supplied id warning) in `packages/braven_agent/lib/src/validation/schema_validator.dart`
 - [ ] T048 [US2] Restructure `modify_chart_tool.dart` input schema to use `update`/`add`/`remove` structure
 - [ ] T049 [US2] Implement remove operation handler in `packages/braven_agent/lib/src/tools/modify_chart_tool.dart`
 - [ ] T050 [US2] Implement add operation handler with UUID generation in `packages/braven_agent/lib/src/tools/modify_chart_tool.dart`
@@ -241,7 +245,7 @@
 - [ ] T103 Run `flutter analyze` on entire `lib/` directory - must show zero warnings
 - [ ] T104 Run `flutter analyze` on entire `packages/braven_agent/` directory - must show zero warnings
 - [ ] T105 Run full test suite: `flutter test test/ packages/braven_agent/test/`
-- [ ] T106 Verify all 44 validation rules (V001-V044) are implemented and tested
+- [ ] T106 Verify all 20 validation rules (V001-V044, with reserved ranges) are implemented and tested
 - [ ] T107 Run quickstart.md validation - execute all examples
 
 ---
@@ -329,25 +333,29 @@ wait
 
 | Metric                         | Value                    |
 | ------------------------------ | ------------------------ |
-| **Total Tasks**                | 107                      |
+| **Total Tasks**                | 111                      |
 | **Phase 1 (Setup)**            | 4 tasks                  |
 | **Phase 2 (Foundational)**     | 15 tasks                 |
 | **Phase 3 (US1 - Create)**     | 17 tasks                 |
-| **Phase 4 (US2 - Modify)**     | 21 tasks                 |
+| **Phase 4 (US2 - Modify)**     | 25 tasks                 |
 | **Phase 5 (US3 - Query)**      | 13 tasks                 |
 | **Phase 6 (US4 - Validation)** | 17 tasks                 |
 | **Phase 7 (US5 - Deep Merge)** | 8 tasks                  |
 | **Phase 8 (Integration)**      | 4 tasks                  |
 | **Phase 9 (Polish)**           | 8 tasks                  |
-| **Parallel Opportunities**     | 52 tasks marked [P]      |
+| **Parallel Opportunities**     | 54 tasks marked [P]      |
 | **MVP Scope**                  | US1 (Phase 3) - 17 tasks |
 
 ### Validation Rule Coverage
 
-All 44 validation rules (V001-V044) are covered:
+All 20 validation rules are covered:
 
-- V001-V004: Chart-level (US1)
-- V010-V012: Series modify (US2)
-- V020-V022: Annotation modify (US2)
-- V030-V034: seriesId validation (US4)
-- V040-V044: Type-specific (US4)
+- V001-V004: Chart-level validation (US1)
+- V005-V009: Reserved for future chart-level validation
+- V010-V012: Series modify validation (US2)
+- V013-V019: Reserved for future series validation
+- V020-V022: Annotation modify validation (US2)
+- V023-V029: Reserved for future annotation validation
+- V030-V034: seriesId reference validation (US4)
+- V035-V039: Reserved for future reference validation
+- V040-V044: Type-specific annotation validation (US4)

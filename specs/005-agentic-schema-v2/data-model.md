@@ -74,15 +74,15 @@ The root configuration object for a chart.
 
 Configuration for a single data series.
 
-| Field   | Type                | Required | Description                                          |
-| ------- | ------------------- | -------- | ---------------------------------------------------- |
-| `id`    | `string`            | Yes      | Unique identifier (agent-provided or auto-generated) |
-| `name`  | `string`            | No       | Display name for legend                              |
-| `type`  | `enum`              | No       | `line` (default), `area`, `bar`, `scatter`, `step`   |
-| `data`  | `DataPoint[]`       | Yes      | Array of data points                                 |
-| `color` | `string`            | No       | Series color (hex or named)                          |
-| `yAxis` | `YAxisConfig`       | No       | Per-series Y-axis configuration                      |
-| `style` | `SeriesStyleConfig` | No       | Line width, markers, etc.                            |
+| Field   | Type                | Required | Description                                        |
+| ------- | ------------------- | -------- | -------------------------------------------------- |
+| `id`    | `string`            | Yes      | Unique identifier (agent-provided, required)       |
+| `name`  | `string`            | No       | Display name for legend                            |
+| `type`  | `enum`              | No       | `line` (default), `area`, `bar`, `scatter`, `step` |
+| `data`  | `DataPoint[]`       | Yes      | Array of data points                               |
+| `color` | `string`            | No       | Series color (hex or named)                        |
+| `yAxis` | `YAxisConfig`       | No       | Per-series Y-axis configuration                    |
+| `style` | `SeriesStyleConfig` | No       | Line width, markers, etc.                          |
 
 **Constraints:**
 
@@ -195,8 +195,8 @@ A single data point in a series.
 
 ### Series ID
 
-- Agent SHOULD provide `id` when creating series
-- If not provided, system generates UUID
+- Agent MUST provide `id` when creating series (required field)
+- System does NOT auto-generate series IDs
 - Used for update/remove operations
 
 ### Annotation ID
@@ -205,6 +205,12 @@ A single data point in a series.
 - System always generates UUID
 - Returned in tool output `added.annotations[].id`
 - Used for update/remove operations
+
+---
+
+## Additional Entities
+
+**InteractionConfig** - Part of ChartConfiguration, defines zoom/pan/crosshair settings. See [schema_spec.md](../../../specs/_base/005-agentic-schema-v2/schema_spec.md) for full definition.
 
 ---
 

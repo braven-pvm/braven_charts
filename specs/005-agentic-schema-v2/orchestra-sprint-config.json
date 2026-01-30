@@ -1,0 +1,592 @@
+{
+  "sprint": {
+    "id": "005-agentic-schema-v2",
+    "name": "Agentic Chart Schema V2 - Unified Schema with Nested Y-Axis and Annotation IDs"
+  },
+  "spec_path": "specs/005-agentic-schema-v2/spec.md",
+  "environment": {
+    "source_base_dir": "packages/braven_agent/lib/src",
+    "test_command": "flutter test",
+    "test_file_pattern": "test/**/*_test.dart"
+  },
+  "phases": [
+    {
+      "phase_id": "phase-1",
+      "phase_name": "Setup & Infrastructure",
+      "speckit_tasks": ["T001", "T002", "T003", "T004"]
+    },
+    {
+      "phase_id": "phase-2",
+      "phase_name": "Foundational Model Updates (Blocking)",
+      "speckit_tasks": ["T005-T019"]
+    },
+    {
+      "phase_id": "phase-3",
+      "phase_name": "US1: Create Multi-Series Charts with Per-Series Y-Axes (P1)",
+      "speckit_tasks": ["T020-T036"]
+    },
+    {
+      "phase_id": "phase-4",
+      "phase_name": "US2: Modify Charts with Update/Add/Remove (P1)",
+      "speckit_tasks": ["T037-T057"]
+    },
+    {
+      "phase_id": "phase-5",
+      "phase_name": "US3: Query Chart State (P2)",
+      "speckit_tasks": ["T058-T070"]
+    },
+    {
+      "phase_id": "phase-6",
+      "phase_name": "US4: Validation & Clear Errors (P2)",
+      "speckit_tasks": ["T071-T087"]
+    },
+    {
+      "phase_id": "phase-7",
+      "phase_name": "US5: Deep Merge for Nested Updates (P3)",
+      "speckit_tasks": ["T088-T095"]
+    },
+    {
+      "phase_id": "phase-8",
+      "phase_name": "Integration Testing",
+      "speckit_tasks": ["T096-T099"]
+    },
+    {
+      "phase_id": "phase-9",
+      "phase_name": "Polish & Final Validation",
+      "speckit_tasks": ["T100-T107"]
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": 1,
+      "phase_id": "phase-1",
+      "title": "Setup & Baseline Verification",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [],
+      "spec_task_refs": ["T001", "T002", "T003", "T004"],
+      "summary": "Verify branch, run baseline analyzer, create validation module directories",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Flutter analyze passes on braven_agent",
+            "command": "flutter analyze packages/braven_agent/lib/src/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "Validation module directory exists with placeholder",
+            "path": "packages/braven_agent/lib/src/validation/.gitkeep",
+            "pattern": ".*",
+            "min_matches": 1,
+            "severity": "INFO"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 2,
+      "phase_id": "phase-2",
+      "title": "Red: Foundational Model Tests",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [1],
+      "spec_task_refs": ["T005", "T006", "T007", "T008", "T009"],
+      "summary": "Write failing tests for annotation id field, nested yAxis, and removed yAxes[]",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Annotation id test exists in core",
+            "path": "test/unit/models/annotation_config_test.dart",
+            "pattern": "id.*field|annotation.*id",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Nested yAxis test exists in agent package",
+            "path": "packages/braven_agent/test/models/series_config_test.dart",
+            "pattern": "yAxis|nested",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 3,
+      "phase_id": "phase-2",
+      "title": "Green: Implement Foundational Models",
+      "category": "INTEGRATION",
+      "dependencies": [2],
+      "spec_task_refs": [
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019"
+      ],
+      "summary": "Add annotation id, nested yAxis, remove flat fields and yAxes[] array",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Foundational tests pass",
+            "command": "flutter test test/unit/models/ packages/braven_agent/test/models/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "AnnotationConfig has id field in core",
+            "path": "lib/src/models/chart_annotation.dart",
+            "pattern": "String.*id",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "SeriesConfig has nested yAxis in agent",
+            "path": "packages/braven_agent/lib/src/models/series_config.dart",
+            "pattern": "YAxisConfig.*yAxis",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 4,
+      "phase_id": "phase-3",
+      "title": "Red: US1 - Create Chart V2 Tests",
+      "category": "INTEGRATION",
+      "dependencies": [3],
+      "spec_task_refs": ["T020", "T021", "T022", "T023", "T024", "T025"],
+      "summary": "Write failing tests for create_chart v2 schema, annotation ID generation, V001-V004 validation",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Create chart v2 schema test exists",
+            "path": "packages/braven_agent/test/tools/create_chart_tool_test.dart",
+            "pattern": "v2|nested.*yAxis|series.*yAxis",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Validation tests exist",
+            "path": "packages/braven_agent/test/validation/schema_validator_test.dart",
+            "pattern": "V001|V002|V003|V004",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 5,
+      "phase_id": "phase-3",
+      "title": "Green: US1 - Implement Create Chart V2",
+      "category": "INTEGRATION",
+      "dependencies": [4],
+      "spec_task_refs": [
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036"
+      ],
+      "summary": "Implement validation framework, V001-V004 rules, update create_chart tool with nested yAxis and ID generation",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "US1 tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/create_chart_tool_test.dart packages/braven_agent/test/validation/schema_validator_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Analyzer clean",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/create_chart_tool.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "SchemaValidator exists",
+            "path": "packages/braven_agent/lib/src/validation/schema_validator.dart",
+            "pattern": "class SchemaValidator",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 6,
+      "phase_id": "phase-4",
+      "title": "Red: US2 - Modify Chart Tests",
+      "category": "INTEGRATION",
+      "dependencies": [3],
+      "spec_task_refs": [
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T045a",
+        "T045b"
+      ],
+      "summary": "Write failing tests for modify_chart update/add/remove operations, execution order, V010-V022 validation",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Modify chart operation tests exist",
+            "path": "packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "pattern": "update|add|remove",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "V010-V022 validation tests exist",
+            "path": "packages/braven_agent/test/validation/schema_validator_test.dart",
+            "pattern": "V010|V011|V012|V020|V021|V022",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 7,
+      "phase_id": "phase-4",
+      "title": "Green: US2 - Implement Modify Chart",
+      "category": "INTEGRATION",
+      "dependencies": [6],
+      "spec_task_refs": [
+        "T046",
+        "T047",
+        "T047a",
+        "T047b",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T052",
+        "T053",
+        "T054",
+        "T055",
+        "T056",
+        "T057"
+      ],
+      "summary": "Implement V010-V022 validation, update/add/remove structure, execution order, deep merge utility",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "US2 tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Analyzer clean",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/modify_chart_tool.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "Modify chart has update/add/remove structure",
+            "path": "packages/braven_agent/lib/src/tools/modify_chart_tool.dart",
+            "pattern": "update|add|remove",
+            "min_matches": 3,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 8,
+      "phase_id": "phase-5",
+      "title": "Red: US3 - Get Chart Tests",
+      "category": "INTEGRATION",
+      "dependencies": [5],
+      "spec_task_refs": ["T058", "T059", "T060", "T061"],
+      "summary": "Write failing tests for get_chart retrieval, includeData parameter, error handling",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Get chart tests exist",
+            "path": "packages/braven_agent/test/tools/get_chart_tool_test.dart",
+            "pattern": "get.*chart|includeData|count",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 9,
+      "phase_id": "phase-5",
+      "title": "Green: US3 - Implement Get Chart",
+      "category": "INTEGRATION",
+      "dependencies": [8],
+      "spec_task_refs": [
+        "T062",
+        "T063",
+        "T064",
+        "T065",
+        "T066",
+        "T067",
+        "T068",
+        "T069",
+        "T070"
+      ],
+      "summary": "Create GetChartTool class, implement includeData parameter, data summarization, register in tool registry",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "US3 tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/get_chart_tool_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Analyzer clean",
+            "command": "flutter analyze packages/braven_agent/lib/src/tools/get_chart_tool.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "GetChartTool class exists",
+            "path": "packages/braven_agent/lib/src/tools/get_chart_tool.dart",
+            "pattern": "class GetChartTool",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 10,
+      "phase_id": "phase-6",
+      "title": "Red: US4 - Validation Error Tests",
+      "category": "INTEGRATION",
+      "dependencies": [5],
+      "spec_task_refs": [
+        "T071",
+        "T072",
+        "T073",
+        "T074",
+        "T075",
+        "T076",
+        "T077",
+        "T078",
+        "T079",
+        "T080"
+      ],
+      "summary": "Write failing tests for V030-V044 validation rules (seriesId validation, type-specific validation)",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "V030-V044 validation tests exist",
+            "path": "packages/braven_agent/test/validation/schema_validator_test.dart",
+            "pattern": "V030|V031|V032|V033|V034|V040|V041|V042|V043|V044",
+            "min_matches": 5,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 11,
+      "phase_id": "phase-6",
+      "title": "Green: US4 - Implement Validation Rules",
+      "category": "INTEGRATION",
+      "dependencies": [10],
+      "spec_task_refs": [
+        "T081",
+        "T082",
+        "T083",
+        "T084",
+        "T085",
+        "T086",
+        "T087"
+      ],
+      "summary": "Implement V030-V044 validation rules, ensure actionable error messages, export validation module",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "US4 tests pass",
+            "command": "flutter test packages/braven_agent/test/validation/schema_validator_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Analyzer clean",
+            "command": "flutter analyze packages/braven_agent/lib/src/validation/schema_validator.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "Actionable error messages present",
+            "path": "packages/braven_agent/lib/src/validation/schema_validator.dart",
+            "pattern": "requires seriesId|must be unique|non-existent",
+            "min_matches": 2,
+            "severity": "MAJOR"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 12,
+      "phase_id": "phase-7",
+      "title": "Red: US5 - Deep Merge Tests",
+      "category": "INTEGRATION",
+      "dependencies": [7],
+      "spec_task_refs": ["T088", "T089", "T090"],
+      "summary": "Write failing tests for deep merge preserving properties, array replacement, scalar replacement",
+      "tdd_red_phase": true,
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Deep merge tests exist",
+            "path": "packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "pattern": "deep.*merge|preserve|array.*replace|scalar",
+            "min_matches": 2,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 13,
+      "phase_id": "phase-7",
+      "title": "Green: US5 - Implement Deep Merge",
+      "category": "INTEGRATION",
+      "dependencies": [12],
+      "spec_task_refs": ["T091", "T092", "T093", "T094", "T095"],
+      "summary": "Verify deep merge handles edge cases, explicit array replacement for data field",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "US5 deep merge tests pass",
+            "command": "flutter test packages/braven_agent/test/tools/modify_chart_tool_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 14,
+      "phase_id": "phase-8",
+      "title": "Integration Tests - Full Lifecycle",
+      "category": "INTEGRATION",
+      "dependencies": [9, 11, 13],
+      "spec_task_refs": ["T096", "T097", "T098", "T099"],
+      "summary": "Write and run integration tests for create-get-modify-remove cycle and annotation lifecycle",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Integration tests pass",
+            "command": "flutter test test/integration/agentic_flow_test.dart",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ],
+        "structural_checks": [
+          {
+            "description": "Agentic flow integration test exists",
+            "path": "test/integration/agentic_flow_test.dart",
+            "pattern": "create|modify|annotation",
+            "min_matches": 1,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 15,
+      "phase_id": "phase-9",
+      "title": "Polish - Documentation & Demo",
+      "category": "REFACTOR",
+      "dependencies": [14],
+      "spec_task_refs": ["T100", "T101", "T102"],
+      "summary": "Update dartdoc comments, update demo app to use v2 schema, remove dead code",
+      "verification": {
+        "structural_checks": [
+          {
+            "description": "Demo uses v2 schema",
+            "path": "example/lib/demos/braven_agent_demo.dart",
+            "pattern": "yAxis",
+            "min_matches": 1,
+            "severity": "MAJOR"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": 16,
+      "phase_id": "phase-9",
+      "title": "Final Validation & Cleanup",
+      "category": "REFACTOR",
+      "dependencies": [15],
+      "spec_task_refs": ["T103", "T104", "T105", "T106", "T107"],
+      "summary": "Run analyzer on full codebase, run full test suite, verify all 20 validation rules implemented",
+      "verification": {
+        "behavioral_checks": [
+          {
+            "description": "Analyzer clean on lib/",
+            "command": "flutter analyze lib/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Analyzer clean on braven_agent",
+            "command": "flutter analyze packages/braven_agent/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          },
+          {
+            "description": "Full test suite passes",
+            "command": "flutter test test/ packages/braven_agent/test/",
+            "expect_exit_code": 0,
+            "severity": "BLOCKING"
+          }
+        ]
+      }
+    }
+  ],
+  "tdd_relationships": [
+    { "red_task_id": 2, "green_task_id": 3 },
+    { "red_task_id": 4, "green_task_id": 5 },
+    { "red_task_id": 6, "green_task_id": 7 },
+    { "red_task_id": 8, "green_task_id": 9 },
+    { "red_task_id": 10, "green_task_id": 11 },
+    { "red_task_id": 12, "green_task_id": 13 }
+  ]
+}
