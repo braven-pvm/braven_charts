@@ -904,7 +904,6 @@ void main() {
 
     test('wiring: color → LineChartSeries.color', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -925,7 +924,6 @@ void main() {
 
     test('wiring: interpolation → LineChartSeries.interpolation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -946,7 +944,6 @@ void main() {
 
     test('wiring: strokeWidth → LineChartSeries.strokeWidth', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -967,7 +964,6 @@ void main() {
 
     test('wiring: tension → LineChartSeries.tension', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -988,7 +984,6 @@ void main() {
 
     test('wiring: showPoints → LineChartSeries.showDataPointMarkers', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1009,7 +1004,6 @@ void main() {
 
     test('wiring: dataPointMarkerRadius → LineChartSeries.dataPointMarkerRadius', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1032,7 +1026,6 @@ void main() {
     test('wiring: markerSize → LineChartSeries.dataPointMarkerRadius (LLM fallback)', () {
       // This is the REAL user flow: LLM sends markerSize, not dataPointMarkerRadius
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1054,19 +1047,19 @@ void main() {
               'The LLM sends markerSize, not dataPointMarkerRadius!');
     });
 
-    // CRITICAL: markerSize should implicitly enable showDataPointMarkers
-    test('wiring: markerSize implicitly enables showDataPointMarkers', () {
-      // LLM sets markerSize but NOT showPoints - markers should still appear
+    // CRITICAL: showPoints is authoritative - markerSize alone does NOT enable markers
+    test('wiring: markerSize without showPoints does NOT enable markers', () {
+      // LLM sets markerSize but NOT showPoints - markers should NOT appear
+      // This ensures explicit control: LLM must set showPoints: true to see markers
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
-            markerSize: 8.0, // Non-default size should implicitly enable markers
-            // showPoints NOT set - but markers should still show
+            markerSize: 8.0, // Non-default size, but showPoints not set
+            // showPoints defaults to false - markers should NOT show
           ),
         ],
       );
@@ -1075,14 +1068,37 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.showDataPointMarkers, isTrue,
-          reason: 'CRITICAL: Setting markerSize to non-default should implicitly enable showDataPointMarkers. '
-              'This ensures LLM setting markerSize sees markers without needing showPoints: true.');
+      expect(series!.showDataPointMarkers, isFalse,
+          reason: 'CRITICAL: showPoints is authoritative. markerSize alone must NOT enable markers. '
+              'LLM must explicitly set showPoints: true to see markers.');
+    });
+
+    // CRITICAL: showPoints: false must ALWAYS be honored
+    test('wiring: explicit showPoints false is ALWAYS honored', () {
+      const config = models.ChartConfiguration(
+        series: [
+          models.SeriesConfig(
+            id: 'test',
+            data: [
+              models.DataPoint(x: 0, y: 1),
+            ],
+            markerSize: 8.0, // Custom marker size
+            showPoints: false, // But explicitly disabled
+          ),
+        ],
+      );
+
+      final widget = renderer.render(config);
+      final series = extractLineSeriesFromWidget(widget);
+
+      expect(series, isNotNull);
+      expect(series!.showDataPointMarkers, isFalse,
+          reason: 'CRITICAL: Explicit showPoints: false MUST be honored regardless of markerSize. '
+              'User explicitly requested no markers - this must NEVER be overridden.');
     });
 
     test('wiring: unit → LineChartSeries.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1103,7 +1119,6 @@ void main() {
 
     test('wiring: yAxisPosition → LineChartSeries.yAxisConfig.position', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1124,7 +1139,6 @@ void main() {
 
     test('wiring: yAxisPosition=leftOuter → YAxisPosition.leftOuter', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1145,7 +1159,6 @@ void main() {
 
     test('wiring: yAxisPosition=rightOuter → YAxisPosition.rightOuter', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1166,7 +1179,6 @@ void main() {
 
     test('wiring: yAxisLabel → LineChartSeries.yAxisConfig.label', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1188,7 +1200,6 @@ void main() {
 
     test('wiring: yAxisUnit → LineChartSeries.yAxisConfig.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1210,7 +1221,6 @@ void main() {
 
     test('wiring: yAxisColor → LineChartSeries.yAxisConfig.color', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1232,7 +1242,6 @@ void main() {
 
     test('wiring: yAxisMin → LineChartSeries.yAxisConfig.min', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1254,7 +1263,6 @@ void main() {
 
     test('wiring: yAxisMax → LineChartSeries.yAxisConfig.max', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1276,7 +1284,6 @@ void main() {
 
     test('wiring: yAxisId → LineChartSeries.yAxisId', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(
             id: 'test',
@@ -1315,10 +1322,10 @@ void main() {
 
     test('wiring: fillOpacity → AreaChartSeries.fillOpacity', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1336,10 +1343,10 @@ void main() {
 
     test('wiring: strokeWidth → AreaChartSeries.strokeWidth', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1357,10 +1364,10 @@ void main() {
 
     test('wiring: interpolation → AreaChartSeries.interpolation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1378,10 +1385,10 @@ void main() {
 
     test('wiring: tension → AreaChartSeries.tension', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1399,10 +1406,10 @@ void main() {
 
     test('wiring: showPoints → AreaChartSeries.showDataPointMarkers', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1420,10 +1427,10 @@ void main() {
 
     test('wiring: dataPointMarkerRadius → AreaChartSeries.dataPointMarkerRadius', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1441,10 +1448,10 @@ void main() {
 
     test('wiring: yAxisId → AreaChartSeries.yAxisId', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1462,10 +1469,10 @@ void main() {
 
     test('wiring: unit → AreaChartSeries.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.area,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.area,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1502,10 +1509,10 @@ void main() {
     test('wiring: markerSize → ScatterChartSeries.markerRadius', () {
       // LLM sends markerSize, which is the canonical property
       const config = models.ChartConfiguration(
-        type: models.ChartType.scatter,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.scatter,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1523,10 +1530,10 @@ void main() {
 
     test('wiring: yAxisId → ScatterChartSeries.yAxisId', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.scatter,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.scatter,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1544,10 +1551,10 @@ void main() {
 
     test('wiring: unit → ScatterChartSeries.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.scatter,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.scatter,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1583,10 +1590,10 @@ void main() {
 
     test('wiring: barWidthPercent → BarChartSeries.barWidthPercent', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1604,10 +1611,10 @@ void main() {
 
     test('wiring: barWidthPixels → BarChartSeries.barWidthPixels', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1625,10 +1632,10 @@ void main() {
 
     test('wiring: barMinWidth → BarChartSeries.minWidth', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1647,10 +1654,10 @@ void main() {
 
     test('wiring: barMaxWidth → BarChartSeries.maxWidth', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1669,10 +1676,10 @@ void main() {
 
     test('wiring: yAxisId → BarChartSeries.yAxisId', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1691,10 +1698,10 @@ void main() {
 
     test('wiring: unit → BarChartSeries.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.bar,
         series: [
           models.SeriesConfig(
             id: 'test',
+            type: models.ChartType.bar,
             data: [
               models.DataPoint(x: 0, y: 1),
             ],
@@ -1735,7 +1742,6 @@ void main() {
 
     test('wiring: title → BravenChartPlus.title', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1753,7 +1759,6 @@ void main() {
 
     test('wiring: subtitle → BravenChartPlus.subtitle', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1771,7 +1776,6 @@ void main() {
 
     test('wiring: width → SizedBox.width', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1789,7 +1793,6 @@ void main() {
 
     test('wiring: height → SizedBox.height', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1807,7 +1810,6 @@ void main() {
 
     test('wiring: showLegend → BravenChartPlus.showLegend', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1825,7 +1827,6 @@ void main() {
 
     test('wiring: legendPosition → BravenChartPlus.legendStyle.position', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1843,7 +1844,6 @@ void main() {
 
     test('wiring: normalizationMode → BravenChartPlus.normalizationMode', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1861,7 +1861,6 @@ void main() {
 
     test('wiring: showScrollbar → BravenChartPlus.showXScrollbar', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1879,7 +1878,6 @@ void main() {
 
     test('wiring: showScrollbar → BravenChartPlus.showYScrollbar', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1897,7 +1895,6 @@ void main() {
 
     test('wiring: backgroundColor → BravenChartPlus.backgroundColor', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1915,7 +1912,6 @@ void main() {
 
     test('wiring: useDarkTheme → BravenChartPlus.theme', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1935,7 +1931,6 @@ void main() {
 
     test('wiring: showGrid → BravenChartPlus.grid', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1953,7 +1948,6 @@ void main() {
 
     test('wiring: xAxis.label → BravenChartPlus.xAxisConfig.label', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1971,7 +1965,6 @@ void main() {
 
     test('wiring: xAxis.unit → BravenChartPlus.xAxisConfig.unit', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -1989,7 +1982,6 @@ void main() {
 
     test('wiring: xAxis.min/max → BravenChartPlus.xAxisConfig.min/max', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2009,7 +2001,6 @@ void main() {
     // CRITICAL: Interaction config wiring tests
     test('wiring: interactions.tooltip → InteractionConfig.tooltip.enabled', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2028,7 +2019,6 @@ void main() {
 
     test('wiring: interactions.crosshair → InteractionConfig.crosshair.enabled', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2049,7 +2039,6 @@ void main() {
     test('wiring: partial interactions defaults unspecified to true', () {
       // If LLM sends only crosshair, tooltip should default to true (not false)
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2069,7 +2058,6 @@ void main() {
 
     test('wiring: interactions can explicitly disable tooltip', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2119,7 +2107,6 @@ void main() {
 
     test('wiring: referenceLine annotation → ThresholdAnnotation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2149,7 +2136,6 @@ void main() {
 
     test('wiring: referenceLine.lineWidth → ThresholdAnnotation.lineWidth', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2173,7 +2159,6 @@ void main() {
 
     test('wiring: referenceLine.dashPattern → ThresholdAnnotation.dashPattern', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2197,7 +2182,6 @@ void main() {
 
     test('wiring: referenceLine.orientation=vertical → ThresholdAnnotation.axis=x', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2221,7 +2205,6 @@ void main() {
 
     test('wiring: referenceLine.seriesId → ThresholdAnnotation.seriesId', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'power', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2245,7 +2228,6 @@ void main() {
 
     test('wiring: zone annotation → RangeAnnotation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2276,7 +2258,6 @@ void main() {
 
     test('wiring: zone.opacity → RangeAnnotation.fillColor.opacity', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2302,7 +2283,6 @@ void main() {
 
     test('wiring: textLabel annotation → TextAnnotation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2330,7 +2310,6 @@ void main() {
 
     test('wiring: textLabel.fontSize → TextAnnotation.style.textStyle.fontSize', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2354,7 +2333,6 @@ void main() {
 
     test('wiring: marker annotation → PinAnnotation', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),
@@ -2386,7 +2364,6 @@ void main() {
 
     test('wiring: multiple annotations of different types', () {
       const config = models.ChartConfiguration(
-        type: models.ChartType.line,
         series: [
           models.SeriesConfig(id: 'test', data: [
             models.DataPoint(x: 0, y: 1),

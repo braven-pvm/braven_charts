@@ -156,8 +156,7 @@ void main() {
           }
         }
       });
-      expect(modifyResult.isError, isFalse,
-          reason: 'Update series data failed');
+      expect(modifyResult.isError, isFalse, reason: 'Update series data failed');
 
       activeChart = getChartFromOutput(modifyResult.data);
       final series = activeChart.series.firstWhere((s) => s.id == 's1');
@@ -196,31 +195,28 @@ void main() {
           ]
         }
       });
-      expect(modifyResult.isError, isFalse,
-          reason: 'Modify axes failed (execution error)');
+      expect(modifyResult.isError, isFalse, reason: 'Modify axes failed (execution error)');
 
       activeChart = getChartFromOutput(modifyResult.data);
 
       // These assertions should fail if ModifyChartTool ignores axes
-      expect(activeChart.xAxis, isNotNull,
-          reason: 'XAxis should not be null after update');
+      expect(activeChart.xAxis, isNotNull, reason: 'XAxis should not be null after update');
       expect(activeChart.xAxis?.label, equals('New X Label'));
       expect(activeChart.xAxis?.unit, equals('seconds'));
 
-      expect(activeChart.yAxes, isNotEmpty,
-          reason: 'YAxes should not be empty after update');
+      expect(activeChart.yAxes, isNotEmpty, reason: 'YAxes should not be empty after update');
       expect(activeChart.yAxes.first.label, equals('Sales'));
       expect(activeChart.yAxes.first.unit, equals('USD'));
     });
 
-    test('Scenario 6: Create -> Modify Chart Type -> Verify', () async {
+    test('Scenario 6: Create -> Modify Series Type -> Verify', () async {
       final createTool = CreateChartTool();
       var activeChart = getChartFromOutput((await createTool.execute({
         'prompt': 'Line chart',
-        'type': 'line',
         'series': [
           {
             'id': 's1',
+            'type': 'line',
             'data': [
               {'x': 0, 'y': 0}
             ]
@@ -229,16 +225,20 @@ void main() {
       }))
           .data);
 
-      expect(activeChart.type, equals(ChartType.line));
+      expect(activeChart.series.first.type, equals(ChartType.line));
 
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
-        'modifications': {'type': 'bar'}
+        'modifications': {
+          'updateSeries': {
+            's1': {'type': 'bar'}
+          }
+        }
       });
       expect(modifyResult.isError, isFalse, reason: 'Modify type failed');
 
       activeChart = getChartFromOutput(modifyResult.data);
-      expect(activeChart.type, equals(ChartType.bar));
+      expect(activeChart.series.first.type, equals(ChartType.bar));
     });
 
     test('Scenario 7: Create -> Modify Color -> Verify ID Preserved', () async {

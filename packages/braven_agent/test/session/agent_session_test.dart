@@ -4,7 +4,6 @@ import 'package:braven_agent/src/llm/llm_response.dart';
 import 'package:braven_agent/src/llm/models/agent_message.dart';
 import 'package:braven_agent/src/llm/models/message_content.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
-import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/session/agent_events.dart';
 import 'package:braven_agent/src/session/agent_session_impl.dart';
 import 'package:braven_agent/src/session/session_state.dart';
@@ -187,11 +186,9 @@ class MockAgentTool implements AgentTool {
 ChartConfiguration createTestChart({
   String? id = 'chart_1',
   String title = 'Test Chart',
-  ChartType type = ChartType.line,
 }) {
   return ChartConfiguration(
     id: id,
-    type: type,
     title: title,
     series: const [],
   );
@@ -246,8 +243,7 @@ void main() {
   // ============================================================
   group('AgentSessionImpl', () {
     group('construction', () {
-      test('accepts required dependencies: LLMProvider, tools, systemPrompt',
-          () {
+      test('accepts required dependencies: LLMProvider, tools, systemPrompt', () {
         // Arrange
         final mockProvider = MockLLMProvider();
         final mockTool = MockAgentTool();
@@ -506,8 +502,7 @@ void main() {
         sub2.cancel();
       });
 
-      test('events stream allows listener after previous listener cancelled',
-          () async {
+      test('events stream allows listener after previous listener cancelled', () async {
         // Arrange
         final mockProvider = MockLLMProvider();
         final session = AgentSessionImpl(
@@ -592,16 +587,12 @@ void main() {
         expect(history.length, greaterThanOrEqualTo(1));
 
         // Find the user message
-        final userMessages =
-            history.where((m) => m.role == MessageRole.user).toList();
+        final userMessages = history.where((m) => m.role == MessageRole.user).toList();
         expect(userMessages, isNotEmpty);
 
         // Check the prompt is in the content
         final userMessage = userMessages.first;
-        final textContent = userMessage.content
-            .whereType<TextContent>()
-            .map((c) => c.text)
-            .join();
+        final textContent = userMessage.content.whereType<TextContent>().map((c) => c.text).join();
         expect(textContent, contains('Create a line chart'));
       });
 
@@ -655,8 +646,7 @@ void main() {
 
         // Assert
         final history = session.state.value.history;
-        final assistantMessages =
-            history.where((m) => m.role == MessageRole.assistant).toList();
+        final assistantMessages = history.where((m) => m.role == MessageRole.assistant).toList();
         expect(assistantMessages, isNotEmpty);
       });
 
@@ -1029,8 +1019,7 @@ void main() {
     // Chart Creation Tests
     // ============================================================
     group('chart creation', () {
-      test('updates activeChart when tool result contains ChartConfiguration',
-          () async {
+      test('updates activeChart when tool result contains ChartConfiguration', () async {
         // Arrange
         final mockProvider = MockLLMProvider();
         final chart = createTestChart(id: 'new_chart', title: 'New Chart');

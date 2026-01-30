@@ -1077,7 +1077,6 @@ void main() {
     ChartConfiguration createFullChartConfiguration() {
       return const ChartConfiguration(
         id: 'chart1',
-        type: ChartType.line,
         title: 'Temperature Over Time',
         subtitle: 'Daily readings',
         series: [
@@ -1147,7 +1146,6 @@ void main() {
     test('fromJson creates correct instance from Map', () {
       final json = {
         'id': 'chart1',
-        'type': 'line',
         'title': 'Test Chart',
         'series': [
           {
@@ -1165,7 +1163,6 @@ void main() {
       final chart = ChartConfiguration.fromJson(json);
 
       expect(chart.id, equals('chart1'));
-      expect(chart.type, equals(ChartType.line));
       expect(chart.title, equals('Test Chart'));
       expect(chart.series.length, equals(1));
       expect(chart.showGrid, isTrue);
@@ -1175,7 +1172,6 @@ void main() {
 
     test('fromJson applies default values for missing fields', () {
       final json = {
-        'type': 'line',
         'series': <Map<String, dynamic>>[],
       };
 
@@ -1194,7 +1190,6 @@ void main() {
 
     test('fromJson parses nested xAxis correctly', () {
       final json = {
-        'type': 'line',
         'series': <Map<String, dynamic>>[],
         'xAxis': {
           'label': 'Time',
@@ -1211,7 +1206,6 @@ void main() {
 
     test('fromJson parses nested yAxes correctly', () {
       final json = {
-        'type': 'line',
         'series': <Map<String, dynamic>>[],
         'yAxes': [
           {'id': 'y1', 'position': 'left'},
@@ -1230,7 +1224,6 @@ void main() {
 
     test('fromJson parses nested annotations correctly', () {
       final json = {
-        'type': 'line',
         'series': <Map<String, dynamic>>[],
         'annotations': [
           {'type': 'referenceLine', 'value': 50.0},
@@ -1247,7 +1240,6 @@ void main() {
 
     test('fromJson parses nested style correctly', () {
       final json = {
-        'type': 'line',
         'series': <Map<String, dynamic>>[],
         'style': {
           'backgroundColor': '#FFFFFF',
@@ -1267,7 +1259,6 @@ void main() {
       final json = chart.toJson();
 
       expect(json['id'], equals('chart1'));
-      expect(json['type'], equals('line'));
       expect(json['title'], equals('Temperature Over Time'));
       expect(json['subtitle'], equals('Daily readings'));
       expect(json['series'], isList);
@@ -1288,7 +1279,6 @@ void main() {
 
     test('toJson omits null optional fields', () {
       const chart = ChartConfiguration(
-        type: ChartType.line,
         series: [],
       );
 
@@ -1318,8 +1308,7 @@ void main() {
       // Verify nested series
       expect(restored.series.length, equals(original.series.length));
       expect(restored.series[0].id, equals(original.series[0].id));
-      expect(restored.series[0].data.length,
-          equals(original.series[0].data.length));
+      expect(restored.series[0].data.length, equals(original.series[0].data.length));
 
       // Verify nested xAxis
       expect(restored.xAxis, equals(original.xAxis));
@@ -1347,12 +1336,10 @@ void main() {
       final original = createFullChartConfiguration();
       final updated = original.copyWith(
         title: 'Updated Title',
-        type: ChartType.bar,
         showLegend: false,
       );
 
       expect(updated.title, equals('Updated Title'));
-      expect(updated.type, equals(ChartType.bar));
       expect(updated.showLegend, isFalse);
       expect(updated.id, equals(original.id));
       expect(updated.series.length, equals(original.series.length));
@@ -1390,10 +1377,10 @@ void main() {
 
     test('minimal configuration round-trip', () {
       const original = ChartConfiguration(
-        type: ChartType.scatter,
         series: [
           SeriesConfig(
             id: 'minimal',
+            type: ChartType.scatter,
             data: [DataPoint(x: 1, y: 1)],
           ),
         ],
@@ -1403,24 +1390,28 @@ void main() {
       expect(restored, equals(original));
     });
 
-    test('all chart types serialize correctly', () {
+    test('all series types serialize correctly', () {
       for (final chartType in ChartType.values) {
         final chart = ChartConfiguration(
-          type: chartType,
-          series: const [],
+          series: [
+            SeriesConfig(
+              id: 'test',
+              type: chartType,
+              data: const [],
+            ),
+          ],
         );
 
         final json = chart.toJson();
         final restored = ChartConfiguration.fromJson(json);
 
-        expect(restored.type, equals(chartType));
+        expect(restored.series.first.type, equals(chartType));
       }
     });
 
     test('all legend positions serialize correctly', () {
       for (final position in LegendPosition.values) {
         final chart = ChartConfiguration(
-          type: ChartType.line,
           series: const [],
           legendPosition: position,
         );
@@ -1435,7 +1426,6 @@ void main() {
     test('all normalization modes serialize correctly', () {
       for (final mode in NormalizationModeConfig.values) {
         final chart = ChartConfiguration(
-          type: ChartType.line,
           series: const [],
           normalizationMode: mode,
         );

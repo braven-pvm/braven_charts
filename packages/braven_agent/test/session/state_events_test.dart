@@ -1,7 +1,6 @@
 import 'package:braven_agent/src/llm/models/agent_message.dart';
 import 'package:braven_agent/src/llm/models/message_content.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
-import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/session/agent_events.dart';
 import 'package:braven_agent/src/session/session_state.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +31,6 @@ void main() {
   }) {
     return ChartConfiguration(
       id: id,
-      type: ChartType.line,
       title: title,
       series: const [],
     );
@@ -116,8 +114,7 @@ void main() {
       });
 
       test('input map can be empty', () {
-        const toolCall =
-            ToolCall(id: 'toolu_1', name: 'simple_tool', input: {});
+        const toolCall = ToolCall(id: 'toolu_1', name: 'simple_tool', input: {});
 
         expect(toolCall.input, isEmpty);
       });
@@ -295,8 +292,7 @@ void main() {
       test('history field stores conversation messages', () {
         final messages = [
           createTestMessage(id: 'msg_1', text: 'Hello'),
-          createTestMessage(
-              id: 'msg_2', role: MessageRole.assistant, text: 'Hi!'),
+          createTestMessage(id: 'msg_2', role: MessageRole.assistant, text: 'Hi!'),
         ];
         final state = SessionState(history: messages);
 
@@ -949,8 +945,7 @@ void main() {
             ErrorEvent(:final message) => 'error:$message',
             ThinkingEvent(:final description) => 'thinking:$description',
             ToolStartEvent(:final toolName) => 'start:$toolName',
-            ToolEndEvent(:final toolName, :final success) =>
-              'end:$toolName:$success',
+            ToolEndEvent(:final toolName, :final success) => 'end:$toolName:$success',
             CancelledEvent() => 'cancelled',
           };
           results.add(result);

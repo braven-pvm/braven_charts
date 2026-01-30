@@ -71,12 +71,13 @@ class CreateChartTool extends AgentTool {
   String get name => 'create_chart';
 
   @override
-  String get description => 'Creates a new chart configuration with the specified type, data series, and styling options. '
+  String get description => 'Creates a new chart configuration with data series and styling options. '
       'Use this tool to generate interactive charts from structured data.\n\n'
       'REQUIRED FIELDS:\n'
       '- prompt: Natural language description of what you want to create\n'
-      '- series: Array of data series, each with id and data points\n\n'
-      'CHART TYPES: line, area, bar, scatter\n\n'
+      '- series: Array of data series, each with id, type, and data points\n\n'
+      'SERIES TYPE (per-series): Each series has its own type (line, area, bar, scatter). '
+      'This enables mixed charts (e.g., line + bar on same chart). Defaults to line.\n\n'
       'FEATURES: Multi-axis support, annotations (reference lines, zones, markers, text labels), '
       'customizable styling, pan/zoom interactions, legends, and grid options.';
 
@@ -87,11 +88,6 @@ class CreateChartTool extends AgentTool {
           'prompt': {
             'type': 'string',
             'description': 'Natural language description of the chart to create',
-          },
-          'type': {
-            'type': 'string',
-            'enum': ['line', 'area', 'bar', 'scatter'],
-            'description': 'The type of chart to render',
           },
           'title': {
             'type': 'string',
@@ -110,6 +106,12 @@ class CreateChartTool extends AgentTool {
                 'id': {
                   'type': 'string',
                   'description': 'Unique identifier for this series',
+                },
+                'type': {
+                  'type': 'string',
+                  'enum': ['line', 'area', 'bar', 'scatter'],
+                  'description':
+                      'The type of chart series (line, area, bar, scatter). Each series can have its own type for mixed charts. Defaults to line.',
                 },
                 'name': {
                   'type': 'string',
@@ -607,21 +609,6 @@ class CreateChartTool extends AgentTool {
       );
     }
 
-    // Validate and parse chart type
-    ChartType chartType = ChartType.line; // default
-    final typeInput = input['type'] as String?;
-    if (typeInput != null) {
-      try {
-        chartType = ChartType.values.byName(typeInput);
-      } catch (_) {
-        return _logError(
-          'Error: Invalid chart type "$typeInput". '
-          'Valid types are: line, area, bar, scatter.',
-          input,
-        );
-      }
-    }
-
     // Validate and parse legend position
     LegendPosition legendPosition = LegendPosition.bottom; // default
     final legendPositionInput = input['legendPosition'] as String?;
@@ -656,6 +643,19 @@ class CreateChartTool extends AgentTool {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
       final seriesMap = Map<String, dynamic>.from(seriesInput[i] as Map);
+
+      // Validate series type if provided
+      final seriesType = seriesMap['type'] as String?;
+      if (seriesType != null) {
+        const validTypes = ['line', 'area', 'bar', 'scatter'];
+        if (!validTypes.contains(seriesType)) {
+          return _logError(
+            'Error: Invalid series type "$seriesType" in series "${seriesMap['id'] ?? 'unknown'}". '
+            'Valid types are: line, area, bar, scatter.',
+            input,
+          );
+        }
+      }
 
       // Assign default color if not provided
       if (seriesMap['color'] == null) {
@@ -759,7 +759,6 @@ class CreateChartTool extends AgentTool {
     // Build chart configuration with ALL properties
     final chart = ChartConfiguration(
       id: chartId,
-      type: chartType,
       title: input['title'] as String?,
       subtitle: input['subtitle'] as String?,
       series: series,

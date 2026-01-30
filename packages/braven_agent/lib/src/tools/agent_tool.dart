@@ -23,16 +23,15 @@ import 'tool_result.dart';
 ///   Map<String, dynamic> get inputSchema => {
 ///     'type': 'object',
 ///     'properties': {
-///       'chartType': {'type': 'string', 'enum': ['line', 'bar', 'area', 'scatter']},
-///       'title': {'type': 'string'},
+///       'chartTitle': {'type': 'string'},
 ///     },
-///     'required': ['chartType'],
+///     'required': ['chartTitle'],
 ///   };
 ///
 ///   @override
 ///   Future<ToolResult> execute(Map<String, dynamic> input) async {
-///     final chartType = input['chartType'] as String;
-///     final chart = ChartConfiguration(type: ChartType.values.byName(chartType));
+///     final title = input['chartTitle'] as String;
+///     final chart = ChartConfiguration(title: title);
 ///     return ToolResult(
 ///       output: jsonEncode(chart.toJson()),
 ///       data: chart,

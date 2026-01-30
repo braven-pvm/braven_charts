@@ -74,23 +74,19 @@ void main() {
 
       group('properties content', () {
         test('has modifications property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications =
-              properties['modifications'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications = properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -98,21 +94,23 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties =
-                tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications =
-                properties['modifications'] as Map<String, dynamic>;
+            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications = properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
-          test('has type property with enum', () {
-            expect(modProps, contains('type'));
-            expect(modProps['type']['type'], equals('string'));
-            expect(modProps['type']['enum'], isA<List>());
+          test('updateSeries additionalProperties have type property with enum', () {
+            final updateSeriesAdditionalProps = modProps['updateSeries']['additionalProperties'] as Map;
+            final seriesProps = updateSeriesAdditionalProps['properties'] as Map;
+            expect(seriesProps, contains('type'));
+            expect(seriesProps['type']['type'], equals('string'));
+            expect(seriesProps['type']['enum'], isA<List>());
           });
 
-          test('type enum includes all chart types', () {
-            final enumValues = modProps['type']['enum'] as List;
+          test('updateSeries type enum includes all chart types', () {
+            final updateSeriesAdditionalProps = modProps['updateSeries']['additionalProperties'] as Map;
+            final seriesProps = updateSeriesAdditionalProps['properties'] as Map;
+            final enumValues = seriesProps['type']['enum'] as List;
             expect(enumValues, contains('line'));
             expect(enumValues, contains('area'));
             expect(enumValues, contains('bar'));
@@ -285,11 +283,9 @@ void main() {
           });
 
           expect(
-            result.output.toLowerCase().contains('no active chart') ||
-                result.output.toLowerCase().contains('create_chart'),
+            result.output.toLowerCase().contains('no active chart') || result.output.toLowerCase().contains('create_chart'),
             isTrue,
-            reason:
-                'Error message should indicate no active chart and suggest create_chart',
+            reason: 'Error message should indicate no active chart and suggest create_chart',
           );
         });
 
@@ -360,49 +356,56 @@ void main() {
         });
       });
 
-      group('modifying chart type', () {
-        test('can change chart type from line to bar', () async {
+      group('modifying series type', () {
+        test('can change series type from line to bar', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'updateSeries': {
+                'existing_series': {'type': 'bar'},
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.bar));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.bar));
         });
 
-        test('can change chart type from line to area', () async {
+        test('can change series type from line to area', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'area',
+              'updateSeries': {
+                'existing_series': {'type': 'area'},
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.area));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.area));
         });
 
-        test('can change chart type from line to scatter', () async {
+        test('can change series type from line to scatter', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'scatter',
+              'updateSeries': {
+                'existing_series': {'type': 'scatter'},
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.scatter));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.scatter));
         });
 
-        test('returns error for invalid type value', () async {
+        test('returns error for invalid series type value', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'pie',
+              'updateSeries': {
+                'existing_series': {'type': 'pie'},
+              },
             },
           });
 
           expect(result.isError, isTrue);
-          expect(result.output.toLowerCase(), contains('type'));
         });
       });
 
@@ -528,8 +531,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -553,8 +555,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
@@ -574,8 +575,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -669,8 +669,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
@@ -687,8 +686,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
@@ -704,8 +702,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });
@@ -723,7 +720,7 @@ void main() {
           expect(chart.series, isNotEmpty);
         });
 
-        test('modifying title preserves chart type', () async {
+        test('modifying title preserves series type', () async {
           final result = await tool.execute({
             'modifications': {
               'title': 'New Title Only',
@@ -731,14 +728,16 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          // Type should be unchanged (line)
-          expect(chart.type, equals(ChartType.line));
+          // Series type should be unchanged (line)
+          expect(chart.series.first.type, equals(ChartType.line));
         });
 
-        test('modifying type preserves title', () async {
+        test('modifying series type preserves title', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'updateSeries': {
+                'existing_series': {'type': 'bar'},
+              },
             },
           });
 
@@ -861,14 +860,14 @@ void main() {
       });
 
       group('multiple modifications at once', () {
-        test('can modify type, title, and add series together', () async {
+        test('can modify title and add series with type together', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'area',
               'title': 'Multi-Modification Chart',
               'addSeries': [
                 {
                   'id': 'new_data',
+                  'type': 'area',
                   'data': [
                     {'x': 0, 'y': 5},
                   ],
@@ -878,7 +877,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.area));
+          expect(chart.series.any((s) => s.id == 'new_data' && s.type == ChartType.area), isTrue);
           expect(chart.title, equals('Multi-Modification Chart'));
           expect(chart.series.any((s) => s.id == 'new_data'), isTrue);
         });
@@ -923,10 +922,12 @@ void main() {
         expect(result.output, endsWith('}'));
       });
 
-      test('output contains modified chart type', () async {
+      test('output contains modified series type', () async {
         final result = await tool.execute({
           'modifications': {
-            'type': 'area',
+            'updateSeries': {
+              'existing_series': {'type': 'area'},
+            },
           },
         });
 
@@ -949,13 +950,11 @@ void main() {
         final result = await tool.execute({
           'modifications': {
             'title': 'Complete Chart',
-            'type': 'bar',
           },
         });
 
         final chart = result.data as ChartConfiguration;
         expect(chart.id, isNotNull);
-        expect(chart.type, isNotNull);
         expect(chart.series, isNotNull);
       });
     });
@@ -966,13 +965,13 @@ void main() {
 ChartConfiguration _createDefaultChart() {
   return const ChartConfiguration(
     id: 'test-chart-123',
-    type: ChartType.line,
     title: 'Original Title',
     subtitle: 'Original Subtitle',
     series: [
       SeriesConfig(
         id: 'existing_series',
         name: 'Existing Series',
+        type: ChartType.line,
         data: [
           DataPoint(x: 0, y: 10),
           DataPoint(x: 1, y: 20),
@@ -982,6 +981,7 @@ ChartConfiguration _createDefaultChart() {
       SeriesConfig(
         id: 'old_series',
         name: 'Old Series',
+        type: ChartType.line,
         data: [
           DataPoint(x: 0, y: 5),
         ],

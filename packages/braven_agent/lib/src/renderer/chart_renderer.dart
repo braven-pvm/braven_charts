@@ -83,15 +83,18 @@ class ChartRenderer {
         // Build YAxisConfig from per-series Y-axis configuration fields
         final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
 
-        // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
-        // This improves UX: LLM setting markerSize expects markers to appear
-        final effectiveShowPoints = seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+        // CRITICAL: showPoints is the ONLY control for markers.
+        // Previous logic tried to implicitly enable markers when markerSize was non-default,
+        // but this caused bugs: LLM setting showPoints: false was ignored if markerSize != 4.0.
+        // Now: showPoints is authoritative. LLM must set showPoints: true to see markers.
+        final effectiveShowPoints = seriesConfig.showPoints;
 
-        // Use markerSize for dataPointMarkerRadius if showPoints is enabled
-        final effectiveMarkerRadius = seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null;
+        // Always pass markerSize to dataPointMarkerRadius - this is the size IF markers are shown
+        // The showDataPointMarkers flag controls visibility, not the radius value
+        final effectiveMarkerRadius = seriesConfig.markerSize;
 
         return _createSeriesForType(
-          config.type,
+          seriesConfig.type,
           id: seriesConfig.id,
           name: seriesConfig.name,
           points: points,

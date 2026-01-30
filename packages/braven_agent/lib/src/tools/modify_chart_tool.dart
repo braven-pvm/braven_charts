@@ -110,11 +110,6 @@ class ModifyChartTool extends AgentTool {
             'type': 'object',
             'description': 'Partial chart configuration to merge',
             'properties': {
-              'type': {
-                'type': 'string',
-                'enum': ['line', 'area', 'bar', 'scatter'],
-                'description': 'New chart type',
-              },
               'title': {
                 'type': 'string',
                 'description': 'New title for the chart',
@@ -137,6 +132,11 @@ class ModifyChartTool extends AgentTool {
                     'id': {
                       'type': 'string',
                       'description': 'Unique identifier for this series',
+                    },
+                    'type': {
+                      'type': 'string',
+                      'enum': ['line', 'area', 'bar', 'scatter'],
+                      'description': 'Type of chart series (line, area, bar, scatter). Each series can have its own type. Defaults to line.',
                     },
                     'name': {
                       'type': 'string',
@@ -282,7 +282,7 @@ class ModifyChartTool extends AgentTool {
               'updateSeries': {
                 'type': 'object',
                 'description': 'Map of series ID to partial update. Only specified properties are changed; unspecified ones remain. '
-                    'Supports: name, color, data, strokeWidth, strokeDash, fillOpacity, '
+                    'Supports: type, name, color, data, strokeWidth, strokeDash, fillOpacity, '
                     'markerStyle, markerSize, interpolation, tension, showPoints, '
                     'yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor, yAxisMin, '
                     'yAxisMax, barWidthPercent, barWidthPixels, barMinWidth, '
@@ -291,6 +291,11 @@ class ModifyChartTool extends AgentTool {
                   'type': 'object',
                   'description': 'Partial series properties to update',
                   'properties': {
+                    'type': {
+                      'type': 'string',
+                      'enum': ['line', 'area', 'bar', 'scatter'],
+                      'description': 'Change the series type (line, area, bar, scatter)',
+                    },
                     'name': {'type': 'string', 'description': 'Display name'},
                     'color': {'type': 'string', 'description': 'Color (hex format, e.g., "#FF0000")'},
                     'data': {
@@ -626,21 +631,6 @@ class ModifyChartTool extends AgentTool {
       );
     }
 
-    // Parse and validate chart type if provided
-    ChartType? chartType;
-    final typeInput = modifications['type'] as String?;
-    if (typeInput != null) {
-      try {
-        chartType = ChartType.values.byName(typeInput);
-      } catch (_) {
-        return _logError(
-          'Error: Invalid chart type "$typeInput". '
-          'Valid types are: line, area, bar, scatter.',
-          input,
-        );
-      }
-    }
-
     // Parse and validate legend position if provided
     LegendPosition? legendPosition;
     final legendPositionInput = modifications['legendPosition'] as String?;
@@ -697,6 +687,23 @@ class ModifyChartTool extends AgentTool {
     // Handle updateSeries (update existing series)
     final updateSeries = modifications['updateSeries'] as Map<String, dynamic>?;
     if (updateSeries != null) {
+      // Validate series types before applying updates
+      const validTypes = ['line', 'area', 'bar', 'scatter'];
+      for (final entry in updateSeries.entries) {
+        final seriesId = entry.key;
+        final update = entry.value as Map<String, dynamic>?;
+        if (update != null && update['type'] != null) {
+          final typeValue = update['type'] as String;
+          if (!validTypes.contains(typeValue)) {
+            return _logError(
+              'Error: Invalid series type "$typeValue" for series "$seriesId". '
+              'Valid types are: line, area, bar, scatter.',
+              input,
+            );
+          }
+        }
+      }
+
       updatedSeries = updatedSeries.map((series) {
         final update = updateSeries[series.id] as Map<String, dynamic>?;
         if (update != null) {
@@ -796,7 +803,6 @@ class ModifyChartTool extends AgentTool {
 
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
-      type: chartType ?? activeChart.type,
       title: modifications.containsKey('title') ? modifications['title'] as String? : activeChart.title,
       subtitle: modifications.containsKey('subtitle') ? modifications['subtitle'] as String? : activeChart.subtitle,
       series: updatedSeries,
@@ -848,7 +854,7 @@ class ModifyChartTool extends AgentTool {
 
   /// Applies a partial update to a series, returning a new [SeriesConfig].
   ///
-  /// Supports ALL 25+ series properties including strokeWidth, fillOpacity,
+  /// Supports ALL 25+ series properties including type, strokeWidth, fillOpacity,
   /// tension, showPoints, markerSize, interpolation, bar properties, etc.
   SeriesConfig _applySeriesUpdate(
     SeriesConfig series,
@@ -868,6 +874,11 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Parse enum values if provided
+    ChartType? seriesType;
+    if (update['type'] != null) {
+      seriesType = ChartType.values.byName(update['type'] as String);
+    }
+
     Interpolation? interpolation;
     if (update['interpolation'] != null) {
       interpolation = Interpolation.values.byName(update['interpolation'] as String);
@@ -880,6 +891,7 @@ class ModifyChartTool extends AgentTool {
 
     // Apply ALL properties via copyWith
     return series.copyWith(
+      type: seriesType,
       name: update['name'] as String?,
       data: updatedData,
       color: update['color'] as String?,

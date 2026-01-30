@@ -322,31 +322,37 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
-  final GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
-  int _lastItemCount = 0;
+  GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
   int? _lastCapturedChartHash;
+  int? _currentChartKeyHash;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to state changes and scroll to bottom after each update
+    widget.session.state.addListener(_onStateChanged);
+  }
 
   @override
   void dispose() {
+    widget.session.state.removeListener(_onStateChanged);
     _messageController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-    );
+  void _onStateChanged() {
+    // Wait for layout to complete, then scroll to bottom
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) _scrollToBottom();
+    });
   }
 
-  void _maybeScroll(int itemCount) {
-    if (itemCount == _lastItemCount) return;
-    _lastItemCount = itemCount;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
+    if (!_scrollController.position.hasContentDimensions) return;
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }
 
   Future<void> _sendMessage(SessionState state) async {
@@ -356,7 +362,16 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     _messageController.clear();
-    await widget.session.transform(text);
+
+    // Start the transform (adds user message to history)
+    final transformFuture = widget.session.transform(text);
+
+    // Immediately scroll after user message is added
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) _scrollToBottom();
+    });
+
+    await transformFuture;
   }
 
   Widget _buildChartPanel(SessionState state) {
@@ -365,6 +380,14 @@ class _ChatScreenState extends State<ChatScreen> {
     // Capture snapshot when chart changes (creation OR modification)
     if (activeChart != null) {
       final chartHash = activeChart.hashCode;
+
+      // Regenerate key when chart changes to force complete widget recreation
+      // This resets zoom/pan state
+      if (chartHash != _currentChartKeyHash) {
+        _currentChartKeyHash = chartHash;
+        _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
+      }
+
       if (chartHash != _lastCapturedChartHash) {
         _captureChartSnapshot(chartHash);
       }
@@ -418,7 +441,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final isProcessing = state.status == ActivityStatus.thinking || state.status == ActivityStatus.calling_tool;
     final messages = state.history;
     final itemCount = messages.length + (isProcessing ? 1 : 0);
-    _maybeScroll(itemCount);
 
     return Column(
       children: [
@@ -622,6 +644,7 @@ class _MessageBubbleState extends State<_MessageBubble> {
               return _ContentBlock(
                 content: content,
                 isUser: isUser,
+                messageRole: widget.message.role,
                 isExpanded: isExpanded,
                 onToggle: () {
                   setState(() {
@@ -678,12 +701,14 @@ class _ContentBlock extends StatelessWidget {
   const _ContentBlock({
     required this.content,
     required this.isUser,
+    required this.messageRole,
     required this.isExpanded,
     required this.onToggle,
   });
 
   final MessageContent content;
   final bool isUser;
+  final MessageRole messageRole;
   final bool isExpanded;
   final VoidCallback onToggle;
 
@@ -709,10 +734,9 @@ class _ContentBlock extends StatelessWidget {
           isError: isError,
           child: _ToolResultDetails(output: output, isError: isError),
         ),
-      ImageContent(:final data, :final mediaType) => _ImageBlock(
-          data: data,
-          mediaType: mediaType,
-        ),
+      // Show images for system messages (chart snapshots), hide for assistant
+      ImageContent(:final data, :final mediaType) =>
+        messageRole == MessageRole.assistant ? const SizedBox.shrink() : _ImageBlock(data: data, mediaType: mediaType),
       BinaryContent(:final filename) => _CollapsibleBlock(
           typeLabel: 'File',
           summary: filename ?? 'Binary data',
@@ -960,7 +984,6 @@ class _ImageBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Try to decode base64 image data
     try {
       final bytes = base64Decode(data);
       return Container(

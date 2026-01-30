@@ -30,6 +30,13 @@ class SeriesConfig with EquatableMixin {
   /// Unique identifier for this series.
   final String id;
 
+  /// The type of chart to render for this series.
+  ///
+  /// Each series can have its own type, enabling mixed charts
+  /// (e.g., one series as line, another as bar).
+  /// Defaults to [ChartType.line].
+  final ChartType type;
+
   /// Optional display name for the series.
   final String? name;
 
@@ -151,6 +158,7 @@ class SeriesConfig with EquatableMixin {
   const SeriesConfig({
     required this.id,
     required this.data,
+    this.type = ChartType.line,
     this.name,
     this.color,
     this.strokeWidth = 2.0,
@@ -183,6 +191,7 @@ class SeriesConfig with EquatableMixin {
   factory SeriesConfig.fromJson(Map<String, dynamic> json) {
     return SeriesConfig(
       id: json['id'] as String,
+      type: json['type'] != null ? ChartType.values.byName(json['type'] as String) : ChartType.line,
       name: json['name'] as String?,
       data: (json['data'] as List<dynamic>).map((e) => DataPoint.fromJson(e as Map<String, dynamic>)).toList(),
       color: json['color'] as String?,
@@ -217,6 +226,7 @@ class SeriesConfig with EquatableMixin {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'type': type.name,
       if (name != null) 'name': name,
       'data': data.map((e) => e.toJson()).toList(),
       if (color != null) 'color': color,
@@ -250,6 +260,7 @@ class SeriesConfig with EquatableMixin {
   /// If a parameter is not provided, the original value is preserved.
   SeriesConfig copyWith({
     String? id,
+    ChartType? type,
     String? name,
     List<DataPoint>? data,
     String? color,
@@ -278,6 +289,7 @@ class SeriesConfig with EquatableMixin {
   }) {
     return SeriesConfig(
       id: id ?? this.id,
+      type: type ?? this.type,
       name: name ?? this.name,
       data: data ?? this.data,
       color: color ?? this.color,
@@ -309,6 +321,7 @@ class SeriesConfig with EquatableMixin {
   @override
   List<Object?> get props => [
         id,
+        type,
         name,
         data,
         color,
