@@ -62,12 +62,10 @@ class AgentSessionImpl implements AgentSession {
   final String _systemPrompt;
 
   /// State notifier for reactive UI updates.
-  final ValueNotifier<SessionState> _state =
-      ValueNotifier<SessionState>(const SessionState());
+  final ValueNotifier<SessionState> _state = ValueNotifier<SessionState>(const SessionState());
 
   /// Stream controller for emitting events.
-  final StreamController<AgentEvent> _eventController =
-      StreamController<AgentEvent>.broadcast();
+  final StreamController<AgentEvent> _eventController = StreamController<AgentEvent>.broadcast();
 
   /// UUID generator for message IDs.
   static const Uuid _uuid = Uuid();
@@ -144,8 +142,7 @@ class AgentSessionImpl implements AgentSession {
         );
 
         // Check for tool use in response
-        final toolUseContents =
-            response.message.content.whereType<ToolUseContent>().toList();
+        final toolUseContents = response.message.content.whereType<ToolUseContent>().toList();
 
         if (toolUseContents.isNotEmpty) {
           // Add assistant message with tool use to history
@@ -254,11 +251,55 @@ class AgentSessionImpl implements AgentSession {
     _updateState(history: [..._state.value.history, toolResultMessage]);
   }
 
+  /// Adds a chart snapshot to the message history.
+  ///
+  /// Call this method from your UI after capturing a chart image using
+  /// [ChartSnapshotService.captureFromBoundary] or [ChartSnapshotWrapper].
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// // In your chart widget
+  /// final _snapshotKey = GlobalKey<ChartSnapshotWrapperState>();
+  ///
+  /// ChartSnapshotWrapper(
+  ///   key: _snapshotKey,
+  ///   child: ChartRenderer().render(config),
+  /// )
+  ///
+  /// // After chart is rendered, capture and add to history
+  /// final imageContent = await _snapshotKey.currentState?.capture();
+  /// if (imageContent != null) {
+  ///   session.addChartSnapshot(imageContent);
+  /// }
+  /// ```
+  @override
+  void addChartSnapshot(ImageContent imageContent, {String? title}) {
+    if (_disposed) return;
+
+    final chart = _state.value.activeChart;
+    final snapshotTitle = title ?? chart?.title ?? chart?.id ?? 'Chart';
+
+    final snapshotMessage = AgentMessage(
+      id: _uuid.v4(),
+      role: MessageRole.system,
+      content: [
+        TextContent(text: '📊 $snapshotTitle'),
+        imageContent,
+      ],
+      timestamp: DateTime.now(),
+      metadata: {
+        if (chart?.id != null) 'chartId': chart!.id,
+        'snapshotType': 'chart_preview',
+      },
+    );
+
+    _updateState(history: [..._state.value.history, snapshotMessage]);
+  }
+
   /// Handles errors by setting state and emitting events.
   void _handleError(Object error) {
-    final message = error is Exception
-        ? error.toString().replaceFirst('Exception: ', '')
-        : error.toString();
+    final message = error is Exception ? error.toString().replaceFirst('Exception: ', '') : error.toString();
 
     _state.value = _state.value.copyWithCleared(
       status: ActivityStatus.error,

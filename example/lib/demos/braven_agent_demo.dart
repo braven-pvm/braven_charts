@@ -1,8 +1,12 @@
 // Copyright 2026 Braven Charts
 // SPDX-License-Identifier: MIT
 
+import 'dart:convert';
+
 import 'package:braven_agent/braven_agent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 
 void main() {
   runApp(const BravenAgentDemo());
@@ -15,7 +19,7 @@ class BravenAgentDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Braven Agent Demo',
+      title: 'Braven Agentic Charts',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -174,7 +178,7 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Braven Agent Demo'),
+        title: const Text('Braven Agentic Charts'),
       ),
       body: Center(
         child: Padding(
@@ -318,7 +322,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
+  final GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
   int _lastItemCount = 0;
+  int? _lastCapturedChartHash;
 
   @override
   void dispose() {
@@ -356,6 +362,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildChartPanel(SessionState state) {
     final activeChart = state.activeChart;
 
+    // Capture snapshot when chart changes (creation OR modification)
+    if (activeChart != null) {
+      final chartHash = activeChart.hashCode;
+      if (chartHash != _lastCapturedChartHash) {
+        _captureChartSnapshot(chartHash);
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -370,12 +384,34 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: activeChart == null ? const _ChartPlaceholder() : const ChartRenderer().render(activeChart),
+              child: activeChart == null
+                  ? const _ChartPlaceholder()
+                  : ChartSnapshotWrapper(
+                      key: _chartSnapshotKey,
+                      child: const ChartRenderer().render(activeChart),
+                    ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _captureChartSnapshot(int chartHash) {
+    // Schedule capture after the chart is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Double-check we haven't already captured this one
+      if (_lastCapturedChartHash == chartHash) return;
+      _lastCapturedChartHash = chartHash;
+
+      // Wait a bit for rendering to complete
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      final imageContent = await _chartSnapshotKey.currentState?.capture();
+      if (imageContent != null) {
+        widget.session.addChartSnapshot(imageContent);
+      }
+    });
   }
 
   Widget _buildChatPanel(SessionState state) {
@@ -423,7 +459,7 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, state, _) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Braven Agent Demo'),
+            title: const Text('Braven Agentic Charts'),
           ),
           body: SafeArea(
             child: LayoutBuilder(
@@ -550,60 +586,489 @@ class _ChatInputBar extends StatelessWidget {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends StatefulWidget {
   const _MessageBubble({required this.message});
 
   final AgentMessage message;
 
   @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> {
+  final Map<int, bool> _expandedContent = {};
+
+  @override
   Widget build(BuildContext context) {
-    final isUser = message.role == MessageRole.user;
-    final backgroundColor = isUser ? Colors.blue : Colors.grey.shade200;
-    final textColor = isUser ? Colors.white : Colors.black87;
+    final isUser = widget.message.role == MessageRole.user;
     final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final borderRadius = BorderRadius.only(
-      topLeft: const Radius.circular(16),
-      topRight: const Radius.circular(16),
-      bottomLeft: isUser ? const Radius.circular(16) : Radius.zero,
-      bottomRight: isUser ? Radius.zero : const Radius.circular(16),
-    );
 
     return Align(
       alignment: alignment,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: const BoxConstraints(maxWidth: 320),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: borderRadius,
-        ),
-        child: Text(
-          _extractMessageText(message),
-          style: TextStyle(color: textColor),
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            // Role badge
+            _RoleBadge(role: widget.message.role),
+            const SizedBox(height: 0),
+            // Content blocks
+            ...widget.message.content.asMap().entries.map((entry) {
+              final index = entry.key;
+              final content = entry.value;
+              final isExpanded = _expandedContent[index] ?? _defaultExpanded(content);
+              return _ContentBlock(
+                content: content,
+                isUser: isUser,
+                isExpanded: isExpanded,
+                onToggle: () {
+                  setState(() {
+                    _expandedContent[index] = !isExpanded;
+                  });
+                },
+              );
+            }),
+          ],
         ),
       ),
     );
   }
 
-  String _extractMessageText(AgentMessage message) {
-    final buffer = StringBuffer();
-    for (final content in message.content) {
-      switch (content) {
-        case TextContent(:final text):
-          buffer.writeln(text);
-        case ToolResultContent(:final output):
-          buffer.writeln(output);
-        case ToolUseContent(:final toolName):
-          buffer.writeln('Calling tool: $toolName');
-        case ImageContent():
-          buffer.writeln('[Image]');
-        case BinaryContent(:final filename):
-          buffer.writeln('[File${filename != null ? ': $filename' : ''}]');
-      }
+  bool _defaultExpanded(MessageContent content) {
+    return switch (content) {
+      TextContent() => true,
+      ToolUseContent() => false,
+      ToolResultContent() => false,
+      ImageContent() => true,
+      BinaryContent() => false,
+    };
+  }
+}
+
+/// Simple label showing the message role
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role});
+
+  final MessageRole role;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (role) {
+      MessageRole.user => 'You',
+      MessageRole.assistant => 'Agent',
+      MessageRole.system => 'System',
+      MessageRole.tool => 'Tool',
+    };
+
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey.shade600,
+      ),
+    );
+  }
+}
+
+/// Widget for displaying a single content block
+class _ContentBlock extends StatelessWidget {
+  const _ContentBlock({
+    required this.content,
+    required this.isUser,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  final MessageContent content;
+  final bool isUser;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (content) {
+      TextContent(:final text) => _TextBlock(
+          text: text,
+          isUser: isUser,
+        ),
+      ToolUseContent(:final toolName, :final input) => _CollapsibleBlock(
+          typeLabel: 'Tool',
+          summary: toolName,
+          isExpanded: isExpanded,
+          onToggle: onToggle,
+          child: _ToolUseDetails(toolName: toolName, input: input),
+        ),
+      ToolResultContent(:final output, :final isError) => _CollapsibleBlock(
+          typeLabel: isError ? 'Error' : 'Result',
+          summary: _truncate(output, 60),
+          isExpanded: isExpanded,
+          onToggle: onToggle,
+          isError: isError,
+          child: _ToolResultDetails(output: output, isError: isError),
+        ),
+      ImageContent(:final data, :final mediaType) => _ImageBlock(
+          data: data,
+          mediaType: mediaType,
+        ),
+      BinaryContent(:final filename) => _CollapsibleBlock(
+          typeLabel: 'File',
+          summary: filename ?? 'Binary data',
+          isExpanded: isExpanded,
+          onToggle: onToggle,
+          child: Text(filename ?? 'Binary data'),
+        ),
+    };
+  }
+
+  String _truncate(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
+  }
+}
+
+/// Text block with markdown rendering for assistant and copy support
+class _TextBlock extends StatelessWidget {
+  const _TextBlock({
+    required this.text,
+    required this.isUser,
+  });
+
+  final String text;
+  final bool isUser;
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = isUser ? Colors.grey.shade100 : Colors.grey.shade50;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 36, 10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        children: [
+          isUser
+              ? SelectableText(
+                  text,
+                  style: const TextStyle(color: Colors.black87, fontSize: 13),
+                )
+              : GptMarkdown(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+          Positioned(
+            top: -4,
+            right: -24,
+            child: _CopyButton(text: text),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Collapsible block for tool calls, results, and other content
+class _CollapsibleBlock extends StatelessWidget {
+  const _CollapsibleBlock({
+    required this.typeLabel,
+    required this.summary,
+    required this.isExpanded,
+    required this.onToggle,
+    required this.child,
+    this.isError = false,
+  });
+
+  final String typeLabel;
+  final String summary;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final Widget child;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 0),
+      decoration: BoxDecoration(
+        color: isError ? Colors.red.shade50 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header (always visible, clickable)
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    typeLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isError ? Colors.red.shade700 : Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      summary,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 16,
+                    color: Colors.grey.shade500,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Expanded content
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: child,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tool use details showing name and input parameters
+class _ToolUseDetails extends StatelessWidget {
+  const _ToolUseDetails({
+    required this.toolName,
+    required this.input,
+  });
+
+  final String toolName;
+  final Map<String, dynamic> input;
+
+  @override
+  Widget build(BuildContext context) {
+    final jsonString = const JsonEncoder.withIndent('  ').convert(input);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Spacer(),
+            _CopyButton(text: jsonString),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: SelectableText(
+            jsonString,
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: 'monospace',
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Tool result details showing output
+class _ToolResultDetails extends StatelessWidget {
+  const _ToolResultDetails({
+    required this.output,
+    required this.isError,
+  });
+
+  final String output;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    // Try to format as JSON if possible
+    String displayText = output;
+    try {
+      final parsed = json.decode(output);
+      displayText = const JsonEncoder.withIndent('  ').convert(parsed);
+    } catch (_) {
+      // Not JSON, use as-is
     }
-    final result = buffer.toString().trim();
-    return result.isEmpty ? '[No content]' : result;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Spacer(),
+            _CopyButton(text: output),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isError ? Colors.red.shade50 : Colors.white,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: SelectableText(
+            displayText,
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: 'monospace',
+              color: isError ? Colors.red.shade700 : Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Image content block that decodes and displays base64 images
+class _ImageBlock extends StatelessWidget {
+  const _ImageBlock({
+    required this.data,
+    required this.mediaType,
+  });
+
+  final String data;
+  final String mediaType;
+
+  @override
+  Widget build(BuildContext context) {
+    // Try to decode base64 image data
+    try {
+      final bytes = base64Decode(data);
+      return Container(
+        margin: const EdgeInsets.only(top: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Image.memory(
+              bytes,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildErrorPlaceholder('Failed to decode image');
+              },
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.image, size: 12, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(
+                      mediaType,
+                      style: const TextStyle(fontSize: 10, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      return _buildErrorPlaceholder('Invalid image data');
+    }
+  }
+
+  Widget _buildErrorPlaceholder(String message) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.broken_image, color: Colors.grey.shade600),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Copy to clipboard button
+class _CopyButton extends StatefulWidget {
+  const _CopyButton({required this.text});
+
+  final String text;
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton> {
+  bool _copied = false;
+
+  Future<void> _copyToClipboard() async {
+    await Clipboard.setData(ClipboardData(text: widget.text));
+    setState(() => _copied = true);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      setState(() => _copied = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: _copyToClipboard,
+      icon: Icon(
+        _copied ? Icons.check : Icons.copy_outlined,
+        size: 14,
+        color: _copied ? Colors.green : Colors.grey.shade400,
+      ),
+      tooltip: _copied ? 'Copied!' : 'Copy',
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+      visualDensity: VisualDensity.compact,
+    );
   }
 }
 
