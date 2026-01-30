@@ -67,6 +67,14 @@ class ChartRenderer {
         return _errorWidget('No series data provided');
       }
 
+      // Build a lookup map from the shared yAxes array for yAxisId resolution
+      final yAxesLookup = <String, models.YAxisConfig>{};
+      for (final yAxis in config.yAxes) {
+        if (yAxis.id != null && yAxis.id!.isNotEmpty) {
+          yAxesLookup[yAxis.id!] = yAxis;
+        }
+      }
+
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data;
         final points = <charts.ChartDataPoint>[];
@@ -80,8 +88,17 @@ class ChartRenderer {
         // Parse color from SeriesConfig
         final seriesColor = _parseColor(seriesConfig.color);
 
-        // Build YAxisConfig from per-series Y-axis configuration fields
-        final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
+        // Build YAxisConfig: first try per-series inline fields, then lookup from shared yAxes
+        charts.YAxisConfig? yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
+
+        // If no inline config but series has yAxisId, look up from shared yAxes
+        if (yAxisConfig == null && seriesConfig.yAxisId != null) {
+          final sharedAxis = yAxesLookup[seriesConfig.yAxisId!];
+          if (sharedAxis != null) {
+            yAxisConfig = _convertYAxisConfig(sharedAxis);
+            debugPrint('Resolved yAxisId "${seriesConfig.yAxisId}" to axis: ${sharedAxis.label}');
+          }
+        }
 
         // CRITICAL: showPoints is the ONLY control for markers.
         // Previous logic tried to implicitly enable markers when markerSize was non-default,
@@ -478,6 +495,37 @@ class ChartRenderer {
       color: axisColor,
       min: seriesConfig.yAxisMin,
       max: seriesConfig.yAxisMax,
+    );
+  }
+
+  /// Converts a models.YAxisConfig to a charts.YAxisConfig.
+  ///
+  /// Used to resolve shared Y-axis configurations from the yAxes array
+  /// when a series references an axis via yAxisId.
+  charts.YAxisConfig _convertYAxisConfig(models.YAxisConfig config) {
+    // Map AxisPosition enum to YAxisPosition enum
+    charts.YAxisPosition position;
+    switch (config.position) {
+      case models.AxisPosition.right:
+        position = charts.YAxisPosition.right;
+      case models.AxisPosition.rightOuter:
+        position = charts.YAxisPosition.rightOuter;
+      case models.AxisPosition.leftOuter:
+        position = charts.YAxisPosition.leftOuter;
+      case models.AxisPosition.left:
+        position = charts.YAxisPosition.left;
+    }
+
+    // Parse axis color
+    final axisColor = _parseColor(config.color);
+
+    return charts.YAxisConfig(
+      position: position,
+      label: config.label,
+      unit: config.unit,
+      color: axisColor,
+      min: config.min,
+      max: config.max,
     );
   }
 

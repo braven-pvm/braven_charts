@@ -166,8 +166,10 @@ class ModifyChartTool extends AgentTool {
                     },
                     'yAxisId': {
                       'type': 'string',
-                      'description': 'Reference to a SHARED Y-axis defined in yAxes[]. '
-                          'MUTUALLY EXCLUSIVE with yAxisPosition/yAxisLabel/yAxisUnit/yAxisColor/yAxisMin/yAxisMax.',
+                      'description': 'Reference to a SHARED Y-axis by its id. '
+                          'Must match an id from yAxes[] array (e.g., yAxes: [{id: "power-axis", ...}] → yAxisId: "power-axis"). '
+                          'MUTUALLY EXCLUSIVE with inline axis fields (yAxisPosition/yAxisLabel/etc). '
+                          'Will be validated - invalid references cause an error.',
                     },
                     'unit': {
                       'type': 'string',
@@ -400,11 +402,19 @@ class ModifyChartTool extends AgentTool {
               },
               'yAxes': {
                 'type': 'array',
-                'description': 'Y-axes configurations. REPLACES all existing Y-axes. For multi-axis charts.',
+                'description': 'SHARED Y-axis configurations. REPLACES all existing Y-axes. '
+                    'Each axis needs a unique id that series reference via yAxisId. '
+                    'Example: yAxes: [{id: "temp-axis", label: "Temp", position: "left"}], '
+                    'series: [{..., yAxisId: "temp-axis"}]',
                 'items': {
                   'type': 'object',
                   'properties': {
-                    'id': {'type': 'string', 'description': 'Unique axis identifier. Series reference via yAxisId.'},
+                    'id': {
+                      'type': 'string',
+                      'description': 'REQUIRED. Unique identifier for this Y-axis. '
+                          'Series reference this exact string via series[].yAxisId. '
+                          'Example: id: "power-axis" → series yAxisId: "power-axis"',
+                    },
                     'label': {'type': 'string', 'description': 'Axis label (e.g., "Power")'},
                     'unit': {'type': 'string', 'description': 'Unit string (e.g., "W")'},
                     'position': {
