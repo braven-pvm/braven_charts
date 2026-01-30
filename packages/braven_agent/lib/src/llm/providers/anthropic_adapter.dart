@@ -65,21 +65,19 @@ class AnthropicAdapter implements LLMProvider {
     LLMConfig? config,
   }) async {
     final effectiveConfig = config ?? _config;
-
-    final request = anthropic.CreateMessageRequest(
-      model: anthropic.Model.modelId(effectiveConfig.model),
-      maxTokens: effectiveConfig.maxTokens,
-      system: anthropic.CreateMessageRequestSystem.text(systemPrompt),
-      messages: _convertMessages(history),
-      tools: tools != null && tools.isNotEmpty ? _convertTools(tools) : null,
-      toolChoice: tools != null && tools.isNotEmpty
-          ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto)
-          : null,
+    final request = _buildRequest(
+      systemPrompt: systemPrompt,
+      history: history,
+      tools: tools,
+      effectiveConfig: effectiveConfig,
     );
 
-    final response = await _client.createMessage(request: request);
-
-    return _convertResponse(response);
+    try {
+      final response = await _client.createMessage(request: request);
+      return _convertResponse(response);
+    } catch (error, stackTrace) {
+      _throwMappedError(error, stackTrace);
+    }
   }
 
   @override
@@ -90,10 +88,47 @@ class AnthropicAdapter implements LLMProvider {
     LLMConfig? config,
   }) async* {
     final effectiveConfig = config ?? _config;
+    final request = _buildRequest(
+      systemPrompt: systemPrompt,
+      history: history,
+      tools: tools,
+      effectiveConfig: effectiveConfig,
+    );
 
-    final request = anthropic.CreateMessageRequest(
+    try {
+      final stream = _client.createMessageStream(request: request);
+
+      await for (final event in stream) {
+        final chunk = _convertStreamEvent(event);
+        if (chunk != null) {
+          yield chunk;
+        }
+      }
+    } catch (error, stackTrace) {
+      _throwMappedError(error, stackTrace);
+    }
+  }
+
+  /// Builds an Anthropic request from agent inputs and configuration.
+  anthropic.CreateMessageRequest _buildRequest({
+    required String systemPrompt,
+    required List<AgentMessage> history,
+    List<AgentTool>? tools,
+    required LLMConfig effectiveConfig,
+  }) {
+    final providerOptions = effectiveConfig.providerOptions ?? const {};
+    final topP =
+        _parseDouble(providerOptions['top_p'] ?? providerOptions['topP']);
+    final topK = _parseInt(providerOptions['top_k'] ?? providerOptions['topK']);
+    final metadata = _parseMetadata(providerOptions['metadata']);
+
+    return anthropic.CreateMessageRequest(
       model: anthropic.Model.modelId(effectiveConfig.model),
       maxTokens: effectiveConfig.maxTokens,
+      temperature: effectiveConfig.temperature,
+      topP: topP,
+      topK: topK,
+      metadata: metadata,
       system: anthropic.CreateMessageRequestSystem.text(systemPrompt),
       messages: _convertMessages(history),
       tools: tools != null && tools.isNotEmpty ? _convertTools(tools) : null,
@@ -101,15 +136,66 @@ class AnthropicAdapter implements LLMProvider {
           ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto)
           : null,
     );
+  }
 
-    final stream = _client.createMessageStream(request: request);
-
-    await for (final event in stream) {
-      final chunk = _convertStreamEvent(event);
-      if (chunk != null) {
-        yield chunk;
+  anthropic.CreateMessageRequestMetadata? _parseMetadata(Object? value) {
+    if (value is anthropic.CreateMessageRequestMetadata) {
+      return value;
+    }
+    if (value is Map) {
+      final userId = value['user_id'] ?? value['userId'];
+      if (userId is String && userId.isNotEmpty) {
+        return anthropic.CreateMessageRequestMetadata(userId: userId);
       }
     }
+    return null;
+  }
+
+  double? _parseDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  int? _parseInt(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  String? _detectAuthErrorMessage(Object error) {
+    final message = error.toString().toLowerCase();
+    final isAuthError = message.contains('401') ||
+        message.contains('403') ||
+        message.contains('unauthorized') ||
+        message.contains('authentication') ||
+        message.contains('invalid api key') ||
+        message.contains('api key');
+
+    if (!isAuthError) {
+      return null;
+    }
+
+    return 'Invalid API key. Please check your API key and try again.';
+  }
+
+  Never _throwMappedError(Object error, StackTrace stackTrace) {
+    final authMessage = _detectAuthErrorMessage(error);
+    if (authMessage != null) {
+      Error.throwWithStackTrace(Exception(authMessage), stackTrace);
+    }
+    Error.throwWithStackTrace(error, stackTrace);
   }
 
   /// Converts a list of [AgentTool] to Anthropic tool format.

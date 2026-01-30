@@ -41,7 +41,7 @@ class LLMConfig with EquatableMixin {
   /// Defaults to 'claude-sonnet-4-20250514'.
   final String model;
 
-  /// Temperature for response generation (0.0 to 1.0+).
+  /// Temperature for response generation (0.0 to 2.0).
   ///
   /// Lower values produce more deterministic outputs.
   /// Defaults to 0.7.
@@ -76,7 +76,14 @@ class LLMConfig with EquatableMixin {
     this.temperature = defaultTemperature,
     this.maxTokens = defaultMaxTokens,
     this.providerOptions,
-  });
+  })  : assert(
+          model != '',
+          'model must be a non-empty string',
+        ),
+        assert(
+          temperature >= 0.0 && temperature <= 2.0,
+          'temperature must be between 0.0 and 2.0',
+        );
 
   /// Creates an [LLMConfig] from a JSON map.
   factory LLMConfig.fromJson(Map<String, dynamic> json) {
