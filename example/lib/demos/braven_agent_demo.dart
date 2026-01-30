@@ -270,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(height: 12),
             Expanded(
               child: activeChart == null
-                  ? _ChartPlaceholder()
+                  ? const _ChartPlaceholder()
                   : const ChartRenderer().render(activeChart),
             ),
           ],
@@ -370,6 +370,8 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _ChartPlaceholder extends StatelessWidget {
+  const _ChartPlaceholder();
+
   @override
   Widget build(BuildContext context) {
     return Center(
