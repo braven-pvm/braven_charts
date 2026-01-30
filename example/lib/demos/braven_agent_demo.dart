@@ -319,7 +319,6 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
   GlobalKey<ChartSnapshotWrapperState> _chartSnapshotKey = GlobalKey<ChartSnapshotWrapperState>();
@@ -329,30 +328,13 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to state changes and scroll to bottom after each update
-    widget.session.state.addListener(_onStateChanged);
   }
 
   @override
   void dispose() {
-    widget.session.state.removeListener(_onStateChanged);
     _messageController.dispose();
-    _scrollController.dispose();
     _inputFocusNode.dispose();
     super.dispose();
-  }
-
-  void _onStateChanged() {
-    // Wait for layout to complete, then scroll to bottom
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) _scrollToBottom();
-    });
-  }
-
-  void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    if (!_scrollController.position.hasContentDimensions) return;
-    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }
 
   Future<void> _sendMessage(SessionState state) async {
@@ -366,10 +348,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // Start the transform (adds user message to history)
     final transformFuture = widget.session.transform(text);
 
-    // Immediately scroll after user message is added
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) _scrollToBottom();
-    });
+    // Scroll will be triggered by _onStateChanged when history updates
 
     await transformFuture;
   }
@@ -447,11 +426,17 @@ class _ChatScreenState extends State<ChatScreen> {
         if (state.status == ActivityStatus.error && state.errorMessage != null) _ErrorBanner(message: state.errorMessage!),
         Expanded(
           child: ListView.builder(
-            controller: _scrollController,
+            // Reversed ListView: items are built from bottom to top
+            // This ensures new items appear at the bottom and stay visible
+            reverse: true,
             padding: const EdgeInsets.all(16),
             itemCount: itemCount,
             itemBuilder: (context, index) {
-              if (index >= messages.length) {
+              // Because list is reversed, we need to reverse the index
+              final reversedIndex = itemCount - 1 - index;
+
+              if (reversedIndex >= messages.length) {
+                // This is the processing indicator (last item visually)
                 if (state.status == ActivityStatus.calling_tool && state.activeTool != null) {
                   return _ToolExecutionBubble(
                     toolName: state.activeTool!.name,
@@ -459,7 +444,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
                 return const _ThinkingBubble();
               }
-              final message = messages[index];
+              final message = messages[reversedIndex];
               return _MessageBubble(message: message);
             },
           ),
