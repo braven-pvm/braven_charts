@@ -1,4 +1,5 @@
 // @orchestra-task: 6
+// @orchestra-task: 12
 library;
 
 import 'package:braven_agent/src/models/annotation_config.dart';
@@ -1307,6 +1308,193 @@ void main() {
         );
       });
     });
+
+    // ==========================================================
+    // US5: TDD Red Phase Tests - Deep Merge Semantics
+    // @orchestra-task: 12
+    // ==========================================================
+    group('US5: Deep Merge Semantics (TDD RED)', () {
+      // ----------------------------------------------------------
+      // Test 1: Deep merge preserving multiple yAxis properties
+      // ----------------------------------------------------------
+      test(
+        'deep merge preserves ALL unspecified yAxis properties (min, max, unit, position, color)',
+        () async {
+          // Set up chart with series that has extended yAxis config
+          currentChart = _createChartWithExtendedYAxis();
+
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'series-extended-yaxis',
+                    'yAxis': {'label': 'New Power Label'},
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series =
+              chart.series.firstWhere((s) => s.id == 'series-extended-yaxis');
+
+          // Updated property should be changed
+          expect(series.yAxis, isNotNull);
+          expect(series.yAxis!.label, equals('New Power Label'));
+
+          // ALL other properties should be preserved via deep merge
+          expect(
+            series.yAxis!.unit,
+            equals('W'),
+            reason: 'Deep merge should preserve unit',
+          );
+          expect(
+            series.yAxis!.position,
+            equals(AxisPosition.left),
+            reason: 'Deep merge should preserve position',
+          );
+          expect(
+            series.yAxis!.min,
+            equals(0),
+            reason: 'Deep merge should preserve min',
+          );
+          expect(
+            series.yAxis!.max,
+            equals(500),
+            reason: 'Deep merge should preserve max',
+          );
+          expect(
+            series.yAxis!.color,
+            equals('#2196F3'),
+            reason: 'Deep merge should preserve color',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+
+      // ----------------------------------------------------------
+      // Test 2: Array replacement semantics for data field
+      // ----------------------------------------------------------
+      test(
+        'data array is REPLACED entirely, not merged element-by-element',
+        () async {
+          // Set up default chart with series that has multiple data points
+          currentChart = _createDefaultChart();
+
+          // Original series 'existing_series' has 2 data points per _createDefaultChart()
+          final originalSeries =
+              currentChart.series.firstWhere((s) => s.id == 'existing_series');
+          expect(
+            originalSeries.data.length,
+            greaterThan(1),
+            reason: 'Test requires series with multiple data points',
+          );
+
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'data': [
+                      {'x': 99, 'y': 999},
+                    ],
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
+
+          // Array should be REPLACED, not merged
+          expect(
+            series.data.length,
+            equals(1),
+            reason: 'Data array should be replaced entirely (not appended)',
+          );
+          expect(
+            series.data[0].x,
+            equals(99),
+            reason: 'Data should contain new x value',
+          );
+          expect(
+            series.data[0].y,
+            equals(999),
+            reason: 'Data should contain new y value',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+
+      // ----------------------------------------------------------
+      // Test 3: Scalar replacement semantics
+      // ----------------------------------------------------------
+      test(
+        'scalar fields (color, type, name) are overwritten, not merged',
+        () async {
+          // Set up default chart
+          currentChart = _createDefaultChart();
+
+          // Original series properties
+          final originalSeries =
+              currentChart.series.firstWhere((s) => s.id == 'existing_series');
+          final originalColor = originalSeries.color;
+          final originalType = originalSeries.type;
+          final originalName = originalSeries.name;
+
+          // Update only the color
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'color': '#FF0000',
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series =
+              chart.series.firstWhere((s) => s.id == 'existing_series');
+
+          // Color should be replaced (scalar replacement)
+          expect(
+            series.color,
+            equals('#FF0000'),
+            reason: 'Scalar color field should be replaced',
+          );
+          expect(
+            series.color,
+            isNot(equals(originalColor)),
+            reason: 'Color should be different from original',
+          );
+
+          // Other scalar fields should remain unchanged
+          expect(
+            series.type,
+            equals(originalType),
+            reason: 'Type was not in update, should be preserved',
+          );
+          expect(
+            series.name,
+            equals(originalName),
+            reason: 'Name was not in update, should be preserved',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
   });
 }
 
@@ -1431,6 +1619,33 @@ ChartConfiguration _createChartWithYAxis() {
           label: 'Power',
           unit: 'W',
           position: AxisPosition.left,
+        ),
+      ),
+    ],
+  );
+}
+
+/// Creates a chart configuration with series that has extended yAxis config
+/// for testing deep merge with multiple properties.
+ChartConfiguration _createChartWithExtendedYAxis() {
+  return const ChartConfiguration(
+    id: 'test-chart-extended-yaxis',
+    title: 'Chart With Extended YAxis',
+    series: [
+      SeriesConfig(
+        id: 'series-extended-yaxis',
+        data: [
+          DataPoint(x: 0, y: 200),
+          DataPoint(x: 1, y: 250),
+          DataPoint(x: 2, y: 300),
+        ],
+        yAxis: YAxisConfig(
+          label: 'Power',
+          unit: 'W',
+          position: AxisPosition.left,
+          min: 0,
+          max: 500,
+          color: '#2196F3',
         ),
       ),
     ],
