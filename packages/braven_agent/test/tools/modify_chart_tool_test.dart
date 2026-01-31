@@ -524,13 +524,13 @@ void main() {
               'add': {
                 'series': [
                   {
-                    'id': 'series_a',
+                    'id': 'new_series_a',
                     'data': [
                       {'x': 0, 'y': 10},
                     ],
                   },
                   {
-                    'id': 'series_b',
+                    'id': 'new_series_b',
                     'data': [
                       {'x': 0, 'y': 20},
                     ],
@@ -542,11 +542,11 @@ void main() {
 
           final chart = result.data as ChartConfiguration;
           expect(
-            chart.series.any((s) => s.id == 'series_a'),
+            chart.series.any((s) => s.id == 'new_series_a'),
             isTrue,
           );
           expect(
-            chart.series.any((s) => s.id == 'series_b'),
+            chart.series.any((s) => s.id == 'new_series_b'),
             isTrue,
           );
         });
@@ -664,8 +664,8 @@ void main() {
           );
         });
 
-        test('removing non-existent series does not error', () async {
-          // Tool should gracefully handle removing a series that doesn't exist
+        test('removing non-existent series returns error (V011)', () async {
+          // V011: Error when remove.series contains non-existent ID
           final result = await tool.execute({
             'modifications': {
               'remove': {
@@ -674,8 +674,9 @@ void main() {
             },
           });
 
-          // Should not error, just no-op for non-existent series
-          expect(result.isError, isFalse);
+          // Should error per V011 validation rule
+          expect(result.isError, isTrue);
+          expect(result.output, contains('V011'));
         });
 
         test('can add and remove series in same modification', () async {
