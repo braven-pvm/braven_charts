@@ -84,34 +84,29 @@ void main() {
 
       group('properties content', () {
         test('has chartId property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('chartId'));
           expect(properties['chartId']['type'], equals('string'));
         });
 
         test('chartId has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['chartId']['description'], isNotEmpty);
         });
 
         test('has includeData property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('includeData'));
           expect(properties['includeData']['type'], equals('boolean'));
         });
 
         test('includeData has default value false', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['includeData']['default'], equals(false));
         });
 
         test('includeData has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['includeData']['description'], isNotEmpty);
         });
       });
@@ -180,8 +175,7 @@ void main() {
     // Execute Method Tests - includeData:false (FR-013)
     // ==========================================================
     group('execute - includeData:false (default)', () {
-      test('series data is summarized as count when includeData is false',
-          () async {
+      test('series data is summarized as count when includeData is false', () async {
         final result = await tool.execute({
           'chartId': 'chart-with-data',
           'includeData': false,
@@ -193,8 +187,7 @@ void main() {
         expect(result.output, contains('5')); // 5 data points
       });
 
-      test('includeData defaults to false when not specified (US3 AC2)',
-          () async {
+      test('includeData defaults to false when not specified (US3 AC2)', () async {
         // Call without includeData parameter - should default to false
         final result = await tool.execute({
           'chartId': 'chart-with-data',
@@ -205,8 +198,7 @@ void main() {
         expect(result.output, contains('count'));
       });
 
-      test('does not include full data arrays when includeData is false',
-          () async {
+      test('does not include full data arrays when includeData is false', () async {
         final result = await tool.execute({
           'chartId': 'chart-with-data',
           'includeData': false,
@@ -224,8 +216,7 @@ void main() {
     // Execute Method Tests - includeData:true (FR-013)
     // ==========================================================
     group('execute - includeData:true', () {
-      test('full data arrays are included when includeData is true (US3 AC3)',
-          () async {
+      test('full data arrays are included when includeData is true (US3 AC3)', () async {
         final result = await tool.execute({
           'chartId': 'chart-with-data',
           'includeData': true,
@@ -238,8 +229,7 @@ void main() {
         expect(chart.series.first.data, hasLength(5));
       });
 
-      test('output contains actual data point values when includeData is true',
-          () async {
+      test('output contains actual data point values when includeData is true', () async {
         final result = await tool.execute({
           'chartId': 'chart-with-data',
           'includeData': true,

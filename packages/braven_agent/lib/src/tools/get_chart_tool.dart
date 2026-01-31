@@ -47,8 +47,7 @@ class GetChartTool extends AgentTool {
   String get name => 'get_chart';
 
   @override
-  String get description =>
-      'Retrieves current chart configuration with all IDs including '
+  String get description => 'Retrieves current chart configuration with all IDs including '
       'annotations. Use this to discover annotation IDs before modifying a chart.';
 
   @override
@@ -61,9 +60,8 @@ class GetChartTool extends AgentTool {
           },
           'includeData': {
             'type': 'boolean',
-            'description':
-                'Whether to include full data arrays. When false (default), '
-                    'series data is summarized as {count: N}.',
+            'description': 'Whether to include full data arrays. When false (default), '
+                'series data is summarized as {count: N}.',
             'default': false,
           },
         },
