@@ -1,5 +1,4 @@
 // @orchestra-task: 6
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_agent/src/models/annotation_config.dart';
@@ -561,7 +560,6 @@ void main() {
             reason: 'Error message should include the missing series ID',
           );
         },
-        tags: ['tdd-red'],
       );
     });
 
@@ -604,7 +602,6 @@ void main() {
             reason: 'Error message should include the missing series ID',
           );
         },
-        tags: ['tdd-red'],
       );
     });
 
@@ -652,7 +649,6 @@ void main() {
             reason: 'Error message should include the duplicate series ID',
           );
         },
-        tags: ['tdd-red'],
       );
     });
 
@@ -705,7 +701,6 @@ void main() {
             reason: 'Error message should include the missing annotation ID',
           );
         },
-        tags: ['tdd-red'],
       );
     });
 
@@ -757,7 +752,6 @@ void main() {
             reason: 'Error message should include the missing annotation ID',
           );
         },
-        tags: ['tdd-red'],
       );
     });
 
@@ -811,7 +805,6 @@ void main() {
                 'Warning message should mention that ID is system-generated or ignored',
           );
         },
-        tags: ['tdd-red'],
       );
     });
   });

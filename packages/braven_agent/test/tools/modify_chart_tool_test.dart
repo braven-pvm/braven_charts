@@ -1,5 +1,4 @@
 // @orchestra-task: 6
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_agent/src/models/annotation_config.dart';
@@ -1069,7 +1068,6 @@ void main() {
             // This test should FAIL because the new schema is not implemented yet
             expect(series.color, equals('#FF0000'));
           },
-          tags: ['tdd-red'],
         );
 
         test(
@@ -1094,7 +1092,6 @@ void main() {
             // This test should FAIL because update.annotations is not implemented
             expect(annotation.label, equals('Updated Label'));
           },
-          tags: ['tdd-red'],
         );
       });
 
@@ -1129,7 +1126,6 @@ void main() {
             expect(newAnnotation.id, isNotNull);
             expect(newAnnotation.id, isNotEmpty);
           },
-          tags: ['tdd-red'],
         );
 
         test(
@@ -1159,7 +1155,6 @@ void main() {
               reason: 'add.series should add the new series',
             );
           },
-          tags: ['tdd-red'],
         );
       });
 
@@ -1186,7 +1181,6 @@ void main() {
               reason: 'remove.series should remove the specified series',
             );
           },
-          tags: ['tdd-red'],
         );
 
         test(
@@ -1211,7 +1205,6 @@ void main() {
                   'remove.annotations should remove the specified annotation',
             );
           },
-          tags: ['tdd-red'],
         );
       });
 
@@ -1267,7 +1260,6 @@ void main() {
               reason: 'Update should run after add, so color should be #00FF00',
             );
           },
-          tags: ['tdd-red'],
         );
       });
 
@@ -1311,7 +1303,6 @@ void main() {
               reason: 'Deep merge should preserve position',
             );
           },
-          tags: ['tdd-red'],
         );
       });
     });

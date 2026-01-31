@@ -49,15 +49,6 @@ import 'tool_result.dart';
 ///       "series": ["old_series"]
 ///     }
 ///   }
-/// }
-/// ```
-///
-/// ## Architecture
-///
-/// Instead of a static registry, ModifyChartTool uses dependency injection:
-/// the session provides a callback function that returns the current active
-/// chart at execution time. This allows:
-/// - Direct integration with AgentSession without manual registration
 /// - Always working with the session's current chart state
 /// - Clean separation of concerns
 /// - Testability through callback injection
@@ -1298,43 +1289,10 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Apply ALL properties via copyWith
-    // Per FR-001/FR-002: Use nested yAxis instead of flat yAxisPosition/Label/etc.
     YAxisConfig? updatedYAxis;
-    final hasYAxisUpdate = update['yAxisPosition'] != null ||
-        update['yAxisLabel'] != null ||
-        update['yAxisUnit'] != null ||
-        update['yAxisColor'] != null ||
-        update['yAxisMin'] != null ||
-        update['yAxisMax'] != null ||
-        update['yAxis'] != null;
-
-    if (hasYAxisUpdate) {
-      // Check if update provides a nested yAxis object (preferred format)
-      final yAxisUpdate = update['yAxis'] as Map<String, dynamic>?;
-      if (yAxisUpdate != null) {
-        updatedYAxis = YAxisConfig(
-          position: yAxisUpdate['position'] != null
-              ? AxisPosition.values.byName(yAxisUpdate['position'] as String)
-              : series.yAxis?.position ?? AxisPosition.left,
-          label: yAxisUpdate['label'] as String? ?? series.yAxis?.label,
-          unit: yAxisUpdate['unit'] as String? ?? series.yAxis?.unit,
-          color: yAxisUpdate['color'] as String? ?? series.yAxis?.color,
-          min: (yAxisUpdate['min'] as num?)?.toDouble() ?? series.yAxis?.min,
-          max: (yAxisUpdate['max'] as num?)?.toDouble() ?? series.yAxis?.max,
-        );
-      } else {
-        // Support legacy flat fields for backwards compatibility in input
-        updatedYAxis = YAxisConfig(
-          position: update['yAxisPosition'] != null
-              ? AxisPosition.values.byName(update['yAxisPosition'] as String)
-              : series.yAxis?.position ?? AxisPosition.left,
-          label: update['yAxisLabel'] as String? ?? series.yAxis?.label,
-          unit: update['yAxisUnit'] as String? ?? series.yAxis?.unit,
-          color: update['yAxisColor'] as String? ?? series.yAxis?.color,
-          min: (update['yAxisMin'] as num?)?.toDouble() ?? series.yAxis?.min,
-          max: (update['yAxisMax'] as num?)?.toDouble() ?? series.yAxis?.max,
-        );
-      }
+    final yAxisUpdate = update['yAxis'] as Map<String, dynamic>?;
+    if (yAxisUpdate != null) {
+      updatedYAxis = _mergeYAxis(series.yAxis, yAxisUpdate);
     }
 
     return series.copyWith(
@@ -1363,6 +1321,36 @@ class ModifyChartTool extends AgentTool {
       legendVisible: update['legendVisible'] as bool?,
       unit: update['unit'] as String?,
     );
+  }
+
+  YAxisConfig _mergeYAxis(
+    YAxisConfig? existing,
+    Map<String, dynamic> update,
+  ) {
+    final base = existing?.toJson() ?? <String, dynamic>{};
+    final merged = _deepMerge(base, update);
+    return YAxisConfig.fromJson(merged);
+  }
+
+  Map<String, dynamic> _deepMerge(
+    Map<String, dynamic> base,
+    Map<String, dynamic> update,
+  ) {
+    final result = Map<String, dynamic>.from(base);
+    for (final entry in update.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      if (value is Map<String, dynamic> &&
+          result[key] is Map<String, dynamic>) {
+        result[key] = _deepMerge(
+          Map<String, dynamic>.from(result[key] as Map),
+          value,
+        );
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 
   AnnotationConfig _applyAnnotationUpdate(
