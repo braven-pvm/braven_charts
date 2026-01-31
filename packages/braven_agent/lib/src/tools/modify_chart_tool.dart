@@ -14,54 +14,81 @@ import '../validation/schema_validator.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
-/// Tool for modifying existing chart configurations.
+/// Tool for modifying existing chart configurations (V2 Schema).
 ///
 /// This tool applies incremental changes to an existing chart configuration
-/// obtained through a callback function. Unlike [CreateChartTool] which builds
-/// new charts from scratch, ModifyChartTool updates specific properties while
-/// preserving unchanged ones.
+/// using add/update/remove operations. It implements deep merge semantics
+/// for nested objects like [YAxisConfig].
 ///
-/// Register this tool on an [AgentSessionImpl] so the LLM can update the
-/// current chart after it has been created. It is intended for partial
-/// updates such as changing titles, adding/removing series, or tweaking
-/// styling/interaction options.
+/// ## V2 Schema: Deep Merge Behavior
 ///
-/// The tool uses a callback architecture where it queries the active chart
-/// from the session at execution time, ensuring it always works with the
-/// current chart state.
+/// When updating a series, nested objects are **deep-merged**:
 ///
-/// ## Example Usage (LLM perspective)
+/// - **Scalar values**: Replaced with new values
+/// - **Nested objects** (e.g., yAxis): Merged field-by-field
+/// - **Arrays** (e.g., data): Replaced entirely
+/// - **Unspecified fields**: Preserved from original
 ///
+/// ### Example: Partial yAxis Update
+///
+/// Original series:
 /// ```json
-/// {
-///   "modifications": {
-///     "title": "Updated Title",
-///     "add": {
-///       "series": [{
-///         "id": "new_series",
-///         "data": [{"x": 0, "y": 10}]
-///       }]
-///     },
-///     "update": {
-///       "series": [{"id": "existing_series", "color": "#FF0000"}]
-///     },
-///     "remove": {
-///       "series": ["old_series"]
-///     }
-///   }
-/// - Always working with the session's current chart state
-/// - Clean separation of concerns
-/// - Testability through callback injection
+/// {"id": "temp", "yAxis": {"min": 0, "max": 100, "label": "Temp"}}
+/// ```
+///
+/// Update:
+/// ```json
+/// {"modifications": {"update": {"series": [{"id": "temp", "yAxis": {"max": 150}}]}}}
+/// ```
+///
+/// Result (min and label preserved):
+/// ```json
+/// {"id": "temp", "yAxis": {"min": 0, "max": 150, "label": "Temp"}}
+/// ```
+///
+/// ## Operations
+///
+/// The tool supports three operation types in `modifications`:
+///
+/// ### add
+/// Adds new series or annotations. Annotation IDs are system-generated.
+/// ```json
+/// {"add": {"series": [{"id": "new", "data": [...]}]}}
+/// ```
+///
+/// ### update
+/// Updates existing series or annotations by ID.
+/// ```json
+/// {"update": {"series": [{"id": "existing", "color": "#FF0000"}]}}
+/// ```
+///
+/// ### remove
+/// Removes series or annotations by ID.
+/// ```json
+/// {"remove": {"series": ["old_series"], "annotations": ["ann-uuid"]}}
+/// ```
+///
+/// ## Validation (V010-V022)
+///
+/// The tool validates operations using [SchemaValidator]:
+/// - **V010**: Error if update.series[].id not found
+/// - **V011**: Error if remove.series contains non-existent ID
+/// - **V012**: Error if add.series[].id already exists
+/// - **V020**: Error if update.annotations[].id not found
+/// - **V021**: Error if remove.annotations contains non-existent ID
+/// - **V022**: Warning if agent supplies annotation ID (ignored)
 ///
 /// ## Output
 ///
 /// Returns a [ToolResult] with:
-/// - `output`: String describing the modification result
-/// - `data`: [ChartConfiguration] object with applied modifications
-/// - `isError`: true if no active chart exists or input validation fails
+/// - `output`: JSON string describing modifications applied
+/// - `data`: Updated [ChartConfiguration] object
+/// - `isError`: true if no active chart or validation fails
 ///
-/// When no active chart is available, the tool returns a helpful error
-/// explaining that `create_chart` must be called first.
+/// See also:
+/// - [CreateChartTool] for creating new charts
+/// - [GetChartTool] for discovering IDs before modification
+/// - [SchemaValidator] for validation rules V010-V022
 class ModifyChartTool extends AgentTool {
   /// Default color palette for series that don't specify their own color.
   static const List<String> _defaultColors = [

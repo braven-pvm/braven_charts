@@ -13,44 +13,84 @@ import '../validation/schema_validator.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
-/// Tool for creating chart configurations from LLM input.
+/// Tool for creating chart configurations from LLM input (V2 Schema).
 ///
-/// This tool lets an LLM produce a complete [ChartConfiguration] by supplying
-/// structured input including data series, chart type, and styling options.
-/// It is typically registered on an [AgentSessionImpl] so the model can call
-/// it during `transform()`.
+/// This tool enables LLM agents to produce complete [ChartConfiguration]
+/// objects by supplying structured input. It is the primary entry point for
+/// chart creation in the agentic workflow.
 ///
-/// Use this tool when there is no active chart yet or when you want a
-/// full replacement configuration from a prompt.
+/// ## V2 Schema Features
 ///
-/// ## Example Usage (LLM perspective)
+/// This tool implements the V2 agentic chart schema with:
+///
+/// - **Nested yAxis**: Each series has its own [YAxisConfig] object
+/// - **System-generated IDs**: Chart and annotation IDs are auto-assigned
+/// - **Comprehensive validation**: V001-V044 rules with actionable errors
+/// - **Per-series normalization**: Independent scaling for multi-axis charts
+///
+/// ## Example: Basic Chart with Nested yAxis
 ///
 /// ```json
 /// {
-///   "prompt": "Create a line chart showing temperature over time",
-///   "type": "line",
+///   "prompt": "Create a temperature chart",
 ///   "title": "Temperature Trends",
 ///   "series": [{
 ///     "id": "temp",
-///     "data": [{"x": 0, "y": 20}, {"x": 1, "y": 22}]
+///     "data": [{"x": 0, "y": 20}, {"x": 1, "y": 22}],
+///     "yAxis": {
+///       "position": "left",
+///       "label": "Temperature",
+///       "unit": "°C",
+///       "min": 0,
+///       "max": 50
+///     }
 ///   }]
+/// }
+/// ```
+///
+/// ## Example: Multi-Axis Chart
+///
+/// ```json
+/// {
+///   "prompt": "Temperature and humidity over time",
+///   "normalizationMode": "perSeries",
+///   "series": [
+///     {
+///       "id": "temp",
+///       "data": [...],
+///       "yAxis": {"position": "left", "label": "Temp", "unit": "°C"}
+///     },
+///     {
+///       "id": "humidity",
+///       "data": [...],
+///       "yAxis": {"position": "right", "label": "Humidity", "unit": "%"}
+///     }
+///   ]
 /// }
 /// ```
 ///
 /// ## Required Fields
 ///
 /// - `prompt`: Natural language description of the chart
-/// - `series`: Array of data series to plot
+/// - `series`: Array of data series (each with `id` and `data`)
+///
+/// ## Validation
+///
+/// The tool validates input using [SchemaValidator] and returns:
+/// - **Errors** (V003, V004, V030-V044): Block chart creation
+/// - **Warnings** (V001, V002): Non-blocking, included in response
 ///
 /// ## Output
 ///
 /// Returns a [ToolResult] with:
 /// - `output`: JSON string of the created chart configuration
 /// - `data`: [ChartConfiguration] object for programmatic use
-/// - `isError`: true if input validation fails
+/// - `isError`: true if validation fails
 ///
-/// This tool validates required fields and returns user-friendly errors
-/// instead of throwing exceptions.
+/// See also:
+/// - [ModifyChartTool] for updating existing charts
+/// - [GetChartTool] for querying chart state
+/// - [SchemaValidator] for validation rules
 class CreateChartTool extends AgentTool {
   /// Default color palette for series that don't specify their own color.
   static const List<String> _defaultColors = [

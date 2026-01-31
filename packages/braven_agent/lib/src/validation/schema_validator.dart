@@ -56,13 +56,68 @@ class ValidationResult {
   bool get isValid => errors.isEmpty;
 }
 
-/// Schema validator for ChartConfiguration.
+/// Schema validator for ChartConfiguration (V2 Schema).
 ///
-/// Validates chart configurations against the v2 schema rules:
-/// - V001: Warning when perSeries mode has chart-level yAxis
-/// - V002: Warning when perSeries mode has series without yAxis
-/// - V003: Error when duplicate series IDs exist
-/// - V004: Error when duplicate annotation IDs exist
+/// Validates chart configurations against the V2 agentic schema rules.
+/// Returns [ValidationResult] containing errors (blocking) and warnings
+/// (non-blocking with actionable guidance).
+///
+/// ## Validation Code Reference
+///
+/// ### Chart Structure Warnings (V001-V002)
+///
+/// | Code | Type | Description |
+/// |------|------|-------------|
+/// | V001 | Warning | Chart-level yAxis ignored in perSeries mode |
+/// | V002 | Warning | Series lacks yAxis in perSeries mode |
+///
+/// ### Uniqueness Errors (V003-V004)
+///
+/// | Code | Type | Description |
+/// |------|------|-------------|
+/// | V003 | Error | Duplicate series IDs |
+/// | V004 | Error | Duplicate annotation IDs |
+///
+/// ### Modification Validation (V010-V022)
+///
+/// | Code | Type | Description |
+/// |------|------|-------------|
+/// | V010 | Error | update.series[].id not found |
+/// | V011 | Error | remove.series contains non-existent ID |
+/// | V012 | Error | add.series[].id already exists |
+/// | V020 | Error | update.annotations[].id not found |
+/// | V021 | Error | remove.annotations contains non-existent ID |
+/// | V022 | Warning | Agent supplied annotation ID (ignored) |
+///
+/// ### Annotation Validation (V030-V044)
+///
+/// | Code | Type | Description |
+/// |------|------|-------------|
+/// | V030 | Error | seriesId references non-existent series |
+/// | V031 | Error | Point annotation lacks seriesId |
+/// | V032 | Error | Marker annotation lacks seriesId |
+/// | V033 | Error | Horizontal referenceLine in perSeries mode lacks seriesId |
+/// | V034 | Error | Horizontal zone in perSeries mode lacks seriesId |
+/// | V040 | Error | ReferenceLine lacks value |
+/// | V041 | Error | Zone lacks minValue or maxValue |
+/// | V042 | Error | Marker with seriesId lacks dataPointIndex or x/y |
+/// | V043 | Error | dataPointIndex out of range |
+/// | V044 | Error | TextLabel lacks text |
+///
+/// ## Usage
+///
+/// ```dart
+/// final result = SchemaValidator.validate(chart);
+/// if (!result.isValid) {
+///   for (final error in result.errors) {
+///     print('${error.code}: ${error.message}');
+///   }
+/// }
+/// ```
+///
+/// See also:
+/// - [CreateChartTool] and [ModifyChartTool] which use this validator
+/// - [ValidationResult] for the return type structure
 class SchemaValidator {
   /// Validates the given chart configuration.
   ///
@@ -505,17 +560,17 @@ class SchemaValidator {
 }
 
 // ============================================================
-// TDD RED PHASE STUBS - US2 Modification Types
-// @orchestra-task: 6
+// Modification Request Types
 // ============================================================
-// These stub classes allow tests to compile but will throw
-// UnimplementedError when used, causing tests to fail (red phase).
-// The GREEN phase task will implement these properly.
+// These types represent modification operations for validateModification.
 
 /// Request object for chart modifications.
 ///
-/// Contains optional update, add, and remove operations.
-/// [TDD RED PHASE STUB]
+/// Contains optional [update], [add], and [remove] operations that are
+/// applied in the order: remove → add → update.
+///
+/// Used by [SchemaValidator.validateModification] to validate operations
+/// before they are applied by [ModifyChartTool].
 class ModificationRequest {
   final UpdateOperation? update;
   final AddOperation? add;
@@ -530,7 +585,8 @@ class ModificationRequest {
 
 /// Update operation containing series and annotation modifications.
 ///
-/// [TDD RED PHASE STUB]
+/// Each item in [series] or [annotations] must have an `id` field
+/// identifying the existing item to update. Validated by V010/V020.
 class UpdateOperation {
   final List<SeriesModification>? series;
   final List<AnnotationModification>? annotations;
@@ -543,7 +599,8 @@ class UpdateOperation {
 
 /// Add operation containing new series and annotations.
 ///
-/// [TDD RED PHASE STUB]
+/// New series must have unique IDs (validated by V012).
+/// Annotation IDs are system-generated (V022 warns if supplied).
 class AddOperation {
   final List<SeriesAddition>? series;
   final List<AnnotationAddition>? annotations;
@@ -556,7 +613,7 @@ class AddOperation {
 
 /// Remove operation containing series and annotation IDs to remove.
 ///
-/// [TDD RED PHASE STUB]
+/// IDs must reference existing items (validated by V011/V021).
 class RemoveOperation {
   final List<String>? series;
   final List<String>? annotations;
@@ -569,7 +626,8 @@ class RemoveOperation {
 
 /// Modification for an existing series.
 ///
-/// [TDD RED PHASE STUB]
+/// The [id] field identifies the series to update. Other fields are
+/// optional and only specified fields are updated (deep merge for yAxis).
 class SeriesModification {
   final String id;
   final String? name;
@@ -586,7 +644,8 @@ class SeriesModification {
 
 /// Modification for an existing annotation.
 ///
-/// [TDD RED PHASE STUB]
+/// The [id] field identifies the annotation to update. Use [GetChartTool]
+/// to discover annotation IDs before calling modify_chart.
 class AnnotationModification {
   final String id;
   final String? label;
@@ -603,7 +662,8 @@ class AnnotationModification {
 
 /// New series to add.
 ///
-/// [TDD RED PHASE STUB]
+/// The [id] must be unique (validated by V012). The [data] array
+/// contains [DataPoint] objects.
 class SeriesAddition {
   final String id;
   final List<dynamic> data;
@@ -620,7 +680,8 @@ class SeriesAddition {
 
 /// New annotation to add.
 ///
-/// [TDD RED PHASE STUB]
+/// The [id] field is ignored if supplied (V022 warning); the system
+/// generates a unique UUID for each new annotation.
 class AnnotationAddition {
   final String? id;
   final AnnotationType type;

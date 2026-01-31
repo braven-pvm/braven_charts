@@ -4,16 +4,40 @@ import '../models/chart_configuration.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
-/// Tool for retrieving current chart configuration with all IDs.
+/// Tool for retrieving current chart configuration (V2 Schema).
 ///
 /// Enables LLM agents to query chart state before making modifications.
 /// Returns the complete chart configuration including all system-generated
-/// IDs for annotations and the chart itself.
+/// IDs for the chart and its annotations.
+///
+/// ## V2 Schema: ID Discovery
+///
+/// This tool is essential for the V2 schema workflow where IDs are
+/// system-generated. Use it to:
+///
+/// - **Discover annotation IDs** before calling `modify_chart` to update/remove
+/// - **Inspect current series IDs** to target specific series for updates
+/// - **Verify chart state** after modifications
 ///
 /// ## Parameters
 ///
 /// - `chartId` (required): The ID of the chart to retrieve
 /// - `includeData` (optional, default: false): Whether to include full data arrays
+///
+/// ## includeData Behavior
+///
+/// When `includeData` is **false** (default), series data is summarized:
+/// ```json
+/// {"series": [{"id": "temp", "data": {"count": 100}, ...}]}
+/// ```
+///
+/// When `includeData` is **true**, full data arrays are included:
+/// ```json
+/// {"series": [{"id": "temp", "data": [{"x": 0, "y": 20}, ...], ...}]}
+/// ```
+///
+/// Use `includeData: false` for efficient ID discovery and chart inspection.
+/// Use `includeData: true` when you need to analyze actual data values.
 ///
 /// ## Example
 ///
@@ -22,15 +46,29 @@ import 'tool_result.dart';
 ///   getChartById: (id) => chartRegistry[id],
 /// );
 ///
+/// // Discover IDs (efficient)
 /// final result = await tool.execute({
-///   'chartId': 'chart-123',
+///   'chartId': 'chart-uuid',
+///   'includeData': false,
+/// });
+///
+/// // Full data retrieval
+/// final fullResult = await tool.execute({
+///   'chartId': 'chart-uuid',
 ///   'includeData': true,
 /// });
 /// ```
 ///
-/// When `includeData` is false (default), series data is summarized as
-/// `{count: N}` instead of the full array. When true, full data arrays
-/// are included in the response.
+/// ## Output
+///
+/// Returns a [ToolResult] with:
+/// - `output`: JSON string of the chart configuration
+/// - `data`: [ChartConfiguration] object for programmatic use
+/// - `isError`: true if chart not found
+///
+/// See also:
+/// - [ModifyChartTool] for updating charts using discovered IDs
+/// - [CreateChartTool] for creating new charts
 class GetChartTool extends AgentTool {
   /// Callback to retrieve a chart by its ID.
   ///

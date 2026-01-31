@@ -4,12 +4,22 @@ import 'data_point.dart';
 import 'enums.dart';
 import 'y_axis_config.dart';
 
-/// Configuration for a single data series in a chart.
+/// Configuration for a single data series in a chart (V2 Schema).
 ///
-/// Represents a complete series with data points and styling options.
-/// Uses [EquatableMixin] for value equality comparisons.
+/// Represents a complete series with data points, styling options, and
+/// per-series axis configuration. Uses [EquatableMixin] for value equality.
 ///
-/// ## Example
+/// ## V2 Schema: Nested yAxis Configuration
+///
+/// In the V2 schema, each series defines its own y-axis through the nested
+/// [yAxis] property (a [YAxisConfig] object). This replaces the legacy
+/// `yAxisId` reference pattern and enables:
+///
+/// - **Per-series normalization**: Each series has independent min/max scaling
+/// - **Multi-axis charts**: Multiple series with different units and scales
+/// - **Deep merge updates**: Partial yAxis updates preserve unspecified properties
+///
+/// ## Example: Basic Series with Nested yAxis
 ///
 /// ```dart
 /// final series = SeriesConfig(
@@ -18,6 +28,29 @@ import 'y_axis_config.dart';
 ///   name: 'Temperature',
 ///   color: '#FF5733',
 ///   strokeWidth: 2.0,
+///   yAxis: YAxisConfig(
+///     position: AxisPosition.left,
+///     label: 'Temperature',
+///     unit: '°C',
+///     min: 0,
+///     max: 50,
+///   ),
+/// );
+/// ```
+///
+/// ## Example: Multi-Series Chart with Different Axes
+///
+/// ```dart
+/// final tempSeries = SeriesConfig(
+///   id: 'temp',
+///   data: tempData,
+///   yAxis: YAxisConfig(position: AxisPosition.left, label: 'Temp', unit: '°C'),
+/// );
+///
+/// final humiditySeries = SeriesConfig(
+///   id: 'humidity',
+///   data: humidityData,
+///   yAxis: YAxisConfig(position: AxisPosition.right, label: 'Humidity', unit: '%'),
 /// );
 /// ```
 ///
@@ -25,8 +58,13 @@ import 'y_axis_config.dart';
 ///
 /// ```dart
 /// final json = series.toJson();
+/// // Output includes nested yAxis: { "yAxis": { "position": "left", ... } }
 /// final restored = SeriesConfig.fromJson(json);
 /// ```
+///
+/// See also:
+/// - [YAxisConfig] for y-axis configuration options
+/// - [ChartConfiguration] for the complete chart structure
 class SeriesConfig with EquatableMixin {
   /// Unique identifier for this series.
   final String id;
@@ -77,12 +115,23 @@ class SeriesConfig with EquatableMixin {
   /// Whether to show individual data points.
   final bool showPoints;
 
-  /// Nested Y-axis configuration for this series.
+  /// Nested Y-axis configuration for this series (V2 Schema).
   ///
   /// Contains all y-axis properties (position, label, unit, color, min, max, etc.)
-  /// in a single nested object. This replaces the flat y-axis fields.
+  /// in a single nested [YAxisConfig] object.
   ///
-  /// Example:
+  /// ## V2 Schema Benefits
+  ///
+  /// - **Self-contained**: All axis config lives with the series data
+  /// - **Deep merge**: Partial updates preserve unspecified properties
+  /// - **Per-series normalization**: Works with `normalizationMode: perSeries`
+  ///
+  /// ## Validation Warnings
+  ///
+  /// - **V002**: Warning if using `perSeries` normalization without yAxis config
+  ///
+  /// ## Example
+  ///
   /// ```dart
   /// SeriesConfig(
   ///   id: 'power',
@@ -91,9 +140,16 @@ class SeriesConfig with EquatableMixin {
   ///     position: AxisPosition.left,
   ///     label: 'Power',
   ///     unit: 'W',
+  ///     min: 0,
+  ///     max: 500,
+  ///     color: '#2196F3',
   ///   ),
   /// )
   /// ```
+  ///
+  /// See also:
+  /// - [YAxisConfig] for all available axis properties
+  /// - [SchemaValidator] for validation rules V001, V002
   final YAxisConfig? yAxis;
 
   /// Bar width as a percentage of available space (0.0 to 1.0).

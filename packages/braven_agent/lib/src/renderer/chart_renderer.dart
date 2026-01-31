@@ -447,11 +447,14 @@ class ChartRenderer {
     // Map position enum to YAxisPosition enum
     charts.YAxisPosition position;
     switch (yAxis.position) {
+      case models.AxisPosition.left:
+        position = charts.YAxisPosition.left;
       case models.AxisPosition.right:
         position = charts.YAxisPosition.right;
-      case models.AxisPosition.left:
-      default:
-        position = charts.YAxisPosition.left;
+      case models.AxisPosition.leftOuter:
+        position = charts.YAxisPosition.leftOuter;
+      case models.AxisPosition.rightOuter:
+        position = charts.YAxisPosition.rightOuter;
     }
 
     // Parse axis color

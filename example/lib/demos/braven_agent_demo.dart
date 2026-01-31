@@ -1,6 +1,41 @@
 // Copyright 2026 Braven Charts
 // SPDX-License-Identifier: MIT
 
+// Braven Agent Demo - Interactive Agentic Chart Creation (V2 Schema)
+//
+// This demo showcases the V2 agentic chart schema features:
+// - **Nested yAxis**: Each series defines its own y-axis configuration
+// - **System-generated IDs**: Annotations have auto-assigned UUIDs
+// - **Deep merge updates**: Partial modifications preserve unspecified fields
+// - **Per-series normalization**: Independent min/max scaling per series
+//
+// ## Usage
+//
+// 1. Enter your Anthropic or Grok API key
+// 2. Use natural language to describe charts:
+//    - "Create a line chart showing temperature from 0 to 100"
+//    - "Add a reference line at 75 labeled 'threshold'"
+//    - "Change the series color to red"
+//
+// ## Example Prompts for V2 Features
+//
+// Multi-axis chart with nested yAxis:
+// "Create a chart with temperature (°C) on the left axis
+// and humidity (%) on the right axis"
+//
+// The LLM will generate series with nested yAxis configurations:
+// ```json
+// {
+//   "series": [{
+//     "id": "temp",
+//     "yAxis": {"position": "left", "label": "Temp", "unit": "°C"}
+//   }, {
+//     "id": "humidity",
+//     "yAxis": {"position": "right", "label": "Humidity", "unit": "%"}
+//   }]
+// }
+// ```
+
 import 'dart:convert';
 
 import 'package:braven_agent/braven_agent.dart';

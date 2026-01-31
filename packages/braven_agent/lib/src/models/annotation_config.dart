@@ -2,36 +2,62 @@ import 'package:equatable/equatable.dart';
 
 import 'enums.dart';
 
-/// Configuration for a chart annotation.
+/// Configuration for a chart annotation (V2 Schema).
 ///
-/// Annotations provide additional context or highlights on charts.
+/// Annotations provide visual overlays on charts for highlighting data,
+/// marking thresholds, or adding contextual information.
+///
+/// ## V2 Schema: System-Generated IDs
+///
+/// In the V2 schema, annotation IDs are **system-generated and read-only**.
+/// When creating annotations via [CreateChartTool] or [ModifyChartTool],
+/// the system automatically assigns unique UUIDs. These IDs enable:
+///
+/// - **Targeted updates**: Modify specific annotations by ID
+/// - **Targeted removal**: Remove specific annotations by ID
+/// - **State tracking**: Query current annotations via [GetChartTool]
+///
+/// ## Annotation Types
+///
 /// The [type] field determines which optional fields are relevant:
-/// - [AnnotationType.referenceLine]: uses [orientation], [value]
-/// - [AnnotationType.zone]: uses [minValue], [maxValue]
-/// - [AnnotationType.textLabel]: uses [text], [position]
-/// - [AnnotationType.marker]: uses [x], [y]
 ///
-/// Uses [EquatableMixin] for value equality comparisons.
+/// | Type | Required Fields | Optional Fields |
+/// |------|-----------------|------------------|
+/// | [AnnotationType.referenceLine] | [orientation], [value] | [label], [color], [lineWidth], [dashPattern] |
+/// | [AnnotationType.zone] | [minValue], [maxValue] | [label], [color], [opacity] |
+/// | [AnnotationType.textLabel] | [text], [position] | [fontSize], [color] |
+/// | [AnnotationType.marker] | [seriesId] | [dataPointIndex], [x], [y] |
 ///
-/// ## Example
+/// ## Validation Rules (V030-V044)
+///
+/// The [SchemaValidator] enforces annotation requirements:
+/// - **V030**: Error if [seriesId] references non-existent series
+/// - **V031-V034**: Errors for missing seriesId in context-specific scenarios
+/// - **V040-V044**: Errors for missing required type-specific fields
+///
+/// ## Example: Reference Line
 ///
 /// ```dart
-/// // Reference line annotation
-/// final refLine = AnnotationConfig(
+/// final threshold = AnnotationConfig(
 ///   type: AnnotationType.referenceLine,
 ///   orientation: Orientation.horizontal,
 ///   value: 100.0,
-///   label: 'Threshold',
+///   label: 'Max Threshold',
 ///   color: '#FF0000',
+///   seriesId: 'power', // Required in perSeries mode
 /// );
+/// ```
 ///
-/// // Zone annotation
+/// ## Example: Zone Annotation
+///
+/// ```dart
 /// final zone = AnnotationConfig(
 ///   type: AnnotationType.zone,
 ///   minValue: 80.0,
 ///   maxValue: 120.0,
 ///   color: '#00FF00',
 ///   opacity: 0.3,
+///   label: 'Optimal Range',
 /// );
 /// ```
 ///
@@ -39,12 +65,34 @@ import 'enums.dart';
 ///
 /// ```dart
 /// final json = annotation.toJson();
+/// // ID is included if present: { "id": "uuid", "type": "referenceLine", ... }
 /// final restored = AnnotationConfig.fromJson(json);
 /// ```
+///
+/// See also:
+/// - [GetChartTool] to discover annotation IDs
+/// - [ModifyChartTool] to update/remove annotations by ID
+/// - [SchemaValidator] for validation rules V030-V044
 class AnnotationConfig with EquatableMixin {
-  /// Unique identifier for this annotation.
+  /// Unique identifier for this annotation (V2 Schema).
   ///
-  /// System-generated and read-only. Used for tracking and updating annotations.
+  /// This field is **system-generated and read-only**. When annotations are
+  /// created via [CreateChartTool] or [ModifyChartTool], the system assigns
+  /// a unique UUID automatically.
+  ///
+  /// ## Usage
+  ///
+  /// - **Read IDs**: Use [GetChartTool] to discover annotation IDs
+  /// - **Update by ID**: Use `modify_chart` with `update.annotations[].id`
+  /// - **Remove by ID**: Use `modify_chart` with `remove.annotations[]`
+  ///
+  /// ## Validation
+  ///
+  /// - **V022**: Warning if agent supplies ID when adding annotations (ignored)
+  /// - **V004**: Error if duplicate annotation IDs exist
+  ///
+  /// IDs are never null after chart creation; this nullable type supports
+  /// deserialization and construction before system assignment.
   final String? id;
 
   /// The type of annotation.
