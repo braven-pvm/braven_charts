@@ -69,9 +69,11 @@ void main() {
       expect(seriesProperties.containsKey('color'), isTrue);
     });
 
-    test('schema: series.yAxisId', () {
-      expect(seriesProperties.containsKey('yAxisId'), isTrue,
-          reason: 'MISSING: yAxisId not in schema');
+    // === Per-series Y-axis config (nested object) ===
+    // Note: yAxisId was replaced by nested yAxis object per FR-003
+    test('schema: series.yAxis (nested object)', () {
+      expect(seriesProperties.containsKey('yAxis'), isTrue,
+          reason: 'MISSING: yAxis object not in schema');
     });
 
     test('schema: series.unit', () {
@@ -131,35 +133,47 @@ void main() {
           reason: 'MISSING: barMaxWidth not in schema');
     });
 
-    // === Per-series Y-axis config (6) ===
-    test('schema: series.yAxisPosition', () {
-      expect(seriesProperties.containsKey('yAxisPosition'), isTrue,
-          reason: 'MISSING: yAxisPosition not in schema');
+    // === Per-series Y-axis config (nested yAxis object properties) ===
+    test('schema: series.yAxis.position', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('position') ?? false, isTrue,
+          reason: 'MISSING: yAxis.position not in schema');
     });
 
-    test('schema: series.yAxisLabel', () {
-      expect(seriesProperties.containsKey('yAxisLabel'), isTrue,
-          reason: 'MISSING: yAxisLabel not in schema');
+    test('schema: series.yAxis.label', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('label') ?? false, isTrue,
+          reason: 'MISSING: yAxis.label not in schema');
     });
 
-    test('schema: series.yAxisUnit', () {
-      expect(seriesProperties.containsKey('yAxisUnit'), isTrue,
-          reason: 'MISSING: yAxisUnit not in schema');
+    test('schema: series.yAxis.unit', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('unit') ?? false, isTrue,
+          reason: 'MISSING: yAxis.unit not in schema');
     });
 
-    test('schema: series.yAxisColor', () {
-      expect(seriesProperties.containsKey('yAxisColor'), isTrue,
-          reason: 'MISSING: yAxisColor not in schema');
+    test('schema: series.yAxis.color', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('color') ?? false, isTrue,
+          reason: 'MISSING: yAxis.color not in schema');
     });
 
-    test('schema: series.yAxisMin', () {
-      expect(seriesProperties.containsKey('yAxisMin'), isTrue,
-          reason: 'MISSING: yAxisMin not in schema');
+    test('schema: series.yAxis.min', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('min') ?? false, isTrue,
+          reason: 'MISSING: yAxis.min not in schema');
     });
 
-    test('schema: series.yAxisMax', () {
-      expect(seriesProperties.containsKey('yAxisMax'), isTrue,
-          reason: 'MISSING: yAxisMax not in schema');
+    test('schema: series.yAxis.max', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      expect(yAxisProps?.containsKey('max') ?? false, isTrue,
+          reason: 'MISSING: yAxis.max not in schema');
     });
   });
 
@@ -341,43 +355,39 @@ void main() {
           reason: 'MISSING: monotone not in interpolation enum');
     });
 
-    // === YAxisPosition enum (4 values) ===
-    test('schema: yAxisPosition.left', () {
-      final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull,
-          reason: 'MISSING: yAxisPosition property not in schema');
-      if (yAxisPositionProp == null) return;
-      final enumValues = yAxisPositionProp['enum'] as List?;
+    // === YAxis Position enum (4 values) - nested in yAxis.position ===
+    test('schema: yAxis.position enum contains left', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      final positionProp = yAxisProps?['position'] as Map<String, dynamic>?;
+      final enumValues = positionProp?['enum'] as List?;
       expect(enumValues?.contains('left') ?? false, isTrue);
     });
 
-    test('schema: yAxisPosition.right', () {
-      final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull,
-          reason: 'MISSING: yAxisPosition property not in schema');
-      if (yAxisPositionProp == null) return;
-      final enumValues = yAxisPositionProp['enum'] as List?;
+    test('schema: yAxis.position enum contains right', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      final positionProp = yAxisProps?['position'] as Map<String, dynamic>?;
+      final enumValues = positionProp?['enum'] as List?;
       expect(enumValues?.contains('right') ?? false, isTrue);
     });
 
-    test('schema: yAxisPosition.leftOuter', () {
-      final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull,
-          reason: 'MISSING: yAxisPosition property not in schema');
-      if (yAxisPositionProp == null) return;
-      final enumValues = yAxisPositionProp['enum'] as List?;
+    test('schema: yAxis.position enum contains leftOuter', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      final positionProp = yAxisProps?['position'] as Map<String, dynamic>?;
+      final enumValues = positionProp?['enum'] as List?;
       expect(enumValues?.contains('leftOuter') ?? false, isTrue,
-          reason: 'MISSING: leftOuter not in yAxisPosition enum');
+          reason: 'MISSING: leftOuter not in yAxis.position enum');
     });
 
-    test('schema: yAxisPosition.rightOuter', () {
-      final yAxisPositionProp = seriesProperties['yAxisPosition'];
-      expect(yAxisPositionProp, isNotNull,
-          reason: 'MISSING: yAxisPosition property not in schema');
-      if (yAxisPositionProp == null) return;
-      final enumValues = yAxisPositionProp['enum'] as List?;
+    test('schema: yAxis.position enum contains rightOuter', () {
+      final yAxisSchema = seriesProperties['yAxis'] as Map<String, dynamic>?;
+      final yAxisProps = yAxisSchema?['properties'] as Map<String, dynamic>?;
+      final positionProp = yAxisProps?['position'] as Map<String, dynamic>?;
+      final enumValues = positionProp?['enum'] as List?;
       expect(enumValues?.contains('rightOuter') ?? false, isTrue,
-          reason: 'MISSING: rightOuter not in yAxisPosition enum');
+          reason: 'MISSING: rightOuter not in yAxis.position enum');
     });
 
     // === LegendPosition enum (9 values in BravenChartPlus) ===
@@ -1034,11 +1044,27 @@ void main() {
         () {
       // Check that all properties in CreateChartTool's series schema
       // are also present in ModifyChartTool's addSeries schema
-      for (final prop in createSeriesProps.keys) {
+      // Note: CreateChartTool uses nested 'yAxis' object while ModifyChartTool uses flat yAxis* properties
+      final propsToCheck =
+          createSeriesProps.keys.where((prop) => prop != 'yAxis').toList();
+
+      for (final prop in propsToCheck) {
         expect(
           modifyAddSeriesProps.containsKey(prop),
           isTrue,
           reason: 'ModifyChartTool.addSeries missing property: $prop',
+        );
+      }
+
+      // Special case: CreateChartTool.yAxis (nested) maps to ModifyChartTool.yAxisPosition/yAxisLabel/etc (flat)
+      if (createSeriesProps.containsKey('yAxis')) {
+        // ModifyChartTool has flat yAxis properties instead of nested object
+        expect(
+          modifyAddSeriesProps.containsKey('yAxisPosition') ||
+              modifyAddSeriesProps.containsKey('yAxisId'),
+          isTrue,
+          reason:
+              'ModifyChartTool.addSeries should have yAxis-related properties',
         );
       }
     });

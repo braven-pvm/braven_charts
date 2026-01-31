@@ -185,15 +185,19 @@ void main() {
       expect(props.containsKey('xAxis'), isTrue);
     });
 
-    test('yAxis - exposed via series yAxis* properties and yAxes array', () {
+    test('yAxis - exposed via series yAxis nested object', () {
       final tool = agent_tools.CreateChartTool();
       final props = tool.inputSchema['properties'] as Map;
       final seriesItems = (props['series']['items']) as Map;
       final seriesProps = seriesItems['properties'] as Map;
-      expect(seriesProps.containsKey('yAxisPosition'), isTrue);
-      expect(seriesProps.containsKey('yAxisLabel'), isTrue);
-      expect(seriesProps.containsKey('yAxisMin'), isTrue);
-      expect(seriesProps.containsKey('yAxisMax'), isTrue);
+      // yAxis is now a nested object, not flat yAxisPosition/yAxisLabel properties
+      expect(seriesProps.containsKey('yAxis'), isTrue);
+      final yAxisSchema = seriesProps['yAxis'] as Map;
+      final yAxisProps = yAxisSchema['properties'] as Map;
+      expect(yAxisProps.containsKey('position'), isTrue);
+      expect(yAxisProps.containsKey('label'), isTrue);
+      expect(yAxisProps.containsKey('min'), isTrue);
+      expect(yAxisProps.containsKey('max'), isTrue);
     });
 
     // -------------------------------------------------------------------------
@@ -409,21 +413,28 @@ void main() {
       expect(props.containsKey('markerSize'), isTrue);
     });
 
-    test('yAxisConfig - exposed via series yAxis* properties', () {
+    test('yAxisConfig - exposed via series yAxis nested object', () {
       final tool = agent_tools.CreateChartTool();
       final seriesItems =
           (tool.inputSchema['properties']['series']['items']) as Map;
       final props = seriesItems['properties'] as Map;
-      expect(props.containsKey('yAxisPosition'), isTrue);
-      expect(props.containsKey('yAxisLabel'), isTrue);
+      // yAxis is a nested object with position, label, etc.
+      expect(props.containsKey('yAxis'), isTrue);
+      final yAxisSchema = props['yAxis'] as Map;
+      final yAxisProps = yAxisSchema['properties'] as Map;
+      expect(yAxisProps.containsKey('position'), isTrue);
+      expect(yAxisProps.containsKey('label'), isTrue);
     });
 
-    test('yAxisId - exposed via schema series.yAxisId', () {
+    // Note: yAxisId was replaced by nested yAxis object per FR-003
+    test('yAxis nested object exists (replaces flat yAxisId)', () {
       final tool = agent_tools.CreateChartTool();
       final seriesItems =
           (tool.inputSchema['properties']['series']['items']) as Map;
       final props = seriesItems['properties'] as Map;
-      expect(props.containsKey('yAxisId'), isTrue);
+      // yAxisId no longer exists - yAxis configuration is now inline
+      expect(props.containsKey('yAxis'), isTrue,
+          reason: 'yAxis nested object should exist');
     });
 
     test('unit - exposed via schema series.unit', () {
@@ -602,58 +613,58 @@ void main() {
   // PART 4: YAxisConfig API Surface
   // ===========================================================================
 
-  group('YAxisConfig API Surface (via series)', () {
-    late Map<String, dynamic> seriesProps;
+  group('YAxisConfig API Surface (via series yAxis nested object)', () {
+    late Map<String, dynamic> yAxisProps;
 
     setUp(() {
       final tool = agent_tools.CreateChartTool();
       final seriesItems =
           (tool.inputSchema['properties']['series']['items']) as Map;
-      seriesProps = seriesItems['properties'] as Map<String, dynamic>;
+      final seriesProps = seriesItems['properties'] as Map<String, dynamic>;
+      final yAxisSchema = seriesProps['yAxis'] as Map<String, dynamic>;
+      yAxisProps = yAxisSchema['properties'] as Map<String, dynamic>;
     });
 
-    test('position - exposed via yAxisPosition', () {
-      expect(seriesProps.containsKey('yAxisPosition'), isTrue);
+    test('position - exposed via yAxis.position', () {
+      expect(yAxisProps.containsKey('position'), isTrue);
     });
 
-    test('label - exposed via yAxisLabel', () {
-      expect(seriesProps.containsKey('yAxisLabel'), isTrue);
+    test('label - exposed via yAxis.label', () {
+      expect(yAxisProps.containsKey('label'), isTrue);
     });
 
-    test('unit - exposed via yAxisUnit', () {
-      expect(seriesProps.containsKey('yAxisUnit'), isTrue);
+    test('unit - exposed via yAxis.unit', () {
+      expect(yAxisProps.containsKey('unit'), isTrue);
     });
 
-    test('color - exposed via yAxisColor', () {
-      expect(seriesProps.containsKey('yAxisColor'), isTrue);
+    test('color - exposed via yAxis.color', () {
+      expect(yAxisProps.containsKey('color'), isTrue);
     });
 
-    test('min - exposed via yAxisMin', () {
-      expect(seriesProps.containsKey('yAxisMin'), isTrue);
+    test('min - exposed via yAxis.min', () {
+      expect(yAxisProps.containsKey('min'), isTrue);
     });
 
-    test('max - exposed via yAxisMax', () {
-      expect(seriesProps.containsKey('yAxisMax'), isTrue);
+    test('max - exposed via yAxis.max', () {
+      expect(yAxisProps.containsKey('max'), isTrue);
+    });
+
+    test('showTicks - exposed via yAxis.showTicks', () {
+      expect(yAxisProps.containsKey('showTicks'), isTrue);
+    });
+
+    test('showAxisLine - exposed via yAxis.showAxisLine', () {
+      expect(yAxisProps.containsKey('showAxisLine'), isTrue);
     });
 
     test('MISSING: visible - NOT exposed', () {
-      expect(seriesProps.containsKey('yAxisVisible'), isFalse,
-          reason: 'DOCUMENTED GAP: yAxisVisible not exposed');
-    });
-
-    test('MISSING: showAxisLine - NOT exposed', () {
-      expect(seriesProps.containsKey('yAxisShowAxisLine'), isFalse,
-          reason: 'DOCUMENTED GAP: yAxisShowAxisLine not exposed');
-    });
-
-    test('MISSING: showTicks - NOT exposed', () {
-      expect(seriesProps.containsKey('yAxisShowTicks'), isFalse,
-          reason: 'DOCUMENTED GAP: yAxisShowTicks not exposed');
+      expect(yAxisProps.containsKey('visible'), isFalse,
+          reason: 'DOCUMENTED GAP: visible not exposed in yAxis');
     });
 
     test('MISSING: tickCount - NOT exposed', () {
-      expect(seriesProps.containsKey('yAxisTickCount'), isFalse,
-          reason: 'DOCUMENTED GAP: yAxisTickCount not exposed');
+      expect(yAxisProps.containsKey('tickCount'), isFalse,
+          reason: 'DOCUMENTED GAP: tickCount not exposed in yAxis');
     });
   });
 
