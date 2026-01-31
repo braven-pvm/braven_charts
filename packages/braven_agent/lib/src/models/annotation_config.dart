@@ -97,6 +97,12 @@ class AnnotationConfig with EquatableMixin {
   /// ID of the series this annotation is associated with.
   final String? seriesId;
 
+  /// Index of the data point within the series for point-style annotations.
+  ///
+  /// Used by marker/point annotations to reference a specific data point.
+  /// Must be a valid index within the series data array (0 to length-1).
+  final int? dataPointIndex;
+
   /// Creates an [AnnotationConfig] with the given parameters.
   ///
   /// [type] is required. Other parameters are optional and depend on
@@ -119,6 +125,7 @@ class AnnotationConfig with EquatableMixin {
     this.lineWidth,
     this.dashPattern,
     this.seriesId,
+    this.dataPointIndex,
   });
 
   /// Creates an [AnnotationConfig] from a JSON map.
@@ -192,6 +199,7 @@ class AnnotationConfig with EquatableMixin {
       lineWidth: (json['lineWidth'] as num?)?.toDouble(),
       dashPattern: (json['dashPattern'] as List<dynamic>?)?.cast<double>(),
       seriesId: seriesId,
+      dataPointIndex: json['dataPointIndex'] as int?,
     );
   }
 
@@ -217,6 +225,7 @@ class AnnotationConfig with EquatableMixin {
       if (lineWidth != null) 'lineWidth': lineWidth,
       if (dashPattern != null) 'dashPattern': dashPattern,
       if (seriesId != null) 'seriesId': seriesId,
+      if (dataPointIndex != null) 'dataPointIndex': dataPointIndex,
     };
   }
 
@@ -241,6 +250,7 @@ class AnnotationConfig with EquatableMixin {
     double? lineWidth,
     List<double>? dashPattern,
     String? seriesId,
+    int? dataPointIndex,
   }) {
     return AnnotationConfig(
       id: id ?? this.id,
@@ -260,6 +270,7 @@ class AnnotationConfig with EquatableMixin {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       seriesId: seriesId ?? this.seriesId,
+      dataPointIndex: dataPointIndex ?? this.dataPointIndex,
     );
   }
 
@@ -282,6 +293,7 @@ class AnnotationConfig with EquatableMixin {
         lineWidth,
         dashPattern,
         seriesId,
+        dataPointIndex,
       ];
 
   @override

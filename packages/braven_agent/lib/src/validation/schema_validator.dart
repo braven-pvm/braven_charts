@@ -83,6 +83,9 @@ class SchemaValidator {
     // V004: Error when duplicate annotation IDs exist
     _validateV004(chart, errors);
 
+    // US4: V030-V044 annotation validation rules
+    _validateUS4AnnotationRules(chart, errors);
+
     return ValidationResult(errors: errors, warnings: warnings);
   }
 
@@ -201,6 +204,31 @@ class SchemaValidator {
         ),
       );
     }
+  }
+
+  /// US4: Validates annotation references and type-specific requirements.
+  ///
+  /// Validates V030-V044 rules:
+  /// - V030: Error when annotation's seriesId references non-existent series
+  /// - V031: Error when point annotation lacks seriesId
+  /// - V032: Error when marker annotation lacks seriesId
+  /// - V033: Error when horizontal referenceLine in perSeries mode lacks seriesId
+  /// - V034: Error when horizontal zone in perSeries mode lacks seriesId
+  /// - V040: Error when referenceLine annotation lacks value
+  /// - V041: Error when zone annotation lacks minValue or maxValue
+  /// - V042: Error when point-style annotation lacks dataPointIndex
+  /// - V043: Error when dataPointIndex is out of range
+  /// - V044: Error when textLabel annotation lacks text
+  ///
+  /// [TDD RED PHASE STUB] This method is a stub that will be implemented
+  /// in the GREEN phase. Currently does nothing, causing validation tests to fail.
+  static void _validateUS4AnnotationRules(
+    ChartConfiguration chart,
+    List<ValidationError> errors,
+  ) {
+    // TDD RED PHASE: This stub intentionally does nothing.
+    // The GREEN phase implementation will add validation for V030-V044.
+    // Tests for these validation rules will FAIL until this is implemented.
   }
 
   /// Validates a modification request against an existing chart.
