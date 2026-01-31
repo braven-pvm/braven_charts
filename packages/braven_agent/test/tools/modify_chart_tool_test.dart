@@ -1,5 +1,4 @@
 // @orchestra-task: 6
-// @orchestra-task: 12
 library;
 
 import 'package:braven_agent/src/models/annotation_config.dart';
@@ -1310,10 +1309,9 @@ void main() {
     });
 
     // ==========================================================
-    // US5: TDD Red Phase Tests - Deep Merge Semantics
-    // @orchestra-task: 12
+    // US5: Deep Merge Semantics
     // ==========================================================
-    group('US5: Deep Merge Semantics (TDD RED)', () {
+    group('US5: Deep Merge Semantics', () {
       // ----------------------------------------------------------
       // Test 1: Deep merge preserving multiple yAxis properties
       // ----------------------------------------------------------
@@ -1372,7 +1370,6 @@ void main() {
             reason: 'Deep merge should preserve color',
           );
         },
-        tags: ['tdd-red'],
       );
 
       // ----------------------------------------------------------
@@ -1430,7 +1427,6 @@ void main() {
             reason: 'Data should contain new y value',
           );
         },
-        tags: ['tdd-red'],
       );
 
       // ----------------------------------------------------------
@@ -1492,7 +1488,6 @@ void main() {
             reason: 'Name was not in update, should be preserved',
           );
         },
-        tags: ['tdd-red'],
       );
     });
   });
