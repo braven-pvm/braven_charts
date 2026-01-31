@@ -219,16 +219,166 @@ class SchemaValidator {
   /// - V042: Error when point-style annotation lacks dataPointIndex
   /// - V043: Error when dataPointIndex is out of range
   /// - V044: Error when textLabel annotation lacks text
-  ///
-  /// [TDD RED PHASE STUB] This method is a stub that will be implemented
-  /// in the GREEN phase. Currently does nothing, causing validation tests to fail.
   static void _validateUS4AnnotationRules(
     ChartConfiguration chart,
     List<ValidationError> errors,
   ) {
-    // TDD RED PHASE: This stub intentionally does nothing.
-    // The GREEN phase implementation will add validation for V030-V044.
-    // Tests for these validation rules will FAIL until this is implemented.
+    // Build lookup structures for validation
+    final seriesMap = <String, int>{};
+    for (final series in chart.series) {
+      seriesMap[series.id] = series.data.length;
+    }
+
+    final isPerSeriesMode =
+        chart.normalizationMode == NormalizationModeConfig.perSeries;
+
+    for (final annotation in chart.annotations) {
+      // V030: Error when annotation's seriesId references non-existent series
+      if (annotation.seriesId != null &&
+          annotation.seriesId!.isNotEmpty &&
+          !seriesMap.containsKey(annotation.seriesId)) {
+        errors.add(
+          ValidationError(
+            code: 'V030',
+            message:
+                "Annotation references non-existent series '${annotation.seriesId}'. "
+                'Use get_chart to discover valid series IDs.',
+          ),
+        );
+        // Skip further validation for this annotation since seriesId is invalid
+        continue;
+      }
+
+      // V031: Error when point annotation (marker with dataPointIndex) lacks seriesId
+      if (annotation.type == AnnotationType.marker &&
+          annotation.dataPointIndex != null &&
+          (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        errors.add(
+          const ValidationError(
+            code: 'V031',
+            message:
+                'Point annotation with dataPointIndex requires seriesId to identify '
+                'which series the data point belongs to.',
+          ),
+        );
+      }
+
+      // V032: Error when marker annotation lacks seriesId
+      if (annotation.type == AnnotationType.marker &&
+          annotation.dataPointIndex == null &&
+          (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        errors.add(
+          const ValidationError(
+            code: 'V032',
+            message:
+                'Marker annotation requires seriesId for coordinate resolution.',
+          ),
+        );
+      }
+
+      // V033: Error when horizontal referenceLine in perSeries mode lacks seriesId
+      if (annotation.type == AnnotationType.referenceLine &&
+          annotation.orientation == Orientation.horizontal &&
+          isPerSeriesMode &&
+          (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        errors.add(
+          const ValidationError(
+            code: 'V033',
+            message:
+                'Horizontal referenceLine requires seriesId in perSeries normalization mode.',
+          ),
+        );
+      }
+
+      // V034: Error when horizontal zone in perSeries mode lacks seriesId
+      if (annotation.type == AnnotationType.zone &&
+          annotation.orientation == Orientation.horizontal &&
+          isPerSeriesMode &&
+          (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        errors.add(
+          const ValidationError(
+            code: 'V034',
+            message:
+                'Horizontal zone requires seriesId in perSeries normalization mode.',
+          ),
+        );
+      }
+
+      // V040: Error when referenceLine annotation lacks value
+      if (annotation.type == AnnotationType.referenceLine &&
+          annotation.value == null) {
+        errors.add(
+          const ValidationError(
+            code: 'V040',
+            message: 'ReferenceLine requires value property.',
+          ),
+        );
+      }
+
+      // V041: Error when zone annotation lacks minValue or maxValue
+      if (annotation.type == AnnotationType.zone &&
+          (annotation.minValue == null || annotation.maxValue == null)) {
+        errors.add(
+          const ValidationError(
+            code: 'V041',
+            message: 'Zone requires both minValue and maxValue properties.',
+          ),
+        );
+      }
+
+      // V042: Error when marker with seriesId lacks dataPointIndex and x/y coordinates
+      if (annotation.type == AnnotationType.marker &&
+          annotation.seriesId != null &&
+          annotation.seriesId!.isNotEmpty &&
+          annotation.dataPointIndex == null &&
+          annotation.x == null &&
+          annotation.y == null) {
+        errors.add(
+          const ValidationError(
+            code: 'V042',
+            message:
+                'Marker annotation with seriesId requires dataPointIndex or x/y coordinates.',
+          ),
+        );
+      }
+
+      // V043: Error when dataPointIndex is out of range
+      if (annotation.dataPointIndex != null && annotation.seriesId != null) {
+        final dataLength = seriesMap[annotation.seriesId];
+        if (dataLength != null) {
+          if (annotation.dataPointIndex! < 0) {
+            errors.add(
+              ValidationError(
+                code: 'V043',
+                message:
+                    'dataPointIndex ${annotation.dataPointIndex} is invalid. '
+                    'Index must be >= 0.',
+              ),
+            );
+          } else if (annotation.dataPointIndex! >= dataLength) {
+            errors.add(
+              ValidationError(
+                code: 'V043',
+                message:
+                    'dataPointIndex ${annotation.dataPointIndex} out of range for series '
+                    "'${annotation.seriesId}' which has $dataLength points.",
+              ),
+            );
+          }
+        }
+      }
+
+      // V044: Error when textLabel annotation lacks text
+      if (annotation.type == AnnotationType.textLabel &&
+          (annotation.text == null || annotation.text!.isEmpty)) {
+        errors.add(
+          const ValidationError(
+            code: 'V044',
+            message: 'TextLabel requires text property.',
+          ),
+        );
+      }
+    }
   }
 
   /// Validates a modification request against an existing chart.

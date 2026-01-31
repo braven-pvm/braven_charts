@@ -107,20 +107,19 @@
 /// ```
 library braven_agent;
 
-// Models Layer - ChartConfiguration, SeriesConfig, DataPoint, AxisConfig,
-// AnnotationConfig, ChartStyleConfig, and enums
-export 'src/models/models.dart';
-
 // LLM Layer - LLMProvider, LLMRegistry, LLMConfig, LLMResponse,
 // MessageContent, AgentMessage, AnthropicAdapter
 export 'src/llm/llm.dart';
-
+// Models Layer - ChartConfiguration, SeriesConfig, DataPoint, AxisConfig,
+// AnnotationConfig, ChartStyleConfig, and enums
+export 'src/models/models.dart';
+// Renderer Layer - ChartRenderer for converting ChartConfiguration to widgets
+export 'src/renderer/renderer.dart';
 // Session Layer - AgentSession, AgentSessionImpl, SessionState,
 // AgentEvent hierarchy, defaultSystemPrompt
 export 'src/session/session.dart';
-
 // Tools Layer - AgentTool, ToolResult, CreateChartTool
 export 'src/tools/tools.dart';
-
-// Renderer Layer - ChartRenderer for converting ChartConfiguration to widgets
-export 'src/renderer/renderer.dart';
+// Validation Layer - SchemaValidator, ValidationResult, ValidationError,
+// ValidationWarning for chart configuration validation
+export 'src/validation/schema_validator.dart';

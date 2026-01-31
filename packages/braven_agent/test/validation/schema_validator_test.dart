@@ -49,7 +49,9 @@ void main() {
         final result = SchemaValidator.validate(chart);
 
         // Should have a V001 warning
-        expect(result.warnings, isNotEmpty, reason: 'V001: should emit warning for chart-level yAxis in perSeries mode');
+        expect(result.warnings, isNotEmpty,
+            reason:
+                'V001: should emit warning for chart-level yAxis in perSeries mode');
         expect(
           result.warnings.any((w) => w.code == 'V001'),
           isTrue,
@@ -120,7 +122,9 @@ void main() {
         final result = SchemaValidator.validate(chart);
 
         // Should have a V002 warning
-        expect(result.warnings, isNotEmpty, reason: 'V002: should emit warning for series without yAxis in perSeries mode');
+        expect(result.warnings, isNotEmpty,
+            reason:
+                'V002: should emit warning for series without yAxis in perSeries mode');
         expect(
           result.warnings.any((w) => w.code == 'V002'),
           isTrue,
@@ -213,7 +217,8 @@ void main() {
         final result = SchemaValidator.validate(chart);
 
         // Should have a V003 error
-        expect(result.isValid, isFalse, reason: 'V003: duplicate series IDs should make chart invalid');
+        expect(result.isValid, isFalse,
+            reason: 'V003: duplicate series IDs should make chart invalid');
         expect(result.errors, isNotEmpty);
         expect(
           result.errors.any((e) => e.code == 'V003'),
@@ -254,8 +259,10 @@ void main() {
 
         expect(result.isValid, isFalse);
         // Should report both duplicates
-        final v003Errors = result.errors.where((e) => e.code == 'V003').toList();
-        expect(v003Errors.length, greaterThanOrEqualTo(2), reason: 'Should report all duplicate ID groups');
+        final v003Errors =
+            result.errors.where((e) => e.code == 'V003').toList();
+        expect(v003Errors.length, greaterThanOrEqualTo(2),
+            reason: 'Should report all duplicate ID groups');
       });
 
       test('passes validation with unique series IDs', () {
@@ -319,7 +326,8 @@ void main() {
         final result = SchemaValidator.validate(chart);
 
         // Should have a V004 error
-        expect(result.isValid, isFalse, reason: 'V004: duplicate annotation IDs should make chart invalid');
+        expect(result.isValid, isFalse,
+            reason: 'V004: duplicate annotation IDs should make chart invalid');
         expect(result.errors, isNotEmpty);
         expect(
           result.errors.any((e) => e.code == 'V004'),
@@ -735,7 +743,8 @@ void main() {
           expect(
             result.errors.any((e) => e.code == 'V021'),
             isTrue,
-            reason: 'Should emit V021 error for non-existent annotation removal',
+            reason:
+                'Should emit V021 error for non-existent annotation removal',
           );
           expect(
             result.errors.any((e) => e.message.contains('unknown-annotation')),
@@ -788,9 +797,12 @@ void main() {
             reason: 'Should emit V022 warning for agent-supplied annotation ID',
           );
           expect(
-            result.warnings.any((w) => w.message.contains('system-generated') || w.message.contains('ignored')),
+            result.warnings.any((w) =>
+                w.message.contains('system-generated') ||
+                w.message.contains('ignored')),
             isTrue,
-            reason: 'Warning message should mention that ID is system-generated or ignored',
+            reason:
+                'Warning message should mention that ID is system-generated or ignored',
           );
         },
       );
