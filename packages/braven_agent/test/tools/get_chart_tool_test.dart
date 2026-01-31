@@ -1,7 +1,3 @@
-// @orchestra-task: 8
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/annotation_config.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/data_point.dart';
