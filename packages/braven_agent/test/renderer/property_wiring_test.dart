@@ -798,8 +798,9 @@ void main() {
       final modifications =
           schema['properties']['modifications'] as Map<String, dynamic>;
       final modProps = modifications['properties'] as Map<String, dynamic>;
+      final addProps = modProps['add']['properties'] as Map<String, dynamic>;
       final addSeriesItems =
-          (modProps['addSeries']['items']) as Map<String, dynamic>;
+          (addProps['series']['items']) as Map<String, dynamic>;
       addSeriesProperties =
           addSeriesItems['properties'] as Map<String, dynamic>;
     });
@@ -941,10 +942,12 @@ void main() {
       final modifications =
           schema['properties']['modifications'] as Map<String, dynamic>;
       final modProps = modifications['properties'] as Map<String, dynamic>;
-      final updateSeriesSchema =
-          modProps['updateSeries'] as Map<String, dynamic>;
-      updateSeriesProps = (updateSeriesSchema['additionalProperties']
-          ['properties']) as Map<String, dynamic>;
+      final updateProps =
+          modProps['update']['properties'] as Map<String, dynamic>;
+      final updateSeriesItems =
+          updateProps['series']['items'] as Map<String, dynamic>;
+      updateSeriesProps =
+          updateSeriesItems['properties'] as Map<String, dynamic>;
     });
 
     test('updateSeries schema: name', () {
@@ -1034,8 +1037,9 @@ void main() {
       final modifications =
           modifySchema['properties']['modifications'] as Map<String, dynamic>;
       final modProps = modifications['properties'] as Map<String, dynamic>;
+      final addProps = modProps['add']['properties'] as Map<String, dynamic>;
       final addSeriesItems =
-          (modProps['addSeries']['items']) as Map<String, dynamic>;
+          (addProps['series']['items']) as Map<String, dynamic>;
       modifyAddSeriesProps =
           addSeriesItems['properties'] as Map<String, dynamic>;
     });

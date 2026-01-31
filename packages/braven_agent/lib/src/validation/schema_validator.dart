@@ -218,11 +218,111 @@ class SchemaValidator {
     ChartConfiguration chart,
     ModificationRequest request,
   ) {
-    // TDD RED PHASE: This method is not yet implemented
-    throw UnimplementedError(
-      'validateModification is not yet implemented. '
-      'This is a TDD red phase stub - implement in GREEN phase.',
-    );
+    final errors = <ValidationError>[];
+    final warnings = <ValidationWarning>[];
+
+    final existingSeriesIds = chart.series.map((s) => s.id).toSet();
+    final existingAnnotationIds = chart.annotations
+        .map((a) => a.id)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final removeSeriesIds = request.remove?.series?.toSet() ?? <String>{};
+    final removeAnnotationIds =
+        request.remove?.annotations?.toSet() ?? <String>{};
+
+    // V011: Error when remove.series contains non-existent ID
+    for (final id in removeSeriesIds) {
+      if (!existingSeriesIds.contains(id)) {
+        errors.add(
+          ValidationError(
+            code: 'V011',
+            message: "Cannot remove series '$id' because it does not exist.",
+          ),
+        );
+      }
+    }
+
+    // V021: Error when remove.annotations contains non-existent ID
+    for (final id in removeAnnotationIds) {
+      if (!existingAnnotationIds.contains(id)) {
+        errors.add(
+          ValidationError(
+            code: 'V021',
+            message:
+                "Cannot remove annotation '$id' because it does not exist.",
+          ),
+        );
+      }
+    }
+
+    // Effective IDs after remove (remove -> add -> update order)
+    final effectiveSeriesIds = existingSeriesIds.difference(removeSeriesIds);
+    final effectiveAnnotationIds =
+        existingAnnotationIds.difference(removeAnnotationIds);
+
+    // V012: Error when add.series[].id already exists
+    final addSeries = request.add?.series ?? const <SeriesAddition>[];
+    for (final series in addSeries) {
+      if (effectiveSeriesIds.contains(series.id)) {
+        errors.add(
+          ValidationError(
+            code: 'V012',
+            message:
+                "Cannot add series '${series.id}' because it already exists.",
+          ),
+        );
+      } else {
+        effectiveSeriesIds.add(series.id);
+      }
+    }
+
+    // V022: Warning when agent supplies id on add.annotations
+    final addAnnotations =
+        request.add?.annotations ?? const <AnnotationAddition>[];
+    for (final annotation in addAnnotations) {
+      if (annotation.id != null && annotation.id!.isNotEmpty) {
+        warnings.add(
+          const ValidationWarning(
+            code: 'V022',
+            message:
+                'Annotation IDs are system-generated; the supplied id will be ignored.',
+          ),
+        );
+      }
+    }
+
+    // V010: Error when update.series[].id not found
+    final updateSeries = request.update?.series ?? const <SeriesModification>[];
+    for (final update in updateSeries) {
+      if (!effectiveSeriesIds.contains(update.id)) {
+        errors.add(
+          ValidationError(
+            code: 'V010',
+            message:
+                "Cannot update series '${update.id}' because it does not exist.",
+          ),
+        );
+      }
+    }
+
+    // V020: Error when update.annotations[].id not found
+    final updateAnnotations =
+        request.update?.annotations ?? const <AnnotationModification>[];
+    for (final update in updateAnnotations) {
+      if (!effectiveAnnotationIds.contains(update.id)) {
+        errors.add(
+          ValidationError(
+            code: 'V020',
+            message:
+                "Cannot update annotation '${update.id}' because it does not exist.",
+          ),
+        );
+      }
+    }
+
+    return ValidationResult(errors: errors, warnings: warnings);
   }
 }
 

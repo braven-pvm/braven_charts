@@ -111,22 +111,19 @@ void main() {
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
-          test('updateSeries additionalProperties have type property with enum',
-              () {
-            final updateSeriesAdditionalProps =
-                modProps['updateSeries']['additionalProperties'] as Map;
-            final seriesProps =
-                updateSeriesAdditionalProps['properties'] as Map;
+          test('update.series items have type property with enum', () {
+            final updateProps = modProps['update']['properties'] as Map;
+            final seriesItems = updateProps['series']['items'] as Map;
+            final seriesProps = seriesItems['properties'] as Map;
             expect(seriesProps, contains('type'));
             expect(seriesProps['type']['type'], equals('string'));
             expect(seriesProps['type']['enum'], isA<List>());
           });
 
-          test('updateSeries type enum includes all chart types', () {
-            final updateSeriesAdditionalProps =
-                modProps['updateSeries']['additionalProperties'] as Map;
-            final seriesProps =
-                updateSeriesAdditionalProps['properties'] as Map;
+          test('update.series type enum includes all chart types', () {
+            final updateProps = modProps['update']['properties'] as Map;
+            final seriesItems = updateProps['series']['items'] as Map;
+            final seriesProps = seriesItems['properties'] as Map;
             final enumValues = seriesProps['type']['enum'] as List;
             expect(enumValues, contains('line'));
             expect(enumValues, contains('area'));
@@ -144,38 +141,38 @@ void main() {
             expect(modProps['subtitle']['type'], equals('string'));
           });
 
-          test('has series property for replacement', () {
-            expect(modProps, contains('series'));
-            expect(modProps['series']['type'], equals('array'));
+          test('has add.series property for adding series', () {
+            final addProps = modProps['add']['properties'] as Map;
+            expect(addProps, contains('series'));
+            expect(addProps['series']['type'], equals('array'));
           });
 
-          test('has addSeries property for adding series', () {
-            expect(modProps, contains('addSeries'));
-            expect(modProps['addSeries']['type'], equals('array'));
-          });
-
-          test('addSeries items have required structure', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series items have required structure', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             expect(seriesItems['type'], equals('object'));
             expect(seriesItems['properties'], isA<Map>());
           });
 
-          test('addSeries item has id property', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item has id property', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             expect(seriesProps, contains('id'));
             expect(seriesProps['id']['type'], equals('string'));
           });
 
-          test('addSeries item has data property', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item has data property', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             expect(seriesProps, contains('data'));
             expect(seriesProps['data']['type'], equals('array'));
           });
 
-          test('addSeries item data has x,y point structure', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item data has x,y point structure', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             final dataItems = seriesProps['data']['items'] as Map;
             expect(dataItems['type'], equals('object'));
@@ -186,20 +183,23 @@ void main() {
             expect(pointProps['y']['type'], equals('number'));
           });
 
-          test('addSeries item requires id and data', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item requires id and data', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final required = seriesItems['required'] as List;
             expect(required, contains('id'));
             expect(required, contains('data'));
           });
 
-          test('has removeSeries property for removing series', () {
-            expect(modProps, contains('removeSeries'));
-            expect(modProps['removeSeries']['type'], equals('array'));
+          test('has remove.series property for removing series', () {
+            final removeProps = modProps['remove']['properties'] as Map;
+            expect(removeProps, contains('series'));
+            expect(removeProps['series']['type'], equals('array'));
           });
 
-          test('removeSeries items are strings (series IDs)', () {
-            final items = modProps['removeSeries']['items'] as Map;
+          test('remove.series items are strings (series IDs)', () {
+            final removeProps = modProps['remove']['properties'] as Map;
+            final items = removeProps['series']['items'] as Map;
             expect(items['type'], equals('string'));
           });
 
@@ -366,7 +366,11 @@ void main() {
         test('output contains chart JSON', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
+              },
             },
           });
 
@@ -379,8 +383,10 @@ void main() {
         test('can change series type from line to bar', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {'type': 'bar'},
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
               },
             },
           });
@@ -393,8 +399,10 @@ void main() {
         test('can change series type from line to area', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {'type': 'area'},
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'area'},
+                ],
               },
             },
           });
@@ -407,8 +415,10 @@ void main() {
         test('can change series type from line to scatter', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {'type': 'scatter'},
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'scatter'},
+                ],
               },
             },
           });
@@ -421,8 +431,10 @@ void main() {
         test('returns error for invalid series type value', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {'type': 'pie'},
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'pie'},
+                ],
               },
             },
           });
@@ -483,15 +495,17 @@ void main() {
         test('can add a single series to existing chart', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'new_series',
-                  'data': [
-                    {'x': 0, 'y': 100},
-                    {'x': 1, 'y': 200},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_series',
+                    'data': [
+                      {'x': 0, 'y': 100},
+                      {'x': 1, 'y': 200},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -508,20 +522,22 @@ void main() {
         test('can add multiple series at once', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'series_a',
-                  'data': [
-                    {'x': 0, 'y': 10},
-                  ],
-                },
-                {
-                  'id': 'series_b',
-                  'data': [
-                    {'x': 0, 'y': 20},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'series_a',
+                    'data': [
+                      {'x': 0, 'y': 10},
+                    ],
+                  },
+                  {
+                    'id': 'series_b',
+                    'data': [
+                      {'x': 0, 'y': 20},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -539,16 +555,18 @@ void main() {
         test('added series has correct data points', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'data_series',
-                  'data': [
-                    {'x': 1.5, 'y': 10.5},
-                    {'x': 2.5, 'y': 20.5},
-                    {'x': 3.5, 'y': 30.5},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'data_series',
+                    'data': [
+                      {'x': 1.5, 'y': 10.5},
+                      {'x': 2.5, 'y': 20.5},
+                      {'x': 3.5, 'y': 30.5},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -565,15 +583,17 @@ void main() {
         test('added series preserves name when provided', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'named_series',
-                  'name': 'Temperature',
-                  'data': [
-                    {'x': 0, 'y': 25},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'named_series',
+                    'name': 'Temperature',
+                    'data': [
+                      {'x': 0, 'y': 25},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -586,15 +606,17 @@ void main() {
         test('added series preserves color when provided', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'colored_series',
-                  'color': '#FF5733',
-                  'data': [
-                    {'x': 0, 'y': 50},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'colored_series',
+                    'color': '#FF5733',
+                    'data': [
+                      {'x': 0, 'y': 50},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -609,7 +631,9 @@ void main() {
         test('can remove a series by id', () async {
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['series_to_remove'],
+              'remove': {
+                'series': ['series_to_remove'],
+              },
             },
           });
 
@@ -624,7 +648,9 @@ void main() {
         test('can remove multiple series at once', () async {
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['series_a', 'series_b'],
+              'remove': {
+                'series': ['series_a', 'series_b'],
+              },
             },
           });
 
@@ -643,7 +669,9 @@ void main() {
           // Tool should gracefully handle removing a series that doesn't exist
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['non_existent_series'],
+              'remove': {
+                'series': ['non_existent_series'],
+              },
             },
           });
 
@@ -654,15 +682,19 @@ void main() {
         test('can add and remove series in same modification', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'new_series',
-                  'data': [
-                    {'x': 0, 'y': 10},
-                  ],
-                },
-              ],
-              'removeSeries': ['old_series'],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_series',
+                    'data': [
+                      {'x': 0, 'y': 10},
+                    ],
+                  },
+                ],
+              },
+              'remove': {
+                'series': ['old_series'],
+              },
             },
           });
 
@@ -682,13 +714,16 @@ void main() {
         test('can update data points for existing series', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'data': [
-                    {'x': 0, 'y': 999},
-                    {'x': 1, 'y': 888},
-                  ],
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'data': [
+                      {'x': 0, 'y': 999},
+                      {'x': 1, 'y': 888},
+                    ],
+                  },
+                ],
               },
             },
           });
@@ -703,10 +738,13 @@ void main() {
         test('can update series name', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'name': 'Updated Series Name',
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'name': 'Updated Series Name',
+                  },
+                ],
               },
             },
           });
@@ -720,10 +758,13 @@ void main() {
         test('can update series color', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'color': '#00FF00',
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'color': '#00FF00',
+                  },
+                ],
               },
             },
           });
@@ -763,8 +804,10 @@ void main() {
         test('modifying series type preserves title', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {'type': 'bar'},
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
               },
             },
           });
@@ -790,14 +833,16 @@ void main() {
         test('adding series preserves existing series', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'additional_series',
-                  'data': [
-                    {'x': 0, 'y': 50},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'additional_series',
+                    'data': [
+                      {'x': 0, 'y': 50},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -892,15 +937,17 @@ void main() {
           final result = await tool.execute({
             'modifications': {
               'title': 'Multi-Modification Chart',
-              'addSeries': [
-                {
-                  'id': 'new_data',
-                  'type': 'area',
-                  'data': [
-                    {'x': 0, 'y': 5},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_data',
+                    'type': 'area',
+                    'data': [
+                      {'x': 0, 'y': 5},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -956,8 +1003,10 @@ void main() {
       test('output contains modified series type', () async {
         final result = await tool.execute({
           'modifications': {
-            'updateSeries': {
-              'existing_series': {'type': 'area'},
+            'update': {
+              'series': [
+                {'id': 'existing_series', 'type': 'area'},
+              ],
             },
           },
         });
@@ -1003,7 +1052,7 @@ void main() {
           'update.series changes property on existing series',
           () async {
             // Test the NEW schema structure with explicit update.series[]
-            // Current implementation uses updateSeries map, new schema uses update.series array
+            // Uses update.series array structure
             final result = await tool.execute({
               'modifications': {
                 'update': {

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:uuid/uuid.dart';
+
 import '../models/annotation_config.dart';
 import '../models/chart_configuration.dart';
 import '../models/chart_style_config.dart';
@@ -8,6 +10,7 @@ import '../models/enums.dart';
 import '../models/series_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
+import '../validation/schema_validator.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
@@ -32,12 +35,19 @@ import 'tool_result.dart';
 /// ```json
 /// {
 ///   "modifications": {
-///     "type": "bar",
 ///     "title": "Updated Title",
-///     "addSeries": [{
-///       "id": "new_series",
-///       "data": [{"x": 0, "y": 10}]
-///     }]
+///     "add": {
+///       "series": [{
+///         "id": "new_series",
+///         "data": [{"x": 0, "y": 10}]
+///       }]
+///     },
+///     "update": {
+///       "series": [{"id": "existing_series", "color": "#FF0000"}]
+///     },
+///     "remove": {
+///       "series": ["old_series"]
+///     }
 ///   }
 /// }
 /// ```
@@ -74,6 +84,9 @@ class ModifyChartTool extends AgentTool {
     '#607D8B', // Blue Grey
   ];
 
+  /// UUID generator for new annotation IDs.
+  static const _uuid = Uuid();
+
   /// Callback function that returns the currently active chart.
   ///
   /// The session provides this function at construction time. The tool
@@ -97,10 +110,9 @@ class ModifyChartTool extends AgentTool {
       'add/remove annotations, or adjust styling options. '
       'Requires an active chart created previously.\n\n'
       'IMPORTANT - How to REMOVE items:\n'
-      '- To REMOVE ALL annotations: set "annotations": []\n'
-      '- To REMOVE ALL series: set "series": []\n'
-      '- To remove SPECIFIC series: use "removeSeries": ["seriesId1", "seriesId2"]\n'
-      '- Setting an array property to [] replaces it with an empty array, effectively removing all items.';
+      '- To REMOVE SPECIFIC series: use "remove.series": ["seriesId1", "seriesId2"]\n'
+      '- To REMOVE SPECIFIC annotations: use "remove.annotations": ["annId1", "annId2"]\n'
+      '- Remove operations only affect the listed items; all others are preserved.';
 
   @override
   Map<String, dynamic> get inputSchema => {
@@ -118,329 +130,465 @@ class ModifyChartTool extends AgentTool {
                 'type': 'string',
                 'description': 'New subtitle for the chart',
               },
-              'series': {
-                'type': 'array',
+              'update': {
+                'type': 'object',
                 'description':
-                    'REPLACES ALL existing series with this array. To REMOVE ALL SERIES, set to []. '
-                        'To add series without removing existing ones, use addSeries instead.',
-              },
-              'addSeries': {
-                'type': 'array',
-                'description': 'Series to add to the existing chart',
-                'items': {
-                  'type': 'object',
-                  'properties': {
-                    'id': {
-                      'type': 'string',
-                      'description': 'Unique identifier for this series',
-                    },
-                    'type': {
-                      'type': 'string',
-                      'enum': ['line', 'area', 'bar', 'scatter'],
-                      'description':
-                          'Type of chart series (line, area, bar, scatter). Each series can have its own type. Defaults to line.',
-                    },
-                    'name': {
-                      'type': 'string',
-                      'description': 'Display name for the series',
-                    },
-                    'color': {
-                      'type': 'string',
-                      'description': 'Color for the series (hex string)',
-                    },
-                    'data': {
-                      'type': 'array',
-                      'description': 'Data points in this series',
-                      'items': {
-                        'type': 'object',
-                        'properties': {
-                          'x': {
-                            'type': 'number',
-                            'description': 'X coordinate',
-                          },
-                          'y': {
-                            'type': 'number',
-                            'description': 'Y coordinate',
+                    'Update existing series/annotations by id. Only specified properties are changed.',
+                'properties': {
+                  'series': {
+                    'type': 'array',
+                    'description': 'Series updates (matched by id).',
+                    'items': {
+                      'type': 'object',
+                      'properties': {
+                        'id': {
+                          'type': 'string',
+                          'description': 'ID of the series to update',
+                        },
+                        'type': {
+                          'type': 'string',
+                          'enum': ['line', 'area', 'bar', 'scatter'],
+                          'description':
+                              'Change the series type (line, area, bar, scatter)',
+                        },
+                        'name': {
+                          'type': 'string',
+                          'description': 'Display name',
+                        },
+                        'color': {
+                          'type': 'string',
+                          'description': 'Color (hex format, e.g., "#FF0000")',
+                        },
+                        'data': {
+                          'type': 'array',
+                          'description':
+                              'New data points (replaces existing data)',
+                          'items': {
+                            'type': 'object',
+                            'properties': {
+                              'x': {'type': 'number'},
+                              'y': {'type': 'number'},
+                            },
+                            'required': ['x', 'y'],
                           },
                         },
-                        'required': ['x', 'y'],
+                        'strokeWidth': {
+                          'type': 'number',
+                          'minimum': 0,
+                        },
+                        'strokeDash': {
+                          'type': 'array',
+                          'items': {'type': 'number'},
+                        },
+                        'fillOpacity': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                        },
+                        'tension': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                        },
+                        'showPoints': {'type': 'boolean'},
+                        'interpolation': {
+                          'type': 'string',
+                          'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                        },
+                        'markerStyle': {
+                          'type': 'string',
+                          'enum': [
+                            'none',
+                            'circle',
+                            'square',
+                            'triangle',
+                            'diamond'
+                          ],
+                        },
+                        'markerSize': {
+                          'type': 'number',
+                          'minimum': 0,
+                        },
+                        'unit': {
+                          'type': 'string',
+                        },
+                        'yAxisId': {
+                          'type': 'string',
+                          'description':
+                              'SHARED axis reference (mutually exclusive with yAxisPosition).',
+                        },
+                        'visible': {'type': 'boolean'},
+                        'legendVisible': {'type': 'boolean'},
+                        'barWidthPercent': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                        },
+                        'barWidthPixels': {'type': 'number', 'minimum': 0},
+                        'barMinWidth': {'type': 'number', 'minimum': 0},
+                        'barMaxWidth': {'type': 'number', 'minimum': 0},
+                        'yAxis': {
+                          'type': 'object',
+                          'description':
+                              'Nested yAxis updates (deep-merged with existing).',
+                          'properties': {
+                            'position': {
+                              'type': 'string',
+                              'enum': [
+                                'left',
+                                'right',
+                                'leftOuter',
+                                'rightOuter'
+                              ],
+                            },
+                            'label': {'type': 'string'},
+                            'unit': {'type': 'string'},
+                            'color': {'type': 'string'},
+                            'min': {'type': 'number'},
+                            'max': {'type': 'number'},
+                          },
+                        },
+                        'yAxisPosition': {
+                          'type': 'string',
+                          'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                        },
+                        'yAxisLabel': {'type': 'string'},
+                        'yAxisUnit': {'type': 'string'},
+                        'yAxisColor': {'type': 'string'},
+                        'yAxisMin': {'type': 'number'},
+                        'yAxisMax': {'type': 'number'},
                       },
-                    },
-                    'yAxisId': {
-                      'type': 'string',
-                      'description': 'Reference to a SHARED Y-axis by its id. '
-                          'Must match an id from yAxes[] array (e.g., yAxes: [{id: "power-axis", ...}] → yAxisId: "power-axis"). '
-                          'MUTUALLY EXCLUSIVE with inline axis fields (yAxisPosition/yAxisLabel/etc). '
-                          'Will be validated - invalid references cause an error.',
-                    },
-                    'unit': {
-                      'type': 'string',
-                      'description':
-                          'Unit of measurement for this series (e.g., "W", "bpm").',
-                    },
-                    'interpolation': {
-                      'type': 'string',
-                      'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-                      'description':
-                          'Line interpolation type. Defaults to "linear".',
-                    },
-                    'strokeWidth': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description':
-                          'Width of the line stroke in pixels. Defaults to 2.0.',
-                    },
-                    'tension': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1,
-                      'description':
-                          'Curve tension for bezier interpolation (0.0 to 1.0).',
-                    },
-                    'showPoints': {
-                      'type': 'boolean',
-                      'description':
-                          'Whether to show data point markers. Defaults to false.',
-                    },
-                    'fillOpacity': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1,
-                      'description':
-                          'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
-                    },
-                    'markerStyle': {
-                      'type': 'string',
-                      'enum': [
-                        'none',
-                        'circle',
-                        'square',
-                        'triangle',
-                        'diamond'
-                      ],
-                      'description': 'Style of markers at data points.',
-                    },
-                    'markerSize': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description':
-                          'Size of markers in pixels. Defaults to 4.0.',
-                    },
-                    'barWidthPercent': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1,
-                      'description':
-                          'Bar width as a percentage of available space (0.0 to 1.0).',
-                    },
-                    'barWidthPixels': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description':
-                          'Fixed bar width in pixels. Overrides barWidthPercent.',
-                    },
-                    'barMinWidth': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description': 'Minimum bar width in pixels.',
-                    },
-                    'barMaxWidth': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description': 'Maximum bar width in pixels.',
-                    },
-                    'yAxisPosition': {
-                      'type': 'string',
-                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                      'description':
-                          'Position for INLINE Y-axis. MUTUALLY EXCLUSIVE with yAxisId.',
-                    },
-                    'yAxisLabel': {
-                      'type': 'string',
-                      'description':
-                          'Label for INLINE Y-axis (used with yAxisPosition).',
-                    },
-                    'yAxisUnit': {
-                      'type': 'string',
-                      'description':
-                          'Unit for INLINE Y-axis (used with yAxisPosition).',
-                    },
-                    'yAxisColor': {
-                      'type': 'string',
-                      'description':
-                          'Color for INLINE Y-axis (used with yAxisPosition).',
-                    },
-                    'yAxisMin': {
-                      'type': 'number',
-                      'description':
-                          'Min value for INLINE Y-axis (used with yAxisPosition).',
-                    },
-                    'yAxisMax': {
-                      'type': 'number',
-                      'description':
-                          'Max value for INLINE Y-axis (used with yAxisPosition).',
-                    },
-                    'visible': {
-                      'type': 'boolean',
-                      'description': 'Whether this series is visible.',
-                    },
-                    'legendVisible': {
-                      'type': 'boolean',
-                      'description':
-                          'Whether to show this series in the legend.',
-                    },
-                    'strokeDash': {
-                      'type': 'array',
-                      'items': {'type': 'number'},
-                      'description':
-                          'Dash pattern for line stroke (e.g., [5, 3] for dashed).',
+                      'required': ['id'],
                     },
                   },
-                  'required': ['id', 'data'],
-                },
-              },
-              'removeSeries': {
-                'type': 'array',
-                'description':
-                    'IDs of series to remove from the chart. Does not affect other series.',
-                'items': {
-                  'type': 'string',
-                },
-              },
-              'updateSeries': {
-                'type': 'object',
-                'description': 'Map of series ID to partial update. Only specified properties are changed; unspecified ones remain. '
-                    'Supports: type, name, color, data, strokeWidth, strokeDash, fillOpacity, '
-                    'markerStyle, markerSize, interpolation, tension, showPoints, '
-                    'yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor, yAxisMin, '
-                    'yAxisMax, barWidthPercent, barWidthPixels, barMinWidth, '
-                    'barMaxWidth, yAxisId, visible, legendVisible, unit.',
-                'additionalProperties': {
-                  'type': 'object',
-                  'description': 'Partial series properties to update',
-                  'properties': {
-                    'type': {
-                      'type': 'string',
-                      'enum': ['line', 'area', 'bar', 'scatter'],
-                      'description':
-                          'Change the series type (line, area, bar, scatter)',
-                    },
-                    'name': {'type': 'string', 'description': 'Display name'},
-                    'color': {
-                      'type': 'string',
-                      'description': 'Color (hex format, e.g., "#FF0000")'
-                    },
-                    'data': {
-                      'type': 'array',
-                      'description': 'New data points (replaces existing data)',
-                      'items': {
-                        'type': 'object',
-                        'properties': {
-                          'x': {'type': 'number'},
-                          'y': {'type': 'number'},
+                  'annotations': {
+                    'type': 'array',
+                    'description': 'Annotation updates (matched by id).',
+                    'items': {
+                      'type': 'object',
+                      'properties': {
+                        'id': {
+                          'type': 'string',
+                          'description': 'ID of the annotation to update',
                         },
-                        'required': ['x', 'y'],
+                        'type': {
+                          'type': 'string',
+                          'enum': [
+                            'referenceLine',
+                            'zone',
+                            'textLabel',
+                            'marker'
+                          ],
+                        },
+                        'value': {'type': 'number'},
+                        'minValue': {'type': 'number'},
+                        'maxValue': {'type': 'number'},
+                        'x': {'type': 'number'},
+                        'y': {'type': 'number'},
+                        'text': {'type': 'string'},
+                        'label': {'type': 'string'},
+                        'color': {'type': 'string'},
+                        'lineWidth': {'type': 'number'},
+                        'dashPattern': {
+                          'type': 'array',
+                          'items': {'type': 'number'},
+                        },
+                        'opacity': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                        },
+                        'orientation': {
+                          'type': 'string',
+                          'enum': ['horizontal', 'vertical'],
+                        },
+                        'position': {
+                          'type': 'string',
+                          'enum': [
+                            'topLeft',
+                            'topCenter',
+                            'topRight',
+                            'centerLeft',
+                            'center',
+                            'centerRight',
+                            'bottomLeft',
+                            'bottomCenter',
+                            'bottomRight'
+                          ],
+                        },
+                        'fontSize': {'type': 'number'},
+                        'seriesId': {'type': 'string'},
                       },
+                      'required': ['id'],
                     },
-                    'strokeWidth': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description': 'Line width in pixels'
+                  },
+                },
+              },
+              'add': {
+                'type': 'object',
+                'description': 'Add new series and annotations.',
+                'properties': {
+                  'series': {
+                    'type': 'array',
+                    'description': 'Series to add to the existing chart',
+                    'items': {
+                      'type': 'object',
+                      'properties': {
+                        'id': {
+                          'type': 'string',
+                          'description': 'Unique identifier for this series',
+                        },
+                        'type': {
+                          'type': 'string',
+                          'enum': ['line', 'area', 'bar', 'scatter'],
+                          'description':
+                              'Type of chart series (line, area, bar, scatter). Each series can have its own type. Defaults to line.',
+                        },
+                        'name': {
+                          'type': 'string',
+                          'description': 'Display name for the series',
+                        },
+                        'color': {
+                          'type': 'string',
+                          'description': 'Color for the series (hex string)',
+                        },
+                        'data': {
+                          'type': 'array',
+                          'description': 'Data points in this series',
+                          'items': {
+                            'type': 'object',
+                            'properties': {
+                              'x': {
+                                'type': 'number',
+                                'description': 'X coordinate',
+                              },
+                              'y': {
+                                'type': 'number',
+                                'description': 'Y coordinate',
+                              },
+                            },
+                            'required': ['x', 'y'],
+                          },
+                        },
+                        'yAxisId': {
+                          'type': 'string',
+                          'description':
+                              'Reference to a SHARED Y-axis by its id. MUTUALLY EXCLUSIVE with inline axis fields (yAxisPosition/yAxisLabel/etc).',
+                        },
+                        'unit': {
+                          'type': 'string',
+                          'description':
+                              'Unit of measurement for this series (e.g., "W", "bpm").',
+                        },
+                        'interpolation': {
+                          'type': 'string',
+                          'enum': ['linear', 'bezier', 'stepped', 'monotone'],
+                          'description':
+                              'Line interpolation type. Defaults to "linear".',
+                        },
+                        'strokeWidth': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'description':
+                              'Width of the line stroke in pixels. Defaults to 2.0.',
+                        },
+                        'tension': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                          'description':
+                              'Curve tension for bezier interpolation (0.0 to 1.0).',
+                        },
+                        'showPoints': {
+                          'type': 'boolean',
+                          'description':
+                              'Whether to show data point markers. Defaults to false.',
+                        },
+                        'fillOpacity': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                          'description':
+                              'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                        },
+                        'markerStyle': {
+                          'type': 'string',
+                          'enum': [
+                            'none',
+                            'circle',
+                            'square',
+                            'triangle',
+                            'diamond'
+                          ],
+                          'description': 'Style of markers at data points.',
+                        },
+                        'markerSize': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'description':
+                              'Size of markers in pixels. Defaults to 4.0.',
+                        },
+                        'barWidthPercent': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                          'description':
+                              'Bar width as a percentage of available space (0.0 to 1.0).',
+                        },
+                        'barWidthPixels': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'description':
+                              'Fixed bar width in pixels. Overrides barWidthPercent.',
+                        },
+                        'barMinWidth': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'description': 'Minimum bar width in pixels.',
+                        },
+                        'barMaxWidth': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'description': 'Maximum bar width in pixels.',
+                        },
+                        'yAxisPosition': {
+                          'type': 'string',
+                          'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                          'description':
+                              'Position for INLINE Y-axis. MUTUALLY EXCLUSIVE with yAxisId.',
+                        },
+                        'yAxisLabel': {
+                          'type': 'string',
+                          'description':
+                              'Label for INLINE Y-axis (used with yAxisPosition).',
+                        },
+                        'yAxisUnit': {
+                          'type': 'string',
+                          'description':
+                              'Unit for INLINE Y-axis (used with yAxisPosition).',
+                        },
+                        'yAxisColor': {
+                          'type': 'string',
+                          'description':
+                              'Color for INLINE Y-axis (used with yAxisPosition).',
+                        },
+                        'yAxisMin': {
+                          'type': 'number',
+                          'description':
+                              'Min value for INLINE Y-axis (used with yAxisPosition).',
+                        },
+                        'yAxisMax': {
+                          'type': 'number',
+                          'description':
+                              'Max value for INLINE Y-axis (used with yAxisPosition).',
+                        },
+                        'visible': {
+                          'type': 'boolean',
+                          'description': 'Whether this series is visible.',
+                        },
+                        'legendVisible': {
+                          'type': 'boolean',
+                          'description':
+                              'Whether to show this series in the legend.',
+                        },
+                        'strokeDash': {
+                          'type': 'array',
+                          'items': {'type': 'number'},
+                          'description':
+                              'Dash pattern for line stroke (e.g., [5, 3] for dashed).',
+                        },
+                      },
+                      'required': ['id', 'data'],
                     },
-                    'strokeDash': {
-                      'type': 'array',
-                      'items': {'type': 'number'},
-                      'description':
-                          'Dash pattern for line (e.g., [5, 3] for dashed)',
+                  },
+                  'annotations': {
+                    'type': 'array',
+                    'description':
+                        'Annotations to add to the chart. If an id is supplied, it is ignored and a system id is generated.',
+                    'items': {
+                      'type': 'object',
+                      'properties': {
+                        'id': {
+                          'type': 'string',
+                          'description':
+                              'Optional annotation id (ignored; system generates one).',
+                        },
+                        'type': {
+                          'type': 'string',
+                          'enum': [
+                            'referenceLine',
+                            'zone',
+                            'textLabel',
+                            'marker'
+                          ],
+                          'description':
+                              'Type of annotation: referenceLine, zone, textLabel, marker',
+                        },
+                        'value': {
+                          'type': 'number',
+                          'description': 'Value for referenceLine.',
+                        },
+                        'minValue': {'type': 'number'},
+                        'maxValue': {'type': 'number'},
+                        'x': {'type': 'number'},
+                        'y': {'type': 'number'},
+                        'text': {'type': 'string'},
+                        'label': {'type': 'string'},
+                        'color': {'type': 'string'},
+                        'lineWidth': {'type': 'number'},
+                        'dashPattern': {
+                          'type': 'array',
+                          'items': {'type': 'number'},
+                        },
+                        'opacity': {
+                          'type': 'number',
+                          'minimum': 0,
+                          'maximum': 1,
+                        },
+                        'orientation': {
+                          'type': 'string',
+                          'enum': ['horizontal', 'vertical'],
+                        },
+                        'position': {
+                          'type': 'string',
+                          'enum': [
+                            'topLeft',
+                            'topCenter',
+                            'topRight',
+                            'centerLeft',
+                            'center',
+                            'centerRight',
+                            'bottomLeft',
+                            'bottomCenter',
+                            'bottomRight'
+                          ],
+                        },
+                        'fontSize': {'type': 'number'},
+                        'seriesId': {
+                          'type': 'string',
+                          'description':
+                              'Series ID used for perSeries normalization positioning.',
+                        },
+                      },
+                      'required': ['type'],
                     },
-                    'fillOpacity': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1,
-                      'description': 'Fill opacity for area charts'
-                    },
-                    'tension': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1,
-                      'description': 'Bezier curve tension'
-                    },
-                    'showPoints': {
-                      'type': 'boolean',
-                      'description': 'Whether to show data point markers'
-                    },
-                    'interpolation': {
-                      'type': 'string',
-                      'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-                      'description': 'Line interpolation type',
-                    },
-                    'markerStyle': {
-                      'type': 'string',
-                      'enum': [
-                        'none',
-                        'circle',
-                        'square',
-                        'triangle',
-                        'diamond'
-                      ],
-                      'description': 'Style of markers at data points',
-                    },
-                    'markerSize': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'description': 'Marker size in pixels'
-                    },
-                    'yAxisId': {
-                      'type': 'string',
-                      'description':
-                          'SHARED axis reference (mutually exclusive with yAxisPosition)'
-                    },
-                    'unit': {
-                      'type': 'string',
-                      'description': 'Unit of measurement'
-                    },
-                    'visible': {
-                      'type': 'boolean',
-                      'description': 'Whether series is visible'
-                    },
-                    'legendVisible': {
-                      'type': 'boolean',
-                      'description': 'Whether to show in legend'
-                    },
-                    'yAxisPosition': {
-                      'type': 'string',
-                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                      'description':
-                          'INLINE axis position (mutually exclusive with yAxisId)',
-                    },
-                    'yAxisLabel': {
-                      'type': 'string',
-                      'description': 'INLINE axis label'
-                    },
-                    'yAxisUnit': {
-                      'type': 'string',
-                      'description': 'INLINE axis unit'
-                    },
-                    'yAxisColor': {
-                      'type': 'string',
-                      'description': 'INLINE axis color (hex)'
-                    },
-                    'yAxisMin': {
-                      'type': 'number',
-                      'description': 'INLINE axis minimum value'
-                    },
-                    'yAxisMax': {
-                      'type': 'number',
-                      'description': 'INLINE axis maximum value'
-                    },
-                    'barWidthPercent': {
-                      'type': 'number',
-                      'minimum': 0,
-                      'maximum': 1
-                    },
-                    'barWidthPixels': {'type': 'number', 'minimum': 0},
-                    'barMinWidth': {'type': 'number', 'minimum': 0},
-                    'barMaxWidth': {'type': 'number', 'minimum': 0},
+                  },
+                },
+              },
+              'remove': {
+                'type': 'object',
+                'description': 'Remove series or annotations by id.',
+                'properties': {
+                  'series': {
+                    'type': 'array',
+                    'description': 'IDs of series to remove from the chart.',
+                    'items': {'type': 'string'},
+                  },
+                  'annotations': {
+                    'type': 'array',
+                    'description':
+                        'IDs of annotations to remove from the chart.',
+                    'items': {'type': 'string'},
                   },
                 },
               },
@@ -842,56 +990,110 @@ class ModifyChartTool extends AgentTool {
       }
     }
 
-    // Start with the existing series
-    var updatedSeries = List<SeriesConfig>.from(activeChart.series);
+    final updateInput = modifications['update'] as Map<String, dynamic>?;
+    final addInput = modifications['add'] as Map<String, dynamic>?;
+    final removeInput = modifications['remove'] as Map<String, dynamic>?;
 
-    // Handle series replacement (replaces all series)
-    final seriesInput = modifications['series'] as List?;
-    if (seriesInput != null) {
-      updatedSeries = _parseSeries(seriesInput, 0);
+    final validation = SchemaValidator.validateModification(
+      activeChart,
+      _buildModificationRequest(updateInput, addInput, removeInput),
+    );
+    if (validation.errors.isNotEmpty) {
+      final message = validation.errors.map((e) => e.toString()).join(' ');
+      return _logError('Error: $message', input);
     }
 
-    // Handle removeSeries (remove series by ID)
-    final removeSeries = modifications['removeSeries'] as List?;
+    final addedSeriesIds = <String>[];
+    final addedAnnotationIds = <String>[];
+
+    // Start with the existing series/annotations
+    var updatedSeries = List<SeriesConfig>.from(activeChart.series);
+    var updatedAnnotations =
+        List<AnnotationConfig>.from(activeChart.annotations);
+
+    // Execution order: remove -> add -> update
+    final removeSeries = removeInput?['series'] as List?;
     if (removeSeries != null) {
       final idsToRemove = removeSeries.cast<String>().toSet();
       updatedSeries =
           updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
     }
+    final removeAnnotations = removeInput?['annotations'] as List?;
+    if (removeAnnotations != null) {
+      final idsToRemove = removeAnnotations.cast<String>().toSet();
+      updatedAnnotations = updatedAnnotations
+          .where((a) => a.id == null || !idsToRemove.contains(a.id))
+          .toList();
+    }
 
-    // Handle addSeries (add new series)
-    final addSeries = modifications['addSeries'] as List?;
+    final addSeries = addInput?['series'] as List?;
     if (addSeries != null) {
       final newSeries = _parseSeries(addSeries, updatedSeries.length);
       updatedSeries.addAll(newSeries);
+      addedSeriesIds.addAll(newSeries.map((s) => s.id));
     }
 
-    // Handle updateSeries (update existing series)
-    final updateSeries = modifications['updateSeries'] as Map<String, dynamic>?;
-    if (updateSeries != null) {
-      // Validate series types before applying updates
+    final addAnnotations = addInput?['annotations'] as List?;
+    if (addAnnotations != null) {
+      for (final entry in addAnnotations) {
+        final annotationMap = Map<String, dynamic>.from(entry as Map);
+        annotationMap.remove('id');
+        final parsed = AnnotationConfig.fromJson(annotationMap);
+        final annotationWithId = parsed.copyWith(id: 'ann-${_uuid.v4()}');
+        updatedAnnotations.add(annotationWithId);
+        addedAnnotationIds.add(annotationWithId.id!);
+      }
+    }
+
+    final updateSeriesInput = updateInput?['series'] as List?;
+    if (updateSeriesInput != null) {
       const validTypes = ['line', 'area', 'bar', 'scatter'];
-      for (final entry in updateSeries.entries) {
-        final seriesId = entry.key;
-        final update = entry.value as Map<String, dynamic>?;
-        if (update != null && update['type'] != null) {
-          final typeValue = update['type'] as String;
-          if (!validTypes.contains(typeValue)) {
-            return _logError(
-              'Error: Invalid series type "$typeValue" for series "$seriesId". '
-              'Valid types are: line, area, bar, scatter.',
-              input,
-            );
-          }
+      final updatesById = <String, Map<String, dynamic>>{};
+      for (final entry in updateSeriesInput) {
+        final updateMap = Map<String, dynamic>.from(entry as Map);
+        final seriesId = updateMap['id'] as String?;
+        if (seriesId == null || seriesId.isEmpty) {
+          continue;
         }
+        final typeValue = updateMap['type'] as String?;
+        if (typeValue != null && !validTypes.contains(typeValue)) {
+          return _logError(
+            'Error: Invalid series type "$typeValue" for series "$seriesId". '
+            'Valid types are: line, area, bar, scatter.',
+            input,
+          );
+        }
+        updatesById[seriesId] = updateMap;
       }
 
       updatedSeries = updatedSeries.map((series) {
-        final update = updateSeries[series.id] as Map<String, dynamic>?;
+        final update = updatesById[series.id];
         if (update != null) {
           return _applySeriesUpdate(series, update);
         }
         return series;
+      }).toList();
+    }
+
+    final updateAnnotationsInput = updateInput?['annotations'] as List?;
+    if (updateAnnotationsInput != null) {
+      final updatesById = <String, Map<String, dynamic>>{};
+      for (final entry in updateAnnotationsInput) {
+        final updateMap = Map<String, dynamic>.from(entry as Map);
+        final annotationId = updateMap['id'] as String?;
+        if (annotationId == null || annotationId.isEmpty) {
+          continue;
+        }
+        updatesById[annotationId] = updateMap;
+      }
+
+      updatedAnnotations = updatedAnnotations.map((annotation) {
+        final update =
+            annotation.id != null ? updatesById[annotation.id] : null;
+        if (update != null) {
+          return _applyAnnotationUpdate(annotation, update);
+        }
+        return annotation;
       }).toList();
     }
 
@@ -909,65 +1111,52 @@ class ModifyChartTool extends AgentTool {
       yAxes = _parseYAxes(yAxesInput);
     }
 
-    // Parse annotations if provided
-    List<AnnotationConfig>? annotations;
-    final annotationsInput = modifications['annotations'] as List?;
-    if (annotationsInput != null) {
-      annotations = <AnnotationConfig>[];
-      for (int i = 0; i < annotationsInput.length; i++) {
-        final annotationMap = annotationsInput[i];
-        final map = Map<String, dynamic>.from(annotationMap as Map);
-        final parsed = AnnotationConfig.fromJson(map);
-        annotations.add(parsed);
+    // Validate annotation seriesId references against updated series
+    final validSeriesIds = updatedSeries.map((s) => s.id).toSet();
+    for (final annotation in updatedAnnotations) {
+      if (annotation.seriesId != null &&
+          !validSeriesIds.contains(annotation.seriesId)) {
+        return _logError(
+          'Error: Annotation references non-existent series '
+          '"${annotation.seriesId}". '
+          'Valid series IDs are: ${validSeriesIds.join(", ")}. '
+          'The seriesId must exactly match a series id from the series array.',
+          input,
+        );
       }
+    }
 
-      // Validate annotation seriesId references against updated series
-      final validSeriesIds = updatedSeries.map((s) => s.id).toSet();
-      for (final annotation in annotations) {
-        if (annotation.seriesId != null &&
-            !validSeriesIds.contains(annotation.seriesId)) {
-          return _logError(
-            'Error: Annotation references non-existent series '
-            '"${annotation.seriesId}". '
-            'Valid series IDs are: ${validSeriesIds.join(", ")}. '
-            'The seriesId must exactly match a series id from the series array.',
-            input,
-          );
-        }
-      }
+    // Determine effective normalization mode
+    final effectiveNormMode =
+        normalizationMode ?? activeChart.normalizationMode;
 
-      // Determine effective normalization mode
-      final effectiveNormMode =
-          normalizationMode ?? activeChart.normalizationMode;
-
-      // Validate horizontal annotations have seriesId in perSeries mode
-      if (effectiveNormMode == NormalizationModeConfig.perSeries) {
-        for (final annotation in annotations) {
-          if (annotation.type == AnnotationType.referenceLine &&
-              annotation.orientation != Orientation.vertical &&
-              annotation.seriesId == null) {
-            return _logError(
-              'Error: Horizontal referenceLine annotation requires '
-              '"seriesId" in perSeries normalization mode. '
-              'Without seriesId, the annotation cannot be positioned correctly. '
-              'Add seriesId matching one of: ${validSeriesIds.join(", ")}',
-              input,
-            );
-          }
-        }
-      }
-
-      // Validate referenceLine annotations have a value
-      for (final annotation in annotations) {
+    // Validate horizontal annotations have seriesId in perSeries mode
+    if (effectiveNormMode == NormalizationModeConfig.perSeries) {
+      for (final annotation in updatedAnnotations) {
         if (annotation.type == AnnotationType.referenceLine &&
-            annotation.value == null) {
+            annotation.orientation != Orientation.vertical &&
+            annotation.seriesId == null) {
           return _logError(
-            'Error: referenceLine annotation requires a "value" property. '
-            'The value should be in the same units as the target series data. '
-            'Example: for a power series with range 0-500W, value: 200 draws a line at 200W.',
+            'Error: Horizontal referenceLine annotation requires '
+            '"seriesId" in perSeries normalization mode. '
+            'Without seriesId, the annotation cannot be positioned correctly. '
+            'Add seriesId matching one of: ${validSeriesIds.join(", ")}',
             input,
           );
         }
+      }
+    }
+
+    // Validate referenceLine annotations have a value
+    for (final annotation in updatedAnnotations) {
+      if (annotation.type == AnnotationType.referenceLine &&
+          annotation.value == null) {
+        return _logError(
+          'Error: referenceLine annotation requires a "value" property. '
+          'The value should be in the same units as the target series data. '
+          'Example: for a power series with range 0-500W, value: 200 draws a line at 200W.',
+          input,
+        );
       }
     }
 
@@ -997,7 +1186,7 @@ class ModifyChartTool extends AgentTool {
       series: updatedSeries,
       xAxis: xAxis ?? activeChart.xAxis,
       yAxes: yAxes ?? activeChart.yAxes,
-      annotations: annotations ?? activeChart.annotations,
+      annotations: updatedAnnotations,
       style: style ?? activeChart.style,
       interactions: interactions ?? activeChart.interactions,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
@@ -1021,8 +1210,26 @@ class ModifyChartTool extends AgentTool {
     );
 
     // Return success result with JSON output and ChartConfiguration data
+    final outputPayload = <String, dynamic>{
+      'chart': modifiedChart.toJson(),
+    };
+    if (addedSeriesIds.isNotEmpty || addedAnnotationIds.isNotEmpty) {
+      outputPayload['added'] = {
+        if (addedSeriesIds.isNotEmpty) 'series': addedSeriesIds,
+        if (addedAnnotationIds.isNotEmpty) 'annotations': addedAnnotationIds,
+      };
+    }
+    if (validation.warnings.isNotEmpty) {
+      outputPayload['warnings'] = validation.warnings
+          .map((warning) => {
+                'code': warning.code,
+                'message': warning.message,
+              })
+          .toList();
+    }
+
     return ToolResult(
-      output: jsonEncode(modifiedChart.toJson()),
+      output: jsonEncode(outputPayload),
       isError: false,
       data: modifiedChart,
     );
@@ -1156,6 +1363,177 @@ class ModifyChartTool extends AgentTool {
       legendVisible: update['legendVisible'] as bool?,
       unit: update['unit'] as String?,
     );
+  }
+
+  AnnotationConfig _applyAnnotationUpdate(
+    AnnotationConfig annotation,
+    Map<String, dynamic> update,
+  ) {
+    AnnotationType? updatedType;
+    if (update['type'] != null) {
+      updatedType = AnnotationType.values.byName(update['type'] as String);
+    }
+
+    Orientation? orientation;
+    if (update['orientation'] != null) {
+      orientation = Orientation.values.byName(update['orientation'] as String);
+    }
+
+    AnnotationPosition? position;
+    if (update['position'] != null) {
+      position = AnnotationPosition.values.byName(update['position'] as String);
+    }
+
+    return annotation.copyWith(
+      type: updatedType,
+      orientation: orientation,
+      value: (update['value'] as num?)?.toDouble(),
+      minValue: (update['minValue'] as num?)?.toDouble(),
+      maxValue: (update['maxValue'] as num?)?.toDouble(),
+      x: (update['x'] as num?)?.toDouble(),
+      y: (update['y'] as num?)?.toDouble(),
+      position: position,
+      text: update['text'] as String?,
+      label: update['label'] as String?,
+      color: update['color'] as String?,
+      opacity: (update['opacity'] as num?)?.toDouble(),
+      fontSize: (update['fontSize'] as num?)?.toDouble(),
+      lineWidth: (update['lineWidth'] as num?)?.toDouble(),
+      dashPattern: (update['dashPattern'] as List<dynamic>?)
+          ?.map((e) => (e as num).toDouble())
+          .toList(),
+      seriesId: update['seriesId'] as String?,
+    );
+  }
+
+  ModificationRequest _buildModificationRequest(
+    Map<String, dynamic>? updateInput,
+    Map<String, dynamic>? addInput,
+    Map<String, dynamic>? removeInput,
+  ) {
+    UpdateOperation? update;
+    if (updateInput != null) {
+      final seriesInput = updateInput['series'] as List?;
+      final updateSeries = seriesInput
+          ?.map((entry) {
+            final map = Map<String, dynamic>.from(entry as Map);
+            final id = map['id'] as String?;
+            if (id == null || id.isEmpty) {
+              return null;
+            }
+            return SeriesModification(
+              id: id,
+              name: map['name'] as String?,
+              color: map['color'] as String?,
+              yAxis: map['yAxis'] as Map<String, dynamic>?,
+            );
+          })
+          .whereType<SeriesModification>()
+          .toList();
+
+      final annotationsInput = updateInput['annotations'] as List?;
+      final updateAnnotations = annotationsInput
+          ?.map((entry) {
+            final map = Map<String, dynamic>.from(entry as Map);
+            final id = map['id'] as String?;
+            if (id == null || id.isEmpty) {
+              return null;
+            }
+            return AnnotationModification(
+              id: id,
+              label: map['label'] as String?,
+              color: map['color'] as String?,
+              value: (map['value'] as num?)?.toDouble(),
+            );
+          })
+          .whereType<AnnotationModification>()
+          .toList();
+
+      if ((updateSeries != null && updateSeries.isNotEmpty) ||
+          (updateAnnotations != null && updateAnnotations.isNotEmpty)) {
+        update = UpdateOperation(
+          series: updateSeries,
+          annotations: updateAnnotations,
+        );
+      }
+    }
+
+    AddOperation? add;
+    if (addInput != null) {
+      final seriesInput = addInput['series'] as List?;
+      final addSeries = seriesInput
+          ?.map((entry) {
+            final map = Map<String, dynamic>.from(entry as Map);
+            final id = map['id'] as String?;
+            if (id == null || id.isEmpty) {
+              return null;
+            }
+            return SeriesAddition(
+              id: id,
+              data: (map['data'] as List?) ?? const <dynamic>[],
+              name: map['name'] as String?,
+              color: map['color'] as String?,
+            );
+          })
+          .whereType<SeriesAddition>()
+          .toList();
+
+      final annotationsInput = addInput['annotations'] as List?;
+      final addAnnotations = annotationsInput
+          ?.map((entry) {
+            final map = Map<String, dynamic>.from(entry as Map);
+            final typeValue = map['type'] as String?;
+            if (typeValue == null) {
+              return null;
+            }
+            AnnotationType type;
+            try {
+              type = AnnotationType.values.byName(typeValue);
+            } catch (_) {
+              return null;
+            }
+            Orientation? orientation;
+            final orientationValue = map['orientation'] as String?;
+            if (orientationValue != null) {
+              try {
+                orientation = Orientation.values.byName(orientationValue);
+              } catch (_) {
+                orientation = null;
+              }
+            }
+            return AnnotationAddition(
+              id: map['id'] as String?,
+              type: type,
+              value: (map['value'] as num?)?.toDouble(),
+              orientation: orientation,
+              label: map['label'] as String?,
+            );
+          })
+          .whereType<AnnotationAddition>()
+          .toList();
+
+      if ((addSeries != null && addSeries.isNotEmpty) ||
+          (addAnnotations != null && addAnnotations.isNotEmpty)) {
+        add = AddOperation(
+          series: addSeries,
+          annotations: addAnnotations,
+        );
+      }
+    }
+
+    RemoveOperation? remove;
+    if (removeInput != null) {
+      final removeSeries = removeInput['series'] as List?;
+      final removeAnnotations = removeInput['annotations'] as List?;
+      if (removeSeries != null || removeAnnotations != null) {
+        remove = RemoveOperation(
+          series: removeSeries?.cast<String>(),
+          annotations: removeAnnotations?.cast<String>(),
+        );
+      }
+    }
+
+    return ModificationRequest(update: update, add: add, remove: remove);
   }
 
   /// Parses an X-axis configuration from a JSON map.

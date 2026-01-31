@@ -73,14 +73,16 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'addSeries': [
-            {
-              'id': 's2',
-              'data': [
-                {'x': 1, 'y': 1}
-              ]
-            }
-          ]
+          'add': {
+            'series': [
+              {
+                'id': 's2',
+                'data': [
+                  {'x': 1, 'y': 1}
+                ]
+              }
+            ]
+          }
         }
       });
       expect(modifyResult.isError, isFalse, reason: 'Add series failed');
@@ -116,7 +118,9 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'removeSeries': ['s1']
+          'remove': {
+            'series': ['s1']
+          }
         }
       });
       expect(modifyResult.isError, isFalse, reason: 'Remove series failed');
@@ -146,13 +150,16 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'updateSeries': {
-            's1': {
-              'data': [
-                {'x': 1, 'y': 20},
-                {'x': 2, 'y': 30}
-              ]
-            }
+          'update': {
+            'series': [
+              {
+                'id': 's1',
+                'data': [
+                  {'x': 1, 'y': 20},
+                  {'x': 2, 'y': 30}
+                ]
+              }
+            ]
           }
         }
       });
@@ -234,8 +241,10 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'updateSeries': {
-            's1': {'type': 'bar'}
+          'update': {
+            'series': [
+              {'id': 's1', 'type': 'bar'}
+            ]
           }
         }
       });
@@ -268,8 +277,10 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'updateSeries': {
-            's1': {'color': '#FF0000'}
+          'update': {
+            'series': [
+              {'id': 's1', 'color': '#FF0000'}
+            ]
           }
         }
       });
