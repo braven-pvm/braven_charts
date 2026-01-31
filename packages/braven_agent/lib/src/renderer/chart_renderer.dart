@@ -61,14 +61,6 @@ class ChartRenderer {
         return _errorWidget('No series data provided');
       }
 
-      // Build a lookup map from the shared yAxes array for yAxisId resolution
-      final yAxesLookup = <String, models.YAxisConfig>{};
-      for (final yAxis in config.yAxes) {
-        if (yAxis.id != null && yAxis.id!.isNotEmpty) {
-          yAxesLookup[yAxis.id!] = yAxis;
-        }
-      }
-
       final series = config.series.map((seriesConfig) {
         final dataPoints = seriesConfig.data;
         final points = <charts.ChartDataPoint>[];

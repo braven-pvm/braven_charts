@@ -1,7 +1,3 @@
-// @orchestra-task: 4
-@Tags(['tdd-red'])
-library;
-
 import 'package:braven_agent/src/models/annotation_config.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/data_point.dart';
@@ -11,23 +7,20 @@ import 'package:braven_agent/src/models/y_axis_config.dart';
 import 'package:braven_agent/src/validation/schema_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// T022-T025: TDD Red Phase - Schema Validator Tests for US1.
+/// T022-T025: Schema Validator Tests for US1.
 ///
 /// These tests verify the validation rules for ChartConfiguration:
 /// - V001: Warning when perSeries mode has chart-level yAxis
 /// - V002: Warning when perSeries mode has series without yAxis
 /// - V003: Error when duplicate series IDs exist
 /// - V004: Error when duplicate annotation IDs exist
-///
-/// Tests are expected to FAIL until SchemaValidator is implemented.
 void main() {
-  group('[tdd-red] SchemaValidator (US1)', () {
+  group('SchemaValidator (US1)', () {
     // ==========================================================
-    // [tdd-red] T022: V001 - perSeries + chart yAxis warning
+    // T022: V001 - perSeries + chart yAxis warning
     // ==========================================================
-    group('[tdd-red] V001: perSeries mode with chart-level yAxis', () {
-      test('[tdd-red] emits warning when perSeries mode has chart-level yAxis',
-          () {
+    group('V001: perSeries mode with chart-level yAxis', () {
+      test('emits warning when perSeries mode has chart-level yAxis', () {
         // T022: Per spec, when normalizationMode is perSeries,
         // chart-level yAxis should trigger a warning and be ignored
         const chart = ChartConfiguration(
@@ -68,9 +61,7 @@ void main() {
         );
       });
 
-      test(
-          '[tdd-red] does NOT emit warning when none mode has chart-level yAxis',
-          () {
+      test('does NOT emit warning when none mode has chart-level yAxis', () {
         // When normalizationMode is 'none', chart-level yAxis is valid
         const chart = ChartConfiguration(
           normalizationMode: NormalizationModeConfig.none,
@@ -100,11 +91,10 @@ void main() {
     });
 
     // ==========================================================
-    // [tdd-red] T023: V002 - perSeries mode with missing series yAxis
+    // T023: V002 - perSeries mode with missing series yAxis
     // ==========================================================
-    group('[tdd-red] V002: perSeries mode with missing series yAxis', () {
-      test('[tdd-red] emits warning when series lacks yAxis in perSeries mode',
-          () {
+    group('V002: perSeries mode with missing series yAxis', () {
+      test('emits warning when series lacks yAxis in perSeries mode', () {
         // T023: In perSeries mode, series without yAxis get default axis,
         // but should emit a warning to alert the user
         const chart = ChartConfiguration(
@@ -144,9 +134,7 @@ void main() {
         );
       });
 
-      test(
-          '[tdd-red] does NOT emit warning when series has yAxis in perSeries mode',
-          () {
+      test('does NOT emit warning when series has yAxis in perSeries mode', () {
         // All series have yAxis, no warning needed
         const chart = ChartConfiguration(
           normalizationMode: NormalizationModeConfig.perSeries,
@@ -180,8 +168,7 @@ void main() {
         );
       });
 
-      test('[tdd-red] does NOT emit warning for missing yAxis in none mode',
-          () {
+      test('does NOT emit warning for missing yAxis in none mode', () {
         // In 'none' mode, series without yAxis is normal
         const chart = ChartConfiguration(
           normalizationMode: NormalizationModeConfig.none,
@@ -206,10 +193,10 @@ void main() {
     });
 
     // ==========================================================
-    // [tdd-red] T024: V003 - Duplicate series IDs error
+    // T024: V003 - Duplicate series IDs error
     // ==========================================================
-    group('[tdd-red] V003: duplicate series IDs', () {
-      test('[tdd-red] returns error when duplicate series IDs exist', () {
+    group('V003: duplicate series IDs', () {
+      test('returns error when duplicate series IDs exist', () {
         // T024: Per FR-020, all series IDs must be unique
         const chart = ChartConfiguration(
           series: [
@@ -242,7 +229,7 @@ void main() {
         );
       });
 
-      test('[tdd-red] returns error with multiple duplicates', () {
+      test('returns error with multiple duplicates', () {
         // Multiple duplicate groups should all be reported
         const chart = ChartConfiguration(
           series: [
@@ -275,7 +262,7 @@ void main() {
             reason: 'Should report all duplicate ID groups');
       });
 
-      test('[tdd-red] passes validation with unique series IDs', () {
+      test('passes validation with unique series IDs', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -305,10 +292,10 @@ void main() {
     });
 
     // ==========================================================
-    // [tdd-red] T025: V004 - Duplicate annotation IDs error
+    // T025: V004 - Duplicate annotation IDs error
     // ==========================================================
-    group('[tdd-red] V004: duplicate annotation IDs', () {
-      test('[tdd-red] returns error when duplicate annotation IDs exist', () {
+    group('V004: duplicate annotation IDs', () {
+      test('returns error when duplicate annotation IDs exist', () {
         // T025: Per FR-021, all annotation IDs must be unique
         const chart = ChartConfiguration(
           series: [
@@ -351,7 +338,7 @@ void main() {
         );
       });
 
-      test('[tdd-red] passes validation with unique annotation IDs', () {
+      test('passes validation with unique annotation IDs', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -385,8 +372,7 @@ void main() {
         );
       });
 
-      test('[tdd-red] allows annotations without IDs (system will generate)',
-          () {
+      test('allows annotations without IDs (system will generate)', () {
         // Annotations without IDs are fine during create - system generates them
         const chart = ChartConfiguration(
           series: [
@@ -426,8 +412,8 @@ void main() {
     // ==========================================================
     // ValidationResult structure tests
     // ==========================================================
-    group('[tdd-red] ValidationResult structure', () {
-      test('[tdd-red] ValidationResult has isValid property', () {
+    group('ValidationResult structure', () {
+      test('ValidationResult has isValid property', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -442,7 +428,7 @@ void main() {
         expect(result.isValid, isA<bool>());
       });
 
-      test('[tdd-red] ValidationResult has errors list', () {
+      test('ValidationResult has errors list', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -457,7 +443,7 @@ void main() {
         expect(result.errors, isA<List<ValidationError>>());
       });
 
-      test('[tdd-red] ValidationResult has warnings list', () {
+      test('ValidationResult has warnings list', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -472,7 +458,7 @@ void main() {
         expect(result.warnings, isA<List<ValidationWarning>>());
       });
 
-      test('[tdd-red] ValidationError has code and message', () {
+      test('ValidationError has code and message', () {
         const chart = ChartConfiguration(
           series: [
             SeriesConfig(
@@ -496,7 +482,7 @@ void main() {
         expect(error.message, isNotEmpty);
       });
 
-      test('[tdd-red] ValidationWarning has code and message', () {
+      test('ValidationWarning has code and message', () {
         const chart = ChartConfiguration(
           normalizationMode: NormalizationModeConfig.perSeries,
           yAxes: [

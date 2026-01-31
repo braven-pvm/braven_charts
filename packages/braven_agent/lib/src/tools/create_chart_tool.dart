@@ -9,6 +9,7 @@ import '../models/enums.dart';
 import '../models/series_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
+import '../validation/schema_validator.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
@@ -140,13 +141,67 @@ class CreateChartTool extends AgentTool {
                     'required': ['x', 'y'],
                   },
                 },
-                'yAxisId': {
-                  'type': 'string',
-                  'description':
-                      'Reference to a SHARED Y-axis defined in the yAxes[] array. '
-                          'Use this when multiple series share the same axis. '
-                          'MUTUALLY EXCLUSIVE with yAxisPosition/yAxisLabel/yAxisUnit/yAxisColor/yAxisMin/yAxisMax. '
-                          'Example: yAxes: [{id: "power-axis", ...}], series: [{yAxisId: "power-axis", ...}]',
+                'yAxis': {
+                  'type': 'object',
+                  'description': 'Nested Y-axis configuration for this series. '
+                      'Contains position, label, unit, color, min, max, etc.',
+                  'properties': {
+                    'position': {
+                      'type': 'string',
+                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                      'description':
+                          'Position of the Y-axis. Defaults to "left".',
+                    },
+                    'label': {
+                      'type': 'string',
+                      'description': 'Label for the Y-axis (e.g., "Power").',
+                    },
+                    'unit': {
+                      'type': 'string',
+                      'description':
+                          'Unit for the Y-axis (e.g., "W" for watts).',
+                    },
+                    'color': {
+                      'type': 'string',
+                      'description':
+                          'Color for this Y-axis (hex format). Often matched to series color.',
+                    },
+                    'min': {
+                      'type': 'number',
+                      'description':
+                          'Minimum value for the Y-axis scale. If not specified, auto-calculated.',
+                    },
+                    'max': {
+                      'type': 'number',
+                      'description':
+                          'Maximum value for the Y-axis scale. If not specified, auto-calculated.',
+                    },
+                    'autoRange': {
+                      'type': 'boolean',
+                      'description':
+                          'Whether to auto-calculate range from data. Defaults to true.',
+                    },
+                    'includeZero': {
+                      'type': 'boolean',
+                      'description':
+                          'Whether the range should include zero. Defaults to false.',
+                    },
+                    'showTicks': {
+                      'type': 'boolean',
+                      'description':
+                          'Whether to show tick marks. Defaults to true.',
+                    },
+                    'showAxisLine': {
+                      'type': 'boolean',
+                      'description':
+                          'Whether to show the axis line. Defaults to true.',
+                    },
+                    'showGridLines': {
+                      'type': 'boolean',
+                      'description':
+                          'Whether to show horizontal grid lines. Defaults to true.',
+                    },
+                  },
                 },
                 'unit': {
                   'type': 'string',
@@ -208,39 +263,6 @@ class CreateChartTool extends AgentTool {
                   'minimum': 0,
                   'description':
                       'Maximum bar width in pixels. Defaults to 100.0.',
-                },
-                'yAxisPosition': {
-                  'type': 'string',
-                  'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                  'description':
-                      'Position for an INLINE Y-axis created specifically for this series. '
-                          'Use this for simple charts where each series has its own axis. '
-                          'MUTUALLY EXCLUSIVE with yAxisId. When set, also configure yAxisLabel, yAxisUnit, yAxisColor, yAxisMin, yAxisMax.',
-                },
-                'yAxisLabel': {
-                  'type': 'string',
-                  'description':
-                      'Label for the INLINE Y-axis (used with yAxisPosition). Ignored if yAxisId is set.',
-                },
-                'yAxisUnit': {
-                  'type': 'string',
-                  'description':
-                      'Unit for the INLINE Y-axis (used with yAxisPosition). Ignored if yAxisId is set.',
-                },
-                'yAxisColor': {
-                  'type': 'string',
-                  'description':
-                      'Color for the INLINE Y-axis in hex format (used with yAxisPosition). Ignored if yAxisId is set.',
-                },
-                'yAxisMin': {
-                  'type': 'number',
-                  'description':
-                      'Minimum value for the INLINE Y-axis scale (used with yAxisPosition). Ignored if yAxisId is set.',
-                },
-                'yAxisMax': {
-                  'type': 'number',
-                  'description':
-                      'Maximum value for the INLINE Y-axis scale (used with yAxisPosition). Ignored if yAxisId is set.',
                 },
                 'markerStyle': {
                   'type': 'string',
@@ -311,76 +333,6 @@ class CreateChartTool extends AgentTool {
                 'type': 'integer',
                 'minimum': 0,
                 'description': 'Number of ticks to display on the X-axis.',
-              },
-            },
-          },
-          'yAxes': {
-            'type': 'array',
-            'description': 'SHARED Y-axis configurations for multi-axis charts. '
-                'Series reference these via yAxisId. '
-                'Alternative to inline axis (yAxisPosition+yAxisLabel+etc). '
-                'Use shared axes when multiple series use the same axis, or for explicit axis control.',
-            'items': {
-              'type': 'object',
-              'properties': {
-                'id': {
-                  'type': 'string',
-                  'description':
-                      'Unique identifier for this Y-axis. Series reference this via series[].yAxisId.',
-                },
-                'label': {
-                  'type': 'string',
-                  'description': 'Label for the Y-axis (e.g., "Power").',
-                },
-                'unit': {
-                  'type': 'string',
-                  'description': 'Unit for the Y-axis (e.g., "W" for watts).',
-                },
-                'position': {
-                  'type': 'string',
-                  'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                  'description': 'Position of the Y-axis. Defaults to "left".',
-                },
-                'min': {
-                  'type': 'number',
-                  'description':
-                      'Minimum value for the Y-axis scale. If not specified, auto-calculated.',
-                },
-                'max': {
-                  'type': 'number',
-                  'description':
-                      'Maximum value for the Y-axis scale. If not specified, auto-calculated.',
-                },
-                'autoRange': {
-                  'type': 'boolean',
-                  'description':
-                      'Whether to auto-calculate range from data. Defaults to true.',
-                },
-                'includeZero': {
-                  'type': 'boolean',
-                  'description':
-                      'Whether the range should include zero. Defaults to false.',
-                },
-                'color': {
-                  'type': 'string',
-                  'description':
-                      'Color for this Y-axis (hex format). Often matched to series color.',
-                },
-                'showTicks': {
-                  'type': 'boolean',
-                  'description':
-                      'Whether to show tick marks. Defaults to true.',
-                },
-                'showAxisLine': {
-                  'type': 'boolean',
-                  'description':
-                      'Whether to show the axis line. Defaults to true.',
-                },
-                'showGridLines': {
-                  'type': 'boolean',
-                  'description':
-                      'Whether to show horizontal grid lines. Defaults to true.',
-                },
               },
             },
           },
@@ -712,6 +664,7 @@ class CreateChartTool extends AgentTool {
     }
 
     // Parse annotations if provided
+    // Per FR-004: Generate unique IDs for all annotations (ignore agent-supplied IDs)
     final annotations = <AnnotationConfig>[];
     final annotationsInput = input['annotations'] as List?;
     if (annotationsInput != null) {
@@ -719,7 +672,9 @@ class CreateChartTool extends AgentTool {
         final annotationMap = annotationsInput[i];
         final map = Map<String, dynamic>.from(annotationMap as Map);
         final parsed = AnnotationConfig.fromJson(map);
-        annotations.add(parsed);
+        // Always generate a new ID (ignore any agent-supplied ID per FR-004)
+        final annotationWithId = parsed.copyWith(id: 'ann-${_uuid.v4()}');
+        annotations.add(annotationWithId);
       }
     }
 
@@ -820,9 +775,28 @@ class CreateChartTool extends AgentTool {
       backgroundColor: input['backgroundColor'] as String?,
     );
 
+    // Validate chart configuration using SchemaValidator (AC-8)
+    final validationResult = SchemaValidator.validate(chart);
+    if (!validationResult.isValid) {
+      // Return validation errors
+      final errorMessages = validationResult.errors
+          .map((e) => '${e.code}: ${e.message}')
+          .join('\n');
+      return _logError('Validation errors:\n$errorMessages', input);
+    }
+
+    // Build warnings string if any (non-blocking)
+    final warningsJson = validationResult.warnings.isNotEmpty
+        ? validationResult.warnings.map((w) => w.toString()).toList()
+        : null;
+
     // Return success result with JSON output and ChartConfiguration data
+    final outputJson = chart.toJson();
+    if (warningsJson != null) {
+      outputJson['_warnings'] = warningsJson;
+    }
     return ToolResult(
-      output: jsonEncode(chart.toJson()),
+      output: jsonEncode(outputJson),
       data: chart,
     );
   }

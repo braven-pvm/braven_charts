@@ -1,5 +1,3 @@
-// @orchestra-task: 4
-
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/tools/tools.dart';
@@ -906,12 +904,10 @@ void main() {
     });
 
     // ==========================================================
-    // [tdd-red] T020: V2 Schema Contract Tests (US1)
+    // T020: V2 Schema Contract Tests (US1)
     // ==========================================================
-    // @orchestra-task: 4
-    group('[tdd-red] V2 Schema - nested yAxis (US1)', () {
-      test('[tdd-red] inputSchema series items include nested yAxis property',
-          tags: ['tdd-red'], () {
+    group('V2 Schema - nested yAxis (US1)', () {
+      test('inputSchema series items include nested yAxis property', () {
         // T020: Per FR-001, series must support nested yAxis object
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -927,8 +923,7 @@ void main() {
             reason: 'FR-001: yAxis must be type object');
       });
 
-      test('[tdd-red] inputSchema series yAxis has position property with enum',
-          tags: ['tdd-red'], () {
+      test('inputSchema series yAxis has position property with enum', () {
         // T020: yAxis must include position field for left/right placement
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -944,8 +939,7 @@ void main() {
         expect(yAxisProps['position']['enum'], contains('right'));
       });
 
-      test('[tdd-red] inputSchema series yAxis has label and unit properties',
-          tags: ['tdd-red'], () {
+      test('inputSchema series yAxis has label and unit properties', () {
         // T020: yAxis must include label and unit for axis display
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -959,8 +953,7 @@ void main() {
             reason: 'FR-001: yAxis must have unit property');
       });
 
-      test('[tdd-red] inputSchema series yAxis has min/max properties',
-          tags: ['tdd-red'], () {
+      test('inputSchema series yAxis has min/max properties', () {
         // T020: yAxis must include min/max for axis range
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -976,9 +969,8 @@ void main() {
         expect(yAxisProps['max']['type'], equals('number'));
       });
 
-      test(
-          '[tdd-red] inputSchema does NOT have flat yAxis fields on series (FR-002)',
-          tags: ['tdd-red'], () {
+      test('inputSchema does NOT have flat yAxis fields on series (FR-002)',
+          () {
         // T020: Per FR-002, flat y-axis fields are prohibited
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -1000,9 +992,7 @@ void main() {
             reason: 'FR-002: yAxisMax flat field is prohibited');
       });
 
-      test(
-          '[tdd-red] inputSchema does NOT have yAxisId reference field (FR-003)',
-          tags: ['tdd-red'], () {
+      test('inputSchema does NOT have yAxisId reference field (FR-003)', () {
         // T020: Per FR-003, yAxisId references are prohibited
         final properties =
             tool.inputSchema['properties'] as Map<String, dynamic>;
@@ -1013,8 +1003,7 @@ void main() {
             reason: 'FR-003: yAxisId reference field is prohibited');
       });
 
-      test('[tdd-red] execute parses nested yAxis from series input',
-          tags: ['tdd-red'], () async {
+      test('execute parses nested yAxis from series input', () async {
         // T020: Tool must parse nested yAxis configuration
         final result = await tool.execute({
           'prompt': 'Create a dual-axis chart',
@@ -1063,8 +1052,7 @@ void main() {
         expect(chart.series[1].yAxis!.unit, equals('bpm'));
       });
 
-      test('[tdd-red] execute respects yAxis position for multi-axis chart',
-          tags: ['tdd-red'], () async {
+      test('execute respects yAxis position for multi-axis chart', () async {
         // T020: Each series yAxis position should be preserved
         final result = await tool.execute({
           'prompt': 'Create a multi-axis chart',
@@ -1102,12 +1090,10 @@ void main() {
     });
 
     // ==========================================================
-    // [tdd-red] T021: Annotation ID Generation Tests (US1)
+    // T021: Annotation ID Generation Tests (US1)
     // ==========================================================
-    // @orchestra-task: 4
-    group('[tdd-red] Annotation ID generation (US1)', () {
-      test('[tdd-red] annotations get system-generated IDs on create',
-          tags: ['tdd-red'], () async {
+    group('Annotation ID generation (US1)', () {
+      test('annotations get system-generated IDs on create', () async {
         // T021: Per FR-004, annotation IDs are system-generated
         final result = await tool.execute({
           'prompt': 'Create a chart with annotation',
@@ -1139,8 +1125,7 @@ void main() {
             reason: 'FR-004: annotation ID must be non-empty');
       });
 
-      test('[tdd-red] each annotation gets unique ID', tags: ['tdd-red'],
-          () async {
+      test('each annotation gets unique ID', () async {
         // T021: Multiple annotations should get unique IDs
         final result = await tool.execute({
           'prompt': 'Create a chart with multiple annotations',
@@ -1190,8 +1175,7 @@ void main() {
             reason: 'All annotation IDs must be unique');
       });
 
-      test('[tdd-red] agent-supplied annotation ID is ignored (edge case)',
-          tags: ['tdd-red'], () async {
+      test('agent-supplied annotation ID is ignored (edge case)', () async {
         // T021: If agent supplies ID, system should ignore and generate new one
         final result = await tool.execute({
           'prompt': 'Create a chart with annotation',
@@ -1225,8 +1209,7 @@ void main() {
             reason: 'System should generate a new ID');
       });
 
-      test('[tdd-red] output JSON includes annotation IDs', tags: ['tdd-red'],
-          () async {
+      test('output JSON includes annotation IDs', () async {
         // T021: The tool output should include generated IDs per FR-011
         final result = await tool.execute({
           'prompt': 'Create a chart with annotation',
