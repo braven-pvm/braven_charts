@@ -182,10 +182,13 @@ void main() {
                 {'x': 0.0, 'y': 150.0},
                 {'x': 1.0, 'y': 200.0},
               ],
-              yAxisPosition: 'left',
-              yAxisLabel: 'Power',
-              yAxisUnit: 'W',
-              yAxisColor: '#2196F3',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Power',
+                unit: 'W',
+                color: '#2196F3',
+                position: agentic.AxisPosition.left,
+              ),
             ),
             agentic.SeriesConfig(
               id: 'hr-series',
@@ -194,17 +197,16 @@ void main() {
                 {'x': 0.0, 'y': 120.0},
                 {'x': 1.0, 'y': 140.0},
               ],
-              yAxisPosition: 'right',
-              yAxisLabel: 'Heart Rate',
-              yAxisUnit: 'bpm',
-              yAxisColor: '#FF0000',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Heart Rate',
+                unit: 'bpm',
+                color: '#FF0000',
+                position: agentic.AxisPosition.right,
+              ),
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'Time'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y Axis', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);
@@ -223,15 +225,14 @@ void main() {
                 {'x': 0.0, 'y': 10.0},
                 {'x': 1.0, 'y': 20.0},
               ],
-              yAxisPosition: 'left',
-              yAxisLabel: 'Left Axis',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Left Axis',
+                position: agentic.AxisPosition.left,
+              ),
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);
@@ -248,16 +249,15 @@ void main() {
                 {'x': 0.0, 'y': 10.0},
                 {'x': 1.0, 'y': 20.0},
               ],
-              yAxisPosition: 'right',
-              yAxisLabel: 'Right Axis',
-              yAxisUnit: 'units',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Right Axis',
+                unit: 'units',
+                position: agentic.AxisPosition.right,
+              ),
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);
@@ -274,17 +274,16 @@ void main() {
                 {'x': 0.0, 'y': 100.0},
                 {'x': 1.0, 'y': 150.0},
               ],
-              yAxisPosition: 'left',
-              yAxisLabel: 'Sales',
-              yAxisUnit: 'USD',
-              yAxisColor: '#4CAF50',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Sales',
+                unit: 'USD',
+                color: '#4CAF50',
+                position: agentic.AxisPosition.left,
+              ),
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'Quarter'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);
@@ -301,15 +300,14 @@ void main() {
                 {'x': 0.0, 'y': 5.0},
                 {'x': 1.0, 'y': 10.0},
               ],
-              yAxisPosition: 'right',
-              yAxisLabel: 'Values',
+              // Per FR-001: use nested yAxisConfig
+              yAxisConfig: agentic.YAxisConfig(
+                label: 'Values',
+                position: agentic.AxisPosition.right,
+              ),
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);
@@ -326,14 +324,10 @@ void main() {
                 {'x': 0.0, 'y': 10.0},
                 {'x': 1.0, 'y': 20.0},
               ],
-              // No yAxisPosition, yAxisLabel, yAxisUnit, yAxisColor set
+              // No yAxisConfig set - uses default
             ),
           ],
           xAxis: agentic.XAxisConfig(label: 'X'),
-          yAxes: [
-            agentic.YAxisConfig(
-                label: 'Y', position: agentic.AxisPosition.left),
-          ],
         );
 
         expect(() => renderer.render(config), returnsNormally);

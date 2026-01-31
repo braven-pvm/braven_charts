@@ -33,7 +33,9 @@ sealed class ChartAnnotation {
   /// Creates a chart annotation.
   ///
   /// If [id] is not provided, a unique ID will be auto-generated.
-  const ChartAnnotation({
+  /// The [id] field is mutable to allow tool handlers to assign
+  /// system-generated IDs after construction.
+  ChartAnnotation({
     required this.id,
     this.label,
     this.style = const AnnotationStyle(),
@@ -48,7 +50,10 @@ sealed class ChartAnnotation {
   ///
   /// Used for managing, updating, and removing annotations from a chart.
   /// Must be unique within a single chart instance.
-  final String id;
+  ///
+  /// This field is mutable to allow the agentic tool layer to assign
+  /// system-generated IDs after the annotation is created.
+  String id;
 
   /// Optional label for this annotation.
   ///
@@ -174,6 +179,25 @@ class PointAnnotation extends ChartAnnotation {
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
 
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'PointAnnotation',
+      if (label != null) 'label': label,
+      'seriesId': seriesId,
+      'dataPointIndex': dataPointIndex,
+      'offset': {'dx': offset.dx, 'dy': offset.dy},
+      'markerShape': markerShape.name,
+      'markerSize': markerSize,
+      'markerColor': markerColor.toARGB32(),
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
   /// Creates a copy with modified properties.
   PointAnnotation copyWith({
     String? id,
@@ -294,6 +318,29 @@ class RangeAnnotation extends ChartAnnotation {
   /// Controls how far the label is positioned from the range boundary.
   /// Defaults to 8.0 logical pixels.
   final double labelMargin;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'RangeAnnotation',
+      if (label != null) 'label': label,
+      if (startX != null) 'startX': startX,
+      if (endX != null) 'endX': endX,
+      if (startY != null) 'startY': startY,
+      if (endY != null) 'endY': endY,
+      'snapTolerance': snapTolerance,
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
+      if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
+      'labelPosition': labelPosition.name,
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+      'snapToValue': snapToValue,
+      'snapIncrement': snapIncrement,
+    };
+  }
 
   /// Creates a copy with modified properties.
   RangeAnnotation copyWith({
@@ -953,6 +1000,27 @@ class ThresholdAnnotation extends ChartAnnotation {
   /// Defaults to 0.0 (no glow).
   final double elevation;
 
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'ThresholdAnnotation',
+      if (label != null) 'label': label,
+      'axis': axis.name,
+      'value': value,
+      if (seriesId != null) 'seriesId': seriesId,
+      'lineColor': lineColor.toARGB32(),
+      'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
+      'labelPosition': labelPosition.name,
+      'labelMargin': labelMargin,
+      'elevation': elevation,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
   /// Creates a copy with modified properties.
   ThresholdAnnotation copyWith({
     String? id,
@@ -1049,6 +1117,24 @@ class PinAnnotation extends ChartAnnotation {
   /// Controls how far the label is positioned from the marker.
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'PinAnnotation',
+      if (label != null) 'label': label,
+      'x': x,
+      'y': y,
+      'markerShape': markerShape.name,
+      'markerSize': markerSize,
+      'markerColor': markerColor.toARGB32(),
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
 
   /// Creates a copy with modified properties.
   PinAnnotation copyWith({
@@ -1167,6 +1253,26 @@ class TrendAnnotation extends ChartAnnotation {
   /// Controls how far the label is positioned from the trend line end.
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'TrendAnnotation',
+      if (label != null) 'label': label,
+      'seriesId': seriesId,
+      'trendType': trendType.name,
+      if (windowSize != null) 'windowSize': windowSize,
+      'degree': degree,
+      'lineColor': lineColor.toARGB32(),
+      'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
 
   /// Creates a copy with modified properties.
   TrendAnnotation copyWith({

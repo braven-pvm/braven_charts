@@ -1,3 +1,5 @@
+import 'axis_config.dart' show YAxisConfig, AxisPosition;
+
 /// Marker style enumeration
 enum MarkerStyle {
   none,
@@ -15,8 +17,11 @@ enum Interpolation {
   monotone,
 }
 
-/// Stub implementation for SeriesConfig model
-/// This will be implemented in the green phase of TDD
+/// Agentic series configuration model
+///
+/// FR-001: Y-axis configuration is done via nested [yAxisConfig] object,
+/// NOT via flat fields or yAxisId references.
+/// FR-002: Flat y-axis fields are not supported.
 class SeriesConfig {
   final String id;
   final String? name;
@@ -31,7 +36,7 @@ class SeriesConfig {
   final double markerSize;
   final Interpolation interpolation;
   final bool showPoints;
-  final String? yAxisId;
+  // FR-002: yAxisId is no longer supported - use yAxisConfig instead
   final String? unit;
   final bool visible;
   final bool legendVisible;
@@ -43,24 +48,10 @@ class SeriesConfig {
   final double? markerRadius;
   final double? dataPointMarkerRadius;
 
-  // Per-series Y-axis configuration fields
-  /// Position of the Y-axis for this series ("left" or "right").
-  final String? yAxisPosition;
-
-  /// Label for the Y-axis associated with this series.
-  final String? yAxisLabel;
-
-  /// Unit for the Y-axis associated with this series (e.g., "W", "bpm").
-  final String? yAxisUnit;
-
-  /// Color for the Y-axis associated with this series (hex format).
-  final String? yAxisColor;
-
-  /// Minimum value for the Y-axis scale.
-  final double? yAxisMin;
-
-  /// Maximum value for the Y-axis scale.
-  final double? yAxisMax;
+  /// FR-001: Nested Y-axis configuration for this series.
+  /// Contains position, label, unit, color, min, max, etc.
+  /// Replaces flat fields per FR-002.
+  final YAxisConfig? yAxisConfig;
 
   /// Minimum bar width in pixels (for bar charts).
   final double? barMinWidth;
@@ -89,7 +80,7 @@ class SeriesConfig {
     double? markerSize,
     Interpolation? interpolation,
     bool? showPoints,
-    this.yAxisId,
+    // FR-002: yAxisId parameter removed - use yAxisConfig instead
     this.unit,
     bool? visible,
     bool? legendVisible,
@@ -98,12 +89,7 @@ class SeriesConfig {
     this.tension,
     this.markerRadius,
     this.dataPointMarkerRadius,
-    this.yAxisPosition,
-    this.yAxisLabel,
-    this.yAxisUnit,
-    this.yAxisColor,
-    this.yAxisMin,
-    this.yAxisMax,
+    this.yAxisConfig,
     this.barMinWidth,
     this.barMaxWidth,
   })  : strokeWidth = strokeWidth ?? 2.0,
@@ -135,29 +121,12 @@ class SeriesConfig {
     if (dataId != null && dataColumn == null) {
       throw ArgumentError('dataId requires dataColumn to be set');
     }
-    final localYAxisId = yAxisId;
-    if (localYAxisId != null && localYAxisId.isEmpty) {
-      throw ArgumentError('yAxisId cannot be empty string');
-    }
     final localColor = color;
     if (localColor != null && !_isValidColor(localColor)) {
       throw ArgumentError('color must be in #RGB or #RRGGBB format');
     }
-    // Validate yAxisPosition
-    final localYAxisPosition = yAxisPosition;
-    if (localYAxisPosition != null &&
-        localYAxisPosition != 'left' &&
-        localYAxisPosition != 'right' &&
-        localYAxisPosition != 'leftOuter' &&
-        localYAxisPosition != 'rightOuter') {
-      throw ArgumentError(
-          'yAxisPosition must be "left", "right", "leftOuter", or "rightOuter"');
-    }
-    // Validate yAxisColor
-    final localYAxisColor = yAxisColor;
-    if (localYAxisColor != null && !_isValidColor(localYAxisColor)) {
-      throw ArgumentError('yAxisColor must be in #RGB or #RRGGBB format');
-    }
+    // FR-002: yAxisId and flat y-axis fields no longer supported.
+    // Y-axis configuration is via nested yAxisConfig (FR-001).
   }
 
   /// Validates hex color format
@@ -168,6 +137,24 @@ class SeriesConfig {
 
   /// Creates a SeriesConfig from JSON
   factory SeriesConfig.fromJson(Map<String, dynamic> json) {
+    // FR-001: Build yAxisConfig from nested object or flat fields (backward compat)
+    YAxisConfig? yAxisConfig;
+    if (json['yAxisConfig'] != null) {
+      // Preferred: nested yAxisConfig object
+      yAxisConfig =
+          YAxisConfig.fromJson(json['yAxisConfig'] as Map<String, dynamic>);
+    } else if (_hasFlatYAxisFields(json)) {
+      // Backward compatibility: build from flat fields (LLM tool input)
+      yAxisConfig = YAxisConfig(
+        position: _parseAxisPosition(json['yAxisPosition'] as String?),
+        label: json['yAxisLabel'] as String?,
+        unit: json['yAxisUnit'] as String?,
+        color: json['yAxisColor'] as String?,
+        min: (json['yAxisMin'] as num?)?.toDouble(),
+        max: (json['yAxisMax'] as num?)?.toDouble(),
+      );
+    }
+
     return SeriesConfig(
       id: json['id'] as String,
       name: json['name'] as String?,
@@ -189,7 +176,7 @@ class SeriesConfig {
               .firstWhere((e) => e.name == json['interpolation'])
           : Interpolation.linear,
       showPoints: json['showPoints'] as bool? ?? false,
-      yAxisId: json['yAxisId'] as String?,
+      // FR-002: yAxisId is no longer supported; use yAxisConfig instead
       unit: json['unit'] as String?,
       visible: json['visible'] as bool? ?? true,
       legendVisible: json['legendVisible'] as bool? ?? true,
@@ -198,10 +185,26 @@ class SeriesConfig {
       tension: json['tension'] as double?,
       markerRadius: json['markerRadius'] as double?,
       dataPointMarkerRadius: json['dataPointMarkerRadius'] as double?,
-      yAxisPosition: json['yAxisPosition'] as String?,
-      yAxisLabel: json['yAxisLabel'] as String?,
-      yAxisUnit: json['yAxisUnit'] as String?,
-      yAxisColor: json['yAxisColor'] as String?,
+      yAxisConfig: yAxisConfig,
+    );
+  }
+
+  /// Check if JSON has any flat y-axis fields (backward compatibility)
+  static bool _hasFlatYAxisFields(Map<String, dynamic> json) {
+    return json['yAxisPosition'] != null ||
+        json['yAxisLabel'] != null ||
+        json['yAxisUnit'] != null ||
+        json['yAxisColor'] != null ||
+        json['yAxisMin'] != null ||
+        json['yAxisMax'] != null;
+  }
+
+  /// Parse axis position string to enum
+  static AxisPosition _parseAxisPosition(String? position) {
+    if (position == null) return AxisPosition.left;
+    return AxisPosition.values.firstWhere(
+      (e) => e.name == position,
+      orElse: () => AxisPosition.left,
     );
   }
 
@@ -221,7 +224,7 @@ class SeriesConfig {
       'markerSize': markerSize,
       'interpolation': interpolation.name,
       'showPoints': showPoints,
-      if (yAxisId != null) 'yAxisId': yAxisId,
+      // FR-002: yAxisId is no longer serialized
       if (unit != null) 'unit': unit,
       'visible': visible,
       'legendVisible': legendVisible,
@@ -231,10 +234,8 @@ class SeriesConfig {
       if (markerRadius != null) 'markerRadius': markerRadius,
       if (dataPointMarkerRadius != null)
         'dataPointMarkerRadius': dataPointMarkerRadius,
-      if (yAxisPosition != null) 'yAxisPosition': yAxisPosition,
-      if (yAxisLabel != null) 'yAxisLabel': yAxisLabel,
-      if (yAxisUnit != null) 'yAxisUnit': yAxisUnit,
-      if (yAxisColor != null) 'yAxisColor': yAxisColor,
+      // FR-001: Serialize nested yAxisConfig object
+      if (yAxisConfig != null) 'yAxisConfig': yAxisConfig!.toJson(),
     };
   }
 
@@ -253,7 +254,6 @@ class SeriesConfig {
     double? markerSize,
     Interpolation? interpolation,
     bool? showPoints,
-    String? yAxisId,
     String? unit,
     bool? visible,
     bool? legendVisible,
@@ -262,10 +262,7 @@ class SeriesConfig {
     double? tension,
     double? markerRadius,
     double? dataPointMarkerRadius,
-    String? yAxisPosition,
-    String? yAxisLabel,
-    String? yAxisUnit,
-    String? yAxisColor,
+    YAxisConfig? yAxisConfig,
   }) {
     return SeriesConfig(
       id: id ?? this.id,
@@ -281,7 +278,6 @@ class SeriesConfig {
       markerSize: markerSize ?? this.markerSize,
       interpolation: interpolation ?? this.interpolation,
       showPoints: showPoints ?? this.showPoints,
-      yAxisId: yAxisId ?? this.yAxisId,
       unit: unit ?? this.unit,
       visible: visible ?? this.visible,
       legendVisible: legendVisible ?? this.legendVisible,
@@ -291,10 +287,7 @@ class SeriesConfig {
       markerRadius: markerRadius ?? this.markerRadius,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
-      yAxisPosition: yAxisPosition ?? this.yAxisPosition,
-      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
-      yAxisUnit: yAxisUnit ?? this.yAxisUnit,
-      yAxisColor: yAxisColor ?? this.yAxisColor,
+      yAxisConfig: yAxisConfig ?? this.yAxisConfig,
     );
   }
 }

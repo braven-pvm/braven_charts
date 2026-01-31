@@ -1091,6 +1091,45 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Apply ALL properties via copyWith
+    // Per FR-001/FR-002: Use nested yAxis instead of flat yAxisPosition/Label/etc.
+    YAxisConfig? updatedYAxis;
+    final hasYAxisUpdate = update['yAxisPosition'] != null ||
+        update['yAxisLabel'] != null ||
+        update['yAxisUnit'] != null ||
+        update['yAxisColor'] != null ||
+        update['yAxisMin'] != null ||
+        update['yAxisMax'] != null ||
+        update['yAxis'] != null;
+
+    if (hasYAxisUpdate) {
+      // Check if update provides a nested yAxis object (preferred format)
+      final yAxisUpdate = update['yAxis'] as Map<String, dynamic>?;
+      if (yAxisUpdate != null) {
+        updatedYAxis = YAxisConfig(
+          position: yAxisUpdate['position'] != null
+              ? AxisPosition.values.byName(yAxisUpdate['position'] as String)
+              : series.yAxis?.position ?? AxisPosition.left,
+          label: yAxisUpdate['label'] as String? ?? series.yAxis?.label,
+          unit: yAxisUpdate['unit'] as String? ?? series.yAxis?.unit,
+          color: yAxisUpdate['color'] as String? ?? series.yAxis?.color,
+          min: (yAxisUpdate['min'] as num?)?.toDouble() ?? series.yAxis?.min,
+          max: (yAxisUpdate['max'] as num?)?.toDouble() ?? series.yAxis?.max,
+        );
+      } else {
+        // Support legacy flat fields for backwards compatibility in input
+        updatedYAxis = YAxisConfig(
+          position: update['yAxisPosition'] != null
+              ? AxisPosition.values.byName(update['yAxisPosition'] as String)
+              : series.yAxis?.position ?? AxisPosition.left,
+          label: update['yAxisLabel'] as String? ?? series.yAxis?.label,
+          unit: update['yAxisUnit'] as String? ?? series.yAxis?.unit,
+          color: update['yAxisColor'] as String? ?? series.yAxis?.color,
+          min: (update['yAxisMin'] as num?)?.toDouble() ?? series.yAxis?.min,
+          max: (update['yAxisMax'] as num?)?.toDouble() ?? series.yAxis?.max,
+        );
+      }
+    }
+
     return series.copyWith(
       type: seriesType,
       name: update['name'] as String?,
@@ -1106,17 +1145,13 @@ class ModifyChartTool extends AgentTool {
       interpolation: interpolation,
       tension: (update['tension'] as num?)?.toDouble(),
       showPoints: update['showPoints'] as bool?,
-      yAxisPosition: update['yAxisPosition'] as String?,
-      yAxisLabel: update['yAxisLabel'] as String?,
-      yAxisUnit: update['yAxisUnit'] as String?,
-      yAxisColor: update['yAxisColor'] as String?,
-      yAxisMin: (update['yAxisMin'] as num?)?.toDouble(),
-      yAxisMax: (update['yAxisMax'] as num?)?.toDouble(),
+      // Per FR-001: Use nested yAxis
+      yAxis: updatedYAxis,
       barWidthPercent: (update['barWidthPercent'] as num?)?.toDouble(),
       barWidthPixels: (update['barWidthPixels'] as num?)?.toDouble(),
       barMinWidth: (update['barMinWidth'] as num?)?.toDouble(),
       barMaxWidth: (update['barMaxWidth'] as num?)?.toDouble(),
-      yAxisId: update['yAxisId'] as String?,
+      // Per FR-003: yAxisId removed
       visible: update['visible'] as bool?,
       legendVisible: update['legendVisible'] as bool?,
       unit: update['unit'] as String?,

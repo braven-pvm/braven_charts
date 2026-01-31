@@ -269,17 +269,19 @@ void main() {
         interpolation: Interpolation.bezier,
         tension: 0.5,
         showPoints: true,
-        yAxisPosition: 'left',
-        yAxisLabel: 'Temp',
-        yAxisUnit: '°C',
-        yAxisColor: '#333333',
-        yAxisMin: 0.0,
-        yAxisMax: 100.0,
+        // Use nested yAxis instead of flat fields per FR-001/FR-002
+        yAxis: YAxisConfig(
+          position: AxisPosition.left,
+          label: 'Temp',
+          unit: '°C',
+          color: '#333333',
+          min: 0.0,
+          max: 100.0,
+        ),
         barWidthPercent: 0.8,
         barWidthPixels: 20.0,
         barMinWidth: 5.0,
         barMaxWidth: 50.0,
-        yAxisId: 'temp-axis',
         visible: true,
         legendVisible: true,
         unit: 'W',
@@ -1089,6 +1091,12 @@ void main() {
               DataPoint(x: 2, y: 21),
             ],
             color: '#FF5733',
+            // Per FR-001: nested yAxis instead of flat fields
+            yAxis: YAxisConfig(
+              position: AxisPosition.left,
+              label: 'Temperature',
+              unit: '°C',
+            ),
           ),
           SeriesConfig(
             id: 'humidity',
@@ -1099,6 +1107,12 @@ void main() {
               DataPoint(x: 2, y: 62),
             ],
             color: '#3366FF',
+            // Per FR-001: nested yAxis instead of flat fields
+            yAxis: YAxisConfig(
+              position: AxisPosition.right,
+              label: 'Humidity',
+              unit: '%',
+            ),
           ),
         ],
         xAxis: XAxisConfig(
@@ -1106,22 +1120,10 @@ void main() {
           unit: 'hours',
           type: AxisType.time,
         ),
-        yAxes: [
-          YAxisConfig(
-            id: 'temp-axis',
-            label: 'Temperature',
-            unit: '°C',
-            position: AxisPosition.left,
-          ),
-          YAxisConfig(
-            id: 'humidity-axis',
-            label: 'Humidity',
-            unit: '%',
-            position: AxisPosition.right,
-          ),
-        ],
+        // Per FR-003: yAxes removed from ChartConfiguration
         annotations: [
           AnnotationConfig(
+            id: 'annotation1',
             type: AnnotationType.referenceLine,
             orientation: Orientation.horizontal,
             value: 25.0,
@@ -1204,22 +1206,42 @@ void main() {
       expect(chart.xAxis!.type, equals(AxisType.time));
     });
 
-    test('fromJson parses nested yAxes correctly', () {
+    test('fromJson parses nested series yAxis correctly', () {
+      // Per FR-001/FR-003: yAxes are on series, not ChartConfiguration
       final json = {
-        'series': <Map<String, dynamic>>[],
-        'yAxes': [
-          {'id': 'y1', 'position': 'left'},
-          {'id': 'y2', 'position': 'right'},
+        'series': [
+          {
+            'id': 'series1',
+            'data': [
+              {'x': 0.0, 'y': 10.0}
+            ],
+            'yAxis': {
+              'position': 'left',
+              'label': 'Values',
+            }
+          },
+          {
+            'id': 'series2',
+            'data': [
+              {'x': 0.0, 'y': 20.0}
+            ],
+            'yAxis': {
+              'position': 'right',
+              'label': 'Other',
+            }
+          },
         ],
       };
 
       final chart = ChartConfiguration.fromJson(json);
 
-      expect(chart.yAxes.length, equals(2));
-      expect(chart.yAxes[0].id, equals('y1'));
-      expect(chart.yAxes[0].position, equals(AxisPosition.left));
-      expect(chart.yAxes[1].id, equals('y2'));
-      expect(chart.yAxes[1].position, equals(AxisPosition.right));
+      expect(chart.series.length, equals(2));
+      expect(chart.series[0].yAxis, isNotNull);
+      expect(chart.series[0].yAxis!.position, equals(AxisPosition.left));
+      expect(chart.series[0].yAxis!.label, equals('Values'));
+      expect(chart.series[1].yAxis, isNotNull);
+      expect(chart.series[1].yAxis!.position, equals(AxisPosition.right));
+      expect(chart.series[1].yAxis!.label, equals('Other'));
     });
 
     test('fromJson parses nested annotations correctly', () {
@@ -1264,8 +1286,13 @@ void main() {
       expect(json['series'], isList);
       expect((json['series'] as List).length, equals(2));
       expect(json['xAxis'], isMap);
-      expect(json['yAxes'], isList);
-      expect((json['yAxes'] as List).length, equals(2));
+      // Per FR-003: yAxes removed from ChartConfiguration - yAxis is now nested in each series
+      expect(json.containsKey('yAxes'), isFalse,
+          reason: 'FR-003: yAxes should not be in ChartConfiguration');
+      // Instead, verify series have yAxis
+      final series0 = (json['series'] as List)[0] as Map<String, dynamic>;
+      expect(series0.containsKey('yAxis'), isTrue,
+          reason: 'FR-001: series should have nested yAxis');
       expect(json['annotations'], isList);
       expect((json['annotations'] as List).length, equals(1));
       expect(json['style'], isMap);
@@ -1314,9 +1341,9 @@ void main() {
       // Verify nested xAxis
       expect(restored.xAxis, equals(original.xAxis));
 
-      // Verify nested yAxes
-      expect(restored.yAxes.length, equals(original.yAxes.length));
-      expect(restored.yAxes[0], equals(original.yAxes[0]));
+      // Verify nested yAxis on series (FR-001: yAxis is now on series, not ChartConfiguration)
+      expect(restored.series[0].yAxis, equals(original.series[0].yAxis));
+      expect(restored.series[1].yAxis, equals(original.series[1].yAxis));
 
       // Verify nested annotations
       expect(restored.annotations.length, equals(original.annotations.length));

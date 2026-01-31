@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 import 'data_point.dart';
 import 'enums.dart';
+import 'y_axis_config.dart';
 
 /// Configuration for a single data series in a chart.
 ///
@@ -76,42 +77,24 @@ class SeriesConfig with EquatableMixin {
   /// Whether to show individual data points.
   final bool showPoints;
 
-  /// Position for an INLINE Y-axis created specifically for this series.
+  /// Nested Y-axis configuration for this series.
   ///
-  /// Use this with [yAxisLabel], [yAxisUnit], [yAxisColor], [yAxisMin], [yAxisMax]
-  /// to define a dedicated Y-axis for this series inline.
+  /// Contains all y-axis properties (position, label, unit, color, min, max, etc.)
+  /// in a single nested object. This replaces the flat y-axis fields.
   ///
-  /// MUTUALLY EXCLUSIVE with [yAxisId] - use one or the other:
-  /// - Use [yAxisId] to reference a SHARED axis defined in the chart's yAxes array.
-  /// - Use [yAxisPosition] (with its companions) to define an INLINE axis.
-  ///
-  /// Values: 'left', 'right', 'leftOuter', 'rightOuter'
-  final String? yAxisPosition;
-
-  /// Label for the INLINE Y-axis (used with [yAxisPosition]).
-  ///
-  /// Ignored if [yAxisId] is set.
-  final String? yAxisLabel;
-
-  /// Unit string for the INLINE Y-axis (used with [yAxisPosition]).
-  ///
-  /// Ignored if [yAxisId] is set.
-  final String? yAxisUnit;
-
-  /// Color for the INLINE Y-axis (used with [yAxisPosition]).
-  ///
-  /// Ignored if [yAxisId] is set.
-  final String? yAxisColor;
-
-  /// Minimum value for the INLINE Y-axis range (used with [yAxisPosition]).
-  ///
-  /// Ignored if [yAxisId] is set.
-  final double? yAxisMin;
-
-  /// Maximum value for the INLINE Y-axis range (used with [yAxisPosition]).
-  ///
-  /// Ignored if [yAxisId] is set.
-  final double? yAxisMax;
+  /// Example:
+  /// ```dart
+  /// SeriesConfig(
+  ///   id: 'power',
+  ///   data: [...],
+  ///   yAxis: YAxisConfig(
+  ///     position: AxisPosition.left,
+  ///     label: 'Power',
+  ///     unit: 'W',
+  ///   ),
+  /// )
+  /// ```
+  final YAxisConfig? yAxis;
 
   /// Bar width as a percentage of available space (0.0 to 1.0).
   ///
@@ -132,16 +115,6 @@ class SeriesConfig with EquatableMixin {
   ///
   /// Only applies to bar charts.
   final double? barMaxWidth;
-
-  /// Reference to a SHARED Y-axis defined in the chart's yAxes array.
-  ///
-  /// Links to [YAxisConfig.id] for multi-axis charts where multiple series
-  /// share the same Y-axis configuration.
-  ///
-  /// MUTUALLY EXCLUSIVE with [yAxisPosition] - use one or the other:
-  /// - Use [yAxisId] to reference a SHARED axis defined in the chart's yAxes array.
-  /// - Use [yAxisPosition] (with its companions) to define an INLINE axis.
-  final String? yAxisId;
 
   /// Whether this series is visible on the chart.
   final bool visible;
@@ -169,17 +142,11 @@ class SeriesConfig with EquatableMixin {
     this.interpolation = Interpolation.linear,
     this.tension = 0.4,
     this.showPoints = false,
-    this.yAxisPosition,
-    this.yAxisLabel,
-    this.yAxisUnit,
-    this.yAxisColor,
-    this.yAxisMin,
-    this.yAxisMax,
+    this.yAxis,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barMinWidth,
     this.barMaxWidth,
-    this.yAxisId,
     this.visible = true,
     this.legendVisible = true,
     this.unit,
@@ -188,7 +155,14 @@ class SeriesConfig with EquatableMixin {
   /// Creates a [SeriesConfig] from a JSON map.
   ///
   /// Parses all fields including the nested [DataPoint] list and enum values.
+  /// Supports nested 'yAxis' object for y-axis configuration per FR-001.
   factory SeriesConfig.fromJson(Map<String, dynamic> json) {
+    // Parse nested yAxis object if present
+    YAxisConfig? yAxis;
+    if (json['yAxis'] != null && json['yAxis'] is Map<String, dynamic>) {
+      yAxis = YAxisConfig.fromJson(json['yAxis'] as Map<String, dynamic>);
+    }
+
     return SeriesConfig(
       id: json['id'] as String,
       type: json['type'] != null
@@ -213,17 +187,11 @@ class SeriesConfig with EquatableMixin {
           : Interpolation.linear,
       tension: (json['tension'] as num?)?.toDouble() ?? 0.4,
       showPoints: json['showPoints'] as bool? ?? false,
-      yAxisPosition: json['yAxisPosition'] as String?,
-      yAxisLabel: json['yAxisLabel'] as String?,
-      yAxisUnit: json['yAxisUnit'] as String?,
-      yAxisColor: json['yAxisColor'] as String?,
-      yAxisMin: (json['yAxisMin'] as num?)?.toDouble(),
-      yAxisMax: (json['yAxisMax'] as num?)?.toDouble(),
+      yAxis: yAxis,
       barWidthPercent: (json['barWidthPercent'] as num?)?.toDouble(),
       barWidthPixels: (json['barWidthPixels'] as num?)?.toDouble(),
       barMinWidth: (json['barMinWidth'] as num?)?.toDouble(),
       barMaxWidth: (json['barMaxWidth'] as num?)?.toDouble(),
-      yAxisId: json['yAxisId'] as String?,
       visible: json['visible'] as bool? ?? true,
       legendVisible: json['legendVisible'] as bool? ?? true,
       unit: json['unit'] as String?,
@@ -233,6 +201,7 @@ class SeriesConfig with EquatableMixin {
   /// Converts this [SeriesConfig] to a JSON map.
   ///
   /// Includes all properties. Enum values are serialized as their names.
+  /// Y-axis configuration is output as nested 'yAxis' object per FR-001/FR-002.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -248,17 +217,11 @@ class SeriesConfig with EquatableMixin {
       'interpolation': interpolation.name,
       'tension': tension,
       'showPoints': showPoints,
-      if (yAxisPosition != null) 'yAxisPosition': yAxisPosition,
-      if (yAxisLabel != null) 'yAxisLabel': yAxisLabel,
-      if (yAxisUnit != null) 'yAxisUnit': yAxisUnit,
-      if (yAxisColor != null) 'yAxisColor': yAxisColor,
-      if (yAxisMin != null) 'yAxisMin': yAxisMin,
-      if (yAxisMax != null) 'yAxisMax': yAxisMax,
+      if (yAxis != null) 'yAxis': yAxis!.toJson(),
       if (barWidthPercent != null) 'barWidthPercent': barWidthPercent,
       if (barWidthPixels != null) 'barWidthPixels': barWidthPixels,
       if (barMinWidth != null) 'barMinWidth': barMinWidth,
       if (barMaxWidth != null) 'barMaxWidth': barMaxWidth,
-      if (yAxisId != null) 'yAxisId': yAxisId,
       'visible': visible,
       'legendVisible': legendVisible,
       if (unit != null) 'unit': unit,
@@ -282,17 +245,11 @@ class SeriesConfig with EquatableMixin {
     Interpolation? interpolation,
     double? tension,
     bool? showPoints,
-    String? yAxisPosition,
-    String? yAxisLabel,
-    String? yAxisUnit,
-    String? yAxisColor,
-    double? yAxisMin,
-    double? yAxisMax,
+    YAxisConfig? yAxis,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barMinWidth,
     double? barMaxWidth,
-    String? yAxisId,
     bool? visible,
     bool? legendVisible,
     String? unit,
@@ -311,17 +268,11 @@ class SeriesConfig with EquatableMixin {
       interpolation: interpolation ?? this.interpolation,
       tension: tension ?? this.tension,
       showPoints: showPoints ?? this.showPoints,
-      yAxisPosition: yAxisPosition ?? this.yAxisPosition,
-      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
-      yAxisUnit: yAxisUnit ?? this.yAxisUnit,
-      yAxisColor: yAxisColor ?? this.yAxisColor,
-      yAxisMin: yAxisMin ?? this.yAxisMin,
-      yAxisMax: yAxisMax ?? this.yAxisMax,
+      yAxis: yAxis ?? this.yAxis,
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       barMinWidth: barMinWidth ?? this.barMinWidth,
       barMaxWidth: barMaxWidth ?? this.barMaxWidth,
-      yAxisId: yAxisId ?? this.yAxisId,
       visible: visible ?? this.visible,
       legendVisible: legendVisible ?? this.legendVisible,
       unit: unit ?? this.unit,
@@ -343,17 +294,11 @@ class SeriesConfig with EquatableMixin {
         interpolation,
         tension,
         showPoints,
-        yAxisPosition,
-        yAxisLabel,
-        yAxisUnit,
-        yAxisColor,
-        yAxisMin,
-        yAxisMax,
+        yAxis,
         barWidthPercent,
         barWidthPixels,
         barMinWidth,
         barMaxWidth,
-        yAxisId,
         visible,
         legendVisible,
         unit,

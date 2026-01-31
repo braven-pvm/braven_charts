@@ -660,7 +660,8 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'right',
+            yAxisConfig:
+                agentic.YAxisConfig(position: agentic.AxisPosition.right),
           ),
         ],
       );
@@ -672,7 +673,7 @@ void main() {
       expect(series!.yAxisConfig?.position, equals(YAxisPosition.right));
     });
 
-    test('wiring: yAxisPosition=leftOuter → YAxisPosition.leftOuter', () {
+    test('wiring: yAxisConfig.position=left → YAxisPosition.left', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -681,7 +682,8 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'leftOuter',
+            yAxisConfig:
+                agentic.YAxisConfig(position: agentic.AxisPosition.left),
           ),
         ],
       );
@@ -690,11 +692,12 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.position, equals(YAxisPosition.leftOuter),
-          reason: 'MISSING: leftOuter not supported in yAxisPosition mapping');
+      expect(series!.yAxisConfig?.position, equals(YAxisPosition.left),
+          reason:
+              'MISSING: left not supported in yAxisConfig.position mapping');
     });
 
-    test('wiring: yAxisPosition=rightOuter → YAxisPosition.rightOuter', () {
+    test('wiring: yAxisConfig.position=right → YAxisPosition.right', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -703,7 +706,8 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'rightOuter',
+            yAxisConfig:
+                agentic.YAxisConfig(position: agentic.AxisPosition.right),
           ),
         ],
       );
@@ -712,11 +716,12 @@ void main() {
       final series = extractLineSeriesFromWidget(widget);
 
       expect(series, isNotNull);
-      expect(series!.yAxisConfig?.position, equals(YAxisPosition.rightOuter),
-          reason: 'MISSING: rightOuter not supported in yAxisPosition mapping');
+      expect(series!.yAxisConfig?.position, equals(YAxisPosition.right),
+          reason:
+              'MISSING: right not supported in yAxisConfig.position mapping');
     });
 
-    test('wiring: yAxisLabel → LineChartSeries.yAxisConfig.label', () {
+    test('wiring: yAxisConfig.label → LineChartSeries.yAxisConfig.label', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -725,8 +730,10 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'left',
-            yAxisLabel: 'Power',
+            yAxisConfig: agentic.YAxisConfig(
+              position: agentic.AxisPosition.left,
+              label: 'Power',
+            ),
           ),
         ],
       );
@@ -738,7 +745,7 @@ void main() {
       expect(series!.yAxisConfig?.label, equals('Power'));
     });
 
-    test('wiring: yAxisUnit → LineChartSeries.yAxisConfig.unit', () {
+    test('wiring: yAxisConfig.unit → LineChartSeries.yAxisConfig.unit', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -747,8 +754,10 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'left',
-            yAxisUnit: 'W',
+            yAxisConfig: agentic.YAxisConfig(
+              position: agentic.AxisPosition.left,
+              unit: 'W',
+            ),
           ),
         ],
       );
@@ -760,7 +769,7 @@ void main() {
       expect(series!.yAxisConfig?.unit, equals('W'));
     });
 
-    test('wiring: yAxisColor → LineChartSeries.yAxisConfig.color', () {
+    test('wiring: yAxisConfig.color → LineChartSeries.yAxisConfig.color', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -769,8 +778,10 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'left',
-            yAxisColor: '#00FF00',
+            yAxisConfig: agentic.YAxisConfig(
+              position: agentic.AxisPosition.left,
+              color: '#00FF00',
+            ),
           ),
         ],
       );
@@ -780,10 +791,10 @@ void main() {
 
       expect(series, isNotNull);
       expect(series!.yAxisConfig?.color, equals(const Color(0xFF00FF00)),
-          reason: 'MISSING: yAxisColor not wired');
+          reason: 'MISSING: yAxisConfig.color not wired');
     });
 
-    test('wiring: yAxisMin → LineChartSeries.yAxisConfig.min', () {
+    test('wiring: yAxisConfig.min → LineChartSeries.yAxisConfig.min', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -792,8 +803,10 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'left',
-            yAxisMin: 0.0,
+            yAxisConfig: agentic.YAxisConfig(
+              position: agentic.AxisPosition.left,
+              min: 0.0,
+            ),
           ),
         ],
       );
@@ -803,10 +816,10 @@ void main() {
 
       expect(series, isNotNull);
       expect(series!.yAxisConfig?.min, equals(0.0),
-          reason: 'MISSING: yAxisMin not wired');
+          reason: 'MISSING: yAxisConfig.min not wired');
     });
 
-    test('wiring: yAxisMax → LineChartSeries.yAxisConfig.max', () {
+    test('wiring: yAxisConfig.max → LineChartSeries.yAxisConfig.max', () {
       final config = agentic.ChartConfiguration(
         type: agentic.ChartType.line,
         series: [
@@ -815,8 +828,10 @@ void main() {
             data: [
               {'x': 0, 'y': 1}
             ],
-            yAxisPosition: 'left',
-            yAxisMax: 100.0,
+            yAxisConfig: agentic.YAxisConfig(
+              position: agentic.AxisPosition.left,
+              max: 100.0,
+            ),
           ),
         ],
       );
@@ -826,7 +841,7 @@ void main() {
 
       expect(series, isNotNull);
       expect(series!.yAxisConfig?.max, equals(100.0),
-          reason: 'MISSING: yAxisMax not wired');
+          reason: 'MISSING: yAxisConfig.max not wired');
     });
   });
 

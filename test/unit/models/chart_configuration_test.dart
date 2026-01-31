@@ -1,5 +1,3 @@
-// @orchestra-task: 2
-@Tags(['tdd-red'])
 library;
 
 // Import the ACTUAL agentic ChartConfiguration, not a placeholder

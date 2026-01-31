@@ -22,11 +22,12 @@ void main() {
           id: 'series-1',
           name: 'Series 1',
           data: [1, 2, 3],
-          yAxisId: 'y1',
+          yAxisConfig: YAxisConfig(
+            id: 'y1',
+            label: 'Y1',
+            position: AxisPosition.left,
+          ),
         ),
-      ],
-      yAxes: [
-        YAxisConfig(id: 'y1', label: 'Y1', position: AxisPosition.left),
       ],
     );
 
@@ -39,11 +40,12 @@ void main() {
           id: 'series-2',
           name: 'Series 2',
           data: [4, 5, 6],
-          yAxisId: 'y2',
+          yAxisConfig: YAxisConfig(
+            id: 'y2',
+            label: 'Y2',
+            position: AxisPosition.left,
+          ),
         ),
-      ],
-      yAxes: [
-        YAxisConfig(id: 'y2', label: 'Y2', position: AxisPosition.left),
       ],
     );
 

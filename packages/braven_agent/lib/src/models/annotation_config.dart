@@ -42,6 +42,11 @@ import 'enums.dart';
 /// final restored = AnnotationConfig.fromJson(json);
 /// ```
 class AnnotationConfig with EquatableMixin {
+  /// Unique identifier for this annotation.
+  ///
+  /// System-generated and read-only. Used for tracking and updating annotations.
+  final String? id;
+
   /// The type of annotation.
   final AnnotationType type;
 
@@ -97,6 +102,7 @@ class AnnotationConfig with EquatableMixin {
   /// [type] is required. Other parameters are optional and depend on
   /// the annotation type being configured.
   const AnnotationConfig({
+    this.id,
     required this.type,
     this.orientation,
     this.value,
@@ -165,6 +171,7 @@ class AnnotationConfig with EquatableMixin {
     }
 
     return AnnotationConfig(
+      id: json['id'] as String?,
       type: AnnotationType.values.byName(json['type'] as String),
       orientation: json['orientation'] != null
           ? Orientation.values.byName(json['orientation'] as String)
@@ -193,6 +200,7 @@ class AnnotationConfig with EquatableMixin {
   /// Includes all properties. Enum values are serialized as their names.
   Map<String, dynamic> toJson() {
     return {
+      if (id != null) 'id': id,
       'type': type.name,
       if (orientation != null) 'orientation': orientation!.name,
       if (value != null) 'value': value,
@@ -216,6 +224,7 @@ class AnnotationConfig with EquatableMixin {
   ///
   /// If a parameter is not provided, the original value is preserved.
   AnnotationConfig copyWith({
+    String? id,
     AnnotationType? type,
     Orientation? orientation,
     double? value,
@@ -234,6 +243,7 @@ class AnnotationConfig with EquatableMixin {
     String? seriesId,
   }) {
     return AnnotationConfig(
+      id: id ?? this.id,
       type: type ?? this.type,
       orientation: orientation ?? this.orientation,
       value: value ?? this.value,
@@ -255,6 +265,7 @@ class AnnotationConfig with EquatableMixin {
 
   @override
   List<Object?> get props => [
+        id,
         type,
         orientation,
         value,

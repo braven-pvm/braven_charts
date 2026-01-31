@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/tools/create_chart_tool.dart';
 import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
+import 'package:braven_charts/src/agentic/models/axis_config.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
 import 'package:braven_charts/src/agentic/models/series_config.dart';
 
@@ -307,8 +308,11 @@ void main() {
 
         expect(config, isA<ChartConfiguration>());
         expect(config.series.length, equals(2));
-        expect(config.series[0].yAxisPosition, equals('left'));
-        expect(config.series[1].yAxisPosition, equals('right'));
+        // Per FR-001: check nested yAxisConfig.position
+        expect(
+            config.series[0].yAxisConfig?.position, equals(AxisPosition.left));
+        expect(
+            config.series[1].yAxisConfig?.position, equals(AxisPosition.right));
       });
 
       test('applies yAxisLabel and yAxisUnit when specified', () async {
@@ -342,10 +346,11 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
-        expect(config.series[0].yAxisLabel, equals('Power'));
-        expect(config.series[0].yAxisUnit, equals('W'));
-        expect(config.series[1].yAxisLabel, equals('Heart Rate'));
-        expect(config.series[1].yAxisUnit, equals('bpm'));
+        // Per FR-001: check nested yAxisConfig.label and unit
+        expect(config.series[0].yAxisConfig?.label, equals('Power'));
+        expect(config.series[0].yAxisConfig?.unit, equals('W'));
+        expect(config.series[1].yAxisConfig?.label, equals('Heart Rate'));
+        expect(config.series[1].yAxisConfig?.unit, equals('bpm'));
       });
 
       test('applies yAxisColor when specified', () async {
@@ -367,7 +372,8 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
-        expect(config.series.first.yAxisColor, equals('#0000FF'));
+        // Per FR-001: check nested yAxisConfig.color
+        expect(config.series.first.yAxisConfig?.color, equals('#0000FF'));
       });
 
       test('creates multi-axis chart with left and right positioning',
@@ -413,21 +419,21 @@ void main() {
         expect(config, isA<ChartConfiguration>());
         expect(config.series.length, equals(2));
 
-        // Verify power series Y-axis config
+        // Per FR-001: Verify power series nested yAxisConfig
         final powerSeries = config.series[0];
         expect(powerSeries.id, equals('power'));
-        expect(powerSeries.yAxisPosition, equals('left'));
-        expect(powerSeries.yAxisLabel, equals('Power'));
-        expect(powerSeries.yAxisUnit, equals('W'));
-        expect(powerSeries.yAxisColor, equals('#2196F3'));
+        expect(powerSeries.yAxisConfig?.position, equals(AxisPosition.left));
+        expect(powerSeries.yAxisConfig?.label, equals('Power'));
+        expect(powerSeries.yAxisConfig?.unit, equals('W'));
+        expect(powerSeries.yAxisConfig?.color, equals('#2196F3'));
 
-        // Verify heart rate series Y-axis config
+        // Per FR-001: Verify heart rate series nested yAxisConfig
         final hrSeries = config.series[1];
         expect(hrSeries.id, equals('heartRate'));
-        expect(hrSeries.yAxisPosition, equals('right'));
-        expect(hrSeries.yAxisLabel, equals('Heart Rate'));
-        expect(hrSeries.yAxisUnit, equals('bpm'));
-        expect(hrSeries.yAxisColor, equals('#FF0000'));
+        expect(hrSeries.yAxisConfig?.position, equals(AxisPosition.right));
+        expect(hrSeries.yAxisConfig?.label, equals('Heart Rate'));
+        expect(hrSeries.yAxisConfig?.unit, equals('bpm'));
+        expect(hrSeries.yAxisConfig?.color, equals('#FF0000'));
       });
     });
   });

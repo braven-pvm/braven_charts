@@ -34,13 +34,15 @@ void main() {
             id: 'series-1',
             name: 'Test Series',
             data: [1, 2, 3],
-            yAxisId: 'y1',
+            // Per FR-001: use nested yAxisConfig instead of yAxisId
+            yAxisConfig: YAxisConfig(
+              id: 'y1',
+              label: 'Y Axis',
+              position: AxisPosition.left,
+            ),
           ),
         ],
         xAxis: XAxisConfig(label: 'X Axis'),
-        yAxes: [
-          YAxisConfig(id: 'y1', label: 'Y Axis', position: AxisPosition.left),
-        ],
       );
     });
 
@@ -149,11 +151,12 @@ void main() {
             id: 'series-1',
             name: 'Series 1',
             data: [1, 2, 3],
-            yAxisId: 'y1',
+            yAxisConfig: YAxisConfig(
+              id: 'y1',
+              label: 'Y1',
+              position: AxisPosition.left,
+            ),
           ),
-        ],
-        yAxes: [
-          YAxisConfig(id: 'y1', label: 'Y1', position: AxisPosition.left),
         ],
       );
 
@@ -166,11 +169,12 @@ void main() {
             id: 'series-2',
             name: 'Series 2',
             data: [4, 5, 6],
-            yAxisId: 'y2',
+            yAxisConfig: YAxisConfig(
+              id: 'y2',
+              label: 'Y2',
+              position: AxisPosition.left,
+            ),
           ),
-        ],
-        yAxes: [
-          YAxisConfig(id: 'y2', label: 'Y2', position: AxisPosition.left),
         ],
       );
 

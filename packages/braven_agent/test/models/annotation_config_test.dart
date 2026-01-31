@@ -1,5 +1,3 @@
-// @orchestra-task: 2
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_agent/src/models/models.dart';
@@ -17,8 +15,9 @@ void main() {
   group('AnnotationConfig.id field', () {
     group('id field in JSON serialization', () {
       test('toJson() should include id field when present', () {
-        // Arrange: Create an annotation
+        // Arrange: Create an annotation with id (FR-004: id is system-generated)
         const annotation = AnnotationConfig(
+          id: 'ref-001',
           type: AnnotationType.referenceLine,
           orientation: Orientation.horizontal,
           value: 100.0,
@@ -29,9 +28,9 @@ void main() {
         final json = annotation.toJson();
 
         // Assert: id field should exist in the output
-        // This test FAILS because AnnotationConfig doesn't have id field
         expect(json.containsKey('id'), isTrue,
             reason: 'FR-004: annotation id must be serialized');
+        expect(json['id'], equals('ref-001'));
       });
 
       test('fromJson() should parse and preserve id field', () {
@@ -77,8 +76,9 @@ void main() {
 
     group('id field in copyWith', () {
       test('copyWith result should include id in serialization', () {
-        // Arrange
+        // Arrange: create with id (FR-004: id is system-generated, preserved through copyWith)
         const original = AnnotationConfig(
+          id: 'ref-002',
           type: AnnotationType.referenceLine,
           value: 100.0,
         );
@@ -87,11 +87,10 @@ void main() {
         final copy = original.copyWith();
         final copyJson = copy.toJson();
 
-        // Assert: after FR-004 implementation, id should be in output
-        // This test FAILS because id field doesn't exist
+        // Assert: id should be preserved through copyWith
         expect(copyJson.containsKey('id'), isTrue,
-            reason:
-                'FR-004: copyWith should preserve/allow id - id must exist');
+            reason: 'FR-004: copyWith should preserve id');
+        expect(copyJson['id'], equals('ref-002'));
       });
     });
 

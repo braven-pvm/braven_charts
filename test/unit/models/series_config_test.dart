@@ -1,5 +1,3 @@
-// @orchestra-task: 2
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_charts/braven_charts.dart';
@@ -146,13 +144,19 @@ bool _hasMethod(Object obj, String methodName) {
 }
 
 /// Helper function to check if a type has a specific static method.
+/// Note: Dart doesn't support dynamic static method calls on Type objects,
+/// so we test specific classes directly.
 bool _hasStaticMethod(Type type, String methodName) {
   try {
     switch (methodName) {
       case 'fromJson':
-        // Try to call fromJson with empty map to check existence
-        (type as dynamic).fromJson(<String, dynamic>{});
-        return true;
+        // For ChartSeries, call the static method directly
+        // (Dart doesn't support (Type as dynamic).staticMethod())
+        if (type == ChartSeries) {
+          ChartSeries.fromJson(<String, dynamic>{'id': 'test', 'points': []});
+          return true;
+        }
+        return false;
       default:
         return false;
     }

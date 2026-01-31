@@ -144,6 +144,7 @@ class ChartConfiguration with EquatableMixin {
   ///
   /// Parses all nested models including series, axes, annotations, and style.
   /// Enum values are parsed using .byName() with sensible defaults.
+  /// Note: yAxes[] in input is ignored per FR-003 - use series-level yAxis instead.
   factory ChartConfiguration.fromJson(Map<String, dynamic> json) {
     return ChartConfiguration(
       id: json['id'] as String?,
@@ -156,10 +157,8 @@ class ChartConfiguration with EquatableMixin {
       xAxis: json['xAxis'] != null
           ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
           : null,
-      yAxes: (json['yAxes'] as List<dynamic>?)
-              ?.map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      // FR-003: yAxes[] is ignored - y-axis config is per-series via yAxis field
+      yAxes: const [],
       annotations: (json['annotations'] as List<dynamic>?)
               ?.map((e) => AnnotationConfig.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -186,6 +185,7 @@ class ChartConfiguration with EquatableMixin {
   ///
   /// Includes all properties. Nested models call their .toJson() methods.
   /// Enum values are serialized as their names.
+  /// Note: yAxes[] is NOT serialized per FR-003 - use series-level yAxis instead.
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -193,7 +193,7 @@ class ChartConfiguration with EquatableMixin {
       if (subtitle != null) 'subtitle': subtitle,
       'series': series.map((e) => e.toJson()).toList(),
       if (xAxis != null) 'xAxis': xAxis!.toJson(),
-      'yAxes': yAxes.map((e) => e.toJson()).toList(),
+      // FR-003: yAxes[] is NOT serialized - y-axis config is per-series
       'annotations': annotations.map((e) => e.toJson()).toList(),
       if (style != null) 'style': style!.toJson(),
       if (interactions != null) 'interactions': interactions,

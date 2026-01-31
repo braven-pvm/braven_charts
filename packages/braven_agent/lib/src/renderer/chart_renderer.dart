@@ -82,17 +82,8 @@ class ChartRenderer {
         // Parse color from SeriesConfig
         final seriesColor = _parseColor(seriesConfig.color);
 
-        // Build YAxisConfig: first try per-series inline fields, then lookup from shared yAxes
-        charts.YAxisConfig? yAxisConfig =
-            _buildYAxisConfigFromSeries(seriesConfig);
-
-        // If no inline config but series has yAxisId, look up from shared yAxes
-        if (yAxisConfig == null && seriesConfig.yAxisId != null) {
-          final sharedAxis = yAxesLookup[seriesConfig.yAxisId!];
-          if (sharedAxis != null) {
-            yAxisConfig = _convertYAxisConfig(sharedAxis);
-          }
-        }
+        // Build YAxisConfig from per-series nested yAxis field (FR-001)
+        final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
 
         // CRITICAL: showPoints is the ONLY control for markers.
         // Previous logic tried to implicitly enable markers when markerSize was non-default,
@@ -112,7 +103,7 @@ class ChartRenderer {
           color: seriesColor,
           strokeWidth: seriesConfig.strokeWidth,
           yAxisConfig: yAxisConfig,
-          yAxisId: seriesConfig.yAxisId,
+          // Per FR-003: yAxisId removed - yAxis is now inline on each series
           fillOpacity: seriesConfig.fillOpacity,
           tension: seriesConfig.tension,
           markerRadius: seriesConfig.markerSize,
@@ -450,76 +441,37 @@ class ChartRenderer {
     }
   }
 
-  /// Builds a YAxisConfig from per-series Y-axis configuration fields.
+  /// Builds a YAxisConfig from per-series Y-axis configuration.
   ///
   /// Returns null if no Y-axis configuration is specified on the series.
   charts.YAxisConfig? _buildYAxisConfigFromSeries(
       models.SeriesConfig seriesConfig) {
-    // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null &&
-        seriesConfig.yAxisLabel == null &&
-        seriesConfig.yAxisUnit == null &&
-        seriesConfig.yAxisColor == null &&
-        seriesConfig.yAxisMin == null &&
-        seriesConfig.yAxisMax == null) {
+    // Per FR-001: Use nested yAxis field instead of flat fields
+    final yAxis = seriesConfig.yAxis;
+    if (yAxis == null) {
       return null;
     }
 
-    // Map position string to YAxisPosition enum
+    // Map position enum to YAxisPosition enum
     charts.YAxisPosition position;
-    switch (seriesConfig.yAxisPosition?.toLowerCase()) {
-      case 'right':
+    switch (yAxis.position) {
+      case models.AxisPosition.right:
         position = charts.YAxisPosition.right;
-      case 'rightouter':
-        position = charts.YAxisPosition.rightOuter;
-      case 'leftouter':
-        position = charts.YAxisPosition.leftOuter;
-      case 'left':
+      case models.AxisPosition.left:
       default:
         position = charts.YAxisPosition.left;
     }
 
     // Parse axis color
-    final axisColor = _parseColor(seriesConfig.yAxisColor);
+    final axisColor = _parseColor(yAxis.color);
 
     return charts.YAxisConfig(
       position: position,
-      label: seriesConfig.yAxisLabel,
-      unit: seriesConfig.yAxisUnit,
+      label: yAxis.label,
+      unit: yAxis.unit,
       color: axisColor,
-      min: seriesConfig.yAxisMin,
-      max: seriesConfig.yAxisMax,
-    );
-  }
-
-  /// Converts a models.YAxisConfig to a charts.YAxisConfig.
-  ///
-  /// Used to resolve shared Y-axis configurations from the yAxes array
-  /// when a series references an axis via yAxisId.
-  charts.YAxisConfig _convertYAxisConfig(models.YAxisConfig config) {
-    // Map AxisPosition enum to YAxisPosition enum
-    charts.YAxisPosition position;
-    switch (config.position) {
-      case models.AxisPosition.right:
-        position = charts.YAxisPosition.right;
-      case models.AxisPosition.rightOuter:
-        position = charts.YAxisPosition.rightOuter;
-      case models.AxisPosition.leftOuter:
-        position = charts.YAxisPosition.leftOuter;
-      case models.AxisPosition.left:
-        position = charts.YAxisPosition.left;
-    }
-
-    // Parse axis color
-    final axisColor = _parseColor(config.color);
-
-    return charts.YAxisConfig(
-      position: position,
-      label: config.label,
-      unit: config.unit,
-      color: axisColor,
-      min: config.min,
-      max: config.max,
+      min: yAxis.min,
+      max: yAxis.max,
     );
   }
 

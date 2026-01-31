@@ -1,5 +1,3 @@
-// @orchestra-task: 2
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_charts/braven_charts.dart';

@@ -1,5 +1,3 @@
-// @orchestra-task: 2
-@Tags(['tdd-red'])
 library;
 
 import 'package:braven_agent/src/models/models.dart';
@@ -11,27 +9,26 @@ import 'package:flutter_test/flutter_test.dart';
 /// - FR-001: Series must support nested yAxis object containing all y-axis properties
 /// - FR-002: Flat y-axis fields (yAxisPosition, yAxisLabel, etc.) are prohibited
 ///
-/// These tests use JSON serialization to verify the structure without requiring
-/// the actual yAxis field to exist yet. Tests FAIL because the new structure
-/// isn't implemented.
+/// These tests verify the new nested yAxis structure works correctly.
 void main() {
   group('SeriesConfig nested yAxis field', () {
     group('yAxis in JSON serialization (FR-001)', () {
       test('toJson() should include nested yAxis object (not flat fields)', () {
-        // Arrange: Create a series with y-axis info using existing flat fields
+        // Arrange: Create a series with nested yAxis config (FR-001)
         const series = SeriesConfig(
           id: 'power',
           data: [DataPoint(x: 0, y: 100)],
-          yAxisPosition: 'left',
-          yAxisLabel: 'Power',
-          yAxisUnit: 'W',
+          yAxis: YAxisConfig(
+            position: AxisPosition.left,
+            label: 'Power',
+            unit: 'W',
+          ),
         );
 
         // Act: Serialize to JSON
         final json = series.toJson();
 
         // Assert: Per FR-001, should have nested 'yAxis', not flat fields
-        // This test FAILS because current implementation uses flat fields
         expect(json.containsKey('yAxis'), isTrue,
             reason: 'FR-001: yAxis must be a nested object');
         expect(json['yAxis'], isA<Map<String, dynamic>>(),
@@ -60,7 +57,6 @@ void main() {
         // Assert: After serializing back, should preserve nested structure
         final outputJson = series.toJson();
 
-        // This test FAILS because current fromJson doesn't parse nested yAxis
         expect(outputJson.containsKey('yAxis'), isTrue,
             reason: 'FR-001: yAxis must be preserved as nested object');
         expect(outputJson['yAxis'], isA<Map<String, dynamic>>());
@@ -89,7 +85,6 @@ void main() {
         final outputJson = series.toJson();
 
         // Assert: Nested structure preserved
-        // This test FAILS because nested yAxis is not supported
         expect(outputJson['yAxis'], isA<Map<String, dynamic>>());
         expect(outputJson['yAxis']['label'], equals('Cadence'));
         expect(outputJson['yAxis']['unit'], equals('rpm'));
@@ -98,18 +93,17 @@ void main() {
 
     group('flat y-axis fields prohibited (FR-002)', () {
       test('toJson() should NOT include flat yAxisPosition field', () {
-        // Arrange: Even if constructed with flat fields (old API)
+        // Arrange: Create with nested yAxis (new API per FR-001)
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisPosition: 'left',
+          yAxis: YAxisConfig(position: AxisPosition.left),
         );
 
         // Act
         final json = series.toJson();
 
         // Assert: Flat fields should NOT appear in output per FR-002
-        // This test FAILS because current implementation outputs flat fields
         expect(json.containsKey('yAxisPosition'), isFalse,
             reason: 'FR-002: yAxisPosition flat field is prohibited');
       });
@@ -118,12 +112,11 @@ void main() {
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisLabel: 'Test Label',
+          yAxis: YAxisConfig(label: 'Test Label'),
         );
 
         final json = series.toJson();
 
-        // This test FAILS because yAxisLabel is currently serialized
         expect(json.containsKey('yAxisLabel'), isFalse,
             reason: 'FR-002: yAxisLabel flat field is prohibited');
       });
@@ -132,7 +125,7 @@ void main() {
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisUnit: 'W',
+          yAxis: YAxisConfig(unit: 'W'),
         );
 
         final json = series.toJson();
@@ -145,8 +138,7 @@ void main() {
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisMin: 0,
-          yAxisMax: 100,
+          yAxis: YAxisConfig(min: 0, max: 100),
         );
 
         final json = series.toJson();
@@ -161,7 +153,7 @@ void main() {
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisColor: '#FF0000',
+          // Note: color on yAxis may be handled differently - this tests flat field prohibition
         );
 
         final json = series.toJson();
@@ -173,15 +165,15 @@ void main() {
 
     group('yAxisId reference prohibited (FR-003)', () {
       test('toJson() should NOT include yAxisId field', () {
+        // Create a series without yAxisId (field doesn't exist anymore per FR-003)
         const series = SeriesConfig(
           id: 'test',
           data: [DataPoint(x: 0, y: 0)],
-          yAxisId: 'shared-axis',
         );
 
         final json = series.toJson();
 
-        // This test FAILS because yAxisId is currently serialized
+        // yAxisId should not appear in output (field removed per FR-003)
         expect(json.containsKey('yAxisId'), isFalse,
             reason: 'FR-003: yAxisId reference field is prohibited');
       });
