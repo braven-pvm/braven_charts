@@ -1,7 +1,13 @@
+// @orchestra-task: 6
+@Tags(['tdd-red'])
+library;
+
+import 'package:braven_agent/src/models/annotation_config.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/data_point.dart';
 import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/models/series_config.dart';
+import 'package:braven_agent/src/models/y_axis_config.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -983,6 +989,283 @@ void main() {
         expect(chart.series, isNotNull);
       });
     });
+
+    // ==========================================================
+    // US2: TDD Red Phase Tests - Update/Add/Remove Operations
+    // @orchestra-task: 6
+    // ==========================================================
+    group('US2: update/add/remove operations (TDD RED)', () {
+      // ----------------------------------------------------------
+      // US2: Update operation with new schema structure
+      // ----------------------------------------------------------
+      group('update operation with new schema', () {
+        test(
+          'update.series changes property on existing series',
+          () async {
+            // Test the NEW schema structure with explicit update.series[]
+            // Current implementation uses updateSeries map, new schema uses update.series array
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {'id': 'existing_series', 'color': '#FF0000'},
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final series =
+                chart.series.firstWhere((s) => s.id == 'existing_series');
+            // This test should FAIL because the new schema is not implemented yet
+            expect(series.color, equals('#FF0000'));
+          },
+          tags: ['tdd-red'],
+        );
+
+        test(
+          'update.annotations changes label on existing annotation',
+          () async {
+            // Need to set up chart with annotations first
+            currentChart = _createChartWithAnnotations();
+
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'annotations': [
+                    {'id': 'ann-001', 'label': 'Updated Label'},
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final annotation =
+                chart.annotations.firstWhere((a) => a.id == 'ann-001');
+            // This test should FAIL because update.annotations is not implemented
+            expect(annotation.label, equals('Updated Label'));
+          },
+          tags: ['tdd-red'],
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Add operation with ID generation
+      // ----------------------------------------------------------
+      group('add operation with ID generation', () {
+        test(
+          'add.annotations generates system ID when not provided',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {
+                      'type': 'referenceLine',
+                      'value': 200.0,
+                      'orientation': 'horizontal'
+                    },
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // Find the newly added annotation
+            final newAnnotation = chart.annotations.firstWhere(
+              (a) => a.value == 200.0 && a.type == AnnotationType.referenceLine,
+              orElse: () => throw StateError('Annotation not found'),
+            );
+            // System should generate an ID
+            expect(newAnnotation.id, isNotNull);
+            expect(newAnnotation.id, isNotEmpty);
+          },
+          tags: ['tdd-red'],
+        );
+
+        test(
+          'add.series adds new series with the specified ID',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'series': [
+                    {
+                      'id': 'brand-new-series',
+                      'data': [
+                        {'x': 0, 'y': 100},
+                        {'x': 1, 'y': 200},
+                      ],
+                    },
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // Should find the new series with the add.series structure
+            expect(
+              chart.series.any((s) => s.id == 'brand-new-series'),
+              isTrue,
+              reason: 'add.series should add the new series',
+            );
+          },
+          tags: ['tdd-red'],
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Remove operation
+      // ----------------------------------------------------------
+      group('remove operation', () {
+        test(
+          'remove.series removes series by ID',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'remove': {
+                  'series': ['series_to_remove'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // This tests the new remove.series structure (not removeSeries)
+            expect(
+              chart.series.any((s) => s.id == 'series_to_remove'),
+              isFalse,
+              reason: 'remove.series should remove the specified series',
+            );
+          },
+          tags: ['tdd-red'],
+        );
+
+        test(
+          'remove.annotations removes annotation by ID',
+          () async {
+            currentChart = _createChartWithAnnotations();
+
+            final result = await tool.execute({
+              'modifications': {
+                'remove': {
+                  'annotations': ['ann-001'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // This tests the new remove.annotations structure
+            expect(
+              chart.annotations.any((a) => a.id == 'ann-001'),
+              isFalse,
+              reason:
+                  'remove.annotations should remove the specified annotation',
+            );
+          },
+          tags: ['tdd-red'],
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Execution Order (remove → add → update)
+      // ----------------------------------------------------------
+      group('execution order', () {
+        test(
+          'operations execute in order: remove then add then update',
+          () async {
+            // This tests FR-015: execution order must be remove → add → update
+            // We remove a series, add one with same ID, then update it
+            // If order is wrong, this will fail
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {'id': 'recycled-id', 'color': '#00FF00'},
+                  ],
+                },
+                'add': {
+                  'series': [
+                    {
+                      'id': 'recycled-id',
+                      'data': [
+                        {'x': 0, 'y': 50},
+                      ],
+                      'color': '#FF0000',
+                    },
+                  ],
+                },
+                'remove': {
+                  'series': ['series_to_remove'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // After remove → add → update:
+            // 1. series_to_remove is removed
+            // 2. recycled-id is added with color #FF0000
+            // 3. recycled-id is updated to color #00FF00
+            expect(
+              chart.series.any((s) => s.id == 'series_to_remove'),
+              isFalse,
+              reason: 'series_to_remove should be removed',
+            );
+            final recycledSeries =
+                chart.series.firstWhere((s) => s.id == 'recycled-id');
+            expect(
+              recycledSeries.color,
+              equals('#00FF00'),
+              reason: 'Update should run after add, so color should be #00FF00',
+            );
+          },
+          tags: ['tdd-red'],
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Deep Merge on yAxis update
+      // ----------------------------------------------------------
+      group('deep merge semantics', () {
+        test(
+          'partial yAxis update preserves non-updated properties',
+          () async {
+            // Set up chart with series that has yAxis config
+            currentChart = _createChartWithYAxis();
+
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {
+                      'id': 'series-with-yaxis',
+                      'yAxis': {'label': 'Updated Label'},
+                    },
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final series =
+                chart.series.firstWhere((s) => s.id == 'series-with-yaxis');
+            // Deep merge should preserve unit and position
+            expect(series.yAxis, isNotNull);
+            expect(series.yAxis!.label, equals('Updated Label'));
+            expect(
+              series.yAxis!.unit,
+              equals('W'),
+              reason: 'Deep merge should preserve unit',
+            );
+            expect(
+              series.yAxis!.position,
+              equals(AxisPosition.left),
+              reason: 'Deep merge should preserve position',
+            );
+          },
+          tags: ['tdd-red'],
+        );
+      });
+    });
   });
 }
 
@@ -1055,5 +1338,60 @@ ChartConfiguration _createDefaultChart() {
     legendPosition: LegendPosition.bottom,
     useDarkTheme: false,
     normalizationMode: NormalizationModeConfig.none,
+  );
+}
+
+/// Creates a chart configuration with annotations for testing.
+ChartConfiguration _createChartWithAnnotations() {
+  return const ChartConfiguration(
+    id: 'test-chart-with-annotations',
+    title: 'Chart With Annotations',
+    series: [
+      SeriesConfig(
+        id: 'main-series',
+        data: [
+          DataPoint(x: 0, y: 100),
+          DataPoint(x: 1, y: 150),
+        ],
+      ),
+    ],
+    annotations: [
+      AnnotationConfig(
+        id: 'ann-001',
+        type: AnnotationType.referenceLine,
+        orientation: Orientation.horizontal,
+        value: 100.0,
+        label: 'Original Label',
+      ),
+      AnnotationConfig(
+        id: 'ann-002',
+        type: AnnotationType.referenceLine,
+        orientation: Orientation.vertical,
+        value: 0.5,
+        label: 'Second Annotation',
+      ),
+    ],
+  );
+}
+
+/// Creates a chart configuration with series that has yAxis config for testing.
+ChartConfiguration _createChartWithYAxis() {
+  return const ChartConfiguration(
+    id: 'test-chart-with-yaxis',
+    title: 'Chart With YAxis',
+    series: [
+      SeriesConfig(
+        id: 'series-with-yaxis',
+        data: [
+          DataPoint(x: 0, y: 200),
+          DataPoint(x: 1, y: 250),
+        ],
+        yAxis: YAxisConfig(
+          label: 'Power',
+          unit: 'W',
+          position: AxisPosition.left,
+        ),
+      ),
+    ],
   );
 }

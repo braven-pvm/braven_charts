@@ -202,4 +202,159 @@ class SchemaValidator {
       );
     }
   }
+
+  /// Validates a modification request against an existing chart.
+  ///
+  /// Validates V010-V022 rules for update/add/remove operations:
+  /// - V010: Error when update.series[].id not found
+  /// - V011: Error when remove.series contains non-existent ID
+  /// - V012: Error when add.series[].id already exists
+  /// - V020: Error when update.annotations[].id not found
+  /// - V021: Error when remove.annotations contains non-existent ID
+  /// - V022: Warning when agent supplies id on add.annotations
+  ///
+  /// [TDD RED PHASE STUB] This method will be implemented in the GREEN phase.
+  static ValidationResult validateModification(
+    ChartConfiguration chart,
+    ModificationRequest request,
+  ) {
+    // TDD RED PHASE: This method is not yet implemented
+    throw UnimplementedError(
+      'validateModification is not yet implemented. '
+      'This is a TDD red phase stub - implement in GREEN phase.',
+    );
+  }
+}
+
+// ============================================================
+// TDD RED PHASE STUBS - US2 Modification Types
+// @orchestra-task: 6
+// ============================================================
+// These stub classes allow tests to compile but will throw
+// UnimplementedError when used, causing tests to fail (red phase).
+// The GREEN phase task will implement these properly.
+
+/// Request object for chart modifications.
+///
+/// Contains optional update, add, and remove operations.
+/// [TDD RED PHASE STUB]
+class ModificationRequest {
+  final UpdateOperation? update;
+  final AddOperation? add;
+  final RemoveOperation? remove;
+
+  const ModificationRequest({
+    this.update,
+    this.add,
+    this.remove,
+  });
+}
+
+/// Update operation containing series and annotation modifications.
+///
+/// [TDD RED PHASE STUB]
+class UpdateOperation {
+  final List<SeriesModification>? series;
+  final List<AnnotationModification>? annotations;
+
+  const UpdateOperation({
+    this.series,
+    this.annotations,
+  });
+}
+
+/// Add operation containing new series and annotations.
+///
+/// [TDD RED PHASE STUB]
+class AddOperation {
+  final List<SeriesAddition>? series;
+  final List<AnnotationAddition>? annotations;
+
+  const AddOperation({
+    this.series,
+    this.annotations,
+  });
+}
+
+/// Remove operation containing series and annotation IDs to remove.
+///
+/// [TDD RED PHASE STUB]
+class RemoveOperation {
+  final List<String>? series;
+  final List<String>? annotations;
+
+  const RemoveOperation({
+    this.series,
+    this.annotations,
+  });
+}
+
+/// Modification for an existing series.
+///
+/// [TDD RED PHASE STUB]
+class SeriesModification {
+  final String id;
+  final String? name;
+  final String? color;
+  final Map<String, dynamic>? yAxis;
+
+  const SeriesModification({
+    required this.id,
+    this.name,
+    this.color,
+    this.yAxis,
+  });
+}
+
+/// Modification for an existing annotation.
+///
+/// [TDD RED PHASE STUB]
+class AnnotationModification {
+  final String id;
+  final String? label;
+  final String? color;
+  final double? value;
+
+  const AnnotationModification({
+    required this.id,
+    this.label,
+    this.color,
+    this.value,
+  });
+}
+
+/// New series to add.
+///
+/// [TDD RED PHASE STUB]
+class SeriesAddition {
+  final String id;
+  final List<dynamic> data;
+  final String? name;
+  final String? color;
+
+  const SeriesAddition({
+    required this.id,
+    required this.data,
+    this.name,
+    this.color,
+  });
+}
+
+/// New annotation to add.
+///
+/// [TDD RED PHASE STUB]
+class AnnotationAddition {
+  final String? id;
+  final AnnotationType type;
+  final double? value;
+  final Orientation? orientation;
+  final String? label;
+
+  const AnnotationAddition({
+    this.id,
+    required this.type,
+    this.value,
+    this.orientation,
+    this.label,
+  });
 }

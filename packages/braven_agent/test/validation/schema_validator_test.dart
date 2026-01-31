@@ -1,3 +1,7 @@
+// @orchestra-task: 6
+@Tags(['tdd-red'])
+library;
+
 import 'package:braven_agent/src/models/annotation_config.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/data_point.dart';
@@ -506,6 +510,309 @@ void main() {
         expect(warning.code, isNotEmpty);
         expect(warning.message, isNotEmpty);
       });
+    });
+  });
+
+  // ============================================================
+  // US2: TDD Red Phase Tests - Modification Validation V010-V022
+  // @orchestra-task: 6
+  // ============================================================
+  group('SchemaValidator (US2 Modification Validation)', () {
+    // ==========================================================
+    // V010: Error when update.series[].id not found
+    // ==========================================================
+    group('V010: update non-existent series', () {
+      test(
+        'returns error when update.series references non-existent series ID',
+        () {
+          // V010: Error if update.series[].id not found in existing chart
+          // This validation happens during modify_chart operation
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'power',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+          );
+
+          // Validate modification operation
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              update: UpdateOperation(
+                series: [
+                  SeriesModification(id: 'non-existent', color: '#FF0000'),
+                ],
+              ),
+            ),
+          );
+
+          expect(result.isValid, isFalse);
+          expect(result.errors, isNotEmpty);
+          expect(
+            result.errors.any((e) => e.code == 'V010'),
+            isTrue,
+            reason: 'Should emit V010 error for non-existent series update',
+          );
+          expect(
+            result.errors.any((e) => e.message.contains('non-existent')),
+            isTrue,
+            reason: 'Error message should include the missing series ID',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
+
+    // ==========================================================
+    // V011: Error when remove.series contains non-existent ID
+    // ==========================================================
+    group('V011: remove non-existent series', () {
+      test(
+        'returns error when remove.series contains non-existent ID',
+        () {
+          // V011: Error if remove.series contains non-existent ID
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'power',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              remove: RemoveOperation(
+                series: ['unknown-series'],
+              ),
+            ),
+          );
+
+          expect(result.isValid, isFalse);
+          expect(result.errors, isNotEmpty);
+          expect(
+            result.errors.any((e) => e.code == 'V011'),
+            isTrue,
+            reason: 'Should emit V011 error for non-existent series removal',
+          );
+          expect(
+            result.errors.any((e) => e.message.contains('unknown-series')),
+            isTrue,
+            reason: 'Error message should include the missing series ID',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
+
+    // ==========================================================
+    // V012: Error when add.series[].id already exists
+    // ==========================================================
+    group('V012: add duplicate series', () {
+      test(
+        'returns error when add.series[].id already exists in chart',
+        () {
+          // V012: Error if add.series[].id already exists
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'power',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              add: AddOperation(
+                series: [
+                  SeriesAddition(
+                    id: 'power', // Already exists
+                    data: [DataPoint(x: 1, y: 200)],
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          expect(result.isValid, isFalse);
+          expect(result.errors, isNotEmpty);
+          expect(
+            result.errors.any((e) => e.code == 'V012'),
+            isTrue,
+            reason: 'Should emit V012 error for duplicate series ID on add',
+          );
+          expect(
+            result.errors.any((e) => e.message.contains('power')),
+            isTrue,
+            reason: 'Error message should include the duplicate series ID',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
+
+    // ==========================================================
+    // V020: Error when update.annotations[].id not found
+    // ==========================================================
+    group('V020: update non-existent annotation', () {
+      test(
+        'returns error when update.annotations references non-existent ID',
+        () {
+          // V020: Error if update.annotations[].id not found in chart
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'data',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+            annotations: [
+              AnnotationConfig(
+                id: 'ann-001',
+                type: AnnotationType.referenceLine,
+                value: 100,
+                orientation: Orientation.horizontal,
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              update: UpdateOperation(
+                annotations: [
+                  AnnotationModification(id: 'ann-999', label: 'New Label'),
+                ],
+              ),
+            ),
+          );
+
+          expect(result.isValid, isFalse);
+          expect(result.errors, isNotEmpty);
+          expect(
+            result.errors.any((e) => e.code == 'V020'),
+            isTrue,
+            reason: 'Should emit V020 error for non-existent annotation update',
+          );
+          expect(
+            result.errors.any((e) => e.message.contains('ann-999')),
+            isTrue,
+            reason: 'Error message should include the missing annotation ID',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
+
+    // ==========================================================
+    // V021: Error when remove.annotations contains non-existent ID
+    // ==========================================================
+    group('V021: remove non-existent annotation', () {
+      test(
+        'returns error when remove.annotations contains non-existent ID',
+        () {
+          // V021: Error if remove.annotations contains non-existent ID
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'data',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+            annotations: [
+              AnnotationConfig(
+                id: 'ann-001',
+                type: AnnotationType.referenceLine,
+                value: 100,
+                orientation: Orientation.horizontal,
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              remove: RemoveOperation(
+                annotations: ['unknown-annotation'],
+              ),
+            ),
+          );
+
+          expect(result.isValid, isFalse);
+          expect(result.errors, isNotEmpty);
+          expect(
+            result.errors.any((e) => e.code == 'V021'),
+            isTrue,
+            reason:
+                'Should emit V021 error for non-existent annotation removal',
+          );
+          expect(
+            result.errors.any((e) => e.message.contains('unknown-annotation')),
+            isTrue,
+            reason: 'Error message should include the missing annotation ID',
+          );
+        },
+        tags: ['tdd-red'],
+      );
+    });
+
+    // ==========================================================
+    // V022: Warning when agent supplies id on add.annotations
+    // ==========================================================
+    group('V022: agent-supplied annotation ID ignored', () {
+      test(
+        'returns warning when add.annotations includes id field',
+        () {
+          // V022: Warning when agent supplies id on add - id is system-generated
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'data',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validateModification(
+            chart,
+            const ModificationRequest(
+              add: AddOperation(
+                annotations: [
+                  AnnotationAddition(
+                    id: 'user-supplied-id', // Should trigger warning
+                    type: AnnotationType.referenceLine,
+                    value: 200,
+                    orientation: Orientation.horizontal,
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          // Should be valid but with warning
+          expect(result.isValid, isTrue);
+          expect(result.warnings, isNotEmpty);
+          expect(
+            result.warnings.any((w) => w.code == 'V022'),
+            isTrue,
+            reason: 'Should emit V022 warning for agent-supplied annotation ID',
+          );
+          expect(
+            result.warnings.any((w) =>
+                w.message.contains('system-generated') ||
+                w.message.contains('ignored')),
+            isTrue,
+            reason:
+                'Warning message should mention that ID is system-generated or ignored',
+          );
+        },
+        tags: ['tdd-red'],
+      );
     });
   });
 }
