@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
+import '../../models/normalization_mode.dart';
 
 /// Dialog for creating or editing RangeAnnotations.
 ///
@@ -22,6 +24,8 @@ class RangeAnnotationDialog extends StatefulWidget {
     this.initialStartY,
     this.initialEndY,
     this.chartTheme,
+    this.availableSeries,
+    this.normalizationMode,
   });
 
   /// The annotation to edit, or null to create a new one.
@@ -42,8 +46,33 @@ class RangeAnnotationDialog extends StatefulWidget {
   /// Initial Y-axis end value (from interactive drag).
   final double? initialEndY;
 
+  /// Available series for series selection (perSeries mode).
+  ///
+  /// When [normalizationMode] is [NormalizationMode.perSeries] and the user
+  /// specifies Y-axis range values, a dropdown allows selecting which series
+  /// the range should be associated with for correct Y-value normalization.
+  final List<ChartSeries>? availableSeries;
+
+  /// Current normalization mode.
+  ///
+  /// When [NormalizationMode.perSeries], shows series selector for ranges
+  /// with Y-axis values.
+  final NormalizationMode? normalizationMode;
+
   @override
   State<RangeAnnotationDialog> createState() => _RangeAnnotationDialogState();
+}
+
+/// Range annotation mode - determines which axis bounds are specified.
+enum RangeMode {
+  /// Horizontal band - spans full X-axis, user specifies Y range only.
+  horizontal,
+
+  /// Vertical band - spans full Y-axis, user specifies X range only.
+  vertical,
+
+  /// Custom rectangle - user specifies both X and Y ranges.
+  custom,
 }
 
 class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
@@ -60,6 +89,64 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   AnnotationStyle? _labelStyle;
   bool _snapToDataPoints = true;
 
+  /// Selected series ID for perSeries normalization mode.
+  String? _selectedSeriesId;
+
+  /// Current range mode (horizontal, vertical, or custom).
+  RangeMode _rangeMode = RangeMode.custom;
+
+  /// Whether to show the series selector dropdown.
+  /// Only shown when normalization mode is perSeries and there are available series.
+  bool get _showSeriesSelector =>
+      widget.normalizationMode == NormalizationMode.perSeries && widget.availableSeries != null && widget.availableSeries!.isNotEmpty;
+
+  /// Gets the Y data range (min, max) for a given series.
+  /// Returns null if series not found or has no points.
+  /// Returns PADDED bounds (5% padding) to match the renderer's computeSeriesBounds.
+  (double min, double max)? _getSeriesYBounds(String? seriesId) {
+    if (seriesId == null || widget.availableSeries == null) return null;
+    final series = widget.availableSeries!.where((s) => s.id == seriesId).firstOrNull;
+    if (series == null || series.points.isEmpty) return null;
+
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+    for (final point in series.points) {
+      if (point.y < minY) minY = point.y;
+      if (point.y > maxY) maxY = point.y;
+    }
+    if (minY == double.infinity || maxY == double.negativeInfinity) return null;
+
+    // Apply 5% padding to match renderer (MultiAxisManager.computeSeriesBounds)
+    final span = maxY - minY;
+    final padding = span > 0 ? span * 0.05 : 0.5;
+    return (minY - padding, maxY + padding);
+  }
+
+  /// Denormalizes a Y value from normalized range to actual data range.
+  /// The input normalizedY comes from plotToData which returns values
+  /// in the 0-1 range (within the padded bounds).
+  double? _denormalizeY(double? normalizedY, String? seriesId) {
+    if (normalizedY == null || !_showSeriesSelector) return normalizedY;
+    final bounds = _getSeriesYBounds(seriesId);
+    if (bounds == null) return normalizedY;
+    final (minY, maxY) = bounds;
+    final span = maxY - minY;
+    if (span <= 0) return normalizedY;
+    return minY + normalizedY * span;
+  }
+
+  /// Normalizes a Y value from actual data range to 0-1 range.
+  /// Used internally for re-translating values when series changes.
+  double? _normalizeY(double? actualY, String? seriesId) {
+    if (actualY == null || !_showSeriesSelector) return actualY;
+    final bounds = _getSeriesYBounds(seriesId);
+    if (bounds == null) return actualY;
+    final (minY, maxY) = bounds;
+    final span = maxY - minY;
+    if (span <= 0) return actualY;
+    return (actualY - minY) / span;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,21 +154,63 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     final annotation = widget.annotation;
     final rangeDefaults = widget.chartTheme?.annotationTheme.rangeDefaults;
 
+    // Initialize series selection FIRST (needed for Y value denormalization)
+    if (annotation != null && annotation.seriesId != null) {
+      // Sanitize seriesId - LLMs sometimes include trailing punctuation
+      var sanitizedId = annotation.seriesId!.trim();
+      while (sanitizedId.isNotEmpty && (sanitizedId.endsWith(',') || sanitizedId.endsWith('.') || sanitizedId.endsWith(';'))) {
+        sanitizedId = sanitizedId.substring(0, sanitizedId.length - 1).trim();
+      }
+
+      // Validate that the seriesId exists in availableSeries
+      final validIds = widget.availableSeries?.map((s) => s.id).toSet() ?? <String>{};
+      if (validIds.contains(sanitizedId)) {
+        _selectedSeriesId = sanitizedId;
+      } else if (widget.availableSeries != null && widget.availableSeries!.isNotEmpty) {
+        // Fallback to first series if seriesId is invalid
+        _selectedSeriesId = widget.availableSeries!.first.id;
+      }
+    } else if (widget.availableSeries != null && widget.availableSeries!.isNotEmpty) {
+      // Default to first series
+      _selectedSeriesId = widget.availableSeries!.first.id;
+    }
+
     // Prefer annotation values, fallback to initial values from drag
     final startX = annotation?.startX ?? widget.initialStartX;
     final endX = annotation?.endX ?? widget.initialEndX;
     final startY = annotation?.startY ?? widget.initialStartY;
     final endY = annotation?.endY ?? widget.initialEndY;
 
+    // DEBUG: Log what values the dialog receives
+    print('=== RANGE DIALOG INIT DEBUG ===');
+    print('widget.initialStartX: ${widget.initialStartX}');
+    print('widget.initialEndX: ${widget.initialEndX}');
+    print('widget.initialStartY: ${widget.initialStartY}');
+    print('widget.initialEndY: ${widget.initialEndY}');
+    print('Final startX: $startX, endX: $endX');
+    print('Final startY: $startY, endY: $endY');
+    print('=== END DIALOG DEBUG ===');
+
+    // Note: In perSeries mode, Y values are now pre-denormalized by the
+    // event handler before being passed to this dialog. No additional
+    // denormalization needed here.
+
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    _startXController = TextEditingController(
-        text: startX != null ? startX.toStringAsFixed(2) : '');
-    _endXController = TextEditingController(
-        text: endX != null ? endX.toStringAsFixed(2) : '');
-    _startYController = TextEditingController(
-        text: startY != null ? startY.toStringAsFixed(2) : '');
-    _endYController = TextEditingController(
-        text: endY != null ? endY.toStringAsFixed(2) : '');
+    _startXController = TextEditingController(text: startX != null ? startX.toStringAsFixed(2) : '');
+    _endXController = TextEditingController(text: endX != null ? endX.toStringAsFixed(2) : '');
+    _startYController = TextEditingController(text: startY != null ? startY.toStringAsFixed(2) : '');
+    _endYController = TextEditingController(text: endY != null ? endY.toStringAsFixed(2) : '');
+
+    // Detect initial range mode based on which values are provided
+    final hasX = startX != null || endX != null;
+    final hasY = startY != null || endY != null;
+    if (hasX && !hasY) {
+      _rangeMode = RangeMode.vertical;
+    } else if (hasY && !hasX) {
+      _rangeMode = RangeMode.horizontal;
+    } else {
+      _rangeMode = RangeMode.custom;
+    }
 
     if (annotation != null) {
       // Edit mode - use existing annotation values
@@ -143,13 +272,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        isEditMode
-                            ? 'Edit Range Annotation'
-                            : 'Add Range Annotation',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        isEditMode ? 'Edit Range Annotation' : 'Add Range Annotation',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -166,26 +292,40 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   _buildInfoMessage(),
                   const SizedBox(height: 20),
 
+                  // Range Mode Selector
+                  _buildRangeModeSelector(),
+                  const SizedBox(height: 20),
+
                   // Label field (optional)
                   _buildLabelField(),
                   const SizedBox(height: 20),
 
-                  // Range inputs (X-axis)
-                  _buildRangeInputs(
-                    title: 'X-Axis Range',
-                    startController: _startXController,
-                    endController: _endXController,
-                    hint: 'Leave blank for full range',
-                  ),
-                  const SizedBox(height: 20),
+                  // Range inputs (X-axis) - shown for Vertical and Custom modes
+                  if (_rangeMode == RangeMode.vertical || _rangeMode == RangeMode.custom) ...[
+                    _buildRangeInputs(
+                      title: 'X-Axis Range',
+                      startController: _startXController,
+                      endController: _endXController,
+                      hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
-                  // Range inputs (Y-axis)
-                  _buildRangeInputs(
-                    title: 'Y-Axis Range',
-                    startController: _startYController,
-                    endController: _endYController,
-                    hint: 'Leave blank for full range',
-                  ),
+                  // Range inputs (Y-axis) - shown for Horizontal and Custom modes
+                  if (_rangeMode == RangeMode.horizontal || _rangeMode == RangeMode.custom) ...[
+                    _buildRangeInputs(
+                      title: 'Y-Axis Range',
+                      startController: _startYController,
+                      endController: _endYController,
+                      hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
+                    ),
+                  ],
+
+                  // Series Selection (only in perSeries normalization mode and when Y is shown)
+                  if (_showSeriesSelector && _rangeMode != RangeMode.vertical) ...[
+                    const SizedBox(height: 20),
+                    _buildSeriesSelector(),
+                  ],
                   const SizedBox(height: 20),
 
                   // Snap to data points checkbox
@@ -227,8 +367,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                       FilledButton(
                         onPressed: _handleSave,
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         ),
                         child: Text(isEditMode ? 'Update' : 'Add'),
                       ),
@@ -244,6 +383,13 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   }
 
   Widget _buildInfoMessage() {
+    // Update message based on mode
+    final message = switch (_rangeMode) {
+      RangeMode.horizontal => 'Horizontal band spanning the full X-axis',
+      RangeMode.vertical => 'Vertical band spanning the full Y-axis',
+      RangeMode.custom => 'Custom rectangle with specified X and Y ranges',
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
       decoration: BoxDecoration(
@@ -257,7 +403,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Define at least one axis range (X or Y)',
+              message,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.blue.shade900,
@@ -267,6 +413,62 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds the range mode selector (Horizontal, Vertical, Custom).
+  Widget _buildRangeModeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Range Type',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<RangeMode>(
+          segments: const [
+            ButtonSegment(
+              value: RangeMode.horizontal,
+              label: Text('Horizontal'),
+              icon: Icon(Icons.horizontal_rule),
+            ),
+            ButtonSegment(
+              value: RangeMode.vertical,
+              label: Text('Vertical'),
+              icon: Icon(Icons.vertical_align_center),
+            ),
+            ButtonSegment(
+              value: RangeMode.custom,
+              label: Text('Custom'),
+              icon: Icon(Icons.crop_free),
+            ),
+          ],
+          selected: {_rangeMode},
+          onSelectionChanged: (Set<RangeMode> selection) {
+            final newMode = selection.first;
+            if (newMode == _rangeMode) return;
+
+            setState(() {
+              // Clear the fields that won't be used in the new mode
+              if (newMode == RangeMode.horizontal) {
+                // Horizontal = Y only, clear X
+                _startXController.clear();
+                _endXController.clear();
+              } else if (newMode == RangeMode.vertical) {
+                // Vertical = X only, clear Y
+                _startYController.clear();
+                _endYController.clear();
+              }
+              // Custom mode keeps whatever values are there
+
+              _rangeMode = newMode;
+            });
+          },
+        ),
+      ],
     );
   }
 
@@ -327,8 +529,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
                 ],
@@ -350,8 +551,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
                 ],
@@ -412,6 +612,75 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds the series selector dropdown for perSeries normalization mode.
+  Widget _buildSeriesSelector() {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Target Series',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Select the series whose data range will be used to position this range annotation.',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _selectedSeriesId,
+          decoration: const InputDecoration(
+            labelText: 'Series',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.show_chart),
+            isDense: true,
+          ),
+          items: widget.availableSeries!.map((series) {
+            return DropdownMenuItem(
+              value: series.id,
+              child: Text(series.name ?? series.id),
+            );
+          }).toList(),
+          onChanged: (newSeriesId) {
+            if (newSeriesId == null || newSeriesId == _selectedSeriesId) return;
+
+            // Re-translate Y values from old series scale to new series scale
+            // Current displayed values are in old series' data units
+            // Normalize them to 0-1, then denormalize to new series' data units
+            final oldSeriesId = _selectedSeriesId;
+
+            // Get current displayed Y values (actual data values in old series scale)
+            final currentStartY = _startYController.text.trim().isEmpty ? null : double.tryParse(_startYController.text.trim());
+            final currentEndY = _endYController.text.trim().isEmpty ? null : double.tryParse(_endYController.text.trim());
+
+            // Normalize from old series → Denormalize to new series
+            final normalizedStartY = _normalizeY(currentStartY, oldSeriesId);
+            final normalizedEndY = _normalizeY(currentEndY, oldSeriesId);
+            final newStartY = _denormalizeY(normalizedStartY, newSeriesId);
+            final newEndY = _denormalizeY(normalizedEndY, newSeriesId);
+
+            setState(() {
+              _selectedSeriesId = newSeriesId;
+              if (newStartY != null) {
+                _startYController.text = newStartY.toStringAsFixed(2);
+              }
+              if (newEndY != null) {
+                _endYController.text = newEndY.toStringAsFixed(2);
+              }
+            });
+          },
+        ),
+      ],
     );
   }
 
@@ -482,8 +751,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
               }),
               borderRadius: BorderRadius.circular(5),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   border: Border.all(color: Colors.grey.shade300),
@@ -493,14 +761,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   spacing: 5,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.palette,
-                        size: 16, color: Colors.deepOrange.shade400),
+                    Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
                     const Text(
                       'Custom',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
                     ),
                     Container(
                       width: 20,
@@ -580,9 +844,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                           ? Icon(
                               Icons.check,
                               size: 16,
-                              color: color == Colors.black
-                                  ? Colors.white
-                                  : Colors.white,
+                              color: color == Colors.black ? Colors.white : Colors.white,
                             )
                           : null,
                 ),
@@ -598,8 +860,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                 }),
                 borderRadius: BorderRadius.circular(5),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     border: Border.all(color: Colors.grey.shade300),
@@ -609,14 +870,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                     spacing: 5,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.palette,
-                          size: 16, color: Colors.deepOrange.shade400),
+                      Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
                       const Text(
                         'Custom',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
                       ),
                       Container(
                         width: 20,
@@ -673,17 +930,12 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[100],
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade300,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
                     width: 1,
                   ),
                 ),
@@ -714,8 +966,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     );
   }
 
-  Future<void> _showCustomColorPicker(
-      Color currentColor, void Function(Color) onColorChanged) async {
+  Future<void> _showCustomColorPicker(Color currentColor, void Function(Color) onColorChanged) async {
     Color selectedColor = currentColor;
 
     final result = await showDialog<bool>(
@@ -761,29 +1012,59 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   }
 
   void _handleSave() {
+    print('=== DIALOG _handleSave CALLED ===');
     if (!_formKey.currentState!.validate()) {
+      print('Form validation FAILED');
+      return;
+    }
+    print('Form validation PASSED');
+
+    final label = _labelController.text.trim();
+
+    // Parse X values (only used for Vertical and Custom modes)
+    double? startX;
+    double? endX;
+    if (_rangeMode == RangeMode.vertical || _rangeMode == RangeMode.custom) {
+      startX = _startXController.text.trim().isEmpty ? null : double.tryParse(_startXController.text.trim());
+      endX = _endXController.text.trim().isEmpty ? null : double.tryParse(_endXController.text.trim());
+    }
+
+    // Parse Y values (only used for Horizontal and Custom modes)
+    double? startY;
+    double? endY;
+    if (_rangeMode == RangeMode.horizontal || _rangeMode == RangeMode.custom) {
+      startY = _startYController.text.trim().isEmpty ? null : double.tryParse(_startYController.text.trim());
+      endY = _endYController.text.trim().isEmpty ? null : double.tryParse(_endYController.text.trim());
+    }
+
+    print('Parsed values: startX=$startX, endX=$endX, startY=$startY, endY=$endY');
+    print('_rangeMode: $_rangeMode');
+
+    // Validation based on mode
+    if (_rangeMode == RangeMode.horizontal && startY == null && endY == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please specify Y-axis range for horizontal band'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-    final label = _labelController.text.trim();
-    final startX = _startXController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_startXController.text.trim());
-    final endX = _endXController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_endXController.text.trim());
-    final startY = _startYController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_startYController.text.trim());
-    final endY = _endYController.text.trim().isEmpty
-        ? null
-        : double.tryParse(_endYController.text.trim());
-
-    // Validation: At least one axis range must be specified
-    if (startX == null && endX == null && startY == null && endY == null) {
+    if (_rangeMode == RangeMode.vertical && startX == null && endX == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please specify at least one axis range (X or Y)'),
+          content: Text('Please specify X-axis range for vertical band'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_rangeMode == RangeMode.custom && startX == null && endX == null && startY == null && endY == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please specify at least one axis range'),
           backgroundColor: Colors.red,
         ),
       );
@@ -811,6 +1092,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       return;
     }
 
+    // Store actual data values - the renderer handles normalization
     final annotation = RangeAnnotation(
       id: widget.annotation?.id,
       label: label.isEmpty ? null : label,
@@ -819,6 +1101,8 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       endX: endX,
       startY: startY,
       endY: endY,
+      // Only include seriesId in perSeries mode when Y values are used
+      seriesId: (_showSeriesSelector && _rangeMode != RangeMode.vertical) ? _selectedSeriesId : null,
       fillColor: _fillColor,
       borderColor: _borderColor,
       labelPosition: _labelPosition,

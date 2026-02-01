@@ -262,6 +262,7 @@ class RangeAnnotation extends ChartAnnotation {
     this.endX,
     this.startY,
     this.endY,
+    this.seriesId,
     this.fillColor,
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
@@ -278,8 +279,7 @@ class RangeAnnotation extends ChartAnnotation {
           startY == null || endY == null || startY < endY,
           'startY must be less than endY',
         ),
-        assert(snapTolerance >= 0 && snapTolerance <= 1,
-            'snapTolerance must be between 0 and 1'),
+        assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
         assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
@@ -303,6 +303,24 @@ class RangeAnnotation extends ChartAnnotation {
   ///
   /// Defaults to 0.05 (5% of viewport).
   final double snapTolerance;
+
+  /// Optional series ID for multi-axis charts with perSeries normalization.
+  ///
+  /// When specified, the range Y values are normalized using the Y-range
+  /// of the referenced series. If null, the first available series bounds
+  /// are used.
+  ///
+  /// Example: If you have "power" and "heartrate" series with different
+  /// Y-ranges, and want a range at 150-200W on the power series scale:
+  /// ```dart
+  /// RangeAnnotation(
+  ///   startY: 150,
+  ///   endY: 200,
+  ///   seriesId: 'power',  // Use power series Y-range for normalization
+  ///   fillColor: Colors.red.withOpacity(0.2),
+  /// )
+  /// ```
+  final String? seriesId;
 
   /// Optional fill color for the range rectangle.
   final Color? fillColor;
@@ -330,6 +348,7 @@ class RangeAnnotation extends ChartAnnotation {
       if (startY != null) 'startY': startY,
       if (endY != null) 'endY': endY,
       'snapTolerance': snapTolerance,
+      if (seriesId != null) 'seriesId': seriesId,
       if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'labelPosition': labelPosition.name,
@@ -357,6 +376,7 @@ class RangeAnnotation extends ChartAnnotation {
     double? endX,
     double? startY,
     double? endY,
+    String? seriesId,
     Color? fillColor,
     Color? borderColor,
     AnnotationLabelPosition? labelPosition,
@@ -376,6 +396,7 @@ class RangeAnnotation extends ChartAnnotation {
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
       endY: endY ?? this.endY,
+      seriesId: seriesId ?? this.seriesId,
       fillColor: fillColor ?? this.fillColor,
       borderColor: borderColor ?? this.borderColor,
       labelPosition: labelPosition ?? this.labelPosition,
@@ -433,12 +454,8 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: json['richTextDelta'] as List<dynamic>?,
       position: position,
       anchor: anchor,
-      backgroundColor: json['backgroundColor'] != null
-          ? Color(json['backgroundColor'] as int)
-          : null,
-      borderColor: json['borderColor'] != null
-          ? Color(json['borderColor'] as int)
-          : null,
+      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
+      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
       allowDragging: json['allowDragging'] as bool? ?? false,
       allowEditing: json['allowEditing'] as bool? ?? false,
       zIndex: json['zIndex'] as int? ?? 0,
@@ -698,9 +715,7 @@ class TextAnnotation extends ChartAnnotation {
     if (attrs['u'] == true || attrs['underline'] == true) {
       result = result.copyWith(decoration: TextDecoration.underline);
     }
-    if (attrs['s'] == true ||
-        attrs['strikethrough'] == true ||
-        attrs['strike'] == true) {
+    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
       result = result.copyWith(decoration: TextDecoration.lineThrough);
     }
 
@@ -859,8 +874,7 @@ class TextAnnotation extends ChartAnnotation {
       if (richTextDelta != null) 'richTextDelta': richTextDelta,
       'position': {'dx': position.dx, 'dy': position.dy},
       'anchor': anchor.name,
-      if (backgroundColor != null)
-        'backgroundColor': backgroundColor!.toARGB32(),
+      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
@@ -1216,8 +1230,7 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelMargin = 4.0,
   })  : assert(
-          trendType != TrendType.movingAverage ||
-              (windowSize != null && windowSize > 0),
+          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
           'windowSize must be positive when trendType is movingAverage',
         ),
         assert(
@@ -1396,8 +1409,7 @@ class LegendAnnotation extends ChartAnnotation {
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
-      customPosition:
-          clearCustomPosition ? null : (customPosition ?? _customPosition),
+      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
     );
   }
 }
