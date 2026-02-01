@@ -382,7 +382,8 @@ class CreateChartTool extends AgentTool {
                 },
                 'seriesId': {
                   'type': 'string',
-                  'description': 'FOR trendLine: REQUIRED - which series to calculate trend for. FOR referenceLine/zone in perSeries mode: which series range to use.',
+                  'description':
+                      'FOR trendLine: REQUIRED - which series to calculate trend for. FOR referenceLine/zone in perSeries mode: which series range to use.',
                 },
                 'lineWidth': {
                   'type': 'number',

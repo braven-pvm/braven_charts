@@ -878,6 +878,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // Add listener to new effective controller
       _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
+
+      // CRITICAL FIX: Rebuild elements when annotation controller changes.
+      // Previously elements were NOT rebuilt, causing stale annotations to persist
+      // even when a new controller with different annotations was provided.
+      _rebuildElements();
     }
 
     // Handle static annotations changes when no user controller
@@ -887,6 +892,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       _internalAnnotationController = null;
       _initializeAnnotationController();
       _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
+      // Elements will be rebuilt by the condition below (annotations changed)
     }
 
     // Handle LiveStreamController changes

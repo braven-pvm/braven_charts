@@ -22,12 +22,29 @@ import '../models/models.dart' as models;
 /// ## Example
 ///
 /// ```dart
-/// final renderer = const ChartRenderer();
+/// // Create a persistent controller for annotation state
+/// final annotationController = AnnotationController();
+///
+/// // Render chart with the controller
+/// final renderer = ChartRenderer(annotationController: annotationController);
 /// final widget = renderer.render(chartConfiguration);
 /// ```
 class ChartRenderer {
-  /// Creates a const [ChartRenderer].
-  const ChartRenderer();
+  /// Creates a [ChartRenderer] with an optional persistent annotation controller.
+  ///
+  /// If [annotationController] is provided, it will be updated with annotations
+  /// from the chart configuration and reused across renders. This preserves
+  /// annotation state (e.g., drag positions) between parent widget rebuilds.
+  ///
+  /// If not provided, a new controller is created for each render (legacy behavior).
+  const ChartRenderer({this.annotationController});
+
+  /// Optional persistent annotation controller.
+  ///
+  /// When provided, the renderer updates this controller's annotations
+  /// instead of creating a new controller each render. This is essential
+  /// for preserving user interactions (e.g., drag-to-move annotations).
+  final charts.AnnotationController? annotationController;
 
   /// Builds a widget for the provided chart configuration or raw chart data.
   ///
@@ -427,9 +444,7 @@ class ChartRenderer {
         // For moving average types, windowSize is required by BravenChartPlus.
         // Default to 5 if not specified by the agent.
         int? windowSize = config.windowSize;
-        if ((trendType == charts.TrendType.movingAverage ||
-                trendType == charts.TrendType.exponentialMovingAverage) &&
-            windowSize == null) {
+        if ((trendType == charts.TrendType.movingAverage || trendType == charts.TrendType.exponentialMovingAverage) && windowSize == null) {
           windowSize = 5; // Sensible default for smoothing
         }
 

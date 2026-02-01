@@ -1212,6 +1212,11 @@ class ModifyChartTool extends AgentTool {
       position = AnnotationPosition.values.byName(update['position'] as String);
     }
 
+    TrendType? trendType;
+    if (update['trendType'] != null) {
+      trendType = TrendType.values.byName(update['trendType'] as String);
+    }
+
     return annotation.copyWith(
       type: updatedType,
       orientation: orientation,
@@ -1229,6 +1234,9 @@ class ModifyChartTool extends AgentTool {
       lineWidth: (update['lineWidth'] as num?)?.toDouble(),
       dashPattern: (update['dashPattern'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
       seriesId: update['seriesId'] as String?,
+      trendType: trendType,
+      degree: update['degree'] as int?,
+      windowSize: update['windowSize'] as int?,
     );
   }
 
