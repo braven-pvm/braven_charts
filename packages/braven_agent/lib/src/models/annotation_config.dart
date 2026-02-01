@@ -151,6 +151,25 @@ class AnnotationConfig with EquatableMixin {
   /// Must be a valid index within the series data array (0 to length-1).
   final int? dataPointIndex;
 
+  /// Type of trend calculation for trendLine annotations.
+  ///
+  /// Determines how the trend is calculated from series data.
+  /// Options: linear, polynomial, exponential, movingAverage, logarithmic.
+  /// REQUIRED for trendLine annotations.
+  final TrendType? trendType;
+
+  /// Window size for moving average trend calculations.
+  ///
+  /// Specifies the number of data points to include in each average.
+  /// REQUIRED when trendType is movingAverage.
+  final int? windowSize;
+
+  /// Polynomial degree for polynomial regression trends.
+  ///
+  /// Determines the order of the polynomial (e.g., 2 for quadratic, 3 for cubic).
+  /// Only used when trendType is polynomial. Defaults to 2 if not specified.
+  final int? degree;
+
   /// Creates an [AnnotationConfig] with the given parameters.
   ///
   /// [type] is required. Other parameters are optional and depend on
@@ -174,6 +193,9 @@ class AnnotationConfig with EquatableMixin {
     this.dashPattern,
     this.seriesId,
     this.dataPointIndex,
+    this.trendType,
+    this.windowSize,
+    this.degree,
   });
 
   /// Creates an [AnnotationConfig] from a JSON map.
@@ -190,10 +212,7 @@ class AnnotationConfig with EquatableMixin {
     if (seriesId != null) {
       seriesId = seriesId.trim();
       // Remove trailing punctuation that LLMs sometimes include
-      while (seriesId!.isNotEmpty &&
-          (seriesId.endsWith(',') ||
-              seriesId.endsWith('.') ||
-              seriesId.endsWith(';'))) {
+      while (seriesId!.isNotEmpty && (seriesId.endsWith(',') || seriesId.endsWith('.') || seriesId.endsWith(';'))) {
         seriesId = seriesId.substring(0, seriesId.length - 1).trim();
       }
       if (seriesId.isEmpty) seriesId = null;
@@ -202,8 +221,7 @@ class AnnotationConfig with EquatableMixin {
       // Pattern: "usage','value':1.4," or "usage","value":1.4
       if (seriesId != null && seriesId.contains('value')) {
         // Try to extract value from malformed string like: "usage','value':1.4,"
-        final valueMatch = RegExp(r'''['":]?value['":]?\s*[:=]?\s*([0-9.]+)''')
-            .firstMatch(seriesId);
+        final valueMatch = RegExp(r'''['":]?value['":]?\s*[:=]?\s*([0-9.]+)''').firstMatch(seriesId);
         if (valueMatch != null && value == null) {
           final extractedValue = double.tryParse(valueMatch.group(1)!);
           if (extractedValue != null) {
@@ -214,11 +232,7 @@ class AnnotationConfig with EquatableMixin {
 
       // Reject obviously malformed seriesId (contains JSON syntax)
       if (seriesId != null &&
-          (seriesId.contains('"') ||
-              seriesId.contains("'") ||
-              seriesId.contains(':') ||
-              seriesId.contains('{') ||
-              seriesId.contains('}'))) {
+          (seriesId.contains('"') || seriesId.contains("'") || seriesId.contains(':') || seriesId.contains('{') || seriesId.contains('}'))) {
         // This is malformed JSON - extract just the first word as a best-effort
         final match = RegExp(r'^[a-zA-Z0-9_-]+').firstMatch(seriesId);
         seriesId = match?.group(0);
@@ -228,17 +242,13 @@ class AnnotationConfig with EquatableMixin {
     return AnnotationConfig(
       id: json['id'] as String?,
       type: AnnotationType.values.byName(json['type'] as String),
-      orientation: json['orientation'] != null
-          ? Orientation.values.byName(json['orientation'] as String)
-          : null,
+      orientation: json['orientation'] != null ? Orientation.values.byName(json['orientation'] as String) : null,
       value: value,
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
-      position: json['position'] != null
-          ? AnnotationPosition.values.byName(json['position'] as String)
-          : null,
+      position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
       text: json['text'] as String?,
       label: json['label'] as String?,
       color: json['color'] as String?,
@@ -248,6 +258,9 @@ class AnnotationConfig with EquatableMixin {
       dashPattern: (json['dashPattern'] as List<dynamic>?)?.cast<double>(),
       seriesId: seriesId,
       dataPointIndex: json['dataPointIndex'] as int?,
+      trendType: json['trendType'] != null ? TrendType.values.byName(json['trendType'] as String) : null,
+      windowSize: json['windowSize'] as int?,
+      degree: json['degree'] as int?,
     );
   }
 
@@ -274,6 +287,9 @@ class AnnotationConfig with EquatableMixin {
       if (dashPattern != null) 'dashPattern': dashPattern,
       if (seriesId != null) 'seriesId': seriesId,
       if (dataPointIndex != null) 'dataPointIndex': dataPointIndex,
+      if (trendType != null) 'trendType': trendType!.name,
+      if (windowSize != null) 'windowSize': windowSize,
+      if (degree != null) 'degree': degree,
     };
   }
 
@@ -299,6 +315,9 @@ class AnnotationConfig with EquatableMixin {
     List<double>? dashPattern,
     String? seriesId,
     int? dataPointIndex,
+    TrendType? trendType,
+    int? windowSize,
+    int? degree,
   }) {
     return AnnotationConfig(
       id: id ?? this.id,
@@ -319,6 +338,9 @@ class AnnotationConfig with EquatableMixin {
       dashPattern: dashPattern ?? this.dashPattern,
       seriesId: seriesId ?? this.seriesId,
       dataPointIndex: dataPointIndex ?? this.dataPointIndex,
+      trendType: trendType ?? this.trendType,
+      windowSize: windowSize ?? this.windowSize,
+      degree: degree ?? this.degree,
     );
   }
 
@@ -342,6 +364,9 @@ class AnnotationConfig with EquatableMixin {
         dashPattern,
         seriesId,
         dataPointIndex,
+        trendType,
+        windowSize,
+        degree,
       ];
 
   @override

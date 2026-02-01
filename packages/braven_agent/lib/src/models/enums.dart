@@ -163,6 +163,40 @@ enum AnnotationType {
 
   /// Point marker annotation.
   marker,
+
+  /// Trend line calculated from series data.
+  ///
+  /// Requires [seriesId] and [trendType]. For moving averages,
+  /// also requires [windowSize].
+  trendLine,
+}
+
+/// Type of trend calculation for trend line annotations.
+///
+/// Determines the mathematical method used to calculate the trend.
+enum TrendType {
+  /// Linear regression (best-fit straight line).
+  ///
+  /// Minimizes sum of squared errors to find y = mx + b.
+  linear,
+
+  /// Polynomial regression of specified degree.
+  ///
+  /// Uses [AnnotationConfig.degree] to determine polynomial order.
+  /// Default is quadratic (degree=2): y = ax² + bx + c
+  polynomial,
+
+  /// Simple moving average with specified window size.
+  ///
+  /// Requires [AnnotationConfig.windowSize] to specify the number
+  /// of data points in each average calculation.
+  movingAverage,
+
+  /// Exponential moving average with specified window size.
+  ///
+  /// Gives more weight to recent data points.
+  /// Requires [AnnotationConfig.windowSize] to specify the span.
+  exponentialMovingAverage,
 }
 
 /// Orientation for reference lines and other directional elements.

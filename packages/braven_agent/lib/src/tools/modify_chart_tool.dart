@@ -116,14 +116,12 @@ class ModifyChartTool extends AgentTool {
   ///
   /// [getActiveChart] is a required callback that the tool uses to retrieve
   /// the current active chart at execution time.
-  ModifyChartTool({required ChartConfiguration? Function() getActiveChart})
-      : _getActiveChart = getActiveChart;
+  ModifyChartTool({required ChartConfiguration? Function() getActiveChart}) : _getActiveChart = getActiveChart;
   @override
   String get name => 'modify_chart';
 
   @override
-  String get description =>
-      'Modifies the currently active chart by applying partial updates. '
+  String get description => 'Modifies the currently active chart by applying partial updates. '
       'Use this tool to change chart type, update titles, add/remove/update series, '
       'add/remove annotations, or adjust styling options. '
       'Requires an active chart created previously.\n\n'
@@ -150,8 +148,7 @@ class ModifyChartTool extends AgentTool {
               },
               'update': {
                 'type': 'object',
-                'description':
-                    'Update existing series/annotations by id. Only specified properties are changed.',
+                'description': 'Update existing series/annotations by id. Only specified properties are changed.',
                 'properties': {
                   'series': {
                     'type': 'array',
@@ -166,8 +163,7 @@ class ModifyChartTool extends AgentTool {
                         'type': {
                           'type': 'string',
                           'enum': ['line', 'area', 'bar', 'scatter'],
-                          'description':
-                              'Change the series type (line, area, bar, scatter)',
+                          'description': 'Change the series type (line, area, bar, scatter)',
                         },
                         'name': {
                           'type': 'string',
@@ -179,8 +175,7 @@ class ModifyChartTool extends AgentTool {
                         },
                         'data': {
                           'type': 'array',
-                          'description':
-                              'New data points (replaces existing data)',
+                          'description': 'New data points (replaces existing data)',
                           'items': {
                             'type': 'object',
                             'properties': {
@@ -215,13 +210,7 @@ class ModifyChartTool extends AgentTool {
                         },
                         'markerStyle': {
                           'type': 'string',
-                          'enum': [
-                            'none',
-                            'circle',
-                            'square',
-                            'triangle',
-                            'diamond'
-                          ],
+                          'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
                         },
                         'markerSize': {
                           'type': 'number',
@@ -242,17 +231,11 @@ class ModifyChartTool extends AgentTool {
                         'barMaxWidth': {'type': 'number', 'minimum': 0},
                         'yAxis': {
                           'type': 'object',
-                          'description':
-                              'Nested yAxis updates (deep-merged with existing).',
+                          'description': 'Nested yAxis updates (deep-merged with existing).',
                           'properties': {
                             'position': {
                               'type': 'string',
-                              'enum': [
-                                'left',
-                                'right',
-                                'leftOuter',
-                                'rightOuter'
-                              ],
+                              'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
                             },
                             'label': {'type': 'string'},
                             'unit': {'type': 'string'},
@@ -277,12 +260,7 @@ class ModifyChartTool extends AgentTool {
                         },
                         'type': {
                           'type': 'string',
-                          'enum': [
-                            'referenceLine',
-                            'zone',
-                            'textLabel',
-                            'marker'
-                          ],
+                          'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
                         },
                         'value': {'type': 'number'},
                         'minValue': {'type': 'number'},
@@ -322,6 +300,12 @@ class ModifyChartTool extends AgentTool {
                         },
                         'fontSize': {'type': 'number'},
                         'seriesId': {'type': 'string'},
+                        'trendType': {
+                          'type': 'string',
+                          'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
+                        },
+                        'windowSize': {'type': 'integer', 'minimum': 1},
+                        'degree': {'type': 'integer', 'minimum': 1},
                       },
                       'required': ['id'],
                     },
@@ -345,8 +329,7 @@ class ModifyChartTool extends AgentTool {
                         'type': {
                           'type': 'string',
                           'enum': ['line', 'area', 'bar', 'scatter'],
-                          'description':
-                              'Type of chart series (line, area, bar, scatter). Each series can have its own type. Defaults to line.',
+                          'description': 'Type of chart series (line, area, bar, scatter). Each series can have its own type. Defaults to line.',
                         },
                         'name': {
                           'type': 'string',
@@ -376,69 +359,54 @@ class ModifyChartTool extends AgentTool {
                         },
                         'unit': {
                           'type': 'string',
-                          'description':
-                              'Unit of measurement for this series (e.g., "W", "bpm").',
+                          'description': 'Unit of measurement for this series (e.g., "W", "bpm").',
                         },
                         'interpolation': {
                           'type': 'string',
                           'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-                          'description':
-                              'Line interpolation type. Defaults to "linear".',
+                          'description': 'Line interpolation type. Defaults to "linear".',
                         },
                         'strokeWidth': {
                           'type': 'number',
                           'minimum': 0,
-                          'description':
-                              'Width of the line stroke in pixels. Defaults to 2.0.',
+                          'description': 'Width of the line stroke in pixels. Defaults to 2.0.',
                         },
                         'tension': {
                           'type': 'number',
                           'minimum': 0,
                           'maximum': 1,
-                          'description':
-                              'Curve tension for bezier interpolation (0.0 to 1.0).',
+                          'description': 'Curve tension for bezier interpolation (0.0 to 1.0).',
                         },
                         'showPoints': {
                           'type': 'boolean',
-                          'description':
-                              'Whether to show data point markers. Defaults to false.',
+                          'description': 'Whether to show data point markers. Defaults to false.',
                         },
                         'fillOpacity': {
                           'type': 'number',
                           'minimum': 0,
                           'maximum': 1,
-                          'description':
-                              'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                          'description': 'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
                         },
                         'markerStyle': {
                           'type': 'string',
-                          'enum': [
-                            'none',
-                            'circle',
-                            'square',
-                            'triangle',
-                            'diamond'
-                          ],
+                          'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
                           'description': 'Style of markers at data points.',
                         },
                         'markerSize': {
                           'type': 'number',
                           'minimum': 0,
-                          'description':
-                              'Size of markers in pixels. Defaults to 4.0.',
+                          'description': 'Size of markers in pixels. Defaults to 4.0.',
                         },
                         'barWidthPercent': {
                           'type': 'number',
                           'minimum': 0,
                           'maximum': 1,
-                          'description':
-                              'Bar width as a percentage of available space (0.0 to 1.0).',
+                          'description': 'Bar width as a percentage of available space (0.0 to 1.0).',
                         },
                         'barWidthPixels': {
                           'type': 'number',
                           'minimum': 0,
-                          'description':
-                              'Fixed bar width in pixels. Overrides barWidthPercent.',
+                          'description': 'Fixed bar width in pixels. Overrides barWidthPercent.',
                         },
                         'barMinWidth': {
                           'type': 'number',
@@ -456,30 +424,21 @@ class ModifyChartTool extends AgentTool {
                         },
                         'legendVisible': {
                           'type': 'boolean',
-                          'description':
-                              'Whether to show this series in the legend.',
+                          'description': 'Whether to show this series in the legend.',
                         },
                         'strokeDash': {
                           'type': 'array',
                           'items': {'type': 'number'},
-                          'description':
-                              'Dash pattern for line stroke (e.g., [5, 3] for dashed).',
+                          'description': 'Dash pattern for line stroke (e.g., [5, 3] for dashed).',
                         },
                         'yAxis': {
                           'type': 'object',
-                          'description':
-                              'Nested Y-axis configuration for this series.',
+                          'description': 'Nested Y-axis configuration for this series.',
                           'properties': {
                             'position': {
                               'type': 'string',
-                              'enum': [
-                                'left',
-                                'right',
-                                'leftOuter',
-                                'rightOuter'
-                              ],
-                              'description':
-                                  'Position of the y-axis (left, right, leftOuter, rightOuter).',
+                              'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                              'description': 'Position of the y-axis (left, right, leftOuter, rightOuter).',
                             },
                             'label': {
                               'type': 'string',
@@ -487,8 +446,7 @@ class ModifyChartTool extends AgentTool {
                             },
                             'unit': {
                               'type': 'string',
-                              'description':
-                                  'Unit of measurement (e.g., "W", "bpm").',
+                              'description': 'Unit of measurement (e.g., "W", "bpm").',
                             },
                             'color': {
                               'type': 'string',
@@ -510,26 +468,18 @@ class ModifyChartTool extends AgentTool {
                   },
                   'annotations': {
                     'type': 'array',
-                    'description':
-                        'Annotations to add to the chart. If an id is supplied, it is ignored and a system id is generated.',
+                    'description': 'Annotations to add to the chart. If an id is supplied, it is ignored and a system id is generated.',
                     'items': {
                       'type': 'object',
                       'properties': {
                         'id': {
                           'type': 'string',
-                          'description':
-                              'Optional annotation id (ignored; system generates one).',
+                          'description': 'Optional annotation id (ignored; system generates one).',
                         },
                         'type': {
                           'type': 'string',
-                          'enum': [
-                            'referenceLine',
-                            'zone',
-                            'textLabel',
-                            'marker'
-                          ],
-                          'description':
-                              'Type of annotation: referenceLine, zone, textLabel, marker',
+                          'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
+                          'description': 'Type of annotation: referenceLine, zone, textLabel, marker, trendLine',
                         },
                         'value': {
                           'type': 'number',
@@ -573,8 +523,22 @@ class ModifyChartTool extends AgentTool {
                         'fontSize': {'type': 'number'},
                         'seriesId': {
                           'type': 'string',
-                          'description':
-                              'Series ID used for perSeries normalization positioning.',
+                          'description': 'Series ID. Required for trendLine. Used for perSeries normalization positioning on referenceLine/zone.',
+                        },
+                        'trendType': {
+                          'type': 'string',
+                          'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
+                          'description': 'For trendLine: type of trend calculation. Required for trendLine.',
+                        },
+                        'windowSize': {
+                          'type': 'integer',
+                          'minimum': 1,
+                          'description': 'For trendLine with movingAverage: window size.',
+                        },
+                        'degree': {
+                          'type': 'integer',
+                          'minimum': 1,
+                          'description': 'For trendLine with polynomial: polynomial degree (default 2).',
                         },
                       },
                       'required': ['type'],
@@ -593,8 +557,7 @@ class ModifyChartTool extends AgentTool {
                   },
                   'annotations': {
                     'type': 'array',
-                    'description':
-                        'IDs of annotations to remove from the chart.',
+                    'description': 'IDs of annotations to remove from the chart.',
                     'items': {'type': 'string'},
                   },
                 },
@@ -619,8 +582,7 @@ class ModifyChartTool extends AgentTool {
                   'bottomLeft',
                   'bottomRight',
                 ],
-                'description':
-                    'Position of the legend relative to the chart area',
+                'description': 'Position of the legend relative to the chart area',
               },
               'useDarkTheme': {
                 'type': 'boolean',
@@ -633,58 +595,26 @@ class ModifyChartTool extends AgentTool {
               },
               'xAxis': {
                 'type': 'object',
-                'description':
-                    'X-axis configuration. Partial updates merge with existing config.',
+                'description': 'X-axis configuration. Partial updates merge with existing config.',
                 'properties': {
-                  'label': {
-                    'type': 'string',
-                    'description': 'Axis label (e.g., "Time")'
-                  },
-                  'unit': {
-                    'type': 'string',
-                    'description': 'Unit string (e.g., "seconds")'
-                  },
-                  'min': {
-                    'type': 'number',
-                    'description': 'Minimum value for X-axis scale'
-                  },
-                  'max': {
-                    'type': 'number',
-                    'description': 'Maximum value for X-axis scale'
-                  },
-                  'autoRange': {
-                    'type': 'boolean',
-                    'description': 'Auto-calculate range from data'
-                  },
-                  'tickCount': {
-                    'type': 'integer',
-                    'description': 'Number of ticks to display'
-                  },
-                  'showTicks': {
-                    'type': 'boolean',
-                    'description': 'Whether to show tick marks'
-                  },
-                  'showAxisLine': {
-                    'type': 'boolean',
-                    'description': 'Whether to show the axis line'
-                  },
-                  'showGridLines': {
-                    'type': 'boolean',
-                    'description': 'Whether to show vertical grid lines'
-                  },
-                  'visible': {
-                    'type': 'boolean',
-                    'description': 'Whether the X-axis is visible'
-                  },
+                  'label': {'type': 'string', 'description': 'Axis label (e.g., "Time")'},
+                  'unit': {'type': 'string', 'description': 'Unit string (e.g., "seconds")'},
+                  'min': {'type': 'number', 'description': 'Minimum value for X-axis scale'},
+                  'max': {'type': 'number', 'description': 'Maximum value for X-axis scale'},
+                  'autoRange': {'type': 'boolean', 'description': 'Auto-calculate range from data'},
+                  'tickCount': {'type': 'integer', 'description': 'Number of ticks to display'},
+                  'showTicks': {'type': 'boolean', 'description': 'Whether to show tick marks'},
+                  'showAxisLine': {'type': 'boolean', 'description': 'Whether to show the axis line'},
+                  'showGridLines': {'type': 'boolean', 'description': 'Whether to show vertical grid lines'},
+                  'visible': {'type': 'boolean', 'description': 'Whether the X-axis is visible'},
                 },
               },
               'yAxes': {
                 'type': 'array',
-                'description':
-                    'SHARED Y-axis configurations. REPLACES all existing Y-axes. '
-                        'Each axis needs a unique id that series reference via yAxisId. '
-                        'Example: yAxes: [{id: "temp-axis", label: "Temp", position: "left"}], '
-                        'series: [{..., yAxisId: "temp-axis"}]',
+                'description': 'SHARED Y-axis configurations. REPLACES all existing Y-axes. '
+                    'Each axis needs a unique id that series reference via yAxisId. '
+                    'Example: yAxes: [{id: "temp-axis", label: "Temp", position: "left"}], '
+                    'series: [{..., yAxisId: "temp-axis"}]',
                 'items': {
                   'type': 'object',
                   'properties': {
@@ -694,51 +624,21 @@ class ModifyChartTool extends AgentTool {
                           'Series reference this exact string via series[].yAxisId. '
                           'Example: id: "power-axis" → series yAxisId: "power-axis"',
                     },
-                    'label': {
-                      'type': 'string',
-                      'description': 'Axis label (e.g., "Power")'
-                    },
-                    'unit': {
-                      'type': 'string',
-                      'description': 'Unit string (e.g., "W")'
-                    },
+                    'label': {'type': 'string', 'description': 'Axis label (e.g., "Power")'},
+                    'unit': {'type': 'string', 'description': 'Unit string (e.g., "W")'},
                     'position': {
                       'type': 'string',
                       'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
                       'description': 'Position of the Y-axis',
                     },
-                    'min': {
-                      'type': 'number',
-                      'description': 'Minimum value for Y-axis scale'
-                    },
-                    'max': {
-                      'type': 'number',
-                      'description': 'Maximum value for Y-axis scale'
-                    },
-                    'autoRange': {
-                      'type': 'boolean',
-                      'description': 'Auto-calculate range from data'
-                    },
-                    'includeZero': {
-                      'type': 'boolean',
-                      'description': 'Whether range should include zero'
-                    },
-                    'color': {
-                      'type': 'string',
-                      'description': 'Axis color (hex format)'
-                    },
-                    'showTicks': {
-                      'type': 'boolean',
-                      'description': 'Whether to show tick marks'
-                    },
-                    'showAxisLine': {
-                      'type': 'boolean',
-                      'description': 'Whether to show the axis line'
-                    },
-                    'showGridLines': {
-                      'type': 'boolean',
-                      'description': 'Whether to show horizontal grid lines'
-                    },
+                    'min': {'type': 'number', 'description': 'Minimum value for Y-axis scale'},
+                    'max': {'type': 'number', 'description': 'Maximum value for Y-axis scale'},
+                    'autoRange': {'type': 'boolean', 'description': 'Auto-calculate range from data'},
+                    'includeZero': {'type': 'boolean', 'description': 'Whether range should include zero'},
+                    'color': {'type': 'string', 'description': 'Axis color (hex format)'},
+                    'showTicks': {'type': 'boolean', 'description': 'Whether to show tick marks'},
+                    'showAxisLine': {'type': 'boolean', 'description': 'Whether to show the axis line'},
+                    'showGridLines': {'type': 'boolean', 'description': 'Whether to show horizontal grid lines'},
                   },
                 },
               },
@@ -753,17 +653,16 @@ class ModifyChartTool extends AgentTool {
                   'properties': {
                     'type': {
                       'type': 'string',
-                      'enum': ['referenceLine', 'zone', 'textLabel', 'marker'],
-                      'description':
-                          'Type of annotation: referenceLine (horizontal/vertical line at value), '
-                              'zone (shaded region), textLabel (text at position), marker (point marker)',
+                      'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
+                      'description': 'Type of annotation: referenceLine (horizontal/vertical line at value), '
+                          'zone (shaded region), textLabel (text at position), marker (point marker), '
+                          'trendLine (trend line calculated from series data)',
                     },
                     'value': {
                       'type': 'number',
-                      'description':
-                          'Value for referenceLine. For horizontal lines, this is the Y-axis value '
-                              'in the SAME UNITS as the target series data. In perSeries mode, '
-                              'seriesId determines which series range to use.',
+                      'description': 'Value for referenceLine. For horizontal lines, this is the Y-axis value '
+                          'in the SAME UNITS as the target series data. In perSeries mode, '
+                          'seriesId determines which series range to use.',
                     },
                     'minValue': {
                       'type': 'number',
@@ -787,23 +686,20 @@ class ModifyChartTool extends AgentTool {
                     },
                     'label': {
                       'type': 'string',
-                      'description':
-                          'Label text displayed with the annotation (for all types)',
+                      'description': 'Label text displayed with the annotation (for all types)',
                     },
                     'color': {
                       'type': 'string',
-                      'description':
-                          'Color of the annotation (hex format, e.g., "#FF0000")',
+                      'description': 'Color of the annotation (hex format, e.g., "#FF0000")',
                     },
                     'lineWidth': {
                       'type': 'number',
-                      'description': 'Line width for referenceLine annotations',
+                      'description': 'Line width for referenceLine/trendLine annotations',
                     },
                     'dashPattern': {
                       'type': 'array',
                       'items': {'type': 'number'},
-                      'description':
-                          'Dash pattern for referenceLine (e.g., [5, 3] for dashed)',
+                      'description': 'Dash pattern for referenceLine/trendLine (e.g., [5, 3] for dashed)',
                     },
                     'opacity': {
                       'type': 'number',
@@ -814,8 +710,7 @@ class ModifyChartTool extends AgentTool {
                     'orientation': {
                       'type': 'string',
                       'enum': ['horizontal', 'vertical'],
-                      'description':
-                          'Orientation for referenceLine/zone (horizontal = Y axis, vertical = X axis)',
+                      'description': 'Orientation for referenceLine/zone (horizontal = Y axis, vertical = X axis)',
                     },
                     'position': {
                       'type': 'string',
@@ -838,10 +733,24 @@ class ModifyChartTool extends AgentTool {
                     },
                     'seriesId': {
                       'type': 'string',
-                      'description':
-                          'REQUIRED for perSeries normalization: ID of the series whose data range '
-                              'determines annotation positioning. Must match a series.id value exactly. '
-                              'Without this, horizontal annotations appear at zero in perSeries mode.',
+                      'description': 'REQUIRED for trendLine. REQUIRED for perSeries normalization on referenceLine/zone: '
+                          'ID of the series whose data range determines annotation positioning. '
+                          'Must match a series.id value exactly.',
+                    },
+                    'trendType': {
+                      'type': 'string',
+                      'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
+                      'description': 'REQUIRED for trendLine: Type of trend calculation.',
+                    },
+                    'windowSize': {
+                      'type': 'integer',
+                      'minimum': 1,
+                      'description': 'For trendLine with movingAverage: window size (number of points).',
+                    },
+                    'degree': {
+                      'type': 'integer',
+                      'minimum': 1,
+                      'description': 'For trendLine with polynomial: polynomial degree (default 2).',
                     },
                   },
                   'required': ['type'],
@@ -851,22 +760,10 @@ class ModifyChartTool extends AgentTool {
                 'type': 'object',
                 'description': 'Visual styling configuration for the chart',
                 'properties': {
-                  'titleFontSize': {
-                    'type': 'number',
-                    'description': 'Font size for chart title'
-                  },
-                  'subtitleFontSize': {
-                    'type': 'number',
-                    'description': 'Font size for chart subtitle'
-                  },
-                  'axisFontSize': {
-                    'type': 'number',
-                    'description': 'Font size for axis labels'
-                  },
-                  'legendFontSize': {
-                    'type': 'number',
-                    'description': 'Font size for legend text'
-                  },
+                  'titleFontSize': {'type': 'number', 'description': 'Font size for chart title'},
+                  'subtitleFontSize': {'type': 'number', 'description': 'Font size for chart subtitle'},
+                  'axisFontSize': {'type': 'number', 'description': 'Font size for axis labels'},
+                  'legendFontSize': {'type': 'number', 'description': 'Font size for legend text'},
                   'padding': {
                     'type': 'object',
                     'description': 'Padding around the chart area',
@@ -881,8 +778,7 @@ class ModifyChartTool extends AgentTool {
               },
               'interactions': {
                 'type': 'object',
-                'description':
-                    'Interaction configuration for pan/zoom/tooltip behavior',
+                'description': 'Interaction configuration for pan/zoom/tooltip behavior',
                 'properties': {
                   'crosshairMode': {
                     'type': 'string',
@@ -891,28 +787,12 @@ class ModifyChartTool extends AgentTool {
                   },
                   'tooltipPosition': {
                     'type': 'string',
-                    'enum': [
-                      'auto',
-                      'top',
-                      'bottom',
-                      'left',
-                      'right',
-                      'nearestPoint'
-                    ],
+                    'enum': ['auto', 'top', 'bottom', 'left', 'right', 'nearestPoint'],
                     'description': 'Preferred tooltip position',
                   },
-                  'enableZoom': {
-                    'type': 'boolean',
-                    'description': 'Whether zooming is enabled'
-                  },
-                  'enablePan': {
-                    'type': 'boolean',
-                    'description': 'Whether panning is enabled'
-                  },
-                  'snapToPoint': {
-                    'type': 'boolean',
-                    'description': 'Whether crosshair snaps to nearest point'
-                  },
+                  'enableZoom': {'type': 'boolean', 'description': 'Whether zooming is enabled'},
+                  'enablePan': {'type': 'boolean', 'description': 'Whether panning is enabled'},
+                  'snapToPoint': {'type': 'boolean', 'description': 'Whether crosshair snaps to nearest point'},
                 },
               },
               'width': {
@@ -925,8 +805,7 @@ class ModifyChartTool extends AgentTool {
               },
               'backgroundColor': {
                 'type': 'string',
-                'description':
-                    'Background color of the chart (hex format, e.g., "#FFFFFF")',
+                'description': 'Background color of the chart (hex format, e.g., "#FFFFFF")',
               },
               'showScrollbar': {
                 'type': 'boolean',
@@ -982,12 +861,10 @@ class ModifyChartTool extends AgentTool {
 
     // Parse and validate normalization mode if provided
     NormalizationModeConfig? normalizationMode;
-    final normalizationModeInput =
-        modifications['normalizationMode'] as String?;
+    final normalizationModeInput = modifications['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode =
-            NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
         return _logError(
           'Error: Invalid normalization mode "$normalizationModeInput". '
@@ -1015,22 +892,18 @@ class ModifyChartTool extends AgentTool {
 
     // Start with the existing series/annotations
     var updatedSeries = List<SeriesConfig>.from(activeChart.series);
-    var updatedAnnotations =
-        List<AnnotationConfig>.from(activeChart.annotations);
+    var updatedAnnotations = List<AnnotationConfig>.from(activeChart.annotations);
 
     // Execution order: remove -> add -> update
     final removeSeries = removeInput?['series'] as List?;
     if (removeSeries != null) {
       final idsToRemove = removeSeries.cast<String>().toSet();
-      updatedSeries =
-          updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
+      updatedSeries = updatedSeries.where((s) => !idsToRemove.contains(s.id)).toList();
     }
     final removeAnnotations = removeInput?['annotations'] as List?;
     if (removeAnnotations != null) {
       final idsToRemove = removeAnnotations.cast<String>().toSet();
-      updatedAnnotations = updatedAnnotations
-          .where((a) => a.id == null || !idsToRemove.contains(a.id))
-          .toList();
+      updatedAnnotations = updatedAnnotations.where((a) => a.id == null || !idsToRemove.contains(a.id)).toList();
     }
 
     final addSeries = addInput?['series'] as List?;
@@ -1095,8 +968,7 @@ class ModifyChartTool extends AgentTool {
       }
 
       updatedAnnotations = updatedAnnotations.map((annotation) {
-        final update =
-            annotation.id != null ? updatesById[annotation.id] : null;
+        final update = annotation.id != null ? updatesById[annotation.id] : null;
         if (update != null) {
           return _applyAnnotationUpdate(annotation, update);
         }
@@ -1121,8 +993,7 @@ class ModifyChartTool extends AgentTool {
     // Validate annotation seriesId references against updated series
     final validSeriesIds = updatedSeries.map((s) => s.id).toSet();
     for (final annotation in updatedAnnotations) {
-      if (annotation.seriesId != null &&
-          !validSeriesIds.contains(annotation.seriesId)) {
+      if (annotation.seriesId != null && !validSeriesIds.contains(annotation.seriesId)) {
         return _logError(
           'Error: Annotation references non-existent series '
           '"${annotation.seriesId}". '
@@ -1134,15 +1005,12 @@ class ModifyChartTool extends AgentTool {
     }
 
     // Determine effective normalization mode
-    final effectiveNormMode =
-        normalizationMode ?? activeChart.normalizationMode;
+    final effectiveNormMode = normalizationMode ?? activeChart.normalizationMode;
 
     // Validate horizontal annotations have seriesId in perSeries mode
     if (effectiveNormMode == NormalizationModeConfig.perSeries) {
       for (final annotation in updatedAnnotations) {
-        if (annotation.type == AnnotationType.referenceLine &&
-            annotation.orientation != Orientation.vertical &&
-            annotation.seriesId == null) {
+        if (annotation.type == AnnotationType.referenceLine && annotation.orientation != Orientation.vertical && annotation.seriesId == null) {
           return _logError(
             'Error: Horizontal referenceLine annotation requires '
             '"seriesId" in perSeries normalization mode. '
@@ -1156,8 +1024,7 @@ class ModifyChartTool extends AgentTool {
 
     // Validate referenceLine annotations have a value
     for (final annotation in updatedAnnotations) {
-      if (annotation.type == AnnotationType.referenceLine &&
-          annotation.value == null) {
+      if (annotation.type == AnnotationType.referenceLine && annotation.value == null) {
         return _logError(
           'Error: referenceLine annotation requires a "value" property. '
           'The value should be in the same units as the target series data. '
@@ -1176,20 +1043,15 @@ class ModifyChartTool extends AgentTool {
 
     // Parse interactions if provided
     Map<String, dynamic>? interactions;
-    final interactionsInput =
-        modifications['interactions'] as Map<String, dynamic>?;
+    final interactionsInput = modifications['interactions'] as Map<String, dynamic>?;
     if (interactionsInput != null) {
       interactions = interactionsInput;
     }
 
     // Build modified chart configuration using copyWith
     final modifiedChart = activeChart.copyWith(
-      title: modifications.containsKey('title')
-          ? modifications['title'] as String?
-          : activeChart.title,
-      subtitle: modifications.containsKey('subtitle')
-          ? modifications['subtitle'] as String?
-          : activeChart.subtitle,
+      title: modifications.containsKey('title') ? modifications['title'] as String? : activeChart.title,
+      subtitle: modifications.containsKey('subtitle') ? modifications['subtitle'] as String? : activeChart.subtitle,
       series: updatedSeries,
       xAxis: xAxis ?? activeChart.xAxis,
       yAxes: yAxes ?? activeChart.yAxes,
@@ -1197,23 +1059,14 @@ class ModifyChartTool extends AgentTool {
       style: style ?? activeChart.style,
       interactions: interactions ?? activeChart.interactions,
       showGrid: modifications['showGrid'] as bool? ?? activeChart.showGrid,
-      showLegend:
-          modifications['showLegend'] as bool? ?? activeChart.showLegend,
+      showLegend: modifications['showLegend'] as bool? ?? activeChart.showLegend,
       legendPosition: legendPosition ?? activeChart.legendPosition,
-      useDarkTheme:
-          modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
-      showScrollbar:
-          modifications['showScrollbar'] as bool? ?? activeChart.showScrollbar,
+      useDarkTheme: modifications['useDarkTheme'] as bool? ?? activeChart.useDarkTheme,
+      showScrollbar: modifications['showScrollbar'] as bool? ?? activeChart.showScrollbar,
       normalizationMode: normalizationMode ?? activeChart.normalizationMode,
-      width: modifications.containsKey('width')
-          ? (modifications['width'] as num?)?.toDouble()
-          : activeChart.width,
-      height: modifications.containsKey('height')
-          ? (modifications['height'] as num?)?.toDouble()
-          : activeChart.height,
-      backgroundColor: modifications.containsKey('backgroundColor')
-          ? modifications['backgroundColor'] as String?
-          : activeChart.backgroundColor,
+      width: modifications.containsKey('width') ? (modifications['width'] as num?)?.toDouble() : activeChart.width,
+      height: modifications.containsKey('height') ? (modifications['height'] as num?)?.toDouble() : activeChart.height,
+      backgroundColor: modifications.containsKey('backgroundColor') ? modifications['backgroundColor'] as String? : activeChart.backgroundColor,
     );
 
     // Return success result with JSON output and ChartConfiguration data
@@ -1248,16 +1101,14 @@ class ModifyChartTool extends AgentTool {
   /// strokeWidth, fillOpacity, tension, showPoints, markerSize, bar properties, etc.
   ///
   /// [startColorIndex] is used to assign default colors starting from that index.
-  List<SeriesConfig> _parseSeries(
-      List<dynamic> seriesInput, int startColorIndex) {
+  List<SeriesConfig> _parseSeries(List<dynamic> seriesInput, int startColorIndex) {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
       final seriesMap = Map<String, dynamic>.from(seriesInput[i] as Map);
 
       // Assign default color if not provided
       if (seriesMap['color'] == null) {
-        seriesMap['color'] =
-            _defaultColors[(startColorIndex + i) % _defaultColors.length];
+        seriesMap['color'] = _defaultColors[(startColorIndex + i) % _defaultColors.length];
       }
 
       // Use fromJson to parse ALL properties
@@ -1295,8 +1146,7 @@ class ModifyChartTool extends AgentTool {
 
     Interpolation? interpolation;
     if (update['interpolation'] != null) {
-      interpolation =
-          Interpolation.values.byName(update['interpolation'] as String);
+      interpolation = Interpolation.values.byName(update['interpolation'] as String);
     }
 
     MarkerStyle? markerStyle;
@@ -1317,9 +1167,7 @@ class ModifyChartTool extends AgentTool {
       data: updatedData,
       color: update['color'] as String?,
       strokeWidth: (update['strokeWidth'] as num?)?.toDouble(),
-      strokeDash: (update['strokeDash'] as List<dynamic>?)
-          ?.map((e) => (e as num).toDouble())
-          .toList(),
+      strokeDash: (update['strokeDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
       fillOpacity: (update['fillOpacity'] as num?)?.toDouble(),
       markerStyle: markerStyle,
       markerSize: (update['markerSize'] as num?)?.toDouble(),
@@ -1356,8 +1204,7 @@ class ModifyChartTool extends AgentTool {
     for (final entry in update.entries) {
       final key = entry.key;
       final value = entry.value;
-      if (value is Map<String, dynamic> &&
-          result[key] is Map<String, dynamic>) {
+      if (value is Map<String, dynamic> && result[key] is Map<String, dynamic>) {
         result[key] = _deepMerge(
           Map<String, dynamic>.from(result[key] as Map),
           value,
@@ -1403,9 +1250,7 @@ class ModifyChartTool extends AgentTool {
       opacity: (update['opacity'] as num?)?.toDouble(),
       fontSize: (update['fontSize'] as num?)?.toDouble(),
       lineWidth: (update['lineWidth'] as num?)?.toDouble(),
-      dashPattern: (update['dashPattern'] as List<dynamic>?)
-          ?.map((e) => (e as num).toDouble())
-          .toList(),
+      dashPattern: (update['dashPattern'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
       seriesId: update['seriesId'] as String?,
     );
   }
@@ -1453,8 +1298,7 @@ class ModifyChartTool extends AgentTool {
           .whereType<AnnotationModification>()
           .toList();
 
-      if ((updateSeries != null && updateSeries.isNotEmpty) ||
-          (updateAnnotations != null && updateAnnotations.isNotEmpty)) {
+      if ((updateSeries != null && updateSeries.isNotEmpty) || (updateAnnotations != null && updateAnnotations.isNotEmpty)) {
         update = UpdateOperation(
           series: updateSeries,
           annotations: updateAnnotations,
@@ -1516,8 +1360,7 @@ class ModifyChartTool extends AgentTool {
           .whereType<AnnotationAddition>()
           .toList();
 
-      if ((addSeries != null && addSeries.isNotEmpty) ||
-          (addAnnotations != null && addAnnotations.isNotEmpty)) {
+      if ((addSeries != null && addSeries.isNotEmpty) || (addAnnotations != null && addAnnotations.isNotEmpty)) {
         add = AddOperation(
           series: addSeries,
           annotations: addAnnotations,
@@ -1545,9 +1388,7 @@ class ModifyChartTool extends AgentTool {
     return XAxisConfig(
       label: json['label'] as String?,
       unit: json['unit'] as String?,
-      type: json['type'] != null
-          ? AxisType.values.byName(json['type'] as String)
-          : AxisType.numeric,
+      type: json['type'] != null ? AxisType.values.byName(json['type'] as String) : AxisType.numeric,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
       autoRange: json['autoRange'] as bool? ?? true,
@@ -1559,9 +1400,7 @@ class ModifyChartTool extends AgentTool {
       showAxisLine: json['showAxisLine'] as bool? ?? true,
       showGridLines: json['showGridLines'] as bool? ?? true,
       gridColor: json['gridColor'] as String?,
-      gridDash: (json['gridDash'] as List<dynamic>?)
-          ?.map((e) => (e as num).toDouble())
-          .toList(),
+      gridDash: (json['gridDash'] as List<dynamic>?)?.map((e) => (e as num).toDouble()).toList(),
     );
   }
 
@@ -1573,9 +1412,7 @@ class ModifyChartTool extends AgentTool {
         id: map['id'] as String?,
         label: map['label'] as String?,
         unit: map['unit'] as String?,
-        position: map['position'] != null
-            ? AxisPosition.values.byName(map['position'] as String)
-            : AxisPosition.left,
+        position: map['position'] != null ? AxisPosition.values.byName(map['position'] as String) : AxisPosition.left,
         min: (map['min'] as num?)?.toDouble(),
         max: (map['max'] as num?)?.toDouble(),
         autoRange: map['autoRange'] as bool? ?? true,
