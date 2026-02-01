@@ -746,12 +746,14 @@ class GrokResponsesAdapter implements LLMProvider {
     final body = response.body;
     String message;
 
+    _debugLog('API ERROR ${response.statusCode}: $body');
+
     try {
       final json = jsonDecode(body) as Map<String, dynamic>;
       final error = json['error'] as Map<String, dynamic>?;
       message = error?['message'] as String? ?? 'Unknown API error';
     } catch (_) {
-      message = 'API error: ${response.statusCode}';
+      message = 'API error: ${response.statusCode} - $body';
     }
 
     if (response.statusCode == 401 || response.statusCode == 403) {

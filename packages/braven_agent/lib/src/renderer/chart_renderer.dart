@@ -37,7 +37,7 @@ class ChartRenderer {
   /// annotation state (e.g., drag positions) between parent widget rebuilds.
   ///
   /// If not provided, a new controller is created for each render (legacy behavior).
-  const ChartRenderer({this.annotationController});
+  ChartRenderer({this.annotationController});
 
   /// Optional persistent annotation controller.
   ///
@@ -45,6 +45,13 @@ class ChartRenderer {
   /// instead of creating a new controller each render. This is essential
   /// for preserving user interactions (e.g., drag-to-move annotations).
   final charts.AnnotationController? annotationController;
+
+  /// Tracks annotation IDs that have been seen from config.
+  ///
+  /// This allows us to distinguish between:
+  /// - Annotations removed by the agent (were in config, now gone → remove from controller)
+  /// - Annotations added by user (never in config → preserve in controller)
+  final Set<String> _configKnownAnnotationIds = {};
 
   /// Builds a widget for the provided chart configuration or raw chart data.
   ///
@@ -223,7 +230,13 @@ class ChartRenderer {
             showYScrollbar: showYScrollbar,
             normalizationMode: normalizationMode,
             interactionConfig: interactionConfig,
-            // interactionConfig: rconst InteractionConfig(crosshair: CrosshairConfig(displayMode: CrosshairDisplayMode.standard)),
+            // interactionConfig: const charts.InteractionConfig(
+            //   tooltip: charts.TooltipConfig(enabled: true, style: charts.TooltipStyle()),
+            //   crosshair: charts.CrosshairConfig(
+            //     displayMode: charts.CrosshairDisplayMode.standard,
+            //     mode: charts.CrosshairMode.both,
+            //   ),
+            // ),
             title: config.title,
             subtitle: config.subtitle,
             backgroundColor: backgroundColor),
@@ -236,9 +249,13 @@ class ChartRenderer {
   /// Syncs the annotation controller with new annotations from config.
   ///
   /// This intelligently merges config annotations with existing controller state:
-  /// - Removes annotations no longer in config
-  /// - Adds new annotations from config
+  /// - Removes annotations that were previously in config but are now gone (agent removed them)
+  /// - Preserves annotations that were never in config (user-added via UI)
+  /// - Adds new annotations from config that don't exist in controller
   /// - Updates existing annotations with config values (LLM modifications take effect)
+  ///
+  /// The key insight is that we track which annotation IDs have been "seen" from config.
+  /// This allows us to distinguish between agent-removed vs. user-added annotations.
   ///
   /// Uses try-catch to gracefully handle race conditions where Flutter rebuilds
   /// trigger render() mid-sync (since controller operations call notifyListeners()).
@@ -249,25 +266,33 @@ class ChartRenderer {
     final configIds = configAnnotations.map((a) => a.id).toSet();
     final existingIds = controller.annotations.map((a) => a.id).toSet();
 
-    // Remove annotations that are no longer in config
-    final toRemove = existingIds.difference(configIds);
-    for (final id in toRemove) {
+    // Remove annotations that:
+    // 1. Were previously known from config (_configKnownAnnotationIds)
+    // 2. Are no longer in the current config (configIds)
+    // 3. Still exist in controller (existingIds)
+    // This means the agent explicitly removed them.
+    final agentRemovedIds = _configKnownAnnotationIds.difference(configIds).intersection(existingIds);
+    for (final id in agentRemovedIds) {
       try {
         controller.removeAnnotation(id);
+        _configKnownAnnotationIds.remove(id);
       } catch (_) {
-        // Already removed (possible if rebuild occurred mid-sync)
+        // Already removed or race condition
       }
     }
 
     // Add or update annotations from config
     for (final annotation in configAnnotations) {
       try {
+        // Track that we've seen this ID from config
+        _configKnownAnnotationIds.add(annotation.id);
+
         if (existingIds.contains(annotation.id)) {
           // Update existing annotation with config values
           // This allows LLM modifications to take effect
           controller.updateAnnotation(annotation.id, annotation);
         } else {
-          // Add new annotation
+          // Add new annotation from config
           controller.addAnnotation(annotation);
         }
       } catch (_) {
@@ -778,5 +803,140 @@ class ChartRenderer {
         style: TextStyle(fontSize: 14, color: Colors.red.shade900),
       ),
     );
+  }
+
+  /// Converts the current annotations from the controller back to [AnnotationConfig] list.
+  ///
+  /// This enables syncing UI changes (e.g., drag-to-move, right-click edits)
+  /// back to the [ChartConfiguration] model for agent awareness.
+  ///
+  /// Returns an empty list if no annotation controller is configured.
+  List<models.AnnotationConfig> getCurrentAnnotationConfigs() {
+    if (annotationController == null) {
+      return [];
+    }
+    return annotationController!.annotations.map((a) => _convertChartAnnotationToConfig(a)).whereType<models.AnnotationConfig>().toList();
+  }
+
+  /// Updates a [ChartConfiguration] with the current annotations from the controller.
+  ///
+  /// This is the main entry point for syncing UI changes back to the model.
+  /// Call this when the annotation controller notifies of changes.
+  ///
+  /// Returns null if the input config is null.
+  models.ChartConfiguration? syncAnnotationsToConfig(models.ChartConfiguration? config) {
+    if (config == null) {
+      return null;
+    }
+    final currentAnnotations = getCurrentAnnotationConfigs();
+    return config.copyWith(annotations: currentAnnotations);
+  }
+
+  /// Converts a single [ChartAnnotation] to [AnnotationConfig].
+  ///
+  /// Handles all annotation types: ThresholdAnnotation, RangeAnnotation,
+  /// TextAnnotation, PointAnnotation, TrendLineAnnotation.
+  models.AnnotationConfig? _convertChartAnnotationToConfig(charts.ChartAnnotation annotation) {
+    if (annotation is charts.ThresholdAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.referenceLine,
+        orientation: annotation.axis == charts.AnnotationAxis.y ? models.Orientation.horizontal : models.Orientation.vertical,
+        value: annotation.value,
+        label: annotation.label,
+        color: _colorToHex(annotation.lineColor),
+        lineWidth: annotation.lineWidth,
+        dashPattern: annotation.dashPattern,
+        seriesId: annotation.seriesId,
+      );
+    }
+
+    if (annotation is charts.RangeAnnotation) {
+      // Determine if horizontal or vertical based on which bounds are set
+      final isHorizontal = annotation.startY != null || annotation.endY != null;
+
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.zone,
+        orientation: isHorizontal ? models.Orientation.horizontal : models.Orientation.vertical,
+        // For horizontal zones, minValue/maxValue are Y values
+        // For vertical zones, minValue/maxValue are X values
+        minValue: isHorizontal ? annotation.startY : annotation.startX,
+        maxValue: isHorizontal ? annotation.endY : annotation.endX,
+        startX: annotation.startX,
+        endX: annotation.endX,
+        startY: annotation.startY,
+        endY: annotation.endY,
+        label: annotation.label,
+        color: _colorToHex(annotation.borderColor ?? annotation.fillColor),
+        opacity: annotation.fillColor?.opacity,
+        seriesId: annotation.seriesId,
+      );
+    }
+
+    if (annotation is charts.TextAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.textLabel,
+        text: annotation.text ?? annotation.plainText,
+        x: annotation.position.dx,
+        y: annotation.position.dy,
+        color: _colorToHex(annotation.style.textStyle.color),
+        fontSize: annotation.style.textStyle.fontSize,
+      );
+    }
+
+    if (annotation is charts.PointAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.marker,
+        seriesId: annotation.seriesId,
+        dataPointIndex: annotation.dataPointIndex,
+        // PointAnnotation doesn't have x/y - it references a data point by index
+        color: _colorToHex(annotation.markerColor),
+        label: annotation.label,
+      );
+    }
+
+    if (annotation is charts.TrendAnnotation) {
+      final trendType = _mapBravenTrendType(annotation.trendType);
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.trendLine,
+        seriesId: annotation.seriesId,
+        trendType: trendType,
+        windowSize: annotation.windowSize,
+        degree: annotation.degree,
+        color: _colorToHex(annotation.lineColor),
+        lineWidth: annotation.lineWidth,
+        dashPattern: annotation.dashPattern,
+        label: annotation.label,
+      );
+    }
+
+    // Unknown annotation type
+    return null;
+  }
+
+  /// Converts a Color to hex string (e.g., "#FF0000").
+  String? _colorToHex(Color? color) {
+    if (color == null) return null;
+    // Format: #RRGGBB (ignoring alpha for simplicity)
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2, 8).toUpperCase()}';
+  }
+
+  /// Maps braven_charts TrendType to braven_agent TrendType.
+  models.TrendType? _mapBravenTrendType(charts.TrendType? trendType) {
+    if (trendType == null) return null;
+    switch (trendType) {
+      case charts.TrendType.linear:
+        return models.TrendType.linear;
+      case charts.TrendType.polynomial:
+        return models.TrendType.polynomial;
+      case charts.TrendType.movingAverage:
+        return models.TrendType.movingAverage;
+      case charts.TrendType.exponentialMovingAverage:
+        return models.TrendType.exponentialMovingAverage;
+    }
   }
 }

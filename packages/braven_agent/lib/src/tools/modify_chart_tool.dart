@@ -945,6 +945,14 @@ CRITICAL: Include color, opacity, label in the SAME call - do not make separate 
       );
     }
 
+    // Debug: Log the annotations in the active chart
+    // ignore: avoid_print
+    print('[ModifyChartTool] Active chart has ${activeChart.annotations.length} annotations:');
+    for (final ann in activeChart.annotations) {
+      // ignore: avoid_print
+      print('[ModifyChartTool]   - ${ann.id}: ${ann.type.name} "${ann.label ?? 'no label'}"');
+    }
+
     // Validate modifications object
     final modifications = input['modifications'] as Map<String, dynamic>?;
     if (modifications == null) {

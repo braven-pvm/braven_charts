@@ -597,18 +597,54 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Cached ChartRenderer with persistent controller.
   late final ChartRenderer _chartRenderer;
 
+  /// Flag to prevent re-entrant annotation sync (avoid loops).
+  bool _syncingAnnotations = false;
+
   @override
   void initState() {
     super.initState();
     _chartRenderer = ChartRenderer(annotationController: _annotationController);
+
+    // Listen for annotation changes from user interactions (drag, right-click menu, etc.)
+    // and sync them back to the session so the agent has current state.
+    _annotationController.addListener(_onAnnotationsChanged);
   }
 
   @override
   void dispose() {
+    _annotationController.removeListener(_onAnnotationsChanged);
     _messageController.dispose();
     _inputFocusNode.dispose();
     _annotationController.dispose();
     super.dispose();
+  }
+
+  /// Called when the annotation controller changes (user edits).
+  /// Syncs the updated annotations back to the session's ChartConfiguration.
+  void _onAnnotationsChanged() {
+    // Prevent re-entrant sync (the render() also updates the controller)
+    if (_syncingAnnotations) return;
+
+    final currentChart = widget.session.state.value.activeChart;
+    if (currentChart == null) return;
+
+    _syncingAnnotations = true;
+    try {
+      // Use the renderer to convert current annotations back to config
+      final updatedConfig = _chartRenderer.syncAnnotationsToConfig(currentChart);
+      if (updatedConfig != null && updatedConfig != currentChart) {
+        // Sync back to session so agent tools see the current state
+        // ignore: avoid_print
+        print('[AnnotationSync] Syncing ${updatedConfig.annotations.length} annotations to session (was ${currentChart.annotations.length})');
+        for (final ann in updatedConfig.annotations) {
+          // ignore: avoid_print
+          print('[AnnotationSync]   - ${ann.id}: ${ann.type.name} "${ann.label ?? 'no label'}"');
+        }
+        widget.session.updateChart(updatedConfig);
+      }
+    } finally {
+      _syncingAnnotations = false;
+    }
   }
 
   Future<void> _sendMessage(SessionState state) async {
