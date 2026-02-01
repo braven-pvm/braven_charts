@@ -117,8 +117,7 @@ class AnthropicAdapter implements LLMProvider {
     required LLMConfig effectiveConfig,
   }) {
     final providerOptions = effectiveConfig.providerOptions ?? const {};
-    final topP =
-        _parseDouble(providerOptions['top_p'] ?? providerOptions['topP']);
+    final topP = _parseDouble(providerOptions['top_p'] ?? providerOptions['topP']);
     final topK = _parseInt(providerOptions['top_k'] ?? providerOptions['topK']);
     final metadata = _parseMetadata(providerOptions['metadata']);
 
@@ -132,9 +131,7 @@ class AnthropicAdapter implements LLMProvider {
       system: anthropic.CreateMessageRequestSystem.text(systemPrompt),
       messages: _convertMessages(history),
       tools: tools != null && tools.isNotEmpty ? _convertTools(tools) : null,
-      toolChoice: tools != null && tools.isNotEmpty
-          ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto)
-          : null,
+      toolChoice: tools != null && tools.isNotEmpty ? const anthropic.ToolChoice(type: anthropic.ToolChoiceType.auto) : null,
     );
   }
 
@@ -258,12 +255,30 @@ class AnthropicAdapter implements LLMProvider {
             name: toolName,
             input: input,
           ));
-        case ToolResultContent(:final toolUseId, :final output, :final isError):
-          blocks.add(anthropic.Block.toolResult(
-            toolUseId: toolUseId,
-            content: anthropic.ToolResultBlockContent.text(output),
-            isError: isError,
-          ));
+        case ToolResultContent(:final toolUseId, :final output, :final isError, :final imageContent):
+          // If there's an image, use blocks format for multimodal tool result
+          if (imageContent != null) {
+            blocks.add(anthropic.Block.toolResult(
+              toolUseId: toolUseId,
+              content: anthropic.ToolResultBlockContent.blocks([
+                anthropic.Block.text(text: output),
+                anthropic.Block.image(
+                  source: anthropic.ImageBlockSource(
+                    type: anthropic.ImageBlockSourceType.base64,
+                    mediaType: _parseMediaType(imageContent.mediaType),
+                    data: imageContent.data,
+                  ),
+                ),
+              ]),
+              isError: isError,
+            ));
+          } else {
+            blocks.add(anthropic.Block.toolResult(
+              toolUseId: toolUseId,
+              content: anthropic.ToolResultBlockContent.text(output),
+              isError: isError,
+            ));
+          }
         case BinaryContent():
           // Binary content not supported by Anthropic API - skip
           continue;
@@ -285,8 +300,7 @@ class AnthropicAdapter implements LLMProvider {
     return switch (role) {
       MessageRole.user => anthropic.MessageRole.user,
       MessageRole.assistant => anthropic.MessageRole.assistant,
-      MessageRole.tool =>
-        anthropic.MessageRole.user, // Tool results come from user role
+      MessageRole.tool => anthropic.MessageRole.user, // Tool results come from user role
       MessageRole.system => anthropic.MessageRole.user, // Should not happen
     };
   }

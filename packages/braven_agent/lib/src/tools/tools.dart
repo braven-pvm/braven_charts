@@ -47,4 +47,5 @@ export 'agent_tool.dart';
 export 'create_chart_tool.dart';
 export 'get_chart_tool.dart';
 export 'modify_chart_tool.dart';
+export 'see_chart_tool.dart';
 export 'tool_result.dart';

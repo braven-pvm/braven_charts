@@ -271,10 +271,9 @@ abstract class AgentSession {
   /// await session.transform(
   ///   'Create a chart from this screenshot',
   ///   attachments: [
-  ///     BinaryContent(
+  ///     ImageContent(
   ///       data: base64Encode(imageData),
-  ///       mimeType: 'image/png',
-  ///       filename: 'screenshot.png',
+  ///       mediaType: 'image/png',
   ///     ),
   ///   ],
   /// );
@@ -291,7 +290,7 @@ abstract class AgentSession {
   /// state and events.
   Future<void> transform(
     String prompt, {
-    List<BinaryContent>? attachments,
+    List<MessageContent>? attachments,
   });
 
   /// Updates the session's active chart with a user-edited configuration.

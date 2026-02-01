@@ -39,10 +39,22 @@
 import 'dart:convert';
 
 import 'package:braven_agent/braven_agent.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A holder for the chart capture callback that can be set after session creation.
+///
+/// This allows the [SeeChartTool] to be registered with the session at creation time,
+/// while the actual capture callback is set later by the ChatScreen widget that owns
+/// the [ChartSnapshotWrapper].
+class ChartCaptureCallbackHolder {
+  /// The callback that captures the chart. Set by ChatScreen when it has access
+  /// to the [ChartSnapshotWrapperState].
+  ChartCaptureCallback? callback;
+}
 
 /// Simple API key storage service using shared_preferences.
 ///
@@ -152,6 +164,9 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   AgentSession? _session;
   String _selectedProvider = 'anthropic';
   String _selectedModel = 'claude-sonnet-4-20250514';
+
+  /// Holder for the chart capture callback, set by ChatScreen.
+  final ChartCaptureCallbackHolder _captureCallbackHolder = ChartCaptureCallbackHolder();
 
   // Available models per provider
   static const Map<String, List<({String id, String name, String description})>> _availableModels = {
@@ -325,6 +340,16 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
             return chart?.id == id ? chart : null;
           },
         ),
+        // SeeChartTool uses a late-bound callback that ChatScreen will set
+        SeeChartTool(
+          onCapture: () async {
+            final callback = _captureCallbackHolder.callback;
+            if (callback == null) {
+              return null; // Callback not yet set by ChatScreen
+            }
+            return callback();
+          },
+        ),
       ],
       systemPrompt: defaultSystemPrompt,
       debugLogging: true, // Enable verbose logging for debugging
@@ -374,6 +399,7 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
     return ChatScreen(
       session: session,
       onChangeProvider: _resetToSettings,
+      captureCallbackHolder: _captureCallbackHolder,
     );
   }
 
@@ -574,10 +600,19 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
 }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.session, this.onChangeProvider});
+  const ChatScreen({
+    super.key,
+    required this.session,
+    this.onChangeProvider,
+    this.captureCallbackHolder,
+  });
 
   final AgentSession session;
   final VoidCallback? onChangeProvider;
+
+  /// Holder for the chart capture callback. If provided, this widget will set
+  /// the callback so that [SeeChartTool] can capture chart screenshots.
+  final ChartCaptureCallbackHolder? captureCallbackHolder;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -600,10 +635,19 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Flag to prevent re-entrant annotation sync (avoid loops).
   bool _syncingAnnotations = false;
 
+  /// Pending image attachment for the next message.
+  ImageContent? _pendingImageAttachment;
+  String? _pendingImageName;
+
   @override
   void initState() {
     super.initState();
     _chartRenderer = ChartRenderer(annotationController: _annotationController);
+
+    // Set the capture callback for SeeChartTool
+    widget.captureCallbackHolder?.callback = () async {
+      return _chartSnapshotKey.currentState?.capture();
+    };
 
     // Listen for annotation changes from user interactions (drag, right-click menu, etc.)
     // and sync them back to the session so the agent has current state.
@@ -655,12 +699,56 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _messageController.clear();
 
+    // Capture and clear the pending attachment
+    final attachments = _pendingImageAttachment != null ? [_pendingImageAttachment!] : null;
+    setState(() {
+      _pendingImageAttachment = null;
+      _pendingImageName = null;
+    });
+
     // Start the transform (adds user message to history)
-    final transformFuture = widget.session.transform(text);
+    final transformFuture = widget.session.transform(text, attachments: attachments);
 
     // Scroll will be triggered by _onStateChanged when history updates
 
     await transformFuture;
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final file = result.files.first;
+      if (file.bytes != null) {
+        final base64Data = base64Encode(file.bytes!);
+        final extension = file.extension?.toLowerCase() ?? 'png';
+        final mediaType = switch (extension) {
+          'jpg' || 'jpeg' => 'image/jpeg',
+          'gif' => 'image/gif',
+          'webp' => 'image/webp',
+          _ => 'image/png',
+        };
+
+        setState(() {
+          _pendingImageAttachment = ImageContent(
+            data: base64Data,
+            mediaType: mediaType,
+          );
+          _pendingImageName = file.name;
+        });
+      }
+    }
+  }
+
+  void _clearPendingImage() {
+    setState(() {
+      _pendingImageAttachment = null;
+      _pendingImageName = null;
+    });
   }
 
   Widget _buildChartPanel(SessionState state) {
@@ -764,6 +852,9 @@ class _ChatScreenState extends State<ChatScreen> {
           focusNode: _inputFocusNode,
           isProcessing: isProcessing,
           onSend: () => _sendMessage(state),
+          onPickImage: _pickImage,
+          pendingImageName: _pendingImageName,
+          onClearImage: _clearPendingImage,
         ),
       ],
     );
@@ -858,12 +949,18 @@ class _ChatInputBar extends StatelessWidget {
     required this.focusNode,
     required this.isProcessing,
     required this.onSend,
+    required this.onPickImage,
+    required this.onClearImage,
+    this.pendingImageName,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool isProcessing;
   final VoidCallback onSend;
+  final VoidCallback onPickImage;
+  final VoidCallback onClearImage;
+  final String? pendingImageName;
 
   @override
   Widget build(BuildContext context) {
@@ -871,38 +968,88 @@ class _ChatInputBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) {
-                  if (!isProcessing && controller.text.trim().isNotEmpty) {
-                    onSend();
-                  }
-                },
-                decoration: const InputDecoration(
-                  hintText: 'Ask the agent to create a chart...',
-                  border: OutlineInputBorder(),
+            // Pending image preview
+            if (pendingImageName != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.image,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        pendingImageName!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: onClearImage,
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            // Use ListenableBuilder so only the button rebuilds when text changes
-            ListenableBuilder(
-              listenable: controller,
-              builder: (context, _) {
-                final hasInput = controller.text.trim().isNotEmpty;
-                final enabled = hasInput && !isProcessing;
-                return IconButton.filled(
-                  onPressed: enabled ? onSend : null,
-                  icon: const Icon(Icons.send),
-                );
-              },
+            // Input row
+            Row(
+              children: [
+                // Attachment button
+                IconButton(
+                  onPressed: isProcessing ? null : onPickImage,
+                  icon: const Icon(Icons.attach_file),
+                  tooltip: 'Attach image',
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) {
+                      if (!isProcessing && controller.text.trim().isNotEmpty) {
+                        onSend();
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Ask the agent to create a chart...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Use ListenableBuilder so only the button rebuilds when text changes
+                ListenableBuilder(
+                  listenable: controller,
+                  builder: (context, _) {
+                    final hasInput = controller.text.trim().isNotEmpty;
+                    final enabled = hasInput && !isProcessing;
+                    return IconButton.filled(
+                      onPressed: enabled ? onSend : null,
+                      icon: const Icon(Icons.send),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),

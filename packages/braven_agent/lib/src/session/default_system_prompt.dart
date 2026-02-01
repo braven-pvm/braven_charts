@@ -130,6 +130,27 @@ Updates an existing chart. Supports three operations:
 - Use `includeData: false` for efficient ID-only queries
 - Essential for iterative refinement workflows
 
+### see_chart
+
+**VISUAL INSPECTION**: Use this to capture and SEE the actual rendered chart:
+- Returns a screenshot image of the current chart as it appears to the user
+- Use when asked to "look at", "see", "check", or "inspect" the chart visually
+- Essential for verifying visual appearance (colors, layout, overlaps, readability)
+- Use after modifications to confirm they look correct
+- Helps identify visual issues that aren't apparent from data alone
+
+**When to use see_chart:**
+- User says "look at the chart", "check the chart", "see what it looks like"
+- User asks "does it look right?", "how does it look?", "can you see the chart?"
+- After making changes to visually verify the result
+- When troubleshooting visual display issues
+- When the user shares their screen or mentions something looks wrong
+
+**Usage pattern:**
+1. Call see_chart to capture the current chart image
+2. Analyze the returned image for visual elements
+3. Describe what you see and continue with the user's request
+
 ## ANNOTATION EXAMPLES (CRITICAL - FOLLOW EXACTLY)
 
 ### Reference Line (horizontal threshold)
@@ -233,4 +254,8 @@ REQUIRED: seriesId, trendType. Options: "linear", "polynomial", "movingAverage"
 
 5. **Support iterative refinement**: Use get_chart to inspect current
    state, then apply precise modifications.
+
+6. **Visual verification**: When asked to "look at" or "see" the chart,
+   use see_chart to capture and analyze the actual rendered image.
+   Describe what you observe and address any visual concerns.
 ''';

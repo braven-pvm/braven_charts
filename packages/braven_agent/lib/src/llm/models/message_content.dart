@@ -270,6 +270,18 @@ final class ToolUseContent extends MessageContent {
 ///   isError: false,
 /// );
 /// ```
+///
+/// ## Returning Images
+///
+/// Tool results can include images for vision-capable models:
+///
+/// ```dart
+/// final content = ToolResultContent(
+///   toolUseId: 'toolu_123',
+///   output: 'Here is the chart screenshot:',
+///   imageContent: ImageContent(data: base64Data, mediaType: 'image/png'),
+/// );
+/// ```
 final class ToolResultContent extends MessageContent {
   /// ID of the [ToolUseContent] this result corresponds to.
   final String toolUseId;
@@ -288,21 +300,35 @@ final class ToolResultContent extends MessageContent {
   /// Whether the tool execution resulted in an error.
   final bool isError;
 
+  /// Optional image content to include in the tool result.
+  ///
+  /// When set, the image will be included in the tool result message
+  /// sent to the LLM, enabling vision-capable models to "see" the result.
+  ///
+  /// Note: Not all LLM providers support images in tool results.
+  /// - Anthropic: Supported via ToolResultBlockContent.blocks
+  /// - OpenAI: Not supported in tool results (use follow-up user message)
+  /// - Gemini: Not supported in function responses
+  final ImageContent? imageContent;
+
   /// Creates a [ToolResultContent] with the given [toolUseId], [output], and [isError].
   const ToolResultContent({
     required this.toolUseId,
     required this.output,
     this.toolName,
     this.isError = false,
+    this.imageContent,
   });
 
   /// Creates a [ToolResultContent] from a JSON map.
   factory ToolResultContent.fromJson(Map<String, dynamic> json) {
+    final imageJson = json['imageContent'] as Map<String, dynamic>?;
     return ToolResultContent(
       toolUseId: json['toolUseId'] as String,
       output: json['output'] as String,
       toolName: json['toolName'] as String?,
       isError: json['isError'] as bool? ?? false,
+      imageContent: imageJson != null ? ImageContent.fromJson(imageJson) : null,
     );
   }
 
@@ -314,12 +340,13 @@ final class ToolResultContent extends MessageContent {
       if (toolName != null) 'toolName': toolName,
       'output': output,
       'isError': isError,
+      if (imageContent != null) 'imageContent': imageContent!.toJson(),
     };
   }
 
   @override
-  List<Object?> get props => [toolUseId, toolName, output, isError];
+  List<Object?> get props => [toolUseId, toolName, output, isError, imageContent];
 
   @override
-  String toString() => 'ToolResultContent(toolUseId: $toolUseId, toolName: $toolName, isError: $isError)';
+  String toString() => 'ToolResultContent(toolUseId: $toolUseId, toolName: $toolName, isError: $isError, hasImage: ${imageContent != null})';
 }

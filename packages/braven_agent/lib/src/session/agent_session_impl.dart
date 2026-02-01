@@ -106,7 +106,7 @@ class AgentSessionImpl implements AgentSession {
   @override
   Future<void> transform(
     String prompt, {
-    List<BinaryContent>? attachments,
+    List<MessageContent>? attachments,
   }) async {
     if (_disposed) return;
 
@@ -289,6 +289,7 @@ class AgentSessionImpl implements AgentSession {
     bool success = true;
     String toolOutput = '';
     bool isError = false;
+    ImageContent? toolImageContent;
 
     try {
       // Execute the tool
@@ -296,12 +297,14 @@ class AgentSessionImpl implements AgentSession {
       final result = await tool.execute(toolUse.input);
       toolOutput = result.output;
       isError = result.isError;
+      toolImageContent = result.imageContent;
       success = !isError;
 
       _log('    Tool result:');
       _log('      isError: $isError');
       _log('      output: ${toolOutput.length > 500 ? "${toolOutput.substring(0, 500)}..." : toolOutput}');
       _log('      data type: ${result.data?.runtimeType ?? "null"}');
+      _log('      hasImage: ${toolImageContent != null}');
 
       // Handle chart configuration in tool result
       if (!isError && result.data is ChartConfiguration) {
@@ -352,6 +355,7 @@ class AgentSessionImpl implements AgentSession {
       toolName: toolUse.toolName,
       output: toolOutput,
       isError: isError,
+      imageContent: toolImageContent,
     );
 
     final toolResultMessage = AgentMessage(

@@ -37,6 +37,9 @@ dependencies:
   # Persistent storage for API keys
   shared_preferences: ^2.2.2
 
+  # File picker for image attachments
+  file_picker: ^8.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
