@@ -304,8 +304,6 @@ class ModifyChartTool extends AgentTool {
                           'type': 'string',
                           'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
                         },
-                        'windowSize': {'type': 'integer', 'minimum': 1},
-                        'degree': {'type': 'integer', 'minimum': 1},
                       },
                       'required': ['id'],
                     },
@@ -528,17 +526,7 @@ class ModifyChartTool extends AgentTool {
                         'trendType': {
                           'type': 'string',
                           'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
-                          'description': 'For trendLine: type of trend calculation. Required for trendLine.',
-                        },
-                        'windowSize': {
-                          'type': 'integer',
-                          'minimum': 1,
-                          'description': 'For trendLine with movingAverage: window size.',
-                        },
-                        'degree': {
-                          'type': 'integer',
-                          'minimum': 1,
-                          'description': 'For trendLine with polynomial: polynomial degree (default 2).',
+                          'description': 'For trendLine: type of trend. Use "linear" for best-fit line (most common).',
                         },
                       },
                       'required': ['type'],
@@ -734,23 +722,12 @@ class ModifyChartTool extends AgentTool {
                     'seriesId': {
                       'type': 'string',
                       'description': 'REQUIRED for trendLine. REQUIRED for perSeries normalization on referenceLine/zone: '
-                          'ID of the series whose data range determines annotation positioning. '
-                          'Must match a series.id value exactly.',
+                          'ID of the series whose data range determines annotation positioning.',
                     },
                     'trendType': {
                       'type': 'string',
                       'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
-                      'description': 'REQUIRED for trendLine: Type of trend calculation.',
-                    },
-                    'windowSize': {
-                      'type': 'integer',
-                      'minimum': 1,
-                      'description': 'For trendLine with movingAverage: window size (number of points).',
-                    },
-                    'degree': {
-                      'type': 'integer',
-                      'minimum': 1,
-                      'description': 'For trendLine with polynomial: polynomial degree (default 2).',
+                      'description': 'REQUIRED for trendLine: Type of trend. Use "linear" for best-fit line (most common).',
                     },
                   },
                   'required': ['type'],

@@ -424,11 +424,20 @@ class ChartRenderer {
         final trendType = _mapTrendType(config.trendType);
         if (trendType == null) return null;
 
+        // For moving average types, windowSize is required by BravenChartPlus.
+        // Default to 5 if not specified by the agent.
+        int? windowSize = config.windowSize;
+        if ((trendType == charts.TrendType.movingAverage ||
+                trendType == charts.TrendType.exponentialMovingAverage) &&
+            windowSize == null) {
+          windowSize = 5; // Sensible default for smoothing
+        }
+
         return charts.TrendAnnotation(
           id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
           seriesId: config.seriesId ?? '', // Required for TrendAnnotation
           trendType: trendType,
-          windowSize: config.windowSize,
+          windowSize: windowSize,
           degree: config.degree ?? 2,
           label: config.label,
           lineColor: color,

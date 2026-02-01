@@ -355,7 +355,7 @@ class CreateChartTool extends AgentTool {
                 '• zone: REQUIRES "minValue" + "maxValue" (numbers) + "orientation". In perSeries mode, horizontal zones also REQUIRE "seriesId".\n'
                 '• textLabel: REQUIRES "text" (string) + "position" (topLeft/center/etc).\n'
                 '• marker: REQUIRES "x" + "y" (numbers).\n'
-                '• trendLine: REQUIRES "seriesId" + "trendType". For movingAverage, also REQUIRES "windowSize".\n'
+                '• trendLine: REQUIRES "seriesId" + "trendType" (linear recommended for most cases).\n'
                 'EXAMPLES:\n'
                 '  {"type": "referenceLine", "value": 80, "orientation": "horizontal", "seriesId": "cpu", "label": "Threshold"}\n'
                 '  {"type": "zone", "minValue": 70, "maxValue": 90, "orientation": "horizontal", "seriesId": "cpu", "color": "#FF000033"}\n'
@@ -382,16 +382,16 @@ class CreateChartTool extends AgentTool {
                 },
                 'seriesId': {
                   'type': 'string',
-                  'description': 'FOR referenceLine/zone in perSeries mode: Which series range to use. REQUIRED for horizontal annotations.',
+                  'description': 'FOR trendLine: REQUIRED - which series to calculate trend for. FOR referenceLine/zone in perSeries mode: which series range to use.',
                 },
                 'lineWidth': {
                   'type': 'number',
-                  'description': 'FOR referenceLine: Line thickness in pixels.',
+                  'description': 'FOR referenceLine/trendLine: Line thickness in pixels.',
                 },
                 'dashPattern': {
                   'type': 'array',
                   'items': {'type': 'number'},
-                  'description': 'FOR referenceLine: Dash pattern e.g. [5,3] for dashed line.',
+                  'description': 'FOR referenceLine/trendLine: Dash pattern e.g. [5,3] for dashed line.',
                 },
                 // zone properties
                 'minValue': {
@@ -435,18 +435,7 @@ class CreateChartTool extends AgentTool {
                 'trendType': {
                   'type': 'string',
                   'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
-                  'description': 'FOR trendLine ONLY: Type of trend calculation. REQUIRED for trendLine.',
-                },
-                'windowSize': {
-                  'type': 'integer',
-                  'minimum': 1,
-                  'description':
-                      'FOR trendLine with movingAverage: Number of points in moving average window. REQUIRED when trendType is movingAverage.',
-                },
-                'degree': {
-                  'type': 'integer',
-                  'minimum': 1,
-                  'description': 'FOR trendLine with polynomial: Polynomial degree (e.g., 2 for quadratic). Defaults to 2.',
+                  'description': 'FOR trendLine: Type of trend. Use "linear" for best-fit line (most common). REQUIRED for trendLine.',
                 },
                 // shared properties
                 'label': {
