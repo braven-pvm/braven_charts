@@ -365,6 +365,15 @@ class GrokAdapter implements LLMProvider {
                 '$outputContent\n\n'
                 'YOUR NEXT TOOL CALL MUST USE THE EXACT JSON SHOWN ABOVE.';
           }
+
+          // Note: Grok/OpenAI API doesn't support images in tool results.
+          // If the tool returned an image, inform the LLM it was captured
+          // but cannot be displayed in this context.
+          if (content.imageContent != null) {
+            outputContent += '\n\n[Note: A chart screenshot was captured but cannot be '
+                'displayed in this API context. The chart is visible to the user.]';
+          }
+
           return {
             'role': 'tool',
             'tool_call_id': content.toolUseId,

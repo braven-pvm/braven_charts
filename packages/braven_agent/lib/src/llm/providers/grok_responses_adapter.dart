@@ -146,6 +146,12 @@ class GrokResponsesAdapter implements LLMProvider {
           _debugLog('    [$i] $role: ${content?.toString().substring(0, (content?.toString().length ?? 0).clamp(0, 100)) ?? "(no content)"}...');
         }
       }
+      // Log full request body JSON for debugging
+      final jsonBody = jsonEncode(requestBody);
+      _debugLog('  Full request JSON length: ${jsonBody.length}');
+      if (jsonBody.length > 7000) {
+        _debugLog('  JSON around column 7134: ...${jsonBody.substring(7100, (jsonBody.length).clamp(7100, 7200))}...');
+      }
       _debugLog('=== END REQUEST ===');
     }
 
@@ -277,6 +283,12 @@ class GrokResponsesAdapter implements LLMProvider {
   }
 
   /// Builds the request body for the Responses API.
+  ///
+  /// When using `previous_response_id` for tool result continuations, the
+  /// API expects ONLY the new tool outputs, not full conversation history.
+  /// The server reconstructs context from the previous response.
+  ///
+  /// Reference: https://docs.x.ai/docs/guides/tools/advanced-usage
   Map<String, dynamic> _buildRequestBody({
     required String systemPrompt,
     required List<AgentMessage> history,
@@ -286,14 +298,28 @@ class GrokResponsesAdapter implements LLMProvider {
   }) {
     final model = effectiveConfig.model == LLMConfig.defaultModel ? defaultModel : effectiveConfig.model;
 
-    // Build input messages
-    final input = <Map<String, dynamic>>[
-      {
-        'role': 'system',
-        'content': systemPrompt,
-      },
-      ..._convertMessages(history),
-    ];
+    // Check if we're continuing with tool results using previous_response_id
+    final hasToolResult = _hasToolResult(history);
+    final isToolContinuation = _previousResponseId != null && hasToolResult;
+
+    List<Map<String, dynamic>> input;
+
+    if (isToolContinuation) {
+      // When continuing with previous_response_id, send ONLY the tool outputs
+      // in function_call_output format (not full history with role: 'tool')
+      // Reference: https://docs.x.ai/docs/guides/tools/advanced-usage
+      input = _extractToolOutputs(history);
+      _debugLog('  Tool continuation: sending ${input.length} tool outputs only');
+    } else {
+      // First request: send full history with system prompt
+      input = <Map<String, dynamic>>[
+        {
+          'role': 'system',
+          'content': systemPrompt,
+        },
+        ..._convertMessages(history),
+      ];
+    }
 
     final body = <String, dynamic>{
       'model': model,
@@ -302,10 +328,8 @@ class GrokResponsesAdapter implements LLMProvider {
       'max_turns': maxTurns, // Limit agentic loops
     };
 
-    // Use previous_response_id for continuations if available
-    // But only if we're not sending full history (for tool results)
-    // The API handles stateful context via response_id
-    if (_previousResponseId != null && _hasToolResult(history)) {
+    // Use previous_response_id for tool result continuations
+    if (isToolContinuation) {
       body['previous_response_id'] = _previousResponseId;
     }
 
@@ -322,6 +346,42 @@ class GrokResponsesAdapter implements LLMProvider {
     }
 
     return body;
+  }
+
+  /// Extracts tool outputs from history in function_call_output format.
+  ///
+  /// The Responses API expects tool results as:
+  /// ```json
+  /// {
+  ///   "type": "function_call_output",
+  ///   "call_id": "<tool_call_id>",
+  ///   "output": "<result_string>"
+  /// }
+  /// ```
+  ///
+  /// Reference: https://docs.x.ai/docs/guides/tools/advanced-usage
+  List<Map<String, dynamic>> _extractToolOutputs(List<AgentMessage> history) {
+    final outputs = <Map<String, dynamic>>[];
+
+    for (final message in history) {
+      if (message.role == MessageRole.tool) {
+        for (final content in message.content) {
+          if (content is ToolResultContent) {
+            String outputContent = content.output;
+            if (content.isError) {
+              outputContent = 'ERROR: $outputContent';
+            }
+            outputs.add({
+              'type': 'function_call_output',
+              'call_id': content.toolUseId,
+              'output': outputContent,
+            });
+          }
+        }
+      }
+    }
+
+    return outputs;
   }
 
   /// Checks if history contains a tool result (for continuations).
@@ -413,10 +473,20 @@ class GrokResponsesAdapter implements LLMProvider {
         }
       }
 
+      // Build assistant message - omit content if null with tool_calls
+      // Some APIs don't accept content: null
       final result = <String, dynamic>{
         'role': 'assistant',
-        'content': textContent,
       };
+
+      // Only add content if it exists or if there are no tool calls
+      if (textContent != null) {
+        result['content'] = textContent;
+      } else if (toolCalls.isEmpty) {
+        // No content and no tool calls - shouldn't happen but handle gracefully
+        result['content'] = '';
+      }
+      // When there are tool_calls and no content, omit content entirely
 
       if (toolCalls.isNotEmpty) {
         result['tool_calls'] = toolCalls;
@@ -427,23 +497,44 @@ class GrokResponsesAdapter implements LLMProvider {
 
     // Handle user messages
     if (message.role == MessageRole.user) {
-      final contentParts = <String>[];
+      final contentParts = <Map<String, dynamic>>[];
 
       for (final content in message.content) {
-        if (content is TextContent) {
-          contentParts.add(content.text);
+        switch (content) {
+          case TextContent(:final text):
+            // Responses API uses 'input_text' type (not 'text' like Chat Completions)
+            contentParts.add({
+              'type': 'input_text',
+              'text': text,
+            });
+          case ImageContent(:final data, :final mediaType):
+            // Responses API uses 'input_image' type with 'image_url' as a direct property
+            // (not nested in an object like Chat Completions' 'image_url' type)
+            contentParts.add({
+              'type': 'input_image',
+              'image_url': 'data:$mediaType;base64,$data',
+            });
+          default:
+            // Skip unsupported content types
+            continue;
         }
-        // Note: Responses API may have different image handling
-        // For now, just use text content
       }
 
       if (contentParts.isEmpty) {
         return null;
       }
 
+      // Simplify if only single text content
+      if (contentParts.length == 1 && contentParts.first['type'] == 'input_text') {
+        return {
+          'role': 'user',
+          'content': contentParts.first['text'],
+        };
+      }
+
       return {
         'role': 'user',
-        'content': contentParts.join('\n'),
+        'content': contentParts,
       };
     }
 

@@ -41,11 +41,11 @@ import '../models/message_content.dart';
 ///
 /// ## Supported Models (as of Feb 2026)
 ///
-/// Gemini 3 (latest):
-/// - `gemini-3-pro` - Most powerful agentic model
-/// - `gemini-3-flash` - Best for speed and scale
+/// Gemini 3 (preview - Jan 2026):
+/// - `gemini-3-pro-preview` - Most powerful agentic model
+/// - `gemini-3-flash-preview` - Best for speed and scale
 ///
-/// Gemini 2.5:
+/// Gemini 2.5 (stable):
 /// - `gemini-2.5-flash` - Best price-performance, agentic (default)
 /// - `gemini-2.5-flash-lite` - Fastest, cost-efficient
 /// - `gemini-2.5-pro` - Advanced thinking model
@@ -373,13 +373,19 @@ class GeminiAdapter implements LLMProvider {
         switch (content) {
           case TextContent(:final text):
             parts.add({'text': text});
-          case ToolUseContent(:final toolName, :final input):
-            parts.add({
+          case ToolUseContent(:final toolName, :final input, :final providerMetadata):
+            final functionCallPart = <String, dynamic>{
               'functionCall': {
                 'name': toolName,
                 'args': input,
               }
-            });
+            };
+            // Include thoughtSignature for Gemini 3 models (required for function calling)
+            final thoughtSignature = providerMetadata?['thoughtSignature'] as String?;
+            if (thoughtSignature != null) {
+              functionCallPart['thoughtSignature'] = thoughtSignature;
+            }
+            parts.add(functionCallPart);
           default:
             // Skip unsupported content types
             continue;
@@ -470,10 +476,13 @@ class GeminiAdapter implements LLMProvider {
           // Parse function calls
           if (p.containsKey('functionCall')) {
             final funcCall = p['functionCall'] as Map<String, dynamic>;
+            // Capture thoughtSignature for Gemini 3 models (required for function calling)
+            final thoughtSignature = p['thoughtSignature'] as String?;
             contentList.add(ToolUseContent(
               id: _uuid.v4(), // Gemini doesn't provide IDs, generate one
               toolName: funcCall['name'] as String,
               input: (funcCall['args'] as Map<String, dynamic>?) ?? {},
+              providerMetadata: thoughtSignature != null ? {'thoughtSignature': thoughtSignature} : null,
             ));
           }
         }
@@ -530,11 +539,14 @@ class GeminiAdapter implements LLMProvider {
           // Handle function calls
           if (p.containsKey('functionCall')) {
             final funcCall = p['functionCall'] as Map<String, dynamic>;
+            // Capture thoughtSignature for Gemini 3 models (required for function calling)
+            final thoughtSignature = p['thoughtSignature'] as String?;
             chunks.add(LLMChunk(
               toolUse: ToolUseContent(
                 id: _uuid.v4(),
                 toolName: funcCall['name'] as String,
                 input: (funcCall['args'] as Map<String, dynamic>?) ?? {},
+                providerMetadata: thoughtSignature != null ? {'thoughtSignature': thoughtSignature} : null,
               ),
             ));
           }

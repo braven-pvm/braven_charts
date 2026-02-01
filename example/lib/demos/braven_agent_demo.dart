@@ -188,10 +188,10 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       (id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and affordable'),
     ],
     'gemini': [
-      // Gemini 3 (latest - Jan 2026)
-      (id: 'gemini-3-pro', name: 'Gemini 3 Pro', description: 'Most powerful agentic model'),
-      (id: 'gemini-3-flash', name: 'Gemini 3 Flash', description: 'Best for speed and scale'),
-      // Gemini 2.5
+      // Gemini 3 (preview - Jan 2026)
+      (id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', description: 'Most powerful agentic model'),
+      (id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', description: 'Best for speed and scale'),
+      // Gemini 2.5 (stable)
       (id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Best price-performance, agentic'),
       (id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Fastest, cost-efficient'),
       (id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Advanced thinking model'),

@@ -222,11 +222,19 @@ final class ToolUseContent extends MessageContent {
   /// Input parameters for the tool as a JSON-compatible map.
   final Map<String, dynamic> input;
 
+  /// Provider-specific metadata that must be preserved across turns.
+  ///
+  /// Used for features like Gemini 3's `thoughtSignature` which must be
+  /// returned with function responses to maintain reasoning context.
+  /// This field is optional and only populated by providers that require it.
+  final Map<String, dynamic>? providerMetadata;
+
   /// Creates a [ToolUseContent] with the given [id], [toolName], and [input].
   const ToolUseContent({
     required this.id,
     required this.toolName,
     required this.input,
+    this.providerMetadata,
   });
 
   /// Creates a [ToolUseContent] from a JSON map.
@@ -235,6 +243,7 @@ final class ToolUseContent extends MessageContent {
       id: json['id'] as String,
       toolName: json['toolName'] as String,
       input: Map<String, dynamic>.from(json['input'] as Map),
+      providerMetadata: json['providerMetadata'] != null ? Map<String, dynamic>.from(json['providerMetadata'] as Map) : null,
     );
   }
 
@@ -245,11 +254,12 @@ final class ToolUseContent extends MessageContent {
       'id': id,
       'toolName': toolName,
       'input': input,
+      if (providerMetadata != null) 'providerMetadata': providerMetadata,
     };
   }
 
   @override
-  List<Object?> get props => [id, toolName, input];
+  List<Object?> get props => [id, toolName, input, providerMetadata];
 
   @override
   String toString() => 'ToolUseContent(id: $id, toolName: $toolName)';
