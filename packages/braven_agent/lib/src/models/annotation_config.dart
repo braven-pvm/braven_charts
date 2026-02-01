@@ -110,6 +110,28 @@ class AnnotationConfig with EquatableMixin {
   /// Maximum value for zone annotations.
   final double? maxValue;
 
+  /// Starting X-axis value for custom range annotations.
+  ///
+  /// Used with [endX] to define X-axis bounds for range annotations.
+  /// When both X and Y bounds are provided, creates a custom rectangle.
+  final double? startX;
+
+  /// Ending X-axis value for custom range annotations.
+  ///
+  /// Used with [startX] to define X-axis bounds for range annotations.
+  final double? endX;
+
+  /// Starting Y-axis value for custom range annotations.
+  ///
+  /// Used with [endY] to define Y-axis bounds for range annotations.
+  /// When both X and Y bounds are provided, creates a custom rectangle.
+  final double? startY;
+
+  /// Ending Y-axis value for custom range annotations.
+  ///
+  /// Used with [startY] to define Y-axis bounds for range annotations.
+  final double? endY;
+
   /// X coordinate for marker annotations.
   final double? x;
 
@@ -181,6 +203,10 @@ class AnnotationConfig with EquatableMixin {
     this.value,
     this.minValue,
     this.maxValue,
+    this.startX,
+    this.endX,
+    this.startY,
+    this.endY,
     this.x,
     this.y,
     this.position,
@@ -246,6 +272,10 @@ class AnnotationConfig with EquatableMixin {
       value: value,
       minValue: (json['minValue'] as num?)?.toDouble(),
       maxValue: (json['maxValue'] as num?)?.toDouble(),
+      startX: (json['startX'] as num?)?.toDouble(),
+      endX: (json['endX'] as num?)?.toDouble(),
+      startY: (json['startY'] as num?)?.toDouble(),
+      endY: (json['endY'] as num?)?.toDouble(),
       x: (json['x'] as num?)?.toDouble(),
       y: (json['y'] as num?)?.toDouble(),
       position: json['position'] != null ? AnnotationPosition.values.byName(json['position'] as String) : null,
@@ -275,6 +305,10 @@ class AnnotationConfig with EquatableMixin {
       if (value != null) 'value': value,
       if (minValue != null) 'minValue': minValue,
       if (maxValue != null) 'maxValue': maxValue,
+      if (startX != null) 'startX': startX,
+      if (endX != null) 'endX': endX,
+      if (startY != null) 'startY': startY,
+      if (endY != null) 'endY': endY,
       if (x != null) 'x': x,
       if (y != null) 'y': y,
       if (position != null) 'position': position!.name,
@@ -303,6 +337,10 @@ class AnnotationConfig with EquatableMixin {
     double? value,
     double? minValue,
     double? maxValue,
+    double? startX,
+    double? endX,
+    double? startY,
+    double? endY,
     double? x,
     double? y,
     AnnotationPosition? position,
@@ -326,6 +364,10 @@ class AnnotationConfig with EquatableMixin {
       value: value ?? this.value,
       minValue: minValue ?? this.minValue,
       maxValue: maxValue ?? this.maxValue,
+      startX: startX ?? this.startX,
+      endX: endX ?? this.endX,
+      startY: startY ?? this.startY,
+      endY: endY ?? this.endY,
       x: x ?? this.x,
       y: y ?? this.y,
       position: position ?? this.position,
@@ -352,6 +394,10 @@ class AnnotationConfig with EquatableMixin {
         value,
         minValue,
         maxValue,
+        startX,
+        endX,
+        startY,
+        endY,
         x,
         y,
         position,

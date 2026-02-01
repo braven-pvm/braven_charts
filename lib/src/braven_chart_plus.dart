@@ -1725,16 +1725,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _coordinator.releaseMode(force: true);
 
     if (result != null && mounted) {
-      // DEBUG: Log the annotation being added
-      print('=== ADDING RANGE ANNOTATION ===');
-      print('result.id: ${result.id}');
-      print('result.startX: ${result.startX}, result.endX: ${result.endX}');
-      print('result.startY: ${result.startY}, result.endY: ${result.endY}');
-      print('result.seriesId: ${result.seriesId}');
-      print('=== END ADDING ===');
       _effectiveAnnotationController?.addAnnotation(result);
-    } else {
-      print('=== DIALOG RETURNED NULL - NO ANNOTATION ADDED ===');
     }
   }
 

@@ -79,7 +79,7 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   String? _apiKey;
   AgentSession? _session;
-  String _selectedProvider = 'anthropic'; // 'anthropic' or 'grok'
+  String _selectedProvider = 'anthropic';
   String _selectedModel = 'claude-sonnet-4-20250514';
 
   // Available models per provider
@@ -88,13 +88,32 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       (id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Best balance of speed and capability'),
       (id: 'claude-opus-4-20250514', name: 'Claude Opus 4', description: 'Most capable, best for complex tasks'),
     ],
+    'openai': [
+      // GPT-4o series (128K context)
+      (id: 'gpt-4o', name: 'GPT-4o', description: 'Latest flagship model (128K context)'),
+      (id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and affordable (128K context)'),
+      // GPT-4 Turbo (128K context)
+      (id: 'gpt-4-turbo', name: 'GPT-4 Turbo', description: 'GPT-4 Turbo (128K context)'),
+      // GPT-3.5 (16K context)
+      (id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and cheap (16K context)'),
+    ],
+    'gemini': [
+      // Gemini 2.0 (1M-2M context)
+      (id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Fast multimodal (1M context)'),
+      (id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', description: 'Lightweight (1M context)'),
+      (id: 'gemini-2.0-pro', name: 'Gemini 2.0 Pro', description: 'Most capable (1M context)'),
+      // Gemini 1.5
+      (id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and versatile (1M context)'),
+      (id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Complex reasoning (2M context)'),
+    ],
     'grok': [
-      // Grok 4 series (2M context)
-      (id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Fast Reasoning', description: 'Latest with reasoning (2M context)'),
-      (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast', description: 'Latest without reasoning (2M context)'),
-      (id: 'grok-4-fast-reasoning', name: 'Grok 4 Fast Reasoning', description: 'Fast with reasoning (2M context)'),
+      // Grok 4 series - NON-REASONING FIRST (reasoning models have tool error issues)
+      (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast', description: 'Latest, best for tools (2M context)'),
       (id: 'grok-4-fast-non-reasoning', name: 'Grok 4 Fast', description: 'Fast without reasoning (2M context)'),
       (id: 'grok-4-0709', name: 'Grok 4', description: 'Grok 4 base (256K context)'),
+      // Grok 4 reasoning models (may ignore tool errors in loops)
+      (id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Reasoning', description: 'With reasoning - may loop on errors'),
+      (id: 'grok-4-fast-reasoning', name: 'Grok 4 Reasoning', description: 'With reasoning - may loop on errors'),
       // Grok 3 series (131K context)
       (id: 'grok-3', name: 'Grok 3', description: 'Full Grok 3 (131K context)'),
       (id: 'grok-3-mini', name: 'Grok 3 Mini', description: 'Lighter Grok 3 (131K context)'),
@@ -107,7 +126,7 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   @override
   void initState() {
     super.initState();
-    // Check for Anthropic API key first
+    // Check for API keys in order of preference
     final anthropicKey = const String.fromEnvironment('ANTHROPIC_API_KEY');
     if (anthropicKey.isNotEmpty) {
       _selectedProvider = 'anthropic';
@@ -115,7 +134,20 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       _setApiKey(anthropicKey);
       return;
     }
-    // Check for Grok API key
+    final openaiKey = const String.fromEnvironment('OPENAI_API_KEY');
+    if (openaiKey.isNotEmpty) {
+      _selectedProvider = 'openai';
+      _selectedModel = 'gpt-4o';
+      _setApiKey(openaiKey);
+      return;
+    }
+    final geminiKey = const String.fromEnvironment('GEMINI_API_KEY');
+    if (geminiKey.isNotEmpty) {
+      _selectedProvider = 'gemini';
+      _selectedModel = 'gemini-2.0-flash';
+      _setApiKey(geminiKey);
+      return;
+    }
     final grokKey = const String.fromEnvironment('GROK_API_KEY');
     if (grokKey.isNotEmpty) {
       _selectedProvider = 'grok';
@@ -136,18 +168,27 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
     _session?.dispose();
 
     final LLMProvider llmProvider;
-    if (_selectedProvider == 'grok') {
-      final config = LLMConfig(
-        apiKey: apiKey,
-        model: _selectedModel,
-      );
-      llmProvider = GrokAdapter(config);
-    } else {
-      final config = LLMConfig(
-        apiKey: apiKey,
-        model: _selectedModel,
-      );
-      llmProvider = AnthropicAdapter(config);
+    final config = LLMConfig(
+      apiKey: apiKey,
+      model: _selectedModel,
+    );
+
+    switch (_selectedProvider) {
+      case 'openai':
+        final adapter = OpenAIAdapter(config);
+        adapter.debugLogging = true;
+        llmProvider = adapter;
+      case 'gemini':
+        final adapter = GeminiAdapter(config);
+        adapter.debugLogging = true;
+        llmProvider = adapter;
+      case 'grok':
+        final adapter = GrokAdapter(config);
+        adapter.debugLogging = true;
+        llmProvider = adapter;
+      case 'anthropic':
+      default:
+        llmProvider = AnthropicAdapter(config);
     }
 
     // Create session first, then pass getActiveChart callback to ModifyChartTool
@@ -166,6 +207,7 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
         ),
       ],
       systemPrompt: defaultSystemPrompt,
+      debugLogging: true, // Enable verbose logging for debugging
     );
     setState(() {
       _apiKey = apiKey;
@@ -213,10 +255,12 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   }
 
   Widget _buildApiKeyInput() {
-    final isGrok = _selectedProvider == 'grok';
-    final providerName = isGrok ? 'Grok (xAI)' : 'Anthropic';
-    final hintText = isGrok ? 'xai-...' : 'sk-ant-...';
-    final consoleUrl = isGrok ? 'console.x.ai' : 'console.anthropic.com';
+    final (providerName, hintText, consoleUrl) = switch (_selectedProvider) {
+      'openai' => ('OpenAI', 'sk-...', 'platform.openai.com'),
+      'gemini' => ('Google Gemini', 'AIza...', 'aistudio.google.com'),
+      'grok' => ('Grok (xAI)', 'xai-...', 'console.x.ai'),
+      _ => ('Anthropic', 'sk-ant-...', 'console.anthropic.com'),
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -253,23 +297,60 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  // Provider selector
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment<String>(
+                  // Provider selector (using dropdown for 4 providers)
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedProvider,
+                    decoration: const InputDecoration(
+                      labelText: 'LLM Provider',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.cloud),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
                         value: 'anthropic',
-                        label: Text('Anthropic'),
-                        icon: Icon(Icons.auto_awesome),
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_awesome, size: 20),
+                            SizedBox(width: 8),
+                            Text('Anthropic (Claude)'),
+                          ],
+                        ),
                       ),
-                      ButtonSegment<String>(
+                      DropdownMenuItem(
+                        value: 'openai',
+                        child: Row(
+                          children: [
+                            Icon(Icons.smart_toy, size: 20),
+                            SizedBox(width: 8),
+                            Text('OpenAI (GPT)'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'gemini',
+                        child: Row(
+                          children: [
+                            Icon(Icons.diamond, size: 20),
+                            SizedBox(width: 8),
+                            Text('Google (Gemini)'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
                         value: 'grok',
-                        label: Text('Grok'),
-                        icon: Icon(Icons.psychology),
+                        child: Row(
+                          children: [
+                            Icon(Icons.psychology, size: 20),
+                            SizedBox(width: 8),
+                            Text('xAI (Grok)'),
+                          ],
+                        ),
                       ),
                     ],
-                    selected: {_selectedProvider},
-                    onSelectionChanged: (Set<String> selection) {
-                      _onProviderChanged(selection.first);
+                    onChanged: (String? value) {
+                      if (value != null) {
+                        _onProviderChanged(value);
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
@@ -367,15 +448,24 @@ class _ChatScreenState extends State<ChatScreen> {
   int? _lastCapturedChartHash;
   int? _currentChartKeyHash;
 
+  /// Persistent annotation controller to preserve user interactions (e.g., drag positions)
+  /// across parent widget rebuilds.
+  final AnnotationController _annotationController = AnnotationController();
+
+  /// Cached ChartRenderer with persistent controller.
+  late final ChartRenderer _chartRenderer;
+
   @override
   void initState() {
     super.initState();
+    _chartRenderer = ChartRenderer(annotationController: _annotationController);
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _inputFocusNode.dispose();
+    _annotationController.dispose();
     super.dispose();
   }
 
@@ -432,7 +522,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ? const _ChartPlaceholder()
                   : ChartSnapshotWrapper(
                       key: _chartSnapshotKey,
-                      child: const ChartRenderer().render(activeChart),
+                      child: _chartRenderer.render(activeChart),
                     ),
             ),
           ],

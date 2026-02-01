@@ -29,4 +29,6 @@ export 'models/agent_message.dart';
 export 'models/message_content.dart';
 // Providers
 export 'providers/anthropic_adapter.dart';
+export 'providers/gemini_adapter.dart';
 export 'providers/grok_adapter.dart';
+export 'providers/openai_adapter.dart';

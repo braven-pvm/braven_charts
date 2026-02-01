@@ -181,16 +181,6 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     final startY = annotation?.startY ?? widget.initialStartY;
     final endY = annotation?.endY ?? widget.initialEndY;
 
-    // DEBUG: Log what values the dialog receives
-    print('=== RANGE DIALOG INIT DEBUG ===');
-    print('widget.initialStartX: ${widget.initialStartX}');
-    print('widget.initialEndX: ${widget.initialEndX}');
-    print('widget.initialStartY: ${widget.initialStartY}');
-    print('widget.initialEndY: ${widget.initialEndY}');
-    print('Final startX: $startX, endX: $endX');
-    print('Final startY: $startY, endY: $endY');
-    print('=== END DIALOG DEBUG ===');
-
     // Note: In perSeries mode, Y values are now pre-denormalized by the
     // event handler before being passed to this dialog. No additional
     // denormalization needed here.
@@ -1012,12 +1002,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   }
 
   void _handleSave() {
-    print('=== DIALOG _handleSave CALLED ===');
     if (!_formKey.currentState!.validate()) {
-      print('Form validation FAILED');
       return;
     }
-    print('Form validation PASSED');
 
     final label = _labelController.text.trim();
 
@@ -1036,9 +1023,6 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       startY = _startYController.text.trim().isEmpty ? null : double.tryParse(_startYController.text.trim());
       endY = _endYController.text.trim().isEmpty ? null : double.tryParse(_endYController.text.trim());
     }
-
-    print('Parsed values: startX=$startX, endX=$endX, startY=$startY, endY=$endY');
-    print('_rangeMode: $_rangeMode');
 
     // Validation based on mode
     if (_rangeMode == RangeMode.horizontal && startY == null && endY == null) {

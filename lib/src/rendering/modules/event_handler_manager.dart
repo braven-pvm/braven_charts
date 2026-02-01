@@ -880,12 +880,6 @@ class EventHandlerManager {
         final transform = seriesElement.transform;
         final plotArea = _delegate.plotArea;
 
-        // DEBUG: Log coordinate translation details
-        print('=== RANGE ANNOTATION CREATION DEBUG ===');
-        print('boxRect (plot coords): $boxRect');
-        print('plotArea: $plotArea');
-        print('isPerSeriesMode: ${_delegate.isPerSeriesMode}');
-
         // For X coordinates, use transform.plotToData as usual
         final topLeft = transform.plotToData(boxRect.left, boxRect.top);
         final bottomRight = transform.plotToData(boxRect.right, boxRect.bottom);
@@ -903,16 +897,11 @@ class EventHandlerManager {
           final normalizedTopY = (plotArea.bottom - boxRect.top) / plotArea.height;
           final normalizedBottomY = (plotArea.bottom - boxRect.bottom) / plotArea.height;
 
-          print('normalizedTopY (crosshair method): $normalizedTopY');
-          print('normalizedBottomY (crosshair method): $normalizedBottomY');
-
           // Denormalize using axisBounds (same as crosshair)
           final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
             normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
             normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
           );
-          print('denormStartY: $denormStartY');
-          print('denormEndY: $denormEndY');
           startY = denormStartY;
           endY = denormEndY;
         } else {
@@ -920,10 +909,6 @@ class EventHandlerManager {
           startY = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
           endY = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
         }
-
-        print('FINAL startX: $startX, endX: $endX');
-        print('FINAL startY: $startY, endY: $endY');
-        print('=== END DEBUG ===');
 
         coordinator.endInteraction();
         _delegate.onRangeCreationComplete!(startX, endX, startY, endY);

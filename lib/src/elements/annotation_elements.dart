@@ -1021,19 +1021,6 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   void paint(Canvas canvas, Size size) {
     final fillRect = _calculateRect();
 
-    // DEBUG: Log paint details
-    print('=== RANGE ANNOTATION PAINT DEBUG ===');
-    print('annotation.id: ${annotation.id}');
-    print('annotation.startX: ${annotation.startX}, endX: ${annotation.endX}');
-    print('annotation.startY: ${annotation.startY}, endY: ${annotation.endY}');
-    print('annotation.seriesId: ${annotation.seriesId}');
-    print('_axisBounds: $_axisBounds');
-    print('fillRect: $fillRect');
-    print('chartSize: $chartSize');
-    print('_currentTransform.dataYMin: ${_currentTransform.dataYMin}');
-    print('_currentTransform.dataYMax: ${_currentTransform.dataYMax}');
-    print('=== END PAINT DEBUG ===');
-
     // Draw fill
     if (annotation.fillColor != null) {
       final fillPaint = Paint()

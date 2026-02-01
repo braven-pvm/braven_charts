@@ -195,9 +195,17 @@ class ChartRenderer {
       final chartHeight = config.height ?? 350.0;
       final backgroundColor = _parseColor(config.backgroundColor) ?? Colors.white;
 
-      // Create annotation controller if we have annotations
-      // Using annotationController (recommended) instead of deprecated annotations list
-      final annotationController = annotations.isNotEmpty ? charts.AnnotationController(initialAnnotations: annotations) : null;
+      // Use provided controller or create a new one
+      // When a persistent controller is provided, sync its annotations with config
+      charts.AnnotationController? effectiveController;
+      if (annotationController != null) {
+        // Sync the provided controller with config annotations
+        _syncAnnotationController(annotationController!, annotations);
+        effectiveController = annotationController;
+      } else if (annotations.isNotEmpty) {
+        // Legacy behavior: create new controller each render
+        effectiveController = charts.AnnotationController(initialAnnotations: annotations);
+      }
 
       return SizedBox(
         width: chartWidth,
@@ -206,7 +214,7 @@ class ChartRenderer {
             series: series,
             xAxisConfig: xAxisConfig,
             yAxis: yAxisConfig,
-            annotationController: annotationController,
+            annotationController: effectiveController,
             theme: chartTheme,
             grid: gridConfig,
             showLegend: showLegend,
@@ -222,6 +230,49 @@ class ChartRenderer {
       );
     } catch (e) {
       return _errorWidget('Failed to render chart: $e');
+    }
+  }
+
+  /// Syncs the annotation controller with new annotations from config.
+  ///
+  /// This intelligently merges config annotations with existing controller state:
+  /// - Removes annotations no longer in config
+  /// - Adds new annotations from config
+  /// - Updates existing annotations with config values (LLM modifications take effect)
+  ///
+  /// Uses try-catch to gracefully handle race conditions where Flutter rebuilds
+  /// trigger render() mid-sync (since controller operations call notifyListeners()).
+  void _syncAnnotationController(
+    charts.AnnotationController controller,
+    List<charts.ChartAnnotation> configAnnotations,
+  ) {
+    final configIds = configAnnotations.map((a) => a.id).toSet();
+    final existingIds = controller.annotations.map((a) => a.id).toSet();
+
+    // Remove annotations that are no longer in config
+    final toRemove = existingIds.difference(configIds);
+    for (final id in toRemove) {
+      try {
+        controller.removeAnnotation(id);
+      } catch (_) {
+        // Already removed (possible if rebuild occurred mid-sync)
+      }
+    }
+
+    // Add or update annotations from config
+    for (final annotation in configAnnotations) {
+      try {
+        if (existingIds.contains(annotation.id)) {
+          // Update existing annotation with config values
+          // This allows LLM modifications to take effect
+          controller.updateAnnotation(annotation.id, annotation);
+        } else {
+          // Add new annotation
+          controller.addAnnotation(annotation);
+        }
+      } catch (_) {
+        // Handle race condition during rebuild
+      }
     }
   }
 
@@ -375,7 +426,7 @@ class ChartRenderer {
         final lineWidth = config.lineWidth ?? 2.0;
 
         return charts.ThresholdAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           axis: isHorizontal ? charts.AnnotationAxis.y : charts.AnnotationAxis.x,
           value: value ?? 0.0,
           seriesId: config.seriesId, // Required for perSeries normalization mode
@@ -387,17 +438,58 @@ class ChartRenderer {
 
       case models.AnnotationType.zone:
         // Convert to RangeAnnotation
-        final isHorizontal = config.orientation != models.Orientation.vertical;
-        final minValue = config.minValue ?? 0.0;
-        final maxValue = config.maxValue ?? 0.0;
+        // Supports three modes:
+        // 1. Custom rectangle: startX/endX AND startY/endY specified
+        // 2. Horizontal band: minValue/maxValue with orientation=horizontal (Y range)
+        // 3. Vertical band: minValue/maxValue with orientation=vertical (X range)
+
         final opacity = config.opacity ?? 0.3;
+
+        // Check for custom range (both X and Y bounds specified)
+        if (config.startX != null || config.endX != null || config.startY != null || config.endY != null) {
+          // Custom rectangle mode - use explicit bounds
+          // At least one of X or Y range must be specified
+          if ((config.startX == null && config.startY == null) ||
+              (config.startX != null && config.startX == config.endX) ||
+              (config.startY != null && config.startY == config.endY)) {
+            // Invalid custom range
+            return null;
+          }
+
+          return charts.RangeAnnotation(
+            id: config.id,
+            startX: config.startX,
+            endX: config.endX,
+            startY: config.startY,
+            endY: config.endY,
+            seriesId: config.seriesId, // Only needed for perSeries mode with Y bounds
+            label: config.label,
+            fillColor: color.withOpacity(opacity),
+            borderColor: color,
+          );
+        }
+
+        // Legacy mode: minValue/maxValue with orientation
+        final isHorizontal = config.orientation != models.Orientation.vertical;
+        final minValue = config.minValue;
+        final maxValue = config.maxValue;
+
+        // Validate zone has valid bounds - skip if missing or equal
+        if (minValue == null || maxValue == null || minValue == maxValue) {
+          // Invalid zone annotation - missing or zero-width bounds
+          // This is typically an LLM schema error (zone without minValue/maxValue)
+          return null;
+        }
+
         return charts.RangeAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           startY: isHorizontal ? minValue : null,
           endY: isHorizontal ? maxValue : null,
           startX: isHorizontal ? null : minValue,
           endX: isHorizontal ? null : maxValue,
-          seriesId: config.seriesId, // Required for perSeries normalization mode
+          // seriesId only needed for horizontal zones in perSeries mode
+          // Vertical zones don't reference Y-axis series values
+          seriesId: isHorizontal ? config.seriesId : null,
           label: config.label,
           fillColor: color.withOpacity(opacity),
           borderColor: color,
@@ -411,7 +503,7 @@ class ChartRenderer {
         final positionOffset = _getTextAnnotationPosition(config.position);
         final anchor = _getTextAnnotationAnchor(config.position);
         return charts.TextAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           position: positionOffset,
           text: text,
           anchor: anchor,
@@ -429,7 +521,7 @@ class ChartRenderer {
         final x = config.x ?? 0.0;
         final y = config.y ?? 0.0;
         return charts.PinAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           x: x,
           y: y,
           label: config.label,
@@ -449,7 +541,7 @@ class ChartRenderer {
         }
 
         return charts.TrendAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           seriesId: config.seriesId ?? '', // Required for TrendAnnotation
           trendType: trendType,
           windowSize: windowSize,

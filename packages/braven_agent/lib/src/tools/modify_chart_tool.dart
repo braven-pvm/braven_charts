@@ -250,39 +250,56 @@ class ModifyChartTool extends AgentTool {
                   },
                   'annotations': {
                     'type': 'array',
-                    'description': 'Annotation updates (matched by id).',
+                    'description': 'Update existing annotations by ID. Use get_chart first to discover annotation IDs.',
                     'items': {
                       'type': 'object',
                       'properties': {
                         'id': {
                           'type': 'string',
-                          'description': 'ID of the annotation to update',
+                          'description': 'REQUIRED: ID of the annotation to update (use get_chart to find IDs)',
                         },
                         'type': {
                           'type': 'string',
                           'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
+                          'description': 'Cannot change type after creation.',
                         },
-                        'value': {'type': 'number'},
-                        'minValue': {'type': 'number'},
-                        'maxValue': {'type': 'number'},
-                        'x': {'type': 'number'},
-                        'y': {'type': 'number'},
-                        'text': {'type': 'string'},
-                        'label': {'type': 'string'},
-                        'color': {'type': 'string'},
-                        'lineWidth': {'type': 'number'},
+                        'value': {
+                          'type': 'number',
+                          'description': 'For referenceLine: the position value.',
+                        },
+                        'minValue': {
+                          'type': 'number',
+                          'description': 'For zone: lower bound.',
+                        },
+                        'maxValue': {
+                          'type': 'number',
+                          'description': 'For zone: upper bound.',
+                        },
+                        'startX': {'type': 'number', 'description': 'For zone custom rectangle: left X bound.'},
+                        'endX': {'type': 'number', 'description': 'For zone custom rectangle: right X bound.'},
+                        'startY': {'type': 'number', 'description': 'For zone custom rectangle: bottom Y bound.'},
+                        'endY': {'type': 'number', 'description': 'For zone custom rectangle: top Y bound.'},
+                        'x': {'type': 'number', 'description': 'For textLabel/marker: X position.'},
+                        'y': {'type': 'number', 'description': 'For textLabel/marker: Y position.'},
+                        'text': {'type': 'string', 'description': 'For textLabel: text content.'},
+                        'label': {'type': 'string', 'description': 'Display label.'},
+                        'color': {'type': 'string', 'description': 'Color in hex format.'},
+                        'lineWidth': {'type': 'number', 'description': 'For lines: thickness.'},
                         'dashPattern': {
                           'type': 'array',
                           'items': {'type': 'number'},
+                          'description': 'Dash pattern for lines.',
                         },
                         'opacity': {
                           'type': 'number',
                           'minimum': 0,
                           'maximum': 1,
+                          'description': 'For zone: fill opacity.',
                         },
                         'orientation': {
                           'type': 'string',
                           'enum': ['horizontal', 'vertical'],
+                          'description': 'For referenceLine/zone.',
                         },
                         'position': {
                           'type': 'string',
@@ -297,12 +314,14 @@ class ModifyChartTool extends AgentTool {
                             'bottomCenter',
                             'bottomRight'
                           ],
+                          'description': 'For textLabel: position in chart.',
                         },
-                        'fontSize': {'type': 'number'},
-                        'seriesId': {'type': 'string'},
+                        'fontSize': {'type': 'number', 'description': 'For textLabel: font size.'},
+                        'seriesId': {'type': 'string', 'description': 'Series association.'},
                         'trendType': {
                           'type': 'string',
                           'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
+                          'description': 'ONLY for trendLine type.',
                         },
                       },
                       'required': ['id'],
@@ -466,43 +485,96 @@ class ModifyChartTool extends AgentTool {
                   },
                   'annotations': {
                     'type': 'array',
-                    'description': 'Annotations to add to the chart. If an id is supplied, it is ignored and a system id is generated.',
+                    'description': '''Annotations to add. IMPORTANT: Include ALL properties in ONE annotation object.
+
+ANNOTATION TYPE REQUIREMENTS:
+- referenceLine: REQUIRES value, orientation. Use color, lineWidth, label. NO trendType!
+- zone: REQUIRES (minValue + maxValue + orientation) OR (startX/endX and/or startY/endY). Use color, opacity, label. NO trendType!
+- trendLine: REQUIRES seriesId, trendType. Use color, lineWidth, label.
+- textLabel: REQUIRES x, y, text. Use color, fontSize.
+- marker: REQUIRES x, y. Use color, label.
+
+CRITICAL: Do NOT add trendType to zones or referenceLines - it will be ignored.
+CRITICAL: Include color, opacity, label in the SAME call - do not make separate update calls.''',
                     'items': {
                       'type': 'object',
                       'properties': {
                         'id': {
                           'type': 'string',
-                          'description': 'Optional annotation id (ignored; system generates one).',
+                          'description': 'Ignored - system generates IDs automatically.',
                         },
                         'type': {
                           'type': 'string',
                           'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
-                          'description': 'Type of annotation: referenceLine, zone, textLabel, marker, trendLine',
+                          'description': 'Annotation type. Each type has different required fields - see description above.',
                         },
                         'value': {
                           'type': 'number',
-                          'description': 'Value for referenceLine.',
+                          'description': 'REQUIRED for referenceLine only. The Y-value (horizontal) or X-value (vertical) where line appears.',
                         },
-                        'minValue': {'type': 'number'},
-                        'maxValue': {'type': 'number'},
-                        'x': {'type': 'number'},
-                        'y': {'type': 'number'},
-                        'text': {'type': 'string'},
-                        'label': {'type': 'string'},
-                        'color': {'type': 'string'},
-                        'lineWidth': {'type': 'number'},
+                        'minValue': {
+                          'type': 'number',
+                          'description': 'For zone with orientation: lower bound of the range.',
+                        },
+                        'maxValue': {
+                          'type': 'number',
+                          'description': 'For zone with orientation: upper bound of the range.',
+                        },
+                        'startX': {
+                          'type': 'number',
+                          'description': 'For zone custom rectangle: left X bound.',
+                        },
+                        'endX': {
+                          'type': 'number',
+                          'description': 'For zone custom rectangle: right X bound.',
+                        },
+                        'startY': {
+                          'type': 'number',
+                          'description': 'For zone custom rectangle: bottom Y bound.',
+                        },
+                        'endY': {
+                          'type': 'number',
+                          'description': 'For zone custom rectangle: top Y bound.',
+                        },
+                        'x': {
+                          'type': 'number',
+                          'description': 'For textLabel/marker: X position.',
+                        },
+                        'y': {
+                          'type': 'number',
+                          'description': 'For textLabel/marker: Y position.',
+                        },
+                        'text': {
+                          'type': 'string',
+                          'description': 'For textLabel: the text content to display.',
+                        },
+                        'label': {
+                          'type': 'string',
+                          'description': 'Display label for any annotation type.',
+                        },
+                        'color': {
+                          'type': 'string',
+                          'description': 'Color in hex format (e.g., "#FF0000"). Always specify for visibility.',
+                        },
+                        'lineWidth': {
+                          'type': 'number',
+                          'description': 'Line thickness for referenceLine/trendLine.',
+                        },
                         'dashPattern': {
                           'type': 'array',
                           'items': {'type': 'number'},
+                          'description': 'Dash pattern for lines, e.g., [5, 3] for dashed.',
                         },
                         'opacity': {
                           'type': 'number',
                           'minimum': 0,
                           'maximum': 1,
+                          'description': 'For zone: fill opacity (0.1-0.2 recommended).',
                         },
                         'orientation': {
                           'type': 'string',
                           'enum': ['horizontal', 'vertical'],
+                          'description': 'For referenceLine/zone: horizontal (Y-axis) or vertical (X-axis).',
                         },
                         'position': {
                           'type': 'string',
@@ -517,16 +589,21 @@ class ModifyChartTool extends AgentTool {
                             'bottomCenter',
                             'bottomRight'
                           ],
+                          'description': 'For textLabel: position within chart area.',
                         },
-                        'fontSize': {'type': 'number'},
+                        'fontSize': {
+                          'type': 'number',
+                          'description': 'For textLabel: font size in pixels.',
+                        },
                         'seriesId': {
                           'type': 'string',
-                          'description': 'Series ID. Required for trendLine. Used for perSeries normalization positioning on referenceLine/zone.',
+                          'description':
+                              'REQUIRED for trendLine. For horizontal referenceLine/zone in perSeries mode, specifies which series Y-axis to use.',
                         },
                         'trendType': {
                           'type': 'string',
                           'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
-                          'description': 'For trendLine: type of trend. Use "linear" for best-fit line (most common).',
+                          'description': 'ONLY for trendLine type. Do NOT use with zone or referenceLine.',
                         },
                       },
                       'required': ['type'],
@@ -799,6 +876,63 @@ class ModifyChartTool extends AgentTool {
     return ToolResult(output: message, isError: true);
   }
 
+  /// Validates an annotation config and returns an error message if invalid.
+  /// Returns null if valid.
+  String? _validateAnnotation(AnnotationConfig annotation, List<SeriesConfig> series) {
+    final seriesIds = series.map((s) => s.id).toSet();
+
+    // V030: seriesId reference validation for trendLine
+    if (annotation.type == AnnotationType.trendLine) {
+      if (annotation.seriesId == null || annotation.seriesId!.isEmpty) {
+        return 'INVALID TRENDLINE - MISSING seriesId. REQUIRED: seriesId from [${seriesIds.join(", ")}]. '
+            'SEND THIS: {"type": "trendLine", "seriesId": "${seriesIds.firstOrNull ?? "series1"}", "trendType": "linear", "color": "#FF6600"}';
+      }
+      if (!seriesIds.contains(annotation.seriesId)) {
+        return 'INVALID TRENDLINE - seriesId "${annotation.seriesId}" NOT FOUND. '
+            'USE ONE OF: [${seriesIds.join(", ")}]. '
+            'SEND THIS: {"type": "trendLine", "seriesId": "${seriesIds.first}", "trendType": "linear", "color": "#FF6600"}';
+      }
+    }
+
+    // V040: referenceLine requires value
+    if (annotation.type == AnnotationType.referenceLine && annotation.value == null) {
+      final orientation = annotation.orientation?.name ?? 'horizontal';
+      return 'INVALID REFERENCELINE - MISSING value. '
+          'SEND THIS: {"type": "referenceLine", "value": 50, "orientation": "$orientation", "color": "#FF0000", "lineWidth": 2, "label": "Threshold"}';
+    }
+
+    // V041: zone requires bounds
+    if (annotation.type == AnnotationType.zone) {
+      final hasMinMax = annotation.minValue != null && annotation.maxValue != null;
+      final hasCustomBounds = annotation.startX != null || annotation.endX != null || annotation.startY != null || annotation.endY != null;
+
+      if (!hasMinMax && !hasCustomBounds) {
+        // CRITICAL: Put the fix FIRST, make it extremely short and direct
+        final orientation = annotation.orientation?.name ?? 'vertical';
+        return 'INVALID ZONE - MISSING BOUNDS. '
+            'REQUIRED FIELDS: minValue, maxValue. '
+            'SEND THIS: {"type": "zone", "orientation": "$orientation", "minValue": 2.5, "maxValue": 6, "color": "#0000FF", "opacity": 0.15, "label": "mid-range"}';
+      }
+    }
+
+    // V042: marker with seriesId requires dataPointIndex or x/y
+    if (annotation.type == AnnotationType.marker &&
+        annotation.seriesId != null &&
+        annotation.seriesId!.isNotEmpty &&
+        annotation.dataPointIndex == null &&
+        annotation.x == null &&
+        annotation.y == null) {
+      return '[V042] Marker with seriesId requires dataPointIndex or x/y coordinates.';
+    }
+
+    // V044: textLabel requires text
+    if (annotation.type == AnnotationType.textLabel && (annotation.text == null || annotation.text!.isEmpty)) {
+      return '[V044] TextLabel requires text property.';
+    }
+
+    return null; // Valid
+  }
+
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
     // Get the active chart from the callback
@@ -892,13 +1026,27 @@ class ModifyChartTool extends AgentTool {
 
     final addAnnotations = addInput?['annotations'] as List?;
     if (addAnnotations != null) {
+      final annotationErrors = <String>[];
       for (final entry in addAnnotations) {
         final annotationMap = Map<String, dynamic>.from(entry as Map);
         annotationMap.remove('id');
         final parsed = AnnotationConfig.fromJson(annotationMap);
+
+        // Validate annotation before adding
+        final error = _validateAnnotation(parsed, updatedSeries);
+        if (error != null) {
+          annotationErrors.add(error);
+          continue;
+        }
+
         final annotationWithId = parsed.copyWith(id: 'ann-${_uuid.v4()}');
         updatedAnnotations.add(annotationWithId);
         addedAnnotationIds.add(annotationWithId.id!);
+      }
+
+      if (annotationErrors.isNotEmpty) {
+        // Don't add extra "Error: " prefix - the validation messages are self-explanatory
+        return _logError(annotationErrors.join(' '), input);
       }
     }
 
@@ -1223,6 +1371,10 @@ class ModifyChartTool extends AgentTool {
       value: (update['value'] as num?)?.toDouble(),
       minValue: (update['minValue'] as num?)?.toDouble(),
       maxValue: (update['maxValue'] as num?)?.toDouble(),
+      startX: (update['startX'] as num?)?.toDouble(),
+      endX: (update['endX'] as num?)?.toDouble(),
+      startY: (update['startY'] as num?)?.toDouble(),
+      endY: (update['endY'] as num?)?.toDouble(),
       x: (update['x'] as num?)?.toDouble(),
       y: (update['y'] as num?)?.toDouble(),
       position: position,

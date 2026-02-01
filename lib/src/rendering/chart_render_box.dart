@@ -2054,12 +2054,6 @@ class ChartRenderBox extends RenderBox {
     Map<String, DataRange>? thresholdSeriesBounds;
     if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries && _multiAxisManager.series.isNotEmpty) {
       thresholdSeriesBounds = _computeSeriesBounds(forPainting: true);
-      print('=== PAINT: thresholdSeriesBounds computed ===');
-      print('thresholdSeriesBounds: $thresholdSeriesBounds');
-    } else {
-      print('=== PAINT: thresholdSeriesBounds NOT computed ===');
-      print('normalizationMode: ${_multiAxisManager.normalizationMode}');
-      print('series.isNotEmpty: ${_multiAxisManager.series.isNotEmpty}');
     }
 
     // [DEBUG OUTPUT REMOVED] Non-series element painting - was firing at 60fps
@@ -2076,20 +2070,13 @@ class ChartRenderBox extends RenderBox {
           element.updateTransform(_transform!);
           // For perSeries mode: update axis bounds for correct Y-value normalization
           // Use seriesId from annotation if specified, otherwise use first available series
-          print('=== PAINT RangeAnnotation: checking bounds ===');
-          print('thresholdSeriesBounds: $thresholdSeriesBounds');
-          print('element.annotation.seriesId: ${element.annotation.seriesId}');
-          print('element.annotation.startY: ${element.annotation.startY}');
-          print('element.annotation.endY: ${element.annotation.endY}');
           if (thresholdSeriesBounds != null &&
               thresholdSeriesBounds.isNotEmpty &&
               (element.annotation.startY != null || element.annotation.endY != null)) {
             final seriesId = element.annotation.seriesId;
             final axisBoundsToUse = seriesId != null ? thresholdSeriesBounds[seriesId] : thresholdSeriesBounds.values.first;
-            print('axisBoundsToUse: $axisBoundsToUse');
             element.updateAxisBounds(axisBoundsToUse);
           } else {
-            print('Condition failed - setting axisBounds to null');
             element.updateAxisBounds(null);
           }
         } else if (element is ThresholdAnnotationElement) {
@@ -2595,29 +2582,18 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
     // The input values are already true 0-1 normalized (calculated like crosshair does).
     final axisBounds = _renderBox._computeAxisBounds();
 
-    // DEBUG: Log bounds
-    print('=== DENORMALIZE Y RANGE DEBUG ===');
-    print('Input (true 0-1 normalized): startY=$normalizedStartY, endY=$normalizedEndY');
-    print('axisBounds: $axisBounds');
-    print('seriesId: $seriesId');
-
     // Use first available axis bounds (same approach as crosshair for single axis)
     if (axisBounds.isNotEmpty) {
       final bounds = axisBounds.values.first;
-      print('Using first axis bounds: min=${bounds.min}, max=${bounds.max}');
 
       // Denormalize exactly like crosshair: MultiAxisNormalizer.denormalize(yValue, bounds.min, bounds.max)
       final startY = MultiAxisNormalizer.denormalize(normalizedStartY, bounds.min, bounds.max);
       final endY = MultiAxisNormalizer.denormalize(normalizedEndY, bounds.min, bounds.max);
 
-      print('output startY: $startY, endY: $endY');
-      print('=== END DENORMALIZE DEBUG ===');
       return (startY, endY);
     }
 
     // If no bounds available, return unchanged
-    print('No bounds available, returning unchanged');
-    print('=== END DENORMALIZE DEBUG ===');
     return (normalizedStartY, normalizedEndY);
   }
 

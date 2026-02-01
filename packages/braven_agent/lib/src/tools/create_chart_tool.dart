@@ -352,13 +352,14 @@ class CreateChartTool extends AgentTool {
             'type': 'array',
             'description': 'Chart annotations. Each type has DIFFERENT required properties:\n'
                 '• referenceLine: REQUIRES "value" (number) + "orientation" (horizontal/vertical). In perSeries mode, horizontal lines also REQUIRE "seriesId".\n'
-                '• zone: REQUIRES "minValue" + "maxValue" (numbers) + "orientation". In perSeries mode, horizontal zones also REQUIRE "seriesId".\n'
+                '• zone: Use EITHER (1) "minValue"+"maxValue"+"orientation" for bands, OR (2) "startX"/"endX"/"startY"/"endY" for custom rectangles. Horizontal zones in perSeries mode REQUIRE "seriesId".\n'
                 '• textLabel: REQUIRES "text" (string) + "position" (topLeft/center/etc).\n'
                 '• marker: REQUIRES "x" + "y" (numbers).\n'
                 '• trendLine: REQUIRES "seriesId" + "trendType" (linear recommended for most cases).\n'
                 'EXAMPLES:\n'
                 '  {"type": "referenceLine", "value": 80, "orientation": "horizontal", "seriesId": "cpu", "label": "Threshold"}\n'
                 '  {"type": "zone", "minValue": 70, "maxValue": 90, "orientation": "horizontal", "seriesId": "cpu", "color": "#FF000033"}\n'
+                '  {"type": "zone", "startX": 2, "endX": 5, "startY": 50, "endY": 80, "seriesId": "cpu", "color": "#00FF0033", "label": "Target"}\n'
                 '  {"type": "textLabel", "text": "Peak", "position": "topRight", "fontSize": 14}\n'
                 '  {"type": "marker", "x": 30, "y": 85, "label": "Event"}\n'
                 '  {"type": "trendLine", "seriesId": "cpu", "trendType": "linear", "color": "#0000FF", "label": "Trend"}',
@@ -397,11 +398,27 @@ class CreateChartTool extends AgentTool {
                 // zone properties
                 'minValue': {
                   'type': 'number',
-                  'description': 'FOR zone ONLY: Lower bound of shaded region. REQUIRED for zone.',
+                  'description': 'FOR zone: Lower bound of shaded region (with orientation). Use with maxValue for simple bands.',
                 },
                 'maxValue': {
                   'type': 'number',
-                  'description': 'FOR zone ONLY: Upper bound of shaded region. REQUIRED for zone.',
+                  'description': 'FOR zone: Upper bound of shaded region (with orientation). Use with minValue for simple bands.',
+                },
+                'startX': {
+                  'type': 'number',
+                  'description': 'FOR zone: Left X bound for custom rectangle. Use with endX, startY, endY for precise regions.',
+                },
+                'endX': {
+                  'type': 'number',
+                  'description': 'FOR zone: Right X bound for custom rectangle.',
+                },
+                'startY': {
+                  'type': 'number',
+                  'description': 'FOR zone: Bottom Y bound for custom rectangle. Requires seriesId in perSeries mode.',
+                },
+                'endY': {
+                  'type': 'number',
+                  'description': 'FOR zone: Top Y bound for custom rectangle. Requires seriesId in perSeries mode.',
                 },
                 'opacity': {
                   'type': 'number',

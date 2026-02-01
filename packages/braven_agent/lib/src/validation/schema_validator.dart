@@ -153,13 +153,11 @@ class SchemaValidator {
     ChartConfiguration chart,
     List<ValidationWarning> warnings,
   ) {
-    if (chart.normalizationMode == NormalizationModeConfig.perSeries &&
-        chart.yAxes.isNotEmpty) {
+    if (chart.normalizationMode == NormalizationModeConfig.perSeries && chart.yAxes.isNotEmpty) {
       warnings.add(
         const ValidationWarning(
           code: 'V001',
-          message:
-              'Chart-level yAxis is ignored in perSeries normalization mode. '
+          message: 'Chart-level yAxis is ignored in perSeries normalization mode. '
               'Use series[].yAxis to configure per-series axes instead.',
         ),
       );
@@ -185,8 +183,7 @@ class SchemaValidator {
         warnings.add(
           ValidationWarning(
             code: 'V002',
-            message:
-                "Series '${series.id}' has no yAxis config in perSeries mode. "
+            message: "Series '${series.id}' has no yAxis config in perSeries mode. "
                 'It will use a default axis. Consider adding a yAxis configuration.',
           ),
         );
@@ -284,20 +281,18 @@ class SchemaValidator {
       seriesMap[series.id] = series.data.length;
     }
 
-    final isPerSeriesMode =
-        chart.normalizationMode == NormalizationModeConfig.perSeries;
+    final isPerSeriesMode = chart.normalizationMode == NormalizationModeConfig.perSeries;
 
     for (final annotation in chart.annotations) {
       // V030: Error when annotation's seriesId references non-existent series
-      if (annotation.seriesId != null &&
-          annotation.seriesId!.isNotEmpty &&
-          !seriesMap.containsKey(annotation.seriesId)) {
+      if (annotation.seriesId != null && annotation.seriesId!.isNotEmpty && !seriesMap.containsKey(annotation.seriesId)) {
+        final validIds = seriesMap.keys.join(', ');
         errors.add(
           ValidationError(
             code: 'V030',
-            message:
-                "Annotation references non-existent series '${annotation.seriesId}'. "
-                'Use get_chart to discover valid series IDs.',
+            message: "Annotation references non-existent series '${annotation.seriesId}'. "
+                'Valid series IDs are: $validIds. '
+                'The seriesId must exactly match a series id from the series array.',
           ),
         );
         // Skip further validation for this annotation since seriesId is invalid
@@ -311,8 +306,7 @@ class SchemaValidator {
         errors.add(
           const ValidationError(
             code: 'V031',
-            message:
-                'Point annotation with dataPointIndex requires seriesId to identify '
+            message: 'Point annotation with dataPointIndex requires seriesId to identify '
                 'which series the data point belongs to.',
           ),
         );
@@ -325,8 +319,7 @@ class SchemaValidator {
         errors.add(
           const ValidationError(
             code: 'V032',
-            message:
-                'Marker annotation requires seriesId for coordinate resolution.',
+            message: 'Marker annotation requires seriesId for coordinate resolution.',
           ),
         );
       }
@@ -336,11 +329,13 @@ class SchemaValidator {
           annotation.orientation == Orientation.horizontal &&
           isPerSeriesMode &&
           (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        final validIds = seriesMap.keys.join(', ');
         errors.add(
-          const ValidationError(
+          ValidationError(
             code: 'V033',
-            message:
-                'Horizontal referenceLine requires seriesId in perSeries normalization mode.',
+            message: 'Horizontal referenceLine requires seriesId in perSeries normalization mode. '
+                'Valid series IDs are: $validIds. '
+                'The seriesId must exactly match a series id from the series array.',
           ),
         );
       }
@@ -350,35 +345,47 @@ class SchemaValidator {
           annotation.orientation == Orientation.horizontal &&
           isPerSeriesMode &&
           (annotation.seriesId == null || annotation.seriesId!.isEmpty)) {
+        final validIds = seriesMap.keys.join(', ');
         errors.add(
-          const ValidationError(
+          ValidationError(
             code: 'V034',
-            message:
-                'Horizontal zone requires seriesId in perSeries normalization mode.',
+            message: 'Horizontal zone requires seriesId in perSeries normalization mode. '
+                'Valid series IDs are: $validIds. '
+                'The seriesId must exactly match a series id from the series array.',
           ),
         );
       }
 
       // V040: Error when referenceLine annotation lacks value
-      if (annotation.type == AnnotationType.referenceLine &&
-          annotation.value == null) {
+      if (annotation.type == AnnotationType.referenceLine && annotation.value == null) {
         errors.add(
           const ValidationError(
             code: 'V040',
-            message: 'ReferenceLine requires value property.',
+            message: 'ReferenceLine requires value property. '
+                'Set value to the numeric position where the line should appear.',
           ),
         );
       }
 
-      // V041: Error when zone annotation lacks minValue or maxValue
-      if (annotation.type == AnnotationType.zone &&
-          (annotation.minValue == null || annotation.maxValue == null)) {
-        errors.add(
-          const ValidationError(
-            code: 'V041',
-            message: 'Zone requires both minValue and maxValue properties.',
-          ),
-        );
+      // V041: Error when zone annotation lacks bounds
+      // Zone can use either:
+      // - minValue/maxValue (with orientation) for simple bands
+      // - startX/endX and/or startY/endY for custom rectangles
+      if (annotation.type == AnnotationType.zone) {
+        final hasMinMax = annotation.minValue != null && annotation.maxValue != null;
+        final hasCustomBounds = annotation.startX != null || annotation.endX != null || annotation.startY != null || annotation.endY != null;
+
+        if (!hasMinMax && !hasCustomBounds) {
+          errors.add(
+            const ValidationError(
+              code: 'V041',
+              message: 'Zone requires bounds. Use either: '
+                  '(1) minValue and maxValue with orientation for simple bands, or '
+                  '(2) startX/endX and/or startY/endY for custom rectangles. '
+                  'Example: {"type": "zone", "orientation": "vertical", "minValue": 2, "maxValue": 5}',
+            ),
+          );
+        }
       }
 
       // V042: Error when marker with seriesId lacks dataPointIndex and x/y coordinates
@@ -391,8 +398,7 @@ class SchemaValidator {
         errors.add(
           const ValidationError(
             code: 'V042',
-            message:
-                'Marker annotation with seriesId requires dataPointIndex or x/y coordinates.',
+            message: 'Marker annotation with seriesId requires dataPointIndex or x/y coordinates.',
           ),
         );
       }
@@ -405,8 +411,7 @@ class SchemaValidator {
             errors.add(
               ValidationError(
                 code: 'V043',
-                message:
-                    'dataPointIndex ${annotation.dataPointIndex} is invalid. '
+                message: 'dataPointIndex ${annotation.dataPointIndex} is invalid. '
                     'Index must be >= 0.',
               ),
             );
@@ -414,8 +419,7 @@ class SchemaValidator {
             errors.add(
               ValidationError(
                 code: 'V043',
-                message:
-                    'dataPointIndex ${annotation.dataPointIndex} out of range for series '
+                message: 'dataPointIndex ${annotation.dataPointIndex} out of range for series '
                     "'${annotation.seriesId}' which has $dataLength points.",
               ),
             );
@@ -424,8 +428,7 @@ class SchemaValidator {
       }
 
       // V044: Error when textLabel annotation lacks text
-      if (annotation.type == AnnotationType.textLabel &&
-          (annotation.text == null || annotation.text!.isEmpty)) {
+      if (annotation.type == AnnotationType.textLabel && (annotation.text == null || annotation.text!.isEmpty)) {
         errors.add(
           const ValidationError(
             code: 'V044',
@@ -455,15 +458,10 @@ class SchemaValidator {
     final warnings = <ValidationWarning>[];
 
     final existingSeriesIds = chart.series.map((s) => s.id).toSet();
-    final existingAnnotationIds = chart.annotations
-        .map((a) => a.id)
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    final existingAnnotationIds = chart.annotations.map((a) => a.id).whereType<String>().where((id) => id.isNotEmpty).toSet();
 
     final removeSeriesIds = request.remove?.series?.toSet() ?? <String>{};
-    final removeAnnotationIds =
-        request.remove?.annotations?.toSet() ?? <String>{};
+    final removeAnnotationIds = request.remove?.annotations?.toSet() ?? <String>{};
 
     // V011: Error when remove.series contains non-existent ID
     for (final id in removeSeriesIds) {
@@ -483,8 +481,7 @@ class SchemaValidator {
         errors.add(
           ValidationError(
             code: 'V021',
-            message:
-                "Cannot remove annotation '$id' because it does not exist.",
+            message: "Cannot remove annotation '$id' because it does not exist.",
           ),
         );
       }
@@ -492,8 +489,7 @@ class SchemaValidator {
 
     // Effective IDs after remove (remove -> add -> update order)
     final effectiveSeriesIds = existingSeriesIds.difference(removeSeriesIds);
-    final effectiveAnnotationIds =
-        existingAnnotationIds.difference(removeAnnotationIds);
+    final effectiveAnnotationIds = existingAnnotationIds.difference(removeAnnotationIds);
 
     // V012: Error when add.series[].id already exists
     final addSeries = request.add?.series ?? const <SeriesAddition>[];
@@ -502,8 +498,7 @@ class SchemaValidator {
         errors.add(
           ValidationError(
             code: 'V012',
-            message:
-                "Cannot add series '${series.id}' because it already exists.",
+            message: "Cannot add series '${series.id}' because it already exists.",
           ),
         );
       } else {
@@ -512,15 +507,13 @@ class SchemaValidator {
     }
 
     // V022: Warning when agent supplies id on add.annotations
-    final addAnnotations =
-        request.add?.annotations ?? const <AnnotationAddition>[];
+    final addAnnotations = request.add?.annotations ?? const <AnnotationAddition>[];
     for (final annotation in addAnnotations) {
       if (annotation.id != null && annotation.id!.isNotEmpty) {
         warnings.add(
           const ValidationWarning(
             code: 'V022',
-            message:
-                'Annotation IDs are system-generated; the supplied id will be ignored.',
+            message: 'Annotation IDs are system-generated; the supplied id will be ignored.',
           ),
         );
       }
@@ -533,23 +526,20 @@ class SchemaValidator {
         errors.add(
           ValidationError(
             code: 'V010',
-            message:
-                "Cannot update series '${update.id}' because it does not exist.",
+            message: "Cannot update series '${update.id}' because it does not exist.",
           ),
         );
       }
     }
 
     // V020: Error when update.annotations[].id not found
-    final updateAnnotations =
-        request.update?.annotations ?? const <AnnotationModification>[];
+    final updateAnnotations = request.update?.annotations ?? const <AnnotationModification>[];
     for (final update in updateAnnotations) {
       if (!effectiveAnnotationIds.contains(update.id)) {
         errors.add(
           ValidationError(
             code: 'V020',
-            message:
-                "Cannot update annotation '${update.id}' because it does not exist.",
+            message: "Cannot update annotation '${update.id}' because it does not exist.",
           ),
         );
       }

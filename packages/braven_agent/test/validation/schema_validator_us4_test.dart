@@ -43,9 +43,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V030: annotation referencing non-existent series should make chart invalid');
+          expect(result.isValid, isFalse, reason: 'V030: annotation referencing non-existent series should make chart invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V030'),
@@ -121,21 +119,15 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V031: point annotation without seriesId should be invalid');
+          expect(result.isValid, isFalse, reason: 'V031: point annotation without seriesId should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V031'),
             isTrue,
-            reason:
-                'Should emit V031 error for point annotation lacking seriesId',
+            reason: 'Should emit V031 error for point annotation lacking seriesId',
           );
           expect(
-            result.errors.any((e) =>
-                e.message.contains('seriesId') ||
-                e.message.contains('point') ||
-                e.message.contains('dataPointIndex')),
+            result.errors.any((e) => e.message.contains('seriesId') || e.message.contains('point') || e.message.contains('dataPointIndex')),
             isTrue,
             reason: 'Error message should explain why seriesId is required',
           );
@@ -170,9 +162,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V032: marker annotation without seriesId should be invalid');
+          expect(result.isValid, isFalse, reason: 'V032: marker annotation without seriesId should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V032'),
@@ -180,8 +170,7 @@ void main() {
             reason: 'Should emit V032 error for marker lacking seriesId',
           );
           expect(
-            result.errors.any((e) =>
-                e.message.contains('marker') || e.message.contains('seriesId')),
+            result.errors.any((e) => e.message.contains('marker') || e.message.contains('seriesId')),
             isTrue,
             reason: 'Error message should mention marker and seriesId',
           );
@@ -249,15 +238,12 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V033: horizontal referenceLine in perSeries without seriesId should be invalid');
+          expect(result.isValid, isFalse, reason: 'V033: horizontal referenceLine in perSeries without seriesId should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V033'),
             isTrue,
-            reason:
-                'Should emit V033 error for horizontal referenceLine lacking seriesId in perSeries mode',
+            reason: 'Should emit V033 error for horizontal referenceLine lacking seriesId in perSeries mode',
           );
         },
       );
@@ -279,8 +265,7 @@ void main() {
             annotations: [
               AnnotationConfig(
                 type: AnnotationType.referenceLine,
-                orientation:
-                    Orientation.vertical, // Vertical - no seriesId needed
+                orientation: Orientation.vertical, // Vertical - no seriesId needed
                 value: 0.5,
               ),
             ],
@@ -360,15 +345,12 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V034: horizontal zone in perSeries without seriesId should be invalid');
+          expect(result.isValid, isFalse, reason: 'V034: horizontal zone in perSeries without seriesId should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V034'),
             isTrue,
-            reason:
-                'Should emit V034 error for horizontal zone lacking seriesId in perSeries mode',
+            reason: 'Should emit V034 error for horizontal zone lacking seriesId in perSeries mode',
           );
         },
       );
@@ -400,8 +382,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V040: referenceLine without value should be invalid');
+          expect(result.isValid, isFalse, reason: 'V040: referenceLine without value should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V040'),
@@ -409,9 +390,7 @@ void main() {
             reason: 'Should emit V040 error for referenceLine lacking value',
           );
           expect(
-            result.errors.any((e) =>
-                e.message.contains('value') ||
-                e.message.contains('referenceLine')),
+            result.errors.any((e) => e.message.contains('value') || e.message.contains('referenceLine')),
             isTrue,
             reason: 'Error message should mention value or referenceLine',
           );
@@ -475,8 +454,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V041: zone without minValue should be invalid');
+          expect(result.isValid, isFalse, reason: 'V041: zone without minValue should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V041'),
@@ -508,8 +486,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V041: zone without maxValue should be invalid');
+          expect(result.isValid, isFalse, reason: 'V041: zone without maxValue should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V041'),
@@ -548,6 +525,66 @@ void main() {
           );
         },
       );
+
+      test(
+        'passes validation when zone has custom bounds (startX/endX)',
+        () {
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'power',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+            annotations: [
+              AnnotationConfig(
+                type: AnnotationType.zone,
+                startX: 1.0,
+                endX: 5.0, // Custom X bounds instead of minValue/maxValue
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validate(chart);
+
+          expect(
+            result.errors.any((e) => e.code == 'V041'),
+            isFalse,
+            reason: 'V041 should not trigger when zone has custom X bounds',
+          );
+        },
+      );
+
+      test(
+        'passes validation when zone has custom rectangle bounds',
+        () {
+          const chart = ChartConfiguration(
+            series: [
+              SeriesConfig(
+                id: 'power',
+                data: [DataPoint(x: 0, y: 100)],
+              ),
+            ],
+            annotations: [
+              AnnotationConfig(
+                type: AnnotationType.zone,
+                startX: 1.0,
+                endX: 5.0,
+                startY: 25.0,
+                endY: 75.0, // Full custom rectangle
+              ),
+            ],
+          );
+
+          final result = SchemaValidator.validate(chart);
+
+          expect(
+            result.errors.any((e) => e.code == 'V041'),
+            isFalse,
+            reason: 'V041 should not trigger when zone has custom rectangle bounds',
+          );
+        },
+      );
     });
 
     // ==========================================================
@@ -579,9 +616,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V042: marker referencing series without dataPointIndex or x/y should be invalid');
+          expect(result.isValid, isFalse, reason: 'V042: marker referencing series without dataPointIndex or x/y should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V042'),
@@ -618,8 +653,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V043: negative dataPointIndex should be invalid');
+          expect(result.isValid, isFalse, reason: 'V043: negative dataPointIndex should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V043'),
@@ -654,15 +688,12 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason:
-                  'V043: dataPointIndex beyond series length should be invalid');
+          expect(result.isValid, isFalse, reason: 'V043: dataPointIndex beyond series length should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V043'),
             isTrue,
-            reason:
-                'Should emit V043 error for dataPointIndex exceeding series length',
+            reason: 'Should emit V043 error for dataPointIndex exceeding series length',
           );
         },
       );
@@ -727,8 +758,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V044: textLabel without text should be invalid');
+          expect(result.isValid, isFalse, reason: 'V044: textLabel without text should be invalid');
           expect(result.errors, isNotEmpty);
           expect(
             result.errors.any((e) => e.code == 'V044'),
@@ -736,8 +766,7 @@ void main() {
             reason: 'Should emit V044 error for textLabel lacking text',
           );
           expect(
-            result.errors.any((e) =>
-                e.message.contains('text') || e.message.contains('textLabel')),
+            result.errors.any((e) => e.message.contains('text') || e.message.contains('textLabel')),
             isTrue,
             reason: 'Error message should mention text or textLabel',
           );
@@ -765,8 +794,7 @@ void main() {
 
           final result = SchemaValidator.validate(chart);
 
-          expect(result.isValid, isFalse,
-              reason: 'V044: textLabel with empty text should be invalid');
+          expect(result.isValid, isFalse, reason: 'V044: textLabel with empty text should be invalid');
           expect(
             result.errors.any((e) => e.code == 'V044'),
             isTrue,

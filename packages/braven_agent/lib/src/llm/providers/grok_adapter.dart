@@ -76,14 +76,22 @@ class GrokAdapter implements LLMProvider {
   ///
   /// The [config] must contain a valid API key.
   /// An optional [client] can be provided for testing purposes.
-  GrokAdapter(this._config, {http.Client? client})
-      : _client = client ?? http.Client();
+  GrokAdapter(this._config, {http.Client? client}) : _client = client ?? http.Client();
 
   @override
   String get id => 'grok';
 
   /// Returns the effective base URL for API requests.
   String get _baseUrl => _config.baseUrl ?? defaultBaseUrl;
+
+  /// Enable debug logging to console.
+  bool debugLogging = false;
+
+  void _debugLog(String message) {
+    if (debugLogging) {
+      print('[GrokAdapter] $message');
+    }
+  }
 
   @override
   Future<LLMResponse> generateResponse({
@@ -101,6 +109,27 @@ class GrokAdapter implements LLMProvider {
       stream: false,
     );
 
+    // Debug: Log the messages being sent
+    if (debugLogging) {
+      final messages = requestBody['messages'] as List<dynamic>;
+      _debugLog('=== SENDING ${messages.length} MESSAGES TO GROK ===');
+      for (var i = 0; i < messages.length; i++) {
+        final msg = messages[i] as Map<String, dynamic>;
+        final role = msg['role'];
+        final content = msg['content'];
+        final toolCallId = msg['tool_call_id'];
+        if (role == 'tool') {
+          _debugLog('  [$i] TOOL RESULT (id: $toolCallId):');
+          _debugLog('      ${content.toString().substring(0, content.toString().length.clamp(0, 300))}...');
+        } else if (role == 'assistant' && msg['tool_calls'] != null) {
+          _debugLog('  [$i] ASSISTANT with tool_calls: ${msg['tool_calls']}');
+        } else {
+          _debugLog('  [$i] $role: ${content?.toString().substring(0, (content?.toString().length ?? 0).clamp(0, 100)) ?? "(no content)"}...');
+        }
+      }
+      _debugLog('=== END MESSAGES ===');
+    }
+
     try {
       final response = await _client.post(
         Uri.parse('$_baseUrl/chat/completions'),
@@ -113,6 +142,23 @@ class GrokAdapter implements LLMProvider {
       }
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
+
+      // Debug: Log raw response
+      if (debugLogging) {
+        _debugLog('=== GROK RESPONSE ===');
+        final choices = json['choices'] as List<dynamic>?;
+        if (choices != null && choices.isNotEmpty) {
+          final message = (choices[0] as Map<String, dynamic>)['message'] as Map<String, dynamic>?;
+          if (message != null) {
+            _debugLog('  Role: ${message['role']}');
+            _debugLog(
+                '  Content: ${message['content']?.toString().substring(0, (message['content']?.toString().length ?? 0).clamp(0, 200)) ?? "null"}');
+            _debugLog('  Tool calls: ${message['tool_calls']}');
+          }
+        }
+        _debugLog('=== END RESPONSE ===');
+      }
+
       return _parseResponse(json);
     } catch (error, stackTrace) {
       _throwMappedError(error, stackTrace);
@@ -155,8 +201,7 @@ class GrokAdapter implements LLMProvider {
       // Track current tool call state for streaming
       final toolCallBuffers = <int, _ToolCallBuffer>{};
 
-      await for (final chunk
-          in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
         buffer += chunk;
 
         // Process complete SSE lines
@@ -218,18 +263,32 @@ class GrokAdapter implements LLMProvider {
     required LLMConfig effectiveConfig,
     required bool stream,
   }) {
+    final model = effectiveConfig.model == LLMConfig.defaultModel ? defaultModel : effectiveConfig.model;
+
+    // Check if using a reasoning model and add stronger tool error instructions
+    final isReasoningModel = model.contains('reasoning');
+    final effectiveSystemPrompt = isReasoningModel
+        ? '$systemPrompt\n\n'
+            'CRITICAL TOOL USAGE RULE: When a tool call fails, you MUST read the error message carefully. '
+            'The error will contain "SEND THIS:" followed by the exact JSON you should use. '
+            'Copy that JSON exactly in your next tool call. Do NOT ignore tool errors.'
+        : systemPrompt;
+
+    if (debugLogging && isReasoningModel) {
+      _debugLog('WARNING: Using reasoning model "$model" which may have issues processing tool errors.');
+      _debugLog('Consider using a non-reasoning model like "grok-4-1-fast-non-reasoning" for better tool handling.');
+    }
+
     final messages = <Map<String, dynamic>>[
       {
         'role': 'system',
-        'content': systemPrompt,
+        'content': effectiveSystemPrompt,
       },
       ..._convertMessages(history),
     ];
 
     final body = <String, dynamic>{
-      'model': effectiveConfig.model == LLMConfig.defaultModel
-          ? defaultModel
-          : effectiveConfig.model,
+      'model': model,
       'messages': messages,
       'max_tokens': effectiveConfig.maxTokens,
       'temperature': effectiveConfig.temperature,
@@ -296,10 +355,20 @@ class GrokAdapter implements LLMProvider {
     if (message.role == MessageRole.tool) {
       for (final content in message.content) {
         if (content is ToolResultContent) {
+          // For OpenAI-compatible APIs, prefix errors with STOP instruction
+          // since there's no isError field like Anthropic has.
+          // The error message already contains "SEND THIS:" with exact JSON.
+          String outputContent = content.output;
+          if (content.isError) {
+            // Make error impossible to ignore with STOP prefix
+            outputContent = 'TOOL CALL FAILED. STOP. READ THIS ERROR AND FIX IT:\n\n'
+                '$outputContent\n\n'
+                'YOUR NEXT TOOL CALL MUST USE THE EXACT JSON SHOWN ABOVE.';
+          }
           return {
             'role': 'tool',
             'tool_call_id': content.toolUseId,
-            'content': content.output,
+            'content': outputContent,
           };
         }
       }
@@ -583,8 +652,7 @@ class GrokAdapter implements LLMProvider {
 
     // Check for auth errors
     if (response.statusCode == 401 || response.statusCode == 403) {
-      throw Exception(
-          'Invalid API key. Please check your Grok API key and try again.');
+      throw Exception('Invalid API key. Please check your Grok API key and try again.');
     }
 
     throw Exception('Grok API error: $message');
@@ -604,8 +672,7 @@ class GrokAdapter implements LLMProvider {
 
     // Check for auth errors
     if (statusCode == 401 || statusCode == 403) {
-      throw Exception(
-          'Invalid API key. Please check your Grok API key and try again.');
+      throw Exception('Invalid API key. Please check your Grok API key and try again.');
     }
 
     throw Exception('Grok API error: $message');
