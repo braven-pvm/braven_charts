@@ -42,8 +42,79 @@ import 'package:braven_agent/braven_agent.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+/// Simple API key storage service using shared_preferences.
+///
+/// Keys are stored locally in the browser (web) or app storage (mobile).
+/// Keys are stored per-provider for convenience.
+class ApiKeyStore {
+  static const _keyPrefix = 'braven_agent_api_key_';
+  static const _providerKey = 'braven_agent_selected_provider';
+  static const _modelKey = 'braven_agent_selected_model';
+
+  static SharedPreferences? _prefs;
+
+  /// Initialize the store. Call once at app startup.
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  /// Get stored API key for a provider.
+  static String? getApiKey(String provider) {
+    // Map provider to base key (grok-responses uses same key as grok)
+    final baseProvider = provider == 'grok-responses' ? 'grok' : provider;
+    return _prefs?.getString('$_keyPrefix$baseProvider');
+  }
+
+  /// Save API key for a provider.
+  static Future<void> setApiKey(String provider, String apiKey) async {
+    // Map provider to base key (grok-responses uses same key as grok)
+    final baseProvider = provider == 'grok-responses' ? 'grok' : provider;
+    await _prefs?.setString('$_keyPrefix$baseProvider', apiKey);
+  }
+
+  /// Get last selected provider.
+  static String? getSelectedProvider() {
+    return _prefs?.getString(_providerKey);
+  }
+
+  /// Save selected provider.
+  static Future<void> setSelectedProvider(String provider) async {
+    await _prefs?.setString(_providerKey, provider);
+  }
+
+  /// Get last selected model.
+  static String? getSelectedModel() {
+    return _prefs?.getString(_modelKey);
+  }
+
+  /// Save selected model.
+  static Future<void> setSelectedModel(String model) async {
+    await _prefs?.setString(_modelKey, model);
+  }
+
+  /// Check if we have a stored key for any provider.
+  static bool hasAnyStoredKey() {
+    for (final provider in ['anthropic', 'openai', 'gemini', 'grok']) {
+      if (getApiKey(provider)?.isNotEmpty == true) return true;
+    }
+    return false;
+  }
+
+  /// Clear all stored keys.
+  static Future<void> clearAll() async {
+    for (final provider in ['anthropic', 'openai', 'gemini', 'grok']) {
+      await _prefs?.remove('$_keyPrefix$provider');
+    }
+    await _prefs?.remove(_providerKey);
+    await _prefs?.remove(_modelKey);
+  }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiKeyStore.init();
   runApp(const BravenAgentDemo());
 }
 
@@ -89,23 +160,34 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       (id: 'claude-opus-4-20250514', name: 'Claude Opus 4', description: 'Most capable, best for complex tasks'),
     ],
     'openai': [
-      // GPT-4o series (128K context)
-      (id: 'gpt-4o', name: 'GPT-4o', description: 'Latest flagship model (128K context)'),
-      (id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and affordable (128K context)'),
-      // GPT-4 Turbo (128K context)
-      (id: 'gpt-4-turbo', name: 'GPT-4 Turbo', description: 'GPT-4 Turbo (128K context)'),
-      // GPT-3.5 (16K context)
-      (id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and cheap (16K context)'),
+      // GPT-5 series (frontier, latest - Jan 2026)
+      (id: 'gpt-5.2', name: 'GPT-5.2', description: 'Best for coding and agentic tasks'),
+      (id: 'gpt-5.2-pro', name: 'GPT-5.2 Pro', description: 'Smarter, more precise responses'),
+      (id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast, cost-efficient'),
+      (id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest, most cost-efficient'),
+      // GPT-4.1 series (non-reasoning)
+      (id: 'gpt-4.1', name: 'GPT-4.1', description: 'Smartest non-reasoning model'),
+      (id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', description: 'Smaller, faster'),
+      // Legacy (still available)
+      (id: 'gpt-4o', name: 'GPT-4o', description: 'Previous flagship (128K context)'),
+      (id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and affordable'),
     ],
     'gemini': [
-      // Gemini 2.0 (1M-2M context)
-      (id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Fast multimodal (1M context)'),
-      (id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', description: 'Lightweight (1M context)'),
-      (id: 'gemini-2.0-pro', name: 'Gemini 2.0 Pro', description: 'Most capable (1M context)'),
-      // Gemini 1.5
-      (id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and versatile (1M context)'),
-      (id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Complex reasoning (2M context)'),
+      // Gemini 3 (latest - Jan 2026)
+      (id: 'gemini-3-pro', name: 'Gemini 3 Pro', description: 'Most powerful agentic model'),
+      (id: 'gemini-3-flash', name: 'Gemini 3 Flash', description: 'Best for speed and scale'),
+      // Gemini 2.5
+      (id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Best price-performance, agentic'),
+      (id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Fastest, cost-efficient'),
+      (id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Advanced thinking model'),
     ],
+    // Grok Responses API (hybrid mode - RECOMMENDED for agentic workflows)
+    'grok-responses': [
+      (id: 'grok-4-1-fast', name: 'Grok 4.1 Fast', description: 'Best for agentic mode (hybrid server/client)'),
+      (id: 'grok-4-1-fast-reasoning', name: 'Grok 4.1 Reasoning', description: 'With extended reasoning'),
+      (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Non-Reasoning', description: 'Faster, less reasoning'),
+    ],
+    // Grok Chat Completions API (OpenAI-compatible - less reliable for tools)
     'grok': [
       // Grok 4 series - NON-REASONING FIRST (reasoning models have tool error issues)
       (id: 'grok-4-1-fast-non-reasoning', name: 'Grok 4.1 Fast', description: 'Latest, best for tools (2M context)'),
@@ -126,7 +208,26 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
   @override
   void initState() {
     super.initState();
-    // Check for API keys in order of preference
+    _loadSavedSettings();
+  }
+
+  Future<void> _loadSavedSettings() async {
+    // 1. First, try to restore from saved preferences
+    final savedProvider = ApiKeyStore.getSelectedProvider();
+    final savedModel = ApiKeyStore.getSelectedModel();
+
+    if (savedProvider != null) {
+      final savedKey = ApiKeyStore.getApiKey(savedProvider);
+      if (savedKey != null && savedKey.isNotEmpty) {
+        _selectedProvider = savedProvider;
+        _selectedModel = savedModel ?? _availableModels[savedProvider]!.first.id;
+        _apiKeyController.text = savedKey;
+        _setApiKey(savedKey);
+        return;
+      }
+    }
+
+    // 2. Fall back to environment variables
     final anthropicKey = const String.fromEnvironment('ANTHROPIC_API_KEY');
     if (anthropicKey.isNotEmpty) {
       _selectedProvider = 'anthropic';
@@ -137,21 +238,22 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
     final openaiKey = const String.fromEnvironment('OPENAI_API_KEY');
     if (openaiKey.isNotEmpty) {
       _selectedProvider = 'openai';
-      _selectedModel = 'gpt-4o';
+      _selectedModel = 'gpt-5.2';
       _setApiKey(openaiKey);
       return;
     }
     final geminiKey = const String.fromEnvironment('GEMINI_API_KEY');
     if (geminiKey.isNotEmpty) {
       _selectedProvider = 'gemini';
-      _selectedModel = 'gemini-2.0-flash';
+      _selectedModel = 'gemini-2.5-flash';
       _setApiKey(geminiKey);
       return;
     }
     final grokKey = const String.fromEnvironment('GROK_API_KEY');
     if (grokKey.isNotEmpty) {
-      _selectedProvider = 'grok';
-      _selectedModel = 'grok-4-fast-non-reasoning';
+      // Prefer Responses API (hybrid mode) for better agentic tool handling
+      _selectedProvider = 'grok-responses';
+      _selectedModel = 'grok-4-1-fast';
       _setApiKey(grokKey);
     }
   }
@@ -161,11 +263,25 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       _selectedProvider = provider;
       // Set default model for the selected provider
       _selectedModel = _availableModels[provider]!.first.id;
+      // Load stored API key for this provider
+      final storedKey = ApiKeyStore.getApiKey(provider);
+      if (storedKey != null && storedKey.isNotEmpty) {
+        _apiKeyController.text = storedKey;
+      } else {
+        _apiKeyController.clear();
+      }
     });
+    // Save selected provider
+    ApiKeyStore.setSelectedProvider(provider);
   }
 
   void _setApiKey(String apiKey) {
     _session?.dispose();
+
+    // Save API key and selections to store
+    ApiKeyStore.setApiKey(_selectedProvider, apiKey);
+    ApiKeyStore.setSelectedProvider(_selectedProvider);
+    ApiKeyStore.setSelectedModel(_selectedModel);
 
     final LLMProvider llmProvider;
     final config = LLMConfig(
@@ -180,6 +296,10 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
         llmProvider = adapter;
       case 'gemini':
         final adapter = GeminiAdapter(config);
+        adapter.debugLogging = true;
+        llmProvider = adapter;
+      case 'grok-responses':
+        final adapter = GrokResponsesAdapter(config);
         adapter.debugLogging = true;
         llmProvider = adapter;
       case 'grok':
@@ -251,7 +371,18 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
       );
     }
 
-    return ChatScreen(session: session);
+    return ChatScreen(
+      session: session,
+      onChangeProvider: _resetToSettings,
+    );
+  }
+
+  void _resetToSettings() {
+    setState(() {
+      _apiKey = null;
+      _session?.dispose();
+      _session = null;
+    });
   }
 
   Widget _buildApiKeyInput() {
@@ -337,12 +468,22 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
                         ),
                       ),
                       DropdownMenuItem(
+                        value: 'grok-responses',
+                        child: Row(
+                          children: [
+                            Icon(Icons.psychology_alt, size: 20),
+                            SizedBox(width: 8),
+                            Text('xAI (Grok Responses API)'),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
                         value: 'grok',
                         child: Row(
                           children: [
                             Icon(Icons.psychology, size: 20),
                             SizedBox(width: 8),
-                            Text('xAI (Grok)'),
+                            Text('xAI (Grok Chat API)'),
                           ],
                         ),
                       ),
@@ -433,9 +574,10 @@ class _ApiKeyGateScreenState extends State<ApiKeyGateScreen> {
 }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.session});
+  const ChatScreen({super.key, required this.session, this.onChangeProvider});
 
   final AgentSession session;
+  final VoidCallback? onChangeProvider;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -599,6 +741,14 @@ class _ChatScreenState extends State<ChatScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Braven Agentic Charts'),
+            actions: [
+              if (widget.onChangeProvider != null)
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  tooltip: 'Change Provider/Model',
+                  onPressed: widget.onChangeProvider,
+                ),
+            ],
           ),
           body: SafeArea(
             child: LayoutBuilder(

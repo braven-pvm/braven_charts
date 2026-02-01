@@ -349,6 +349,7 @@ class AgentSessionImpl implements AgentSession {
     // Create tool result message and add to history
     final toolResultContent = ToolResultContent(
       toolUseId: toolUse.id,
+      toolName: toolUse.toolName,
       output: toolOutput,
       isError: isError,
     );

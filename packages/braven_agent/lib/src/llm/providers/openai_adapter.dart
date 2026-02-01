@@ -42,20 +42,19 @@ import '../models/message_content.dart';
 ///
 /// ## Supported Models (as of Feb 2026)
 ///
-/// GPT-4o series:
-/// - `gpt-4o` - Latest GPT-4o (128K context)
-/// - `gpt-4o-mini` - Smaller, faster GPT-4o (128K context)
+/// GPT-5 series (frontier, latest):
+/// - `gpt-5.2` - Best for coding and agentic tasks (default)
+/// - `gpt-5.2-pro` - Smarter, more precise responses
+/// - `gpt-5-mini` - Fast, cost-efficient
+/// - `gpt-5-nano` - Fastest, most cost-efficient
 ///
-/// GPT-4 Turbo:
-/// - `gpt-4-turbo` - GPT-4 Turbo (128K context)
-/// - `gpt-4-turbo-preview` - Preview version
+/// GPT-4.1 series (non-reasoning):
+/// - `gpt-4.1` - Smartest non-reasoning model
+/// - `gpt-4.1-mini` - Smaller, faster
 ///
-/// GPT-4:
-/// - `gpt-4` - Original GPT-4 (8K context)
-/// - `gpt-4-32k` - Extended context (32K)
-///
-/// GPT-3.5:
-/// - `gpt-3.5-turbo` - Fast and cheap (16K context)
+/// Legacy:
+/// - `gpt-4o` - Previous flagship (128K context)
+/// - `gpt-4o-mini` - Fast and affordable
 class OpenAIAdapter implements LLMProvider {
   /// The LLM configuration.
   final LLMConfig _config;
@@ -70,7 +69,7 @@ class OpenAIAdapter implements LLMProvider {
   static const String defaultBaseUrl = 'https://api.openai.com/v1';
 
   /// Default OpenAI model.
-  static const String defaultModel = 'gpt-4o';
+  static const String defaultModel = 'gpt-5.2';
 
   /// Creates an [OpenAIAdapter] with the given configuration.
   ///
@@ -276,7 +275,8 @@ class OpenAIAdapter implements LLMProvider {
     final body = <String, dynamic>{
       'model': model,
       'messages': messages,
-      'max_tokens': effectiveConfig.maxTokens,
+      // GPT-5+ models require 'max_completion_tokens' instead of 'max_tokens'
+      'max_completion_tokens': effectiveConfig.maxTokens,
       'temperature': effectiveConfig.temperature,
       'stream': stream,
     };

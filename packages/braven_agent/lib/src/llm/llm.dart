@@ -31,4 +31,5 @@ export 'models/message_content.dart';
 export 'providers/anthropic_adapter.dart';
 export 'providers/gemini_adapter.dart';
 export 'providers/grok_adapter.dart';
+export 'providers/grok_responses_adapter.dart';
 export 'providers/openai_adapter.dart';

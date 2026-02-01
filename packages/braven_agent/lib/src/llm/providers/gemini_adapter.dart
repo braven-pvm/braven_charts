@@ -41,15 +41,14 @@ import '../models/message_content.dart';
 ///
 /// ## Supported Models (as of Feb 2026)
 ///
-/// Gemini 2.0:
-/// - `gemini-2.0-flash` - Fast multimodal (1M context)
-/// - `gemini-2.0-flash-lite` - Lightweight (1M context)
-/// - `gemini-2.0-pro` - Most capable (1M context)
+/// Gemini 3 (latest):
+/// - `gemini-3-pro` - Most powerful agentic model
+/// - `gemini-3-flash` - Best for speed and scale
 ///
-/// Gemini 1.5:
-/// - `gemini-1.5-flash` - Fast and versatile (1M context)
-/// - `gemini-1.5-flash-8b` - High volume (1M context)
-/// - `gemini-1.5-pro` - Complex reasoning (2M context)
+/// Gemini 2.5:
+/// - `gemini-2.5-flash` - Best price-performance, agentic (default)
+/// - `gemini-2.5-flash-lite` - Fastest, cost-efficient
+/// - `gemini-2.5-pro` - Advanced thinking model
 class GeminiAdapter implements LLMProvider {
   /// The LLM configuration.
   final LLMConfig _config;
@@ -64,7 +63,7 @@ class GeminiAdapter implements LLMProvider {
   static const String defaultBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
   /// Default Gemini model.
-  static const String defaultModel = 'gemini-2.0-flash';
+  static const String defaultModel = 'gemini-2.5-flash';
 
   /// Creates a [GeminiAdapter] with the given configuration.
   ///

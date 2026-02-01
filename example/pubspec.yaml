@@ -34,6 +34,9 @@ dependencies:
   # Markdown rendering for AI agent responses
   gpt_markdown: ^1.1.5
 
+  # Persistent storage for API keys
+  shared_preferences: ^2.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
