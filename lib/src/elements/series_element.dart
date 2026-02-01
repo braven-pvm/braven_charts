@@ -64,8 +64,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 
   // Get effective style for first segment (from first point)
   Color currentColor = points[0].segmentStyle?.color ?? defaultColor;
-  double currentWidth =
-      points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
+  double currentWidth = points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
 
   // Iterate through points, detecting style changes
   // Note: We check points[i] for segment i→i+1's style
@@ -164,9 +163,7 @@ class SeriesElement implements ChartElement {
       return (series as AreaChartSeries).strokeWidth;
     }
     // Fall back to theme for series types without explicit strokeWidth
-    return seriesTheme?.lineWidthAt(seriesIndex) ??
-        _deprecatedStrokeWidth ??
-        2.0;
+    return seriesTheme?.lineWidthAt(seriesIndex) ?? _deprecatedStrokeWidth ?? 2.0;
   }
 
   // Get effective color: series-explicit > deprecated > theme > default
@@ -177,9 +174,7 @@ class SeriesElement implements ChartElement {
       return series.color!;
     }
     // Fall back to deprecated parameter, then theme, then default
-    return _deprecatedThemeColor ??
-        seriesTheme?.colorAt(seriesIndex) ??
-        const Color(0xFF2196F3);
+    return _deprecatedThemeColor ?? seriesTheme?.colorAt(seriesIndex) ?? const Color(0xFF2196F3);
   }
 
   // Get effective marker size: series-explicit > theme > default
@@ -199,14 +194,24 @@ class SeriesElement implements ChartElement {
   }
 
   // Get effective marker shape from theme or default
-  MarkerShape get markerShape =>
-      seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
+  MarkerShape get markerShape => seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows path caching to work - transform stored at construction stays fixed,
   /// but _currentTransform updates on every paint.
+  ///
+  /// IMPORTANT: If Y bounds change (perSeries normalization mode), bounds are
+  /// recomputed so QuadTree hit detection works correctly.
   void updateTransform(ChartTransform newTransform) {
+    // Check if Y bounds changed - if so, recompute element bounds
+    final yBoundsChanged = _currentTransform.dataYMin != newTransform.dataYMin || _currentTransform.dataYMax != newTransform.dataYMax;
+
     _currentTransform = newTransform;
+
+    // Recompute bounds if Y range changed (needed for perSeries normalization hit testing)
+    if (yBoundsChanged) {
+      _computeBounds();
+    }
   }
 
   /// Update the series data without recreating the element.
@@ -216,8 +221,7 @@ class SeriesElement implements ChartElement {
   /// [skipBoundsComputation] should be true for streaming updates where
   /// bounds are tracked externally (in StreamingBuffer). This avoids
   /// expensive O(n) iteration through all points on every frame.
-  void updateSeries(ChartSeries newSeries,
-      {bool skipBoundsComputation = true}) {
+  void updateSeries(ChartSeries newSeries, {bool skipBoundsComputation = true}) {
     // Check if we need to invalidate path cache
     final pointCountChanged = newSeries.points.length != series.points.length;
 
@@ -256,14 +260,16 @@ class SeriesElement implements ChartElement {
   // Cache the rendered path to avoid recalculating on every paint
   Path? _cachedPath;
   List<Offset>? _cachedTransformedPoints;
-  List<int>?
-      _cachedOriginalIndices; // Maps visible point index → original series.points index
+  List<int>? _cachedOriginalIndices; // Maps visible point index → original series.points index
   late ChartTransform _cachedTransform;
 
   // Segment color caching - fast-path check result
   bool? _cachedHasSegmentOverrides;
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
+  ///
+  /// Uses _currentTransform for coordinate conversion so bounds are correct
+  /// in perSeries normalization mode where each series has different Y bounds.
   void _computeBounds() {
     if (series.isEmpty) {
       _bounds = Rect.zero;
@@ -276,7 +282,8 @@ class SeriesElement implements ChartElement {
     double maxY = double.negativeInfinity;
 
     for (final point in series.points) {
-      final plotPos = transform.dataToPlot(point.x, point.y);
+      // Use _currentTransform for perSeries normalization support
+      final plotPos = _currentTransform.dataToPlot(point.x, point.y);
       minX = plotPos.dx < minX ? plotPos.dx : minX;
       maxX = plotPos.dx > maxX ? plotPos.dx : maxX;
       minY = plotPos.dy < minY ? plotPos.dy : minY;
@@ -285,8 +292,7 @@ class SeriesElement implements ChartElement {
 
     // Add padding for stroke width
     final padding = strokeWidth / 2;
-    _bounds = Rect.fromLTRB(
-        minX - padding, minY - padding, maxX + padding, maxY + padding);
+    _bounds = Rect.fromLTRB(minX - padding, minY - padding, maxX + padding, maxY + padding);
   }
 
   @override
@@ -326,7 +332,7 @@ class SeriesElement implements ChartElement {
 
       // CRITICAL: Use _currentTransform, not transform!
       // In perSeries normalization mode, _currentTransform has the correct
-      // per-series Y bounds (set via updateTransform during painting).
+      // per-series Y bounds (set via updateTransform before hit testing).
       // Using the initial 'transform' would use global Y bounds, causing
       // hit detection to fail when series have different Y scales.
       final plotP1 = _currentTransform.dataToPlot(p1.x, p1.y);
@@ -353,13 +359,11 @@ class SeriesElement implements ChartElement {
     }
 
     // Project point onto line segment (clamped to [0, 1])
-    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
-        lengthSquared;
+    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) / lengthSquared;
     final clampedT = t.clamp(0.0, 1.0);
 
     // Find closest point on segment
-    final closest =
-        Offset(segStart.dx + clampedT * dx, segStart.dy + clampedT * dy);
+    final closest = Offset(segStart.dx + clampedT * dx, segStart.dy + clampedT * dy);
 
     return (point - closest).distance;
   }
@@ -388,8 +392,7 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  void _paintLineSeries(
-      Canvas canvas, LineChartSeries series, Color baseColor) {
+  void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
     // FAST PATH CHECK: If any segment has style overrides, use multi-style rendering
     // This check is cached to avoid O(n) scan on every paint
     if (_hasSegmentOverrides(series)) {
@@ -409,14 +412,12 @@ class SeriesElement implements ChartElement {
     }
 
     // O(n) scan, but only done once and cached
-    _cachedHasSegmentOverrides =
-        series.points.any((p) => p.segmentStyle != null);
+    _cachedHasSegmentOverrides = series.points.any((p) => p.segmentStyle != null);
     return _cachedHasSegmentOverrides!;
   }
 
   /// Original single-color line rendering (fast path).
-  void _paintLineSeriesSingleColor(
-      Canvas canvas, LineChartSeries series, Color baseColor) {
+  void _paintLineSeriesSingleColor(Canvas canvas, LineChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
     final opacity = isSelected
         ? 1.0
@@ -434,15 +435,13 @@ class SeriesElement implements ChartElement {
       ..strokeJoin = StrokeJoin.round;
 
     // Check if we need to regenerate the path (transform changed or no cache)
-    final needsRegeneration =
-        _cachedPath == null || _cachedTransform != _currentTransform;
+    final needsRegeneration = _cachedPath == null || _cachedTransform != _currentTransform;
 
     if (needsRegeneration) {
       // PERFORMANCE OPTIMIZATION: Only process points within visible viewport
       // During streaming with 500+ points but only 100 visible, this saves 80% of work
       final visiblePoints = <ChartDataPoint>[];
-      final visibleIndices =
-          <int>[]; // Track original indices for hover matching
+      final visibleIndices = <int>[]; // Track original indices for hover matching
       final xMin = _currentTransform.dataXMin;
       final xMax = _currentTransform.dataXMax;
 
@@ -498,9 +497,7 @@ class SeriesElement implements ChartElement {
       }
 
       // PRE-TRANSFORM visible points ONCE to avoid redundant calculations
-      final transformedPoints = visiblePoints
-          .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-          .toList();
+      final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
       final path = Path();
       path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
@@ -556,8 +553,7 @@ class SeriesElement implements ChartElement {
   ///
   /// **Performance**: Regions are cached. Bezier tangents use full point context
   /// for smooth curves at color boundaries.
-  void _paintLineSeriesMultiStyle(
-      Canvas canvas, LineChartSeries series, Color baseColor) {
+  void _paintLineSeriesMultiStyle(Canvas canvas, LineChartSeries series, Color baseColor) {
     final opacity = _getOpacity();
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
 
@@ -612,13 +608,10 @@ class SeriesElement implements ChartElement {
     if (visiblePoints.length < 2) return;
 
     // Pre-transform ALL visible points once
-    final transformedPoints = visiblePoints
-        .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-        .toList();
+    final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
     // Analyze style regions (uses visible points, not full series)
-    final regions =
-        _analyzeStyleRegions(visiblePoints, baseColor, effectiveStrokeWidth);
+    final regions = _analyzeStyleRegions(visiblePoints, baseColor, effectiveStrokeWidth);
 
     // Paint each region
     for (final region in regions) {
@@ -679,8 +672,7 @@ class SeriesElement implements ChartElement {
 
         case LineInterpolation.bezier:
           // Calculate control points using FULL context for smooth tangents
-          final (cp1, cp2) =
-              _calculateBezierControlPoints(allPoints, i, tension);
+          final (cp1, cp2) = _calculateBezierControlPoints(allPoints, i, tension);
           path.cubicTo(
             cp1.dx,
             cp1.dy,
@@ -749,8 +741,7 @@ class SeriesElement implements ChartElement {
             : 0.7;
   }
 
-  void _paintScatterSeries(
-      Canvas canvas, ScatterChartSeries series, Color baseColor) {
+  void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
     final opacity = isSelected
         ? 1.0
@@ -758,8 +749,7 @@ class SeriesElement implements ChartElement {
             ? 0.8
             : 0.7;
     // Use theme marker size if available, otherwise series-specific size
-    final defaultMarkerSize =
-        seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
+    final defaultMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
 
     // Check if any point has style overrides
     final hasOverrides = series.points.any((p) => p.pointStyle != null);
@@ -790,14 +780,11 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  void _paintAreaSeries(
-      Canvas canvas, AreaChartSeries series, Color baseColor) {
+  void _paintAreaSeries(Canvas canvas, AreaChartSeries series, Color baseColor) {
     if (series.points.isEmpty) return;
 
     // PRE-TRANSFORM all points ONCE
-    final transformedPoints = series.points
-        .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-        .toList();
+    final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
     // Check if any segment has style overrides
     final hasOverrides = series.points.any((p) => p.segmentStyle != null);
@@ -872,8 +859,7 @@ class SeriesElement implements ChartElement {
         }
         break;
       case LineInterpolation.bezier:
-        _addBezierToPath(path, transformedPoints, series.tension,
-            startIndex: 1);
+        _addBezierToPath(path, transformedPoints, series.tension, startIndex: 1);
         break;
       case LineInterpolation.stepped:
         _addSteppedToPath(path, transformedPoints, startIndex: 1);
@@ -1004,8 +990,7 @@ class SeriesElement implements ChartElement {
       case LineInterpolation.bezier:
         // For bezier, calculate control points for each segment
         for (int i = startIndex; i < endIndex; i++) {
-          final (cp1, cp2) =
-              _calculateBezierControlPoints(transformedPoints, i, tension);
+          final (cp1, cp2) = _calculateBezierControlPoints(transformedPoints, i, tension);
           path.cubicTo(
             cp1.dx,
             cp1.dy,
@@ -1057,8 +1042,7 @@ class SeriesElement implements ChartElement {
     // Pre-calculate default bar width (in pixels)
     double defaultBarWidth;
     if (series.barWidthPixels != null) {
-      defaultBarWidth =
-          series.barWidthPixels! / _currentTransform.dataPerPixelX;
+      defaultBarWidth = series.barWidthPixels! / _currentTransform.dataPerPixelX;
       defaultBarWidth = defaultBarWidth.clamp(series.minWidth, series.maxWidth);
     } else {
       final spacingInPixels = _calculateXAxisSpacing(series.points);
@@ -1172,11 +1156,8 @@ class SeriesElement implements ChartElement {
 
   /// Add bezier curves using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   /// Uses Catmull-Rom spline converted to cubic bezier, ensuring curve passes through all data points.
-  void _addBezierToPath(
-      Path path, List<Offset> transformedPoints, double tension,
-      {int startIndex = 1}) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 
@@ -1194,9 +1175,7 @@ class SeriesElement implements ChartElement {
       final p0 = transformedPoints[i > 1 ? i - 2 : 0];
       final p1 = transformedPoints[i - 1];
       final p2 = transformedPoints[i];
-      final p3 = transformedPoints[i < transformedPoints.length - 1
-          ? i + 1
-          : transformedPoints.length - 1];
+      final p3 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : transformedPoints.length - 1];
 
       // Catmull-Rom to cubic bezier control points
       // Control point 1: 1/3 of the way from p1 toward the tangent direction
@@ -1212,10 +1191,8 @@ class SeriesElement implements ChartElement {
   }
 
   /// Add stepped lines using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
-  void _addSteppedToPath(Path path, List<Offset> transformedPoints,
-      {int startIndex = 1}) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addSteppedToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 
@@ -1229,10 +1206,8 @@ class SeriesElement implements ChartElement {
   }
 
   /// Add monotone curves using PRE-TRANSFORMED points (currently uses linear)
-  void _addMonotoneToPath(Path path, List<Offset> transformedPoints,
-      {int startIndex = 1}) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addMonotoneToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 

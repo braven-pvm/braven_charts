@@ -2284,14 +2284,20 @@ class ThresholdAnnotationElement extends ChartElement {
 /// A chart element that renders a trend annotation line.
 ///
 /// Calculates and displays statistical trend lines over series data.
+///
+/// In perSeries normalization mode, the trend line Y values must be
+/// normalized using the appropriate axis bounds. Pass [axisBounds]
+/// to enable correct positioning when each series has its own Y range.
 class TrendAnnotationElement extends ChartElement {
   TrendAnnotationElement({
     required this.annotation,
     required this.series,
     required this.transform,
+    this.axisBounds,
   })  : _isSelected = false,
         _isHovered = false,
-        _currentTransform = transform {
+        _currentTransform = transform,
+        _axisBounds = axisBounds {
     _calculateTrendPoints();
   }
 
@@ -2299,6 +2305,8 @@ class TrendAnnotationElement extends ChartElement {
   final ChartSeries series;
   final ChartTransform transform;
   ChartTransform _currentTransform;
+  final DataRange? axisBounds;
+  DataRange? _axisBounds;
   bool _isSelected;
   bool _isHovered;
   List<Offset> _trendPoints = [];
@@ -2306,6 +2314,35 @@ class TrendAnnotationElement extends ChartElement {
   /// Update the current transform before painting.
   void updateTransform(ChartTransform newTransform) {
     _currentTransform = newTransform;
+  }
+
+  /// Update axis bounds for perSeries normalization.
+  void updateAxisBounds(DataRange? newBounds) {
+    _axisBounds = newBounds;
+  }
+
+  /// Converts a data point to plot coordinates.
+  ///
+  /// When [_axisBounds] is set (perSeries normalization mode), the Y value
+  /// is first normalized to 0-1 range using axis bounds, then mapped to
+  /// the plot height. This ensures trend lines appear at the correct
+  /// position when each series has its own Y-axis range.
+  ///
+  /// When axisBounds is null, uses standard transform.
+  Offset _dataToPlot(double x, double y) {
+    final bounds = _axisBounds;
+    if (bounds != null && bounds.span > 0) {
+      // PerSeries mode: normalize Y to 0-1, then map to screen
+      // X axis uses standard transform
+      final plotX = _currentTransform.dataToPlot(x, 0).dx;
+      // Y axis uses axisBounds normalization (same formula as ThresholdAnnotationElement)
+      final normalizedY = (y - bounds.min) / bounds.span;
+      final plotY = _currentTransform.plotHeight * (1.0 - normalizedY);
+      return Offset(plotX, plotY);
+    } else {
+      // Standard mode: use transform directly
+      return _currentTransform.dataToPlot(x, y);
+    }
   }
 
   /// Calculate trend line points based on series data and trend type.
@@ -2559,7 +2596,8 @@ class TrendAnnotationElement extends ChartElement {
     if (_trendPoints.isEmpty) return Rect.zero;
 
     // Calculate bounds from trend points in plot coordinates
-    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+    // Use _dataToPlot for perSeries normalization support
+    final plotPoints = _trendPoints.map((p) => _dataToPlot(p.dx, p.dy)).toList();
 
     double minX = plotPoints.first.dx;
     double maxX = plotPoints.first.dx;
@@ -2605,8 +2643,8 @@ class TrendAnnotationElement extends ChartElement {
   bool hitTest(Offset position) {
     if (_trendPoints.isEmpty) return false;
 
-    // Convert trend points to plot coordinates
-    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+    // Convert trend points to plot coordinates using _dataToPlot for perSeries support
+    final plotPoints = _trendPoints.map((p) => _dataToPlot(p.dx, p.dy)).toList();
 
     // Check if click is near any line segment
     final hitRadius = annotation.lineWidth + 4;
@@ -2639,8 +2677,8 @@ class TrendAnnotationElement extends ChartElement {
       ..strokeWidth = _isSelected ? annotation.lineWidth * 1.5 : annotation.lineWidth
       ..style = PaintingStyle.stroke;
 
-    // Convert trend points to plot coordinates
-    final plotPoints = _trendPoints.map((p) => _currentTransform.dataToPlot(p.dx, p.dy)).toList();
+    // Convert trend points to plot coordinates using _dataToPlot for perSeries support
+    final plotPoints = _trendPoints.map((p) => _dataToPlot(p.dx, p.dy)).toList();
 
     // Draw trend line
     if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {

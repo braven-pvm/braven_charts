@@ -1465,12 +1465,28 @@ class ChartRenderBox extends RenderBox {
     // Convert widget coordinates to plot coordinates
     final plotPosition = widgetToPlot(widgetPosition);
 
-    // Query spatial index for candidate elements (in plot space)
-    // Use 18px radius to account for edge zones that extend 8px outside bounds
-    // (10px base tolerance + 8px max edge width = 18px total)
-    // NOTE: QuadTree now inserts elements into ALL overlapping quadrants,
-    // so this smaller radius is sufficient (previously needed 50px due to center-only insertion bug)
-    final candidates = _spatialIndex!.query(plotPosition, radius: 18);
+    // In perSeries normalization mode, QuadTree bounds for SeriesElements are
+    // incorrect because they were computed with the initial global transform.
+    // We need to ensure transforms are updated and check ALL series elements
+    // directly, bypassing the spatial index for series.
+    final isPerSeriesMode = _multiAxisManager.isMultiAxisNormalizationActive();
+
+    List<ChartElement> candidates;
+
+    if (isPerSeriesMode) {
+      // Get series elements directly and update their transforms
+      final seriesElements = _elements.whereType<SeriesElement>().toList();
+      _ensureSeriesTransformsUpdated(seriesElements.cast<ChartElement>());
+
+      // Query spatial index for non-series elements (annotations, etc.)
+      final nonSeriesCandidates = _spatialIndex!.query(plotPosition, radius: 18).where((e) => e is! SeriesElement).toList();
+
+      // Combine: all series elements + spatially-nearby non-series elements
+      candidates = [...seriesElements, ...nonSeriesCandidates];
+    } else {
+      // Standard mode: use spatial index normally
+      candidates = _spatialIndex!.query(plotPosition, radius: 18);
+    }
 
     if (candidates.isEmpty) return null;
 
@@ -1497,6 +1513,43 @@ class ChartRenderBox extends RenderBox {
       return 0; // Equal priority and type
     });
     return hits.first;
+  }
+
+  /// Ensures SeriesElement transforms are updated before hit testing.
+  ///
+  /// In perSeries normalization mode, each series needs its own Y bounds
+  /// in the transform. This is normally done during painting, but hit testing
+  /// may occur before the current frame's paint (e.g., on pointer events).
+  ///
+  /// This method applies the same per-series transform logic used during
+  /// painting, ensuring hit detection works correctly in normalized mode.
+  void _ensureSeriesTransformsUpdated(List<ChartElement> candidates) {
+    if (_transform == null) return;
+
+    // Only need to update transforms in multi-axis normalization mode
+    if (!_multiAxisManager.isMultiAxisNormalizationActive()) return;
+
+    // Get axis bounds and series-to-axis mapping
+    final axisBounds = _computeAxisBounds(forPainting: true);
+    final effectiveBindings = _getEffectiveBindings();
+    final seriesToAxisMap = {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId};
+
+    // Update transform for each SeriesElement candidate
+    for (final element in candidates) {
+      if (element is SeriesElement) {
+        final axisId = seriesToAxisMap[element.id];
+        if (axisId != null && axisBounds.containsKey(axisId)) {
+          final axisRange = axisBounds[axisId]!;
+          final perSeriesTransform = _transform!.copyWith(
+            dataYMin: axisRange.min,
+            dataYMax: axisRange.max,
+          );
+          element.updateTransform(perSeriesTransform);
+        } else {
+          element.updateTransform(_transform!);
+        }
+      }
+    }
   }
 
   /// Finds all elements within a rectangular region (for box select).
@@ -2052,6 +2105,15 @@ class ChartRenderBox extends RenderBox {
           }
         } else if (element is TrendAnnotationElement) {
           element.updateTransform(_transform!);
+          // For perSeries mode: update axis bounds for correct Y-value normalization
+          // Use seriesId from the annotation's linked series
+          if (thresholdSeriesBounds != null && thresholdSeriesBounds.isNotEmpty) {
+            final seriesId = element.annotation.seriesId;
+            final axisBoundsToUse = thresholdSeriesBounds[seriesId];
+            element.updateAxisBounds(axisBoundsToUse);
+          } else {
+            element.updateAxisBounds(null);
+          }
         } else if (element is PinAnnotationElement) {
           element.updateTransform(_transform!);
         }
