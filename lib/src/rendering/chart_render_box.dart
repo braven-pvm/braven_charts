@@ -2558,4 +2558,25 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
     print('=== END DENORMALIZE DEBUG ===');
     return (normalizedStartY, normalizedEndY);
   }
+
+  @override
+  (double min, double max) getActualYRange() {
+    // In perSeries mode, use axisBounds (actual data range)
+    // In other modes, use transform's Y range
+    if (isPerSeriesMode) {
+      final axisBounds = _renderBox._computeAxisBounds();
+      if (axisBounds.isNotEmpty) {
+        final bounds = axisBounds.values.first;
+        return (bounds.min, bounds.max);
+      }
+    }
+
+    // Fallback to transform range
+    final transform = _renderBox._transform;
+    if (transform != null) {
+      return (transform.dataYMin, transform.dataYMax);
+    }
+
+    return (0.0, 1.0);
+  }
 }

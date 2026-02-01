@@ -152,6 +152,12 @@ abstract class EventHandlerDelegate {
     String? seriesId,
   });
 
+  /// Gets the actual Y data range for snapping calculations.
+  ///
+  /// In perSeries mode, returns the axis bounds (actual data range).
+  /// In other modes, returns the transform's Y range.
+  (double min, double max) getActualYRange();
+
   /// Whether perSeries normalization mode is active.
   bool get isPerSeriesMode;
 }
@@ -947,7 +953,9 @@ class EventHandlerManager {
       if (seriesElements.isNotEmpty) {
         final seriesElement = seriesElements.first;
         final transform = seriesElement.transform;
+        final plotArea = _delegate.plotArea;
 
+        // For X coordinates, use transform.plotToData as usual
         final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
         final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
 
@@ -957,8 +965,24 @@ class EventHandlerManager {
         double? newEndY;
 
         if (resizedAnnotation.startY != null && resizedAnnotation.endY != null) {
-          newStartY = rightData.dy;
-          newEndY = leftData.dy;
+          if (_delegate.isPerSeriesMode) {
+            // For perSeries mode, calculate normalized Y the SAME way crosshair does:
+            // normalizedY = (plotArea.bottom - pixelY) / plotArea.height
+            final normalizedTopY = (plotArea.bottom - resizedBounds.top) / plotArea.height;
+            final normalizedBottomY = (plotArea.bottom - resizedBounds.bottom) / plotArea.height;
+
+            // Denormalize using axisBounds (same as crosshair)
+            final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
+              normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
+              normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
+            );
+            newStartY = denormStartY;
+            newEndY = denormEndY;
+          } else {
+            // Non-perSeries mode: use plotToData result directly
+            newStartY = rightData.dy;
+            newEndY = leftData.dy;
+          }
         }
 
         // Apply snapping if enabled
@@ -989,7 +1013,9 @@ class EventHandlerManager {
     double? endY,
   ) {
     final xTolerance = (transform.dataXMax - transform.dataXMin) * annotation.snapTolerance;
-    final yTolerance = (transform.dataYMax - transform.dataYMin) * annotation.snapTolerance;
+    // Use actual Y range for tolerance (not transform range which is 0-1 in perSeries mode)
+    final (yMin, yMax) = _delegate.getActualYRange();
+    final yTolerance = (yMax - yMin) * annotation.snapTolerance;
 
     final needsSnapStartX = direction == ResizeDirection.left || direction == ResizeDirection.topLeft || direction == ResizeDirection.bottomLeft;
     final needsSnapEndX = direction == ResizeDirection.right || direction == ResizeDirection.topRight || direction == ResizeDirection.bottomRight;
@@ -1037,7 +1063,9 @@ class EventHandlerManager {
       if (seriesElements.isNotEmpty) {
         final seriesElement = seriesElements.first;
         final transform = seriesElement.transform;
+        final plotArea = _delegate.plotArea;
 
+        // For X coordinates, use transform.plotToData as usual
         final leftData = transform.plotToData(movedBounds.left, movedBounds.top);
         final rightData = transform.plotToData(movedBounds.right, movedBounds.bottom);
 
@@ -1047,14 +1075,32 @@ class EventHandlerManager {
         double? newEndY;
 
         if (movedAnnotation.startY != null && movedAnnotation.endY != null) {
-          newStartY = rightData.dy;
-          newEndY = leftData.dy;
+          if (_delegate.isPerSeriesMode) {
+            // For perSeries mode, calculate normalized Y the SAME way crosshair does:
+            // normalizedY = (plotArea.bottom - pixelY) / plotArea.height
+            final normalizedTopY = (plotArea.bottom - movedBounds.top) / plotArea.height;
+            final normalizedBottomY = (plotArea.bottom - movedBounds.bottom) / plotArea.height;
+
+            // Denormalize using axisBounds (same as crosshair)
+            final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
+              normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
+              normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
+            );
+            newStartY = denormStartY;
+            newEndY = denormEndY;
+          } else {
+            // Non-perSeries mode: use plotToData result directly
+            newStartY = rightData.dy;
+            newEndY = leftData.dy;
+          }
         }
 
         // Apply snapping if enabled
         if (movedAnnotation.snapToValue) {
           final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
-          final yTolerance = (transform.dataYMax - transform.dataYMin) * movedAnnotation.snapTolerance;
+          // Use actual Y range for tolerance (not transform range which is 0-1 in perSeries mode)
+          final (yMin, yMax) = _delegate.getActualYRange();
+          final yTolerance = (yMax - yMin) * movedAnnotation.snapTolerance;
 
           if (movedAnnotation.startX != null && movedAnnotation.endX != null) {
             final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);

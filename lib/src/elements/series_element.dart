@@ -324,8 +324,13 @@ class SeriesElement implements ChartElement {
       final p1 = series.points[i];
       final p2 = series.points[i + 1];
 
-      final plotP1 = transform.dataToPlot(p1.x, p1.y);
-      final plotP2 = transform.dataToPlot(p2.x, p2.y);
+      // CRITICAL: Use _currentTransform, not transform!
+      // In perSeries normalization mode, _currentTransform has the correct
+      // per-series Y bounds (set via updateTransform during painting).
+      // Using the initial 'transform' would use global Y bounds, causing
+      // hit detection to fail when series have different Y scales.
+      final plotP1 = _currentTransform.dataToPlot(p1.x, p1.y);
+      final plotP2 = _currentTransform.dataToPlot(p2.x, p2.y);
 
       final distance = _distanceToLineSegment(position, plotP1, plotP2);
       if (distance <= threshold) {
