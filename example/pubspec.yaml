@@ -15,30 +15,17 @@ dependencies:
   braven_charts:
     path: ../
 
-  # Braven agent package for demo integration
-  braven_agent:
-    path: ../packages/braven_agent
-
   # braven_data for FIT ingestion and analysis
   braven_data:
     git:
       url: https://github.com/forcegage-pvm/braven_data.git
 
-  # Anthropic Claude SDK for AI chat demo
-  anthropic_sdk_dart: ^0.2.3
-
   # UUID generation for conversations and messages
   uuid: ^4.5.1
   google_fonts: ^8.0.0
 
-  # Markdown rendering for AI agent responses
-  gpt_markdown: ^1.1.5
-
   # Persistent storage for API keys
   shared_preferences: ^2.2.2
-
-  # File picker for image attachments
-  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
