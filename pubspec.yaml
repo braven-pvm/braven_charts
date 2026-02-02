@@ -12,9 +12,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  braven_data:
-    git:
-      url: https://github.com/forcegage-pvm/braven_data.git
+  # braven_data:
+  #   git:
+  #     url: https://github.com/forcegage-pvm/braven_data.git
   flex_color_picker: ^3.7.1
   fleather: ^1.26.0
   parchment: ^1.25.1

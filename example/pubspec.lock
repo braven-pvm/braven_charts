@@ -24,15 +24,6 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
-  braven_data:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: HEAD
-      resolved-ref: a2873b07c269de86bc0ed7e5727fdfb880a130d6
-      url: "https://github.com/forcegage-pvm/braven_data.git"
-    source: git
-    version: "0.1.0"
   characters:
     dependency: transitive
     description:
@@ -81,15 +72,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
-  dart_fit_decoder:
-    dependency: transitive
-    description:
-      path: "."
-      ref: main
-      resolved-ref: ac7a4450e51c677b4ce39dd0ba27f9f44142f614
-      url: "https://github.com/forcegage-pvm/dart_fit_decoder"
-    source: git
-    version: "0.1.0"
   diff_match_patch:
     dependency: transitive
     description:
@@ -254,14 +236,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.20.2"
-  latlong2:
-    dependency: transitive
-    description:
-      name: latlong2
-      sha256: "98227922caf49e6056f91b6c56945ea1c7b166f28ffcd5fb8e72fc0b453cc8fe"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.9.1"
   leak_tracker:
     dependency: transitive
     description:
