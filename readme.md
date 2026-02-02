@@ -6,6 +6,8 @@
 
 **Web-first Flutter charting library** with interactive annotations, multi-axis support, and streaming-ready performance.
 
+> Note: The braven_agent package is being moved into its own dedicated repository and workspace. This repo will focus on the braven_charts library only.
+
 ## Overview
 
 BravenChartPlus is a high-performance, web-optimized charting library for Flutter applications. Built with a **web-first philosophy**, it provides:
