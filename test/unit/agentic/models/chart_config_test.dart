@@ -86,25 +86,39 @@ void main() {
         expect(config.series[2].name, equals('Cadence'));
       });
 
-      test('creates instance with multiple y-axes', () {
+      test('creates instance with series having y-axis configs', () {
+        // Per FR-001: each series has its own nested yAxisConfig
         final config = ChartConfiguration(
           type: ChartType.line,
           series: [
             SeriesConfig(
-                id: 's1', name: 'Power', dataColumn: 'power', yAxisId: 'y1'),
-            SeriesConfig(id: 's2', name: 'HR', dataColumn: 'hr', yAxisId: 'y2'),
-          ],
-          yAxes: [
-            YAxisConfig(
-                id: 'y1', label: 'Power (W)', position: AxisPosition.left),
-            YAxisConfig(
-                id: 'y2', label: 'HR (bpm)', position: AxisPosition.right),
+              id: 's1',
+              name: 'Power',
+              dataColumn: 'power',
+              yAxisConfig: YAxisConfig(
+                id: 'y1',
+                label: 'Power (W)',
+                position: AxisPosition.left,
+              ),
+            ),
+            SeriesConfig(
+              id: 's2',
+              name: 'HR',
+              dataColumn: 'hr',
+              yAxisConfig: YAxisConfig(
+                id: 'y2',
+                label: 'HR (bpm)',
+                position: AxisPosition.right,
+              ),
+            ),
           ],
         );
 
-        expect(config.yAxes.length, equals(2));
-        expect(config.yAxes[0].position, equals(AxisPosition.left));
-        expect(config.yAxes[1].position, equals(AxisPosition.right));
+        expect(config.series.length, equals(2));
+        expect(
+            config.series[0].yAxisConfig?.position, equals(AxisPosition.left));
+        expect(
+            config.series[1].yAxisConfig?.position, equals(AxisPosition.right));
       });
 
       test('throws assertion error when series list is empty', () {
@@ -112,7 +126,6 @@ void main() {
           () => ChartConfiguration(
             type: ChartType.line,
             series: [],
-            yAxes: [YAxisConfig(id: 'y1', position: AxisPosition.left)],
           ),
           throwsAssertionError,
         );
@@ -189,10 +202,15 @@ void main() {
           type: ChartType.line,
           title: 'Test Chart',
           series: [
-            SeriesConfig(id: 's1', name: 'Power', dataColumn: 'power'),
-          ],
-          yAxes: [
-            YAxisConfig(id: 'y1', position: AxisPosition.left),
+            SeriesConfig(
+              id: 's1',
+              name: 'Power',
+              dataColumn: 'power',
+              yAxisConfig: YAxisConfig(
+                id: 'y1',
+                position: AxisPosition.left,
+              ),
+            ),
           ],
         );
 
@@ -201,7 +219,9 @@ void main() {
         expect(json['type'], equals('line'));
         expect(json['title'], equals('Test Chart'));
         expect(json['series'], isA<List>());
-        expect(json['yAxes'], isA<List>());
+        // yAxisConfig is now nested in series, not at top level
+        final seriesJson = json['series'] as List;
+        expect(seriesJson.first['yAxisConfig'], isA<Map>());
       });
 
       test('fromJson creates instance from map', () {
@@ -209,10 +229,12 @@ void main() {
           'type': 'bar',
           'title': 'Sales Data',
           'series': [
-            {'id': 's1', 'name': 'Q1', 'dataColumn': 'q1_sales'},
-          ],
-          'yAxes': [
-            {'id': 'y1', 'position': 'left'},
+            {
+              'id': 's1',
+              'name': 'Q1',
+              'dataColumn': 'q1_sales',
+              'yAxisConfig': {'id': 'y1', 'position': 'left'},
+            },
           ],
         };
 
@@ -234,15 +256,13 @@ void main() {
               name: 'Zone 2',
               dataColumn: 'power',
               color: '#00FF00',
-            ),
-          ],
-          yAxes: [
-            YAxisConfig(
-              id: 'y1',
-              label: 'Power (W)',
-              position: AxisPosition.left,
-              min: 0,
-              max: 400,
+              yAxisConfig: YAxisConfig(
+                id: 'y1',
+                label: 'Power (W)',
+                position: AxisPosition.left,
+                min: 0,
+                max: 400,
+              ),
             ),
           ],
         );
@@ -254,7 +274,8 @@ void main() {
         expect(restored.title, equals(original.title));
         expect(restored.subtitle, equals(original.subtitle));
         expect(restored.series.length, equals(original.series.length));
-        expect(restored.yAxes.length, equals(original.yAxes.length));
+        expect(restored.series.first.yAxisConfig?.id,
+            equals(original.series.first.yAxisConfig?.id));
       });
     });
 
@@ -263,8 +284,14 @@ void main() {
         final original = ChartConfiguration(
           type: ChartType.line,
           title: 'Original Title',
-          series: [SeriesConfig(id: 's1', name: 'Data', dataColumn: 'col')],
-          yAxes: [YAxisConfig(id: 'y1', position: AxisPosition.left)],
+          series: [
+            SeriesConfig(
+              id: 's1',
+              name: 'Data',
+              dataColumn: 'col',
+              yAxisConfig: YAxisConfig(id: 'y1', position: AxisPosition.left),
+            ),
+          ],
         );
 
         final copy = original.copyWith(title: 'New Title');
@@ -277,9 +304,13 @@ void main() {
         final original = ChartConfiguration(
           type: ChartType.line,
           series: [
-            SeriesConfig(id: 's1', name: 'Series 1', dataColumn: 'col1')
+            SeriesConfig(
+              id: 's1',
+              name: 'Series 1',
+              dataColumn: 'col1',
+              yAxisConfig: YAxisConfig(id: 'y1', position: AxisPosition.left),
+            ),
           ],
-          yAxes: [YAxisConfig(id: 'y1', position: AxisPosition.left)],
         );
 
         final copy = original.copyWith(
@@ -375,16 +406,22 @@ void main() {
         expect(series.interpolation, equals(Interpolation.bezier));
       });
 
-      test('creates instance with y-axis binding', () {
+      test('creates instance with nested y-axis config (FR-001)', () {
+        // Per FR-001: yAxisId is replaced by nested yAxisConfig
         final series = SeriesConfig(
           id: 's1',
           name: 'Power',
           dataColumn: 'power',
-          yAxisId: 'y-axis-1',
+          yAxisConfig: YAxisConfig(
+            id: 'y-axis-1',
+            label: 'Power',
+            unit: 'W',
+            position: AxisPosition.left,
+          ),
           unit: 'W',
         );
 
-        expect(series.yAxisId, equals('y-axis-1'));
+        expect(series.yAxisConfig?.id, equals('y-axis-1'));
         expect(series.unit, equals('W'));
       });
 

@@ -39,12 +39,18 @@ class LLMResponse with EquatableMixin {
   /// - 'stop_sequence': Hit a stop sequence
   final String? stopReason;
 
+  /// Provider-specific response ID for conversation continuations.
+  ///
+  /// Used by Grok Responses API for `previous_response_id` chaining.
+  final String? responseId;
+
   /// Creates an [LLMResponse] with the given parameters.
   const LLMResponse({
     required this.message,
     required this.inputTokens,
     required this.outputTokens,
     this.stopReason,
+    this.responseId,
   });
 
   /// Creates an [LLMResponse] from a JSON map.
@@ -54,6 +60,7 @@ class LLMResponse with EquatableMixin {
       inputTokens: json['inputTokens'] as int,
       outputTokens: json['outputTokens'] as int,
       stopReason: json['stopReason'] as String?,
+      responseId: json['responseId'] as String?,
     );
   }
 
@@ -64,6 +71,7 @@ class LLMResponse with EquatableMixin {
       'inputTokens': inputTokens,
       'outputTokens': outputTokens,
       if (stopReason != null) 'stopReason': stopReason,
+      if (responseId != null) 'responseId': responseId,
     };
   }
 
@@ -73,21 +81,22 @@ class LLMResponse with EquatableMixin {
     int? inputTokens,
     int? outputTokens,
     String? stopReason,
+    String? responseId,
   }) {
     return LLMResponse(
       message: message ?? this.message,
       inputTokens: inputTokens ?? this.inputTokens,
       outputTokens: outputTokens ?? this.outputTokens,
       stopReason: stopReason ?? this.stopReason,
+      responseId: responseId ?? this.responseId,
     );
   }
 
   @override
-  List<Object?> get props => [message, inputTokens, outputTokens, stopReason];
+  List<Object?> get props => [message, inputTokens, outputTokens, stopReason, responseId];
 
   @override
-  String toString() =>
-      'LLMResponse(inputTokens: $inputTokens, outputTokens: $outputTokens, stopReason: $stopReason)';
+  String toString() => 'LLMResponse(inputTokens: $inputTokens, outputTokens: $outputTokens, stopReason: $stopReason, responseId: $responseId)';
 }
 
 /// A chunk of a streaming LLM response.
@@ -155,9 +164,7 @@ class LLMChunk with EquatableMixin {
   factory LLMChunk.fromJson(Map<String, dynamic> json) {
     return LLMChunk(
       textDelta: json['textDelta'] as String?,
-      toolUse: json['toolUse'] != null
-          ? ToolUseContent.fromJson(json['toolUse'] as Map<String, dynamic>)
-          : null,
+      toolUse: json['toolUse'] != null ? ToolUseContent.fromJson(json['toolUse'] as Map<String, dynamic>) : null,
       isComplete: json['isComplete'] as bool? ?? false,
       stopReason: json['stopReason'] as String?,
     );
@@ -192,6 +199,5 @@ class LLMChunk with EquatableMixin {
   List<Object?> get props => [textDelta, toolUse, isComplete, stopReason];
 
   @override
-  String toString() =>
-      'LLMChunk(textDelta: ${textDelta?.length ?? 0} chars, toolUse: ${toolUse != null}, isComplete: $isComplete)';
+  String toString() => 'LLMChunk(textDelta: ${textDelta?.length ?? 0} chars, toolUse: ${toolUse != null}, isComplete: $isComplete)';
 }

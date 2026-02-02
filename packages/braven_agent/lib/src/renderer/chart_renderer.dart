@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:braven_charts/braven_charts.dart' as charts;
 import 'package:flutter/material.dart';
 
@@ -24,12 +22,36 @@ import '../models/models.dart' as models;
 /// ## Example
 ///
 /// ```dart
-/// final renderer = const ChartRenderer();
+/// // Create a persistent controller for annotation state
+/// final annotationController = AnnotationController();
+///
+/// // Render chart with the controller
+/// final renderer = ChartRenderer(annotationController: annotationController);
 /// final widget = renderer.render(chartConfiguration);
 /// ```
 class ChartRenderer {
-  /// Creates a const [ChartRenderer].
-  const ChartRenderer();
+  /// Creates a [ChartRenderer] with an optional persistent annotation controller.
+  ///
+  /// If [annotationController] is provided, it will be updated with annotations
+  /// from the chart configuration and reused across renders. This preserves
+  /// annotation state (e.g., drag positions) between parent widget rebuilds.
+  ///
+  /// If not provided, a new controller is created for each render (legacy behavior).
+  ChartRenderer({this.annotationController});
+
+  /// Optional persistent annotation controller.
+  ///
+  /// When provided, the renderer updates this controller's annotations
+  /// instead of creating a new controller each render. This is essential
+  /// for preserving user interactions (e.g., drag-to-move annotations).
+  final charts.AnnotationController? annotationController;
+
+  /// Tracks annotation IDs that have been seen from config.
+  ///
+  /// This allows us to distinguish between:
+  /// - Annotations removed by the agent (were in config, now gone → remove from controller)
+  /// - Annotations added by user (never in config → preserve in controller)
+  final Set<String> _configKnownAnnotationIds = {};
 
   /// Builds a widget for the provided chart configuration or raw chart data.
   ///
@@ -57,10 +79,6 @@ class ChartRenderer {
   }
 
   Widget _renderConfiguration(models.ChartConfiguration config) {
-    // DEBUG: Log chart configuration being rendered
-    debugPrint('=== RENDERING CHART ===');
-    _debugPrintChartJson(config);
-
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
@@ -80,27 +98,28 @@ class ChartRenderer {
         // Parse color from SeriesConfig
         final seriesColor = _parseColor(seriesConfig.color);
 
-        // Build YAxisConfig from per-series Y-axis configuration fields
+        // Build YAxisConfig from per-series nested yAxis field (FR-001)
         final yAxisConfig = _buildYAxisConfigFromSeries(seriesConfig);
 
-        // If markerSize is explicitly set (non-default), implicitly enable showDataPointMarkers
-        // This improves UX: LLM setting markerSize expects markers to appear
-        final effectiveShowPoints =
-            seriesConfig.showPoints || seriesConfig.markerSize != 4.0;
+        // CRITICAL: showPoints is the ONLY control for markers.
+        // Previous logic tried to implicitly enable markers when markerSize was non-default,
+        // but this caused bugs: LLM setting showPoints: false was ignored if markerSize != 4.0.
+        // Now: showPoints is authoritative. LLM must set showPoints: true to see markers.
+        final effectiveShowPoints = seriesConfig.showPoints;
 
-        // Use markerSize for dataPointMarkerRadius if showPoints is enabled
-        final effectiveMarkerRadius =
-            seriesConfig.markerSize != 4.0 ? seriesConfig.markerSize : null;
+        // Always pass markerSize to dataPointMarkerRadius - this is the size IF markers are shown
+        // The showDataPointMarkers flag controls visibility, not the radius value
+        final effectiveMarkerRadius = seriesConfig.markerSize;
 
         return _createSeriesForType(
-          config.type,
+          seriesConfig.type,
           id: seriesConfig.id,
           name: seriesConfig.name,
           points: points,
           color: seriesColor,
           strokeWidth: seriesConfig.strokeWidth,
           yAxisConfig: yAxisConfig,
-          yAxisId: seriesConfig.yAxisId,
+          // Per FR-003: yAxisId removed - yAxis is now inline on each series
           fillOpacity: seriesConfig.fillOpacity,
           tension: seriesConfig.tension,
           markerRadius: seriesConfig.markerSize,
@@ -117,14 +136,6 @@ class ChartRenderer {
 
       // Convert AnnotationConfig to ChartAnnotation
       final annotations = _convertAnnotations(config.annotations);
-
-      // DEBUG: Log annotation conversion
-      debugPrint('=== ANNOTATION CONVERSION ===');
-      debugPrint('Input annotations: ${config.annotations.length}');
-      debugPrint('Converted annotations: ${annotations.length}');
-      for (final a in annotations) {
-        debugPrint('  - ${a.runtimeType}: ${a.id}');
-      }
 
       // Build X-axis config - wire all properties from config
       // Explicit min/max values are passed through verbatim (no padding applied)
@@ -189,14 +200,19 @@ class ChartRenderer {
       // Determine chart dimensions
       final chartWidth = config.width;
       final chartHeight = config.height ?? 350.0;
-      final backgroundColor =
-          _parseColor(config.backgroundColor) ?? Colors.white;
+      final backgroundColor = _parseColor(config.backgroundColor) ?? Colors.white;
 
-      // Create annotation controller if we have annotations
-      // Using annotationController (recommended) instead of deprecated annotations list
-      final annotationController = annotations.isNotEmpty
-          ? charts.AnnotationController(initialAnnotations: annotations)
-          : null;
+      // Use provided controller or create a new one
+      // When a persistent controller is provided, sync its annotations with config
+      charts.AnnotationController? effectiveController;
+      if (annotationController != null) {
+        // Sync the provided controller with config annotations
+        _syncAnnotationController(annotationController!, annotations);
+        effectiveController = annotationController;
+      } else if (annotations.isNotEmpty) {
+        // Legacy behavior: create new controller each render
+        effectiveController = charts.AnnotationController(initialAnnotations: annotations);
+      }
 
       return SizedBox(
         width: chartWidth,
@@ -205,7 +221,7 @@ class ChartRenderer {
             series: series,
             xAxisConfig: xAxisConfig,
             yAxis: yAxisConfig,
-            annotationController: annotationController,
+            annotationController: effectiveController,
             theme: chartTheme,
             grid: gridConfig,
             showLegend: showLegend,
@@ -214,12 +230,74 @@ class ChartRenderer {
             showYScrollbar: showYScrollbar,
             normalizationMode: normalizationMode,
             interactionConfig: interactionConfig,
+            // interactionConfig: const charts.InteractionConfig(
+            //   tooltip: charts.TooltipConfig(enabled: true, style: charts.TooltipStyle()),
+            //   crosshair: charts.CrosshairConfig(
+            //     displayMode: charts.CrosshairDisplayMode.standard,
+            //     mode: charts.CrosshairMode.both,
+            //   ),
+            // ),
             title: config.title,
             subtitle: config.subtitle,
             backgroundColor: backgroundColor),
       );
     } catch (e) {
       return _errorWidget('Failed to render chart: $e');
+    }
+  }
+
+  /// Syncs the annotation controller with new annotations from config.
+  ///
+  /// This intelligently merges config annotations with existing controller state:
+  /// - Removes annotations that were previously in config but are now gone (agent removed them)
+  /// - Preserves annotations that were never in config (user-added via UI)
+  /// - Adds new annotations from config that don't exist in controller
+  /// - Updates existing annotations with config values (LLM modifications take effect)
+  ///
+  /// The key insight is that we track which annotation IDs have been "seen" from config.
+  /// This allows us to distinguish between agent-removed vs. user-added annotations.
+  ///
+  /// Uses try-catch to gracefully handle race conditions where Flutter rebuilds
+  /// trigger render() mid-sync (since controller operations call notifyListeners()).
+  void _syncAnnotationController(
+    charts.AnnotationController controller,
+    List<charts.ChartAnnotation> configAnnotations,
+  ) {
+    final configIds = configAnnotations.map((a) => a.id).toSet();
+    final existingIds = controller.annotations.map((a) => a.id).toSet();
+
+    // Remove annotations that:
+    // 1. Were previously known from config (_configKnownAnnotationIds)
+    // 2. Are no longer in the current config (configIds)
+    // 3. Still exist in controller (existingIds)
+    // This means the agent explicitly removed them.
+    final agentRemovedIds = _configKnownAnnotationIds.difference(configIds).intersection(existingIds);
+    for (final id in agentRemovedIds) {
+      try {
+        controller.removeAnnotation(id);
+        _configKnownAnnotationIds.remove(id);
+      } catch (_) {
+        // Already removed or race condition
+      }
+    }
+
+    // Add or update annotations from config
+    for (final annotation in configAnnotations) {
+      try {
+        // Track that we've seen this ID from config
+        _configKnownAnnotationIds.add(annotation.id);
+
+        if (existingIds.contains(annotation.id)) {
+          // Update existing annotation with config values
+          // This allows LLM modifications to take effect
+          controller.updateAnnotation(annotation.id, annotation);
+        } else {
+          // Add new annotation from config
+          controller.addAnnotation(annotation);
+        }
+      } catch (_) {
+        // Handle race condition during rebuild
+      }
     }
   }
 
@@ -261,9 +339,7 @@ class ChartRenderer {
   /// Build LegendStyle from configuration
   charts.LegendStyle _buildLegendStyle(models.ChartConfiguration config) {
     // Theme for base style
-    final baseStyle = config.useDarkTheme
-        ? charts.LegendStyle.dark
-        : charts.LegendStyle.light;
+    final baseStyle = config.useDarkTheme ? charts.LegendStyle.dark : charts.LegendStyle.light;
 
     // Map LegendPosition enum to braven_charts LegendPosition
     charts.LegendPosition position;
@@ -292,8 +368,7 @@ class ChartRenderer {
   /// Get normalization mode from configuration
   ///
   /// Converts NormalizationModeConfig to braven_charts.NormalizationMode
-  charts.NormalizationMode _getNormalizationMode(
-      models.ChartConfiguration config) {
+  charts.NormalizationMode _getNormalizationMode(models.ChartConfiguration config) {
     switch (config.normalizationMode) {
       case models.NormalizationModeConfig.none:
         return charts.NormalizationMode.none;
@@ -311,8 +386,7 @@ class ChartRenderer {
   ///
   /// When tooltip or crosshair is enabled, uses CrosshairDisplayMode.tracking
   /// which is required for perSeries normalization mode to work correctly.
-  charts.InteractionConfig _buildInteractionConfig(
-      models.ChartConfiguration config) {
+  charts.InteractionConfig _buildInteractionConfig(models.ChartConfiguration config) {
     if (config.interactions == null) {
       return const charts.InteractionConfig(
         enablePan: true,
@@ -337,17 +411,14 @@ class ChartRenderer {
       enableZoom: enableZoom,
       crosshair: charts.CrosshairConfig(
         enabled: crosshairEnabled,
-        displayMode: useTrackingMode
-            ? charts.CrosshairDisplayMode.tracking
-            : charts.CrosshairDisplayMode.standard,
+        displayMode: useTrackingMode ? charts.CrosshairDisplayMode.tracking : charts.CrosshairDisplayMode.standard,
       ),
       tooltip: charts.TooltipConfig(enabled: tooltipEnabled),
     );
   }
 
   /// Convert AnnotationConfig list to ChartAnnotation list
-  List<charts.ChartAnnotation> _convertAnnotations(
-      List<models.AnnotationConfig>? annotations) {
+  List<charts.ChartAnnotation> _convertAnnotations(List<models.AnnotationConfig>? annotations) {
     if (annotations == null || annotations.isEmpty) {
       return [];
     }
@@ -369,23 +440,21 @@ class ChartRenderer {
   }
 
   /// Convert a single AnnotationConfig to a ChartAnnotation
-  charts.ChartAnnotation? _convertAnnotationConfig(
-      models.AnnotationConfig config) {
+  charts.ChartAnnotation? _convertAnnotationConfig(models.AnnotationConfig config) {
     final color = _parseColor(config.color) ?? Colors.red;
 
     switch (config.type) {
       case models.AnnotationType.referenceLine:
         // Convert to ThresholdAnnotation
         final isHorizontal = config.orientation != models.Orientation.vertical;
-        final value = config.value ?? 0.0;
+        final value = config.value;
         final lineWidth = config.lineWidth ?? 2.0;
+
         return charts.ThresholdAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
-          axis:
-              isHorizontal ? charts.AnnotationAxis.y : charts.AnnotationAxis.x,
-          value: value,
-          seriesId:
-              config.seriesId, // Required for perSeries normalization mode
+          id: config.id,
+          axis: isHorizontal ? charts.AnnotationAxis.y : charts.AnnotationAxis.x,
+          value: value ?? 0.0,
+          seriesId: config.seriesId, // Required for perSeries normalization mode
           label: config.label,
           lineColor: color,
           lineWidth: lineWidth,
@@ -394,16 +463,58 @@ class ChartRenderer {
 
       case models.AnnotationType.zone:
         // Convert to RangeAnnotation
-        final isHorizontal = config.orientation != models.Orientation.vertical;
-        final minValue = config.minValue ?? 0.0;
-        final maxValue = config.maxValue ?? 0.0;
+        // Supports three modes:
+        // 1. Custom rectangle: startX/endX AND startY/endY specified
+        // 2. Horizontal band: minValue/maxValue with orientation=horizontal (Y range)
+        // 3. Vertical band: minValue/maxValue with orientation=vertical (X range)
+
         final opacity = config.opacity ?? 0.3;
+
+        // Check for custom range (both X and Y bounds specified)
+        if (config.startX != null || config.endX != null || config.startY != null || config.endY != null) {
+          // Custom rectangle mode - use explicit bounds
+          // At least one of X or Y range must be specified
+          if ((config.startX == null && config.startY == null) ||
+              (config.startX != null && config.startX == config.endX) ||
+              (config.startY != null && config.startY == config.endY)) {
+            // Invalid custom range
+            return null;
+          }
+
+          return charts.RangeAnnotation(
+            id: config.id,
+            startX: config.startX,
+            endX: config.endX,
+            startY: config.startY,
+            endY: config.endY,
+            seriesId: config.seriesId, // Only needed for perSeries mode with Y bounds
+            label: config.label,
+            fillColor: color.withOpacity(opacity),
+            borderColor: color,
+          );
+        }
+
+        // Legacy mode: minValue/maxValue with orientation
+        final isHorizontal = config.orientation != models.Orientation.vertical;
+        final minValue = config.minValue;
+        final maxValue = config.maxValue;
+
+        // Validate zone has valid bounds - skip if missing or equal
+        if (minValue == null || maxValue == null || minValue == maxValue) {
+          // Invalid zone annotation - missing or zero-width bounds
+          // This is typically an LLM schema error (zone without minValue/maxValue)
+          return null;
+        }
+
         return charts.RangeAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           startY: isHorizontal ? minValue : null,
           endY: isHorizontal ? maxValue : null,
           startX: isHorizontal ? null : minValue,
           endX: isHorizontal ? null : maxValue,
+          // seriesId only needed for horizontal zones in perSeries mode
+          // Vertical zones don't reference Y-axis series values
+          seriesId: isHorizontal ? config.seriesId : null,
           label: config.label,
           fillColor: color.withOpacity(opacity),
           borderColor: color,
@@ -417,7 +528,7 @@ class ChartRenderer {
         final positionOffset = _getTextAnnotationPosition(config.position);
         final anchor = _getTextAnnotationAnchor(config.position);
         return charts.TextAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           position: positionOffset,
           text: text,
           anchor: anchor,
@@ -435,60 +546,92 @@ class ChartRenderer {
         final x = config.x ?? 0.0;
         final y = config.y ?? 0.0;
         return charts.PinAnnotation(
-          id: 'annotation_${DateTime.now().millisecondsSinceEpoch}',
+          id: config.id,
           x: x,
           y: y,
           label: config.label,
           markerColor: color,
         );
+
+      case models.AnnotationType.trendLine:
+        // Convert to TrendAnnotation
+        final trendType = _mapTrendType(config.trendType);
+        if (trendType == null) return null;
+
+        // For moving average types, windowSize is required by BravenChartPlus.
+        // Default to 5 if not specified by the agent.
+        int? windowSize = config.windowSize;
+        if ((trendType == charts.TrendType.movingAverage || trendType == charts.TrendType.exponentialMovingAverage) && windowSize == null) {
+          windowSize = 5; // Sensible default for smoothing
+        }
+
+        return charts.TrendAnnotation(
+          id: config.id,
+          seriesId: config.seriesId ?? '', // Required for TrendAnnotation
+          trendType: trendType,
+          windowSize: windowSize,
+          degree: config.degree ?? 2,
+          label: config.label,
+          lineColor: color,
+          lineWidth: config.lineWidth ?? 2.0,
+          dashPattern: config.dashPattern,
+        );
     }
   }
 
-  /// Builds a YAxisConfig from per-series Y-axis configuration fields.
+  /// Maps agent TrendType enum to BravenChartPlus TrendType enum.
+  charts.TrendType? _mapTrendType(models.TrendType? trendType) {
+    if (trendType == null) return null;
+    switch (trendType) {
+      case models.TrendType.linear:
+        return charts.TrendType.linear;
+      case models.TrendType.polynomial:
+        return charts.TrendType.polynomial;
+      case models.TrendType.movingAverage:
+        return charts.TrendType.movingAverage;
+      case models.TrendType.exponentialMovingAverage:
+        return charts.TrendType.exponentialMovingAverage;
+    }
+  }
+
+  /// Builds a YAxisConfig from per-series Y-axis configuration.
   ///
   /// Returns null if no Y-axis configuration is specified on the series.
-  charts.YAxisConfig? _buildYAxisConfigFromSeries(
-      models.SeriesConfig seriesConfig) {
-    // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null &&
-        seriesConfig.yAxisLabel == null &&
-        seriesConfig.yAxisUnit == null &&
-        seriesConfig.yAxisColor == null &&
-        seriesConfig.yAxisMin == null &&
-        seriesConfig.yAxisMax == null) {
+  charts.YAxisConfig? _buildYAxisConfigFromSeries(models.SeriesConfig seriesConfig) {
+    // Per FR-001: Use nested yAxis field instead of flat fields
+    final yAxis = seriesConfig.yAxis;
+    if (yAxis == null) {
       return null;
     }
 
-    // Map position string to YAxisPosition enum
+    // Map position enum to YAxisPosition enum
     charts.YAxisPosition position;
-    switch (seriesConfig.yAxisPosition?.toLowerCase()) {
-      case 'right':
-        position = charts.YAxisPosition.right;
-      case 'rightouter':
-        position = charts.YAxisPosition.rightOuter;
-      case 'leftouter':
-        position = charts.YAxisPosition.leftOuter;
-      case 'left':
-      default:
+    switch (yAxis.position) {
+      case models.AxisPosition.left:
         position = charts.YAxisPosition.left;
+      case models.AxisPosition.right:
+        position = charts.YAxisPosition.right;
+      case models.AxisPosition.leftOuter:
+        position = charts.YAxisPosition.leftOuter;
+      case models.AxisPosition.rightOuter:
+        position = charts.YAxisPosition.rightOuter;
     }
 
     // Parse axis color
-    final axisColor = _parseColor(seriesConfig.yAxisColor);
+    final axisColor = _parseColor(yAxis.color);
 
     return charts.YAxisConfig(
       position: position,
-      label: seriesConfig.yAxisLabel,
-      unit: seriesConfig.yAxisUnit,
+      label: yAxis.label,
+      unit: yAxis.unit,
       color: axisColor,
-      min: seriesConfig.yAxisMin,
-      max: seriesConfig.yAxisMax,
+      min: yAxis.min,
+      max: yAxis.max,
     );
   }
 
   /// Maps Interpolation enum to BravenChartPlus LineInterpolation enum.
-  charts.LineInterpolation _mapInterpolation(
-      models.Interpolation interpolation) {
+  charts.LineInterpolation _mapInterpolation(models.Interpolation interpolation) {
     switch (interpolation) {
       case models.Interpolation.linear:
         return charts.LineInterpolation.linear;
@@ -622,8 +765,7 @@ class ChartRenderer {
 
   /// Gets the appropriate anchor for the semantic position.
   /// The anchor determines which corner of the text box is at the position.
-  charts.AnnotationAnchor _getTextAnnotationAnchor(
-      models.AnnotationPosition? position) {
+  charts.AnnotationAnchor _getTextAnnotationAnchor(models.AnnotationPosition? position) {
     switch (position) {
       case models.AnnotationPosition.topCenter:
         return charts.AnnotationAnchor.topCenter;
@@ -663,17 +805,138 @@ class ChartRenderer {
     );
   }
 
-  /// Debug helper: print chart configuration as JSON
-  void _debugPrintChartJson(models.ChartConfiguration config) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(config.toJson());
-      debugPrint('Chart JSON:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('Chart JSON: [Failed to serialize: $e]');
+  /// Converts the current annotations from the controller back to [AnnotationConfig] list.
+  ///
+  /// This enables syncing UI changes (e.g., drag-to-move, right-click edits)
+  /// back to the [ChartConfiguration] model for agent awareness.
+  ///
+  /// Returns an empty list if no annotation controller is configured.
+  List<models.AnnotationConfig> getCurrentAnnotationConfigs() {
+    if (annotationController == null) {
+      return [];
+    }
+    return annotationController!.annotations.map((a) => _convertChartAnnotationToConfig(a)).whereType<models.AnnotationConfig>().toList();
+  }
+
+  /// Updates a [ChartConfiguration] with the current annotations from the controller.
+  ///
+  /// This is the main entry point for syncing UI changes back to the model.
+  /// Call this when the annotation controller notifies of changes.
+  ///
+  /// Returns null if the input config is null.
+  models.ChartConfiguration? syncAnnotationsToConfig(models.ChartConfiguration? config) {
+    if (config == null) {
+      return null;
+    }
+    final currentAnnotations = getCurrentAnnotationConfigs();
+    return config.copyWith(annotations: currentAnnotations);
+  }
+
+  /// Converts a single [ChartAnnotation] to [AnnotationConfig].
+  ///
+  /// Handles all annotation types: ThresholdAnnotation, RangeAnnotation,
+  /// TextAnnotation, PointAnnotation, TrendLineAnnotation.
+  models.AnnotationConfig? _convertChartAnnotationToConfig(charts.ChartAnnotation annotation) {
+    if (annotation is charts.ThresholdAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.referenceLine,
+        orientation: annotation.axis == charts.AnnotationAxis.y ? models.Orientation.horizontal : models.Orientation.vertical,
+        value: annotation.value,
+        label: annotation.label,
+        color: _colorToHex(annotation.lineColor),
+        lineWidth: annotation.lineWidth,
+        dashPattern: annotation.dashPattern,
+        seriesId: annotation.seriesId,
+      );
+    }
+
+    if (annotation is charts.RangeAnnotation) {
+      // Determine if horizontal or vertical based on which bounds are set
+      final isHorizontal = annotation.startY != null || annotation.endY != null;
+
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.zone,
+        orientation: isHorizontal ? models.Orientation.horizontal : models.Orientation.vertical,
+        // For horizontal zones, minValue/maxValue are Y values
+        // For vertical zones, minValue/maxValue are X values
+        minValue: isHorizontal ? annotation.startY : annotation.startX,
+        maxValue: isHorizontal ? annotation.endY : annotation.endX,
+        startX: annotation.startX,
+        endX: annotation.endX,
+        startY: annotation.startY,
+        endY: annotation.endY,
+        label: annotation.label,
+        color: _colorToHex(annotation.borderColor ?? annotation.fillColor),
+        opacity: annotation.fillColor?.opacity,
+        seriesId: annotation.seriesId,
+      );
+    }
+
+    if (annotation is charts.TextAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.textLabel,
+        text: annotation.text ?? annotation.plainText,
+        x: annotation.position.dx,
+        y: annotation.position.dy,
+        color: _colorToHex(annotation.style.textStyle.color),
+        fontSize: annotation.style.textStyle.fontSize,
+      );
+    }
+
+    if (annotation is charts.PointAnnotation) {
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.marker,
+        seriesId: annotation.seriesId,
+        dataPointIndex: annotation.dataPointIndex,
+        // PointAnnotation doesn't have x/y - it references a data point by index
+        color: _colorToHex(annotation.markerColor),
+        label: annotation.label,
+      );
+    }
+
+    if (annotation is charts.TrendAnnotation) {
+      final trendType = _mapBravenTrendType(annotation.trendType);
+      return models.AnnotationConfig(
+        id: annotation.id,
+        type: models.AnnotationType.trendLine,
+        seriesId: annotation.seriesId,
+        trendType: trendType,
+        windowSize: annotation.windowSize,
+        degree: annotation.degree,
+        color: _colorToHex(annotation.lineColor),
+        lineWidth: annotation.lineWidth,
+        dashPattern: annotation.dashPattern,
+        label: annotation.label,
+      );
+    }
+
+    // Unknown annotation type
+    return null;
+  }
+
+  /// Converts a Color to hex string (e.g., "#FF0000").
+  String? _colorToHex(Color? color) {
+    if (color == null) return null;
+    // Format: #RRGGBB (ignoring alpha for simplicity)
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2, 8).toUpperCase()}';
+  }
+
+  /// Maps braven_charts TrendType to braven_agent TrendType.
+  models.TrendType? _mapBravenTrendType(charts.TrendType? trendType) {
+    if (trendType == null) return null;
+    switch (trendType) {
+      case charts.TrendType.linear:
+        return models.TrendType.linear;
+      case charts.TrendType.polynomial:
+        return models.TrendType.polynomial;
+      case charts.TrendType.movingAverage:
+        return models.TrendType.movingAverage;
+      case charts.TrendType.exponentialMovingAverage:
+        return models.TrendType.exponentialMovingAverage;
     }
   }
 }

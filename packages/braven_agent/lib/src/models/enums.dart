@@ -75,12 +75,34 @@ enum AxisType {
 /// Position of Y-axis on the chart.
 ///
 /// Used for multi-axis charts to position Y-axes on left or right sides.
+/// Multi-axis charts support up to 4 Y-axes simultaneously, positioned
+/// in a specific layout order from left to right:
+///
+/// ```
+/// [leftOuter] [left] | Chart Area | [right] [rightOuter]
+/// ```
 enum AxisPosition {
-  /// Y-axis positioned on the left side.
+  /// Leftmost axis (far left of plot area).
+  ///
+  /// Use for a secondary axis on the left side when [left] is already
+  /// occupied by the primary axis.
+  leftOuter,
+
+  /// Primary left axis (adjacent to plot area left edge).
+  ///
+  /// This is the standard position for the main Y-axis in most charts.
   left,
 
-  /// Y-axis positioned on the right side.
+  /// Primary right axis (adjacent to plot area right edge).
+  ///
+  /// Use for a secondary axis when displaying two data series with
+  /// different scales or units.
   right,
+
+  /// Rightmost axis (far right of plot area).
+  ///
+  /// Use for a tertiary/quaternary axis when [right] is already occupied.
+  rightOuter,
 }
 
 /// Normalization mode for multi-series charts.
@@ -141,6 +163,40 @@ enum AnnotationType {
 
   /// Point marker annotation.
   marker,
+
+  /// Trend line calculated from series data.
+  ///
+  /// Requires [seriesId] and [trendType]. For moving averages,
+  /// also requires [windowSize].
+  trendLine,
+}
+
+/// Type of trend calculation for trend line annotations.
+///
+/// Determines the mathematical method used to calculate the trend.
+enum TrendType {
+  /// Linear regression (best-fit straight line).
+  ///
+  /// Minimizes sum of squared errors to find y = mx + b.
+  linear,
+
+  /// Polynomial regression of specified degree.
+  ///
+  /// Uses [AnnotationConfig.degree] to determine polynomial order.
+  /// Default is quadratic (degree=2): y = ax² + bx + c
+  polynomial,
+
+  /// Simple moving average with specified window size.
+  ///
+  /// Requires [AnnotationConfig.windowSize] to specify the number
+  /// of data points in each average calculation.
+  movingAverage,
+
+  /// Exponential moving average with specified window size.
+  ///
+  /// Gives more weight to recent data points.
+  /// Requires [AnnotationConfig.windowSize] to specify the span.
+  exponentialMovingAverage,
 }
 
 /// Orientation for reference lines and other directional elements.

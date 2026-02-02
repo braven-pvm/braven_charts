@@ -1,7 +1,12 @@
+// @orchestra-task: 6
+library;
+
+import 'package:braven_agent/src/models/annotation_config.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
 import 'package:braven_agent/src/models/data_point.dart';
 import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/models/series_config.dart';
+import 'package:braven_agent/src/models/y_axis_config.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -74,23 +79,19 @@ void main() {
 
       group('properties content', () {
         test('has modifications property', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties, contains('modifications'));
           expect(properties['modifications']['type'], equals('object'));
         });
 
         test('modifications has description', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
           expect(properties['modifications']['description'], isNotEmpty);
         });
 
         test('modifications has nested properties', () {
-          final properties =
-              tool.inputSchema['properties'] as Map<String, dynamic>;
-          final modifications =
-              properties['modifications'] as Map<String, dynamic>;
+          final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+          final modifications = properties['modifications'] as Map<String, dynamic>;
           expect(modifications['properties'], isA<Map<String, dynamic>>());
         });
 
@@ -98,21 +99,25 @@ void main() {
           late Map<String, dynamic> modProps;
 
           setUp(() {
-            final properties =
-                tool.inputSchema['properties'] as Map<String, dynamic>;
-            final modifications =
-                properties['modifications'] as Map<String, dynamic>;
+            final properties = tool.inputSchema['properties'] as Map<String, dynamic>;
+            final modifications = properties['modifications'] as Map<String, dynamic>;
             modProps = modifications['properties'] as Map<String, dynamic>;
           });
 
-          test('has type property with enum', () {
-            expect(modProps, contains('type'));
-            expect(modProps['type']['type'], equals('string'));
-            expect(modProps['type']['enum'], isA<List>());
+          test('update.series items have type property with enum', () {
+            final updateProps = modProps['update']['properties'] as Map;
+            final seriesItems = updateProps['series']['items'] as Map;
+            final seriesProps = seriesItems['properties'] as Map;
+            expect(seriesProps, contains('type'));
+            expect(seriesProps['type']['type'], equals('string'));
+            expect(seriesProps['type']['enum'], isA<List>());
           });
 
-          test('type enum includes all chart types', () {
-            final enumValues = modProps['type']['enum'] as List;
+          test('update.series type enum includes all chart types', () {
+            final updateProps = modProps['update']['properties'] as Map;
+            final seriesItems = updateProps['series']['items'] as Map;
+            final seriesProps = seriesItems['properties'] as Map;
+            final enumValues = seriesProps['type']['enum'] as List;
             expect(enumValues, contains('line'));
             expect(enumValues, contains('area'));
             expect(enumValues, contains('bar'));
@@ -129,38 +134,38 @@ void main() {
             expect(modProps['subtitle']['type'], equals('string'));
           });
 
-          test('has series property for replacement', () {
-            expect(modProps, contains('series'));
-            expect(modProps['series']['type'], equals('array'));
+          test('has add.series property for adding series', () {
+            final addProps = modProps['add']['properties'] as Map;
+            expect(addProps, contains('series'));
+            expect(addProps['series']['type'], equals('array'));
           });
 
-          test('has addSeries property for adding series', () {
-            expect(modProps, contains('addSeries'));
-            expect(modProps['addSeries']['type'], equals('array'));
-          });
-
-          test('addSeries items have required structure', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series items have required structure', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             expect(seriesItems['type'], equals('object'));
             expect(seriesItems['properties'], isA<Map>());
           });
 
-          test('addSeries item has id property', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item has id property', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             expect(seriesProps, contains('id'));
             expect(seriesProps['id']['type'], equals('string'));
           });
 
-          test('addSeries item has data property', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item has data property', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             expect(seriesProps, contains('data'));
             expect(seriesProps['data']['type'], equals('array'));
           });
 
-          test('addSeries item data has x,y point structure', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item data has x,y point structure', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final seriesProps = seriesItems['properties'] as Map;
             final dataItems = seriesProps['data']['items'] as Map;
             expect(dataItems['type'], equals('object'));
@@ -171,20 +176,23 @@ void main() {
             expect(pointProps['y']['type'], equals('number'));
           });
 
-          test('addSeries item requires id and data', () {
-            final seriesItems = modProps['addSeries']['items'] as Map;
+          test('add.series item requires id and data', () {
+            final addProps = modProps['add']['properties'] as Map;
+            final seriesItems = addProps['series']['items'] as Map;
             final required = seriesItems['required'] as List;
             expect(required, contains('id'));
             expect(required, contains('data'));
           });
 
-          test('has removeSeries property for removing series', () {
-            expect(modProps, contains('removeSeries'));
-            expect(modProps['removeSeries']['type'], equals('array'));
+          test('has remove.series property for removing series', () {
+            final removeProps = modProps['remove']['properties'] as Map;
+            expect(removeProps, contains('series'));
+            expect(removeProps['series']['type'], equals('array'));
           });
 
-          test('removeSeries items are strings (series IDs)', () {
-            final items = modProps['removeSeries']['items'] as Map;
+          test('remove.series items are strings (series IDs)', () {
+            final removeProps = modProps['remove']['properties'] as Map;
+            final items = removeProps['series']['items'] as Map;
             expect(items['type'], equals('string'));
           });
 
@@ -285,11 +293,9 @@ void main() {
           });
 
           expect(
-            result.output.toLowerCase().contains('no active chart') ||
-                result.output.toLowerCase().contains('create_chart'),
+            result.output.toLowerCase().contains('no active chart') || result.output.toLowerCase().contains('create_chart'),
             isTrue,
-            reason:
-                'Error message should indicate no active chart and suggest create_chart',
+            reason: 'Error message should indicate no active chart and suggest create_chart',
           );
         });
 
@@ -351,7 +357,11 @@ void main() {
         test('output contains chart JSON', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
+              },
             },
           });
 
@@ -360,49 +370,64 @@ void main() {
         });
       });
 
-      group('modifying chart type', () {
-        test('can change chart type from line to bar', () async {
+      group('modifying series type', () {
+        test('can change series type from line to bar', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.bar));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.bar));
         });
 
-        test('can change chart type from line to area', () async {
+        test('can change series type from line to area', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'area',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'area'},
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.area));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.area));
         });
 
-        test('can change chart type from line to scatter', () async {
+        test('can change series type from line to scatter', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'scatter',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'scatter'},
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.scatter));
+          expect(chart.series.firstWhere((s) => s.id == 'existing_series').type, equals(ChartType.scatter));
         });
 
-        test('returns error for invalid type value', () async {
+        test('returns error for invalid series type value', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'pie',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'pie'},
+                ],
+              },
             },
           });
 
           expect(result.isError, isTrue);
-          expect(result.output.toLowerCase(), contains('type'));
         });
       });
 
@@ -458,15 +483,17 @@ void main() {
         test('can add a single series to existing chart', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'new_series',
-                  'data': [
-                    {'x': 0, 'y': 100},
-                    {'x': 1, 'y': 200},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_series',
+                    'data': [
+                      {'x': 0, 'y': 100},
+                      {'x': 1, 'y': 200},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -483,30 +510,32 @@ void main() {
         test('can add multiple series at once', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'series_a',
-                  'data': [
-                    {'x': 0, 'y': 10},
-                  ],
-                },
-                {
-                  'id': 'series_b',
-                  'data': [
-                    {'x': 0, 'y': 20},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_series_a',
+                    'data': [
+                      {'x': 0, 'y': 10},
+                    ],
+                  },
+                  {
+                    'id': 'new_series_b',
+                    'data': [
+                      {'x': 0, 'y': 20},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
           expect(
-            chart.series.any((s) => s.id == 'series_a'),
+            chart.series.any((s) => s.id == 'new_series_a'),
             isTrue,
           );
           expect(
-            chart.series.any((s) => s.id == 'series_b'),
+            chart.series.any((s) => s.id == 'new_series_b'),
             isTrue,
           );
         });
@@ -514,22 +543,23 @@ void main() {
         test('added series has correct data points', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'data_series',
-                  'data': [
-                    {'x': 1.5, 'y': 10.5},
-                    {'x': 2.5, 'y': 20.5},
-                    {'x': 3.5, 'y': 30.5},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'data_series',
+                    'data': [
+                      {'x': 1.5, 'y': 10.5},
+                      {'x': 2.5, 'y': 20.5},
+                      {'x': 3.5, 'y': 30.5},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'data_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'data_series');
           expect(newSeries.data, hasLength(3));
           expect(newSeries.data[0].x, equals(1.5));
           expect(newSeries.data[0].y, equals(10.5));
@@ -540,42 +570,44 @@ void main() {
         test('added series preserves name when provided', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'named_series',
-                  'name': 'Temperature',
-                  'data': [
-                    {'x': 0, 'y': 25},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'named_series',
+                    'name': 'Temperature',
+                    'data': [
+                      {'x': 0, 'y': 25},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'named_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'named_series');
           expect(newSeries.name, equals('Temperature'));
         });
 
         test('added series preserves color when provided', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'colored_series',
-                  'color': '#FF5733',
-                  'data': [
-                    {'x': 0, 'y': 50},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'colored_series',
+                    'color': '#FF5733',
+                    'data': [
+                      {'x': 0, 'y': 50},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final newSeries =
-              chart.series.firstWhere((s) => s.id == 'colored_series');
+          final newSeries = chart.series.firstWhere((s) => s.id == 'colored_series');
           expect(newSeries.color, equals('#FF5733'));
         });
       });
@@ -584,7 +616,9 @@ void main() {
         test('can remove a series by id', () async {
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['series_to_remove'],
+              'remove': {
+                'series': ['series_to_remove'],
+              },
             },
           });
 
@@ -599,7 +633,9 @@ void main() {
         test('can remove multiple series at once', () async {
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['series_a', 'series_b'],
+              'remove': {
+                'series': ['series_a', 'series_b'],
+              },
             },
           });
 
@@ -614,30 +650,37 @@ void main() {
           );
         });
 
-        test('removing non-existent series does not error', () async {
-          // Tool should gracefully handle removing a series that doesn't exist
+        test('removing non-existent series returns error (V011)', () async {
+          // V011: Error when remove.series contains non-existent ID
           final result = await tool.execute({
             'modifications': {
-              'removeSeries': ['non_existent_series'],
+              'remove': {
+                'series': ['non_existent_series'],
+              },
             },
           });
 
-          // Should not error, just no-op for non-existent series
-          expect(result.isError, isFalse);
+          // Should error per V011 validation rule
+          expect(result.isError, isTrue);
+          expect(result.output, contains('V011'));
         });
 
         test('can add and remove series in same modification', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'new_series',
-                  'data': [
-                    {'x': 0, 'y': 10},
-                  ],
-                },
-              ],
-              'removeSeries': ['old_series'],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_series',
+                    'data': [
+                      {'x': 0, 'y': 10},
+                    ],
+                  },
+                ],
+              },
+              'remove': {
+                'series': ['old_series'],
+              },
             },
           });
 
@@ -657,20 +700,22 @@ void main() {
         test('can update data points for existing series', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'data': [
-                    {'x': 0, 'y': 999},
-                    {'x': 1, 'y': 888},
-                  ],
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'data': [
+                      {'x': 0, 'y': 999},
+                      {'x': 1, 'y': 888},
+                    ],
+                  },
+                ],
               },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.data[0].y, equals(999));
           expect(series.data[1].y, equals(888));
         });
@@ -678,34 +723,38 @@ void main() {
         test('can update series name', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'name': 'Updated Series Name',
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'name': 'Updated Series Name',
+                  },
+                ],
               },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.name, equals('Updated Series Name'));
         });
 
         test('can update series color', () async {
           final result = await tool.execute({
             'modifications': {
-              'updateSeries': {
-                'existing_series': {
-                  'color': '#00FF00',
-                },
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'color': '#00FF00',
+                  },
+                ],
               },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          final series =
-              chart.series.firstWhere((s) => s.id == 'existing_series');
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
           expect(series.color, equals('#00FF00'));
         });
       });
@@ -723,7 +772,7 @@ void main() {
           expect(chart.series, isNotEmpty);
         });
 
-        test('modifying title preserves chart type', () async {
+        test('modifying title preserves series type', () async {
           final result = await tool.execute({
             'modifications': {
               'title': 'New Title Only',
@@ -731,14 +780,18 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          // Type should be unchanged (line)
-          expect(chart.type, equals(ChartType.line));
+          // Series type should be unchanged (line)
+          expect(chart.series.first.type, equals(ChartType.line));
         });
 
-        test('modifying type preserves title', () async {
+        test('modifying series type preserves title', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'bar',
+              'update': {
+                'series': [
+                  {'id': 'existing_series', 'type': 'bar'},
+                ],
+              },
             },
           });
 
@@ -763,14 +816,16 @@ void main() {
         test('adding series preserves existing series', () async {
           final result = await tool.execute({
             'modifications': {
-              'addSeries': [
-                {
-                  'id': 'additional_series',
-                  'data': [
-                    {'x': 0, 'y': 50},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'additional_series',
+                    'data': [
+                      {'x': 0, 'y': 50},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
@@ -861,24 +916,26 @@ void main() {
       });
 
       group('multiple modifications at once', () {
-        test('can modify type, title, and add series together', () async {
+        test('can modify title and add series with type together', () async {
           final result = await tool.execute({
             'modifications': {
-              'type': 'area',
               'title': 'Multi-Modification Chart',
-              'addSeries': [
-                {
-                  'id': 'new_data',
-                  'data': [
-                    {'x': 0, 'y': 5},
-                  ],
-                },
-              ],
+              'add': {
+                'series': [
+                  {
+                    'id': 'new_data',
+                    'type': 'area',
+                    'data': [
+                      {'x': 0, 'y': 5},
+                    ],
+                  },
+                ],
+              },
             },
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.area));
+          expect(chart.series.any((s) => s.id == 'new_data' && s.type == ChartType.area), isTrue);
           expect(chart.title, equals('Multi-Modification Chart'));
           expect(chart.series.any((s) => s.id == 'new_data'), isTrue);
         });
@@ -923,10 +980,14 @@ void main() {
         expect(result.output, endsWith('}'));
       });
 
-      test('output contains modified chart type', () async {
+      test('output contains modified series type', () async {
         final result = await tool.execute({
           'modifications': {
-            'type': 'area',
+            'update': {
+              'series': [
+                {'id': 'existing_series', 'type': 'area'},
+              ],
+            },
           },
         });
 
@@ -949,15 +1010,549 @@ void main() {
         final result = await tool.execute({
           'modifications': {
             'title': 'Complete Chart',
-            'type': 'bar',
           },
         });
 
         final chart = result.data as ChartConfiguration;
         expect(chart.id, isNotNull);
-        expect(chart.type, isNotNull);
         expect(chart.series, isNotNull);
       });
+    });
+
+    // ==========================================================
+    // US2: TDD Red Phase Tests - Update/Add/Remove Operations
+    // @orchestra-task: 6
+    // ==========================================================
+    group('US2: update/add/remove operations (TDD RED)', () {
+      // ----------------------------------------------------------
+      // US2: Update operation with new schema structure
+      // ----------------------------------------------------------
+      group('update operation with new schema', () {
+        test(
+          'update.series changes property on existing series',
+          () async {
+            // Test the NEW schema structure with explicit update.series[]
+            // Uses update.series array structure
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {'id': 'existing_series', 'color': '#FF0000'},
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+            // This test should FAIL because the new schema is not implemented yet
+            expect(series.color, equals('#FF0000'));
+          },
+        );
+
+        test(
+          'update.annotations changes label on existing annotation',
+          () async {
+            // Need to set up chart with annotations first
+            currentChart = _createChartWithAnnotations();
+
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'annotations': [
+                    {'id': 'ann-001', 'label': 'Updated Label'},
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final annotation = chart.annotations.firstWhere((a) => a.id == 'ann-001');
+            // This test should FAIL because update.annotations is not implemented
+            expect(annotation.label, equals('Updated Label'));
+          },
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Add operation with ID generation
+      // ----------------------------------------------------------
+      group('add operation with ID generation', () {
+        test(
+          'add.annotations generates system ID when not provided',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {'type': 'referenceLine', 'value': 200.0, 'orientation': 'horizontal'},
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // Find the newly added annotation
+            final newAnnotation = chart.annotations.firstWhere(
+              (a) => a.value == 200.0 && a.type == AnnotationType.referenceLine,
+              orElse: () => throw StateError('Annotation not found'),
+            );
+            // System should generate an ID
+            expect(newAnnotation.id, isNotNull);
+            expect(newAnnotation.id, isNotEmpty);
+          },
+        );
+
+        test(
+          'add.series adds new series with the specified ID',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'series': [
+                    {
+                      'id': 'brand-new-series',
+                      'data': [
+                        {'x': 0, 'y': 100},
+                        {'x': 1, 'y': 200},
+                      ],
+                    },
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // Should find the new series with the add.series structure
+            expect(
+              chart.series.any((s) => s.id == 'brand-new-series'),
+              isTrue,
+              reason: 'add.series should add the new series',
+            );
+          },
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US4: Annotation validation for add operations
+      // ----------------------------------------------------------
+      group('annotation validation on add', () {
+        test(
+          'add.annotations returns error when zone lacks bounds',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {
+                      'type': 'zone',
+                      'orientation': 'vertical',
+                      'seriesId': 'series1',
+                    },
+                  ],
+                },
+              },
+            });
+
+            expect(result.isError, isTrue);
+            expect(result.output, contains('INVALID ZONE'));
+            expect(result.output, contains('MISSING BOUNDS'));
+            expect(result.output, contains('minValue'));
+            expect(result.output, contains('maxValue'));
+          },
+        );
+
+        test(
+          'add.annotations returns error when referenceLine lacks value',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {
+                      'type': 'referenceLine',
+                      'orientation': 'horizontal',
+                    },
+                  ],
+                },
+              },
+            });
+
+            expect(result.isError, isTrue);
+            expect(result.output, contains('INVALID REFERENCELINE'));
+            expect(result.output, contains('MISSING value'));
+          },
+        );
+
+        test(
+          'add.annotations returns error when trendLine lacks seriesId',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {
+                      'type': 'trendLine',
+                      'trendType': 'linear',
+                    },
+                  ],
+                },
+              },
+            });
+
+            expect(result.isError, isTrue);
+            expect(result.output, contains('INVALID TRENDLINE'));
+            expect(result.output, contains('MISSING seriesId'));
+          },
+        );
+
+        test(
+          'add.annotations accepts valid zone with minValue/maxValue',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'add': {
+                  'annotations': [
+                    {
+                      'type': 'zone',
+                      'orientation': 'vertical',
+                      'minValue': 2.0,
+                      'maxValue': 5.0,
+                    },
+                  ],
+                },
+              },
+            });
+
+            expect(result.isError, isFalse);
+            final chart = result.data as ChartConfiguration;
+            expect(chart.annotations.any((a) => a.type == AnnotationType.zone), isTrue);
+          },
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Remove operation
+      // ----------------------------------------------------------
+      group('remove operation', () {
+        test(
+          'remove.series removes series by ID',
+          () async {
+            final result = await tool.execute({
+              'modifications': {
+                'remove': {
+                  'series': ['series_to_remove'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // This tests the new remove.series structure (not removeSeries)
+            expect(
+              chart.series.any((s) => s.id == 'series_to_remove'),
+              isFalse,
+              reason: 'remove.series should remove the specified series',
+            );
+          },
+        );
+
+        test(
+          'remove.annotations removes annotation by ID',
+          () async {
+            currentChart = _createChartWithAnnotations();
+
+            final result = await tool.execute({
+              'modifications': {
+                'remove': {
+                  'annotations': ['ann-001'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // This tests the new remove.annotations structure
+            expect(
+              chart.annotations.any((a) => a.id == 'ann-001'),
+              isFalse,
+              reason: 'remove.annotations should remove the specified annotation',
+            );
+          },
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Execution Order (remove → add → update)
+      // ----------------------------------------------------------
+      group('execution order', () {
+        test(
+          'operations execute in order: remove then add then update',
+          () async {
+            // This tests FR-015: execution order must be remove → add → update
+            // We remove a series, add one with same ID, then update it
+            // If order is wrong, this will fail
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {'id': 'recycled-id', 'color': '#00FF00'},
+                  ],
+                },
+                'add': {
+                  'series': [
+                    {
+                      'id': 'recycled-id',
+                      'data': [
+                        {'x': 0, 'y': 50},
+                      ],
+                      'color': '#FF0000',
+                    },
+                  ],
+                },
+                'remove': {
+                  'series': ['series_to_remove'],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            // After remove → add → update:
+            // 1. series_to_remove is removed
+            // 2. recycled-id is added with color #FF0000
+            // 3. recycled-id is updated to color #00FF00
+            expect(
+              chart.series.any((s) => s.id == 'series_to_remove'),
+              isFalse,
+              reason: 'series_to_remove should be removed',
+            );
+            final recycledSeries = chart.series.firstWhere((s) => s.id == 'recycled-id');
+            expect(
+              recycledSeries.color,
+              equals('#00FF00'),
+              reason: 'Update should run after add, so color should be #00FF00',
+            );
+          },
+        );
+      });
+
+      // ----------------------------------------------------------
+      // US2: Deep Merge on yAxis update
+      // ----------------------------------------------------------
+      group('deep merge semantics', () {
+        test(
+          'partial yAxis update preserves non-updated properties',
+          () async {
+            // Set up chart with series that has yAxis config
+            currentChart = _createChartWithYAxis();
+
+            final result = await tool.execute({
+              'modifications': {
+                'update': {
+                  'series': [
+                    {
+                      'id': 'series-with-yaxis',
+                      'yAxis': {'label': 'Updated Label'},
+                    },
+                  ],
+                },
+              },
+            });
+
+            final chart = result.data as ChartConfiguration;
+            final series = chart.series.firstWhere((s) => s.id == 'series-with-yaxis');
+            // Deep merge should preserve unit and position
+            expect(series.yAxis, isNotNull);
+            expect(series.yAxis!.label, equals('Updated Label'));
+            expect(
+              series.yAxis!.unit,
+              equals('W'),
+              reason: 'Deep merge should preserve unit',
+            );
+            expect(
+              series.yAxis!.position,
+              equals(AxisPosition.left),
+              reason: 'Deep merge should preserve position',
+            );
+          },
+        );
+      });
+    });
+
+    // ==========================================================
+    // US5: Deep Merge Semantics
+    // ==========================================================
+    group('US5: Deep Merge Semantics', () {
+      // ----------------------------------------------------------
+      // Test 1: Deep merge preserving multiple yAxis properties
+      // ----------------------------------------------------------
+      test(
+        'deep merge preserves ALL unspecified yAxis properties (min, max, unit, position, color)',
+        () async {
+          // Set up chart with series that has extended yAxis config
+          currentChart = _createChartWithExtendedYAxis();
+
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'series-extended-yaxis',
+                    'yAxis': {'label': 'New Power Label'},
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series = chart.series.firstWhere((s) => s.id == 'series-extended-yaxis');
+
+          // Updated property should be changed
+          expect(series.yAxis, isNotNull);
+          expect(series.yAxis!.label, equals('New Power Label'));
+
+          // ALL other properties should be preserved via deep merge
+          expect(
+            series.yAxis!.unit,
+            equals('W'),
+            reason: 'Deep merge should preserve unit',
+          );
+          expect(
+            series.yAxis!.position,
+            equals(AxisPosition.left),
+            reason: 'Deep merge should preserve position',
+          );
+          expect(
+            series.yAxis!.min,
+            equals(0),
+            reason: 'Deep merge should preserve min',
+          );
+          expect(
+            series.yAxis!.max,
+            equals(500),
+            reason: 'Deep merge should preserve max',
+          );
+          expect(
+            series.yAxis!.color,
+            equals('#2196F3'),
+            reason: 'Deep merge should preserve color',
+          );
+        },
+      );
+
+      // ----------------------------------------------------------
+      // Test 2: Array replacement semantics for data field
+      // ----------------------------------------------------------
+      test(
+        'data array is REPLACED entirely, not merged element-by-element',
+        () async {
+          // Set up default chart with series that has multiple data points
+          currentChart = _createDefaultChart();
+
+          // Original series 'existing_series' has 2 data points per _createDefaultChart()
+          final originalSeries = currentChart.series.firstWhere((s) => s.id == 'existing_series');
+          expect(
+            originalSeries.data.length,
+            greaterThan(1),
+            reason: 'Test requires series with multiple data points',
+          );
+
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'data': [
+                      {'x': 99, 'y': 999},
+                    ],
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+
+          // Array should be REPLACED, not merged
+          expect(
+            series.data.length,
+            equals(1),
+            reason: 'Data array should be replaced entirely (not appended)',
+          );
+          expect(
+            series.data[0].x,
+            equals(99),
+            reason: 'Data should contain new x value',
+          );
+          expect(
+            series.data[0].y,
+            equals(999),
+            reason: 'Data should contain new y value',
+          );
+        },
+      );
+
+      // ----------------------------------------------------------
+      // Test 3: Scalar replacement semantics
+      // ----------------------------------------------------------
+      test(
+        'scalar fields (color, type, name) are overwritten, not merged',
+        () async {
+          // Set up default chart
+          currentChart = _createDefaultChart();
+
+          // Original series properties
+          final originalSeries = currentChart.series.firstWhere((s) => s.id == 'existing_series');
+          final originalColor = originalSeries.color;
+          final originalType = originalSeries.type;
+          final originalName = originalSeries.name;
+
+          // Update only the color
+          final result = await tool.execute({
+            'modifications': {
+              'update': {
+                'series': [
+                  {
+                    'id': 'existing_series',
+                    'color': '#FF0000',
+                  },
+                ],
+              },
+            },
+          });
+
+          expect(result.isError, isFalse, reason: 'Update should succeed');
+          final chart = result.data as ChartConfiguration;
+          final series = chart.series.firstWhere((s) => s.id == 'existing_series');
+
+          // Color should be replaced (scalar replacement)
+          expect(
+            series.color,
+            equals('#FF0000'),
+            reason: 'Scalar color field should be replaced',
+          );
+          expect(
+            series.color,
+            isNot(equals(originalColor)),
+            reason: 'Color should be different from original',
+          );
+
+          // Other scalar fields should remain unchanged
+          expect(
+            series.type,
+            equals(originalType),
+            reason: 'Type was not in update, should be preserved',
+          );
+          expect(
+            series.name,
+            equals(originalName),
+            reason: 'Name was not in update, should be preserved',
+          );
+        },
+      );
     });
   });
 }
@@ -966,13 +1561,13 @@ void main() {
 ChartConfiguration _createDefaultChart() {
   return const ChartConfiguration(
     id: 'test-chart-123',
-    type: ChartType.line,
     title: 'Original Title',
     subtitle: 'Original Subtitle',
     series: [
       SeriesConfig(
         id: 'existing_series',
         name: 'Existing Series',
+        type: ChartType.line,
         data: [
           DataPoint(x: 0, y: 10),
           DataPoint(x: 1, y: 20),
@@ -982,6 +1577,7 @@ ChartConfiguration _createDefaultChart() {
       SeriesConfig(
         id: 'old_series',
         name: 'Old Series',
+        type: ChartType.line,
         data: [
           DataPoint(x: 0, y: 5),
         ],
@@ -1030,5 +1626,87 @@ ChartConfiguration _createDefaultChart() {
     legendPosition: LegendPosition.bottom,
     useDarkTheme: false,
     normalizationMode: NormalizationModeConfig.none,
+  );
+}
+
+/// Creates a chart configuration with annotations for testing.
+ChartConfiguration _createChartWithAnnotations() {
+  return const ChartConfiguration(
+    id: 'test-chart-with-annotations',
+    title: 'Chart With Annotations',
+    series: [
+      SeriesConfig(
+        id: 'main-series',
+        data: [
+          DataPoint(x: 0, y: 100),
+          DataPoint(x: 1, y: 150),
+        ],
+      ),
+    ],
+    annotations: [
+      AnnotationConfig(
+        id: 'ann-001',
+        type: AnnotationType.referenceLine,
+        orientation: Orientation.horizontal,
+        value: 100.0,
+        label: 'Original Label',
+      ),
+      AnnotationConfig(
+        id: 'ann-002',
+        type: AnnotationType.referenceLine,
+        orientation: Orientation.vertical,
+        value: 0.5,
+        label: 'Second Annotation',
+      ),
+    ],
+  );
+}
+
+/// Creates a chart configuration with series that has yAxis config for testing.
+ChartConfiguration _createChartWithYAxis() {
+  return const ChartConfiguration(
+    id: 'test-chart-with-yaxis',
+    title: 'Chart With YAxis',
+    series: [
+      SeriesConfig(
+        id: 'series-with-yaxis',
+        data: [
+          DataPoint(x: 0, y: 200),
+          DataPoint(x: 1, y: 250),
+        ],
+        yAxis: YAxisConfig(
+          label: 'Power',
+          unit: 'W',
+          position: AxisPosition.left,
+        ),
+      ),
+    ],
+  );
+}
+
+/// Creates a chart configuration with series that has extended yAxis config
+/// for testing deep merge with multiple properties.
+ChartConfiguration _createChartWithExtendedYAxis() {
+  return const ChartConfiguration(
+    id: 'test-chart-extended-yaxis',
+    title: 'Chart With Extended YAxis',
+    series: [
+      SeriesConfig(
+        id: 'series-extended-yaxis',
+        data: [
+          DataPoint(x: 0, y: 200),
+          DataPoint(x: 1, y: 250),
+          DataPoint(x: 2, y: 300),
+        ],
+        yAxis: YAxisConfig(
+          label: 'Power',
+          unit: 'W',
+          position: AxisPosition.left,
+          min: 0,
+          max: 500,
+          color: '#2196F3',
+        ),
+      ),
+    ],
   );
 }

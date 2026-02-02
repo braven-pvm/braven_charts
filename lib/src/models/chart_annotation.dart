@@ -33,7 +33,9 @@ sealed class ChartAnnotation {
   /// Creates a chart annotation.
   ///
   /// If [id] is not provided, a unique ID will be auto-generated.
-  const ChartAnnotation({
+  /// The [id] field is mutable to allow tool handlers to assign
+  /// system-generated IDs after construction.
+  ChartAnnotation({
     required this.id,
     this.label,
     this.style = const AnnotationStyle(),
@@ -48,7 +50,10 @@ sealed class ChartAnnotation {
   ///
   /// Used for managing, updating, and removing annotations from a chart.
   /// Must be unique within a single chart instance.
-  final String id;
+  ///
+  /// This field is mutable to allow the agentic tool layer to assign
+  /// system-generated IDs after the annotation is created.
+  String id;
 
   /// Optional label for this annotation.
   ///
@@ -174,6 +179,25 @@ class PointAnnotation extends ChartAnnotation {
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
 
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'PointAnnotation',
+      if (label != null) 'label': label,
+      'seriesId': seriesId,
+      'dataPointIndex': dataPointIndex,
+      'offset': {'dx': offset.dx, 'dy': offset.dy},
+      'markerShape': markerShape.name,
+      'markerSize': markerSize,
+      'markerColor': markerColor.toARGB32(),
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
   /// Creates a copy with modified properties.
   PointAnnotation copyWith({
     String? id,
@@ -238,6 +262,7 @@ class RangeAnnotation extends ChartAnnotation {
     this.endX,
     this.startY,
     this.endY,
+    this.seriesId,
     this.fillColor,
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
@@ -254,8 +279,7 @@ class RangeAnnotation extends ChartAnnotation {
           startY == null || endY == null || startY < endY,
           'startY must be less than endY',
         ),
-        assert(snapTolerance >= 0 && snapTolerance <= 1,
-            'snapTolerance must be between 0 and 1'),
+        assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
         assert(labelMargin >= 0, 'Label margin must be non-negative'),
         super(id: id ?? ChartAnnotation.generateId());
 
@@ -280,6 +304,24 @@ class RangeAnnotation extends ChartAnnotation {
   /// Defaults to 0.05 (5% of viewport).
   final double snapTolerance;
 
+  /// Optional series ID for multi-axis charts with perSeries normalization.
+  ///
+  /// When specified, the range Y values are normalized using the Y-range
+  /// of the referenced series. If null, the first available series bounds
+  /// are used.
+  ///
+  /// Example: If you have "power" and "heartrate" series with different
+  /// Y-ranges, and want a range at 150-200W on the power series scale:
+  /// ```dart
+  /// RangeAnnotation(
+  ///   startY: 150,
+  ///   endY: 200,
+  ///   seriesId: 'power',  // Use power series Y-range for normalization
+  ///   fillColor: Colors.red.withOpacity(0.2),
+  /// )
+  /// ```
+  final String? seriesId;
+
   /// Optional fill color for the range rectangle.
   final Color? fillColor;
 
@@ -294,6 +336,30 @@ class RangeAnnotation extends ChartAnnotation {
   /// Controls how far the label is positioned from the range boundary.
   /// Defaults to 8.0 logical pixels.
   final double labelMargin;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'RangeAnnotation',
+      if (label != null) 'label': label,
+      if (startX != null) 'startX': startX,
+      if (endX != null) 'endX': endX,
+      if (startY != null) 'startY': startY,
+      if (endY != null) 'endY': endY,
+      'snapTolerance': snapTolerance,
+      if (seriesId != null) 'seriesId': seriesId,
+      if (fillColor != null) 'fillColor': fillColor!.toARGB32(),
+      if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
+      'labelPosition': labelPosition.name,
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+      'snapToValue': snapToValue,
+      'snapIncrement': snapIncrement,
+    };
+  }
 
   /// Creates a copy with modified properties.
   RangeAnnotation copyWith({
@@ -310,6 +376,7 @@ class RangeAnnotation extends ChartAnnotation {
     double? endX,
     double? startY,
     double? endY,
+    String? seriesId,
     Color? fillColor,
     Color? borderColor,
     AnnotationLabelPosition? labelPosition,
@@ -329,6 +396,7 @@ class RangeAnnotation extends ChartAnnotation {
       endX: endX ?? this.endX,
       startY: startY ?? this.startY,
       endY: endY ?? this.endY,
+      seriesId: seriesId ?? this.seriesId,
       fillColor: fillColor ?? this.fillColor,
       borderColor: borderColor ?? this.borderColor,
       labelPosition: labelPosition ?? this.labelPosition,
@@ -386,12 +454,8 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: json['richTextDelta'] as List<dynamic>?,
       position: position,
       anchor: anchor,
-      backgroundColor: json['backgroundColor'] != null
-          ? Color(json['backgroundColor'] as int)
-          : null,
-      borderColor: json['borderColor'] != null
-          ? Color(json['borderColor'] as int)
-          : null,
+      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
+      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
       allowDragging: json['allowDragging'] as bool? ?? false,
       allowEditing: json['allowEditing'] as bool? ?? false,
       zIndex: json['zIndex'] as int? ?? 0,
@@ -651,9 +715,7 @@ class TextAnnotation extends ChartAnnotation {
     if (attrs['u'] == true || attrs['underline'] == true) {
       result = result.copyWith(decoration: TextDecoration.underline);
     }
-    if (attrs['s'] == true ||
-        attrs['strikethrough'] == true ||
-        attrs['strike'] == true) {
+    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
       result = result.copyWith(decoration: TextDecoration.lineThrough);
     }
 
@@ -812,8 +874,7 @@ class TextAnnotation extends ChartAnnotation {
       if (richTextDelta != null) 'richTextDelta': richTextDelta,
       'position': {'dx': position.dx, 'dy': position.dy},
       'anchor': anchor.name,
-      if (backgroundColor != null)
-        'backgroundColor': backgroundColor!.toARGB32(),
+      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
@@ -953,6 +1014,27 @@ class ThresholdAnnotation extends ChartAnnotation {
   /// Defaults to 0.0 (no glow).
   final double elevation;
 
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'ThresholdAnnotation',
+      if (label != null) 'label': label,
+      'axis': axis.name,
+      'value': value,
+      if (seriesId != null) 'seriesId': seriesId,
+      'lineColor': lineColor.toARGB32(),
+      'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
+      'labelPosition': labelPosition.name,
+      'labelMargin': labelMargin,
+      'elevation': elevation,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
   /// Creates a copy with modified properties.
   ThresholdAnnotation copyWith({
     String? id,
@@ -1050,6 +1132,24 @@ class PinAnnotation extends ChartAnnotation {
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
 
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'PinAnnotation',
+      if (label != null) 'label': label,
+      'x': x,
+      'y': y,
+      'markerShape': markerShape.name,
+      'markerSize': markerSize,
+      'markerColor': markerColor.toARGB32(),
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
   /// Creates a copy with modified properties.
   PinAnnotation copyWith({
     String? id,
@@ -1130,8 +1230,7 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelMargin = 4.0,
   })  : assert(
-          trendType != TrendType.movingAverage ||
-              (windowSize != null && windowSize > 0),
+          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
           'windowSize must be positive when trendType is movingAverage',
         ),
         assert(
@@ -1167,6 +1266,26 @@ class TrendAnnotation extends ChartAnnotation {
   /// Controls how far the label is positioned from the trend line end.
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'TrendAnnotation',
+      if (label != null) 'label': label,
+      'seriesId': seriesId,
+      'trendType': trendType.name,
+      if (windowSize != null) 'windowSize': windowSize,
+      'degree': degree,
+      'lineColor': lineColor.toARGB32(),
+      'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
+      'labelMargin': labelMargin,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
 
   /// Creates a copy with modified properties.
   TrendAnnotation copyWith({
@@ -1290,8 +1409,7 @@ class LegendAnnotation extends ChartAnnotation {
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
-      customPosition:
-          clearCustomPosition ? null : (customPosition ?? _customPosition),
+      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
     );
   }
 }

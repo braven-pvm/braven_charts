@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:braven_charts/src/agentic/tools/modify_chart_tool.dart';
 import 'package:braven_charts/src/agentic/tools/llm_tool.dart';
+import 'package:braven_charts/src/agentic/models/axis_config.dart';
 import 'package:braven_charts/src/agentic/models/chart_configuration.dart';
 import 'package:braven_charts/src/agentic/models/series_config.dart';
 import 'package:braven_charts/src/agentic/services/data_store.dart';
@@ -464,7 +465,9 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
-        expect(config.series.first.yAxisPosition, equals('right'));
+        // Per FR-001: check nested yAxisConfig.position
+        expect(config.series.first.yAxisConfig?.position,
+            equals(AxisPosition.right));
       });
 
       test('applies yAxisLabel and yAxisUnit via series modifications',
@@ -485,8 +488,9 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
-        expect(config.series.first.yAxisLabel, equals('Power Output'));
-        expect(config.series.first.yAxisUnit, equals('W'));
+        // Per FR-001: check nested yAxisConfig fields
+        expect(config.series.first.yAxisConfig?.label, equals('Power Output'));
+        expect(config.series.first.yAxisConfig?.unit, equals('W'));
       });
 
       test('applies yAxisColor via series modifications', () async {
@@ -505,7 +509,8 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
-        expect(config.series.first.yAxisColor, equals('#FF5500'));
+        // Per FR-001: check nested yAxisConfig.color
+        expect(config.series.first.yAxisConfig?.color, equals('#FF5500'));
       });
 
       test('applies all per-series Y-axis config fields together', () async {
@@ -527,11 +532,12 @@ void main() {
         });
 
         expect(config, isA<ChartConfiguration>());
+        // Per FR-001: check nested yAxisConfig fields
         final series = config.series.first;
-        expect(series.yAxisPosition, equals('left'));
-        expect(series.yAxisLabel, equals('Heart Rate'));
-        expect(series.yAxisUnit, equals('bpm'));
-        expect(series.yAxisColor, equals('#FF0000'));
+        expect(series.yAxisConfig?.position, equals(AxisPosition.left));
+        expect(series.yAxisConfig?.label, equals('Heart Rate'));
+        expect(series.yAxisConfig?.unit, equals('bpm'));
+        expect(series.yAxisConfig?.color, equals('#FF0000'));
       });
 
       test('preserves existing data when modifying yAxisConfig', () async {
@@ -554,9 +560,11 @@ void main() {
         // Data should be preserved
         expect(config.series.first.data, isNotEmpty);
         expect(config.series.first.data!.length, equals(2));
-        // Y-axis config should be modified
-        expect(config.series.first.yAxisPosition, equals('right'));
-        expect(config.series.first.yAxisLabel, equals('Modified Label'));
+        // Per FR-001: Y-axis config should be modified via nested yAxisConfig
+        expect(config.series.first.yAxisConfig?.position,
+            equals(AxisPosition.right));
+        expect(
+            config.series.first.yAxisConfig?.label, equals('Modified Label'));
       });
     });
   });

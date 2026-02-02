@@ -76,18 +76,22 @@ void main() {
           expect(properties['prompt']['description'], isNotEmpty);
         });
 
-        test('has type property with enum', () {
+        test('series item has type property with enum', () {
           final properties =
               tool.inputSchema['properties'] as Map<String, dynamic>;
-          expect(properties, contains('type'));
-          expect(properties['type']['type'], equals('string'));
-          expect(properties['type']['enum'], isA<List>());
+          final seriesItems = properties['series']['items'] as Map;
+          final seriesProps = seriesItems['properties'] as Map;
+          expect(seriesProps, contains('type'));
+          expect(seriesProps['type']['type'], equals('string'));
+          expect(seriesProps['type']['enum'], isA<List>());
         });
 
-        test('type enum includes all chart types', () {
+        test('series item type enum includes all chart types', () {
           final properties =
               tool.inputSchema['properties'] as Map<String, dynamic>;
-          final enumValues = properties['type']['enum'] as List;
+          final seriesItems = properties['series']['items'] as Map;
+          final seriesProps = seriesItems['properties'] as Map;
+          final enumValues = seriesProps['type']['enum'] as List;
           expect(enumValues, contains('line'));
           expect(enumValues, contains('area'));
           expect(enumValues, contains('bar'));
@@ -330,13 +334,13 @@ void main() {
           expect(result.output, contains('line'));
         });
 
-        test('respects chart type parameter', () async {
+        test('respects series type parameter', () async {
           final result = await tool.execute({
             'prompt': 'Create a bar chart',
-            'type': 'bar',
             'series': [
               {
                 'id': 'data',
+                'type': 'bar',
                 'data': [
                   {'x': 0, 'y': 100},
                 ],
@@ -345,10 +349,10 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.bar));
+          expect(chart.series.first.type, equals(ChartType.bar));
         });
 
-        test('defaults to line chart when type not specified', () async {
+        test('defaults to line series when type not specified', () async {
           final result = await tool.execute({
             'prompt': 'Create a chart',
             'series': [
@@ -362,7 +366,7 @@ void main() {
           });
 
           final chart = result.data as ChartConfiguration;
-          expect(chart.type, equals(ChartType.line));
+          expect(chart.series.first.type, equals(ChartType.line));
         });
 
         test('respects title parameter', () async {
@@ -654,14 +658,14 @@ void main() {
         });
       });
 
-      group('with invalid type enum', () {
+      group('with invalid series type enum', () {
         test('returns error result for invalid type', () async {
           final result = await tool.execute({
             'prompt': 'Create a chart',
-            'type': 'invalid_chart_type',
             'series': [
               {
                 'id': 'series1',
+                'type': 'invalid_chart_type',
                 'data': [
                   {'x': 0, 'y': 10},
                 ],
@@ -675,10 +679,10 @@ void main() {
         test('error output mentions type', () async {
           final result = await tool.execute({
             'prompt': 'Create a chart',
-            'type': 'pie',
             'series': [
               {
                 'id': 'series1',
+                'type': 'pie',
                 'data': [
                   {'x': 0, 'y': 10},
                 ],
@@ -692,10 +696,10 @@ void main() {
         test('error suggests valid types', () async {
           final result = await tool.execute({
             'prompt': 'Create a chart',
-            'type': 'histogram',
             'series': [
               {
                 'id': 'series1',
+                'type': 'histogram',
                 'data': [
                   {'x': 0, 'y': 10},
                 ],
@@ -777,13 +781,13 @@ void main() {
         expect(result.output, endsWith('}'));
       });
 
-      test('output contains chart type', () async {
+      test('output contains series type', () async {
         final result = await tool.execute({
           'prompt': 'Create a chart',
-          'type': 'area',
           'series': [
             {
               'id': 'data',
+              'type': 'area',
               'data': [
                 {'x': 0, 'y': 100},
               ],
@@ -896,6 +900,343 @@ void main() {
         expect(chart.legendPosition, equals(LegendPosition.bottom));
         expect(chart.useDarkTheme, isFalse);
         expect(chart.normalizationMode, equals(NormalizationModeConfig.none));
+      });
+    });
+
+    // ==========================================================
+    // T020: V2 Schema Contract Tests (US1)
+    // ==========================================================
+    group('V2 Schema - nested yAxis (US1)', () {
+      test('inputSchema series items include nested yAxis property', () {
+        // T020: Per FR-001, series must support nested yAxis object
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+
+        // Should have nested yAxis property
+        expect(seriesProps, contains('yAxis'),
+            reason: 'FR-001: series must have nested yAxis property');
+        expect(seriesProps['yAxis'], isA<Map>(),
+            reason: 'FR-001: yAxis must be an object schema');
+        expect(seriesProps['yAxis']['type'], equals('object'),
+            reason: 'FR-001: yAxis must be type object');
+      });
+
+      test('inputSchema series yAxis has position property with enum', () {
+        // T020: yAxis must include position field for left/right placement
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+        final yAxisProps = seriesProps['yAxis']['properties'] as Map;
+
+        expect(yAxisProps, contains('position'),
+            reason: 'FR-001: yAxis must have position property');
+        expect(yAxisProps['position']['enum'], isA<List>(),
+            reason: 'position must be an enum');
+        expect(yAxisProps['position']['enum'], contains('left'));
+        expect(yAxisProps['position']['enum'], contains('right'));
+      });
+
+      test('inputSchema series yAxis has label and unit properties', () {
+        // T020: yAxis must include label and unit for axis display
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+        final yAxisProps = seriesProps['yAxis']['properties'] as Map;
+
+        expect(yAxisProps, contains('label'),
+            reason: 'FR-001: yAxis must have label property');
+        expect(yAxisProps, contains('unit'),
+            reason: 'FR-001: yAxis must have unit property');
+      });
+
+      test('inputSchema series yAxis has min/max properties', () {
+        // T020: yAxis must include min/max for axis range
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+        final yAxisProps = seriesProps['yAxis']['properties'] as Map;
+
+        expect(yAxisProps, contains('min'),
+            reason: 'FR-001: yAxis must have min property');
+        expect(yAxisProps, contains('max'),
+            reason: 'FR-001: yAxis must have max property');
+        expect(yAxisProps['min']['type'], equals('number'));
+        expect(yAxisProps['max']['type'], equals('number'));
+      });
+
+      test('inputSchema does NOT have flat yAxis fields on series (FR-002)',
+          () {
+        // T020: Per FR-002, flat y-axis fields are prohibited
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+
+        // These flat fields should NOT exist
+        expect(seriesProps.containsKey('yAxisPosition'), isFalse,
+            reason: 'FR-002: yAxisPosition flat field is prohibited');
+        expect(seriesProps.containsKey('yAxisLabel'), isFalse,
+            reason: 'FR-002: yAxisLabel flat field is prohibited');
+        expect(seriesProps.containsKey('yAxisUnit'), isFalse,
+            reason: 'FR-002: yAxisUnit flat field is prohibited');
+        expect(seriesProps.containsKey('yAxisColor'), isFalse,
+            reason: 'FR-002: yAxisColor flat field is prohibited');
+        expect(seriesProps.containsKey('yAxisMin'), isFalse,
+            reason: 'FR-002: yAxisMin flat field is prohibited');
+        expect(seriesProps.containsKey('yAxisMax'), isFalse,
+            reason: 'FR-002: yAxisMax flat field is prohibited');
+      });
+
+      test('inputSchema does NOT have yAxisId reference field (FR-003)', () {
+        // T020: Per FR-003, yAxisId references are prohibited
+        final properties =
+            tool.inputSchema['properties'] as Map<String, dynamic>;
+        final seriesItems = properties['series']['items'] as Map;
+        final seriesProps = seriesItems['properties'] as Map;
+
+        expect(seriesProps.containsKey('yAxisId'), isFalse,
+            reason: 'FR-003: yAxisId reference field is prohibited');
+      });
+
+      test('execute parses nested yAxis from series input', () async {
+        // T020: Tool must parse nested yAxis configuration
+        final result = await tool.execute({
+          'prompt': 'Create a dual-axis chart',
+          'series': [
+            {
+              'id': 'power',
+              'data': [
+                {'x': 0, 'y': 250},
+              ],
+              'yAxis': {
+                'position': 'left',
+                'label': 'Power',
+                'unit': 'W',
+                'min': 0,
+                'max': 500,
+              },
+            },
+            {
+              'id': 'heart-rate',
+              'data': [
+                {'x': 0, 'y': 145},
+              ],
+              'yAxis': {
+                'position': 'right',
+                'label': 'Heart Rate',
+                'unit': 'bpm',
+                'min': 60,
+                'max': 200,
+              },
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+
+        // Verify series have yAxis configuration
+        expect(chart.series[0].yAxis, isNotNull,
+            reason: 'First series must have yAxis');
+        expect(chart.series[0].yAxis!.label, equals('Power'));
+        expect(chart.series[0].yAxis!.unit, equals('W'));
+
+        expect(chart.series[1].yAxis, isNotNull,
+            reason: 'Second series must have yAxis');
+        expect(chart.series[1].yAxis!.label, equals('Heart Rate'));
+        expect(chart.series[1].yAxis!.unit, equals('bpm'));
+      });
+
+      test('execute respects yAxis position for multi-axis chart', () async {
+        // T020: Each series yAxis position should be preserved
+        final result = await tool.execute({
+          'prompt': 'Create a multi-axis chart',
+          'normalizationMode': 'perSeries',
+          'series': [
+            {
+              'id': 'power',
+              'data': [
+                {'x': 0, 'y': 250},
+              ],
+              'yAxis': {
+                'position': 'left',
+                'label': 'Power',
+              },
+            },
+            {
+              'id': 'cadence',
+              'data': [
+                {'x': 0, 'y': 90},
+              ],
+              'yAxis': {
+                'position': 'right',
+                'label': 'Cadence',
+              },
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+
+        expect(chart.series[0].yAxis!.position, equals(AxisPosition.left));
+        expect(chart.series[1].yAxis!.position, equals(AxisPosition.right));
+      });
+    });
+
+    // ==========================================================
+    // T021: Annotation ID Generation Tests (US1)
+    // ==========================================================
+    group('Annotation ID generation (US1)', () {
+      test('annotations get system-generated IDs on create', () async {
+        // T021: Per FR-004, annotation IDs are system-generated
+        final result = await tool.execute({
+          'prompt': 'Create a chart with annotation',
+          'series': [
+            {
+              'id': 'data',
+              'data': [
+                {'x': 0, 'y': 100},
+              ],
+            },
+          ],
+          'annotations': [
+            {
+              'type': 'referenceLine',
+              'orientation': 'horizontal',
+              'value': 75,
+              'label': 'Threshold',
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+
+        expect(chart.annotations, hasLength(1));
+        expect(chart.annotations[0].id, isNotNull,
+            reason: 'FR-004: annotation must have system-generated ID');
+        expect(chart.annotations[0].id, isNotEmpty,
+            reason: 'FR-004: annotation ID must be non-empty');
+      });
+
+      test('each annotation gets unique ID', () async {
+        // T021: Multiple annotations should get unique IDs
+        final result = await tool.execute({
+          'prompt': 'Create a chart with multiple annotations',
+          'series': [
+            {
+              'id': 'data',
+              'data': [
+                {'x': 0, 'y': 100},
+              ],
+            },
+          ],
+          'annotations': [
+            {
+              'type': 'referenceLine',
+              'orientation': 'horizontal',
+              'value': 75,
+              'label': 'Lower Threshold',
+            },
+            {
+              'type': 'referenceLine',
+              'orientation': 'horizontal',
+              'value': 125,
+              'label': 'Upper Threshold',
+            },
+            {
+              'type': 'zone',
+              'orientation': 'horizontal',
+              'minValue': 75,
+              'maxValue': 125,
+              'label': 'Target Zone',
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+
+        expect(chart.annotations, hasLength(3));
+
+        // All IDs should be non-null and unique
+        final ids = chart.annotations.map((a) => a.id).toList();
+        expect(ids.every((id) => id != null && id.isNotEmpty), isTrue,
+            reason: 'All annotations must have non-empty IDs');
+
+        final uniqueIds = ids.toSet();
+        expect(uniqueIds.length, equals(3),
+            reason: 'All annotation IDs must be unique');
+      });
+
+      test('agent-supplied annotation ID is ignored (edge case)', () async {
+        // T021: If agent supplies ID, system should ignore and generate new one
+        final result = await tool.execute({
+          'prompt': 'Create a chart with annotation',
+          'series': [
+            {
+              'id': 'data',
+              'data': [
+                {'x': 0, 'y': 100},
+              ],
+            },
+          ],
+          'annotations': [
+            {
+              'id': 'agent-supplied-id', // This should be ignored
+              'type': 'referenceLine',
+              'orientation': 'horizontal',
+              'value': 75,
+              'label': 'Threshold',
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+
+        expect(chart.annotations, hasLength(1));
+        // The agent-supplied ID should be ignored, system generates its own
+        expect(chart.annotations[0].id, isNot(equals('agent-supplied-id')),
+            reason: 'System should ignore agent-supplied annotation ID');
+        expect(chart.annotations[0].id, isNotEmpty,
+            reason: 'System should generate a new ID');
+      });
+
+      test('output JSON includes annotation IDs', () async {
+        // T021: The tool output should include generated IDs per FR-011
+        final result = await tool.execute({
+          'prompt': 'Create a chart with annotation',
+          'series': [
+            {
+              'id': 'data',
+              'data': [
+                {'x': 0, 'y': 100},
+              ],
+            },
+          ],
+          'annotations': [
+            {
+              'type': 'referenceLine',
+              'orientation': 'horizontal',
+              'value': 75,
+            },
+          ],
+        });
+
+        expect(result.isError, isFalse);
+        final chart = result.data as ChartConfiguration;
+        final annotationId = chart.annotations[0].id;
+
+        // The output string should contain the generated annotation ID
+        expect(result.output, contains(annotationId!),
+            reason: 'FR-011: output must include generated annotation IDs');
       });
     });
   });

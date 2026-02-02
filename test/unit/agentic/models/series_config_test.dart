@@ -53,7 +53,13 @@ void main() {
           markerSize: 6.0,
           interpolation: Interpolation.bezier,
           showPoints: true,
-          yAxisId: 'y-axis-1',
+          // Per FR-001: use nested yAxisConfig instead of yAxisId
+          yAxisConfig: YAxisConfig(
+            id: 'y-axis-1',
+            label: 'Power',
+            unit: 'W',
+            position: AxisPosition.left,
+          ),
           unit: 'W',
           visible: true,
           legendVisible: true,
@@ -71,7 +77,8 @@ void main() {
         expect(config.markerSize, equals(6.0));
         expect(config.interpolation, equals(Interpolation.bezier));
         expect(config.showPoints, isTrue);
-        expect(config.yAxisId, equals('y-axis-1'));
+        // Per FR-001: verify nested yAxisConfig
+        expect(config.yAxisConfig?.id, equals('y-axis-1'));
         expect(config.unit, equals('W'));
         expect(config.visible, isTrue);
         expect(config.legendVisible, isTrue);
@@ -196,7 +203,13 @@ void main() {
           markerSize: 5.0,
           interpolation: Interpolation.bezier,
           showPoints: true,
-          yAxisId: 'y-1',
+          // Per FR-001: use nested yAxisConfig
+          yAxisConfig: YAxisConfig(
+            id: 'y-1',
+            label: 'Power',
+            unit: 'W',
+            position: AxisPosition.left,
+          ),
           unit: 'W',
           visible: true,
           legendVisible: false,
@@ -216,7 +229,9 @@ void main() {
         expect(json['markerSize'], equals(5.0));
         expect(json['interpolation'], equals('bezier'));
         expect(json['showPoints'], isTrue);
-        expect(json['yAxisId'], equals('y-1'));
+        // Per FR-001: verify yAxisConfig is serialized as nested object
+        expect(json['yAxisConfig'], isA<Map<String, dynamic>>());
+        expect(json['yAxisConfig']['id'], equals('y-1'));
         expect(json['unit'], equals('W'));
         expect(json['visible'], isTrue);
         expect(json['legendVisible'], isFalse);
@@ -241,7 +256,13 @@ void main() {
           'strokeWidth': 2.5,
           'markerStyle': 'square',
           'interpolation': 'monotone',
-          'yAxisId': 'y-2',
+          // Per FR-001: nested yAxisConfig instead of flat yAxisId
+          'yAxisConfig': {
+            'id': 'y-2',
+            'label': 'Heart Rate',
+            'unit': 'bpm',
+            'position': 'left',
+          },
           'unit': 'bpm',
         };
 
@@ -254,7 +275,8 @@ void main() {
         expect(config.strokeWidth, equals(2.5));
         expect(config.markerStyle, equals(MarkerStyle.square));
         expect(config.interpolation, equals(Interpolation.monotone));
-        expect(config.yAxisId, equals('y-2'));
+        // Per FR-001: verify nested yAxisConfig is parsed
+        expect(config.yAxisConfig?.id, equals('y-2'));
         expect(config.unit, equals('bpm'));
       });
 
@@ -272,7 +294,13 @@ void main() {
           markerSize: 4.5,
           interpolation: Interpolation.stepped,
           showPoints: false,
-          yAxisId: 'y-3',
+          // Per FR-001: use nested yAxisConfig
+          yAxisConfig: YAxisConfig(
+            id: 'y-3',
+            label: 'Cadence',
+            unit: 'rpm',
+            position: AxisPosition.left,
+          ),
           unit: 'rpm',
           visible: false,
           legendVisible: true,
@@ -293,7 +321,8 @@ void main() {
         expect(reconstructed.markerSize, equals(original.markerSize));
         expect(reconstructed.interpolation, equals(original.interpolation));
         expect(reconstructed.showPoints, equals(original.showPoints));
-        expect(reconstructed.yAxisId, equals(original.yAxisId));
+        // Per FR-001: verify nested yAxisConfig round-trips
+        expect(reconstructed.yAxisConfig?.id, equals(original.yAxisConfig?.id));
         expect(reconstructed.unit, equals(original.unit));
         expect(reconstructed.visible, equals(original.visible));
         expect(reconstructed.legendVisible, equals(original.legendVisible));
@@ -336,32 +365,36 @@ void main() {
     });
 
     group('axis binding', () {
-      test('allows undefined yAxisId for default axis', () {
+      test('allows undefined yAxisConfig for default axis', () {
         final config = SeriesConfig(
           id: 'series-1',
           dataColumn: 'power',
         );
 
-        expect(config.yAxisId, isNull);
+        // Per FR-001: yAxisConfig is optional (null means use default)
+        expect(config.yAxisConfig, isNull);
       });
 
-      test('validates yAxisId format', () {
+      test('validates yAxisConfig id format', () {
+        // Per FR-001: use nested yAxisConfig instead of flat yAxisId
         final validConfig = SeriesConfig(
           id: 'series-1',
           dataColumn: 'power',
-          yAxisId: 'y-axis-1',
-        );
-        expect(validConfig.yAxisId, equals('y-axis-1'));
-
-        // Empty yAxisId should fail
-        expect(
-          () => SeriesConfig(
-            id: 'series-1',
-            dataColumn: 'power',
-            yAxisId: '',
+          yAxisConfig: YAxisConfig(
+            id: 'y-axis-1',
+            position: AxisPosition.left,
           ),
-          throwsA(isA<ArgumentError>()),
         );
+        expect(validConfig.yAxisConfig?.id, equals('y-axis-1'));
+
+        // Empty id in yAxisConfig should NOT throw (id is optional)
+        // The validation is different from the old yAxisId behavior
+        final configWithNoId = SeriesConfig(
+          id: 'series-1',
+          dataColumn: 'power',
+          yAxisConfig: YAxisConfig(position: AxisPosition.left),
+        );
+        expect(configWithNoId.yAxisConfig?.id, isNull);
       });
     });
   });

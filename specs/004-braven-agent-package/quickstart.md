@@ -522,7 +522,7 @@ class DemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Braven Agent Demo',
+      title: 'Braven Agentic Charts',
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       home: const ApiKeyScreen(),  // First, get API key

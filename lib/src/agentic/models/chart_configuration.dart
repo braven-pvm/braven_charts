@@ -208,6 +208,7 @@ class ChartConfiguration {
         );
 
   /// Creates a ChartConfiguration from JSON
+  /// Note: yAxes[] in input is ignored per FR-003 - use series-level yAxisConfig instead.
   factory ChartConfiguration.fromJson(Map<String, dynamic> json) {
     return ChartConfiguration(
       id: json['id'] as String?,
@@ -220,9 +221,8 @@ class ChartConfiguration {
       xAxis: json['xAxis'] != null
           ? XAxisConfig.fromJson(json['xAxis'] as Map<String, dynamic>)
           : null,
-      yAxes: (json['yAxes'] as List)
-          .map((e) => YAxisConfig.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      // FR-003: yAxes[] is ignored - y-axis config is per-series via yAxisConfig
+      yAxes: const [],
       style: json['style'] != null
           ? ChartStyleConfig.fromJson(json['style'] as Map<String, dynamic>)
           : null,
@@ -247,6 +247,7 @@ class ChartConfiguration {
   }
 
   /// Converts ChartConfiguration to JSON
+  /// Note: yAxes[] is NOT serialized per FR-003 - use series-level yAxisConfig instead.
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -255,7 +256,7 @@ class ChartConfiguration {
       if (subtitle != null) 'subtitle': subtitle,
       'series': series.map((s) => s.toJson()).toList(),
       if (xAxis != null) 'xAxis': xAxis!.toJson(),
-      'yAxes': yAxes.map((y) => y.toJson()).toList(),
+      // FR-003: yAxes[] is NOT serialized - y-axis config is per-series
       if (style != null) 'style': style!.toJson(),
       if (interactions != null) 'interactions': interactions,
       if (annotations != null) 'annotations': annotations,

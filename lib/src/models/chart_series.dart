@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'y_axis_config.dart';
+import 'y_axis_position.dart';
 
 /// Interpolation methods for line and area charts.
 enum LineInterpolation {
@@ -204,6 +205,70 @@ class ChartSeries {
   @override
   String toString() =>
       'ChartSeries(id: $id, points: ${points.length}, yAxisId: $yAxisId, unit: $unit)';
+
+  /// Serializes this series to a JSON map.
+  ///
+  /// The [yAxisConfig] is serialized as a nested 'yAxisConfig' object for
+  /// consistency with the agentic schema format (FR-001).
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      if (name != null) 'name': name,
+      'points': points.map((p) => {'x': p.x, 'y': p.y}).toList(),
+      if (color != null) 'color': color!.toARGB32(),
+      if (style != null) 'style': style!.name,
+      'isXOrdered': isXOrdered,
+      if (metadata != null) 'metadata': metadata,
+      if (yAxisId != null) 'yAxisId': yAxisId,
+      if (yAxisConfig != null)
+        'yAxisConfig': {
+          'position': yAxisConfig!.position.name,
+          if (yAxisConfig!.label != null) 'label': yAxisConfig!.label,
+          if (yAxisConfig!.unit != null) 'unit': yAxisConfig!.unit,
+          if (yAxisConfig!.min != null) 'min': yAxisConfig!.min,
+          if (yAxisConfig!.max != null) 'max': yAxisConfig!.max,
+          if (yAxisConfig!.color != null)
+            'color': yAxisConfig!.color!.toARGB32(),
+        },
+      if (unit != null) 'unit': unit,
+    };
+  }
+
+  /// Creates a ChartSeries from a JSON map.
+  ///
+  /// The 'yAxisConfig' nested object is parsed into a [YAxisConfig] if present.
+  static ChartSeries fromJson(Map<String, dynamic> json) {
+    YAxisConfig? yAxisConfig;
+    if (json['yAxisConfig'] != null &&
+        json['yAxisConfig'] is Map<String, dynamic>) {
+      final yAxisMap = json['yAxisConfig'] as Map<String, dynamic>;
+      yAxisConfig = YAxisConfig(
+        position: yAxisMap['position'] != null
+            ? YAxisPosition.values.byName(yAxisMap['position'] as String)
+            : YAxisPosition.left,
+        label: yAxisMap['label'] as String?,
+        unit: yAxisMap['unit'] as String?,
+        min: (yAxisMap['min'] as num?)?.toDouble(),
+        max: (yAxisMap['max'] as num?)?.toDouble(),
+      );
+    }
+
+    return ChartSeries(
+      id: json['id'] as String,
+      name: json['name'] as String?,
+      points: (json['points'] as List<dynamic>?)
+              ?.map((p) => ChartDataPoint(
+                    x: (p['x'] as num).toDouble(),
+                    y: (p['y'] as num).toDouble(),
+                  ))
+              .toList() ??
+          const [],
+      yAxisId: json['yAxisId'] as String?,
+      yAxisConfig: yAxisConfig,
+      unit: json['unit'] as String?,
+      isXOrdered: json['isXOrdered'] as bool? ?? false,
+    );
+  }
 }
 
 /// Line chart series with configurable interpolation.

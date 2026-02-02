@@ -580,6 +580,53 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
     return properties.keys.any((key) => seriesProps.contains(key));
   }
 
+  /// Builds YAxisConfig from either nested yAxisConfig or flat y-axis fields.
+  ///
+  /// Priority:
+  /// 1. Nested yAxisConfig object (new format)
+  /// 2. Flat y-axis fields (yAxisPosition, yAxisLabel, etc.) for backward compat
+  /// 3. Existing yAxisConfig if no changes provided
+  YAxisConfig? _buildYAxisConfig(
+      Map<String, dynamic> seriesJson, YAxisConfig? existing) {
+    // If nested yAxisConfig is provided, use it directly
+    if (seriesJson.containsKey('yAxisConfig') &&
+        seriesJson['yAxisConfig'] != null) {
+      return YAxisConfig.fromJson(
+          seriesJson['yAxisConfig'] as Map<String, dynamic>);
+    }
+
+    // Check for flat y-axis fields
+    final hasFlat = seriesJson.containsKey('yAxisPosition') ||
+        seriesJson.containsKey('yAxisLabel') ||
+        seriesJson.containsKey('yAxisUnit') ||
+        seriesJson.containsKey('yAxisColor') ||
+        seriesJson.containsKey('yAxisId');
+
+    if (hasFlat) {
+      // Build from flat fields
+      AxisPosition? position;
+      if (seriesJson['yAxisPosition'] != null) {
+        final posStr = seriesJson['yAxisPosition'] as String;
+        position = posStr.toLowerCase() == 'right'
+            ? AxisPosition.right
+            : AxisPosition.left;
+      }
+
+      return YAxisConfig(
+        id: seriesJson['yAxisId'] as String? ?? existing?.id,
+        label: seriesJson['yAxisLabel'] as String? ?? existing?.label,
+        unit: seriesJson['yAxisUnit'] as String? ?? existing?.unit,
+        color: seriesJson['yAxisColor'] as String? ?? existing?.color,
+        position: position ?? existing?.position ?? AxisPosition.left,
+        min: existing?.min,
+        max: existing?.max,
+      );
+    }
+
+    // No changes, return existing
+    return existing;
+  }
+
   /// Merges agent-provided series modifications with existing series.
   ///
   /// For each series the agent modifies, we:
@@ -644,7 +691,7 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
               )
             : existing.interpolation,
         showPoints: seriesJson['showPoints'] as bool? ?? existing.showPoints,
-        yAxisId: seriesJson['yAxisId'] as String? ?? existing.yAxisId,
+        // FR-002: yAxisId is no longer supported - use yAxisConfig instead
         unit: seriesJson['unit'] as String? ?? existing.unit,
         visible: seriesJson['visible'] as bool? ?? existing.visible,
         legendVisible:
@@ -652,12 +699,9 @@ When using perSeries normalization, set each series' yAxisId to specify which Y-
         tension: seriesJson['tension'] != null
             ? (seriesJson['tension'] as num).toDouble()
             : existing.tension,
-        // Per-series Y-axis configuration fields
-        yAxisPosition:
-            seriesJson['yAxisPosition'] as String? ?? existing.yAxisPosition,
-        yAxisLabel: seriesJson['yAxisLabel'] as String? ?? existing.yAxisLabel,
-        yAxisUnit: seriesJson['yAxisUnit'] as String? ?? existing.yAxisUnit,
-        yAxisColor: seriesJson['yAxisColor'] as String? ?? existing.yAxisColor,
+        // FR-001: Per-series Y-axis configuration via nested yAxisConfig
+        // Also handle flat y-axis fields for backward compatibility with LLM input
+        yAxisConfig: _buildYAxisConfig(seriesJson, existing.yAxisConfig),
         // NOTE: data and dataColumn are NEVER modified - always preserved from existing
       ));
     }

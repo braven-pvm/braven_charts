@@ -62,12 +62,10 @@ class AgentSessionImpl implements AgentSession {
   final String _systemPrompt;
 
   /// State notifier for reactive UI updates.
-  final ValueNotifier<SessionState> _state =
-      ValueNotifier<SessionState>(const SessionState());
+  final ValueNotifier<SessionState> _state = ValueNotifier<SessionState>(const SessionState());
 
   /// Stream controller for emitting events.
-  final StreamController<AgentEvent> _eventController =
-      StreamController<AgentEvent>.broadcast();
+  final StreamController<AgentEvent> _eventController = StreamController<AgentEvent>.broadcast();
 
   /// UUID generator for message IDs.
   static const Uuid _uuid = Uuid();
@@ -75,18 +73,29 @@ class AgentSessionImpl implements AgentSession {
   /// Whether this session has been disposed.
   bool _disposed = false;
 
+  /// Enable verbose debug logging for tracing agent behavior.
+  final bool debugLogging;
+
   /// Creates an [AgentSessionImpl] with the required dependencies.
   ///
   /// - [llmProvider]: The LLM provider for API communication.
   /// - [tools]: List of tools available to the agent.
   /// - [systemPrompt]: Instructions for the LLM's behavior.
+  /// - [debugLogging]: Enable verbose console logging for debugging.
   AgentSessionImpl({
     required LLMProvider llmProvider,
     required List<AgentTool> tools,
     required String systemPrompt,
+    this.debugLogging = false,
   })  : _llmProvider = llmProvider,
         _tools = tools,
         _systemPrompt = systemPrompt;
+
+  void _log(String message) {
+    if (debugLogging) {
+      debugPrint('[AgentSession] $message');
+    }
+  }
 
   @override
   ValueListenable<SessionState> get state => _state;
@@ -97,9 +106,15 @@ class AgentSessionImpl implements AgentSession {
   @override
   Future<void> transform(
     String prompt, {
-    List<BinaryContent>? attachments,
+    List<MessageContent>? attachments,
   }) async {
     if (_disposed) return;
+
+    _log('========================================');
+    _log('TRANSFORM CALLED');
+    _log('User prompt: $prompt');
+    _log('Attachments: ${attachments?.length ?? 0}');
+    _log('========================================');
 
     try {
       // Set status to thinking and emit event
@@ -123,6 +138,7 @@ class AgentSessionImpl implements AgentSession {
 
       // Add user message to history
       _updateState(history: [..._state.value.history, userMessage]);
+      _log('Added user message to history. Total messages: ${_state.value.history.length}');
 
       // Start the agentic loop
       await _processLLMResponse();
@@ -132,49 +148,124 @@ class AgentSessionImpl implements AgentSession {
     }
   }
 
+  /// Maximum iterations allowed in the agentic loop to prevent infinite loops.
+  static const int _maxIterations = 10;
+
   /// Processes LLM responses in an agentic loop until completion.
   Future<void> _processLLMResponse() async {
+    int loopIteration = 0;
+    String? lastFailedToolInput;
+    int consecutiveIdenticalFailures = 0;
+
     while (!_disposed) {
+      loopIteration++;
+      _log('--- LLM Loop Iteration $loopIteration ---');
+
+      // Check for max iterations
+      if (loopIteration > _maxIterations) {
+        _log('ERROR: Max iterations ($_maxIterations) exceeded - breaking loop');
+        _updateState(status: ActivityStatus.idle);
+        _eventController.add(ErrorEvent(
+          message:
+              'The agent exceeded the maximum number of iterations ($_maxIterations). This usually indicates the model is not learning from errors.',
+          originalError: Exception('Maximum iterations exceeded'),
+        ));
+        return;
+      }
+
       try {
         // Call LLM with current history
+        _log('Calling LLM with ${_state.value.history.length} messages in history');
         final response = await _llmProvider.generateResponse(
           systemPrompt: _systemPrompt,
           history: _state.value.history,
           tools: _tools.isNotEmpty ? _tools : null,
         );
 
+        // Log the LLM response
+        _log('LLM Response received:');
+        _log('  Stop reason: ${response.stopReason}');
+        _log('  Content items: ${response.message.content.length}');
+        for (final content in response.message.content) {
+          if (content is TextContent) {
+            _log('  [TEXT]: ${content.text.length > 200 ? "${content.text.substring(0, 200)}..." : content.text}');
+          } else if (content is ToolUseContent) {
+            _log('  [TOOL_USE]: ${content.toolName}');
+            _log('    ID: ${content.id}');
+            _log('    Input: ${content.input}');
+          } else {
+            _log('  [OTHER]: ${content.runtimeType}');
+          }
+        }
+
         // Check for tool use in response
-        final toolUseContents =
-            response.message.content.whereType<ToolUseContent>().toList();
+        final toolUseContents = response.message.content.whereType<ToolUseContent>().toList();
 
         if (toolUseContents.isNotEmpty) {
+          _log('Found ${toolUseContents.length} tool use(s) - executing...');
           // Add assistant message with tool use to history
           _updateState(history: [..._state.value.history, response.message]);
 
-          // Execute each tool
+          // Execute each tool and track repeated failures
           for (final toolUse in toolUseContents) {
-            await _executeTool(toolUse);
+            final inputSignature = '${toolUse.toolName}:${toolUse.input.toString()}';
+            final result = await _executeToolWithResult(toolUse);
+
+            if (result.isError) {
+              if (inputSignature == lastFailedToolInput) {
+                consecutiveIdenticalFailures++;
+                _log('WARNING: Identical failure detected ($consecutiveIdenticalFailures consecutive)');
+
+                if (consecutiveIdenticalFailures >= 3) {
+                  _log('ERROR: 3 consecutive identical failures - breaking loop');
+                  _updateState(status: ActivityStatus.idle);
+                  _eventController.add(ErrorEvent(
+                    message:
+                        'The model made the same failing request 3 times without learning from the error. Please try rephrasing your request or providing more specific instructions.',
+                    originalError: Exception('Agent stuck in loop'),
+                  ));
+                  return;
+                }
+              } else {
+                lastFailedToolInput = inputSignature;
+                consecutiveIdenticalFailures = 1;
+              }
+            } else {
+              // Success - reset failure tracking
+              lastFailedToolInput = null;
+              consecutiveIdenticalFailures = 0;
+            }
           }
 
           // Continue the loop for next LLM response
+          _log('Continuing agentic loop...');
           continue;
         }
 
         // No tool use - add assistant message to history and complete
+        _log('No tool use - completing response');
         _updateState(
           history: [..._state.value.history, response.message],
           status: ActivityStatus.idle,
         );
+        _log('========================================');
+        _log('TRANSFORM COMPLETE');
+        _log('========================================');
         return;
       } catch (e) {
+        _log('ERROR in LLM loop: $e');
         _handleError(e);
         return;
       }
     }
   }
 
-  /// Executes a tool and handles the result.
-  Future<void> _executeTool(ToolUseContent toolUse) async {
+  /// Executes a tool and handles the result. Returns whether it was an error.
+  Future<({bool isError, String output})> _executeToolWithResult(ToolUseContent toolUse) async {
+    _log('>>> TOOL EXECUTION START: ${toolUse.toolName}');
+    _log('    Tool ID: ${toolUse.id}');
+    _log('    Input: ${toolUse.input}');
+
     // Set status to calling_tool
     _updateState(
       status: ActivityStatus.calling_tool,
@@ -193,40 +284,61 @@ class AgentSessionImpl implements AgentSession {
       (t) => t.name == toolUse.toolName,
       orElse: () => throw StateError('Tool not found: ${toolUse.toolName}'),
     );
+    _log('    Found tool: ${tool.name}');
 
     bool success = true;
     String toolOutput = '';
     bool isError = false;
+    ImageContent? toolImageContent;
 
     try {
       // Execute the tool
+      _log('    Executing tool...');
       final result = await tool.execute(toolUse.input);
       toolOutput = result.output;
       isError = result.isError;
+      toolImageContent = result.imageContent;
       success = !isError;
+
+      _log('    Tool result:');
+      _log('      isError: $isError');
+      _log('      output: ${toolOutput.length > 500 ? "${toolOutput.substring(0, 500)}..." : toolOutput}');
+      _log('      data type: ${result.data?.runtimeType ?? "null"}');
+      _log('      hasImage: ${toolImageContent != null}');
 
       // Handle chart configuration in tool result
       if (!isError && result.data is ChartConfiguration) {
         final chart = result.data! as ChartConfiguration;
+        _log('      Chart config received:');
+        _log('        id: ${chart.id}');
+        _log('        series: ${chart.series.length}');
+        _log('        annotations: ${chart.annotations.length}');
+
         final existingChart = _state.value.activeChart;
 
         // Determine if this is a new chart or an update
         if (existingChart == null || existingChart.id != chart.id) {
           // New chart created
+          _log('      Emitting ChartCreatedEvent');
           _eventController.add(ChartCreatedEvent(config: chart));
         } else {
           // Existing chart updated
+          _log('      Emitting ChartUpdatedEvent');
           _eventController.add(ChartUpdatedEvent(config: chart));
         }
 
         // Update active chart
         _updateState(activeChart: chart);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      _log('    TOOL ERROR: $e');
+      _log('    Stack: $stack');
       success = false;
       toolOutput = 'Error: $e';
       isError = true;
     }
+
+    _log('<<< TOOL EXECUTION END: ${toolUse.toolName} (success: $success)');
 
     // Emit tool end event
     _eventController.add(ToolEndEvent(
@@ -240,8 +352,10 @@ class AgentSessionImpl implements AgentSession {
     // Create tool result message and add to history
     final toolResultContent = ToolResultContent(
       toolUseId: toolUse.id,
+      toolName: toolUse.toolName,
       output: toolOutput,
       isError: isError,
+      imageContent: toolImageContent,
     );
 
     final toolResultMessage = AgentMessage(
@@ -252,13 +366,59 @@ class AgentSessionImpl implements AgentSession {
     );
 
     _updateState(history: [..._state.value.history, toolResultMessage]);
+
+    return (isError: isError, output: toolOutput);
+  }
+
+  /// Adds a chart snapshot to the message history.
+  ///
+  /// Call this method from your UI after capturing a chart image using
+  /// [ChartSnapshotService.captureFromBoundary] or [ChartSnapshotWrapper].
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// // In your chart widget
+  /// final _snapshotKey = GlobalKey<ChartSnapshotWrapperState>();
+  ///
+  /// ChartSnapshotWrapper(
+  ///   key: _snapshotKey,
+  ///   child: ChartRenderer().render(config),
+  /// )
+  ///
+  /// // After chart is rendered, capture and add to history
+  /// final imageContent = await _snapshotKey.currentState?.capture();
+  /// if (imageContent != null) {
+  ///   session.addChartSnapshot(imageContent);
+  /// }
+  /// ```
+  @override
+  void addChartSnapshot(ImageContent imageContent, {String? title}) {
+    if (_disposed) return;
+
+    final chart = _state.value.activeChart;
+    final snapshotTitle = title ?? chart?.title ?? chart?.id ?? 'Chart';
+
+    final snapshotMessage = AgentMessage(
+      id: _uuid.v4(),
+      role: MessageRole.system,
+      content: [
+        TextContent(text: '📊 $snapshotTitle'),
+        imageContent,
+      ],
+      timestamp: DateTime.now(),
+      metadata: {
+        if (chart?.id != null) 'chartId': chart!.id,
+        'snapshotType': 'chart_preview',
+      },
+    );
+
+    _updateState(history: [..._state.value.history, snapshotMessage]);
   }
 
   /// Handles errors by setting state and emitting events.
   void _handleError(Object error) {
-    final message = error is Exception
-        ? error.toString().replaceFirst('Exception: ', '')
-        : error.toString();
+    final message = error is Exception ? error.toString().replaceFirst('Exception: ', '') : error.toString();
 
     _state.value = _state.value.copyWithCleared(
       status: ActivityStatus.error,

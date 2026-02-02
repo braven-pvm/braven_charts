@@ -2,13 +2,24 @@ import 'package:equatable/equatable.dart';
 
 import 'data_point.dart';
 import 'enums.dart';
+import 'y_axis_config.dart';
 
-/// Configuration for a single data series in a chart.
+/// Configuration for a single data series in a chart (V2 Schema).
 ///
-/// Represents a complete series with data points and styling options.
-/// Uses [EquatableMixin] for value equality comparisons.
+/// Represents a complete series with data points, styling options, and
+/// per-series axis configuration. Uses [EquatableMixin] for value equality.
 ///
-/// ## Example
+/// ## V2 Schema: Nested yAxis Configuration
+///
+/// In the V2 schema, each series defines its own y-axis through the nested
+/// [yAxis] property (a [YAxisConfig] object). This replaces the legacy
+/// `yAxisId` reference pattern and enables:
+///
+/// - **Per-series normalization**: Each series has independent min/max scaling
+/// - **Multi-axis charts**: Multiple series with different units and scales
+/// - **Deep merge updates**: Partial yAxis updates preserve unspecified properties
+///
+/// ## Example: Basic Series with Nested yAxis
 ///
 /// ```dart
 /// final series = SeriesConfig(
@@ -17,6 +28,29 @@ import 'enums.dart';
 ///   name: 'Temperature',
 ///   color: '#FF5733',
 ///   strokeWidth: 2.0,
+///   yAxis: YAxisConfig(
+///     position: AxisPosition.left,
+///     label: 'Temperature',
+///     unit: '°C',
+///     min: 0,
+///     max: 50,
+///   ),
+/// );
+/// ```
+///
+/// ## Example: Multi-Series Chart with Different Axes
+///
+/// ```dart
+/// final tempSeries = SeriesConfig(
+///   id: 'temp',
+///   data: tempData,
+///   yAxis: YAxisConfig(position: AxisPosition.left, label: 'Temp', unit: '°C'),
+/// );
+///
+/// final humiditySeries = SeriesConfig(
+///   id: 'humidity',
+///   data: humidityData,
+///   yAxis: YAxisConfig(position: AxisPosition.right, label: 'Humidity', unit: '%'),
 /// );
 /// ```
 ///
@@ -24,11 +58,23 @@ import 'enums.dart';
 ///
 /// ```dart
 /// final json = series.toJson();
+/// // Output includes nested yAxis: { "yAxis": { "position": "left", ... } }
 /// final restored = SeriesConfig.fromJson(json);
 /// ```
+///
+/// See also:
+/// - [YAxisConfig] for y-axis configuration options
+/// - [ChartConfiguration] for the complete chart structure
 class SeriesConfig with EquatableMixin {
   /// Unique identifier for this series.
   final String id;
+
+  /// The type of chart to render for this series.
+  ///
+  /// Each series can have its own type, enabling mixed charts
+  /// (e.g., one series as line, another as bar).
+  /// Defaults to [ChartType.line].
+  final ChartType type;
 
   /// Optional display name for the series.
   final String? name;
@@ -69,25 +115,42 @@ class SeriesConfig with EquatableMixin {
   /// Whether to show individual data points.
   final bool showPoints;
 
-  /// ID of the Y-axis this series is bound to.
+  /// Nested Y-axis configuration for this series (V2 Schema).
   ///
-  /// Used for multi-axis charts to associate series with specific axes.
-  final String? yAxisPosition;
-
-  /// Label for the Y-axis when using per-series axis configuration.
-  final String? yAxisLabel;
-
-  /// Unit string for the Y-axis (e.g., '°C', 'km/h').
-  final String? yAxisUnit;
-
-  /// Color for the Y-axis line and labels.
-  final String? yAxisColor;
-
-  /// Minimum value for the Y-axis range.
-  final double? yAxisMin;
-
-  /// Maximum value for the Y-axis range.
-  final double? yAxisMax;
+  /// Contains all y-axis properties (position, label, unit, color, min, max, etc.)
+  /// in a single nested [YAxisConfig] object.
+  ///
+  /// ## V2 Schema Benefits
+  ///
+  /// - **Self-contained**: All axis config lives with the series data
+  /// - **Deep merge**: Partial updates preserve unspecified properties
+  /// - **Per-series normalization**: Works with `normalizationMode: perSeries`
+  ///
+  /// ## Validation Warnings
+  ///
+  /// - **V002**: Warning if using `perSeries` normalization without yAxis config
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// SeriesConfig(
+  ///   id: 'power',
+  ///   data: [...],
+  ///   yAxis: YAxisConfig(
+  ///     position: AxisPosition.left,
+  ///     label: 'Power',
+  ///     unit: 'W',
+  ///     min: 0,
+  ///     max: 500,
+  ///     color: '#2196F3',
+  ///   ),
+  /// )
+  /// ```
+  ///
+  /// See also:
+  /// - [YAxisConfig] for all available axis properties
+  /// - [SchemaValidator] for validation rules V001, V002
+  final YAxisConfig? yAxis;
 
   /// Bar width as a percentage of available space (0.0 to 1.0).
   ///
@@ -109,11 +172,6 @@ class SeriesConfig with EquatableMixin {
   /// Only applies to bar charts.
   final double? barMaxWidth;
 
-  /// ID of the Y-axis this series is bound to.
-  ///
-  /// Links to [YAxisConfig.id] for multi-axis charts.
-  final String? yAxisId;
-
   /// Whether this series is visible on the chart.
   final bool visible;
 
@@ -129,6 +187,7 @@ class SeriesConfig with EquatableMixin {
   const SeriesConfig({
     required this.id,
     required this.data,
+    this.type = ChartType.line,
     this.name,
     this.color,
     this.strokeWidth = 2.0,
@@ -139,17 +198,11 @@ class SeriesConfig with EquatableMixin {
     this.interpolation = Interpolation.linear,
     this.tension = 0.4,
     this.showPoints = false,
-    this.yAxisPosition,
-    this.yAxisLabel,
-    this.yAxisUnit,
-    this.yAxisColor,
-    this.yAxisMin,
-    this.yAxisMax,
+    this.yAxis,
     this.barWidthPercent,
     this.barWidthPixels,
     this.barMinWidth,
     this.barMaxWidth,
-    this.yAxisId,
     this.visible = true,
     this.legendVisible = true,
     this.unit,
@@ -158,9 +211,19 @@ class SeriesConfig with EquatableMixin {
   /// Creates a [SeriesConfig] from a JSON map.
   ///
   /// Parses all fields including the nested [DataPoint] list and enum values.
+  /// Supports nested 'yAxis' object for y-axis configuration per FR-001.
   factory SeriesConfig.fromJson(Map<String, dynamic> json) {
+    // Parse nested yAxis object if present
+    YAxisConfig? yAxis;
+    if (json['yAxis'] != null && json['yAxis'] is Map<String, dynamic>) {
+      yAxis = YAxisConfig.fromJson(json['yAxis'] as Map<String, dynamic>);
+    }
+
     return SeriesConfig(
       id: json['id'] as String,
+      type: json['type'] != null
+          ? ChartType.values.byName(json['type'] as String)
+          : ChartType.line,
       name: json['name'] as String?,
       data: (json['data'] as List<dynamic>)
           .map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
@@ -180,17 +243,11 @@ class SeriesConfig with EquatableMixin {
           : Interpolation.linear,
       tension: (json['tension'] as num?)?.toDouble() ?? 0.4,
       showPoints: json['showPoints'] as bool? ?? false,
-      yAxisPosition: json['yAxisPosition'] as String?,
-      yAxisLabel: json['yAxisLabel'] as String?,
-      yAxisUnit: json['yAxisUnit'] as String?,
-      yAxisColor: json['yAxisColor'] as String?,
-      yAxisMin: (json['yAxisMin'] as num?)?.toDouble(),
-      yAxisMax: (json['yAxisMax'] as num?)?.toDouble(),
+      yAxis: yAxis,
       barWidthPercent: (json['barWidthPercent'] as num?)?.toDouble(),
       barWidthPixels: (json['barWidthPixels'] as num?)?.toDouble(),
       barMinWidth: (json['barMinWidth'] as num?)?.toDouble(),
       barMaxWidth: (json['barMaxWidth'] as num?)?.toDouble(),
-      yAxisId: json['yAxisId'] as String?,
       visible: json['visible'] as bool? ?? true,
       legendVisible: json['legendVisible'] as bool? ?? true,
       unit: json['unit'] as String?,
@@ -200,9 +257,11 @@ class SeriesConfig with EquatableMixin {
   /// Converts this [SeriesConfig] to a JSON map.
   ///
   /// Includes all properties. Enum values are serialized as their names.
+  /// Y-axis configuration is output as nested 'yAxis' object per FR-001/FR-002.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'type': type.name,
       if (name != null) 'name': name,
       'data': data.map((e) => e.toJson()).toList(),
       if (color != null) 'color': color,
@@ -214,17 +273,11 @@ class SeriesConfig with EquatableMixin {
       'interpolation': interpolation.name,
       'tension': tension,
       'showPoints': showPoints,
-      if (yAxisPosition != null) 'yAxisPosition': yAxisPosition,
-      if (yAxisLabel != null) 'yAxisLabel': yAxisLabel,
-      if (yAxisUnit != null) 'yAxisUnit': yAxisUnit,
-      if (yAxisColor != null) 'yAxisColor': yAxisColor,
-      if (yAxisMin != null) 'yAxisMin': yAxisMin,
-      if (yAxisMax != null) 'yAxisMax': yAxisMax,
+      if (yAxis != null) 'yAxis': yAxis!.toJson(),
       if (barWidthPercent != null) 'barWidthPercent': barWidthPercent,
       if (barWidthPixels != null) 'barWidthPixels': barWidthPixels,
       if (barMinWidth != null) 'barMinWidth': barMinWidth,
       if (barMaxWidth != null) 'barMaxWidth': barMaxWidth,
-      if (yAxisId != null) 'yAxisId': yAxisId,
       'visible': visible,
       'legendVisible': legendVisible,
       if (unit != null) 'unit': unit,
@@ -236,6 +289,7 @@ class SeriesConfig with EquatableMixin {
   /// If a parameter is not provided, the original value is preserved.
   SeriesConfig copyWith({
     String? id,
+    ChartType? type,
     String? name,
     List<DataPoint>? data,
     String? color,
@@ -247,23 +301,18 @@ class SeriesConfig with EquatableMixin {
     Interpolation? interpolation,
     double? tension,
     bool? showPoints,
-    String? yAxisPosition,
-    String? yAxisLabel,
-    String? yAxisUnit,
-    String? yAxisColor,
-    double? yAxisMin,
-    double? yAxisMax,
+    YAxisConfig? yAxis,
     double? barWidthPercent,
     double? barWidthPixels,
     double? barMinWidth,
     double? barMaxWidth,
-    String? yAxisId,
     bool? visible,
     bool? legendVisible,
     String? unit,
   }) {
     return SeriesConfig(
       id: id ?? this.id,
+      type: type ?? this.type,
       name: name ?? this.name,
       data: data ?? this.data,
       color: color ?? this.color,
@@ -275,17 +324,11 @@ class SeriesConfig with EquatableMixin {
       interpolation: interpolation ?? this.interpolation,
       tension: tension ?? this.tension,
       showPoints: showPoints ?? this.showPoints,
-      yAxisPosition: yAxisPosition ?? this.yAxisPosition,
-      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
-      yAxisUnit: yAxisUnit ?? this.yAxisUnit,
-      yAxisColor: yAxisColor ?? this.yAxisColor,
-      yAxisMin: yAxisMin ?? this.yAxisMin,
-      yAxisMax: yAxisMax ?? this.yAxisMax,
+      yAxis: yAxis ?? this.yAxis,
       barWidthPercent: barWidthPercent ?? this.barWidthPercent,
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       barMinWidth: barMinWidth ?? this.barMinWidth,
       barMaxWidth: barMaxWidth ?? this.barMaxWidth,
-      yAxisId: yAxisId ?? this.yAxisId,
       visible: visible ?? this.visible,
       legendVisible: legendVisible ?? this.legendVisible,
       unit: unit ?? this.unit,
@@ -295,6 +338,7 @@ class SeriesConfig with EquatableMixin {
   @override
   List<Object?> get props => [
         id,
+        type,
         name,
         data,
         color,
@@ -306,17 +350,11 @@ class SeriesConfig with EquatableMixin {
         interpolation,
         tension,
         showPoints,
-        yAxisPosition,
-        yAxisLabel,
-        yAxisUnit,
-        yAxisColor,
-        yAxisMin,
-        yAxisMax,
+        yAxis,
         barWidthPercent,
         barWidthPixels,
         barMinWidth,
         barMaxWidth,
-        yAxisId,
         visible,
         legendVisible,
         unit,

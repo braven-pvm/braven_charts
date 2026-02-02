@@ -1,0 +1,496 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://braven.dev/schemas/create_chart_v2.json",
+  "title": "create_chart Tool Input Schema",
+  "description": "Creates a new chart with the specified configuration. All series must have unique IDs. The chart ID is auto-generated if not provided.",
+
+  "type": "object",
+  "required": ["chart"],
+  "additionalProperties": false,
+
+  "properties": {
+    "chart": {
+      "$ref": "#/$defs/ChartConfiguration"
+    }
+  },
+
+  "$defs": {
+    "ChartConfiguration": {
+      "type": "object",
+      "description": "Complete chart configuration",
+      "required": ["series"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique chart identifier. Auto-generated if not provided."
+        },
+        "title": {
+          "type": ["string", "null"],
+          "description": "Chart title displayed at the top"
+        },
+        "subtitle": {
+          "type": ["string", "null"],
+          "description": "Chart subtitle displayed below the title"
+        },
+        "series": {
+          "type": "array",
+          "description": "Array of data series to display. At least one series is required.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/SeriesConfig"
+          }
+        },
+        "xAxis": {
+          "$ref": "#/$defs/XAxisConfig"
+        },
+        "yAxis": {
+          "oneOf": [{ "$ref": "#/$defs/YAxisConfig" }, { "type": "null" }],
+          "description": "Chart-level Y-axis configuration. Used when normalizationMode is 'none' or 'auto'. IGNORED when normalizationMode is 'perSeries' - each series must define its own yAxis."
+        },
+        "annotations": {
+          "type": "array",
+          "description": "Annotations to display on the chart (reference lines, zones, text labels, markers)",
+          "items": {
+            "$ref": "#/$defs/AnnotationConfig"
+          }
+        },
+        "normalizationMode": {
+          "type": "string",
+          "enum": ["none", "auto", "perSeries"],
+          "default": "none",
+          "description": "How to normalize Y-axis data. 'none': raw values with shared scale. 'auto': auto-detect based on data ranges. 'perSeries': each series normalized independently with its own Y-axis."
+        },
+        "showGrid": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show grid lines"
+        },
+        "showLegend": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show the chart legend"
+        },
+        "legendPosition": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right",
+            "topLeft",
+            "topRight",
+            "bottomLeft",
+            "bottomRight"
+          ],
+          "default": "bottom",
+          "description": "Position of the legend relative to the chart"
+        },
+        "interactions": {
+          "$ref": "#/$defs/InteractionConfig"
+        },
+        "useDarkTheme": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to use dark theme colors"
+        },
+        "showScrollbar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show scrollbars for pan/zoom"
+        },
+        "width": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Chart width in pixels. Null for responsive width."
+        },
+        "height": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "default": 350,
+          "description": "Chart height in pixels"
+        },
+        "backgroundColor": {
+          "type": ["string", "null"],
+          "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
+          "description": "Background color in hex format (e.g., '#FFFFFF')"
+        }
+      }
+    },
+
+    "SeriesConfig": {
+      "type": "object",
+      "description": "Configuration for a single data series",
+      "required": ["id", "name", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this series. Used to reference the series in modifications and annotations."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name shown in legend and tooltips"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["line", "area", "bar", "scatter"],
+          "default": "line",
+          "description": "Type of chart visualization for this series"
+        },
+        "data": {
+          "type": "array",
+          "description": "Array of data points with x and y coordinates",
+          "items": {
+            "type": "object",
+            "required": ["x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X coordinate value"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y coordinate value"
+              }
+            }
+          }
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
+          "description": "Series color in hex format (e.g., '#4472C4'). Auto-assigned if not provided."
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the series is visible"
+        },
+        "legendVisible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the series appears in the legend"
+        },
+        "yAxis": {
+          "oneOf": [{ "$ref": "#/$defs/YAxisConfig" }, { "type": "null" }],
+          "description": "Y-axis configuration for this series. REQUIRED when normalizationMode is 'perSeries'. When provided in 'none'/'auto' mode, creates an additional Y-axis for this series."
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "description": "Unit of measurement for tooltip display (e.g., 'kW', 'bpm')"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "default": 2.0,
+          "description": "Width of the line stroke in pixels"
+        },
+        "interpolation": {
+          "type": "string",
+          "enum": ["linear", "bezier", "stepped", "monotone"],
+          "default": "linear",
+          "description": "How to interpolate between data points"
+        },
+        "tension": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.4,
+          "description": "Curve tension for bezier interpolation (0 = straight, 1 = maximum curve)"
+        },
+        "showPoints": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show markers at each data point"
+        },
+        "markerStyle": {
+          "type": "string",
+          "enum": ["none", "circle", "square", "triangle", "diamond"],
+          "default": "circle",
+          "description": "Style of data point markers (only visible when showPoints is true)"
+        },
+        "markerSize": {
+          "type": "number",
+          "minimum": 0,
+          "default": 4.0,
+          "description": "Size of data point markers in pixels"
+        },
+        "fillOpacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.3,
+          "description": "Fill opacity for area charts (0 = transparent, 1 = opaque)"
+        },
+        "barWidthPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7,
+          "description": "Bar width as a percentage of available space (for bar charts)"
+        },
+        "barWidthPixels": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Fixed bar width in pixels. Overrides barWidthPercent when set."
+        },
+        "barMinWidth": {
+          "type": "number",
+          "minimum": 0,
+          "default": 4.0,
+          "description": "Minimum bar width in pixels"
+        },
+        "barMaxWidth": {
+          "type": "number",
+          "minimum": 0,
+          "default": 100.0,
+          "description": "Maximum bar width in pixels"
+        }
+      }
+    },
+
+    "YAxisConfig": {
+      "type": "object",
+      "description": "Y-axis configuration. Can be at chart-level (shared) or series-level (dedicated).",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": ["string", "null"],
+          "description": "Axis label text (e.g., 'Power', 'Temperature')"
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "description": "Unit string displayed with label (e.g., 'kW', '°C')"
+        },
+        "position": {
+          "type": "string",
+          "enum": ["left", "right", "leftOuter", "rightOuter"],
+          "default": "left",
+          "description": "Position of the Y-axis. Use 'leftOuter'/'rightOuter' for additional axes in multi-axis charts."
+        },
+        "color": {
+          "type": ["string", "null"],
+          "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
+          "description": "Axis color in hex format. Often matched to series color for clarity."
+        },
+        "min": {
+          "type": ["number", "null"],
+          "description": "Minimum axis value. Null for auto-calculated."
+        },
+        "max": {
+          "type": ["number", "null"],
+          "description": "Maximum axis value. Null for auto-calculated."
+        },
+        "autoRange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to auto-calculate range from data"
+        },
+        "includeZero": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the axis range should always include zero"
+        },
+        "showTicks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show tick marks on the axis"
+        },
+        "showAxisLine": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show the axis line"
+        },
+        "showGridLines": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show horizontal grid lines from this axis"
+        }
+      }
+    },
+
+    "XAxisConfig": {
+      "type": "object",
+      "description": "X-axis configuration",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": ["string", "null"],
+          "description": "Axis label text (e.g., 'Time', 'Date')"
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "description": "Unit string displayed with label (e.g., 'hours', 'days')"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["numeric", "category", "datetime"],
+          "default": "numeric",
+          "description": "Type of X-axis data"
+        },
+        "min": {
+          "type": ["number", "null"],
+          "description": "Minimum axis value. Null for auto-calculated."
+        },
+        "max": {
+          "type": ["number", "null"],
+          "description": "Maximum axis value. Null for auto-calculated."
+        },
+        "autoRange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to auto-calculate range from data"
+        },
+        "paddingPercent": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Percentage of padding to add beyond data range"
+        },
+        "tickRotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Rotation angle for tick labels in degrees"
+        },
+        "showTicks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show tick marks"
+        },
+        "showAxisLine": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show the axis line"
+        },
+        "showGridLines": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to show vertical grid lines"
+        }
+      }
+    },
+
+    "AnnotationConfig": {
+      "type": "object",
+      "description": "Annotation configuration for reference lines, zones, text labels, or markers",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["referenceLine", "zone", "textLabel", "marker"],
+          "description": "Type of annotation"
+        },
+        "orientation": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "description": "Orientation for referenceLine annotations"
+        },
+        "value": {
+          "type": "number",
+          "description": "Value for referenceLine. For horizontal lines, this is the Y value in the same units as the target series."
+        },
+        "minValue": {
+          "type": "number",
+          "description": "Minimum value for zone annotations"
+        },
+        "maxValue": {
+          "type": "number",
+          "description": "Maximum value for zone annotations"
+        },
+        "seriesId": {
+          "type": ["string", "null"],
+          "description": "ID of the series this annotation is tied to. REQUIRED for horizontal referenceLine when normalizationMode is 'perSeries'."
+        },
+        "label": {
+          "type": ["string", "null"],
+          "description": "Label text displayed with the annotation"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",
+          "description": "Annotation color in hex format"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "default": 2.0,
+          "description": "Stroke width for lines"
+        },
+        "strokeDash": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Dash pattern as [dashLength, gapLength]. Null for solid line."
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content for textLabel annotations"
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "topLeft",
+            "topCenter",
+            "topRight",
+            "centerLeft",
+            "center",
+            "centerRight",
+            "bottomLeft",
+            "bottomCenter",
+            "bottomRight"
+          ],
+          "default": "topLeft",
+          "description": "Position for textLabel annotations"
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 0,
+          "default": 14,
+          "description": "Font size for textLabel annotations"
+        },
+        "x": {
+          "type": "number",
+          "description": "X coordinate for marker annotations"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate for marker annotations"
+        }
+      }
+    },
+
+    "InteractionConfig": {
+      "type": "object",
+      "description": "User interaction configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enableZoom": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether zooming is enabled"
+        },
+        "enablePan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether panning is enabled"
+        },
+        "crosshairMode": {
+          "type": "string",
+          "enum": ["none", "vertical", "horizontal", "both"],
+          "default": "both",
+          "description": "Crosshair display mode"
+        },
+        "tooltipEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether tooltips are enabled on hover"
+        }
+      }
+    }
+  }
+}

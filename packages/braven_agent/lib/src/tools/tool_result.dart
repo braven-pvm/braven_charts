@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../llm/models/message_content.dart';
+
 /// Result of executing an [AgentTool].
 ///
 /// Captures the outcome of a tool execution, providing both human-readable
@@ -59,6 +61,15 @@ class ToolResult with EquatableMixin {
   /// structured data.
   final Object? data;
 
+  /// Optional image content from the tool execution.
+  ///
+  /// When set, this image will be included in the tool result message
+  /// sent to the LLM, enabling vision-capable models to "see" the result.
+  ///
+  /// This is useful for tools like `see_chart` that capture screenshots
+  /// of charts for visual analysis.
+  final ImageContent? imageContent;
+
   /// Creates a [ToolResult] with the given parameters.
   ///
   /// The [output] parameter is required and contains the string result
@@ -73,12 +84,12 @@ class ToolResult with EquatableMixin {
     required this.output,
     this.isError = false,
     this.data,
+    this.imageContent,
   });
 
   @override
-  List<Object?> get props => [output, isError, data];
+  List<Object?> get props => [output, isError, data, imageContent];
 
   @override
-  String toString() =>
-      'ToolResult(output: ${output.length} chars, isError: $isError, data: ${data?.runtimeType})';
+  String toString() => 'ToolResult(output: ${output.length} chars, isError: $isError, data: ${data?.runtimeType}, hasImage: ${imageContent != null})';
 }

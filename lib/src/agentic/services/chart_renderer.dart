@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
 import '../models/annotation_config.dart';
+import '../models/axis_config.dart' as agentic show AxisPosition;
 import '../models/chart_configuration.dart' as agentic;
 import '../models/series_config.dart' as agentic;
 
@@ -31,10 +30,6 @@ class ChartRenderer {
   }
 
   Widget _renderConfiguration(agentic.ChartConfiguration config) {
-    // DEBUG: Log chart configuration being rendered
-    debugPrint('=== RENDERING CHART ===');
-    _debugPrintChartJson(config);
-
     try {
       // Convert SeriesConfig to ChartSeries
       if (config.series.isEmpty) {
@@ -492,48 +487,36 @@ class ChartRenderer {
     }
   }
 
-  /// Builds a YAxisConfig from per-series Y-axis configuration fields.
+  /// Builds a YAxisConfig from per-series Y-axis configuration.
   ///
+  /// FR-001: Uses nested yAxisConfig object instead of flat fields.
   /// Returns null if no Y-axis configuration is specified on the series.
   YAxisConfig? _buildYAxisConfigFromSeries(agentic.SeriesConfig seriesConfig) {
-    // If no per-series Y-axis fields are set, return null
-    if (seriesConfig.yAxisPosition == null &&
-        seriesConfig.yAxisLabel == null &&
-        seriesConfig.yAxisUnit == null &&
-        seriesConfig.yAxisColor == null &&
-        seriesConfig.yAxisMin == null &&
-        seriesConfig.yAxisMax == null) {
+    // FR-001: Use nested yAxisConfig instead of flat fields
+    final agenticYAxisConfig = seriesConfig.yAxisConfig;
+    if (agenticYAxisConfig == null) {
       return null;
     }
 
-    // Map position string to YAxisPosition enum
+    // Map position enum to core YAxisPosition enum
     YAxisPosition position;
-    switch (seriesConfig.yAxisPosition?.toLowerCase()) {
-      case 'right':
+    switch (agenticYAxisConfig.position) {
+      case agentic.AxisPosition.right:
         position = YAxisPosition.right;
-        break;
-      case 'rightouter':
-        position = YAxisPosition.rightOuter;
-        break;
-      case 'leftouter':
-        position = YAxisPosition.leftOuter;
-        break;
-      case 'left':
-      default:
+      case agentic.AxisPosition.left:
         position = YAxisPosition.left;
-        break;
     }
 
-    // Parse axis color
-    final axisColor = _parseColor(seriesConfig.yAxisColor);
+    // Parse axis color from the nested config (FR-001: color is now in YAxisConfig)
+    final axisColor = _parseColor(agenticYAxisConfig.color);
 
     return YAxisConfig(
       position: position,
-      label: seriesConfig.yAxisLabel,
-      unit: seriesConfig.yAxisUnit,
+      label: agenticYAxisConfig.label,
+      unit: agenticYAxisConfig.unit,
       color: axisColor,
-      min: seriesConfig.yAxisMin,
-      max: seriesConfig.yAxisMax,
+      min: agenticYAxisConfig.min,
+      max: agenticYAxisConfig.max,
     );
   }
 
@@ -737,19 +720,5 @@ class ChartRenderer {
         style: TextStyle(fontSize: 14, color: Colors.red.shade900),
       ),
     );
-  }
-
-  /// Debug helper: print chart configuration as JSON
-  void _debugPrintChartJson(agentic.ChartConfiguration config) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(config.toJson());
-      debugPrint('Chart JSON:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('Chart JSON: [Failed to serialize: $e]');
-    }
   }
 }

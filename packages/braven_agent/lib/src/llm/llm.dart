@@ -10,6 +10,7 @@
 ///
 /// // Register providers
 /// LLMRegistry.register('anthropic', (config) => AnthropicAdapter(config));
+/// LLMRegistry.register('grok', (config) => GrokAdapter(config));
 ///
 /// // Create a provider
 /// final config = LLMConfig(apiKey: 'sk-...');
@@ -28,3 +29,7 @@ export 'models/agent_message.dart';
 export 'models/message_content.dart';
 // Providers
 export 'providers/anthropic_adapter.dart';
+export 'providers/gemini_adapter.dart';
+export 'providers/grok_adapter.dart';
+export 'providers/grok_responses_adapter.dart';
+export 'providers/openai_adapter.dart';

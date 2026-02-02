@@ -73,14 +73,16 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'addSeries': [
-            {
-              'id': 's2',
-              'data': [
-                {'x': 1, 'y': 1}
-              ]
-            }
-          ]
+          'add': {
+            'series': [
+              {
+                'id': 's2',
+                'data': [
+                  {'x': 1, 'y': 1}
+                ]
+              }
+            ]
+          }
         }
       });
       expect(modifyResult.isError, isFalse, reason: 'Add series failed');
@@ -116,7 +118,9 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'removeSeries': ['s1']
+          'remove': {
+            'series': ['s1']
+          }
         }
       });
       expect(modifyResult.isError, isFalse, reason: 'Remove series failed');
@@ -146,13 +150,16 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'updateSeries': {
-            's1': {
-              'data': [
-                {'x': 1, 'y': 20},
-                {'x': 2, 'y': 30}
-              ]
-            }
+          'update': {
+            'series': [
+              {
+                'id': 's1',
+                'data': [
+                  {'x': 1, 'y': 20},
+                  {'x': 2, 'y': 30}
+                ]
+              }
+            ]
           }
         }
       });
@@ -213,14 +220,14 @@ void main() {
       expect(activeChart.yAxes.first.unit, equals('USD'));
     });
 
-    test('Scenario 6: Create -> Modify Chart Type -> Verify', () async {
+    test('Scenario 6: Create -> Modify Series Type -> Verify', () async {
       final createTool = CreateChartTool();
       var activeChart = getChartFromOutput((await createTool.execute({
         'prompt': 'Line chart',
-        'type': 'line',
         'series': [
           {
             'id': 's1',
+            'type': 'line',
             'data': [
               {'x': 0, 'y': 0}
             ]
@@ -229,16 +236,22 @@ void main() {
       }))
           .data);
 
-      expect(activeChart.type, equals(ChartType.line));
+      expect(activeChart.series.first.type, equals(ChartType.line));
 
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
-        'modifications': {'type': 'bar'}
+        'modifications': {
+          'update': {
+            'series': [
+              {'id': 's1', 'type': 'bar'}
+            ]
+          }
+        }
       });
       expect(modifyResult.isError, isFalse, reason: 'Modify type failed');
 
       activeChart = getChartFromOutput(modifyResult.data);
-      expect(activeChart.type, equals(ChartType.bar));
+      expect(activeChart.series.first.type, equals(ChartType.bar));
     });
 
     test('Scenario 7: Create -> Modify Color -> Verify ID Preserved', () async {
@@ -264,8 +277,10 @@ void main() {
       final modifyTool = ModifyChartTool(getActiveChart: () => activeChart);
       final modifyResult = await modifyTool.execute({
         'modifications': {
-          'updateSeries': {
-            's1': {'color': '#FF0000'}
+          'update': {
+            'series': [
+              {'id': 's1', 'color': '#FF0000'}
+            ]
           }
         }
       });

@@ -9,47 +9,88 @@ import '../models/enums.dart';
 import '../models/series_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
+import '../validation/schema_validator.dart';
 import 'agent_tool.dart';
 import 'tool_result.dart';
 
-/// Tool for creating chart configurations from LLM input.
+/// Tool for creating chart configurations from LLM input (V2 Schema).
 ///
-/// This tool lets an LLM produce a complete [ChartConfiguration] by supplying
-/// structured input including data series, chart type, and styling options.
-/// It is typically registered on an [AgentSessionImpl] so the model can call
-/// it during `transform()`.
+/// This tool enables LLM agents to produce complete [ChartConfiguration]
+/// objects by supplying structured input. It is the primary entry point for
+/// chart creation in the agentic workflow.
 ///
-/// Use this tool when there is no active chart yet or when you want a
-/// full replacement configuration from a prompt.
+/// ## V2 Schema Features
 ///
-/// ## Example Usage (LLM perspective)
+/// This tool implements the V2 agentic chart schema with:
+///
+/// - **Nested yAxis**: Each series has its own [YAxisConfig] object
+/// - **System-generated IDs**: Chart and annotation IDs are auto-assigned
+/// - **Comprehensive validation**: V001-V044 rules with actionable errors
+/// - **Per-series normalization**: Independent scaling for multi-axis charts
+///
+/// ## Example: Basic Chart with Nested yAxis
 ///
 /// ```json
 /// {
-///   "prompt": "Create a line chart showing temperature over time",
-///   "type": "line",
+///   "prompt": "Create a temperature chart",
 ///   "title": "Temperature Trends",
 ///   "series": [{
 ///     "id": "temp",
-///     "data": [{"x": 0, "y": 20}, {"x": 1, "y": 22}]
+///     "data": [{"x": 0, "y": 20}, {"x": 1, "y": 22}],
+///     "yAxis": {
+///       "position": "left",
+///       "label": "Temperature",
+///       "unit": "°C",
+///       "min": 0,
+///       "max": 50
+///     }
 ///   }]
+/// }
+/// ```
+///
+/// ## Example: Multi-Axis Chart
+///
+/// ```json
+/// {
+///   "prompt": "Temperature and humidity over time",
+///   "normalizationMode": "perSeries",
+///   "series": [
+///     {
+///       "id": "temp",
+///       "data": [...],
+///       "yAxis": {"position": "left", "label": "Temp", "unit": "°C"}
+///     },
+///     {
+///       "id": "humidity",
+///       "data": [...],
+///       "yAxis": {"position": "right", "label": "Humidity", "unit": "%"}
+///     }
+///   ]
 /// }
 /// ```
 ///
 /// ## Required Fields
 ///
 /// - `prompt`: Natural language description of the chart
-/// - `series`: Array of data series to plot
+/// - `series`: Array of data series (each with `id` and `data`)
+///
+/// ## Validation
+///
+/// The tool validates input using [SchemaValidator] and returns:
+/// - **Errors** (V003, V004, V030-V044): Block chart creation
+/// - **Warnings** (V001, V002): Non-blocking, included in response
 ///
 /// ## Output
 ///
 /// Returns a [ToolResult] with:
 /// - `output`: JSON string of the created chart configuration
 /// - `data`: [ChartConfiguration] object for programmatic use
-/// - `isError`: true if input validation fails
+/// - `isError`: true if validation fails
 ///
-/// This tool validates required fields and returns user-friendly errors
-/// instead of throwing exceptions.
+/// See also:
+/// - [ModifyChartTool] for updating existing charts
+/// - [GetChartTool] for querying chart state
+/// - [SchemaValidator] for validation rules
 class CreateChartTool extends AgentTool {
   /// Default color palette for series that don't specify their own color.
   static const List<String> _defaultColors = [
@@ -70,9 +111,15 @@ class CreateChartTool extends AgentTool {
   String get name => 'create_chart';
 
   @override
-  String get description =>
-      'Creates a new chart configuration with the specified type, data series, and styling options. '
-      'Use this tool to generate interactive charts from structured data.';
+  String get description => 'Creates a new chart configuration with data series and styling options. '
+      'Use this tool to generate interactive charts from structured data.\n\n'
+      'REQUIRED FIELDS:\n'
+      '- prompt: Natural language description of what you want to create\n'
+      '- series: Array of data series, each with id, type, and data points\n\n'
+      'SERIES TYPE (per-series): Each series has its own type (line, area, bar, scatter). '
+      'This enables mixed charts (e.g., line + bar on same chart). Defaults to line.\n\n'
+      'FEATURES: Multi-axis support, annotations (reference lines, zones, markers, text labels), '
+      'customizable styling, pan/zoom interactions, legends, and grid options.';
 
   @override
   Map<String, dynamic> get inputSchema => {
@@ -80,13 +127,7 @@ class CreateChartTool extends AgentTool {
         'properties': {
           'prompt': {
             'type': 'string',
-            'description':
-                'Natural language description of the chart to create',
-          },
-          'type': {
-            'type': 'string',
-            'enum': ['line', 'area', 'bar', 'scatter'],
-            'description': 'The type of chart to render',
+            'description': 'Natural language description of the chart to create',
           },
           'title': {
             'type': 'string',
@@ -105,6 +146,12 @@ class CreateChartTool extends AgentTool {
                 'id': {
                   'type': 'string',
                   'description': 'Unique identifier for this series',
+                },
+                'type': {
+                  'type': 'string',
+                  'enum': ['line', 'area', 'bar', 'scatter'],
+                  'description':
+                      'The type of chart series (line, area, bar, scatter). Each series can have its own type for mixed charts. Defaults to line.',
                 },
                 'name': {
                   'type': 'string',
@@ -132,102 +179,131 @@ class CreateChartTool extends AgentTool {
                     'required': ['x', 'y'],
                   },
                 },
-                'yAxisId': {
-                  'type': 'string',
-                  'description':
-                      'ID of the Y-axis this series should use (for multi-axis charts).',
+                'yAxis': {
+                  'type': 'object',
+                  'description': 'Nested Y-axis configuration for this series. '
+                      'Contains position, label, unit, color, min, max, etc.',
+                  'properties': {
+                    'position': {
+                      'type': 'string',
+                      'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
+                      'description': 'Position of the Y-axis. Defaults to "left".',
+                    },
+                    'label': {
+                      'type': 'string',
+                      'description': 'Label for the Y-axis (e.g., "Power").',
+                    },
+                    'unit': {
+                      'type': 'string',
+                      'description': 'Unit for the Y-axis (e.g., "W" for watts).',
+                    },
+                    'color': {
+                      'type': 'string',
+                      'description': 'Color for this Y-axis (hex format). Often matched to series color.',
+                    },
+                    'min': {
+                      'type': 'number',
+                      'description': 'Minimum value for the Y-axis scale. If not specified, auto-calculated.',
+                    },
+                    'max': {
+                      'type': 'number',
+                      'description': 'Maximum value for the Y-axis scale. If not specified, auto-calculated.',
+                    },
+                    'autoRange': {
+                      'type': 'boolean',
+                      'description': 'Whether to auto-calculate range from data. Defaults to true.',
+                    },
+                    'includeZero': {
+                      'type': 'boolean',
+                      'description': 'Whether the range should include zero. Defaults to false.',
+                    },
+                    'showTicks': {
+                      'type': 'boolean',
+                      'description': 'Whether to show tick marks. Defaults to true.',
+                    },
+                    'showAxisLine': {
+                      'type': 'boolean',
+                      'description': 'Whether to show the axis line. Defaults to true.',
+                    },
+                    'showGridLines': {
+                      'type': 'boolean',
+                      'description': 'Whether to show horizontal grid lines. Defaults to true.',
+                    },
+                  },
                 },
                 'unit': {
                   'type': 'string',
-                  'description':
-                      'Unit of measurement for this series (e.g., "W", "bpm").',
+                  'description': 'Unit of measurement for this series (e.g., "W", "bpm").',
                 },
                 'interpolation': {
                   'type': 'string',
                   'enum': ['linear', 'bezier', 'stepped', 'monotone'],
-                  'description':
-                      'Line interpolation type. Defaults to "linear".',
+                  'description': 'Line interpolation type. Defaults to "linear".',
                 },
                 'strokeWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Width of the line stroke in pixels. Defaults to 2.0.',
+                  'description': 'Width of the line stroke in pixels. Defaults to 2.0.',
                 },
                 'tension': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
+                  'description': 'Curve tension for bezier interpolation (0.0 to 1.0). Only applicable for line/area charts.',
                 },
                 'showPoints': {
                   'type': 'boolean',
-                  'description':
-                      'Whether to show data point markers. Defaults to false.',
+                  'description': 'Whether to show data point markers. Defaults to false.',
                 },
                 'fillOpacity': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
+                  'description': 'Fill opacity for area charts (0.0 to 1.0). Defaults to 0.3.',
                 },
                 'barWidthPercent': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description':
-                      'Bar width as a percentage of available space (0.0 to 1.0). Defaults to 0.7.',
+                  'description': 'Bar width as a percentage of available space (0.0 to 1.0). Defaults to 0.7.',
                 },
                 'barWidthPixels': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Fixed bar width in pixels. Overrides barWidthPercent if specified.',
+                  'description': 'Fixed bar width in pixels. Overrides barWidthPercent if specified.',
                 },
                 'barMinWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Minimum bar width in pixels. Defaults to 4.0.',
+                  'description': 'Minimum bar width in pixels. Defaults to 4.0.',
                 },
                 'barMaxWidth': {
                   'type': 'number',
                   'minimum': 0,
-                  'description':
-                      'Maximum bar width in pixels. Defaults to 100.0.',
+                  'description': 'Maximum bar width in pixels. Defaults to 100.0.',
                 },
-                'yAxisPosition': {
+                'markerStyle': {
                   'type': 'string',
-                  'enum': ['left', 'right', 'leftOuter', 'rightOuter'],
-                  'description':
-                      'Position of the Y-axis for this series in multi-axis charts.',
+                  'enum': ['none', 'circle', 'square', 'triangle', 'diamond'],
+                  'description': 'Style of markers at data points. Defaults to "none".',
                 },
-                'yAxisLabel': {
-                  'type': 'string',
-                  'description':
-                      'Label for the Y-axis associated with this series.',
-                },
-                'yAxisUnit': {
-                  'type': 'string',
-                  'description':
-                      'Unit for the Y-axis associated with this series.',
-                },
-                'yAxisColor': {
-                  'type': 'string',
-                  'description':
-                      'Color for the Y-axis associated with this series in hex format.',
-                },
-                'yAxisMin': {
+                'markerSize': {
                   'type': 'number',
-                  'description':
-                      'Minimum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                  'minimum': 0,
+                  'description': 'Size of markers in pixels. Defaults to 4.0.',
                 },
-                'yAxisMax': {
-                  'type': 'number',
-                  'description':
-                      'Maximum value for the Y-axis scale. If not specified, auto-calculated from data.',
+                'visible': {
+                  'type': 'boolean',
+                  'description': 'Whether this series is visible. Defaults to true.',
+                },
+                'legendVisible': {
+                  'type': 'boolean',
+                  'description': 'Whether to show this series in the legend. Defaults to true.',
+                },
+                'strokeDash': {
+                  'type': 'array',
+                  'items': {'type': 'number'},
+                  'description': 'Dash pattern for line stroke (e.g., [5, 3] for dashed). Defaults to solid line.',
                 },
               },
               'required': ['id', 'data'],
@@ -247,13 +323,11 @@ class CreateChartTool extends AgentTool {
               },
               'min': {
                 'type': 'number',
-                'description':
-                    'Minimum value for the X-axis scale. If not specified, auto-calculated from data.',
+                'description': 'Minimum value for the X-axis scale. If not specified, auto-calculated from data.',
               },
               'max': {
                 'type': 'number',
-                'description':
-                    'Maximum value for the X-axis scale. If not specified, auto-calculated from data.',
+                'description': 'Maximum value for the X-axis scale. If not specified, auto-calculated from data.',
               },
               'visible': {
                 'type': 'boolean',
@@ -276,97 +350,119 @@ class CreateChartTool extends AgentTool {
           },
           'annotations': {
             'type': 'array',
-            'description':
-                'Annotations to display on the chart (reference lines, zones, markers, text labels)',
+            'description': 'Chart annotations. Each type has DIFFERENT required properties:\n'
+                '• referenceLine: REQUIRES "value" (number) + "orientation" (horizontal/vertical). In perSeries mode, horizontal lines also REQUIRE "seriesId".\n'
+                '• zone: Use EITHER (1) "minValue"+"maxValue"+"orientation" for bands, OR (2) "startX"/"endX"/"startY"/"endY" for custom rectangles. Horizontal zones in perSeries mode REQUIRE "seriesId".\n'
+                '• textLabel: REQUIRES "text" (string) + "position" (topLeft/center/etc).\n'
+                '• marker: REQUIRES "x" + "y" (numbers).\n'
+                '• trendLine: REQUIRES "seriesId" + "trendType" (linear recommended for most cases).\n'
+                'EXAMPLES:\n'
+                '  {"type": "referenceLine", "value": 80, "orientation": "horizontal", "seriesId": "cpu", "label": "Threshold"}\n'
+                '  {"type": "zone", "minValue": 70, "maxValue": 90, "orientation": "horizontal", "seriesId": "cpu", "color": "#FF000033"}\n'
+                '  {"type": "zone", "startX": 2, "endX": 5, "startY": 50, "endY": 80, "seriesId": "cpu", "color": "#00FF0033", "label": "Target"}\n'
+                '  {"type": "textLabel", "text": "Peak", "position": "topRight", "fontSize": 14}\n'
+                '  {"type": "marker", "x": 30, "y": 85, "label": "Event"}\n'
+                '  {"type": "trendLine", "seriesId": "cpu", "trendType": "linear", "color": "#0000FF", "label": "Trend"}',
             'items': {
               'type': 'object',
               'properties': {
                 'type': {
                   'type': 'string',
-                  'enum': ['referenceLine', 'zone', 'textLabel', 'marker'],
-                  'description':
-                      'Type of annotation: referenceLine (horizontal/vertical line at value), zone (shaded region), textLabel (text at position), marker (point marker)',
+                  'enum': ['referenceLine', 'zone', 'textLabel', 'marker', 'trendLine'],
+                  'description': 'Annotation type. Determines which other properties are required.',
                 },
+                // referenceLine properties
                 'value': {
                   'type': 'number',
-                  'description':
-                      'Value for referenceLine (Y value for horizontal, X for vertical)',
+                  'description': 'FOR referenceLine ONLY: The Y-value where line is drawn. REQUIRED for referenceLine.',
                 },
-                'minValue': {
-                  'type': 'number',
-                  'description': 'Minimum value for zone annotation',
-                },
-                'maxValue': {
-                  'type': 'number',
-                  'description': 'Maximum value for zone annotation',
-                },
-                'x': {
-                  'type': 'number',
-                  'description': 'X coordinate for marker annotation',
-                },
-                'y': {
-                  'type': 'number',
-                  'description': 'Y coordinate for marker annotation',
-                },
-                'text': {
+                'orientation': {
                   'type': 'string',
-                  'description': 'Text content for textLabel annotation',
+                  'enum': ['horizontal', 'vertical'],
+                  'description': 'FOR referenceLine/zone: horizontal draws at Y-value, vertical at X-value.',
                 },
-                'label': {
+                'seriesId': {
                   'type': 'string',
                   'description':
-                      'Label text displayed with the annotation (for all types)',
-                },
-                'color': {
-                  'type': 'string',
-                  'description':
-                      'Color of the annotation (hex format, e.g., "#FF0000")',
+                      'FOR trendLine: REQUIRED - which series to calculate trend for. FOR referenceLine/zone in perSeries mode: which series range to use.',
                 },
                 'lineWidth': {
                   'type': 'number',
-                  'description': 'Line width for referenceLine annotations',
+                  'description': 'FOR referenceLine/trendLine: Line thickness in pixels.',
                 },
                 'dashPattern': {
                   'type': 'array',
                   'items': {'type': 'number'},
-                  'description':
-                      'Dash pattern for referenceLine (e.g., [5, 3] for dashed)',
+                  'description': 'FOR referenceLine/trendLine: Dash pattern e.g. [5,3] for dashed line.',
+                },
+                // zone properties
+                'minValue': {
+                  'type': 'number',
+                  'description': 'FOR zone: Lower bound of shaded region (with orientation). Use with maxValue for simple bands.',
+                },
+                'maxValue': {
+                  'type': 'number',
+                  'description': 'FOR zone: Upper bound of shaded region (with orientation). Use with minValue for simple bands.',
+                },
+                'startX': {
+                  'type': 'number',
+                  'description': 'FOR zone: Left X bound for custom rectangle. Use with endX, startY, endY for precise regions.',
+                },
+                'endX': {
+                  'type': 'number',
+                  'description': 'FOR zone: Right X bound for custom rectangle.',
+                },
+                'startY': {
+                  'type': 'number',
+                  'description': 'FOR zone: Bottom Y bound for custom rectangle. Requires seriesId in perSeries mode.',
+                },
+                'endY': {
+                  'type': 'number',
+                  'description': 'FOR zone: Top Y bound for custom rectangle. Requires seriesId in perSeries mode.',
                 },
                 'opacity': {
                   'type': 'number',
                   'minimum': 0,
                   'maximum': 1,
-                  'description': 'Opacity for zone fill (0.0 to 1.0)',
+                  'description': 'FOR zone: Fill opacity 0.0-1.0.',
                 },
-                'orientation': {
+                // textLabel properties
+                'text': {
                   'type': 'string',
-                  'enum': ['horizontal', 'vertical'],
-                  'description':
-                      'Orientation for referenceLine/zone (horizontal = Y axis, vertical = X axis)',
+                  'description': 'FOR textLabel ONLY: The text to display. REQUIRED for textLabel.',
                 },
                 'position': {
                   'type': 'string',
-                  'enum': [
-                    'topLeft',
-                    'topCenter',
-                    'topRight',
-                    'centerLeft',
-                    'center',
-                    'centerRight',
-                    'bottomLeft',
-                    'bottomCenter',
-                    'bottomRight'
-                  ],
-                  'description': 'Position for textLabel annotation',
+                  'enum': ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'],
+                  'description': 'FOR textLabel ONLY: Where to place the text. REQUIRED for textLabel.',
                 },
                 'fontSize': {
                   'type': 'number',
-                  'description': 'Font size for textLabel annotation',
+                  'description': 'FOR textLabel: Font size in pixels.',
                 },
-                'seriesId': {
+                // marker properties
+                'x': {
+                  'type': 'number',
+                  'description': 'FOR marker ONLY: X coordinate. REQUIRED for marker.',
+                },
+                'y': {
+                  'type': 'number',
+                  'description': 'FOR marker ONLY: Y coordinate. REQUIRED for marker.',
+                },
+                // trendLine properties
+                'trendType': {
                   'type': 'string',
-                  'description':
-                      'Series ID to bind annotation to (required for perSeries normalization mode)',
+                  'enum': ['linear', 'polynomial', 'movingAverage', 'exponentialMovingAverage'],
+                  'description': 'FOR trendLine: Type of trend. Use "linear" for best-fit line (most common). REQUIRED for trendLine.',
+                },
+                // shared properties
+                'label': {
+                  'type': 'string',
+                  'description': 'Optional label text shown with annotation.',
+                },
+                'color': {
+                  'type': 'string',
+                  'description': 'Color in hex format e.g. "#FF0000".',
                 },
               },
               'required': ['type'],
@@ -374,7 +470,35 @@ class CreateChartTool extends AgentTool {
           },
           'style': {
             'type': 'object',
-            'description': 'Visual styling configuration',
+            'description': 'Visual styling configuration for the chart',
+            'properties': {
+              'titleFontSize': {
+                'type': 'number',
+                'description': 'Font size for the chart title in pixels.',
+              },
+              'subtitleFontSize': {
+                'type': 'number',
+                'description': 'Font size for the chart subtitle in pixels.',
+              },
+              'axisFontSize': {
+                'type': 'number',
+                'description': 'Font size for axis labels in pixels.',
+              },
+              'legendFontSize': {
+                'type': 'number',
+                'description': 'Font size for legend text in pixels.',
+              },
+              'padding': {
+                'type': 'object',
+                'description': 'Padding around the chart area',
+                'properties': {
+                  'top': {'type': 'number'},
+                  'right': {'type': 'number'},
+                  'bottom': {'type': 'number'},
+                  'left': {'type': 'number'},
+                },
+              },
+            },
           },
           'width': {
             'type': 'number',
@@ -429,23 +553,30 @@ class CreateChartTool extends AgentTool {
           },
           'interactions': {
             'type': 'object',
-            'description': 'Interaction configuration for pan/zoom/tooltip.',
+            'description': 'Interaction configuration for pan/zoom/tooltip behavior.',
             'properties': {
               'crosshairMode': {
                 'type': 'string',
-                'description': 'Crosshair display mode.',
+                'enum': ['none', 'vertical', 'horizontal', 'both'],
+                'description':
+                    'Crosshair display mode. "none" hides crosshair, "vertical" shows vertical line, "horizontal" shows horizontal line, "both" shows both.',
               },
               'tooltipPosition': {
                 'type': 'string',
-                'description': 'Preferred tooltip position.',
+                'enum': ['auto', 'top', 'bottom', 'left', 'right', 'nearestPoint'],
+                'description': 'Preferred tooltip position relative to the cursor or data point.',
               },
               'enableZoom': {
                 'type': 'boolean',
-                'description': 'Whether zooming is enabled.',
+                'description': 'Whether zooming is enabled. Defaults to true.',
               },
               'enablePan': {
                 'type': 'boolean',
-                'description': 'Whether panning is enabled.',
+                'description': 'Whether panning is enabled. Defaults to true.',
+              },
+              'snapToPoint': {
+                'type': 'boolean',
+                'description': 'Whether crosshair/tooltip snaps to nearest data point.',
               },
             },
           },
@@ -453,41 +584,30 @@ class CreateChartTool extends AgentTool {
         'required': ['prompt', 'series'],
       };
 
+  /// Helper to return tool error result
+  ToolResult _logError(String message, Map<String, dynamic> input) {
+    return ToolResult(output: message, isError: true);
+  }
+
   @override
   Future<ToolResult> execute(Map<String, dynamic> input) async {
     // Validate required fields
     final prompt = input['prompt'] as String?;
     if (prompt == null || prompt.isEmpty) {
-      return const ToolResult(
-        output: 'Error: prompt is required. Please provide a natural language '
-            'description of the chart you want to create.',
-        isError: true,
+      return _logError(
+        'Error: prompt is required. Please provide a natural language '
+        'description of the chart you want to create.',
+        input,
       );
     }
 
     final seriesInput = input['series'] as List?;
     if (seriesInput == null || seriesInput.isEmpty) {
-      return const ToolResult(
-        output:
-            'Error: series is required and must contain at least one data series. '
-            'Each series should have an id and data array.',
-        isError: true,
+      return _logError(
+        'Error: series is required and must contain at least one data series. '
+        'Each series should have an id and data array.',
+        input,
       );
-    }
-
-    // Validate and parse chart type
-    ChartType chartType = ChartType.line; // default
-    final typeInput = input['type'] as String?;
-    if (typeInput != null) {
-      try {
-        chartType = ChartType.values.byName(typeInput);
-      } catch (_) {
-        return ToolResult(
-          output: 'Error: Invalid chart type "$typeInput". '
-              'Valid types are: line, area, bar, scatter.',
-          isError: true,
-        );
-      }
     }
 
     // Validate and parse legend position
@@ -497,28 +617,25 @@ class CreateChartTool extends AgentTool {
       try {
         legendPosition = LegendPosition.values.byName(legendPositionInput);
       } catch (_) {
-        return ToolResult(
-          output: 'Error: Invalid legend position "$legendPositionInput". '
-              'Valid positions are: top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight.',
-          isError: true,
+        return _logError(
+          'Error: Invalid legend position "$legendPositionInput". '
+          'Valid positions are: top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight.',
+          input,
         );
       }
     }
 
     // Validate and parse normalization mode
-    NormalizationModeConfig normalizationMode =
-        NormalizationModeConfig.none; // default
+    NormalizationModeConfig normalizationMode = NormalizationModeConfig.none; // default
     final normalizationModeInput = input['normalizationMode'] as String?;
     if (normalizationModeInput != null) {
       try {
-        normalizationMode =
-            NormalizationModeConfig.values.byName(normalizationModeInput);
+        normalizationMode = NormalizationModeConfig.values.byName(normalizationModeInput);
       } catch (_) {
-        return ToolResult(
-          output:
-              'Error: Invalid normalization mode "$normalizationModeInput". '
-              'Valid modes are: none, auto, perSeries.',
-          isError: true,
+        return _logError(
+          'Error: Invalid normalization mode "$normalizationModeInput". '
+          'Valid modes are: none, auto, perSeries.',
+          input,
         );
       }
     }
@@ -527,6 +644,19 @@ class CreateChartTool extends AgentTool {
     final series = <SeriesConfig>[];
     for (int i = 0; i < seriesInput.length; i++) {
       final seriesMap = Map<String, dynamic>.from(seriesInput[i] as Map);
+
+      // Validate series type if provided
+      final seriesType = seriesMap['type'] as String?;
+      if (seriesType != null) {
+        const validTypes = ['line', 'area', 'bar', 'scatter'];
+        if (!validTypes.contains(seriesType)) {
+          return _logError(
+            'Error: Invalid series type "$seriesType" in series "${seriesMap['id'] ?? 'unknown'}". '
+            'Valid types are: line, area, bar, scatter.',
+            input,
+          );
+        }
+      }
 
       // Assign default color if not provided
       if (seriesMap['color'] == null) {
@@ -539,12 +669,58 @@ class CreateChartTool extends AgentTool {
     }
 
     // Parse annotations if provided
+    // Per FR-004: Generate unique IDs for all annotations (ignore agent-supplied IDs)
     final annotations = <AnnotationConfig>[];
     final annotationsInput = input['annotations'] as List?;
     if (annotationsInput != null) {
-      for (final annotationMap in annotationsInput) {
+      for (int i = 0; i < annotationsInput.length; i++) {
+        final annotationMap = annotationsInput[i];
         final map = Map<String, dynamic>.from(annotationMap as Map);
-        annotations.add(AnnotationConfig.fromJson(map));
+        final parsed = AnnotationConfig.fromJson(map);
+        // Always generate a new ID (ignore any agent-supplied ID per FR-004)
+        final annotationWithId = parsed.copyWith(id: 'ann-${_uuid.v4()}');
+        annotations.add(annotationWithId);
+      }
+    }
+
+    // Validate annotation seriesId references
+    final validSeriesIds = series.map((s) => s.id).toSet();
+    for (final annotation in annotations) {
+      if (annotation.seriesId != null && !validSeriesIds.contains(annotation.seriesId)) {
+        return _logError(
+          'Error: Annotation references non-existent series '
+          '"${annotation.seriesId}". '
+          'Valid series IDs are: ${validSeriesIds.join(", ")}. '
+          'The seriesId must exactly match a series id from the series array.',
+          input,
+        );
+      }
+    }
+
+    // Warn if perSeries mode but annotations missing seriesId
+    if (normalizationMode == NormalizationModeConfig.perSeries) {
+      for (final annotation in annotations) {
+        if (annotation.type == AnnotationType.referenceLine && annotation.orientation != Orientation.vertical && annotation.seriesId == null) {
+          return _logError(
+            'Error: Horizontal referenceLine annotation requires '
+            '"seriesId" in perSeries normalization mode. '
+            'Without seriesId, the annotation cannot be positioned correctly. '
+            'Add seriesId matching one of: ${validSeriesIds.join(", ")}',
+            input,
+          );
+        }
+      }
+    }
+
+    // Validate referenceLine annotations have a value
+    for (final annotation in annotations) {
+      if (annotation.type == AnnotationType.referenceLine && annotation.value == null) {
+        return _logError(
+          'Error: referenceLine annotation requires a "value" property. '
+          'The value should be in the same units as the target series data. '
+          'Example: for a power series with range 0-500W, value: 200 draws a line at 200W.',
+          input,
+        );
       }
     }
 
@@ -581,7 +757,6 @@ class CreateChartTool extends AgentTool {
     // Build chart configuration with ALL properties
     final chart = ChartConfiguration(
       id: chartId,
-      type: chartType,
       title: input['title'] as String?,
       subtitle: input['subtitle'] as String?,
       series: series,
@@ -601,9 +776,24 @@ class CreateChartTool extends AgentTool {
       backgroundColor: input['backgroundColor'] as String?,
     );
 
+    // Validate chart configuration using SchemaValidator (AC-8)
+    final validationResult = SchemaValidator.validate(chart);
+    if (!validationResult.isValid) {
+      // Return validation errors
+      final errorMessages = validationResult.errors.map((e) => '${e.code}: ${e.message}').join('\n');
+      return _logError('Validation errors:\n$errorMessages', input);
+    }
+
+    // Build warnings string if any (non-blocking)
+    final warningsJson = validationResult.warnings.isNotEmpty ? validationResult.warnings.map((w) => w.toString()).toList() : null;
+
     // Return success result with JSON output and ChartConfiguration data
+    final outputJson = chart.toJson();
+    if (warningsJson != null) {
+      outputJson['_warnings'] = warningsJson;
+    }
     return ToolResult(
-      output: jsonEncode(chart.toJson()),
+      output: jsonEncode(outputJson),
       data: chart,
     );
   }

@@ -203,18 +203,6 @@ class DefaultChartAgent implements ChartAgentInterface {
   }
 
   Widget _buildChartWidget(ChartBuildResult result, String chartId) {
-    // Debug: print series data
-    for (final series in result.series) {
-      // ignore: avoid_print
-      print('📊 Series "${series.name}": ${series.points.length} points');
-      if (series.points.isNotEmpty) {
-        // ignore: avoid_print
-        print('   First: (${series.points.first.x}, ${series.points.first.y})');
-        // ignore: avoid_print
-        print('   Last: (${series.points.last.x}, ${series.points.last.y})');
-      }
-    }
-
     return SizedBox(
       width: 750,
       height: 450,

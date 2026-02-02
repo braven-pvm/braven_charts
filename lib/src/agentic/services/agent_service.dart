@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -123,10 +121,6 @@ class AgentService {
 
         final toolResults = <ToolResult>[];
         for (final ToolCall call in toolCalls) {
-          // DEBUG: Log tool call input from agent
-          debugPrint('=== TOOL CALL: ${call.toolName} ===');
-          _debugPrintJson('Tool input', call.arguments);
-
           try {
             final result =
                 await _toolRegistry.execute(call.toolName, call.arguments);
@@ -173,16 +167,10 @@ class AgentService {
                 ),
               );
             }
-          } catch (e, stackTrace) {
-            // CRITICAL: Always add a tool_result even on error
+          } catch (e) {
+            // Always add a tool_result even on error
             // The API requires every tool_use to have a corresponding tool_result
-            // This is NOT hiding errors - it's proper LLM tool protocol:
-            // 1. Log full details for developers
-            // 2. Return error to LLM so it can respond appropriately
-            debugPrint('=== TOOL ERROR: ${call.toolName} ===');
-            debugPrint('Error: $e');
-            debugPrint('Stack trace: $stackTrace');
-            debugPrint('Tool arguments: ${call.arguments}');
+            // Return error to LLM so it can respond appropriately
             toolResults.add(
               ToolResult(
                 toolCallId: call.id,
@@ -263,18 +251,4 @@ class AgentService {
 
   /// Whether redo is possible
   bool get canRedoChart => history.canRedo;
-
-  /// Debug helper: print JSON with formatting
-  void _debugPrintJson(String label, Map<String, dynamic> json) {
-    try {
-      const encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(json);
-      debugPrint('$label:');
-      for (final line in prettyJson.split('\n')) {
-        debugPrint(line);
-      }
-    } catch (e) {
-      debugPrint('$label: [Failed to serialize: $e]');
-    }
-  }
 }

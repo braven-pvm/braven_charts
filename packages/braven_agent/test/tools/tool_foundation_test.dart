@@ -1,3 +1,4 @@
+import 'package:braven_agent/src/llm/models/message_content.dart';
 import 'package:braven_agent/src/tools/tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,8 +7,7 @@ class MockTool extends AgentTool {
   final String _name;
   final String _description;
   final Map<String, dynamic> _inputSchema;
-  final Future<ToolResult> Function(Map<String, dynamic> input)?
-      _executeHandler;
+  final Future<ToolResult> Function(Map<String, dynamic> input)? _executeHandler;
 
   MockTool({
     required String name,
@@ -212,13 +212,24 @@ void main() {
           data: 'data',
         );
 
-        expect(result.props, equals(['test', true, 'data']));
+        expect(result.props, equals(['test', true, 'data', null]));
       });
 
       test('props handles null data', () {
         const result = ToolResult(output: 'test', isError: false);
 
-        expect(result.props, equals(['test', false, null]));
+        expect(result.props, equals(['test', false, null, null]));
+      });
+
+      test('props includes imageContent when present', () {
+        const result = ToolResult(
+          output: 'test',
+          isError: false,
+          imageContent: ImageContent(data: 'abc123', mediaType: 'image/png'),
+        );
+
+        expect(result.props.length, equals(4));
+        expect(result.props[3], isA<ImageContent>());
       });
     });
   });

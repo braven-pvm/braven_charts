@@ -97,8 +97,26 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     _selectedAxis = annotation?.axis ?? AnnotationAxis.y; // Default to Y-axis
 
     // Initialize series selection for perSeries mode
-    if (annotation != null) {
-      _selectedSeriesId = annotation.seriesId;
+    if (annotation != null && annotation.seriesId != null) {
+      // Sanitize seriesId - LLMs sometimes include trailing punctuation
+      var sanitizedId = annotation.seriesId!.trim();
+      while (sanitizedId.isNotEmpty &&
+          (sanitizedId.endsWith(',') ||
+              sanitizedId.endsWith('.') ||
+              sanitizedId.endsWith(';'))) {
+        sanitizedId = sanitizedId.substring(0, sanitizedId.length - 1).trim();
+      }
+
+      // Validate that the seriesId exists in availableSeries
+      final validIds =
+          widget.availableSeries?.map((s) => s.id).toSet() ?? <String>{};
+      if (validIds.contains(sanitizedId)) {
+        _selectedSeriesId = sanitizedId;
+      } else if (widget.availableSeries != null &&
+          widget.availableSeries!.isNotEmpty) {
+        // Fallback to first series if seriesId is invalid
+        _selectedSeriesId = widget.availableSeries!.first.id;
+      }
     } else if (widget.availableSeries != null &&
         widget.availableSeries!.isNotEmpty) {
       // Default to first series for new annotations

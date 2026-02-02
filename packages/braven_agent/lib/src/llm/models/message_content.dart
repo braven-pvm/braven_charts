@@ -137,8 +137,7 @@ final class ImageContent extends MessageContent {
   List<Object?> get props => [data, mediaType];
 
   @override
-  String toString() =>
-      'ImageContent(mediaType: $mediaType, data: ${data.length} chars)';
+  String toString() => 'ImageContent(mediaType: $mediaType, data: ${data.length} chars)';
 }
 
 /// Raw binary content with MIME type.
@@ -194,8 +193,7 @@ final class BinaryContent extends MessageContent {
   List<Object?> get props => [data, mimeType, filename];
 
   @override
-  String toString() =>
-      'BinaryContent(mimeType: $mimeType, filename: $filename, data: ${data.length} chars)';
+  String toString() => 'BinaryContent(mimeType: $mimeType, filename: $filename, data: ${data.length} chars)';
 }
 
 /// LLM requesting to call a tool.
@@ -224,11 +222,19 @@ final class ToolUseContent extends MessageContent {
   /// Input parameters for the tool as a JSON-compatible map.
   final Map<String, dynamic> input;
 
+  /// Provider-specific metadata that must be preserved across turns.
+  ///
+  /// Used for features like Gemini 3's `thoughtSignature` which must be
+  /// returned with function responses to maintain reasoning context.
+  /// This field is optional and only populated by providers that require it.
+  final Map<String, dynamic>? providerMetadata;
+
   /// Creates a [ToolUseContent] with the given [id], [toolName], and [input].
   const ToolUseContent({
     required this.id,
     required this.toolName,
     required this.input,
+    this.providerMetadata,
   });
 
   /// Creates a [ToolUseContent] from a JSON map.
@@ -237,6 +243,7 @@ final class ToolUseContent extends MessageContent {
       id: json['id'] as String,
       toolName: json['toolName'] as String,
       input: Map<String, dynamic>.from(json['input'] as Map),
+      providerMetadata: json['providerMetadata'] != null ? Map<String, dynamic>.from(json['providerMetadata'] as Map) : null,
     );
   }
 
@@ -247,11 +254,12 @@ final class ToolUseContent extends MessageContent {
       'id': id,
       'toolName': toolName,
       'input': input,
+      if (providerMetadata != null) 'providerMetadata': providerMetadata,
     };
   }
 
   @override
-  List<Object?> get props => [id, toolName, input];
+  List<Object?> get props => [id, toolName, input, providerMetadata];
 
   @override
   String toString() => 'ToolUseContent(id: $id, toolName: $toolName)';
@@ -272,9 +280,27 @@ final class ToolUseContent extends MessageContent {
 ///   isError: false,
 /// );
 /// ```
+///
+/// ## Returning Images
+///
+/// Tool results can include images for vision-capable models:
+///
+/// ```dart
+/// final content = ToolResultContent(
+///   toolUseId: 'toolu_123',
+///   output: 'Here is the chart screenshot:',
+///   imageContent: ImageContent(data: base64Data, mediaType: 'image/png'),
+/// );
+/// ```
 final class ToolResultContent extends MessageContent {
   /// ID of the [ToolUseContent] this result corresponds to.
   final String toolUseId;
+
+  /// Name of the tool that was executed.
+  ///
+  /// Required for some LLM APIs (e.g., Gemini) that need the function name
+  /// in the response. Optional for OpenAI-compatible APIs that use tool_call_id.
+  final String? toolName;
 
   /// String output from the tool execution.
   ///
@@ -284,19 +310,35 @@ final class ToolResultContent extends MessageContent {
   /// Whether the tool execution resulted in an error.
   final bool isError;
 
+  /// Optional image content to include in the tool result.
+  ///
+  /// When set, the image will be included in the tool result message
+  /// sent to the LLM, enabling vision-capable models to "see" the result.
+  ///
+  /// Note: Not all LLM providers support images in tool results.
+  /// - Anthropic: Supported via ToolResultBlockContent.blocks
+  /// - OpenAI: Not supported in tool results (use follow-up user message)
+  /// - Gemini: Not supported in function responses
+  final ImageContent? imageContent;
+
   /// Creates a [ToolResultContent] with the given [toolUseId], [output], and [isError].
   const ToolResultContent({
     required this.toolUseId,
     required this.output,
+    this.toolName,
     this.isError = false,
+    this.imageContent,
   });
 
   /// Creates a [ToolResultContent] from a JSON map.
   factory ToolResultContent.fromJson(Map<String, dynamic> json) {
+    final imageJson = json['imageContent'] as Map<String, dynamic>?;
     return ToolResultContent(
       toolUseId: json['toolUseId'] as String,
       output: json['output'] as String,
+      toolName: json['toolName'] as String?,
       isError: json['isError'] as bool? ?? false,
+      imageContent: imageJson != null ? ImageContent.fromJson(imageJson) : null,
     );
   }
 
@@ -305,15 +347,16 @@ final class ToolResultContent extends MessageContent {
     return {
       'type': 'tool_result',
       'toolUseId': toolUseId,
+      if (toolName != null) 'toolName': toolName,
       'output': output,
       'isError': isError,
+      if (imageContent != null) 'imageContent': imageContent!.toJson(),
     };
   }
 
   @override
-  List<Object?> get props => [toolUseId, output, isError];
+  List<Object?> get props => [toolUseId, toolName, output, isError, imageContent];
 
   @override
-  String toString() =>
-      'ToolResultContent(toolUseId: $toolUseId, isError: $isError)';
+  String toString() => 'ToolResultContent(toolUseId: $toolUseId, toolName: $toolName, isError: $isError, hasImage: ${imageContent != null})';
 }

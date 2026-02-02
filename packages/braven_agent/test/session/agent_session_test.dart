@@ -4,7 +4,6 @@ import 'package:braven_agent/src/llm/llm_response.dart';
 import 'package:braven_agent/src/llm/models/agent_message.dart';
 import 'package:braven_agent/src/llm/models/message_content.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
-import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/session/agent_events.dart';
 import 'package:braven_agent/src/session/agent_session_impl.dart';
 import 'package:braven_agent/src/session/session_state.dart';
@@ -187,11 +186,9 @@ class MockAgentTool implements AgentTool {
 ChartConfiguration createTestChart({
   String? id = 'chart_1',
   String title = 'Test Chart',
-  ChartType type = ChartType.line,
 }) {
   return ChartConfiguration(
     id: id,
-    type: type,
     title: title,
     series: const [],
   );

@@ -271,10 +271,9 @@ abstract class AgentSession {
   /// await session.transform(
   ///   'Create a chart from this screenshot',
   ///   attachments: [
-  ///     BinaryContent(
+  ///     ImageContent(
   ///       data: base64Encode(imageData),
-  ///       mimeType: 'image/png',
-  ///       filename: 'screenshot.png',
+  ///       mediaType: 'image/png',
   ///     ),
   ///   ],
   /// );
@@ -291,7 +290,7 @@ abstract class AgentSession {
   /// state and events.
   Future<void> transform(
     String prompt, {
-    List<BinaryContent>? attachments,
+    List<MessageContent>? attachments,
   });
 
   /// Updates the session's active chart with a user-edited configuration.
@@ -337,6 +336,39 @@ abstract class AgentSession {
   /// }
   /// ```
   void updateChart(ChartConfiguration newConfig);
+
+  /// Adds a chart snapshot image to the message history.
+  ///
+  /// Use this method to store a visual snapshot of a chart in the
+  /// conversation history. This is useful for:
+  /// - Visual history tracking
+  /// - Comparing chart versions
+  /// - Exporting conversation with embedded charts
+  ///
+  /// The [imageContent] should be captured using [ChartSnapshotService]
+  /// or [ChartSnapshotWrapper] from the renderer layer.
+  ///
+  /// The optional [title] provides a label for the snapshot message.
+  /// If not provided, the active chart's title or ID is used.
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// // Using ChartSnapshotWrapper in your UI
+  /// final _snapshotKey = GlobalKey<ChartSnapshotWrapperState>();
+  ///
+  /// ChartSnapshotWrapper(
+  ///   key: _snapshotKey,
+  ///   child: ChartRenderer().render(config),
+  /// )
+  ///
+  /// // After chart renders, capture and add to history
+  /// final imageContent = await _snapshotKey.currentState?.capture();
+  /// if (imageContent != null) {
+  ///   session.addChartSnapshot(imageContent, title: 'Sales Chart');
+  /// }
+  /// ```
+  void addChartSnapshot(ImageContent imageContent, {String? title});
 
   /// Cancels the current in-progress operation.
   ///

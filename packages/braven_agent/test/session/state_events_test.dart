@@ -1,7 +1,6 @@
 import 'package:braven_agent/src/llm/models/agent_message.dart';
 import 'package:braven_agent/src/llm/models/message_content.dart';
 import 'package:braven_agent/src/models/chart_configuration.dart';
-import 'package:braven_agent/src/models/enums.dart';
 import 'package:braven_agent/src/session/agent_events.dart';
 import 'package:braven_agent/src/session/session_state.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +31,6 @@ void main() {
   }) {
     return ChartConfiguration(
       id: id,
-      type: ChartType.line,
       title: title,
       series: const [],
     );
