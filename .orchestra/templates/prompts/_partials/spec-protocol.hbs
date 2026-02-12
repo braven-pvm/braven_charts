@@ -1,0 +1,92 @@
+{{~#if tool_alternatives}}
+## ⛔ CRITICAL: Database Access STRICTLY PROHIBITED
+
+**NEVER attempt to access the Orchestra database directly.**
+
+| ❌ FORBIDDEN                                         | Why                                      |
+| ---------------------------------------------------- | ---------------------------------------- |
+| SQLite commands (`sqlite3`, `.schema`, `.tables`)    | Direct DB access bypasses security model |
+| SQL queries (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) | Only tools may access the database   |
+| better-sqlite3 or any DB library                     | Violates role separation                 |
+| Reading `.orchestra/orchestra.db` directly           | Database is MCP-server controlled only   |
+
+**If you find yourself wanting to query the database:**
+
+1. STOP immediately
+2. Use the appropriate tool instead ({{tool_alternatives}})
+3. If no tool exists for your need, report it - don't work around it
+
+Attempting direct database access is a **security violation** that breaks Orchestra's trust model.
+{{/if~}}
+{{~#if_eq protocol_variant "single"}}
+## Mandatory Spec-First Protocol (9.1-9.4)
+- Assume the implementation is WRONG until PROVEN correct
+- Read the spec FIRST using spec_path from `get_code_review`
+- If spec_files[] is not empty, also read those files using `read_spec_file` (e.g., tasks.md)
+- Build a per-spec-task evidence table from spec_task_definitions[] BEFORE reading any implementation code
+- Any spec task without evidence MUST result in CHANGES_REQUESTED
+
+2. Read the specification file at spec_path (and any files in spec_files[])
+3. Read the implementation files only AFTER completing the evidence requirements
+4. Verify the implementation against the evidence table:
+  - Does each spec task have concrete evidence (file, location, mechanism, proof)?
+  - Is the code quality acceptable (patterns, naming, structure)?
+  - Are there any obvious bugs, security issues, or performance concerns?
+  - Are tests adequate and actually validating behavior?
+
+5. Submit your decision using `submit_code_review`:
+  - decision: "APPROVED" - Only if ALL spec tasks have evidence and quality is acceptable
+  - decision: "CHANGES_REQUESTED" - If any spec task lacks evidence or issues need fixing (MUST include issues array)
+  - decision: "REJECTED" - If major issues/incorrect implementation (MUST include issues array)
+
+Minimal valid issues entry (REQUIRED for CHANGES_REQUESTED/REJECTED):
+```json
+{
+  "issues": [
+    {
+      "severity": "MAJOR",
+      "issue": "Describe the problem",
+      "rationale": "Why this is a problem and needs fixing"
+    }
+  ]
+}
+```
+
+## Review Standards
+- **Correctness**: Implementation matches spec requirements with evidence
+- **Quality**: Code follows project patterns and best practices
+- **Completeness**: All spec tasks have evidence; deliverables and tests are adequate
+- **Safety**: No obvious security or stability issues
+
+Provide specific, actionable feedback for any issues found.
+
+IMPORTANT:
+- Any non-approval decision MUST include explicit issues in the issues array.
+- Any spec task without evidence = CHANGES_REQUESTED.
+{{/if_eq~}}
+{{~#if_eq protocol_variant "bulk"}}
+## Mandatory Spec-First Protocol (9.1-9.4)
+- Assume the implementation is WRONG until PROVEN correct
+- Read the spec FIRST using spec_path from `get_code_review`
+- If spec_files[] is not empty, also read those files using `read_spec_file` (e.g., tasks.md)
+- Build a per-spec-task evidence table from spec_task_definitions[] BEFORE reading any implementation code
+- Any spec task without evidence MUST result in CHANGES_REQUESTED
+
+4. Read the specification file at spec_path (and any files in spec_files[])
+5. Read the implementation files only AFTER completing the evidence requirements
+6. Verify the implementation quality and correctness using the evidence table
+7. Submit decision using `submit_code_review` with decision: "APPROVED", "CHANGES_REQUESTED", or "REJECTED"
+
+Minimal valid issues entry (REQUIRED for CHANGES_REQUESTED/REJECTED):
+```json
+{
+  "issues": [
+    {
+      "severity": "MAJOR",
+      "issue": "Describe the problem",
+      "rationale": "Why this is a problem and needs fixing"
+    }
+  ]
+}
+```
+{{/if_eq}}

@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=G:\Media\SDK\flutter"
-export "FLUTTER_APPLICATION_PATH=X:\Cloud Storage\Dropbox\Repositories\Flutter\braven_chart_plus\example"
+export "FLUTTER_ROOT=F:\sdk\flutter"
+export "FLUTTER_APPLICATION_PATH=F:\Repositories\braven_chart_plus\example"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"

@@ -1,0 +1,55 @@
+As Controller, review Sprint "{{sprint.title}}" (ID: {{sprint.sprint_id}}) for specification alignment.
+
+{{>task-header tool_description="Analyze sprint configuration" tool_name="review_sprint_config" tool_return_description="Returns sprint configuration details for review"}}
+
+{{>spec-protocol tool_alternatives="review_sprint_config, approve_sprint, reject_sprint"}}
+
+## Your Task
+Use your tools to perform a comprehensive sprint review:
+
+1. `review_sprint_config` - Analyze the sprint configuration:
+   - Task breakdown completeness (all spec requirements covered?)
+   - Task descriptions clarity and specificity
+   - Dependencies correctness and logical ordering
+   - Verification criteria adequacy
+   - TDD task separation (red/green phases distinct?)
+   - Category assignments appropriateness
+
+2. Check against specification:
+   - All specified features have corresponding tasks
+   - No tasks implement features not in specification
+   - Task granularity is appropriate (not too broad/narrow)
+   - Technical approach aligns with architectural constraints
+
+3. Make your decision:
+   - `approve_sprint` - If configuration fully aligns with specification
+   - `reject_sprint` - If issues found requiring revision
+
+## Sprint Context
+- **Sprint ID**: {{sprint.sprint_id}}
+- **Sprint Title**: {{sprint.title}}
+- **Review Attempt**: {{default reviewAttempt 1}}{{#if_eq sprint.status "SPEC_REVIEW_FAILED"}}
+- **Status**: Previous review REJECTED - address prior feedback{{/if_eq}}
+
+## Review Standards
+- **Completeness**: Every spec requirement has corresponding task(s)
+- **Faithfulness**: No tasks implement unspecified features
+- **Clarity**: Task descriptions are specific and actionable
+- **Testability**: Verification criteria are measurable
+- **Feasibility**: Technical approach is sound given constraints
+
+## Decision Guidance
+**APPROVE** if:
+- All spec requirements covered by tasks
+- Task breakdown is logical and complete
+- Verification criteria are adequate
+- No specification violations
+
+**REJECT** if:
+- Missing tasks for spec requirements
+- Tasks implementing unspecified features
+- Unclear or overly broad task descriptions
+- Inadequate verification criteria
+- Logical dependency issues
+
+Provide detailed, actionable feedback for any issues found.

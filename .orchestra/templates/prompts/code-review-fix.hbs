@@ -1,0 +1,23 @@
+As Implementor, resolve {{openIssueCount}} open code review issue(s) for Sprint "{{sprint.title}}" ({{sprint.sprint_id}}).
+
+## Your Task
+Use the `fix_code_review` tool to find and fix open code review issues:
+
+1. `fix_code_review({ action: "GET_ISSUES" })` - List all open issues with handover context
+
+2. For each issue:
+    - Read the file/location and recommendation
+    - Implement a fix that addresses the issue
+    - Add or update tests if needed
+    - `fix_code_review({ action: "RESOLVE_ISSUE", issue_id: N, fix_summary: "..." })` - Mark resolved
+
+3. When all issues are fixed:
+    - `fix_code_review({ action: "SUBMIT_FIXES", summary: "...", files_changed: [...], tests_run: [...] })`
+
+## Quality Standards
+- Fixes must directly address the issue description and rationale
+- Prefer minimal, targeted changes
+- Maintain existing code style and conventions
+- Run relevant tests and report results
+
+Proceed issue by issue and keep your fixes concise.

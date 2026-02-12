@@ -1,0 +1,61 @@
+# Project Coding Standards
+
+These are the coding standards for this project. All agents must adhere to these standards during implementation, review, and verification.
+
+{{!--
+  CUSTOMIZATION GUIDE:
+
+  This template is injected into ALL agent sessions (orchestrator, implementor, controller)
+  as a hidden system prompt. Customize the sections below to match your project's standards.
+
+  The controller agent will additionally review implementations against these standards
+  during code review.
+
+  To customize:
+  1. Edit this file at .orchestra/templates/prompts/coding-standards.hbs
+  2. Your changes are preserved across extension updates (never overwritten)
+  3. You can use Handlebars syntax if needed, but plain markdown works fine
+  4. Remove or add sections as needed for your project
+--}}
+
+## Architecture
+
+{{!-- Define your project's architectural patterns and constraints here --}}
+{{!-- Examples:
+- Use dependency injection for all service classes
+- Follow hexagonal architecture: domain logic must not depend on infrastructure
+- All database access goes through the repository pattern
+- API endpoints must use the controller → service → repository layering
+--}}
+
+## Coding Conventions
+
+{{!-- Define naming conventions, code style, and language-specific rules here --}}
+{{!-- Examples:
+- TypeScript strict mode required; no `any` types
+- Use PascalCase for types/interfaces, camelCase for variables/functions
+- Prefer `unknown` over `any` for untyped values
+- Use Zod schemas for runtime validation, not TypeScript enums
+- One responsibility per file
+--}}
+
+## Testing Standards
+
+{{!-- Define testing requirements and patterns here --}}
+{{!-- Examples:
+- All new features must include unit tests
+- Test files mirror source structure: src/foo.ts → test/foo.test.ts
+- Use Vitest with global test APIs (describe, it, expect)
+- Minimum 80% code coverage for new code
+- Tests must validate behavior, not just existence
+--}}
+
+## Error Handling
+
+{{!-- Define error handling patterns here --}}
+{{!-- Examples:
+- Use custom error classes that extend Error
+- Never swallow errors silently in catch blocks
+- Log errors with structured context (not just error.message)
+- All async operations must have proper error handling
+--}}

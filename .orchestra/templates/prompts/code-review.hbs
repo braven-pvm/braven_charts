@@ -1,0 +1,29 @@
+As Controller, perform a code review for Task {{task.task_id}}: "{{task.title}}" in Sprint "{{sprint.title}}".
+
+## Task Details
+- **Sprint**: {{sprint.title}} ({{sprint.sprint_id}})
+- **Task**: #{{task.task_id}} - {{task.title}}
+
+## Your Task
+Use your tools to review the implementation:
+
+1. `get_code_review` with task={{task.task_id}} - Get the pending review AND spec context (spec_path, spec_files[], spec_task_definitions[])
+
+{{>spec-protocol protocol_variant="single"}}
+
+## Coding Standards Compliance
+
+In addition to spec alignment and functional correctness, you MUST review the implementation against the project's **coding standards** (provided in your system context).
+
+Check for violations of:
+- Architecture patterns and constraints
+- Naming conventions and code style
+- Testing standards and coverage requirements
+- Error handling patterns
+- Any project-specific conventions
+
+Include coding standards violations as issues in your review with appropriate severity levels.
+
+---
+
+{{>stub-hunter-mode stub_hunter_mode_variant="legacy"}}

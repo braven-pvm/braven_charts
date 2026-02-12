@@ -1,0 +1,247 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://orchestra.dev/schemas/template-context.schema.json",
+  "title": "Orchestra Template Context",
+  "description": "Schema defining context variables available to Handlebars templates in Orchestra",
+  "type": "object",
+  "properties": {
+    "task": {
+      "type": "object",
+      "description": "Current task information",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Internal database ID of the task"
+        },
+        "task_id": {
+          "type": "integer",
+          "description": "User-facing task number within the sprint"
+        },
+        "title": {
+          "type": "string",
+          "description": "Task title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current task status",
+          "enum": [
+            "PENDING",
+            "PREPARED",
+            "IMPLEMENT",
+            "GATE_CHECK",
+            "VERIFIED",
+            "COMPLETE",
+            "FAILED",
+            "ESCALATED",
+            "BLOCKED"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "description": "Task priority level",
+          "enum": ["P0", "P1", "P2", "P3"]
+        },
+        "category": {
+          "type": "string",
+          "description": "Task category"
+        },
+        "phase_id": {
+          "type": "string",
+          "description": "ID of the phase this task belongs to"
+        }
+      },
+      "required": ["id", "task_id", "title", "status"]
+    },
+    "sprint": {
+      "type": "object",
+      "description": "Current sprint information",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Sprint identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Sprint name"
+        },
+        "status": {
+          "type": "string",
+          "description": "Sprint status",
+          "enum": [
+            "PENDING",
+            "PENDING_SPEC_REVIEW",
+            "SPEC_REVIEW_FAILED",
+            "ACTIVE",
+            "COMPLETE",
+            "ARCHIVED"
+          ]
+        },
+        "goal": {
+          "type": "string",
+          "description": "Sprint goal"
+        }
+      },
+      "required": ["id", "name", "status"]
+    },
+    "handover": {
+      "type": "object",
+      "description": "Task handover information for implementor",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Task title"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Task priority"
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description"
+        },
+        "context": {
+          "type": "string",
+          "description": "Additional context for the task"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "description": "List of acceptance criteria",
+          "items": {
+            "type": "object",
+            "properties": {
+              "criterion": {
+                "type": "string",
+                "description": "The acceptance criterion"
+              },
+              "verification": {
+                "type": "string",
+                "description": "How to verify the criterion is met"
+              }
+            },
+            "required": ["criterion"]
+          }
+        },
+        "file_operations": {
+          "type": "array",
+          "description": "List of file operations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": ["CREATE", "UPDATE", "DELETE"]
+              },
+              "path": {
+                "type": "string",
+                "description": "File path relative to workspace root"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the file operation"
+              }
+            },
+            "required": ["operation", "path"]
+          }
+        },
+        "deliverables": {
+          "type": "array",
+          "description": "List of expected deliverables",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "List of task dependencies",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "context_files": {
+          "type": "array",
+          "description": "List of context files for reference",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "code_review": {
+      "type": "object",
+      "description": "Code review information",
+      "properties": {
+        "review_id": {
+          "type": "integer",
+          "description": "Review ID"
+        },
+        "status": {
+          "type": "string",
+          "description": "Review status",
+          "enum": [
+            "PENDING",
+            "IN_REVIEW",
+            "APPROVED",
+            "CHANGES_REQUESTED",
+            "REJECTED"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "description": "Review summary"
+        },
+        "issues": {
+          "type": "array",
+          "description": "List of code review issues",
+          "items": {
+            "type": "object",
+            "properties": {
+              "issue_id": {
+                "type": "integer"
+              },
+              "severity": {
+                "type": "string",
+                "enum": ["CRITICAL", "MAJOR", "MINOR", "SUGGESTION"]
+              },
+              "category": {
+                "type": "string"
+              },
+              "file_path": {
+                "type": "string"
+              },
+              "line_number": {
+                "type": "integer"
+              },
+              "description": {
+                "type": "string"
+              },
+              "suggestion": {
+                "type": "string"
+              }
+            },
+            "required": ["issue_id", "severity", "description"]
+          }
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "description": "Agent-specific context",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Agent role",
+          "enum": ["orchestrator", "implementor", "controller"]
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Current session ID"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

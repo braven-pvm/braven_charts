@@ -1,0 +1,32 @@
+As Implementor, apply code review fixes for Task {{task.task_id}}: "{{task.title}}".
+
+This task has a code review status of **{{codeReview.status}}**.{{#if codeReview.summary}}
+
+Review summary: {{codeReview.summary}}{{/if}}
+
+## Your Task
+Use the `fix_code_review` tool to address the code review feedback:
+
+1. `get_current_task` - Review the updated fix handover{{#if handoverPath}}
+   - **Handover**: {{handoverPath}}{{/if}}
+2. `fix_code_review({ action: "GET_ISSUES" })` - List all open issues with handover context
+3. For each issue:
+   - Read the issue details (file, line, recommendation)
+   - Fix the code according to the recommendation
+   - Run relevant tests
+   - `fix_code_review({ action: "RESOLVE_ISSUE", issue_id: N, fix_summary: "..." })` - Mark resolved
+{{#if codeReview.summary}}
+4. `fix_code_review({ action: "SUBMIT_FIXES", summary: "...", files_changed: [...], tests_run: [...] })` - Submit for re-review
+{{else}}
+4. `fix_code_review({ action: "SUBMIT_FIXES", files_changed: [...], tests_run: [...] })` - Submit for re-review
+{{/if}}
+## Task Details
+- **ID**: {{task.task_id}}
+- **Title**: {{task.title}}
+- **Sprint**: {{sprint.title}} ({{sprint.sprint_id}})
+
+## Remember
+- Keep changes scoped to the review feedback
+- Run relevant tests and report results
+- Resolve EACH issue explicitly before submitting
+- After SUBMIT_FIXES, Controller will re-review the code

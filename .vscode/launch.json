@@ -5,9 +5,9 @@
       "name": "Flutter Example (main.dart)",
       "type": "dart",
       "request": "launch",
-      // "program": "example/lib/main.dart",
+      "program": "example/lib/main.dart",
       // "program": "example/lib/demos/agentic_chart_demo.dart",
-      "program": "example/lib/demos/braven_agent_demo.dart",
+      // "program": "example/lib/demos/braven_agent_demo.dart",
       "deviceId": "chrome",
       "args": ["-d", "chrome", "--web-browser-flag", "--disable-web-security"]
     }

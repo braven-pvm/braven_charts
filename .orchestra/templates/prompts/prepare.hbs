@@ -1,0 +1,34 @@
+As Orchestrator, prepare Task {{task.task_id}}: "{{task.title}}".
+
+{{>task-header tool_description="Review the task specification" tool_name="get_task" tool_return_description="Returns task details including verification criteria"}}
+
+{{>spec-protocol tool_alternatives="get_task, prepare_task"}}
+
+## Your Task
+Use your tools to prepare this task for implementation:
+
+1. `get_task` - Review the task specification and verification criteria
+2. `prepare_task` - Create a comprehensive handover with:
+   - Clear acceptance criteria
+   - File operations (CREATE/UPDATE/DELETE)
+   - Deliverables list
+   - Context files to reference
+
+## Task Details
+- **ID**: {{task.task_id}}
+- **Title**: {{task.title}}
+{{#if task.category}}- **Category**: {{task.category}}
+{{/if}}{{#if task.phase_id}}- **Phase**: {{task.phase_id}}
+{{/if}}
+## Sprint Context
+- **Sprint ID**: {{sprint.sprint_id}}
+- **Sprint Title**: {{sprint.title}}
+
+## Description
+{{task.description}}
+
+## Remember
+- Create verification criteria that the implementor CANNOT see
+- Be specific about expected file changes
+- Include test requirements
+- Reference relevant context files from the codebase

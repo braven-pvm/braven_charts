@@ -1,0 +1,58 @@
+As Controller, review the handover for Task {{task.task_id}}: "{{task.title}}" for specification alignment.
+
+{{>task-header tool_description="Analyze task handover" tool_name="review_handover" tool_return_description="Returns task handover details for review"}}
+
+{{>spec-protocol tool_alternatives="review_handover, approve_handover, reject_handover"}}
+
+## Your Task
+Use your tools to perform a comprehensive handover review:
+
+1. `review_handover` - Analyze the task handover:
+   - Acceptance criteria completeness and measurability
+   - File operations clarity (CREATE/UPDATE/DELETE)
+   - Deliverables specificity and testability
+   - Context files relevance and sufficiency
+   - Implementation guidance clarity
+
+2. Check against specification:
+   - Handover faithfully implements the specified requirement
+   - No scope creep or unspecified features
+   - Acceptance criteria align with spec's success criteria
+   - Technical approach matches architectural constraints
+   - Test requirements are adequate
+
+3. Make your decision:
+   - `approve_handover` - If handover fully aligns with specification
+   - `reject_handover` - If issues found requiring revision
+
+## Task Context
+- **Task ID**: {{task.task_id}}
+- **Title**: {{task.title}}
+- **Category**: {{task.category}}
+- **Phase**: {{task.phase_id}}
+- **Sprint**: {{sprint.title}} ({{sprint.sprint_id}})
+- **Review Attempt**: {{default reviewAttempt 1}}{{#if_eq task.status "HANDOVER_REVIEW_FAILED"}}
+- **Status**: Previous review REJECTED - address prior feedback{{/if_eq}}
+
+## Review Standards
+- **Completeness**: All aspects of spec requirement covered
+- **Faithfulness**: No deviation from specification
+- **Clarity**: Implementor can execute without ambiguity
+- **Testability**: Acceptance criteria are measurable
+- **Feasibility**: Approach is technically sound
+
+## Decision Guidance
+**APPROVE** if:
+- Handover fully captures the spec requirement
+- Acceptance criteria are complete and measurable
+- File operations and deliverables are clear
+- No specification violations or scope creep
+
+**REJECT** if:
+- Missing or unclear acceptance criteria
+- Scope differs from specification
+- File operations or deliverables ambiguous
+- Insufficient test requirements
+- Technical approach has issues
+
+Provide detailed, actionable feedback for any issues found.

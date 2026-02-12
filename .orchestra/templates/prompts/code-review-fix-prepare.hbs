@@ -1,0 +1,34 @@
+As Orchestrator, prepare code review fixes for Task {{task.task_id}}: "{{task.title}}".
+
+This task has a code review status of **{{codeReview.status}}**.{{#if codeReview.summary}}
+
+Review summary: {{codeReview.summary}}{{/if}}
+
+## Your Task
+Use your tools to reopen and prepare a focused fix handover:
+
+1. `get_latest_code_review` - Review the latest code review details for this task
+2. `reopen_task` - Reopen the task for fixes (include a clear reason)
+3. `update_handover` or `prepare_task` - Create a focused fix handover that:
+   - References the code review issues explicitly
+   - Narrows scope to the requested changes
+   - Updates acceptance criteria and deliverables
+
+## Task Details
+- **ID**: {{task.task_id}}
+- **Title**: {{task.title}}
+{{#if task.category}}- **Category**: {{task.category}}
+{{/if}}{{#if task.phase_id}}- **Phase**: {{task.phase_id}}
+{{/if}}
+
+## Sprint Context
+- **Sprint ID**: {{sprint.sprint_id}}
+- **Sprint Title**: {{sprint.title}}
+
+## Description
+{{task.description}}
+
+## Remember
+- Keep the fix scope tight to the review feedback
+- Ensure handover is explicit about which issues to fix
+- Include test updates if required by the review

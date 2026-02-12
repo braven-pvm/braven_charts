@@ -1,0 +1,48 @@
+As Controller, re-review Task {{task.task_id}}: "{{task.title}}" after the Implementor submitted fixes.
+
+## Context
+- **Sprint**: {{sprint.title}} ({{sprint.sprint_id}})
+- **Task**: #{{task.task_id}} - {{task.title}}
+- **Review ID**: {{codeReview.reviewId}}
+- **Status**: PENDING_VERIFICATION (fixes have been submitted)
+
+## Your Task
+The Implementor has addressed the issues from your previous review. Verify the fixes:
+
+1. `get_code_review` with task={{task.task_id}} - Get review details including:
+   - Previously reported issues and their resolution status
+   - The fix summary provided by the implementor
+   - Files changed and tests run
+
+2. For each previously reported issue:
+   - Verify the fix addresses the original concern
+   - Check that no new issues were introduced
+   - Ensure tests cover the fixed code path
+
+3. Submit your decision using `submit_code_review` with `verifying_fixes: true`:
+   - decision: "APPROVED" - All issues have been properly addressed
+   - decision: "CHANGES_REQUESTED" - Some issues remain or new issues found (include issues array)
+   - decision: "REJECTED" - Fundamental problems remain (include issues array)
+
+Minimal valid issues entry (REQUIRED for CHANGES_REQUESTED/REJECTED):
+```json
+{
+  "issues": [
+    {
+      "severity": "MAJOR",
+      "issue": "Describe the problem",
+      "rationale": "Why this is a problem and needs fixing"
+    }
+  ]
+}
+```
+
+## Re-Review Focus
+- **Issue Resolution**: Were the original issues properly fixed?
+- **Regression**: Did the fixes introduce new problems?
+- **Quality**: Is the fix implementation acceptable?
+- **Tests**: Were relevant tests added or updated?
+- **Coding Standards**: Do the fixes comply with the project's coding standards (provided in your system context)?
+
+Note: This is a focused re-review - you don't need to do a full spec-first review.
+Focus on verifying the fixes for previously reported issues.
