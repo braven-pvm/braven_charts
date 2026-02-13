@@ -1857,6 +1857,7 @@ class ChartRenderBox extends RenderBox {
         multiAxisInfo: multiAxisInfo,
         seriesElements: _elements.whereType<SeriesElement>().toList(),
         isRangeCreationMode: coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
+        trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
         xAxisConfig: xAxisConfig,
       );
     }

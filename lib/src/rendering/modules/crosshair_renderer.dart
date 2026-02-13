@@ -7,6 +7,7 @@ import 'package:flutter/painting.dart';
 
 import '../../axis/series_axis_resolver.dart';
 import '../../coordinates/chart_transform.dart';
+import '../../elements/annotation_elements.dart';
 import '../../elements/series_element.dart';
 import '../../formatting/multi_axis_value_formatter.dart';
 import '../../interaction/core/crosshair_tracker.dart';
@@ -135,6 +136,7 @@ class CrosshairRenderer {
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
     required bool isRangeCreationMode,
+    List<TrendAnnotationElement> trendElements = const [],
     XAxisConfig? xAxisConfig,
   }) {
     // Check if tracking mode should be used
@@ -154,6 +156,7 @@ class CrosshairRenderer {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: seriesElements,
+        trendElements: trendElements,
         xAxisConfig: xAxisConfig,
       );
     } else {
@@ -280,6 +283,7 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
+    List<TrendAnnotationElement> trendElements = const [],
     XAxisConfig? xAxisConfig,
   }) {
     final interactionTheme = theme?.interactionTheme;
@@ -357,6 +361,29 @@ class CrosshairRenderer {
     );
 
     if (trackingState == null) return;
+
+    // Append trend annotation values to tracking state
+    for (final trendEl in trendElements) {
+      final trendY = trendEl.evaluateAt(trackingState.dataX);
+      if (trendY == null) continue;
+
+      final label = trendEl.annotation.label;
+      final displayName = (label != null && label.isNotEmpty)
+          ? label
+          : '${trendEl.annotation.trendType.name} trend';
+
+      trackingState.seriesValues.add(
+        CrosshairSeriesValue(
+          seriesId: trendEl.annotation.id,
+          seriesName: displayName,
+          seriesColor: trendEl.annotation.lineColor,
+          x: trackingState.dataX,
+          y: trendY,
+          dataPointIndex: -1,
+          isInterpolated: true,
+        ),
+      );
+    }
 
     // Draw intersection markers
     if (crosshairConfig.showIntersectionMarkers) {

@@ -2391,6 +2391,41 @@ class TrendAnnotationElement extends ChartElement {
     return result;
   }
 
+  /// Evaluates the trend line Y value at the given data-space X coordinate.
+  ///
+  /// Uses binary search and linear interpolation on the computed
+  /// [_trendPoints]. Returns null if the trend has no points or
+  /// [dataX] is outside the trend's X range.
+  double? evaluateAt(double dataX) {
+    if (_trendPoints.length < 2) return null;
+
+    final first = _trendPoints.first;
+    final last = _trendPoints.last;
+
+    // Outside range
+    if (dataX < first.dx || dataX > last.dx) return null;
+
+    // Binary search for the bracketing segment
+    var lo = 0;
+    var hi = _trendPoints.length - 1;
+    while (lo < hi - 1) {
+      final mid = (lo + hi) >> 1;
+      if (_trendPoints[mid].dx <= dataX) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    final left = _trendPoints[lo];
+    final right = _trendPoints[hi];
+    final span = right.dx - left.dx;
+    if (span == 0) return left.dy;
+
+    final t = (dataX - left.dx) / span;
+    return left.dy + (right.dy - left.dy) * t;
+  }
+
   @override
   String get id => annotation.id;
 
