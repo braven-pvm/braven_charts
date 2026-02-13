@@ -101,26 +101,10 @@ sealed class ChartAnnotation {
 }
 
 /// Anchor point for text annotations positioning.
-enum AnnotationAnchor {
-  topLeft,
-  topCenter,
-  topRight,
-  centerLeft,
-  center,
-  centerRight,
-  bottomLeft,
-  bottomCenter,
-  bottomRight,
-}
+enum AnnotationAnchor { topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight }
 
 /// Position for range annotation labels.
-enum AnnotationLabelPosition {
-  topLeft,
-  topRight,
-  bottomLeft,
-  bottomRight,
-  center,
-}
+enum AnnotationLabelPosition { topLeft, topRight, bottomLeft, bottomRight, center }
 
 /// A point annotation that marks a specific data point with a custom marker.
 ///
@@ -151,9 +135,9 @@ class PointAnnotation extends ChartAnnotation {
     this.markerSize = 8.0,
     this.markerColor = Colors.blue,
     this.labelMargin = 4.0,
-  })  : assert(dataPointIndex >= 0, 'Data point index must be non-negative'),
-        assert(labelMargin >= 0, 'Label margin must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : assert(dataPointIndex >= 0, 'Data point index must be non-negative'),
+       assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series containing the data point to annotate.
   final String seriesId;
@@ -267,21 +251,12 @@ class RangeAnnotation extends ChartAnnotation {
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
     this.labelMargin = 8.0,
-  })  : assert(
-          startX != null || startY != null,
-          'At least one range (X or Y) must be specified',
-        ),
-        assert(
-          startX == null || endX == null || startX < endX,
-          'startX must be less than endX',
-        ),
-        assert(
-          startY == null || endY == null || startY < endY,
-          'startY must be less than endY',
-        ),
-        assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
-        assert(labelMargin >= 0, 'Label margin must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : assert(startX != null || startY != null, 'At least one range (X or Y) must be specified'),
+       assert(startX == null || endX == null || startX < endX, 'startX must be less than endX'),
+       assert(startY == null || endY == null || startY < endY, 'startY must be less than endY'),
+       assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
+       assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// The starting X-axis value of the range (null = infinite negative).
   final double? startX;
@@ -434,17 +409,11 @@ class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {
     final posJson = json['position'] as Map<String, dynamic>;
-    final position = Offset(
-      (posJson['dx'] as num).toDouble(),
-      (posJson['dy'] as num).toDouble(),
-    );
+    final position = Offset((posJson['dx'] as num).toDouble(), (posJson['dy'] as num).toDouble());
 
     final anchorName = json['anchor'] as String?;
     final anchor = anchorName != null
-        ? AnnotationAnchor.values.firstWhere(
-            (a) => a.name == anchorName,
-            orElse: () => AnnotationAnchor.topLeft,
-          )
+        ? AnnotationAnchor.values.firstWhere((a) => a.name == anchorName, orElse: () => AnnotationAnchor.topLeft)
         : AnnotationAnchor.topLeft;
 
     return TextAnnotation._internal(
@@ -475,12 +444,9 @@ class TextAnnotation extends ChartAnnotation {
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  })  : richTextDelta = null,
-        assert(
-          position.dx >= 0 && position.dy >= 0,
-          'Position cannot have negative coordinates',
-        ),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : richTextDelta = null,
+       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// Creates a text annotation with rich text (Delta format) at a screen position.
   TextAnnotation.rich({
@@ -495,12 +461,9 @@ class TextAnnotation extends ChartAnnotation {
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  })  : text = null,
-        assert(
-          position.dx >= 0 && position.dy >= 0,
-          'Position cannot have negative coordinates',
-        ),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : text = null,
+       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// Internal constructor for copyWith and fromJson.
   TextAnnotation._internal({
@@ -516,10 +479,7 @@ class TextAnnotation extends ChartAnnotation {
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  }) : assert(
-          text != null || richTextDelta != null,
-          'Either text or richTextDelta must be provided',
-        );
+  }) : assert(text != null || richTextDelta != null, 'Either text or richTextDelta must be provided');
 
   /// The plain text content to display (null if using rich text).
   final String? text;
@@ -689,10 +649,7 @@ class TextAnnotation extends ChartAnnotation {
         return style; // Unknown level, no change
     }
 
-    return style.copyWith(
-      fontSize: baseFontSize * sizeMultiplier,
-      fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600,
-    );
+    return style.copyWith(fontSize: baseFontSize * sizeMultiplier, fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600);
   }
 
   /// Applies Delta attributes to a TextStyle.
@@ -958,10 +915,10 @@ class ThresholdAnnotation extends ChartAnnotation {
     this.labelPosition = AnnotationLabelPosition.topLeft,
     this.labelMargin = 8.0,
     this.elevation = 0.0,
-  })  : assert(value.isFinite, 'Threshold value must be finite'),
-        assert(labelMargin >= 0, 'Label margin must be non-negative'),
-        assert(elevation >= 0, 'Elevation must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : assert(value.isFinite, 'Threshold value must be finite'),
+       assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       assert(elevation >= 0, 'Elevation must be non-negative'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// Which axis this threshold line is perpendicular to.
   final AnnotationAxis axis;
@@ -1106,10 +1063,10 @@ class PinAnnotation extends ChartAnnotation {
     this.markerSize = 8.0,
     this.markerColor = Colors.blue,
     this.labelMargin = 4.0,
-  })  : assert(x.isFinite, 'X coordinate must be finite'),
-        assert(y.isFinite, 'Y coordinate must be finite'),
-        assert(labelMargin >= 0, 'Label margin must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : assert(x.isFinite, 'X coordinate must be finite'),
+       assert(y.isFinite, 'Y coordinate must be finite'),
+       assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// The X-axis data coordinate.
   final double x;
@@ -1229,16 +1186,14 @@ class TrendAnnotation extends ChartAnnotation {
     this.lineWidth = 2.0,
     this.dashPattern,
     this.labelMargin = 4.0,
-  })  : assert(
-          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
-          'windowSize must be positive when trendType is movingAverage',
-        ),
-        assert(
-          degree > 0,
-          'degree must be positive',
-        ),
-        assert(labelMargin >= 0, 'Label margin must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+    this.labelPosition = AnnotationLabelPosition.bottomRight,
+  }) : assert(
+         trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+         'windowSize must be positive when trendType is movingAverage',
+       ),
+       assert(degree > 0, 'degree must be positive'),
+       assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series to calculate the trend for.
   final String seriesId;
@@ -1267,6 +1222,11 @@ class TrendAnnotation extends ChartAnnotation {
   /// Defaults to 4.0 logical pixels.
   final double labelMargin;
 
+  /// The position of the label relative to the trend line bounding area.
+  ///
+  /// Defaults to [AnnotationLabelPosition.bottomRight].
+  final AnnotationLabelPosition labelPosition;
+
   /// Serializes this annotation to JSON.
   Map<String, dynamic> toJson() {
     return {
@@ -1281,6 +1241,7 @@ class TrendAnnotation extends ChartAnnotation {
       'lineWidth': lineWidth,
       if (dashPattern != null) 'dashPattern': dashPattern,
       'labelMargin': labelMargin,
+      'labelPosition': labelPosition.name,
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
       'zIndex': zIndex,
@@ -1303,6 +1264,7 @@ class TrendAnnotation extends ChartAnnotation {
     double? lineWidth,
     List<double>? dashPattern,
     double? labelMargin,
+    AnnotationLabelPosition? labelPosition,
   }) {
     return TrendAnnotation(
       id: id ?? this.id,
@@ -1319,6 +1281,7 @@ class TrendAnnotation extends ChartAnnotation {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       labelMargin: labelMargin ?? this.labelMargin,
+      labelPosition: labelPosition ?? this.labelPosition,
     );
   }
 }
@@ -1361,12 +1324,12 @@ class LegendAnnotation extends ChartAnnotation {
     this.hiddenSeriesIds = const {},
     this.onSeriesToggle,
     Offset? customPosition,
-  })  : _customPosition = customPosition,
-        super(
-          id: id ?? ChartAnnotation.generateId(),
-          allowDragging: legendStyle.allowDragging,
-          allowEditing: false, // Legends don't support inline editing
-        );
+  }) : _customPosition = customPosition,
+       super(
+         id: id ?? ChartAnnotation.generateId(),
+         allowDragging: legendStyle.allowDragging,
+         allowEditing: false, // Legends don't support inline editing
+       );
 
   /// The list of series to display in the legend.
   final List<ChartSeries> series;

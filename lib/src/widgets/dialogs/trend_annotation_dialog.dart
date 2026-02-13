@@ -46,6 +46,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
   late double _lineWidth;
   late List<double>? _dashPattern;
   late double _labelMargin;
+  late AnnotationLabelPosition _labelPosition;
 
   // Predefined dash patterns
   final Map<String, List<double>?> _dashPatterns = {
@@ -73,6 +74,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     _lineWidth = annotation?.lineWidth ?? 2.0;
     _dashPattern = annotation?.dashPattern;
     _labelMargin = annotation?.labelMargin ?? 4.0;
+    _labelPosition = annotation?.labelPosition ?? AnnotationLabelPosition.bottomRight;
   }
 
   @override
@@ -100,6 +102,83 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
       if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  Widget _buildLabelPositionSelector() {
+    final positions = [
+      (AnnotationLabelPosition.topLeft, 'Top Left', Icons.north_west),
+      (AnnotationLabelPosition.topRight, 'Top Right', Icons.north_east),
+      (AnnotationLabelPosition.center, 'Center', Icons.center_focus_strong),
+      (AnnotationLabelPosition.bottomLeft, 'Bottom Left', Icons.south_west),
+      (AnnotationLabelPosition.bottomRight, 'Bottom Right', Icons.south_east),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Label Position',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 5,
+          runSpacing: 5,
+          children: positions.map((pos) {
+            final position = pos.$1;
+            final label = pos.$2;
+            final icon = pos.$3;
+            final isSelected = position == _labelPosition;
+
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _labelPosition = position;
+                });
+              },
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.shade300,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 5,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 14,
+                      color: isSelected ? Colors.white : Colors.grey[700],
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 
   void _handleCreate() {
@@ -150,6 +229,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
       lineWidth: _lineWidth,
       dashPattern: _dashPattern,
       labelMargin: _labelMargin,
+      labelPosition: _labelPosition,
       allowDragging: true, // Enable dragging by default
     );
 
@@ -310,6 +390,9 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       ),
                       maxLength: 50,
                     ),
+
+                    const SizedBox(height: 16),
+                    _buildLabelPositionSelector(),
 
                     const SizedBox(height: 24),
                     const Divider(),

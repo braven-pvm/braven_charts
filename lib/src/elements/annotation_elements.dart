@@ -2485,9 +2485,7 @@ class TrendAnnotationElement extends ChartElement {
 
     // Draw trend line
     if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
-      for (int i = 0; i < plotPoints.length - 1; i++) {
-        _drawDashedLine(canvas, plotPoints[i], plotPoints[i + 1], paint, annotation.dashPattern!);
-      }
+      _drawDashedPolyline(canvas, plotPoints, paint, annotation.dashPattern!);
     } else {
       final path = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
       for (int i = 1; i < plotPoints.length; i++) {
@@ -2512,8 +2510,43 @@ class TrendAnnotationElement extends ChartElement {
       // Use labelMargin from annotation
       final labelMargin = annotation.labelMargin;
 
-      // Position label container to the right of trend line end, vertically centered
-      final bgRect = Rect.fromLTWH(plotPoints.last.dx + labelMargin, plotPoints.last.dy - containerHeight / 2, containerWidth, containerHeight);
+      // Compute the trend line bounding rect for label positioning
+      double minX = plotPoints.first.dx;
+      double maxX = plotPoints.first.dx;
+      double minY = plotPoints.first.dy;
+      double maxY = plotPoints.first.dy;
+      for (final pt in plotPoints) {
+        minX = math.min(minX, pt.dx);
+        maxX = math.max(maxX, pt.dx);
+        minY = math.min(minY, pt.dy);
+        maxY = math.max(maxY, pt.dy);
+      }
+      final trendRect = Rect.fromLTRB(minX, minY, maxX, maxY);
+
+      // Position label inside the trend line bounding area
+      final Rect bgRect;
+      switch (annotation.labelPosition) {
+        case AnnotationLabelPosition.topLeft:
+          bgRect = Rect.fromLTWH(trendRect.left + labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.topRight:
+          bgRect = Rect.fromLTWH(trendRect.right - containerWidth - labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.center:
+          bgRect = Rect.fromLTWH(
+            trendRect.center.dx - containerWidth / 2,
+            trendRect.center.dy - containerHeight / 2,
+            containerWidth,
+            containerHeight,
+          );
+        case AnnotationLabelPosition.bottomLeft:
+          bgRect = Rect.fromLTWH(trendRect.left + labelMargin, trendRect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
+        case AnnotationLabelPosition.bottomRight:
+          bgRect = Rect.fromLTWH(
+            trendRect.right - containerWidth - labelMargin,
+            trendRect.bottom - containerHeight - labelMargin,
+            containerWidth,
+            containerHeight,
+          );
+      }
 
       // Draw background if backgroundColor is set
       if (annotation.style.backgroundColor != null) {
@@ -2542,28 +2575,46 @@ class TrendAnnotationElement extends ChartElement {
     }
   }
 
-  /// Draws a dashed line using the provided dash pattern.
-  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
-    final totalLength = (end - start).distance;
-    var currentLength = 0.0;
+  /// Draws a dashed polyline that carries dash state across all segments.
+  ///
+  /// Unlike per-segment dashing, this ensures the dash pattern flows
+  /// continuously along the entire polyline — critical for moving average
+  /// and EMA trends that have many short segments.
+  void _drawDashedPolyline(Canvas canvas, List<Offset> points, Paint paint, List<double> dashPattern) {
+    if (points.length < 2) return;
+
     var patternIndex = 0;
     var isDash = true;
+    var remaining = dashPattern[0];
 
-    while (currentLength < totalLength) {
-      final dashLength = dashPattern[patternIndex % dashPattern.length];
-      final nextLength = math.min(currentLength + dashLength, totalLength);
+    for (int i = 0; i < points.length - 1; i++) {
+      final start = points[i];
+      final end = points[i + 1];
+      final segLength = (end - start).distance;
+      if (segLength == 0) continue;
 
-      if (isDash) {
-        final t1 = currentLength / totalLength;
-        final t2 = nextLength / totalLength;
-        final p1 = Offset.lerp(start, end, t1)!;
-        final p2 = Offset.lerp(start, end, t2)!;
-        canvas.drawLine(p1, p2, paint);
+      var consumed = 0.0;
+      while (consumed < segLength) {
+        final available = segLength - consumed;
+        final step = math.min(remaining, available);
+
+        if (isDash) {
+          final t1 = consumed / segLength;
+          final t2 = (consumed + step) / segLength;
+          final p1 = Offset.lerp(start, end, t1)!;
+          final p2 = Offset.lerp(start, end, t2)!;
+          canvas.drawLine(p1, p2, paint);
+        }
+
+        consumed += step;
+        remaining -= step;
+
+        if (remaining <= 0) {
+          patternIndex = (patternIndex + 1) % dashPattern.length;
+          remaining = dashPattern[patternIndex];
+          isDash = !isDash;
+        }
       }
-
-      currentLength = nextLength;
-      patternIndex++;
-      isDash = !isDash;
     }
   }
 
