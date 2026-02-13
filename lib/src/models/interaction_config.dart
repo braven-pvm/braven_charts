@@ -51,6 +51,8 @@ class CrosshairSeriesValue {
     required this.y,
     required this.dataPointIndex,
     required this.isInterpolated,
+    this.linkedSeriesId,
+    this.isTrend = false,
   });
 
   final String seriesId;
@@ -60,6 +62,16 @@ class CrosshairSeriesValue {
   final double y;
   final int dataPointIndex;
   final bool isInterpolated;
+
+  /// For trend annotations, the ID of the data series this trend is linked to.
+  /// Used for axis resolution so the trend dot aligns with the correct Y axis.
+  final String? linkedSeriesId;
+
+  /// Whether this value represents a trend annotation rather than a data series.
+  final bool isTrend;
+
+  /// Returns the series ID to use for axis resolution (linked series for trends).
+  String get axisSeriesId => linkedSeriesId ?? seriesId;
 }
 
 /// Complete tracking state for crosshair rendering.
