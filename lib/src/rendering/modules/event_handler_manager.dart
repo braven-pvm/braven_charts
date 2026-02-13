@@ -78,6 +78,13 @@ abstract class EventHandlerDelegate {
   /// Rebuilds the spatial index after element changes.
   void rebuildSpatialIndex();
 
+  /// Marks the spatial index as dirty for lazy rebuild.
+  ///
+  /// Instead of rebuilding the QuadTree synchronously (expensive with many
+  /// elements), this defers the rebuild until the next hitTestElements() call.
+  /// This eliminates the ~2s freeze when clicking on gallery pages with 21+ charts.
+  void markSpatialIndexDirty();
+
   /// Triggers a repaint.
   void markNeedsPaint();
 
@@ -146,11 +153,7 @@ abstract class EventHandlerDelegate {
   ///
   /// [normalizedStartY] and [normalizedEndY] are in 0-1 normalized space.
   /// [seriesId] is optional - if null, uses first series for translation.
-  (double startY, double endY) denormalizeYRange(
-    double normalizedStartY,
-    double normalizedEndY, {
-    String? seriesId,
-  });
+  (double startY, double endY) denormalizeYRange(double normalizedStartY, double normalizedEndY, {String? seriesId});
 
   /// Gets the actual Y data range for snapping calculations.
   ///
@@ -299,6 +302,29 @@ class EventHandlerManager {
   Offset? _potentialDragLegendStartPosition;
 
   // ==========================================================================
+  // Deferred Selection State (Click-and-Hold Pattern)
+  // ==========================================================================
+
+  /// True when pointer-down was on empty area and selection should be cleared
+  /// on pointer-up. Deferring this avoids synchronous notifyListeners() +
+  /// rebuildSpatialIndex() during pointer-down, which caused ~2s freezes
+  /// on gallery pages with 21+ charts.
+  bool _pointerDownOnEmptyArea = false;
+
+  /// Position where empty-area click occurred (for onEmptyAreaClick callback).
+  Offset? _emptyAreaClickPosition;
+
+  /// The PointerEvent from the empty-area click (for onEmptyAreaClick callback).
+  PointerDownEvent? _emptyAreaClickEvent;
+
+  /// Non-draggable element that was clicked during pointer-down.
+  /// Selection is deferred to pointer-up to match draggable annotations' fast path.
+  ChartElement? _potentialSelectElement;
+
+  /// The PointerDownEvent associated with the deferred element selection.
+  PointerDownEvent? _potentialSelectEvent;
+
+  // ==========================================================================
   // Pan State
   // ==========================================================================
 
@@ -440,19 +466,18 @@ class EventHandlerManager {
       if (hitElement != null) {
         _handlePrimaryButtonDownOnElement(hitElement, event, position);
       } else {
-        // Clicked on empty area - clear selection and prepare for box select
-        coordinator.clearSelection();
-        _delegate.rebuildSpatialIndex();
-        _delegate.onEmptyAreaClick?.call(position, event);
-        _delegate.markNeedsPaint();
+        // Clicked on empty area — defer clearSelection to pointer-up
+        // to avoid synchronous notifyListeners + rebuildSpatialIndex cascade
+        // that caused ~2s freeze on gallery pages with 21+ charts.
+        _pointerDownOnEmptyArea = true;
+        _emptyAreaClickPosition = position;
+        _emptyAreaClickEvent = event;
       }
     }
   }
 
   /// Handles primary button down on a specific element.
   void _handlePrimaryButtonDownOnElement(ChartElement hitElement, PointerDownEvent event, Offset position) {
-    final coordinator = _delegate.coordinator;
-
     // Check for various annotation types that support potential drag
     if (hitElement is RangeAnnotationElement) {
       _potentialDragRangeAnnotation = hitElement;
@@ -474,21 +499,11 @@ class EventHandlerManager {
       _potentialDragPointAnnotation = hitElement;
       _potentialDragStartPosition = position;
     } else {
-      // Check if selection is enabled
-      final enableSelection = _delegate.interactionConfig?.enableSelection ?? true;
-      if (!enableSelection) {
-        return;
-      }
-
-      // Clicked on element - select it (or toggle if Ctrl)
-      if (coordinator.isCtrlPressed) {
-        coordinator.toggleElementSelection(hitElement);
-      } else {
-        coordinator.selectElement(hitElement);
-      }
-      _delegate.rebuildSpatialIndex();
-      coordinator.claimMode(InteractionMode.selecting, element: hitElement);
-      _delegate.onElementClick?.call(hitElement, event);
+      // Non-draggable element — defer selection to pointer-up
+      // to match draggable annotations' fast path and avoid synchronous
+      // notifyListeners + rebuildSpatialIndex during pointer-down.
+      _potentialSelectElement = hitElement;
+      _potentialSelectEvent = event;
     }
   }
 
@@ -792,6 +807,12 @@ class EventHandlerManager {
           coordinator.claimMode(InteractionMode.draggingAnnotation, element: startElement);
         }
       } else if (coordinator.shouldStartBoxSelect(position)) {
+        // Clear deferred selection states since we're transitioning to box select
+        _pointerDownOnEmptyArea = false;
+        _emptyAreaClickPosition = null;
+        _emptyAreaClickEvent = null;
+        _potentialSelectElement = null;
+        _potentialSelectEvent = null;
         coordinator.claimMode(InteractionMode.boxSelecting);
         coordinator.updateBoxSelection(startPos, position);
         _delegate.markNeedsPaint();
@@ -972,8 +993,15 @@ class EventHandlerManager {
 
         // Apply snapping if enabled
         if (resizedAnnotation.snapToValue) {
-          (newStartX, newEndX, newStartY, newEndY) =
-              _applyResizeSnapping(resizedAnnotation, transform, resizeDirection, newStartX, newEndX, newStartY, newEndY);
+          (newStartX, newEndX, newStartY, newEndY) = _applyResizeSnapping(
+            resizedAnnotation,
+            transform,
+            resizeDirection,
+            newStartX,
+            newEndX,
+            newStartY,
+            newEndY,
+          );
         }
 
         final updatedAnnotation = resizedAnnotation.copyWith(
@@ -1119,6 +1147,38 @@ class EventHandlerManager {
   }
 
   void _handlePotentialDragReleases(PointerUpEvent event, bool completedResizeOrMove) {
+    // Handle deferred empty-area click (was deferred from pointer-down)
+    if (_pointerDownOnEmptyArea) {
+      final coordinator = _delegate.coordinator;
+      coordinator.clearSelection();
+      _delegate.markSpatialIndexDirty();
+      if (_emptyAreaClickPosition != null && _emptyAreaClickEvent != null) {
+        _delegate.onEmptyAreaClick?.call(_emptyAreaClickPosition!, _emptyAreaClickEvent!);
+      }
+      _delegate.markNeedsPaint();
+      _pointerDownOnEmptyArea = false;
+      _emptyAreaClickPosition = null;
+      _emptyAreaClickEvent = null;
+    }
+
+    // Handle deferred non-draggable element selection (was deferred from pointer-down)
+    if (_potentialSelectElement != null) {
+      final coordinator = _delegate.coordinator;
+      final enableSelection = _delegate.interactionConfig?.enableSelection ?? true;
+      if (enableSelection) {
+        if (coordinator.isCtrlPressed) {
+          coordinator.toggleElementSelection(_potentialSelectElement!);
+        } else {
+          coordinator.selectElement(_potentialSelectElement!);
+        }
+        _delegate.markSpatialIndexDirty();
+        coordinator.claimMode(InteractionMode.selecting, element: _potentialSelectElement);
+        _delegate.onElementClick?.call(_potentialSelectElement!, _potentialSelectEvent ?? event);
+      }
+      _potentialSelectElement = null;
+      _potentialSelectEvent = null;
+    }
+
     // TextAnnotation
     if (_potentialDragTextAnnotation != null) {
       _handlePotentialDragClick(_potentialDragTextAnnotation!, event);
@@ -1150,7 +1210,7 @@ class EventHandlerManager {
     // RangeAnnotation (skip if just completed resize/move)
     if (_potentialDragRangeAnnotation != null && !completedResizeOrMove) {
       _handlePotentialDragClick(_potentialDragRangeAnnotation!, event);
-      _delegate.rebuildSpatialIndex();
+      _delegate.markSpatialIndexDirty();
     }
     if (_potentialDragRangeAnnotation != null) {
       _potentialDragRangeAnnotation = null;
@@ -1382,11 +1442,7 @@ class EventHandlerManager {
 
         if (distance < minDistance) {
           minDistance = distance;
-          nearestMarker = HoveredMarkerInfo(
-            seriesId: element.id,
-            markerIndex: i,
-            plotPosition: markerPlotPos,
-          );
+          nearestMarker = HoveredMarkerInfo(seriesId: element.id, markerIndex: i, plotPosition: markerPlotPos);
         }
       }
     }
@@ -1394,7 +1450,8 @@ class EventHandlerManager {
     final previousMarker = _delegate.coordinator.hoveredMarker;
     _delegate.coordinator.setHoveredMarker(nearestMarker);
 
-    final markerChanged = (previousMarker == null) != (nearestMarker == null) ||
+    final markerChanged =
+        (previousMarker == null) != (nearestMarker == null) ||
         (previousMarker != null &&
             nearestMarker != null &&
             (previousMarker.seriesId != nearestMarker.seriesId || previousMarker.markerIndex != nearestMarker.markerIndex));
@@ -1526,12 +1583,7 @@ class EventHandlerManager {
         tempEndY = leftData.dy;
       }
 
-      _resizingAnnotation!.updateTempValues(
-        startX: tempStartX,
-        endX: tempEndX,
-        startY: tempStartY,
-        endY: tempEndY,
-      );
+      _resizingAnnotation!.updateTempValues(startX: tempStartX, endX: tempEndX, startY: tempStartY, endY: tempEndY);
     }
   }
 
@@ -1543,12 +1595,7 @@ class EventHandlerManager {
     final delta = currentPosition - _moveStartPosition!;
     final oldBounds = _moveStartBounds!;
 
-    final newBounds = Rect.fromLTRB(
-      oldBounds.left + delta.dx,
-      oldBounds.top + delta.dy,
-      oldBounds.right + delta.dx,
-      oldBounds.bottom + delta.dy,
-    );
+    final newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top + delta.dy, oldBounds.right + delta.dx, oldBounds.bottom + delta.dy);
 
     _movingAnnotation!.updateBounds(newBounds);
   }

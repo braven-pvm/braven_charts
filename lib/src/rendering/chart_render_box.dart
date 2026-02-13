@@ -83,17 +83,14 @@ class ChartRenderBox extends RenderBox {
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
-  })  : _elementGenerator = elementGenerator,
-        _theme = theme,
-        _tooltipsEnabled = tooltipsEnabled,
-        _interactionConfig = interactionConfig,
-        assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
+  }) : _elementGenerator = elementGenerator,
+       _theme = theme,
+       _tooltipsEnabled = tooltipsEnabled,
+       _interactionConfig = interactionConfig,
+       assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
-    _zoomAnimator = ZoomAnimator(
-      onUpdate: _onZoomAnimationUpdate,
-      onComplete: _onZoomAnimationComplete,
-    );
+    _zoomAnimator = ZoomAnimator(onUpdate: _onZoomAnimationUpdate, onComplete: _onZoomAnimationComplete);
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
     _initAnnotationDragHandler();
@@ -119,23 +116,17 @@ class ChartRenderBox extends RenderBox {
 
   /// Initializes the StreamingManager with a delegate that references this RenderBox.
   void _initStreamingManager() {
-    _streamingManager = StreamingManager(
-      delegate: _StreamingDelegateImpl(this),
-    );
+    _streamingManager = StreamingManager(delegate: _StreamingDelegateImpl(this));
   }
 
   /// Initializes the AnnotationDragHandler with a delegate that references this RenderBox.
   void _initAnnotationDragHandler() {
-    _annotationDragHandler = AnnotationDragHandler(
-      delegate: _AnnotationDragDelegateImpl(this),
-    );
+    _annotationDragHandler = AnnotationDragHandler(delegate: _AnnotationDragDelegateImpl(this));
   }
 
   /// Initializes the EventHandlerManager with a delegate that references this RenderBox.
   void _initEventHandlerManager() {
-    _eventHandlerManager = EventHandlerManager(
-      delegate: _EventHandlerDelegateImpl(this),
-    );
+    _eventHandlerManager = EventHandlerManager(delegate: _EventHandlerDelegateImpl(this));
   }
 
   /// Scrollbar manager handling all scrollbar state and interactions.
@@ -152,6 +143,14 @@ class ChartRenderBox extends RenderBox {
 
   /// Spatial index for O(log n) hit testing.
   QuadTree? _spatialIndex;
+
+  /// Whether the spatial index needs rebuilding before the next query.
+  ///
+  /// Set to true when selection changes or elements are modified, instead of
+  /// rebuilding synchronously. This defers the expensive QuadTree rebuild
+  /// until the next hitTestElements() call or paint(), avoiding 2s freezes
+  /// when multiple charts are on screen (e.g., gallery with 21 charts).
+  bool _spatialIndexDirty = false;
 
   /// All chart elements to render and test.
   ///
@@ -475,7 +474,8 @@ class ChartRenderBox extends RenderBox {
     // - When widget rebuilds, new axis has FULL data range (e.g., 0-100)
     // - We track the ORIGINAL widget-provided bounds separately from _originalTransform
     //   because _originalTransform can get updated during zoom/pan operations
-    final boundsMatchWidgetProvided = _widgetProvidedXMin != null &&
+    final boundsMatchWidgetProvided =
+        _widgetProvidedXMin != null &&
         _widgetProvidedXMax != null &&
         axis != null &&
         _widgetProvidedXMin == axis.dataMin &&
@@ -504,10 +504,7 @@ class ChartRenderBox extends RenderBox {
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      _transform = _transform!.copyWith(
-        dataXMin: axis.dataMin,
-        dataXMax: axis.dataMax,
-      );
+      _transform = _transform!.copyWith(dataXMin: axis.dataMin, dataXMax: axis.dataMax);
 
       // DO NOT update _originalTransform here - it must stay frozen at initial data range
       // for scrollbar handle sizing to work correctly. Updating it causes the handle
@@ -540,7 +537,8 @@ class ChartRenderBox extends RenderBox {
     // - After first annotation drag, _originalTransform may contain ZOOMED range, not original
     // - Widget-provided bounds are stable: always the FULL data range from the widget
     // - This correctly detects "same data, just annotation change" vs "actual data range change"
-    final boundsMatchWidgetProvided = _widgetProvidedYMin != null &&
+    final boundsMatchWidgetProvided =
+        _widgetProvidedYMin != null &&
         _widgetProvidedYMax != null &&
         axis != null &&
         _widgetProvidedYMin == axis.dataMin &&
@@ -596,10 +594,7 @@ class ChartRenderBox extends RenderBox {
         _originalTransform = null;
         // Let performLayout() recreate transforms with new bounds
       } else {
-        _transform = _transform!.copyWith(
-          dataYMin: axis.dataMin,
-          dataYMax: axis.dataMax,
-        );
+        _transform = _transform!.copyWith(dataYMin: axis.dataMin, dataYMax: axis.dataMax);
 
         // DO NOT update _originalTransform here - it must stay frozen at initial data range
         // for scrollbar handle sizing to work correctly. Updating it causes the handle
@@ -717,10 +712,7 @@ class ChartRenderBox extends RenderBox {
   /// transformation.
   /// [forPainting]: When true AND viewport is zoomed, returns bounds that match
   /// the visible portion of data. Used for series rendering transforms.
-  Map<String, DataRange> _computeAxisBounds({
-    bool forceFullBounds = false,
-    bool forPainting = false,
-  }) {
+  Map<String, DataRange> _computeAxisBounds({bool forceFullBounds = false, bool forPainting = false}) {
     return _multiAxisManager.computeAxisBounds(
       transform: _transform,
       originalTransform: _originalTransform,
@@ -734,11 +726,7 @@ class ChartRenderBox extends RenderBox {
   /// Used for threshold annotations with perSeries normalization mode.
   /// Delegates to [MultiAxisManager.computeSeriesBounds].
   Map<String, DataRange> _computeSeriesBounds({bool forPainting = false}) {
-    return _multiAxisManager.computeSeriesBounds(
-      transform: _transform,
-      originalTransform: _originalTransform,
-      forPainting: forPainting,
-    );
+    return _multiAxisManager.computeSeriesBounds(transform: _transform, originalTransform: _originalTransform, forPainting: forPainting);
   }
 
   /// Gets effective axis bindings by deriving bindings from series properties.
@@ -752,10 +740,7 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Delegates to [MultiAxisManager.buildMultiAxisInfo].
   MultiAxisInfo _buildMultiAxisInfo() {
-    return _multiAxisManager.buildMultiAxisInfo(
-      transform: _transform,
-      originalTransform: _originalTransform,
-    );
+    return _multiAxisManager.buildMultiAxisInfo(transform: _transform, originalTransform: _originalTransform);
   }
 
   /// Sets pan constraint bounds for paused streaming mode.
@@ -782,12 +767,7 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Create a transform with full dataset bounds for pan constraints
-    _panConstraintTransform = _transform!.copyWith(
-      dataXMin: xMin,
-      dataXMax: xMax,
-      dataYMin: yMin,
-      dataYMax: yMax,
-    );
+    _panConstraintTransform = _transform!.copyWith(dataXMin: xMin, dataXMax: xMax, dataYMin: yMin, dataYMax: yMax);
   }
 
   /// Clears pan constraint bounds, restoring normal sliding window constraints.
@@ -1033,10 +1013,7 @@ class ChartRenderBox extends RenderBox {
     // otherwise use original transform (normal mode or active streaming with sliding window)
     final zoomBaseTransform = _panConstraintTransform ?? _originalTransform!;
 
-    return _viewportConstraints.clampZoomLevel(
-      transform: transform,
-      baseTransform: zoomBaseTransform,
-    );
+    return _viewportConstraints.clampZoomLevel(transform: transform, baseTransform: zoomBaseTransform);
   }
 
   /// Clamps pan delta to enforce viewport bounds (limit whitespace).
@@ -1124,14 +1101,8 @@ class ChartRenderBox extends RenderBox {
   /// - [marginPercent]: Percentage of visible width to keep as margin on right
   /// - [viewportDataPoints]: Number of data points to show in viewport. If null,
   ///   shows all accumulated data (viewport expands as buffer fills).
-  void snapViewportToStreamingData({
-    double marginPercent = 5.0,
-    int? viewportDataPoints,
-  }) {
-    _streamingManager.snapViewportToStreamingData(
-      marginPercent: marginPercent,
-      viewportDataPoints: viewportDataPoints,
-    );
+  void snapViewportToStreamingData({double marginPercent = 5.0, int? viewportDataPoints}) {
+    _streamingManager.snapViewportToStreamingData(marginPercent: marginPercent, viewportDataPoints: viewportDataPoints);
   }
 
   // ============================================================================
@@ -1211,7 +1182,6 @@ class ChartRenderBox extends RenderBox {
     final generator = _elementGenerator;
     final transform = _transform;
     if (generator == null || transform == null) {
-      // [DEBUG OUTPUT REMOVED] Rebuild elements skipped - fires frequently
       return;
     }
 
@@ -1359,7 +1329,8 @@ class ChartRenderBox extends RenderBox {
       // Detect if data range has fundamentally changed (different chart/dataset)
       // This handles the case where Flutter reuses the same RenderBox instance
       // when switching between charts (e.g., Athletic → Test → Scientific)
-      final bool rangeChanged = _originalTransform != null &&
+      final bool rangeChanged =
+          _originalTransform != null &&
           ((_xAxis!.dataMin - _originalTransform!.dataXMin).abs() > 10 || (_xAxis!.dataMax - _originalTransform!.dataXMax).abs() > 10);
 
       // Create initial transform if none exists OR if data range has significantly changed
@@ -1460,6 +1431,11 @@ class ChartRenderBox extends RenderBox {
   /// - Filter to elements that pass precise hitTest()
   /// - Return highest priority element
   ChartElement? hitTestElements(Offset widgetPosition) {
+    // Lazily rebuild spatial index if marked dirty (deferred from click handlers)
+    if (_spatialIndexDirty) {
+      _rebuildSpatialIndex();
+      _spatialIndexDirty = false;
+    }
     if (_spatialIndex == null) return null;
 
     // Convert widget coordinates to plot coordinates
@@ -1540,10 +1516,7 @@ class ChartRenderBox extends RenderBox {
         final axisId = seriesToAxisMap[element.id];
         if (axisId != null && axisBounds.containsKey(axisId)) {
           final axisRange = axisBounds[axisId]!;
-          final perSeriesTransform = _transform!.copyWith(
-            dataYMin: axisRange.min,
-            dataYMax: axisRange.max,
-          );
+          final perSeriesTransform = _transform!.copyWith(dataYMin: axisRange.min, dataYMax: axisRange.max);
           element.updateTransform(perSeriesTransform);
         } else {
           element.updateTransform(_transform!);
@@ -1632,8 +1605,9 @@ class ChartRenderBox extends RenderBox {
 
     // Build series-to-axis lookup for efficient transform creation (use effective bindings)
     final effectiveBindings = _getEffectiveBindings();
-    final Map<String, String>? seriesToAxisMap =
-        axisBounds != null ? {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId} : null;
+    final Map<String, String>? seriesToAxisMap = axisBounds != null
+        ? {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId}
+        : null;
 
     // Paint each series with current transform
     for (final series in seriesElements) {
@@ -1647,10 +1621,7 @@ class ChartRenderBox extends RenderBox {
           if (axisId != null && axisBounds.containsKey(axisId)) {
             final axisRange = axisBounds[axisId]!;
             // Create transform with per-axis Y bounds for proper normalization
-            final perSeriesTransform = _transform!.copyWith(
-              dataYMin: axisRange.min,
-              dataYMax: axisRange.max,
-            );
+            final perSeriesTransform = _transform!.copyWith(dataYMin: axisRange.min, dataYMax: axisRange.max);
             series.updateTransform(perSeriesTransform);
           } else {
             // Fallback: No axis binding found, use global transform
@@ -1704,6 +1675,46 @@ class ChartRenderBox extends RenderBox {
   /// Parameters:
   /// - canvas: Canvas to paint overlays (in widget space)
   /// - size: Total widget size (including axis areas)
+
+  /// Returns true if there is active overlay content that requires saveLayer.
+  ///
+  /// This avoids allocating a full-size GPU texture on every paint frame
+  /// for idle charts. On CanvasKit web, saveLayer is extremely expensive
+  /// (~1-3ms per call), and with 21 charts on the gallery page, skipping
+  /// it for idle charts saves ~20-60ms per frame.
+  bool _hasActiveOverlayContent() {
+    // Box selection or range creation has visible rectangle
+    if (coordinator.currentMode == InteractionMode.boxSelecting || coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+      return true;
+    }
+
+    // Crosshair is visible
+    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final cursorPos = _eventHandlerManager.cursorPosition;
+    if (crosshairConfig.enabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
+      return true;
+    }
+
+    // Tooltip is visible or animating
+    if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
+      if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) {
+        return true;
+      }
+      // Check if there's a marker that would trigger a tooltip
+      final config = _interactionConfig?.tooltip ?? const TooltipConfig();
+      final hasHoveredMarker = coordinator.hoveredMarker != null;
+      final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
+      if (hasHoveredMarker && (config.triggerMode == TooltipTriggerMode.hover || config.triggerMode == TooltipTriggerMode.both)) {
+        return true;
+      }
+      if (hasTappedMarker && (config.triggerMode == TooltipTriggerMode.tap || config.triggerMode == TooltipTriggerMode.both)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   void _paintOverlayLayer(Canvas canvas, Size size) {
     // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
     // Paint preview selection indicators (during box drag)
@@ -1761,7 +1772,8 @@ class ChartRenderBox extends RenderBox {
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = rangeColor.withValues(alpha: 0.15) // 15% opacity for fill
+            ..color = rangeColor
+                .withValues(alpha: 0.15) // 15% opacity for fill
             ..style = PaintingStyle.fill,
         );
 
@@ -1785,7 +1797,8 @@ class ChartRenderBox extends RenderBox {
           final yMax = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
 
           // Format coordinate text
-          final coordText = 'X: [${xMin.toStringAsFixed(2)}, ${xMax.toStringAsFixed(2)}]  '
+          final coordText =
+              'X: [${xMin.toStringAsFixed(2)}, ${xMax.toStringAsFixed(2)}]  '
               'Y: [${yMin.toStringAsFixed(2)}, ${yMax.toStringAsFixed(2)}]';
 
           // Draw text near bottom-right corner of rectangle
@@ -2004,10 +2017,7 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
-    final cacheValid = _seriesCacheManager.isValid(
-      elements: _elements,
-      currentTransform: _transform,
-    );
+    final cacheValid = _seriesCacheManager.isValid(elements: _elements, currentTransform: _transform);
     // [DEBUG OUTPUT REMOVED] Cache hit/miss - was firing at 60fps
 
     if (cacheValid) {
@@ -2115,10 +2125,16 @@ class ChartRenderBox extends RenderBox {
     // Crosshair, selection box, preview indicators - change every frame during hover/drag
     // Use saveLayer to create independent compositing layer for crosshair
     // This allows Flutter to repaint ONLY the crosshair without touching series layer
-    final overlayBounds = Offset.zero & size;
-    canvas.saveLayer(overlayBounds, Paint());
-    _paintOverlayLayer(canvas, size);
-    canvas.restore(); // Restore from saveLayer
+    //
+    // PERFORMANCE: Only use saveLayer when there is actual overlay content to paint.
+    // saveLayer allocates a full-size GPU texture on CanvasKit web — extremely expensive.
+    // On the gallery page with 21 charts, 19+ idle charts shouldn't pay this GPU cost.
+    if (_hasActiveOverlayContent()) {
+      final overlayBounds = Offset.zero & size;
+      canvas.saveLayer(overlayBounds, Paint());
+      _paintOverlayLayer(canvas, size);
+      canvas.restore(); // Restore from saveLayer
+    }
 
     // Paint scrollbars if enabled (outside plot area clipping)
     _scrollbarManager.paint(canvas, size);
@@ -2468,6 +2484,11 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
     _renderBox._rebuildSpatialIndex();
   }
 
+  @override
+  void markSpatialIndexDirty() {
+    _renderBox._spatialIndexDirty = true;
+  }
+
   // ============================================================================
   // Module delegations
   // ============================================================================
@@ -2573,11 +2594,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   bool get isPerSeriesMode => _renderBox._multiAxisManager.normalizationMode == NormalizationMode.perSeries;
 
   @override
-  (double startY, double endY) denormalizeYRange(
-    double normalizedStartY,
-    double normalizedEndY, {
-    String? seriesId,
-  }) {
+  (double startY, double endY) denormalizeYRange(double normalizedStartY, double normalizedEndY, {String? seriesId}) {
     // Use axisBounds - this is what the Y-axis labels show and what crosshair uses.
     // The input values are already true 0-1 normalized (calculated like crosshair does).
     final axisBounds = _renderBox._computeAxisBounds();

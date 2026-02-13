@@ -330,11 +330,7 @@ class BravenChartPlus extends StatefulWidget {
     if (decoded is List) {
       points = decoded.map((item) {
         if (item is Map<String, dynamic>) {
-          return ChartDataPoint(
-            x: (item['x'] as num).toDouble(),
-            y: (item['y'] as num).toDouble(),
-            label: item['label'] as String?,
-          );
+          return ChartDataPoint(x: (item['x'] as num).toDouble(), y: (item['y'] as num).toDouble(), label: item['label'] as String?);
         } else {
           throw ArgumentError('JSON array must contain objects with x and y properties');
         }
@@ -363,20 +359,9 @@ class BravenChartPlus extends StatefulWidget {
           interpolation: interpolation,
         );
       case ChartType.bar:
-        series = BarChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-          barWidthPercent: 0.8,
-        );
+        series = BarChartSeries(id: seriesId, name: seriesName ?? seriesId, points: points, color: seriesColor ?? Colors.blue, barWidthPercent: 0.8);
       case ChartType.scatter:
-        series = ScatterChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-        );
+        series = ScatterChartSeries(id: seriesId, name: seriesName ?? seriesId, points: points, color: seriesColor ?? Colors.blue);
     }
 
     return BravenChartPlus(
@@ -791,9 +776,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // No user controller - create internal one and populate with static annotations
     if (widget.annotations.isNotEmpty) {
-      _internalAnnotationController = AnnotationController(
-        initialAnnotations: widget.annotations,
-      );
+      _internalAnnotationController = AnnotationController(initialAnnotations: widget.annotations);
     }
   }
 
@@ -908,20 +891,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     if (widget.series != oldWidget.series || widget.theme != oldWidget.theme || widget.annotations != oldWidget.annotations) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements();
-      // Request focus after rebuild to ensure keyboard events still work
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _focusNode.requestFocus();
-          // Removed excessive debugPrint (focus requested)
-        }
-      });
+      // Focus will be acquired on next mouse enter — no need to grab it here.
+      // Previously this called requestFocus() which caused 21 charts to fight
+      // for focus on gallery page load, contributing to startup lag.
     }
   }
 
   /// Called when focus state changes.
   void _onFocusChanged() {
-    // Trigger rebuild to show/hide focus border
-    setState(() {});
+    // Only trigger rebuild when focus border is actually displayed.
+    // Without this guard, every focus change triggers setState on ALL charts,
+    // causing cascading rebuilds with 21+ charts on the gallery page.
+    if (widget.interactionConfig?.showFocusBorder ?? false) {
+      setState(() {});
+    }
   }
 
   @override
@@ -1023,8 +1006,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   }
 
   void _rebuildElements() {
-    // Removed excessive debugPrints - was firing on every frame during streaming
-
     _spatialIndex.clear();
 
     // Start with widget.series as base
@@ -1060,13 +1041,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
           // Convert src ChartDataPoint to src_plus ChartDataPoint
           final convertedPoints = controllerPoints
-              .map((p) => ChartDataPoint(
-                    x: p.x,
-                    y: p.y,
-                    timestamp: p.timestamp,
-                    label: p.label,
-                    metadata: p.metadata,
-                  ))
+              .map((p) => ChartDataPoint(x: p.x, y: p.y, timestamp: p.timestamp, label: p.label, metadata: p.metadata))
               .toList();
 
           // Removed excessive debugPrint (last point details)
@@ -1076,18 +1051,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
           final updatedSeries = switch (series) {
             LineChartSeries() => LineChartSeries(
-                id: series.id,
-                name: series.name,
-                points: mergedPoints,
-                color: series.color,
-                isXOrdered: series.isXOrdered,
-                metadata: series.metadata,
-                interpolation: series.interpolation,
-                strokeWidth: series.strokeWidth,
-                tension: series.tension,
-                showDataPointMarkers: series.showDataPointMarkers,
-                dataPointMarkerRadius: series.dataPointMarkerRadius,
-              ),
+              id: series.id,
+              name: series.name,
+              points: mergedPoints,
+              color: series.color,
+              isXOrdered: series.isXOrdered,
+              metadata: series.metadata,
+              interpolation: series.interpolation,
+              strokeWidth: series.strokeWidth,
+              tension: series.tension,
+              showDataPointMarkers: series.showDataPointMarkers,
+              dataPointMarkerRadius: series.dataPointMarkerRadius,
+            ),
             _ => series, // Keep original if not LineChartSeries
           };
 
@@ -1103,24 +1078,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         if (!processedIds.contains(entry.key)) {
           // Convert src ChartDataPoint to src_plus ChartDataPoint
           final convertedPoints = entry.value
-              .map((p) => ChartDataPoint(
-                    x: p.x,
-                    y: p.y,
-                    timestamp: p.timestamp,
-                    label: p.label,
-                    metadata: p.metadata,
-                  ))
+              .map((p) => ChartDataPoint(x: p.x, y: p.y, timestamp: p.timestamp, label: p.label, metadata: p.metadata))
               .toList();
 
           // Create new series from controller data
-          mergedSeriesList.add(LineChartSeries(
-            id: entry.key,
-            name: entry.key,
-            points: convertedPoints,
-            color: widget.theme?.seriesTheme.colors.isNotEmpty == true
-                ? widget.theme!.seriesTheme.colors[mergedSeriesList.length % widget.theme!.seriesTheme.colors.length]
-                : Colors.blue,
-          ));
+          mergedSeriesList.add(
+            LineChartSeries(
+              id: entry.key,
+              name: entry.key,
+              points: convertedPoints,
+              color: widget.theme?.seriesTheme.colors.isNotEmpty == true
+                  ? widget.theme!.seriesTheme.colors[mergedSeriesList.length % widget.theme!.seriesTheme.colors.length]
+                  : Colors.blue,
+            ),
+          );
         }
       }
 
@@ -1134,18 +1105,18 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Create updated series with streaming data
       final updatedFirstSeries = switch (firstSeries) {
         LineChartSeries() => LineChartSeries(
-            id: firstSeries.id,
-            name: firstSeries.name,
-            points: mergedPoints,
-            color: firstSeries.color,
-            isXOrdered: firstSeries.isXOrdered,
-            metadata: firstSeries.metadata,
-            interpolation: firstSeries.interpolation,
-            strokeWidth: firstSeries.strokeWidth,
-            tension: firstSeries.tension,
-            showDataPointMarkers: firstSeries.showDataPointMarkers,
-            dataPointMarkerRadius: firstSeries.dataPointMarkerRadius,
-          ),
+          id: firstSeries.id,
+          name: firstSeries.name,
+          points: mergedPoints,
+          color: firstSeries.color,
+          isXOrdered: firstSeries.isXOrdered,
+          metadata: firstSeries.metadata,
+          interpolation: firstSeries.interpolation,
+          strokeWidth: firstSeries.strokeWidth,
+          tension: firstSeries.tension,
+          showDataPointMarkers: firstSeries.showDataPointMarkers,
+          dataPointMarkerRadius: firstSeries.dataPointMarkerRadius,
+        ),
         _ => firstSeries, // Keep original if not LineChartSeries
       };
 
@@ -1198,12 +1169,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
             // Removed excessive print (window bounds)
 
-            dataBounds = DataBounds(
-              xMin: minX - xPadding,
-              xMax: maxX + xPadding,
-              yMin: minY - yPadding,
-              yMax: maxY + yPadding,
-            );
+            dataBounds = DataBounds(xMin: minX - xPadding, xMax: maxX + xPadding, yMin: minY - yPadding, yMax: maxY + yPadding);
           } else {
             // Removed excessive print (no points in window)
             dataBounds = DataConverter.computeDataBounds(effectiveSeries);
@@ -1220,20 +1186,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // CRITICAL: Ensure valid bounds before creating axes (prevent dataMax <= dataMin assertion)
     if (dataBounds.xMax <= dataBounds.xMin) {
-      dataBounds = DataBounds(
-        xMin: 0,
-        xMax: 1,
-        yMin: dataBounds.yMin,
-        yMax: dataBounds.yMax,
-      );
+      dataBounds = DataBounds(xMin: 0, xMax: 1, yMin: dataBounds.yMin, yMax: dataBounds.yMax);
     }
     if (dataBounds.yMax <= dataBounds.yMin) {
-      dataBounds = DataBounds(
-        xMin: dataBounds.xMin,
-        xMax: dataBounds.xMax,
-        yMin: 0,
-        yMax: 1,
-      );
+      dataBounds = DataBounds(xMin: dataBounds.xMin, xMax: dataBounds.xMax, yMin: 0, yMax: 1);
     }
 
     // Multi-axis normalization detection (FR-008, US2)
@@ -1274,11 +1230,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       labelFormatter: xAxisConfig.labelFormatter,
     );
 
-    _yAxis = chart_axis.Axis.fromYAxisConfig(
-      config: yAxisConfigRaw,
-      dataMin: dataBounds.yMin,
-      dataMax: dataBounds.yMax,
-    );
+    _yAxis = chart_axis.Axis.fromYAxisConfig(config: yAxisConfigRaw, dataMin: dataBounds.yMin, dataMax: dataBounds.yMax);
 
     // Create element generator that renders series
     // This will be called by ChartRenderBox during zoom/pan to regenerate elements
@@ -1301,41 +1253,30 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         try {
           final ChartElement element = switch (annotation) {
             PointAnnotation() => PointAnnotationElement(
-                annotation: annotation,
-                series: widget.series.firstWhere(
-                  (s) => s.id == annotation.seriesId,
-                  orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
-                ),
-                transform: transform,
+              annotation: annotation,
+              series: widget.series.firstWhere(
+                (s) => s.id == annotation.seriesId,
+                orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
               ),
-            PinAnnotation() => PinAnnotationElement(
-                annotation: annotation,
-                transform: transform,
-              ),
+              transform: transform,
+            ),
+            PinAnnotation() => PinAnnotationElement(annotation: annotation, transform: transform),
             RangeAnnotation() => RangeAnnotationElement(
-                annotation: annotation,
-                transform: transform,
-                chartSize: Size(transform.plotWidth, transform.plotHeight),
-              ),
-            TextAnnotation() => TextAnnotationElement(
-                annotation: annotation,
-              ),
-            ThresholdAnnotation() => ThresholdAnnotationElement(
-                annotation: annotation,
-                transform: transform,
-              ),
+              annotation: annotation,
+              transform: transform,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+            TextAnnotation() => TextAnnotationElement(annotation: annotation),
+            ThresholdAnnotation() => ThresholdAnnotationElement(annotation: annotation, transform: transform),
             TrendAnnotation() => TrendAnnotationElement(
-                annotation: annotation,
-                series: widget.series.firstWhere(
-                  (s) => s.id == annotation.seriesId,
-                  orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
-                ),
-                transform: transform,
+              annotation: annotation,
+              series: widget.series.firstWhere(
+                (s) => s.id == annotation.seriesId,
+                orElse: () => throw StateError('Series ${annotation.seriesId} not found'),
               ),
-            LegendAnnotation() => LegendAnnotationElement(
-                annotation: annotation,
-                chartSize: Size(transform.plotWidth, transform.plotHeight),
-              ),
+              transform: transform,
+            ),
+            LegendAnnotation() => LegendAnnotationElement(annotation: annotation, chartSize: Size(transform.plotWidth, transform.plotHeight)),
           };
           elements.add(element);
 
@@ -1362,10 +1303,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           legendStyle: effectiveLegendStyle,
           customPosition: _legendCustomPosition,
         );
-        elements.add(LegendAnnotationElement(
-          annotation: legendAnnotation,
-          chartSize: Size(transform.plotWidth, transform.plotHeight),
-        ));
+        elements.add(LegendAnnotationElement(annotation: legendAnnotation, chartSize: Size(transform.plotWidth, transform.plotHeight)));
       }
 
       return elements;
@@ -1373,8 +1311,6 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Increment version to signal that regeneration is needed
     _elementGeneratorVersion++;
-
-    // Removed excessive debugPrint (_rebuildElements complete)
   }
 
   void _onCoordinatorChanged() {
@@ -1447,76 +1383,36 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Annotation creation items - ONLY show when annotationController is available
       if (hasAnnotationController) ...[
         // TextAnnotation - ALWAYS available
-        const WebContextMenuAction(
-          value: 'add_text',
-          icon: Icons.text_fields,
-          label: 'Add Text Annotation',
-        ),
+        const WebContextMenuAction(value: 'add_text', icon: Icons.text_fields, label: 'Add Text Annotation'),
 
         // PinAnnotation - ALWAYS available (arbitrary position marker)
-        const WebContextMenuAction(
-          value: 'add_pin',
-          icon: Icons.push_pin,
-          label: 'Add Pin Annotation',
-        ),
+        const WebContextMenuAction(value: 'add_pin', icon: Icons.push_pin, label: 'Add Pin Annotation'),
 
         // PointAnnotation - ONLY when clicking on data point marker
-        if (isDataPointClick)
-          const WebContextMenuAction(
-            value: 'add_point',
-            icon: Icons.place,
-            label: 'Add Point Annotation',
-          ),
+        if (isDataPointClick) const WebContextMenuAction(value: 'add_point', icon: Icons.place, label: 'Add Point Annotation'),
 
         // TrendAnnotation - ONLY when clicking on series line (not marker)
-        if (isSeriesLineClick)
-          const WebContextMenuAction(
-            value: 'add_trend',
-            icon: Icons.trending_up,
-            label: 'Add Trend Annotation',
-          ),
+        if (isSeriesLineClick) const WebContextMenuAction(value: 'add_trend', icon: Icons.trending_up, label: 'Add Trend Annotation'),
 
         // RangeAnnotation - ALWAYS available (interactive drag mode)
-        const WebContextMenuAction(
-          value: 'add_range',
-          icon: Icons.width_full,
-          label: 'Add Range Annotation',
-        ),
+        const WebContextMenuAction(value: 'add_range', icon: Icons.width_full, label: 'Add Range Annotation'),
 
         const WebContextMenuDivider(),
 
         // ThresholdAnnotation - ALWAYS available
-        const WebContextMenuAction(
-          value: 'add_threshold',
-          icon: Icons.horizontal_rule,
-          label: 'Add Threshold Line',
-        ),
+        const WebContextMenuAction(value: 'add_threshold', icon: Icons.horizontal_rule, label: 'Add Threshold Line'),
       ],
 
       // Edit/Delete for existing annotations - ONLY show when annotationController is available
       if (hasAnnotationController && isExistingAnnotation) ...[
         const WebContextMenuDivider(),
-        const WebContextMenuAction(
-          value: 'edit',
-          icon: Icons.edit,
-          label: 'Edit',
-        ),
-        const WebContextMenuAction(
-          value: 'delete',
-          icon: Icons.delete,
-          label: 'Delete',
-          iconColor: Colors.red,
-          textColor: Colors.red,
-        ),
+        const WebContextMenuAction(value: 'edit', icon: Icons.edit, label: 'Edit'),
+        const WebContextMenuAction(value: 'delete', icon: Icons.delete, label: 'Delete', iconColor: Colors.red, textColor: Colors.red),
       ],
     ];
 
     // Show the web-native context menu
-    final result = await WebContextMenu.show(
-      context: context,
-      position: globalPosition,
-      items: menuItems,
-    );
+    final result = await WebContextMenu.show(context: context, position: globalPosition, items: menuItems);
 
     // Clear guard flag now that menu is closed
     _isShowingContextMenu = false;
@@ -1572,9 +1468,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final result = await showDialog<TextAnnotation>(
       context: context,
-      builder: (context) => TextAnnotationDialog(
-        clickPosition: localPosition,
-      ),
+      builder: (context) => TextAnnotationDialog(clickPosition: localPosition),
     );
 
     if (result != null && mounted) {
@@ -1602,11 +1496,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final result = await showDialog<PinAnnotation>(
       context: context,
-      builder: (context) => PinAnnotationDialog(
-        initialX: initialX,
-        initialY: initialY,
-        chartTheme: widget.theme,
-      ),
+      builder: (context) => PinAnnotationDialog(initialX: initialX, initialY: initialY, chartTheme: widget.theme),
     );
 
     if (result != null && mounted) {
@@ -1626,11 +1516,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final result = await showDialog<PointAnnotation>(
       context: context,
-      builder: (context) => PointAnnotationDialog(
-        seriesId: markerInfo.seriesId,
-        dataPointIndex: markerInfo.markerIndex,
-        chartTheme: widget.theme,
-      ),
+      builder: (context) => PointAnnotationDialog(seriesId: markerInfo.seriesId, dataPointIndex: markerInfo.markerIndex, chartTheme: widget.theme),
     );
 
     if (result != null && mounted) {
@@ -1747,10 +1633,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final result = await showDialog<TrendAnnotation>(
       context: context,
-      builder: (context) => TrendAnnotationDialog(
-        availableSeries: availableSeries,
-        preselectedSeriesId: preselectedSeriesId,
-      ),
+      builder: (context) => TrendAnnotationDialog(availableSeries: availableSeries, preselectedSeriesId: preselectedSeriesId),
     );
 
     if (result != null && mounted) {
@@ -1778,10 +1661,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final annotation = element.annotation;
       final result = await showDialog<TextAnnotation>(
         context: context,
-        builder: (context) => TextAnnotationDialog(
-          annotation: annotation,
-          clickPosition: annotation.position,
-        ),
+        builder: (context) => TextAnnotationDialog(annotation: annotation, clickPosition: annotation.position),
       );
 
       if (result != null && mounted) {
@@ -1791,11 +1671,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final annotation = element.annotation;
       final result = await showDialog<PointAnnotation>(
         context: context,
-        builder: (context) => PointAnnotationDialog(
-          annotation: annotation,
-          seriesId: annotation.seriesId,
-          dataPointIndex: annotation.dataPointIndex,
-        ),
+        builder: (context) => PointAnnotationDialog(annotation: annotation, seriesId: annotation.seriesId, dataPointIndex: annotation.dataPointIndex),
       );
 
       if (result != null && mounted) {
@@ -1805,12 +1681,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final annotation = element.annotation;
       final result = await showDialog<PinAnnotation>(
         context: context,
-        builder: (context) => PinAnnotationDialog(
-          annotation: annotation,
-          initialX: annotation.x,
-          initialY: annotation.y,
-          chartTheme: widget.theme,
-        ),
+        builder: (context) => PinAnnotationDialog(annotation: annotation, initialX: annotation.x, initialY: annotation.y, chartTheme: widget.theme),
       );
 
       if (result != null && mounted) {
@@ -1820,11 +1691,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final annotation = element.annotation;
       final result = await showDialog<ThresholdAnnotation>(
         context: context,
-        builder: (context) => ThresholdAnnotationDialog(
-          annotation: annotation,
-          availableSeries: widget.series,
-          normalizationMode: widget.normalizationMode,
-        ),
+        builder: (context) =>
+            ThresholdAnnotationDialog(annotation: annotation, availableSeries: widget.series, normalizationMode: widget.normalizationMode),
       );
 
       if (result != null && mounted) {
@@ -1835,10 +1703,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final availableSeries = widget.series.map((s) => s.id).toList();
       final result = await showDialog<TrendAnnotation>(
         context: context,
-        builder: (context) => TrendAnnotationDialog(
-          annotation: annotation,
-          availableSeries: availableSeries,
-        ),
+        builder: (context) => TrendAnnotationDialog(annotation: annotation, availableSeries: availableSeries),
       );
 
       if (result != null && mounted) {
@@ -1848,11 +1713,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       final annotation = element.annotation;
       final result = await showDialog<RangeAnnotation>(
         context: context,
-        builder: (context) => RangeAnnotationDialog(
-          annotation: annotation,
-          availableSeries: widget.series,
-          normalizationMode: widget.normalizationMode,
-        ),
+        builder: (context) =>
+            RangeAnnotationDialog(annotation: annotation, availableSeries: widget.series, normalizationMode: widget.normalizationMode),
       );
 
       if (result != null && mounted) {
@@ -1905,10 +1767,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         title: const Text('Delete Annotation'),
         content: Text('Are you sure you want to delete this $annotationType?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -2241,23 +2100,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // STEP 1: Capture current viewport bounds from axes
     // This is what the user sees RIGHT NOW - we must preserve it exactly
     if (_xAxis != null && _yAxis != null) {
-      _lockedPausedBounds = DataBounds(
-        xMin: _xAxis!.dataMin,
-        xMax: _xAxis!.dataMax,
-        yMin: _yAxis!.dataMin,
-        yMax: _yAxis!.dataMax,
-      );
+      _lockedPausedBounds = DataBounds(xMin: _xAxis!.dataMin, xMax: _xAxis!.dataMax, yMin: _yAxis!.dataMin, yMax: _yAxis!.dataMax);
     }
 
     // STEP 2: Set pan constraints to full dataset bounds (Option 4)
     final renderBox = _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     if (renderBox != null && _cachedDataXMin != null) {
-      renderBox.setPanConstraintBounds(
-        _cachedDataXMin!,
-        _cachedDataXMax!,
-        _cachedDataYMin!,
-        _cachedDataYMax!,
-      );
+      renderBox.setPanConstraintBounds(_cachedDataXMin!, _cachedDataXMax!, _cachedDataYMin!, _cachedDataYMax!);
     }
 
     // STEP 3: Update streaming state
@@ -2497,7 +2346,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     final Widget chartContent = Focus(
       focusNode: _focusNode,
-      autofocus: true,
+      autofocus: false,
       onKeyEvent: (node, event) {
         _handleKeyEvent(event);
         return KeyEventResult.handled;
@@ -2505,14 +2354,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       child: Builder(
         builder: (context) {
           final hasFocus = _focusNode.hasFocus;
+          final enableFocusOnHover = widget.interactionConfig?.enableFocusOnHover ?? true;
           return MouseRegion(
             onEnter: (_) {
-              if (!_focusNode.hasFocus) {
+              if (enableFocusOnHover && !_focusNode.hasFocus) {
                 _focusNode.requestFocus();
               }
             },
             onExit: (_) {
-              if (_focusNode.hasFocus) {
+              if (enableFocusOnHover && _focusNode.hasFocus) {
                 _focusNode.unfocus();
               }
             },
@@ -2522,10 +2372,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
               decoration: BoxDecoration(
                 color: widget.backgroundColor,
                 border: (widget.interactionConfig?.showFocusBorder ?? false) && hasFocus
-                    ? Border.all(
-                        color: widget.theme?.focusBorderColor ?? Colors.blue,
-                        width: widget.theme?.focusBorderWidth ?? 2.0,
-                      )
+                    ? Border.all(color: widget.theme?.focusBorderColor ?? Colors.blue, width: widget.theme?.focusBorderWidth ?? 2.0)
                     : null,
                 borderRadius: (widget.interactionConfig?.showFocusBorder ?? false) && hasFocus && (widget.theme?.focusBorderRadius ?? 0.0) > 0
                     ? BorderRadius.circular(widget.theme?.focusBorderRadius ?? 0.0)
@@ -2535,7 +2382,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                 children: [
                   MouseRegion(
                     cursor: _coordinator.currentMode == InteractionMode.rangeAnnotationCreation
-                        ? SystemMouseCursors.precise // Precise crosshair cursor for range selection
+                        ? SystemMouseCursors
+                              .precise // Precise crosshair cursor for range selection
                         : _currentCursor,
                     child: RawGestureDetector(
                       gestures: {
@@ -2589,21 +2437,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
                           decoration: BoxDecoration(
                             color: const Color(0xE6448AFF), // Semi-opaque blue
                             borderRadius: BorderRadius.circular(4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(51),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: [BoxShadow(color: Colors.black.withAlpha(51), blurRadius: 4, offset: const Offset(0, 2))],
                           ),
                           child: const Text(
                             'Range Creation Mode: Drag to select region • ESC to cancel',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                           ),
                         ),
                       ),
@@ -2624,11 +2462,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         children.add(
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(
-              widget.title!,
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
+            child: Text(widget.title!, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
           ),
         );
       }
@@ -2637,11 +2471,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         children.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              widget.subtitle!,
-              style: Theme.of(context).textTheme.titleSmall,
-              textAlign: TextAlign.center,
-            ),
+            child: Text(widget.subtitle!, style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center),
           ),
         );
       }
@@ -2652,11 +2482,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       // Legacy ChartLegend widget removed - overlay legend (LegendAnnotation)
       // is now used exclusively for legend rendering within the chart area.
 
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      );
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
     }
 
     return chartContent;
@@ -2722,21 +2548,21 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   @override
   RenderObject createRenderObject(BuildContext context) {
     return ChartRenderBox(
-      coordinator: coordinator,
-      elementGenerator: elementGenerator,
-      theme: theme,
-      tooltipsEnabled: tooltipsEnabled,
-      showXScrollbar: showXScrollbar,
-      showYScrollbar: showYScrollbar,
-      scrollbarTheme: scrollbarTheme,
-      interactionConfig: interactionConfig,
-      normalizationMode: normalizationMode,
-      series: series,
-      onCursorChange: onCursorChange,
-      onAnnotationChanged: onAnnotationChanged,
-      onElementHover: onElementHover,
-      onRangeCreationComplete: onRangeCreationComplete,
-    )
+        coordinator: coordinator,
+        elementGenerator: elementGenerator,
+        theme: theme,
+        tooltipsEnabled: tooltipsEnabled,
+        showXScrollbar: showXScrollbar,
+        showYScrollbar: showYScrollbar,
+        scrollbarTheme: scrollbarTheme,
+        interactionConfig: interactionConfig,
+        normalizationMode: normalizationMode,
+        series: series,
+        onCursorChange: onCursorChange,
+        onAnnotationChanged: onAnnotationChanged,
+        onElementHover: onElementHover,
+        onRangeCreationComplete: onRangeCreationComplete,
+      )
       ..setXAxis(xAxis)
       ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)

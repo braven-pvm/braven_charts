@@ -27,12 +27,7 @@ import '../interaction/core/chart_element.dart';
 /// final hits = tree.query(Offset(100, 100), radius: 10);
 /// ```
 class QuadTree {
-  QuadTree({
-    required this.bounds,
-    this.maxElementsPerNode = 4,
-    this.maxDepth = 8,
-    this.depth = 0,
-  });
+  QuadTree({required this.bounds, this.maxElementsPerNode = 4, this.maxDepth = 8, this.depth = 0});
 
   /// Bounding rectangle for this tree/node.
   final Rect bounds;
@@ -80,12 +75,25 @@ class QuadTree {
       _split();
     }
 
-    // Insert into ALL child quadrants that the element overlaps
-    // This ensures queries will find the element regardless of where they search
+    // Insert into child quadrants, but keep spanning elements at this level
+    // to prevent exponential tree explosion (4^maxDepth node duplication).
     if (isSplit) {
-      bool inserted = false;
+      // Count how many children this element overlaps
+      int overlapCount = 0;
+      for (final child in _children!) {
+        if (child.bounds.overlaps(element.bounds)) {
+          overlapCount++;
+        }
+      }
 
-      // Check each child quadrant for overlap and insert if overlaps
+      // Keep spanning elements (overlap 3+ quadrants) at this node level
+      if (overlapCount >= 3) {
+        _elements.add(element);
+        return true;
+      }
+
+      // Push localized elements into overlapping children
+      bool inserted = false;
       for (final child in _children!) {
         if (child.bounds.overlaps(element.bounds)) {
           if (child.insert(element)) {
@@ -111,12 +119,7 @@ class QuadTree {
 
     _children = [
       // Top-left
-      QuadTree(
-        bounds: Rect.fromLTWH(x, y, halfWidth, halfHeight),
-        maxElementsPerNode: maxElementsPerNode,
-        maxDepth: maxDepth,
-        depth: depth + 1,
-      ),
+      QuadTree(bounds: Rect.fromLTWH(x, y, halfWidth, halfHeight), maxElementsPerNode: maxElementsPerNode, maxDepth: maxDepth, depth: depth + 1),
       // Top-right
       QuadTree(
         bounds: Rect.fromLTWH(x + halfWidth, y, halfWidth, halfHeight),
@@ -133,24 +136,37 @@ class QuadTree {
       ),
       // Bottom-right
       QuadTree(
-        bounds:
-            Rect.fromLTWH(x + halfWidth, y + halfHeight, halfWidth, halfHeight),
+        bounds: Rect.fromLTWH(x + halfWidth, y + halfHeight, halfWidth, halfHeight),
         maxElementsPerNode: maxElementsPerNode,
         maxDepth: maxDepth,
         depth: depth + 1,
       ),
     ];
 
-    // Re-insert existing elements into ALL overlapping children
-    // (not just the one containing the center)
+    // Re-insert elements: keep spanning elements at this level to prevent
+    // exponential duplication when elements overlap most/all quadrants.
+    final spanning = <ChartElement>[];
     for (final element in _elements) {
+      int overlapCount = 0;
       for (final child in _children!) {
         if (child.bounds.overlaps(element.bounds)) {
-          child.insert(element);
+          overlapCount++;
+        }
+      }
+      if (overlapCount >= 3) {
+        // Element spans most quadrants - keep at this level
+        spanning.add(element);
+      } else {
+        // Element fits in 1-2 quadrants - push down
+        for (final child in _children!) {
+          if (child.bounds.overlaps(element.bounds)) {
+            child.insert(element);
+          }
         }
       }
     }
     _elements.clear();
+    _elements.addAll(spanning);
   }
 
   // ============================================================================
@@ -164,41 +180,41 @@ class QuadTree {
   ///
   /// Returns all elements whose bounds contain the query region.
   List<ChartElement> query(Offset position, {double radius = 0}) {
-    final searchRect = Rect.fromCenter(
-      center: position,
-      width: radius * 2,
-      height: radius * 2,
-    );
+    final searchRect = Rect.fromCenter(center: position, width: radius * 2, height: radius * 2);
     return queryRect(searchRect);
   }
 
   /// Queries for elements within a rectangular region.
   ///
-  /// Returns all elements whose bounds overlap the query rectangle.
+  /// Returns unique elements whose bounds overlap the query rectangle.
+  /// Uses identity-based deduplication to handle elements stored in
+  /// multiple quadrant nodes (e.g., full-chart-spanning annotations).
   List<ChartElement> queryRect(Rect rect) {
-    final results = <ChartElement>[];
+    final results = <ChartElement>{};
+    _queryRectInternal(rect, results);
+    return results.toList();
+  }
 
+  /// Internal recursive query that collects results into a Set for deduplication.
+  void _queryRectInternal(Rect rect, Set<ChartElement> results) {
     // Check if query region intersects this node's bounds
     if (!bounds.overlaps(rect)) {
-      return results;
+      return;
     }
 
-    // If not split, check elements in this node
-    if (!isSplit) {
-      for (final element in _elements) {
-        if (element.bounds.overlaps(rect)) {
-          results.add(element);
-        }
+    // Check elements at this node (leaf elements or spanning elements on split nodes)
+    for (final element in _elements) {
+      if (element.bounds.overlaps(rect)) {
+        results.add(element);
       }
-      return results;
     }
 
-    // Query child quadrants
-    for (final child in _children!) {
-      results.addAll(child.queryRect(rect));
+    // If split, also query children
+    if (isSplit) {
+      for (final child in _children!) {
+        child._queryRectInternal(rect, results);
+      }
     }
-
-    return results;
   }
 
   /// Queries for the nearest element to a point.
@@ -210,10 +226,7 @@ class QuadTree {
   ///
   /// Per conflict resolution scenario 4: Used for selecting nearest datapoint
   /// when multiple points are close together.
-  ({ChartElement element, double distance})? queryNearest(
-    Offset position, {
-    double? maxDistance,
-  }) {
+  ({ChartElement element, double distance})? queryNearest(Offset position, {double? maxDistance}) {
     // Get all elements within search radius
     final searchRadius = maxDistance ?? bounds.width.abs();
     final candidates = query(position, radius: searchRadius);
@@ -228,8 +241,7 @@ class QuadTree {
       final elementCenter = element.bounds.center;
       final distance = (position - elementCenter).distance;
 
-      if (distance < nearestDistance &&
-          (maxDistance == null || distance <= maxDistance)) {
+      if (distance < nearestDistance && (maxDistance == null || distance <= maxDistance)) {
         nearest = element;
         nearestDistance = distance;
       }
@@ -245,10 +257,7 @@ class QuadTree {
   /// 3px of the click, show a picker UI.
   ///
   /// Returns elements sorted by distance (nearest first).
-  List<({ChartElement element, double distance})> queryNearby(
-    Offset position, {
-    required double maxDistance,
-  }) {
+  List<({ChartElement element, double distance})> queryNearby(Offset position, {required double maxDistance}) {
     final candidates = query(position, radius: maxDistance);
     final results = <({ChartElement element, double distance})>[];
 
@@ -279,9 +288,13 @@ class QuadTree {
       return false;
     }
 
-    // If not split, try to remove from this node's elements
+    // Try to remove from this node's elements (leaf or spanning on split nodes)
+    if (_elements.remove(element)) {
+      return true;
+    }
+
     if (!isSplit) {
-      return _elements.remove(element);
+      return false;
     }
 
     // Remove from child quadrants
@@ -304,8 +317,8 @@ class QuadTree {
   void _tryMerge() {
     if (!isSplit) return;
 
-    // Count total elements in all children
-    int totalElements = 0;
+    // Count spanning elements at this level plus all children's elements
+    int totalElements = _elements.length;
     for (final child in _children!) {
       totalElements += child._countElements();
       if (totalElements > maxElementsPerNode) {
@@ -313,39 +326,31 @@ class QuadTree {
       }
     }
 
-    // Collect all elements from children
-    final allElements = <ChartElement>[];
+    // Collect all elements from children into this node
     for (final child in _children!) {
-      child._collectElements(allElements);
+      child._collectElements(_elements);
     }
-
-    // Merge children back into this node
-    _elements.addAll(allElements);
     _children = null;
   }
 
   /// Counts total elements in this node and all descendants.
   int _countElements() {
-    if (!isSplit) {
-      return _elements.length;
-    }
-
-    int count = 0;
-    for (final child in _children!) {
-      count += child._countElements();
+    int count = _elements.length;
+    if (isSplit) {
+      for (final child in _children!) {
+        count += child._countElements();
+      }
     }
     return count;
   }
 
   /// Collects all elements in this node and descendants.
   void _collectElements(List<ChartElement> output) {
-    if (!isSplit) {
-      output.addAll(_elements);
-      return;
-    }
-
-    for (final child in _children!) {
-      child._collectElements(output);
+    output.addAll(_elements);
+    if (isSplit) {
+      for (final child in _children!) {
+        child._collectElements(output);
+      }
     }
   }
 
@@ -371,9 +376,9 @@ class QuadTree {
 
     void traverse(QuadTree node) {
       nodeCount++;
+      totalElements += node._elements.length;
       if (!node.isSplit) {
         leafCount++;
-        totalElements += node._elements.length;
         if (node.depth > maxDepthReached) {
           maxDepthReached = node.depth;
         }
@@ -386,12 +391,7 @@ class QuadTree {
 
     traverse(this);
 
-    return QuadTreeStats(
-      nodeCount: nodeCount,
-      leafCount: leafCount,
-      maxDepth: maxDepthReached,
-      elementCount: totalElements,
-    );
+    return QuadTreeStats(nodeCount: nodeCount, leafCount: leafCount, maxDepth: maxDepthReached, elementCount: totalElements);
   }
 
   /// Returns a debug string representation of the tree.
@@ -399,8 +399,7 @@ class QuadTree {
     final buffer = StringBuffer();
     final prefix = '  ' * indent;
 
-    buffer.writeln(
-        '${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)');
+    buffer.writeln('${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)');
 
     if (isSplit) {
       for (int i = 0; i < _children!.length; i++) {
@@ -416,12 +415,7 @@ class QuadTree {
 
 /// Statistics about a QuadTree structure.
 class QuadTreeStats {
-  const QuadTreeStats({
-    required this.nodeCount,
-    required this.leafCount,
-    required this.maxDepth,
-    required this.elementCount,
-  });
+  const QuadTreeStats({required this.nodeCount, required this.leafCount, required this.maxDepth, required this.elementCount});
 
   /// Total number of nodes (including internal and leaf nodes).
   final int nodeCount;
