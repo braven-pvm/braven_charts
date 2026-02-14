@@ -51,6 +51,8 @@ class CrosshairSeriesValue {
     required this.y,
     required this.dataPointIndex,
     required this.isInterpolated,
+    this.linkedSeriesId,
+    this.isTrend = false,
   });
 
   final String seriesId;
@@ -60,15 +62,21 @@ class CrosshairSeriesValue {
   final double y;
   final int dataPointIndex;
   final bool isInterpolated;
+
+  /// For trend annotations, the ID of the data series this trend is linked to.
+  /// Used for axis resolution so the trend dot aligns with the correct Y axis.
+  final String? linkedSeriesId;
+
+  /// Whether this value represents a trend annotation rather than a data series.
+  final bool isTrend;
+
+  /// Returns the series ID to use for axis resolution (linked series for trends).
+  String get axisSeriesId => linkedSeriesId ?? seriesId;
 }
 
 /// Complete tracking state for crosshair rendering.
 class CrosshairTrackingState {
-  const CrosshairTrackingState({
-    required this.dataX,
-    required this.screenX,
-    required this.seriesValues,
-  });
+  const CrosshairTrackingState({required this.dataX, required this.screenX, required this.seriesValues});
 
   final double dataX;
   final double screenX;
@@ -86,8 +94,8 @@ class CrosshairStyle {
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
     this.labelPadding = 4.0,
-  })  : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
-        assert(labelPadding >= 0, 'labelPadding must be non-negative');
+  }) : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
+       assert(labelPadding >= 0, 'labelPadding must be non-negative');
 
   /// The color of the crosshair lines.
   final Color lineColor;
@@ -190,12 +198,7 @@ class CrosshairStyle {
 /// ```
 class CrosshairConfig {
   /// Creates a CrosshairConfig optimized for tracking mode.
-  factory CrosshairConfig.tracking({
-    bool interpolate = true,
-    bool showTooltip = true,
-    bool showMarkers = true,
-    double markerRadius = 4.0,
-  }) {
+  factory CrosshairConfig.tracking({bool interpolate = true, bool showTooltip = true, bool showMarkers = true, double markerRadius = 4.0}) {
     return CrosshairConfig(
       displayMode: CrosshairDisplayMode.tracking,
       interpolateValues: interpolate,
@@ -221,11 +224,9 @@ class CrosshairConfig {
     this.showTrackingTooltip = true,
     this.showIntersectionMarkers = true,
     this.intersectionMarkerRadius = 4.0,
-  })  : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
-        assert(trackingModeThreshold > 0,
-            'trackingModeThreshold must be positive'),
-        assert(intersectionMarkerRadius > 0,
-            'intersectionMarkerRadius must be positive');
+  }) : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
+       assert(trackingModeThreshold > 0, 'trackingModeThreshold must be positive'),
+       assert(intersectionMarkerRadius > 0, 'intersectionMarkerRadius must be positive');
 
   /// Creates a default crosshair configuration.
   ///
@@ -338,14 +339,11 @@ class CrosshairConfig {
       coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
       style: style ?? this.style,
       displayMode: displayMode ?? this.displayMode,
-      trackingModeThreshold:
-          trackingModeThreshold ?? this.trackingModeThreshold,
+      trackingModeThreshold: trackingModeThreshold ?? this.trackingModeThreshold,
       interpolateValues: interpolateValues ?? this.interpolateValues,
       showTrackingTooltip: showTrackingTooltip ?? this.showTrackingTooltip,
-      showIntersectionMarkers:
-          showIntersectionMarkers ?? this.showIntersectionMarkers,
-      intersectionMarkerRadius:
-          intersectionMarkerRadius ?? this.intersectionMarkerRadius,
+      showIntersectionMarkers: showIntersectionMarkers ?? this.showIntersectionMarkers,
+      intersectionMarkerRadius: intersectionMarkerRadius ?? this.intersectionMarkerRadius,
     );
   }
 
@@ -436,11 +434,11 @@ class TooltipStyle {
     this.padding = 8.0,
     this.textColor = const Color(0xFF333333),
     this.fontSize = 12.0,
-  })  : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
-        assert(borderRadius >= 0, 'borderRadius must be non-negative'),
-        assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
-        assert(padding >= 0, 'padding must be non-negative'),
-        assert(fontSize > 0, 'fontSize must be greater than 0');
+  }) : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
+       assert(borderRadius >= 0, 'borderRadius must be non-negative'),
+       assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
+       assert(padding >= 0, 'padding must be non-negative'),
+       assert(fontSize > 0, 'fontSize must be greater than 0');
 
   /// The background color of the tooltip.
   final Color backgroundColor;
@@ -522,17 +520,7 @@ class TooltipStyle {
 
   @override
   int get hashCode {
-    return Object.hash(
-      backgroundColor,
-      borderColor,
-      borderWidth,
-      borderRadius,
-      shadowColor,
-      shadowBlurRadius,
-      padding,
-      textColor,
-      fontSize,
-    );
+    return Object.hash(backgroundColor, borderColor, borderWidth, borderRadius, shadowColor, shadowBlurRadius, padding, textColor, fontSize);
   }
 }
 
@@ -540,10 +528,7 @@ class TooltipStyle {
 ///
 /// Takes a [BuildContext] and a [dataPoint] map containing the data
 /// to display, and returns a [Widget] representing the custom tooltip.
-typedef TooltipBuilder = Widget Function(
-  BuildContext context,
-  Map<String, dynamic> dataPoint,
-);
+typedef TooltipBuilder = Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
 
 /// Configuration for tooltip behavior and appearance.
 ///
@@ -668,17 +653,7 @@ class TooltipConfig {
 
   @override
   int get hashCode {
-    return Object.hash(
-      enabled,
-      triggerMode,
-      preferredPosition,
-      showDelay,
-      hideDelay,
-      followCursor,
-      offsetFromPoint,
-      style,
-      customBuilder,
-    );
+    return Object.hash(enabled, triggerMode, preferredPosition, showDelay, hideDelay, followCursor, offsetFromPoint, style, customBuilder);
   }
 }
 
@@ -721,12 +696,7 @@ class GestureConfig {
   final double pinchThreshold;
 
   /// Creates a copy with some properties replaced.
-  GestureConfig copyWith({
-    Duration? tapTimeout,
-    Duration? longPressTimeout,
-    double? panThreshold,
-    double? pinchThreshold,
-  }) {
+  GestureConfig copyWith({Duration? tapTimeout, Duration? longPressTimeout, double? panThreshold, double? pinchThreshold}) {
     return GestureConfig(
       tapTimeout: tapTimeout ?? this.tapTimeout,
       longPressTimeout: longPressTimeout ?? this.longPressTimeout,
@@ -746,8 +716,7 @@ class GestureConfig {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
+  int get hashCode => Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
 }
 
 // ==============================================================================
@@ -830,8 +799,7 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys,
-      enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys, enablePlusMinusKeys, enableHomeEndKeys);
 }
 
 // ==============================================================================
@@ -923,6 +891,7 @@ class InteractionConfig {
     this.enablePan = true,
     this.enableSelection = true,
     this.showFocusBorder = false,
+    this.enableFocusOnHover = true,
     this.showXScrollbar = false,
     this.showYScrollbar = false,
     this.keyboardZoomPercent = 25,
@@ -937,8 +906,7 @@ class InteractionConfig {
     this.onCrosshairChanged,
     this.onTooltipChanged,
     this.onKeyboardAction,
-  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100,
-            'keyboardZoomPercent must be between 1 and 100');
+  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100, 'keyboardZoomPercent must be between 1 and 100');
 
   /// Creates a configuration with all interaction features enabled.
   ///
@@ -957,19 +925,20 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.all() => const InteractionConfig(
-        enabled: true,
-        crosshair: CrosshairConfig(enabled: true),
-        tooltip: TooltipConfig(enabled: true),
-        gesture: GestureConfig(),
-        keyboard: KeyboardConfig(enabled: true),
-        enableZoom: true,
-        enablePan: true,
-        enableSelection: true,
-        showFocusBorder: true,
-        showXScrollbar: true,
-        showYScrollbar: true,
-        keyboardZoomPercent: 25,
-      );
+    enabled: true,
+    crosshair: CrosshairConfig(enabled: true),
+    tooltip: TooltipConfig(enabled: true),
+    gesture: GestureConfig(),
+    keyboard: KeyboardConfig(enabled: true),
+    enableZoom: true,
+    enablePan: true,
+    enableSelection: true,
+    showFocusBorder: true,
+    enableFocusOnHover: true,
+    showXScrollbar: true,
+    showYScrollbar: true,
+    keyboardZoomPercent: 25,
+  );
 
   /// Creates a configuration with all interaction features disabled.
   ///
@@ -984,19 +953,20 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.none() => const InteractionConfig(
-        enabled: false,
-        crosshair: CrosshairConfig(enabled: false),
-        tooltip: TooltipConfig(enabled: false),
-        gesture: GestureConfig(),
-        keyboard: KeyboardConfig(enabled: false),
-        enableZoom: false,
-        enablePan: false,
-        enableSelection: false,
-        showFocusBorder: false,
-        showXScrollbar: false,
-        showYScrollbar: false,
-        keyboardZoomPercent: 25,
-      );
+    enabled: false,
+    crosshair: CrosshairConfig(enabled: false),
+    tooltip: TooltipConfig(enabled: false),
+    gesture: GestureConfig(),
+    keyboard: KeyboardConfig(enabled: false),
+    enableZoom: false,
+    enablePan: false,
+    enableSelection: false,
+    showFocusBorder: false,
+    enableFocusOnHover: false,
+    showXScrollbar: false,
+    showYScrollbar: false,
+    keyboardZoomPercent: 25,
+  );
 
   /// Creates a default configuration (same as unnamed constructor).
   ///
@@ -1031,6 +1001,17 @@ class InteractionConfig {
 
   /// Whether to show focus border when chart has keyboard focus.
   final bool showFocusBorder;
+
+  /// Whether the chart acquires keyboard focus when the mouse enters.
+  ///
+  /// When true (default), the chart calls `requestFocus()` on mouse enter
+  /// and `unfocus()` on mouse exit. This enables keyboard shortcuts (zoom,
+  /// pan, etc.) without requiring the user to click the chart first.
+  ///
+  /// Set to false on pages with many charts (e.g., gallery with 21+ charts)
+  /// to prevent focus thrashing that causes cascading widget rebuilds and
+  /// input lag. When false, the user must click the chart to give it focus.
+  final bool enableFocusOnHover;
 
   /// Whether to show the X-axis scrollbar for horizontal scrolling.
   final bool showXScrollbar;
@@ -1208,6 +1189,7 @@ class InteractionConfig {
     bool? enablePan,
     bool? enableSelection,
     bool? showFocusBorder,
+    bool? enableFocusOnHover,
     bool? showXScrollbar,
     bool? showYScrollbar,
     int? keyboardZoomPercent,
@@ -1232,6 +1214,7 @@ class InteractionConfig {
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
       showFocusBorder: showFocusBorder ?? this.showFocusBorder,
+      enableFocusOnHover: enableFocusOnHover ?? this.enableFocusOnHover,
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
       showYScrollbar: showYScrollbar ?? this.showYScrollbar,
       keyboardZoomPercent: keyboardZoomPercent ?? this.keyboardZoomPercent,
@@ -1261,6 +1244,7 @@ class InteractionConfig {
         other.enablePan == enablePan &&
         other.enableSelection == enableSelection &&
         other.showFocusBorder == showFocusBorder &&
+        other.enableFocusOnHover == enableFocusOnHover &&
         other.showXScrollbar == showXScrollbar &&
         other.showYScrollbar == showYScrollbar &&
         other.keyboardZoomPercent == keyboardZoomPercent;
@@ -1268,17 +1252,18 @@ class InteractionConfig {
 
   @override
   int get hashCode => Object.hash(
-        enabled,
-        crosshair,
-        tooltip,
-        gesture,
-        keyboard,
-        enableZoom,
-        enablePan,
-        enableSelection,
-        showFocusBorder,
-        showXScrollbar,
-        showYScrollbar,
-        keyboardZoomPercent,
-      );
+    enabled,
+    crosshair,
+    tooltip,
+    gesture,
+    keyboard,
+    enableZoom,
+    enablePan,
+    enableSelection,
+    showFocusBorder,
+    enableFocusOnHover,
+    showXScrollbar,
+    showYScrollbar,
+    keyboardZoomPercent,
+  );
 }

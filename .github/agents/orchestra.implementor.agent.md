@@ -118,14 +118,108 @@ You have powerful built-in tools for navigating and editing code. **Always prefe
 
 ### System & Execution
 
-| Tool           | Purpose                       | When to Use                                                                    |
-| -------------- | ----------------------------- | ------------------------------------------------------------------------------ |
-| `run_command`  | Run a shell command           | Build, test, lint commands. **Not for searching** — use `grep_search` instead. |
-| `run_terminal` | Run in persistent terminal    | Long-running or interactive processes.                                         |
-| `run_tests`    | Run test suite                | Execute tests with proper framework integration.                               |
-| `get_problems` | Get compiler/lint diagnostics | Check for TypeScript, ESLint errors after edits.                               |
+| Tool           | Purpose                       | When to Use                                                                                                      |
+| -------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `run_command`  | Run a shell command           | Build, lint commands. **⚠️ NOT for tests** — use `run_tests` instead. **Not for searching** — use `grep_search`. |
+| `run_terminal` | Run in persistent terminal    | Long-running or interactive processes. **⚠️ NOT for test watchers** — use `run_tests`.                           |
+| `get_problems` | Get compiler/lint diagnostics | Check for TypeScript, ESLint errors after edits.                                                                 |
+
+### Testing Tools
+
+| Tool               | Purpose                      | When to Use                                                                                              |
+| ------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `run_tests`        | **Run tests (scoped)**       | **All test execution.** Supports `scope`: `file`, `pattern`, `suite`, `related`, `red`, `failed`, `all`. |
+| `get_test_results` | Re-examine previous results  | Check last run without re-executing. Formats: `summary`, `failures`, `full`, `structured`.               |
+| `list_test_suites` | Discover tests and tiers     | Drill-down: `suites` → `files` → `tests`. Find what tests exist and where.                               |
+| `promote_tests`    | Graduate TDD red-phase tests | Move passing red-phase tests into standard tiers. Defaults to dry-run.                                   |
 
 **⚠️ Anti-pattern**: Do NOT use `run_command` with `findstr`, `grep`, `find`, or `cat` to search or read files. Use `grep_search`, `search_files`, and `read_file` instead — they are faster, cross-platform, and return structured results.
+
+### ⛔ TEST EXECUTION POLICY
+
+- **NEVER** run tests directly via terminal commands (`npm test`, `npx vitest`, `dart test`, `flutter test`, etc.)
+- **ALWAYS** use `run_tests()` for ALL test execution without exception.
+- `run_tests()` provides scoped execution, compressed output, red-phase isolation, and structured failure details. Raw terminal commands provide none of these.
+- If you need to check test results, use `get_test_results()` — do not re-run via terminal.
+- If you need to discover tests, use `list_test_suites()` — do not grep test directories.
+
+### Test Execution Decision Tree
+
+When you've made a code change, choose the right scope:
+
+```
+0. Is this a TDD task with red-phase tests?
+   YES → run_tests({ scope: "red" })
+   If red tests all passing → promote_tests() then continue below
+   If red tests still failing → keep implementing, don't run standard suite yet
+
+1. Small, localized change to a single file?
+   YES → run_tests({ scope: "file", target: "path/to/test.ts" })
+
+2. Change affects interfaces, types, or exports?
+   YES → run_tests({ scope: "related" })
+
+3. Refactoring across multiple files?
+   YES → run_tests({ scope: "suite", target: "unit" })
+
+4. Final check before signaling completion?
+   YES → run_tests({ scope: "suite", target: "unit" })
+
+5. NEVER run scope: "all" in agent workflow. Full suite is for CI only.
+```
+
+### Response to Test Results
+
+```
+All passing (✓):
+  → Continue with next step. No further action needed.
+
+Some failures (✗):
+  → Read failure details: get_test_results({ format: "failures" })
+  → Fix the failing code.
+  → Re-run with: run_tests({ scope: "failed" })
+  → Do NOT re-run the full suite.
+
+All failing:
+  → Likely a systemic issue (build error, config problem).
+  → Check build first: run_command("npm run build")
+  → Re-run with: run_tests({ scope: "suite", target: "smoke" })
+
+Red — all correctly failing (✓ RED):
+  → Good. Keep implementing. This is expected.
+
+Red — unexpectedly passing (⚠ RED):
+  → These tests aren't testing new behavior. Rewrite them.
+
+Red — all passing (🟢 RED→GREEN):
+  → Implementation complete! Run promote_tests().
+  → Then verify with: run_tests({ scope: "related" })
+```
+
+### Escalation Pattern
+
+```
+Level 0: scope: "red"            → TDD red-phase progress (if red tests exist)
+Level 1: scope: "file"           → Single test file for the changed source
+Level 2: scope: "related"        → Import-graph related tests
+Level 3: scope: "suite" (unit)   → All unit tests
+Level 4: scope: "suite" (integration) → Integration tests
+Level 5: scope: "all"            → NEVER in agent. Push to CI.
+
+Only escalate when the current level passes but you suspect broader impact.
+Red-phase tests are NEVER part of the escalation chain — they are a separate track.
+```
+
+### `.agent-test-config.json`
+
+The testing tools are configured via `.agent-test-config.json` in the workspace root. You don't edit this file, but understanding it helps:
+
+- **`tiers`**: Named test tiers with glob paths and timeouts (e.g., `smoke`, `unit`, `integration`)
+- **`framework`**: Test framework (e.g., `"vitest"`)
+- **`defaultTimeout`**: Timeout for test runs (ms)
+- **`configFingerprint`**: Files that invalidate the result cache when changed
+
+When you use `run_tests({ scope: "suite", target: "unit" })`, it resolves `"unit"` to the glob path defined in this config.
 
 ---
 
@@ -245,10 +339,11 @@ GET TASK (MCP) → IMPLEMENT → TEST → SIGNAL (MCP)
 
 ### Before Signaling
 
-1. **Run all tests** - `npm test` must pass
-2. **Check TypeScript** - `npx tsc --noEmit` must succeed
-3. **Verify deliverables** - Did you produce everything required?
-4. **Review your own code** - Would you approve this PR?
+1. **Run tests** — `run_tests({ scope: "suite", target: "unit" })` must pass (or `scope: "related"` at minimum)
+2. **Check failures** — `get_test_results({ format: "failures" })` to confirm zero failures
+3. **Check TypeScript** — `npx tsc --noEmit` must succeed
+4. **Verify deliverables** — Did you produce everything required?
+5. **Review your own code** — Would you approve this PR?
 
 ## You Touch It, You Own It
 
@@ -264,10 +359,10 @@ This means:
 
 The verification process will check that:
 
-1. **Build succeeds** - zero errors
-2. **All tests pass** - 100% pass rate, no skips
-3. **Lint is clean** - zero warnings or errors
-4. **TypeScript compiles** - `npx tsc --noEmit` exits 0
+1. **Build succeeds** — zero errors
+2. **All tests pass** — `run_tests({ scope: "all" })` shows 100% pass rate
+3. **Lint is clean** — zero warnings or errors
+4. **TypeScript compiles** — `npx tsc --noEmit` exits 0
 
 ## The Signal
 
@@ -296,26 +391,26 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
 ### When Working on a Red Phase Task
 
 1. **Write failing tests** that define expected behavior
-2. **Mark tests with TDD markers** using the **TWO-PART SYSTEM**:
+2. **Place test files in the `test/red/{tier}/` directory** using the **TWO-PART SYSTEM**:
 
    TDD markers have TWO separate concerns:
    - **Task linking**: `// @orchestra-task: N` at file top - associates tests with task ID
-   - **Test filtering**: `[tdd-red]` or `@Tags(['tdd-red'])` - allows running just TDD tests
+   - **Test isolation**: Place the test file in `test/red/{tier}/` directory (e.g., `test/red/unit/`) - isolates red-phase tests from the standard suite
 
    **TypeScript/Vitest:**
 
    ```typescript
    // @orchestra-task: 3
+   // File: test/red/unit/feature.test.ts
 
-   // Use [tdd-red] in test or describe name (no task ID in the marker!)
-   describe("[tdd-red] Feature", () => {
+   describe("Feature", () => {
      it("should validate user input", () => {
        expect(validateInput("")).toBe(false);
      });
    });
 
-   // Or at test level:
-   it("[tdd-red] should validate user input", () => {
+   // Multiple tests in one file:
+   it("should reject empty strings", () => {
      expect(validateInput("")).toBe(false);
    });
    ```
@@ -324,80 +419,97 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
 
    ```dart
    // @orchestra-task: 3
-   @Tags(['tdd-red'])
-   library;
+   // File: test/red/unit/feature_test.dart
+
+   import 'package:flutter_test/flutter_test.dart';
 
    void main() {
      test('should validate user input', () {
        expect(validateInput(''), false);
      });
-   }
 
-   // Or inline tags (still need // @orchestra-task: N at file top):
-   test('should validate user input', () {
-     expect(validateInput(''), false);
-   }, tags: ['tdd-red']);
+     test('should reject empty strings', () {
+       expect(validateInput(''), false);
+     });
+   }
    ```
 
    **⚠️ OLD FORMAT NO LONGER SUPPORTED:**
-   - ❌ `@Tags(['tdd-red-task-N'])` (single-token with embedded task ID)
-   - ❌ `[tdd-red-task-N]` (single-token with embedded task ID)
-   - ❌ `tags: ['tdd-red', 'task-N']` (two tokens for one concept)
-   - ❌ `test/tdd-red/` directories
+   - ❌ Tag-based markers in test/describe names (e.g., `describe("[tag] ...")`)
+   - ❌ Dart `@Tags()` annotations for TDD filtering
+   - ❌ Inline `tags:` parameters for TDD filtering
    - ❌ `it.skip`, `test.skip`, `xit` (skip markers)
-
+   - ❌ Any test name manipulation for TDD — use `test/red/{tier}/` directories instead
 3. **Verify locally before signaling:**
 
-   **TypeScript:**
+   Use the testing tools to verify red-phase tests:
 
-   ```bash
-   # Red tests should FAIL
-   npm test -- --testNamePattern="\[tdd-red\]"
-   # All other tests should PASS
-   npm test -- --testNamePattern="^(?!.*\[tdd-red\])"
+   ```
+   # Red tests should FAIL (inverted interpretation)
+   run_tests({ scope: "red" })
+   # → Shows: "Correctly failing: N, Unexpectedly passing: 0"
+
+   # All OTHER tests should PASS
+   run_tests({ scope: "suite", target: "unit" })
+   # → Shows: "PASS | N passed, 0 failed"
    ```
 
-   **Dart/Flutter:**
+   **TDD Red-Green-Promote Workflow:**
 
-   ```bash
-   # Red tests should FAIL
-   flutter test --tags tdd-red
-   # All other tests should PASS
-   flutter test --exclude-tags tdd-red
+   ```
+   1. RED: Write failing tests in test/red/{tier}/
+      → run_tests({ scope: "red" })
+      → VERIFY: All tests correctly failing
+      → If any pass unexpectedly: rewrite to be more specific
+
+   2. GREEN: Implement until red tests pass
+      → Write implementation code
+      → run_tests({ scope: "red" })  — check progress
+      → Keep iterating until: "all passing"
+
+   3. PROMOTE: Graduate tests into standard suite
+      → promote_tests({ files: [...] })  — dry-run first (default)
+      → promote_tests({ files: [...], dry_run: false })  — apply
+      → Moves files from test/red/{tier}/ to test/{tier}/
+      → run_tests({ scope: "related" })  — verify no regressions
+
+   4. REFACTOR: Clean up with safety net
+      → Standard tests now protect the behavior
+      → run_tests({ scope: "related" }) after each refactoring step
    ```
 
-4. **Signal completion** as normal - the system will automatically scan for TDD markers
+4. **Signal completion** as normal - the system will automatically scan for TDD test files
 
 ### Automatic TDD Test Registration (Scan-on-Signal)
 
 When you call `signal_completion` (for ANY task, not just TDD tasks), Orchestra automatically:
 
-1. **Scans entire workspace** for TDD markers (`@Tags(['tdd-red'])` or `[tdd-red]`) with `// @orchestra-task: N` annotations
+1. **Scans `test/red/` directories** for test files with `// @orchestra-task: N` annotations
 2. **Deletes all existing registry entries** for the sprint (fresh snapshot)
-3. **Repopulates registry** with all markers found, grouped by task ID from annotations
-4. **Validates markers** (for `tdd_red_phase: true` tasks only) - ensures markers AND task annotation exist for your task ID
+3. **Repopulates registry** with all test files found, grouped by task ID from annotations
+4. **Validates** (for `tdd_red_phase: true` tasks only) - ensures test files in `test/red/` AND task annotation exist for your task ID
 
 The registry is a **transitory snapshot** - it reflects what's currently in the codebase, not accumulated state.
 
-You don't need to manually register tests - just add the markers WITH the task annotation and signal completion.
+You don't need to manually register tests - just place files in `test/red/{tier}/` WITH the `// @orchestra-task: N` annotation and signal completion.
 
 ### What Happens Next
 
 After your red phase task is complete:
 
-- Registry entries exist for your task's markers (file-level tracking with test count)
+- Registry entries exist for your task's test files (file-level tracking with test count)
 - Orchestrator must call `complete_task` with `green_task_id` to assign the green phase
-- Green phase implementor implements the feature to make tests pass, then removes markers AND annotation
+- Green phase implementor implements the feature to make tests pass, then uses `promote_tests()` to move files from `test/red/{tier}/` to `test/{tier}/` and removes the `// @orchestra-task: N` annotation
 - **Gate check**: No task can be completed until ALL registry entries have `green_task_id` assigned
 - Sprint cannot close until all TDD relationships have `completed_at` set
 
 ### Red Phase Errors
 
-| Error                              | Meaning                                                        | Fix                                                                             |
-| ---------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `TDD RED-PHASE WORKFLOW VIOLATION` | Task has `tdd_red_phase: true` but no markers found            | Add `// @orchestra-task: N` AND `[tdd-red]` (TS) or `@Tags(['tdd-red'])` (Dart) |
-| `TDD-RED FILE MISSING TASK-ID`     | File has TDD markers but no `// @orchestra-task: N` annotation | Add `// @orchestra-task: N` at top of file (replace N with task ID)             |
-| `SCAN_FAILED`                      | Error during automatic test scanning                           | Check test file syntax and marker format                                        |
+| Error                              | Meaning                                                             | Fix                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `TDD RED-PHASE WORKFLOW VIOLATION` | Task has `tdd_red_phase: true` but no test files found in test/red/ | Add `// @orchestra-task: N` at file top AND place test file in `test/red/{tier}/`        |
+| `TDD-RED FILE MISSING TASK-ID`     | File in test/red/ has no `// @orchestra-task: N` annotation         | Add `// @orchestra-task: N` at top of file (replace N with task ID)                      |
+| `SCAN_FAILED`                      | Error during automatic test scanning                                | Check test file syntax and directory structure                                           |
 
 ### Test Configuration Troubleshooting
 
@@ -433,11 +545,13 @@ The error output includes diagnostic information:
    - Orchestrator will fix the config and re-prepare the task
 
 3. **Common patterns by location**:
-   | Test Location | test_file_pattern | test_command |
-   |---------------|-------------------|--------------|
-   | `test/` | `test/**/*.test.ts` | `npm test` |
-   | `testing/foo/` | `testing/foo/**/*.test.ts` | `npx vitest run testing/foo/` |
-   | `extension/test/` | `extension/test/**/*.test.ts` | `npm test --prefix extension` |
+   | Test Location | test_file_pattern | How to run |
+   |---------------|-------------------|-----------|
+   | `test/` | `test/**/*.test.ts` | `run_tests({ scope: "suite", target: "unit" })` |
+   | `testing/foo/` | `testing/foo/**/*.test.ts` | `run_tests({ scope: "file", target: "testing/foo/" })` |
+   | `extension/test/` | `extension/test/**/*.test.ts` | `run_tests({ scope: "suite", target: "extension-unit" })` |
+
+   > **Note**: Always use `run_tests` — never run test commands directly in the terminal.
 
 4. **If vitest.config.ts is the issue** (not sprint config):
    - You CAN edit `vitest.config.ts` directly
@@ -528,9 +642,9 @@ After receiving feedback:
    └─> Don't introduce new problems
 
 4. TEST LOCALLY
-   └─> npm test (all tests must pass)
-   └─> npx tsc --noEmit (TypeScript must compile)
-   └─> Manual verification of the fixes
+   └─> run_tests({ scope: "failed" })  — re-run only failures
+   └─> run_tests({ scope: "related" })  — verify no regressions
+   └─> npx tsc --noEmit  — TypeScript must compile
 
 5. SIGNAL AGAIN
    └─> Call signal_completion with updated artifacts
@@ -651,7 +765,7 @@ The `fix_code_review` tool supports three actions:
   "action": "SUBMIT_FIXES",
   "summary": "Fixed all requested issues and aligned error handling with spec requirements.",
   "files_changed": ["src/db/client.ts", "test/db/client.test.ts"],
-  "tests_run": ["npm test"]
+  "tests_run": ["run_tests({ scope: 'related' })"]
 }
 ```
 
@@ -712,7 +826,8 @@ Response:
 [Write code, create files, run tests]
 
 // Step 3: Verify locally
-$ npm test  # All tests passing ✓
+run_tests({ scope: "related" })   # Tests related to changes ✓
+get_test_results({ format: "failures" })  # Confirm zero failures ✓
 $ npx tsc --noEmit  # TypeScript compiles ✓
 
 // Step 4: Signal completion
