@@ -2450,12 +2450,12 @@ class TrendAnnotationElement extends ChartElement {
       maxY = math.max(maxY, point.dy);
     }
 
-    // Add hit test margin
+    // Add hit test margin (12px matches the hitTest radius for reliable selection)
     _cachedBounds = Rect.fromLTRB(
-      minX - annotation.lineWidth - 4,
-      minY - annotation.lineWidth - 4,
-      maxX + annotation.lineWidth + 4,
-      maxY + annotation.lineWidth + 4,
+      minX - annotation.lineWidth - 12,
+      minY - annotation.lineWidth - 12,
+      maxX + annotation.lineWidth + 12,
+      maxY + annotation.lineWidth + 12,
     );
     return _cachedBounds!;
   }
@@ -2479,14 +2479,70 @@ class TrendAnnotationElement extends ChartElement {
   @override
   bool get isDraggable => annotation.allowDragging;
 
+  /// Calculate label bounds if a label is present.
+  ///
+  /// Extracted from paint() to enable label hit testing — mirrors the
+  /// pattern used by ThresholdAnnotationElement._calculateLabelBounds().
+  Rect? _calculateLabelBounds() {
+    if (annotation.label == null || annotation.label!.isEmpty) return null;
+    if (_trendPoints.isEmpty) return null;
+
+    final plotPoints = _plotPoints;
+
+    final textStyle = annotation.style.textStyle;
+    final textSpan = TextSpan(text: annotation.label, style: textStyle);
+    final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
+
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = textPainter.width + padding.left + padding.right;
+    final containerHeight = textPainter.height + padding.top + padding.bottom;
+    final labelMargin = annotation.labelMargin;
+
+    // Compute the trend line bounding rect for label positioning
+    double minX = plotPoints.first.dx;
+    double maxX = plotPoints.first.dx;
+    double minY = plotPoints.first.dy;
+    double maxY = plotPoints.first.dy;
+    for (final pt in plotPoints) {
+      minX = math.min(minX, pt.dx);
+      maxX = math.max(maxX, pt.dx);
+      minY = math.min(minY, pt.dy);
+      maxY = math.max(maxY, pt.dy);
+    }
+    final trendRect = Rect.fromLTRB(minX, minY, maxX, maxY);
+
+    // Position label inside the trend line bounding area
+    switch (annotation.labelPosition) {
+      case AnnotationLabelPosition.topLeft:
+        return Rect.fromLTWH(trendRect.left + labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
+      case AnnotationLabelPosition.topRight:
+        return Rect.fromLTWH(trendRect.right - containerWidth - labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
+      case AnnotationLabelPosition.center:
+        return Rect.fromLTWH(trendRect.center.dx - containerWidth / 2, trendRect.center.dy - containerHeight / 2, containerWidth, containerHeight);
+      case AnnotationLabelPosition.bottomLeft:
+        return Rect.fromLTWH(trendRect.left + labelMargin, trendRect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
+      case AnnotationLabelPosition.bottomRight:
+        return Rect.fromLTWH(
+          trendRect.right - containerWidth - labelMargin,
+          trendRect.bottom - containerHeight - labelMargin,
+          containerWidth,
+          containerHeight,
+        );
+    }
+  }
+
   @override
   bool hitTest(Offset position) {
     if (_trendPoints.isEmpty) return false;
 
+    // Check label first (if present) - labels are typically easier click targets
+    final labelBounds = _calculateLabelBounds();
+    if (labelBounds?.contains(position) == true) return true;
+
     final plotPoints = _plotPoints;
 
-    // Check if click is near any line segment
-    final hitRadius = annotation.lineWidth + 4;
+    // Check if click is near any line segment (12px matches threshold's UX feel)
+    final hitRadius = annotation.lineWidth + 12;
     for (int i = 0; i < plotPoints.length - 1; i++) {
       final distance = _distanceToLineSegment(position, plotPoints[i], plotPoints[i + 1]);
       if (distance <= hitRadius) return true;
@@ -2511,14 +2567,33 @@ class TrendAnnotationElement extends ChartElement {
   void paint(Canvas canvas, Size size) {
     if (_trendPoints.isEmpty) return;
 
-    final paint = Paint()
-      ..color = annotation.lineColor
-      ..strokeWidth = _isSelected ? annotation.lineWidth * 1.5 : annotation.lineWidth
-      ..style = PaintingStyle.stroke;
-
     final plotPoints = _plotPoints;
 
-    // Draw trend line
+    // Draw selection glow (behind the line) — matches ThresholdAnnotationElement
+    if (_isSelected) {
+      final glowPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(130)
+        ..strokeWidth = annotation.lineWidth * 4.0
+        ..style = PaintingStyle.stroke
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedPolyline(canvas, plotPoints, glowPaint, annotation.dashPattern!);
+      } else {
+        final glowPath = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
+        for (int i = 1; i < plotPoints.length; i++) {
+          glowPath.lineTo(plotPoints[i].dx, plotPoints[i].dy);
+        }
+        canvas.drawPath(glowPath, glowPaint);
+      }
+    }
+
+    // Draw main line
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 2.5 : annotation.lineWidth
+      ..style = PaintingStyle.stroke;
+
     if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
       _drawDashedPolyline(canvas, plotPoints, paint, annotation.dashPattern!);
     } else {
@@ -2529,59 +2604,13 @@ class TrendAnnotationElement extends ChartElement {
       canvas.drawPath(path, paint);
     }
 
-    // Draw label if present
-    if (annotation.label != null && annotation.label!.isNotEmpty) {
+    // Draw label if present (uses extracted _calculateLabelBounds for DRY)
+    final labelRect = _calculateLabelBounds();
+    if (labelRect != null) {
       final textStyle = annotation.style.textStyle;
       final textSpan = TextSpan(text: annotation.label, style: textStyle);
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-
-      // Get padding from style or use default
       final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-
-      // Calculate label container dimensions (includes padding)
-      final containerWidth = textPainter.width + padding.left + padding.right;
-      final containerHeight = textPainter.height + padding.top + padding.bottom;
-
-      // Use labelMargin from annotation
-      final labelMargin = annotation.labelMargin;
-
-      // Compute the trend line bounding rect for label positioning
-      double minX = plotPoints.first.dx;
-      double maxX = plotPoints.first.dx;
-      double minY = plotPoints.first.dy;
-      double maxY = plotPoints.first.dy;
-      for (final pt in plotPoints) {
-        minX = math.min(minX, pt.dx);
-        maxX = math.max(maxX, pt.dx);
-        minY = math.min(minY, pt.dy);
-        maxY = math.max(maxY, pt.dy);
-      }
-      final trendRect = Rect.fromLTRB(minX, minY, maxX, maxY);
-
-      // Position label inside the trend line bounding area
-      final Rect bgRect;
-      switch (annotation.labelPosition) {
-        case AnnotationLabelPosition.topLeft:
-          bgRect = Rect.fromLTWH(trendRect.left + labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.topRight:
-          bgRect = Rect.fromLTWH(trendRect.right - containerWidth - labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.center:
-          bgRect = Rect.fromLTWH(
-            trendRect.center.dx - containerWidth / 2,
-            trendRect.center.dy - containerHeight / 2,
-            containerWidth,
-            containerHeight,
-          );
-        case AnnotationLabelPosition.bottomLeft:
-          bgRect = Rect.fromLTWH(trendRect.left + labelMargin, trendRect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.bottomRight:
-          bgRect = Rect.fromLTWH(
-            trendRect.right - containerWidth - labelMargin,
-            trendRect.bottom - containerHeight - labelMargin,
-            containerWidth,
-            containerHeight,
-          );
-      }
 
       // Draw background if backgroundColor is set
       if (annotation.style.backgroundColor != null) {
@@ -2589,7 +2618,7 @@ class TrendAnnotationElement extends ChartElement {
           ..color = annotation.style.backgroundColor!
           ..style = PaintingStyle.fill;
         final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
-        final rrect = borderRadius.toRRect(bgRect);
+        final rrect = borderRadius.toRRect(labelRect);
         canvas.drawRRect(rrect, bgPaint);
       }
 
@@ -2600,12 +2629,12 @@ class TrendAnnotationElement extends ChartElement {
           ..style = PaintingStyle.stroke
           ..strokeWidth = annotation.style.borderWidth;
         final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
-        final rrect = borderRadius.toRRect(bgRect);
+        final rrect = borderRadius.toRRect(labelRect);
         canvas.drawRRect(rrect, borderPaint);
       }
 
       // Draw text inside container (accounting for padding)
-      final textPosition = Offset(bgRect.left + padding.left, bgRect.top + padding.top);
+      final textPosition = Offset(labelRect.left + padding.left, labelRect.top + padding.top);
       textPainter.paint(canvas, textPosition);
     }
   }
