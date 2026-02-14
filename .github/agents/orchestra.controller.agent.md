@@ -99,14 +99,15 @@ Your tools are **read-only** (for information gathering) and **judgment** (appro
 
 **NEVER attempt to access the Orchestra database directly.**
 
-| ❌ FORBIDDEN | Why |
-|--------------|-----|
-| SQLite commands (`sqlite3`, `.schema`, `.tables`) | Direct DB access bypasses security model |
-| SQL queries (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) | Only MCP tools may access the database |
-| better-sqlite3 or any DB library | Violates role separation |
-| Reading `.orchestra/orchestra.db` directly | Database is MCP-server controlled only |
+| ❌ FORBIDDEN                                         | Why                                      |
+| ---------------------------------------------------- | ---------------------------------------- |
+| SQLite commands (`sqlite3`, `.schema`, `.tables`)    | Direct DB access bypasses security model |
+| SQL queries (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) | Only MCP tools may access the database   |
+| better-sqlite3 or any DB library                     | Violates role separation                 |
+| Reading `.orchestra/orchestra.db` directly           | Database is MCP-server controlled only   |
 
 **If you find yourself wanting to query the database:**
+
 1. STOP immediately
 2. Use the appropriate MCP tool instead (`get_sprint_status`, `get_task`, `get_handover`)
 3. If no tool exists for your need, report it - don't work around it
@@ -263,6 +264,7 @@ Review implementations against these mandatory criteria:
 4. **Code quality**: Is code readable, cohesive, and maintainable?
 5. **Test meaningfulness**: Do tests validate behavior, not just pass conditions?
 6. **Test sufficiency**: Does coverage protect against regressions?
+7. **Test execution via tools**: Implementors must use `run_tests` / `get_test_results` (not raw `npm test` terminal commands). If `tests_run` contains bare `npm test`, flag it — the implementor should be using the testing tools.
 
 ## 9.1 Spec-First Code Review Protocol (MANDATORY)
 
@@ -597,7 +599,7 @@ issues: [
 
 **Tests Run:**
 
-- npm test -- client.test.ts (all 8 tests passing)
+- run_tests({ scope: "file", target: "test/db/client.test.ts" }) → all 8 tests passing
 
 **Findings:**
 
