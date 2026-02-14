@@ -2479,65 +2479,9 @@ class TrendAnnotationElement extends ChartElement {
   @override
   bool get isDraggable => annotation.allowDragging;
 
-  /// Calculate label bounds if a label is present.
-  ///
-  /// Extracted from paint() to enable label hit testing — mirrors the
-  /// pattern used by ThresholdAnnotationElement._calculateLabelBounds().
-  Rect? _calculateLabelBounds() {
-    if (annotation.label == null || annotation.label!.isEmpty) return null;
-    if (_trendPoints.isEmpty) return null;
-
-    final plotPoints = _plotPoints;
-
-    final textStyle = annotation.style.textStyle;
-    final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-
-    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth = textPainter.width + padding.left + padding.right;
-    final containerHeight = textPainter.height + padding.top + padding.bottom;
-    final labelMargin = annotation.labelMargin;
-
-    // Compute the trend line bounding rect for label positioning
-    double minX = plotPoints.first.dx;
-    double maxX = plotPoints.first.dx;
-    double minY = plotPoints.first.dy;
-    double maxY = plotPoints.first.dy;
-    for (final pt in plotPoints) {
-      minX = math.min(minX, pt.dx);
-      maxX = math.max(maxX, pt.dx);
-      minY = math.min(minY, pt.dy);
-      maxY = math.max(maxY, pt.dy);
-    }
-    final trendRect = Rect.fromLTRB(minX, minY, maxX, maxY);
-
-    // Position label inside the trend line bounding area
-    switch (annotation.labelPosition) {
-      case AnnotationLabelPosition.topLeft:
-        return Rect.fromLTWH(trendRect.left + labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
-      case AnnotationLabelPosition.topRight:
-        return Rect.fromLTWH(trendRect.right - containerWidth - labelMargin, trendRect.top + labelMargin, containerWidth, containerHeight);
-      case AnnotationLabelPosition.center:
-        return Rect.fromLTWH(trendRect.center.dx - containerWidth / 2, trendRect.center.dy - containerHeight / 2, containerWidth, containerHeight);
-      case AnnotationLabelPosition.bottomLeft:
-        return Rect.fromLTWH(trendRect.left + labelMargin, trendRect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
-      case AnnotationLabelPosition.bottomRight:
-        return Rect.fromLTWH(
-          trendRect.right - containerWidth - labelMargin,
-          trendRect.bottom - containerHeight - labelMargin,
-          containerWidth,
-          containerHeight,
-        );
-    }
-  }
-
   @override
   bool hitTest(Offset position) {
     if (_trendPoints.isEmpty) return false;
-
-    // Check label first (if present) - labels are typically easier click targets
-    final labelBounds = _calculateLabelBounds();
-    if (labelBounds?.contains(position) == true) return true;
 
     final plotPoints = _plotPoints;
 
@@ -2624,40 +2568,6 @@ class TrendAnnotationElement extends ChartElement {
         path.lineTo(plotPoints[i].dx, plotPoints[i].dy);
       }
       canvas.drawPath(path, paint);
-    }
-
-    // Draw label if present (uses extracted _calculateLabelBounds for DRY)
-    final labelRect = _calculateLabelBounds();
-    if (labelRect != null) {
-      final textStyle = annotation.style.textStyle;
-      final textSpan = TextSpan(text: annotation.label, style: textStyle);
-      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
-      final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-
-      // Draw background if backgroundColor is set
-      if (annotation.style.backgroundColor != null) {
-        final bgPaint = Paint()
-          ..color = annotation.style.backgroundColor!
-          ..style = PaintingStyle.fill;
-        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
-        final rrect = borderRadius.toRRect(labelRect);
-        canvas.drawRRect(rrect, bgPaint);
-      }
-
-      // Draw border if borderColor and borderWidth are set
-      if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
-        final borderPaint = Paint()
-          ..color = annotation.style.borderColor!
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = annotation.style.borderWidth;
-        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
-        final rrect = borderRadius.toRRect(labelRect);
-        canvas.drawRRect(rrect, borderPaint);
-      }
-
-      // Draw text inside container (accounting for padding)
-      final textPosition = Offset(labelRect.left + padding.left, labelRect.top + padding.top);
-      textPainter.paint(canvas, textPosition);
     }
   }
 
@@ -2753,6 +2663,9 @@ class LegendAnnotationElement extends ChartElement {
   /// Cached text painters for each series item.
   final List<TextPainter> _textPainters = [];
 
+  /// Cached text painters for each trend annotation item.
+  final List<TextPainter> _trendTextPainters = [];
+
   /// Get the current temp position (used during drag completion).
   Offset? get tempPosition => _tempPosition;
 
@@ -2771,9 +2684,10 @@ class LegendAnnotationElement extends ChartElement {
 
     // Clear and rebuild text painters
     _textPainters.clear();
+    _trendTextPainters.clear();
 
-    double maxTextWidth = 0;
-    double totalTextHeight = 0;
+    double maxSeriesTextWidth = 0;
+    double totalSeriesTextHeight = 0;
 
     for (final series in annotation.series) {
       final painter = TextPainter(
@@ -2782,30 +2696,112 @@ class LegendAnnotationElement extends ChartElement {
       )..layout();
 
       _textPainters.add(painter);
-      maxTextWidth = math.max(maxTextWidth, painter.width);
-      totalTextHeight += painter.height;
+      maxSeriesTextWidth = math.max(maxSeriesTextWidth, painter.width);
+      totalSeriesTextHeight += painter.height;
+    }
+
+    // Build trend text painters
+    final hasTrends = annotation.trendAnnotations.isNotEmpty;
+    double trendHeaderWidth = 0;
+    double trendHeaderHeight = 0;
+    double maxTrendTextWidth = 0;
+
+    if (hasTrends) {
+      final headerPainter = TextPainter(
+        text: TextSpan(
+          text: 'Trends',
+          style: style.textStyle.copyWith(
+            fontStyle: FontStyle.italic,
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
+            fontSize: (style.textStyle.fontSize ?? 11) - 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      trendHeaderWidth = headerPainter.width;
+      trendHeaderHeight = headerPainter.height;
+
+      for (final trend in annotation.trendAnnotations) {
+        final label = trend.label ?? '';
+        final painter = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: style.textStyle.copyWith(color: trend.lineColor),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        _trendTextPainters.add(painter);
+        maxTrendTextWidth = math.max(maxTrendTextWidth, painter.width);
+      }
     }
 
     // Calculate legend size
     final itemCount = annotation.series.length;
+    final markerItemWidth = style.markerSize + style.markerLabelSpacing;
+    final halfSpacing = style.itemSpacing / 2;
     final double legendWidth;
     final double legendHeight;
 
     if (style.orientation == LegendOrientation.vertical) {
-      // Vertical: one item per row
-      legendWidth = padding.left + style.markerSize + style.markerLabelSpacing + maxTextWidth + padding.right;
-      legendHeight = padding.top + totalTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0) + padding.bottom;
-    } else {
-      // Horizontal: items side by side
-      double totalWidth = 0;
-      for (final painter in _textPainters) {
-        totalWidth += style.markerSize + style.markerLabelSpacing + painter.width;
-      }
-      totalWidth += (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
-      legendWidth = padding.left + totalWidth + padding.right;
+      if (!hasTrends) {
+        // Single column: series items stacked
+        legendWidth = padding.left + markerItemWidth + maxSeriesTextWidth + padding.right;
+        legendHeight = padding.top + totalSeriesTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0) + padding.bottom;
+      } else {
+        // Two-column layout: series left, "Trends" header + items right
+        final seriesColWidth = markerItemWidth + maxSeriesTextWidth;
+        final trendColWidth = math.max(trendHeaderWidth, markerItemWidth + maxTrendTextWidth);
+        final columnGap = style.itemSpacing * 2;
 
-      final maxItemHeight = _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max);
-      legendHeight = padding.top + math.max(style.markerSize, maxItemHeight) + padding.bottom;
+        final seriesColHeight = totalSeriesTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
+        double trendItemsHeight = 0;
+        for (final tp in _trendTextPainters) {
+          trendItemsHeight += tp.height;
+        }
+        if (_trendTextPainters.length > 1) {
+          trendItemsHeight += (_trendTextPainters.length - 1) * style.itemSpacing;
+        }
+
+        legendWidth = padding.left + seriesColWidth + columnGap + trendColWidth + padding.right;
+        legendHeight = padding.top + trendHeaderHeight + halfSpacing + math.max(seriesColHeight, trendItemsHeight) + padding.bottom;
+      }
+    } else {
+      // Horizontal: series items side by side on row 1
+      double seriesRowWidth = 0;
+      for (final painter in _textPainters) {
+        seriesRowWidth += markerItemWidth + painter.width;
+      }
+      seriesRowWidth += (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
+
+      final maxSeriesItemHeight = _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max);
+      final seriesRowHeight = math.max(style.markerSize, maxSeriesItemHeight);
+
+      if (!hasTrends) {
+        legendWidth = padding.left + seriesRowWidth + padding.right;
+        legendHeight = padding.top + seriesRowHeight + padding.bottom;
+      } else {
+        // Three rows: series row, divider + header row, trend items row
+        double trendHeight = halfSpacing + 1.0 + halfSpacing; // divider
+        trendHeight += trendHeaderHeight + halfSpacing; // header + gap
+
+        double maxTrendItemHeight = 0;
+        for (final tp in _trendTextPainters) {
+          maxTrendItemHeight = math.max(maxTrendItemHeight, tp.height);
+        }
+        maxTrendItemHeight = math.max(maxTrendItemHeight, style.markerSize);
+        trendHeight += maxTrendItemHeight;
+
+        double trendRowWidth = 0;
+        for (int i = 0; i < _trendTextPainters.length; i++) {
+          trendRowWidth += markerItemWidth + _trendTextPainters[i].width;
+          if (i < _trendTextPainters.length - 1) trendRowWidth += style.itemSpacing;
+        }
+
+        final maxRowWidth = math.max(seriesRowWidth, math.max(trendHeaderWidth, trendRowWidth));
+        legendWidth = padding.left + maxRowWidth + padding.right;
+        legendHeight = padding.top + seriesRowHeight + trendHeight + padding.bottom;
+      }
     }
 
     // Calculate position based on anchor or custom position
@@ -2888,7 +2884,7 @@ class LegendAnnotationElement extends ChartElement {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_bounds == null || annotation.series.isEmpty) return;
+    if (_bounds == null || (annotation.series.isEmpty && annotation.trendAnnotations.isEmpty)) return;
 
     final style = annotation.legendStyle;
     final padding = style.effectivePadding;
@@ -2922,6 +2918,35 @@ class LegendAnnotationElement extends ChartElement {
     double currentX = _bounds!.left + padding.left;
     double currentY = _bounds!.top + padding.top;
 
+    final hasTrends = annotation.trendAnnotations.isNotEmpty && _trendTextPainters.isNotEmpty;
+    final halfSpacing = style.itemSpacing / 2;
+
+    // For horizontal layout, compute the series row height so markers/text
+    // are centered within just the first row.
+    final seriesRowHeight = style.orientation == LegendOrientation.horizontal
+        ? math.max(style.markerSize, _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max))
+        : 0.0;
+
+    // For vertical layout with trends, compute header height and offset
+    // series items down so they align with trend items below the header.
+    double trendHeaderHeight = 0;
+    if (style.orientation == LegendOrientation.vertical && hasTrends) {
+      final headerPainter = TextPainter(
+        text: TextSpan(
+          text: 'Trends',
+          style: style.textStyle.copyWith(
+            fontStyle: FontStyle.italic,
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
+            fontSize: (style.textStyle.fontSize ?? 11) - 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      trendHeaderHeight = headerPainter.height;
+      // Offset series items down so they start at the same Y as trend items
+      currentY += trendHeaderHeight + halfSpacing;
+    }
+
     for (int i = 0; i < annotation.series.length; i++) {
       final series = annotation.series[i];
       final textPainter = _textPainters[i];
@@ -2933,7 +2958,7 @@ class LegendAnnotationElement extends ChartElement {
       // Draw marker
       final markerCenter = style.orientation == LegendOrientation.vertical
           ? Offset(currentX + style.markerSize / 2, currentY + textPainter.height / 2)
-          : Offset(currentX + style.markerSize / 2, _bounds!.top + padding.top + (_bounds!.height - padding.vertical) / 2);
+          : Offset(currentX + style.markerSize / 2, _bounds!.top + padding.top + seriesRowHeight / 2);
 
       _drawMarker(canvas, markerCenter, seriesColor, style);
 
@@ -2941,7 +2966,7 @@ class LegendAnnotationElement extends ChartElement {
       final textX = currentX + style.markerSize + style.markerLabelSpacing;
       final textY = style.orientation == LegendOrientation.vertical
           ? currentY
-          : _bounds!.top + padding.top + (_bounds!.height - padding.vertical - textPainter.height) / 2;
+          : _bounds!.top + padding.top + (seriesRowHeight - textPainter.height) / 2;
 
       // Apply strikethrough if hidden
       if (isHidden) {
@@ -2965,11 +2990,95 @@ class LegendAnnotationElement extends ChartElement {
       }
     }
 
+    // Draw trend annotations section (if any)
+    if (hasTrends) {
+      // Build header painter for rendering
+      final headerPainter = TextPainter(
+        text: TextSpan(
+          text: 'Trends',
+          style: style.textStyle.copyWith(
+            fontStyle: FontStyle.italic,
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
+            fontSize: (style.textStyle.fontSize ?? 11) - 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      if (style.orientation == LegendOrientation.vertical) {
+        // Two-column layout: series was drawn in left column.
+        // Now draw "Trends" header and trend items in the right column.
+        double maxSeriesTextWidth = 0;
+        for (final tp in _textPainters) {
+          maxSeriesTextWidth = math.max(maxSeriesTextWidth, tp.width);
+        }
+        final seriesColWidth = style.markerSize + style.markerLabelSpacing + maxSeriesTextWidth;
+        final columnGap = style.itemSpacing * 2;
+        final rightColX = _bounds!.left + padding.left + seriesColWidth + columnGap;
+
+        // Draw "Trends" header at top of right column
+        headerPainter.paint(canvas, Offset(rightColX, _bounds!.top + padding.top));
+
+        // Draw trend items stacked in right column, below header
+        double trendY = _bounds!.top + padding.top + trendHeaderHeight + halfSpacing;
+        for (int i = 0; i < annotation.trendAnnotations.length && i < _trendTextPainters.length; i++) {
+          final trend = annotation.trendAnnotations[i];
+          final trendPainter = _trendTextPainters[i];
+
+          final markerCenter = Offset(rightColX + style.markerSize / 2, trendY + trendPainter.height / 2);
+          _drawMarker(canvas, markerCenter, trend.lineColor, style, dashPattern: trend.dashPattern);
+
+          final textX = rightColX + style.markerSize + style.markerLabelSpacing;
+          trendPainter.paint(canvas, Offset(textX, trendY));
+
+          trendY += trendPainter.height + style.itemSpacing;
+        }
+      } else {
+        // Horizontal: three rows — series row already drawn above.
+        // Reset X for new rows below series.
+        currentX = _bounds!.left + padding.left;
+        currentY = _bounds!.top + padding.top + seriesRowHeight;
+
+        // Draw divider line
+        currentY += halfSpacing;
+        final dividerPaint = Paint()
+          ..color = style.effectiveBorderColor.withAlpha(80)
+          ..strokeWidth = 1.0;
+        canvas.drawLine(Offset(_bounds!.left + padding.left, currentY), Offset(_bounds!.right - padding.right, currentY), dividerPaint);
+        currentY += 1.0 + halfSpacing;
+
+        // Draw "Trends" header on its own line
+        headerPainter.paint(canvas, Offset(currentX, currentY));
+        currentY += headerPainter.height + halfSpacing;
+
+        // Draw trend items side by side on the next line
+        double trendRowHeight = 0;
+        for (final tp in _trendTextPainters) {
+          trendRowHeight = math.max(trendRowHeight, tp.height);
+        }
+        trendRowHeight = math.max(trendRowHeight, style.markerSize);
+
+        for (int i = 0; i < annotation.trendAnnotations.length && i < _trendTextPainters.length; i++) {
+          final trend = annotation.trendAnnotations[i];
+          final trendPainter = _trendTextPainters[i];
+
+          final markerCenter = Offset(currentX + style.markerSize / 2, currentY + trendRowHeight / 2);
+          _drawMarker(canvas, markerCenter, trend.lineColor, style, dashPattern: trend.dashPattern);
+
+          final textX = currentX + style.markerSize + style.markerLabelSpacing;
+          final textY = currentY + (trendRowHeight - trendPainter.height) / 2;
+          trendPainter.paint(canvas, Offset(textX, textY));
+
+          currentX += style.markerSize + style.markerLabelSpacing + trendPainter.width + style.itemSpacing;
+        }
+      }
+    }
+
     canvas.restore();
   }
 
   /// Draws a marker at the given position.
-  void _drawMarker(Canvas canvas, Offset center, Color color, LegendStyle style) {
+  void _drawMarker(Canvas canvas, Offset center, Color color, LegendStyle style, {List<double>? dashPattern}) {
     final paint = Paint()..color = color;
 
     switch (style.markerShape) {
@@ -2984,7 +3093,50 @@ class LegendAnnotationElement extends ChartElement {
           ..style = PaintingStyle.stroke
           ..strokeWidth = style.markerLineWidth
           ..strokeCap = StrokeCap.round;
-        canvas.drawLine(Offset(center.dx - style.markerSize / 2, center.dy), Offset(center.dx + style.markerSize / 2, center.dy), paint);
+        final startX = center.dx - style.markerSize / 2;
+        final endX = center.dx + style.markerSize / 2;
+        final markerLen = style.markerSize;
+        if (dashPattern != null && dashPattern.isNotEmpty) {
+          // Use butt caps for dashed patterns — round caps add strokeWidth/2
+          // visual bleed on each end of every dash, making small gaps invisible.
+          paint.strokeCap = StrokeCap.butt;
+          // Slightly thinner stroke for dashed legend markers so gaps are clearer.
+          paint.strokeWidth = math.min(style.markerLineWidth, 3.0);
+
+          // Target ~3.5 visible marks (drawn segments) for clarity.
+          // Scale cycles based on marks-per-cycle so simple patterns
+          // (dashed, dotted) get enough repetitions while complex ones
+          // (dash-dot) stay compact.
+          final marksPerCycle = (dashPattern.length + 1) ~/ 2;
+          final targetCycles = 3.5 / marksPerCycle;
+          final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
+          final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
+          final scaled = dashPattern.map((v) => (v * scale).clamp(0.5, markerLen)).toList();
+
+          // Cap gaps so they don't exceed the largest dash — keeps patterns
+          // like dotted (small dot, large gap) visually balanced at legend scale.
+          double maxDash = 0;
+          for (int i = 0; i < scaled.length; i += 2) {
+            maxDash = math.max(maxDash, scaled[i]);
+          }
+          for (int i = 1; i < scaled.length; i += 2) {
+            scaled[i] = math.min(scaled[i], maxDash);
+          }
+
+          double x = startX;
+          int patternIdx = 0;
+          while (x < endX) {
+            final segLen = scaled[patternIdx % scaled.length];
+            final segEnd = math.min(x + segLen, endX);
+            if (patternIdx % 2 == 0) {
+              canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
+            }
+            x = segEnd;
+            patternIdx++;
+          }
+        } else {
+          canvas.drawLine(Offset(startX, center.dy), Offset(endX, center.dy), paint);
+        }
 
       case LegendMarkerShape.diamond:
         final half = style.markerSize / 2;

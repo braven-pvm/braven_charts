@@ -1297,9 +1297,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
         // Use widget legendStyle if provided, otherwise fall back to theme's legendStyle
         final effectiveLegendStyle = widget.legendStyle ?? widget.theme?.legendStyle ?? const LegendStyle();
 
+        // Collect trend annotations that have labels for display in the legend
+        final trendAnnotations = effectiveAnnotations.whereType<TrendAnnotation>().where((t) => t.label != null && t.label!.isNotEmpty).toList();
+
         final legendAnnotation = LegendAnnotation(
           id: '__internal_legend__', // Special ID for internal legend
           series: effectiveSeries,
+          trendAnnotations: trendAnnotations,
           legendStyle: effectiveLegendStyle,
           customPosition: _legendCustomPosition,
         );
