@@ -15,12 +15,7 @@ import '../../models/chart_annotation.dart';
 /// - Line style (color, width, dash pattern)
 /// - Optional label
 class TrendAnnotationDialog extends StatefulWidget {
-  const TrendAnnotationDialog({
-    super.key,
-    this.annotation,
-    required this.availableSeries,
-    this.preselectedSeriesId,
-  });
+  const TrendAnnotationDialog({super.key, this.annotation, required this.availableSeries, this.preselectedSeriesId});
 
   /// Existing annotation to edit, or null to create new.
   final TrendAnnotation? annotation;
@@ -47,6 +42,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
   late List<double>? _dashPattern;
   late double _labelMargin;
   late AnnotationLabelPosition _labelPosition;
+  late double _elevation;
 
   // Predefined dash patterns
   final Map<String, List<double>?> _dashPatterns = {
@@ -61,20 +57,17 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     super.initState();
 
     final annotation = widget.annotation;
-    _selectedSeriesId = annotation?.seriesId ??
-        widget.preselectedSeriesId ??
-        (widget.availableSeries.isNotEmpty ? widget.availableSeries.first : '');
+    _selectedSeriesId = annotation?.seriesId ?? widget.preselectedSeriesId ?? (widget.availableSeries.isNotEmpty ? widget.availableSeries.first : '');
     _trendType = annotation?.trendType ?? TrendType.linear;
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    _windowSizeController =
-        TextEditingController(text: annotation?.windowSize?.toString() ?? '5');
-    _degreeController =
-        TextEditingController(text: annotation?.degree.toString() ?? '2');
+    _windowSizeController = TextEditingController(text: annotation?.windowSize?.toString() ?? '5');
+    _degreeController = TextEditingController(text: annotation?.degree.toString() ?? '2');
     _lineColor = annotation?.lineColor ?? Colors.blue;
     _lineWidth = annotation?.lineWidth ?? 2.0;
     _dashPattern = annotation?.dashPattern;
     _labelMargin = annotation?.labelMargin ?? 4.0;
     _labelPosition = annotation?.labelPosition ?? AnnotationLabelPosition.bottomRight;
+    _elevation = annotation?.elevation ?? 0.0;
   }
 
   @override
@@ -116,12 +109,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Label Position',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-        ),
+        Text('Label Position', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 5,
@@ -140,36 +128,20 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[100],
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade300,
-                    width: 1,
-                  ),
+                  border: Border.all(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300, width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   spacing: 5,
                   children: [
-                    Icon(
-                      icon,
-                      size: 14,
-                      color: isSelected ? Colors.white : Colors.grey[700],
-                    ),
+                    Icon(icon, size: 14, color: isSelected ? Colors.white : Colors.grey[700]),
                     Text(
                       label,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: isSelected ? Colors.white : Colors.grey[700]),
                     ),
                   ],
                 ),
@@ -183,23 +155,16 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
 
   void _handleCreate() {
     if (_selectedSeriesId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a series')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a series')));
       return;
     }
 
     // Validate type-specific parameters
     int? windowSize;
-    if (_trendType == TrendType.movingAverage ||
-        _trendType == TrendType.exponentialMovingAverage) {
+    if (_trendType == TrendType.movingAverage || _trendType == TrendType.exponentialMovingAverage) {
       windowSize = int.tryParse(_windowSizeController.text);
       if (windowSize == null || windowSize <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Please enter a valid window size (positive integer)')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid window size (positive integer)')));
         return;
       }
     }
@@ -208,11 +173,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
     if (_trendType == TrendType.polynomial) {
       final parsedDegree = int.tryParse(_degreeController.text);
       if (parsedDegree == null || parsedDegree <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Please enter a valid polynomial degree (positive integer)')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid polynomial degree (positive integer)')));
         return;
       }
       degree = parsedDegree;
@@ -230,6 +191,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
       dashPattern: _dashPattern,
       labelMargin: _labelMargin,
       labelPosition: _labelPosition,
+      elevation: _elevation,
       allowDragging: true, // Enable dragging by default
     );
 
@@ -253,25 +215,19 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     isEditing ? 'Edit Trend' : 'Add Trend',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                    style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Statistical trend line overlay',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color:
-                          theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
-                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8)),
                   ),
                 ],
               ),
@@ -290,13 +246,9 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _selectedSeriesId,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.show_chart),
-                        ),
+                        decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: Icon(Icons.show_chart)),
                         items: widget.availableSeries.map((seriesId) {
-                          return DropdownMenuItem(
-                              value: seriesId, child: Text(seriesId));
+                          return DropdownMenuItem(value: seriesId, child: Text(seriesId));
                         }).toList(),
                         onChanged: (value) {
                           if (value != null) {
@@ -309,21 +261,12 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                       // Show read-only series info
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
                         child: Row(
                           children: [
-                            Icon(Icons.show_chart,
-                                color: theme.colorScheme.onSurfaceVariant),
+                            Icon(Icons.show_chart, color: theme.colorScheme.onSurfaceVariant),
                             const SizedBox(width: 12),
-                            Text(
-                              'Series: $_selectedSeriesId',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                            Text('Series: $_selectedSeriesId', style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                           ],
                         ),
                       ),
@@ -348,8 +291,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                     const SizedBox(height: 16),
 
                     // Type-specific parameters
-                    if (_trendType == TrendType.movingAverage ||
-                        _trendType == TrendType.exponentialMovingAverage) ...[
+                    if (_trendType == TrendType.movingAverage || _trendType == TrendType.exponentialMovingAverage) ...[
                       TextField(
                         controller: _windowSizeController,
                         decoration: const InputDecoration(
@@ -418,8 +360,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                             decoration: BoxDecoration(
                               color: _lineColor,
                               borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: theme.colorScheme.outline),
+                              border: Border.all(color: theme.colorScheme.outline),
                             ),
                           ),
                         ),
@@ -442,17 +383,33 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                             max: 10.0,
                             divisions: 19,
                             label: '${_lineWidth.toStringAsFixed(1)}px',
-                            onChanged: (value) =>
-                                setState(() => _lineWidth = value),
+                            onChanged: (value) => setState(() => _lineWidth = value),
                           ),
                         ),
-                        SizedBox(
-                          width: 50,
-                          child: Text(
-                            '${_lineWidth.toStringAsFixed(1)}px',
-                            textAlign: TextAlign.right,
+                        SizedBox(width: 50, child: Text('${_lineWidth.toStringAsFixed(1)}px', textAlign: TextAlign.right)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Elevation/Glow
+                    Row(
+                      children: [
+                        const Icon(Icons.blur_on, size: 20),
+                        const SizedBox(width: 12),
+                        const Text('Glow'),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Slider(
+                            value: _elevation,
+                            min: 0.0,
+                            max: 12.0,
+                            divisions: 24,
+                            label: _elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1),
+                            onChanged: (value) => setState(() => _elevation = value),
                           ),
                         ),
+                        SizedBox(width: 50, child: Text(_elevation == 0 ? 'Off' : _elevation.toStringAsFixed(1), textAlign: TextAlign.right)),
                       ],
                     ),
 
@@ -468,13 +425,11 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
                         DropdownButton<String>(
                           value: _getDashPatternName(),
                           items: _dashPatterns.keys.map((name) {
-                            return DropdownMenuItem(
-                                value: name, child: Text(name));
+                            return DropdownMenuItem(value: name, child: Text(name));
                           }).toList(),
                           onChanged: (name) {
                             if (name != null) {
-                              setState(
-                                  () => _dashPattern = _dashPatterns[name]);
+                              setState(() => _dashPattern = _dashPatterns[name]);
                             }
                           },
                         ),
@@ -491,10 +446,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                   const SizedBox(width: 16),
                   FilledButton.icon(
                     onPressed: _handleCreate,
@@ -560,12 +512,7 @@ class _TrendAnnotationDialogState extends State<TrendAnnotationDialog> {
             },
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
       ),
     );
   }

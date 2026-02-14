@@ -2569,13 +2569,35 @@ class TrendAnnotationElement extends ChartElement {
 
     final plotPoints = _plotPoints;
 
-    // Draw selection glow (behind the line) — matches ThresholdAnnotationElement
+    // Draw elevation glow in DEFAULT state only (not selected)
+    // This creates a subtle glow effect using the line color — same pattern
+    // as ThresholdAnnotationElement's elevation glow.
+    if (!_isSelected && annotation.elevation > 0) {
+      final elevationPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(60)
+        ..strokeWidth = annotation.lineWidth + annotation.elevation * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, annotation.elevation);
+
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedPolyline(canvas, plotPoints, elevationPaint, annotation.dashPattern!);
+      } else {
+        final elevationPath = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
+        for (int i = 1; i < plotPoints.length; i++) {
+          elevationPath.lineTo(plotPoints[i].dx, plotPoints[i].dy);
+        }
+        canvas.drawPath(elevationPath, elevationPaint);
+      }
+    }
+
+    // Draw selection glow (behind the line) — always more prominent than
+    // the elevation glow so the selection state is visually distinct.
     if (_isSelected) {
       final glowPaint = Paint()
         ..color = annotation.lineColor.withAlpha(130)
-        ..strokeWidth = annotation.lineWidth * 4.0
+        ..strokeWidth = annotation.lineWidth * 4.0 + annotation.elevation * 2
         ..style = PaintingStyle.stroke
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5.0 + annotation.elevation);
 
       if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
         _drawDashedPolyline(canvas, plotPoints, glowPaint, annotation.dashPattern!);

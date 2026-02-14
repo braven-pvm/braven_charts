@@ -1187,12 +1187,14 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelMargin = 4.0,
     this.labelPosition = AnnotationLabelPosition.bottomRight,
+    this.elevation = 0.0,
   }) : assert(
          trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
          'windowSize must be positive when trendType is movingAverage',
        ),
        assert(degree > 0, 'degree must be positive'),
        assert(labelMargin >= 0, 'Label margin must be non-negative'),
+       assert(elevation >= 0, 'Elevation must be non-negative'),
        super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series to calculate the trend for.
@@ -1227,6 +1229,16 @@ class TrendAnnotation extends ChartAnnotation {
   /// Defaults to [AnnotationLabelPosition.bottomRight].
   final AnnotationLabelPosition labelPosition;
 
+  /// The elevation/glow spread for the trend line in the default state.
+  ///
+  /// When greater than 0, a glow effect is drawn behind the line using the
+  /// same color as [lineColor]. The value controls the blur radius of the glow.
+  /// This only affects the default state — when selected, the selection glow
+  /// is always more prominent than the elevation glow to ensure visual
+  /// distinction.
+  /// Defaults to 0.0 (no glow).
+  final double elevation;
+
   /// Serializes this annotation to JSON.
   Map<String, dynamic> toJson() {
     return {
@@ -1242,6 +1254,7 @@ class TrendAnnotation extends ChartAnnotation {
       if (dashPattern != null) 'dashPattern': dashPattern,
       'labelMargin': labelMargin,
       'labelPosition': labelPosition.name,
+      'elevation': elevation,
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
       'zIndex': zIndex,
@@ -1265,6 +1278,7 @@ class TrendAnnotation extends ChartAnnotation {
     List<double>? dashPattern,
     double? labelMargin,
     AnnotationLabelPosition? labelPosition,
+    double? elevation,
   }) {
     return TrendAnnotation(
       id: id ?? this.id,
@@ -1282,6 +1296,7 @@ class TrendAnnotation extends ChartAnnotation {
       dashPattern: dashPattern ?? this.dashPattern,
       labelMargin: labelMargin ?? this.labelMargin,
       labelPosition: labelPosition ?? this.labelPosition,
+      elevation: elevation ?? this.elevation,
     );
   }
 }
