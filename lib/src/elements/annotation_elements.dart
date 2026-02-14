@@ -3100,39 +3100,85 @@ class LegendAnnotationElement extends ChartElement {
           // Use butt caps for dashed patterns — round caps add strokeWidth/2
           // visual bleed on each end of every dash, making small gaps invisible.
           paint.strokeCap = StrokeCap.butt;
-          // Slightly thinner stroke for dashed legend markers so gaps are clearer.
-          paint.strokeWidth = math.min(style.markerLineWidth, 3.0);
 
-          // Target ~3.5 visible marks (drawn segments) for clarity.
-          // Scale cycles based on marks-per-cycle so simple patterns
-          // (dashed, dotted) get enough repetitions while complex ones
-          // (dash-dot) stay compact.
-          final marksPerCycle = (dashPattern.length + 1) ~/ 2;
-          final targetCycles = 3.5 / marksPerCycle;
-          final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
-          final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
-          final scaled = dashPattern.map((v) => (v * scale).clamp(0.5, markerLen)).toList();
+          // Classify pattern type so each gets appropriate legend scaling:
+          //  - Dotted:   drawn < gap, e.g. [2, 6]      — many small dots
+          //  - Dash-dot: 4+ segments,  e.g. [8, 4, 2, 4] — mixed long/short
+          //  - Dashed:   drawn >= gap, e.g. [5, 5]     — fewer long dashes
+          final dashLen = dashPattern.first;
+          final gapLen = dashPattern.length > 1 ? dashPattern[1] : dashPattern.first;
+          final isDotted = dashLen < gapLen && dashPattern.length <= 2;
+          final isDashDot = dashPattern.length > 2;
 
-          // Cap gaps so they don't exceed the largest dash — keeps patterns
-          // like dotted (small dot, large gap) visually balanced at legend scale.
-          double maxDash = 0;
-          for (int i = 0; i < scaled.length; i += 2) {
-            maxDash = math.max(maxDash, scaled[i]);
-          }
-          for (int i = 1; i < scaled.length; i += 2) {
-            scaled[i] = math.min(scaled[i], maxDash);
-          }
-
-          double x = startX;
-          int patternIdx = 0;
-          while (x < endX) {
-            final segLen = scaled[patternIdx % scaled.length];
-            final segEnd = math.min(x + segLen, endX);
-            if (patternIdx % 2 == 0) {
-              canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
+          if (isDotted) {
+            // --- DOTTED ---
+            paint.strokeWidth = math.min(style.markerLineWidth, 1.5);
+            const targetCycles = 3.5;
+            final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
+            final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
+            final scaled = dashPattern.map((v) => (v * scale).clamp(0.8, markerLen)).toList();
+            // Cap gaps so they never exceed 2× the dot size.
+            final maxGap = scaled[0] * 2.0;
+            for (int i = 1; i < scaled.length; i += 2) {
+              scaled[i] = math.min(scaled[i], maxGap);
             }
-            x = segEnd;
-            patternIdx++;
+
+            double x = startX;
+            int patternIdx = 0;
+            while (x < endX) {
+              final segLen = scaled[patternIdx % scaled.length];
+              final segEnd = math.min(x + segLen, endX);
+              if (patternIdx % 2 == 0) {
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
+              }
+              x = segEnd;
+              patternIdx++;
+            }
+          } else if (isDashDot) {
+            // --- DASH-DOT (e.g. [8, 4, 2, 4]) ---
+            // Scale to fit exactly 1 full cycle so the long dash and short
+            // dot are both visible with correct proportions.
+            paint.strokeWidth = math.min(style.markerLineWidth, 2.0);
+            final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
+            final scale = patternTotal > 0 ? markerLen / patternTotal : 1.0;
+            // Clamp each segment independently: drawn segments get a 1px
+            // floor (preserves the dot), gaps get a 2px floor (stays visible).
+            final scaled = <double>[];
+            for (int i = 0; i < dashPattern.length; i++) {
+              final v = dashPattern[i] * scale;
+              scaled.add(v.clamp(i.isEven ? 1.0 : 2.0, markerLen));
+            }
+
+            double x = startX;
+            int patternIdx = 0;
+            while (x < endX) {
+              final segLen = scaled[patternIdx % scaled.length];
+              final segEnd = math.min(x + segLen, endX);
+              if (patternIdx % 2 == 0) {
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
+              }
+              x = segEnd;
+              patternIdx++;
+            }
+          } else {
+            // --- DASHED ---
+            paint.strokeWidth = math.min(style.markerLineWidth, 2.0);
+            const targetCycles = 1.5;
+            final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
+            final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
+            final scaled = dashPattern.map((v) => (v * scale).clamp(4.0, markerLen)).toList();
+
+            double x = startX;
+            int patternIdx = 0;
+            while (x < endX) {
+              final segLen = scaled[patternIdx % scaled.length];
+              final segEnd = math.min(x + segLen, endX);
+              if (patternIdx % 2 == 0) {
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
+              }
+              x = segEnd;
+              patternIdx++;
+            }
           }
         } else {
           canvas.drawLine(Offset(startX, center.dy), Offset(endX, center.dy), paint);
