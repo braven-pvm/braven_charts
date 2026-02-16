@@ -13,7 +13,7 @@ Use the `fix_code_review` tool to address the code review feedback:
 3. For each issue:
    - Read the issue details (file, line, recommendation)
    - Fix the code according to the recommendation
-   - Run relevant tests
+   - Test with `run_tests({ scope: "related" })` and verify with `get_test_results({ format: "failures" })`
    - `fix_code_review({ action: "RESOLVE_ISSUE", issue_id: N, fix_summary: "..." })` - Mark resolved
 {{#if codeReview.summary}}
 4. `fix_code_review({ action: "SUBMIT_FIXES", summary: "...", files_changed: [...], tests_run: [...] })` - Submit for re-review
@@ -27,6 +27,6 @@ Use the `fix_code_review` tool to address the code review feedback:
 
 ## Remember
 - Keep changes scoped to the review feedback
-- Run relevant tests and report results
+- Use `run_tests({ scope: "related" })` and report results
 - Resolve EACH issue explicitly before submitting
 - After SUBMIT_FIXES, Controller will re-review the code

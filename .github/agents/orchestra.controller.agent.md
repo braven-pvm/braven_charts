@@ -265,6 +265,7 @@ Review implementations against these mandatory criteria:
 5. **Test meaningfulness**: Do tests validate behavior, not just pass conditions?
 6. **Test sufficiency**: Does coverage protect against regressions?
 7. **Test execution via tools**: Implementors must use `run_tests` / `get_test_results` (not raw `npm test` terminal commands). If `tests_run` contains bare `npm test`, flag it — the implementor should be using the testing tools.
+8. **Test tier placement**: Tests should be in the correct tier directory based on their characteristics. For the classification decision tree and tier definitions, see `.orchestra/templates/prompts/_docs/test-tier-migration-guide.md`.
 
 ## 9.1 Spec-First Code Review Protocol (MANDATORY)
 

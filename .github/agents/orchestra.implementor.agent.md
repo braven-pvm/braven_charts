@@ -221,6 +221,20 @@ The testing tools are configured via `.agent-test-config.json` in the workspace 
 
 When you use `run_tests({ scope: "suite", target: "unit" })`, it resolves `"unit"` to the glob path defined in this config.
 
+### Test Tier Reference Guide
+
+For comprehensive guidance on test tier structure, classification rules, migration from flat test layouts, import path fixes, and monorepo conventions, refer to:
+
+`.orchestra/templates/prompts/_docs/test-tier-migration-guide.md`
+
+This guide covers:
+
+- The 5 standard test tiers (red, smoke, unit, integration, e2e) and when to use each
+- How to classify tests using the decision tree (smoke vs unit vs integration)
+- Setting up `.agent-test-config.json` for new or existing projects
+- Fixing import paths after moving test files between directories
+- Per-package tier naming for monorepos (e.g., `extension-unit`, `extension-smoke`)
+
 ---
 
 ## Role Identity
@@ -397,6 +411,8 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
    - **Task linking**: `// @orchestra-task: N` at file top - associates tests with task ID
    - **Test isolation**: Place the test file in `test/red/{tier}/` directory (e.g., `test/red/unit/`) - isolates red-phase tests from the standard suite
 
+   **⛔ CRITICAL: DO NOT place test files directly in `test/{tier}/`** — Red-phase tests placed outside `test/red/` will fail verification and corrupt the TDD workflow. The `test/red/` directory is the ONLY valid location for red-phase tests.
+
    **TypeScript/Vitest:**
 
    ```typescript
@@ -440,6 +456,7 @@ Some tasks have `tdd_red_phase: true` in their handover. These are **TDD red pha
    - ❌ Inline `tags:` parameters for TDD filtering
    - ❌ `it.skip`, `test.skip`, `xit` (skip markers)
    - ❌ Any test name manipulation for TDD — use `test/red/{tier}/` directories instead
+
 3. **Verify locally before signaling:**
 
    Use the testing tools to verify red-phase tests:
@@ -505,11 +522,11 @@ After your red phase task is complete:
 
 ### Red Phase Errors
 
-| Error                              | Meaning                                                             | Fix                                                                                     |
-| ---------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `TDD RED-PHASE WORKFLOW VIOLATION` | Task has `tdd_red_phase: true` but no test files found in test/red/ | Add `// @orchestra-task: N` at file top AND place test file in `test/red/{tier}/`        |
-| `TDD-RED FILE MISSING TASK-ID`     | File in test/red/ has no `// @orchestra-task: N` annotation         | Add `// @orchestra-task: N` at top of file (replace N with task ID)                      |
-| `SCAN_FAILED`                      | Error during automatic test scanning                                | Check test file syntax and directory structure                                           |
+| Error                              | Meaning                                                             | Fix                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `TDD RED-PHASE WORKFLOW VIOLATION` | Task has `tdd_red_phase: true` but no test files found in test/red/ | Add `// @orchestra-task: N` at file top AND place test file in `test/red/{tier}/` |
+| `TDD-RED FILE MISSING TASK-ID`     | File in test/red/ has no `// @orchestra-task: N` annotation         | Add `// @orchestra-task: N` at top of file (replace N with task ID)               |
+| `SCAN_FAILED`                      | Error during automatic test scanning                                | Check test file syntax and directory structure                                    |
 
 ### Test Configuration Troubleshooting
 

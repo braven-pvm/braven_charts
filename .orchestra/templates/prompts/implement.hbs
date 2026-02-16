@@ -28,6 +28,41 @@ Use your tools to implement this task:
 ## Remember
 - Read ALL acceptance criteria before starting
 - Follow the handover specifications exactly
-- Test your implementation thoroughly
+- Test using `run_tests` — never run test commands directly in the terminal
+- Use `get_test_results` to check failures after a test run
 - Signal completion only when ALL criteria are met
 - You will be verified against criteria you cannot see
+
+{{#if task.tdd_red_phase}}
+
+---
+
+## 🔴 TDD RED-PHASE TASK — Special Rules
+
+This is a **TDD red-phase task**. You are writing tests that are **expected to fail**.
+
+### File Placement (MANDATORY)
+
+- **Place ALL test files in `test/red/{tier}/`** (e.g., `test/red/smoke/`, `test/red/unit/`)
+- **Add `// @orchestra-task: {{task.task_id}}` as the FIRST line** of each test file
+- ⛔ **NEVER place test files in `test/{tier}/` directly** — they MUST be in `test/red/{tier}/`
+- ⛔ **NEVER use tag-based markers** (`[tdd-red]` in describe names, `@Tags()` annotations)
+
+### Expected Behavior
+
+- Red-phase tests MUST **compile successfully** but **fail assertions**
+- A test that cannot compile (missing imports) is NOT a valid red-phase test
+- Create companion stub files if tests import classes/modules that don't exist yet
+
+### Verification
+
+```
+# Red tests should FAIL (inverted interpretation)
+run_tests({ scope: "red" })
+# → Shows: "Correctly failing: N, Unexpectedly passing: 0"
+
+# All OTHER tests should PASS (no regressions)
+run_tests({ scope: "suite", target: "unit" })
+```
+
+{{/if}}

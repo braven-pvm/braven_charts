@@ -1,4 +1,4 @@
-# braven_charts_v2.0 Development Guidelines
+﻿# braven_charts_v2.0 Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2025-10-04
 
@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-04
 - Session-local only (no persistence in V1) (003-agentic-charts)
 - Dart 3.0+, Flutter SDK 3.10.0+ + `braven_chart_plus` (path: ../../), `anthropic_sdk_dart: ^0.2.0`, `uuid: ^4.0.0`, `equatable: ^2.0.5`, `meta: ^1.11.0`, `async: ^2.11.0`, `collection: ^1.18.0` (004-braven-agent-package)
 - N/A (session-local only, no persistence in V1) (004-braven-agent-package)
+- Dart >=3.9.0 <4.0.0, Flutter SDK >=3.35.0 + Flutter standard libraries (dart:ui, dart:math), `equatable: ^2.0.8` for model equality; no new external packages required (006-segment-area-analysis)
+- N/A (stateless — data provided by caller, analysis is point-in-time) (006-segment-area-analysis)
 
 - Dart 3.10.0-227.0.dev, Flutter SDK 3.38.6 + Standard Flutter libraries (dart:ui, flutter/painting.dart), NO external packages (017-x-axis-unification)
 
@@ -42,9 +44,9 @@ tests/
 Dart 3.0+ (3.10.0-227.0.dev), Flutter SDK 3.37.0-1.0.pre-216: Follow standard conventions
 
 ## Recent Changes
+- 006-segment-area-analysis: Added Dart >=3.9.0 <4.0.0, Flutter SDK >=3.35.0 + Flutter standard libraries (dart:ui, dart:math), `equatable: ^2.0.8` for model equality; no new external packages required
 - 004-braven-agent-package: Added Dart 3.0+, Flutter SDK 3.10.0+ + `braven_chart_plus` (path: ../../), `anthropic_sdk_dart: ^0.2.0`, `uuid: ^4.0.0`, `equatable: ^2.0.5`, `meta: ^1.11.0`, `async: ^2.11.0`, `collection: ^1.18.0`
 - 003-agentic-charts: Added Dart 3.10+, Flutter SDK 3.38.6 + `anthropic_sdk_dart`, `braven_data`, `braven_charts`, `http`, `uuid`
-- 002-multi-series-rendering-fix: Added Dart 3.0+, Flutter SDK 3.10.0+ + Flutter standard libraries (dart:ui, dart:math), no external packages for core rendering
 
 
 

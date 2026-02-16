@@ -37,7 +37,8 @@ The orchestrator found specific issues with your implementation. You must:
 - Read the entire feedback document carefully
 - Understand what failed and why
 - Address EVERY issue mentioned in the feedback
-- Test your fixes thoroughly before re-signaling
+- Test your fixes using `run_tests({ scope: "failed" })` then `run_tests({ scope: "related" })`
+- Use `get_test_results({ format: "failures" })` to verify all issues are resolved before re-signaling
 - Remember you are still verified against criteria you cannot see
 
 Do not skip any feedback items. Incomplete fixes will result in another FAIL.
