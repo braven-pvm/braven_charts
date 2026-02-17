@@ -16,9 +16,9 @@ void main() {
   // ===========================================================================
   group('RegionAnalyzer.filterPointsInRange', () {
     // -------------------------------------------------------------------------
-    // Sorted data — binary-search fast-path
+    // Sorted data — binary-search fast-path (isSorted: true, the default)
     // -------------------------------------------------------------------------
-    group('sorted data (binary search path)', () {
+    group('sorted data (binary search path, isSorted: true)', () {
       test('returns points within range for sorted ascending data', () {
         // Arrange
         final points = [
@@ -34,9 +34,9 @@ void main() {
           const ChartDataPoint(x: 10.0, y: 100.0),
         ];
 
-        // Act
+        // Act — isSorted defaults to true, uses binary search
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 3.0,
           endX: 7.0,
         );
@@ -59,11 +59,12 @@ void main() {
           const ChartDataPoint(x: 5.0, y: 500.0),
         ];
 
-        // Act
+        // Act — explicit isSorted: true
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 2.0,
           endX: 4.0,
+          isSorted: true,
         );
 
         // Assert
@@ -75,9 +76,9 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // Unsorted data — linear-scan fallback
+    // Unsorted data — linear-scan fallback (isSorted: false)
     // -------------------------------------------------------------------------
-    group('unsorted data (linear scan fallback)', () {
+    group('unsorted data (linear scan fallback, isSorted: false)', () {
       test('returns points within range for unsorted data', () {
         // Arrange — data intentionally out of order
         final points = [
@@ -93,11 +94,12 @@ void main() {
           const ChartDataPoint(x: 10.0, y: 100.0),
         ];
 
-        // Act
+        // Act — explicit isSorted: false forces linear scan
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 3.0,
           endX: 7.0,
+          isSorted: false,
         );
 
         // Assert — should contain same 5 points regardless of order
@@ -108,8 +110,8 @@ void main() {
         );
       });
 
-      test('returns same results as sorted path would', () {
-        // Arrange — descending order triggers unsorted fallback
+      test('returns same results as sorted path for equivalent data', () {
+        // Arrange — descending order, must use isSorted: false
         final unsortedPoints = [
           const ChartDataPoint(x: 10.0, y: 100.0),
           const ChartDataPoint(x: 7.0, y: 70.0),
@@ -120,9 +122,10 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: unsortedPoints,
+          unsortedPoints,
           startX: 3.0,
           endX: 7.0,
+          isSorted: false,
         );
 
         // Assert — all points with x in [3.0, 7.0]
@@ -145,7 +148,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 2.0,
           endX: 5.0,
         );
@@ -164,7 +167,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 0.0,
           endX: 2.0,
         );
@@ -187,7 +190,7 @@ void main() {
 
           // Act
           final result = analyzer.filterPointsInRange(
-            points: points,
+            points,
             startX: 2.0,
             endX: 4.0,
           );
@@ -210,7 +213,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 0.0,
           endX: 10.0,
         );
@@ -238,7 +241,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 3.0,
           endX: 5.0,
         );
@@ -260,7 +263,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 3.0,
           endX: 5.0,
         );
@@ -287,7 +290,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 3.0,
           endX: 3.0,
         );
@@ -308,7 +311,7 @@ void main() {
 
         // Act — query at x=2.0 where no point exists
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 2.0,
           endX: 2.0,
         );
@@ -332,7 +335,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 1.0,
           endX: 4.0,
         );
@@ -351,7 +354,7 @@ void main() {
 
         // Act
         final result = analyzer.filterPointsInRange(
-          points: points,
+          points,
           startX: 10.0,
           endX: 20.0,
         );
@@ -373,7 +376,7 @@ void main() {
 
           // Act — query x=4.0 to x=6.0 falls in the gap
           final result = analyzer.filterPointsInRange(
-            points: points,
+            points,
             startX: 4.0,
             endX: 6.0,
           );
@@ -398,7 +401,7 @@ void main() {
           endX: 8.0,
           label: 'Test Range',
         );
-        final seriesData = <String, List<ChartDataPoint>>{
+        final allSeriesData = <String, List<ChartDataPoint>>{
           'series-a': [
             const ChartDataPoint(x: 1.0, y: 10.0),
             const ChartDataPoint(x: 3.0, y: 30.0),
@@ -408,10 +411,10 @@ void main() {
           ],
         };
 
-        // Act
+        // Act — positional args per spec contract
         final region = analyzer.regionFromAnnotation(
-          annotation: annotation,
-          seriesData: seriesData,
+          annotation,
+          allSeriesData,
         );
 
         // Assert
@@ -428,7 +431,7 @@ void main() {
           startX: 3.0,
           endX: 7.0,
         );
-        final seriesData = <String, List<ChartDataPoint>>{
+        final allSeriesData = <String, List<ChartDataPoint>>{
           'power': [
             const ChartDataPoint(x: 1.0, y: 100.0),
             const ChartDataPoint(x: 3.0, y: 300.0),
@@ -446,8 +449,8 @@ void main() {
 
         // Act
         final region = analyzer.regionFromAnnotation(
-          annotation: annotation,
-          seriesData: seriesData,
+          annotation,
+          allSeriesData,
         );
 
         // Assert — power series: x=3,5,7 (3 points in range)
@@ -474,7 +477,7 @@ void main() {
           startX: 3.0,
           endX: 5.0,
         );
-        final seriesData = <String, List<ChartDataPoint>>{
+        final allSeriesData = <String, List<ChartDataPoint>>{
           'in-range': [
             const ChartDataPoint(x: 3.0, y: 30.0),
             const ChartDataPoint(x: 4.0, y: 40.0),
@@ -488,8 +491,8 @@ void main() {
 
         // Act
         final region = analyzer.regionFromAnnotation(
-          annotation: annotation,
-          seriesData: seriesData,
+          annotation,
+          allSeriesData,
         );
 
         // Assert — only 'in-range' series should be in result
@@ -501,7 +504,7 @@ void main() {
 
     group('handles empty series gracefully', () {
       test(
-        'returns DataRegion with empty seriesData when all series are empty',
+        'returns DataRegion with empty seriesData when no series provided',
         () {
           // Arrange
           final annotation = RangeAnnotation(
@@ -509,12 +512,12 @@ void main() {
             startX: 3.0,
             endX: 5.0,
           );
-          final seriesData = <String, List<ChartDataPoint>>{};
+          final allSeriesData = <String, List<ChartDataPoint>>{};
 
           // Act
           final region = analyzer.regionFromAnnotation(
-            annotation: annotation,
-            seriesData: seriesData,
+            annotation,
+            allSeriesData,
           );
 
           // Assert
@@ -532,14 +535,14 @@ void main() {
             startX: 1.0,
             endX: 10.0,
           );
-          final seriesData = <String, List<ChartDataPoint>>{
+          final allSeriesData = <String, List<ChartDataPoint>>{
             'empty-series': <ChartDataPoint>[],
           };
 
           // Act
           final region = analyzer.regionFromAnnotation(
-            annotation: annotation,
-            seriesData: seriesData,
+            annotation,
+            allSeriesData,
           );
 
           // Assert — empty series should be excluded from result
@@ -554,7 +557,7 @@ void main() {
           startX: 2.0,
           endX: 6.0,
         );
-        final seriesData = <String, List<ChartDataPoint>>{
+        final allSeriesData = <String, List<ChartDataPoint>>{
           'has-data': [
             const ChartDataPoint(x: 3.0, y: 30.0),
             const ChartDataPoint(x: 5.0, y: 50.0),
@@ -565,8 +568,8 @@ void main() {
 
         // Act
         final region = analyzer.regionFromAnnotation(
-          annotation: annotation,
-          seriesData: seriesData,
+          annotation,
+          allSeriesData,
         );
 
         // Assert — only 'has-data' should remain

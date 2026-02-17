@@ -31,8 +31,8 @@ import 'models/chart_type.dart';
 import 'models/data_range.dart';
 import 'models/enums.dart';
 import 'models/grid_config.dart';
-import 'models/interaction_config.dart';
-import 'models/legend_style.dart';
+import 'models/interaction_callbacks.dart';
+import 'models/interaction_config.dart';import 'models/legend_style.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -116,10 +116,10 @@ class BravenChartPlus extends StatefulWidget {
     this.onSeriesSelected,
     this.onAnnotationTap,
     this.onAnnotationDragged,
+    this.onRegionSelected,
     // ==================== MULTI-AXIS PARAMETERS ====================
     this.normalizationMode,
   });
-
   // ==================== FACTORY CONSTRUCTORS ====================
 
   /// Creates a chart from a simple list of y-values.
@@ -659,8 +659,15 @@ class BravenChartPlus extends StatefulWidget {
   final void Function(ChartAnnotation annotation, Offset newPosition)?
   onAnnotationDragged;
 
-  // ==================== MULTI-AXIS PARAMETERS ====================
+  /// Fired when a data region is selected or deselected.
+  ///
+  /// Triggers on: range annotation tap (vertical only).
+  /// Fires with null when the region is cleared.
+  /// Existing [onAnnotationTap] continues to fire as before —
+  /// [onRegionSelected] fires additionally for vertical RangeAnnotations.
+  final RegionSelectedCallback? onRegionSelected;
 
+  // ==================== MULTI-AXIS PARAMETERS ====================
   /// Y-axis configurations for multi-axis mode.
   ///
   /// When provided, enables multi-axis mode where each series can have
