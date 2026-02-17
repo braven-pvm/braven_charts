@@ -98,106 +98,124 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
     if (_selectedDemo == 0) {
       // Athletic demo: Power thresholds and zones
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'power_threshold_low',
-        axis: AnnotationAxis.y,
-        value: 200,
-        label: 'Zone 2',
-        lineColor: Colors.green.withValues(alpha: 0.7),
-        labelPosition: AnnotationLabelPosition.bottomLeft,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'power_threshold_high',
-        axis: AnnotationAxis.y,
-        value: 300,
-        label: 'Zone 4',
-        lineColor: Colors.red.withValues(alpha: 0.7),
-        labelPosition: AnnotationLabelPosition.topRight,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
-      _annotationController.addAnnotation(RangeAnnotation(
-        id: 'optimal_zone',
-        startX: 50,
-        endX: 150,
-        label: 'Optimal Window',
-        fillColor: Colors.blue.withValues(alpha: 0.15),
-        borderColor: Colors.blue.withValues(alpha: 0.5),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-        snapToValue: _snapToValue,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'power_threshold_low',
+          axis: AnnotationAxis.y,
+          value: 200,
+          label: 'Zone 2',
+          lineColor: Colors.green.withValues(alpha: 0.7),
+          labelPosition: AnnotationLabelPosition.bottomLeft,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'power_threshold_high',
+          axis: AnnotationAxis.y,
+          value: 300,
+          label: 'Zone 4',
+          lineColor: Colors.red.withValues(alpha: 0.7),
+          labelPosition: AnnotationLabelPosition.topRight,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
+      _annotationController.addAnnotation(
+        RangeAnnotation(
+          id: 'optimal_zone',
+          startX: 50,
+          endX: 150,
+          label: 'Optimal Window',
+          fillColor: Colors.blue.withValues(alpha: 0.15),
+          borderColor: Colors.blue.withValues(alpha: 0.5),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+          snapToValue: _snapToValue,
+        ),
+      );
     } else if (_selectedDemo == 1) {
       // Scientific demo: Temperature thresholds
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'temp_cold',
-        axis: AnnotationAxis.y,
-        value: 15,
-        label: 'Cold',
-        lineColor: Colors.blue.withValues(alpha: 0.7),
-        labelPosition: AnnotationLabelPosition.bottomLeft,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'temp_hot',
-        axis: AnnotationAxis.y,
-        value: 25,
-        label: 'Hot',
-        lineColor: Colors.orange.withValues(alpha: 0.7),
-        labelPosition: AnnotationLabelPosition.topRight,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'temp_cold',
+          axis: AnnotationAxis.y,
+          value: 15,
+          label: 'Cold',
+          lineColor: Colors.blue.withValues(alpha: 0.7),
+          labelPosition: AnnotationLabelPosition.bottomLeft,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'temp_hot',
+          axis: AnnotationAxis.y,
+          value: 25,
+          label: 'Hot',
+          lineColor: Colors.orange.withValues(alpha: 0.7),
+          labelPosition: AnnotationLabelPosition.topRight,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
     } else if (_selectedDemo == 2) {
       // Test demo: Range highlight
-      _annotationController.addAnnotation(RangeAnnotation(
-        id: 'test_range',
-        startX: 15,
-        endX: 35,
-        label: 'Test Window',
-        fillColor: Colors.purple.withValues(alpha: 0.15),
-        borderColor: Colors.purple.withValues(alpha: 0.5),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-        snapToValue: _snapToValue,
-      ));
+      _annotationController.addAnnotation(
+        RangeAnnotation(
+          id: 'test_range',
+          startX: 15,
+          endX: 35,
+          label: 'Test Window',
+          fillColor: Colors.purple.withValues(alpha: 0.15),
+          borderColor: Colors.purple.withValues(alpha: 0.5),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+          snapToValue: _snapToValue,
+        ),
+      );
     } else {
       // VO2 demo: VT1/VT2 thresholds
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'vt1_threshold',
-        axis: AnnotationAxis.x,
-        value: 7.0,
-        label: 'VT1',
-        lineColor: Colors.green.withValues(alpha: 0.7),
-        lineWidth: 1.5,
-        elevation: 4.0, // Adds subtle glow in default state
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'vt2_threshold',
-        axis: AnnotationAxis.x,
-        value: 12.5,
-        label: 'VT2',
-        lineColor: Colors.red.withValues(alpha: 0.7),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
-      _annotationController.addAnnotation(RangeAnnotation(
-        id: 'exercise_zone',
-        startX: 0.0,
-        endX: 5.0,
-        label: 'Warm-up',
-        fillColor: Colors.grey.withValues(alpha: 0.2),
-        labelPosition: AnnotationLabelPosition.bottomLeft,
-        borderColor: Colors.red,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-        snapToValue: _snapToValue,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'vt1_threshold',
+          axis: AnnotationAxis.x,
+          value: 7.0,
+          label: 'VT1',
+          lineColor: Colors.green.withValues(alpha: 0.7),
+          lineWidth: 1.5,
+          elevation: 4.0, // Adds subtle glow in default state
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'vt2_threshold',
+          axis: AnnotationAxis.x,
+          value: 12.5,
+          label: 'VT2',
+          lineColor: Colors.red.withValues(alpha: 0.7),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
+      _annotationController.addAnnotation(
+        RangeAnnotation(
+          id: 'exercise_zone',
+          startX: 0.0,
+          endX: 5.0,
+          label: 'Warm-up',
+          fillColor: Colors.grey.withValues(alpha: 0.2),
+          labelPosition: AnnotationLabelPosition.bottomLeft,
+          borderColor: Colors.red,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+          snapToValue: _snapToValue,
+        ),
+      );
     }
   }
 
@@ -234,10 +252,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             labelBuilder: (v) => v == 0
                 ? 'Athletic'
                 : v == 1
-                    ? 'Scientific'
-                    : v == 2
-                        ? 'Test'
-                        : 'VO2 Test',
+                ? 'Scientific'
+                : v == 2
+                ? 'Test'
+                : 'VO2 Test',
             onChanged: (v) {
               setState(() => _selectedDemo = v);
               _rebuildAnnotations();
@@ -248,10 +266,10 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             message: _selectedDemo == 0
                 ? 'Power, Heart Rate, and Cadence on different scales'
                 : _selectedDemo == 1
-                    ? 'Temperature and Pressure with different units'
-                    : _selectedDemo == 2
-                        ? 'Test: Series 1 (0-100) vs Series 2 (250-1500) vs Series 3 (500-800)'
-                        : 'VO2 Max Test: Stepped power targets with gas exchange metrics',
+                ? 'Temperature and Pressure with different units'
+                : _selectedDemo == 2
+                ? 'Test: Series 1 (0-100) vs Series 2 (250-1500) vs Series 3 (500-800)'
+                : 'VO2 Max Test: Stepped power targets with gas exchange metrics',
           ),
         ],
       ),
@@ -342,8 +360,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Athletic Performance',
       subtitle: 'Power (W), Heart Rate (bpm), Cadence (rpm)',
       child: BravenChartPlus(
-        key:
-            const ValueKey('athletic'), // Prevent RenderBox reuse across charts
+        key: const ValueKey(
+          'athletic',
+        ), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'power',
@@ -424,7 +443,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       subtitle: 'Temperature (°C) and Pressure (hPa)',
       child: BravenChartPlus(
         key: const ValueKey(
-            'scientific'), // Prevent RenderBox reuse across charts
+          'scientific',
+        ), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'temperature',
@@ -477,9 +497,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             enabled: true,
             displayMode: CrosshairDisplayMode.tracking,
           ),
-          tooltip: const TooltipConfig(
-            enabled: true,
-          ),
+          tooltip: const TooltipConfig(enabled: true),
         ),
         annotationController: _annotationController,
         interactiveAnnotations: _interactiveAnnotations,
@@ -870,7 +888,9 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       ChartDataPoint(x: 12.5, y: 300), // Jump to VO2 max phase 1 at minute 12.5
       ChartDataPoint(x: 12.5, y: 325), // Jump to VO2 max phase 1 at minute 12.5
       ChartDataPoint(
-          x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
+        x: 13.75,
+        y: 325,
+      ), // Jump to VO2 max phase 2 at minute 13.75
 
       ChartDataPoint(x: 15.0, y: 325), // End point (maintains last level)
     ];

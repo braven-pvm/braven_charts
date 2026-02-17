@@ -72,9 +72,11 @@ class ZoomPanState {
     this.allowOverscroll = false,
     this.isAnimating = false,
     this.animationDuration = const Duration(milliseconds: 300),
-  })  : assert(minZoomLevel > 0, 'minZoomLevel must be greater than 0'),
-        assert(maxZoomLevel > minZoomLevel,
-            'maxZoomLevel must be greater than minZoomLevel');
+  }) : assert(minZoomLevel > 0, 'minZoomLevel must be greater than 0'),
+       assert(
+         maxZoomLevel > minZoomLevel,
+         'maxZoomLevel must be greater than minZoomLevel',
+       );
 
   /// Creates an initial zoom/pan state with default values.
   ///
@@ -82,16 +84,16 @@ class ZoomPanState {
   /// Requires the original data bounds to initialize visible bounds.
   /// If [dataBounds] is not provided, defaults to Rect.zero.
   const ZoomPanState.initial([Rect dataBounds = Rect.zero])
-      : zoomLevelX = 1.0,
-        zoomLevelY = 1.0,
-        panOffset = Offset.zero,
-        visibleDataBounds = dataBounds,
-        originalDataBounds = dataBounds,
-        minZoomLevel = 0.5,
-        maxZoomLevel = 10.0,
-        allowOverscroll = false,
-        isAnimating = false,
-        animationDuration = const Duration(milliseconds: 300);
+    : zoomLevelX = 1.0,
+      zoomLevelY = 1.0,
+      panOffset = Offset.zero,
+      visibleDataBounds = dataBounds,
+      originalDataBounds = dataBounds,
+      minZoomLevel = 0.5,
+      maxZoomLevel = 10.0,
+      allowOverscroll = false,
+      isAnimating = false,
+      animationDuration = const Duration(milliseconds: 300);
 
   /// The current horizontal zoom level.
   ///
@@ -175,10 +177,7 @@ class ZoomPanState {
     return {
       'zoomLevelX': zoomLevelX,
       'zoomLevelY': zoomLevelY,
-      'panOffset': {
-        'dx': panOffset.dx,
-        'dy': panOffset.dy,
-      },
+      'panOffset': {'dx': panOffset.dx, 'dy': panOffset.dy},
       'visibleDataBounds': {
         'left': visibleDataBounds.left,
         'top': visibleDataBounds.top,

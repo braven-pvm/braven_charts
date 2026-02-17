@@ -1,14 +1,10 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Tests for SeriesCacheManager module
 
-import 'dart:ui' as ui;
-
+import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/rendering/modules/series_cache_manager.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:braven_charts/src/coordinates/chart_transform.dart';
-import 'package:braven_charts/src/interaction/core/chart_element.dart';
-import 'package:braven_charts/src/rendering/modules/series_cache_manager.dart';
 
 void main() {
   group('SeriesCacheManager', () {
@@ -151,10 +147,7 @@ void main() {
 
       test('isValid returns false when no picture exists', () {
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isFalse,
         );
       });
@@ -170,10 +163,7 @@ void main() {
         cacheManager.invalidate();
 
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isFalse,
         );
       });
@@ -187,10 +177,7 @@ void main() {
         );
 
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: transform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: transform),
           isTrue,
         );
       });
@@ -213,10 +200,7 @@ void main() {
         );
 
         expect(
-          cacheManager.isValid(
-            elements: [],
-            currentTransform: newTransform,
-          ),
+          cacheManager.isValid(elements: [], currentTransform: newTransform),
           isFalse,
         );
       });

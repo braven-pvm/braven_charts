@@ -23,8 +23,8 @@ class TestAnnotationDragDelegate implements AnnotationDragDelegate {
     this.transform,
     List<ChartElement>? elements,
     List<ChartSeries>? series,
-  })  : elements = elements ?? [],
-        series = series ?? [];
+  }) : elements = elements ?? [],
+       series = series ?? [];
 
   @override
   ChartTransform? transform;
@@ -51,7 +51,9 @@ class TestAnnotationDragDelegate implements AnnotationDragDelegate {
 
   @override
   void notifyAnnotationChanged(
-      String annotationId, ChartAnnotation updatedAnnotation) {
+    String annotationId,
+    ChartAnnotation updatedAnnotation,
+  ) {
     annotationChanges.add((annotationId, updatedAnnotation));
   }
 
@@ -178,12 +180,7 @@ PinAnnotation createPinAnnotation({
   double y = 50,
   bool allowDragging = true,
 }) {
-  return PinAnnotation(
-    id: id,
-    x: x,
-    y: y,
-    allowDragging: allowDragging,
-  );
+  return PinAnnotation(id: id, x: x, y: y, allowDragging: allowDragging);
 }
 
 PinAnnotationElement createPinElement(
@@ -206,7 +203,8 @@ ChartSeries createTestSeries({
     id: id,
     name: 'Test Series',
     color: const Color(0xFF0000FF),
-    points: points ??
+    points:
+        points ??
         [
           const ChartDataPoint(x: 0, y: 0),
           const ChartDataPoint(x: 25, y: 50),
@@ -256,10 +254,7 @@ void main() {
         element = createRangeElement(transform);
         // Add a series element for transform access
         delegate.elements = [
-          SeriesElement(
-            series: createTestSeries(),
-            transform: transform,
-          ),
+          SeriesElement(series: createTestSeries(), transform: transform),
         ];
       });
 
@@ -292,8 +287,10 @@ void main() {
 
       test('performResize respects minimum size constraint', () {
         handler.startResize(element, ResizeDirection.right);
-        final startPosition =
-            Offset(element.bounds.right, element.bounds.center.dy);
+        final startPosition = Offset(
+          element.bounds.right,
+          element.bounds.center.dy,
+        );
 
         // Try to shrink way below minimum
         handler.performResize(
@@ -318,10 +315,14 @@ void main() {
 
       test('finalizeResize returns updated annotation', () {
         handler.startResize(element, ResizeDirection.right);
-        final startPosition =
-            Offset(element.bounds.right, element.bounds.center.dy);
+        final startPosition = Offset(
+          element.bounds.right,
+          element.bounds.center.dy,
+        );
         handler.performResize(
-            startPosition + const Offset(50, 0), startPosition);
+          startPosition + const Offset(50, 0),
+          startPosition,
+        );
 
         final result = handler.finalizeResize();
 
@@ -343,10 +344,7 @@ void main() {
       setUp(() {
         element = createRangeElement(transform);
         delegate.elements = [
-          SeriesElement(
-            series: createTestSeries(),
-            transform: transform,
-          ),
+          SeriesElement(series: createTestSeries(), transform: transform),
         ];
       });
 
@@ -441,7 +439,9 @@ void main() {
 
         expect(element.tempValue, isNotNull);
         expect(
-            element.tempValue!, greaterThan(50)); // Moving up increases Y value
+          element.tempValue!,
+          greaterThan(50),
+        ); // Moving up increases Y value
       });
 
       test('finalizeThresholdMove returns updated annotation', () {

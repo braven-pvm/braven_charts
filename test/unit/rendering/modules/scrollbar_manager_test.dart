@@ -224,31 +224,33 @@ void main() {
       });
 
       test(
-          'setScrollbarTheme with autoHide true respects viewport modification',
-          () {
-        // First set up a modified viewport
-        delegate.setTransform(defaultTransform.copyWith(dataXMin: 10));
-        manager.setScrollbarsVisible(false);
+        'setScrollbarTheme with autoHide true respects viewport modification',
+        () {
+          // First set up a modified viewport
+          delegate.setTransform(defaultTransform.copyWith(dataXMin: 10));
+          manager.setScrollbarsVisible(false);
 
-        final theme = ScrollbarConfig.defaultLight.copyWith(autoHide: true);
-        manager.setScrollbarTheme(theme);
+          final theme = ScrollbarConfig.defaultLight.copyWith(autoHide: true);
+          manager.setScrollbarTheme(theme);
 
-        // Should be visible because viewport is modified
-        expect(manager.scrollbarsVisible, isTrue);
-      });
+          // Should be visible because viewport is modified
+          expect(manager.scrollbarsVisible, isTrue);
+        },
+      );
 
       test(
-          'setScrollbarTheme with autoHide true hides if viewport not modified',
-          () {
-        // Viewport matches original - not modified
-        manager.setScrollbarsVisible(true);
+        'setScrollbarTheme with autoHide true hides if viewport not modified',
+        () {
+          // Viewport matches original - not modified
+          manager.setScrollbarsVisible(true);
 
-        final theme = ScrollbarConfig.defaultLight.copyWith(autoHide: true);
-        manager.setScrollbarTheme(theme);
+          final theme = ScrollbarConfig.defaultLight.copyWith(autoHide: true);
+          manager.setScrollbarTheme(theme);
 
-        // Should be hidden because viewport is not modified
-        expect(manager.scrollbarsVisible, isFalse);
-      });
+          // Should be hidden because viewport is not modified
+          expect(manager.scrollbarsVisible, isFalse);
+        },
+      );
     });
 
     group('Hover detection', () {
@@ -316,66 +318,56 @@ void main() {
       });
 
       test('returns false when position is outside scrollbars', () {
-        var claimed = false;
-        var canceled = false;
         final result = manager.hitTestScrollbars(
           const Offset(200, 200),
           1, // kPrimaryMouseButton
           isModal: false,
-          onClaimMode: () => claimed = true,
-          cancelAutoScroll: () => canceled = true,
+          onClaimMode: () {},
+          cancelAutoScroll: () {},
         );
         expect(result, isFalse);
       });
 
       test('returns true when position is on X scrollbar', () {
-        var claimed = false;
-        var canceled = false;
         final result = manager.hitTestScrollbars(
           const Offset(200, 356),
           1, // kPrimaryMouseButton
           isModal: false,
-          onClaimMode: () => claimed = true,
-          cancelAutoScroll: () => canceled = true,
+          onClaimMode: () {},
+          cancelAutoScroll: () {},
         );
         expect(result, isTrue);
       });
 
       test('returns true when position is on Y scrollbar', () {
-        var claimed = false;
-        var canceled = false;
         final result = manager.hitTestScrollbars(
           const Offset(456, 200),
           1, // kPrimaryMouseButton
           isModal: false,
-          onClaimMode: () => claimed = true,
-          cancelAutoScroll: () => canceled = true,
+          onClaimMode: () {},
+          cancelAutoScroll: () {},
         );
         expect(result, isTrue);
       });
 
       test('returns false when modal mode is active', () {
-        var claimed = false;
-        var canceled = false;
         final result = manager.hitTestScrollbars(
           const Offset(200, 356),
           1, // kPrimaryMouseButton
           isModal: true, // Modal mode blocks scrollbar interaction
-          onClaimMode: () => claimed = true,
-          cancelAutoScroll: () => canceled = true,
+          onClaimMode: () {},
+          cancelAutoScroll: () {},
         );
         expect(result, isFalse);
       });
 
       test('returns false for non-primary mouse button', () {
-        var claimed = false;
-        var canceled = false;
         final result = manager.hitTestScrollbars(
           const Offset(200, 356),
           2, // Secondary button
           isModal: false,
-          onClaimMode: () => claimed = true,
-          cancelAutoScroll: () => canceled = true,
+          onClaimMode: () {},
+          cancelAutoScroll: () {},
         );
         expect(result, isFalse);
       });
@@ -416,12 +408,11 @@ void main() {
       });
 
       test('hitTestScrollbars starts drag on X scrollbar', () {
-        var claimed = false;
         manager.hitTestScrollbars(
           const Offset(200, 356),
           1,
           isModal: false,
-          onClaimMode: () => claimed = true,
+          onClaimMode: () {},
           cancelAutoScroll: () {},
         );
 
@@ -430,12 +421,11 @@ void main() {
       });
 
       test('hitTestScrollbars starts drag on Y scrollbar', () {
-        var claimed = false;
         manager.hitTestScrollbars(
           const Offset(456, 200),
           1,
           isModal: false,
-          onClaimMode: () => claimed = true,
+          onClaimMode: () {},
           cancelAutoScroll: () {},
         );
 
@@ -486,44 +476,36 @@ void main() {
         // Should not throw and should return early
         // We can't easily test Canvas calls, but verify no exceptions
         expect(
-            () => manager.paint(
-                  _FakeCanvas(),
-                  const Size(500, 400),
-                ),
-            returnsNormally);
+          () => manager.paint(_FakeCanvas(), const Size(500, 400)),
+          returnsNormally,
+        );
       });
 
       test('does not paint when no scrollbars enabled', () {
         manager.setShowXScrollbar(false);
         manager.setShowYScrollbar(false);
         expect(
-            () => manager.paint(
-                  _FakeCanvas(),
-                  const Size(500, 400),
-                ),
-            returnsNormally);
+          () => manager.paint(_FakeCanvas(), const Size(500, 400)),
+          returnsNormally,
+        );
       });
 
       test('paints when X scrollbar enabled and visible', () {
         manager.setShowXScrollbar(true);
         manager.setScrollbarRects(xRect: const Rect.fromLTWH(50, 350, 400, 12));
         expect(
-            () => manager.paint(
-                  _FakeCanvas(),
-                  const Size(500, 400),
-                ),
-            returnsNormally);
+          () => manager.paint(_FakeCanvas(), const Size(500, 400)),
+          returnsNormally,
+        );
       });
 
       test('paints when Y scrollbar enabled and visible', () {
         manager.setShowYScrollbar(true);
         manager.setScrollbarRects(yRect: const Rect.fromLTWH(450, 50, 12, 300));
         expect(
-            () => manager.paint(
-                  _FakeCanvas(),
-                  const Size(500, 400),
-                ),
-            returnsNormally);
+          () => manager.paint(_FakeCanvas(), const Size(500, 400)),
+          returnsNormally,
+        );
       });
     });
 

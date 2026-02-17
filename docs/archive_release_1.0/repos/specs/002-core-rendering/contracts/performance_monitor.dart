@@ -205,16 +205,16 @@ class MockPerformanceMonitor implements PerformanceMonitor {
 
   final PerformanceMetrics _mockMetrics;
 
-  MockPerformanceMonitor({
-    PerformanceMetrics? mockMetrics,
-  }) : _mockMetrics = mockMetrics ??
-            const PerformanceMetrics(
-              frameTime: Duration(microseconds: 7000),
-              averageFrameTime: Duration(microseconds: 7500),
-              p99FrameTime: Duration(microseconds: 15000),
-              jankCount: 0,
-              poolHitRate: 0.95,
-            );
+  MockPerformanceMonitor({PerformanceMetrics? mockMetrics})
+    : _mockMetrics =
+          mockMetrics ??
+          const PerformanceMetrics(
+            frameTime: Duration(microseconds: 7000),
+            averageFrameTime: Duration(microseconds: 7500),
+            p99FrameTime: Duration(microseconds: 15000),
+            jankCount: 0,
+            poolHitRate: 0.95,
+          );
 
   @override
   int get maxHistorySize => 120;

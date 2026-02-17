@@ -148,8 +148,14 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys,
-      enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(
+    enabled,
+    panStep,
+    zoomStep,
+    enableArrowKeys,
+    enablePlusMinusKeys,
+    enableHomeEndKeys,
+  );
 }
 
 /// Comprehensive interaction configuration for charts.
@@ -269,18 +275,18 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.all() => const InteractionConfig(
-        enabled: true,
-        crosshair: CrosshairConfig(enabled: true),
-        tooltip: TooltipConfig(enabled: true),
-        gesture: GestureConfig(),
-        keyboard: KeyboardConfig(enabled: true),
-        enableZoom: true,
-        enablePan: true,
-        enableSelection: true,
-        showFocusBorder: true,
-        showXScrollbar: true,
-        showYScrollbar: true,
-      );
+    enabled: true,
+    crosshair: CrosshairConfig(enabled: true),
+    tooltip: TooltipConfig(enabled: true),
+    gesture: GestureConfig(),
+    keyboard: KeyboardConfig(enabled: true),
+    enableZoom: true,
+    enablePan: true,
+    enableSelection: true,
+    showFocusBorder: true,
+    showXScrollbar: true,
+    showYScrollbar: true,
+  );
 
   /// Creates a configuration with all interaction features disabled.
   ///
@@ -295,18 +301,18 @@ class InteractionConfig {
   /// )
   /// ```
   factory InteractionConfig.none() => const InteractionConfig(
-        enabled: false,
-        crosshair: CrosshairConfig(enabled: false),
-        tooltip: TooltipConfig(enabled: false),
-        gesture: GestureConfig(),
-        keyboard: KeyboardConfig(enabled: false),
-        enableZoom: false,
-        enablePan: false,
-        enableSelection: false,
-        showFocusBorder: false,
-        showXScrollbar: false,
-        showYScrollbar: false,
-      );
+    enabled: false,
+    crosshair: CrosshairConfig(enabled: false),
+    tooltip: TooltipConfig(enabled: false),
+    gesture: GestureConfig(),
+    keyboard: KeyboardConfig(enabled: false),
+    enableZoom: false,
+    enablePan: false,
+    enableSelection: false,
+    showFocusBorder: false,
+    showXScrollbar: false,
+    showYScrollbar: false,
+  );
 
   /// Creates a default configuration (same as unnamed constructor).
   ///
@@ -559,16 +565,16 @@ class InteractionConfig {
 
   @override
   int get hashCode => Object.hash(
-        enabled,
-        crosshair,
-        tooltip,
-        gesture,
-        keyboard,
-        enableZoom,
-        enablePan,
-        enableSelection,
-        showFocusBorder,
-        showXScrollbar,
-        showYScrollbar,
-      );
+    enabled,
+    crosshair,
+    tooltip,
+    gesture,
+    keyboard,
+    enableZoom,
+    enablePan,
+    enableSelection,
+    showFocusBorder,
+    showXScrollbar,
+    showYScrollbar,
+  );
 }

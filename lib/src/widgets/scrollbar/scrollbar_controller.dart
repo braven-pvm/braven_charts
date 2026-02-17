@@ -456,19 +456,13 @@ class ScrollbarController {
       final heightShortfall = math.max(0.0, safeMin - safeHeight);
       final verticalPadding = heightShortfall / 2.0;
 
-      return EdgeInsets.symmetric(
-        horizontal: 0.0,
-        vertical: verticalPadding,
-      );
+      return EdgeInsets.symmetric(horizontal: 0.0, vertical: verticalPadding);
     } else {
       // Vertical scrollbar: ensure width meets minimum
       final widthShortfall = math.max(0.0, safeMin - safeWidth);
       final horizontalPadding = widthShortfall / 2.0;
 
-      return EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: 0.0,
-      );
+      return EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 0.0);
     }
   }
 }

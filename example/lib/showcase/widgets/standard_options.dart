@@ -184,9 +184,7 @@ class ChartCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -221,10 +219,7 @@ class ChartCard extends StatelessWidget {
               ),
             ),
           Expanded(
-            child: Padding(
-              padding: padding,
-              child: child,
-            ),
+            child: Padding(padding: padding, child: child),
           ),
         ],
       ),
@@ -312,10 +307,7 @@ class ChartPageLayout extends StatelessWidget {
 
         // Options panel
         if (optionsChildren.isNotEmpty)
-          OptionsPanel(
-            width: optionsPanelWidth,
-            children: optionsChildren,
-          ),
+          OptionsPanel(width: optionsPanelWidth, children: optionsChildren),
       ],
     );
   }
@@ -339,8 +331,9 @@ class StatusPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final bgColor =
         color ?? (highlighted ? Colors.green.shade50 : Colors.grey.shade100);
-    final borderColor =
-        highlighted ? Colors.green.shade300 : theme.dividerColor;
+    final borderColor = highlighted
+        ? Colors.green.shade300
+        : theme.dividerColor;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -371,10 +364,7 @@ class StatusPanel extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           item.label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(context).hintColor,
-          ),
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
         ),
       ],
     );
@@ -382,11 +372,7 @@ class StatusPanel extends StatelessWidget {
 }
 
 class StatusItem {
-  const StatusItem({
-    required this.label,
-    required this.value,
-    this.color,
-  });
+  const StatusItem({required this.label, required this.value, this.color});
 
   final String label;
   final String value;

@@ -199,8 +199,9 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -238,8 +239,9 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
       name: 'Styled Line',
       points: _data,
       color: Colors.blue,
-      interpolation:
-          _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
+      interpolation: _useBezier
+          ? LineInterpolation.bezier
+          : LineInterpolation.linear,
       strokeWidth: 2.5,
       showDataPointMarkers: _optionsController.showDataMarkers,
     );
@@ -285,8 +287,9 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
       name: 'Styled Area',
       points: _data,
       color: Colors.green,
-      interpolation:
-          _useBezier ? LineInterpolation.bezier : LineInterpolation.linear,
+      interpolation: _useBezier
+          ? LineInterpolation.bezier
+          : LineInterpolation.linear,
       strokeWidth: 2.5,
       fillOpacity: 0.3,
     );
@@ -310,10 +313,7 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
         }
         series = series.withSegmentColors(indices);
       case StylingMode.gradient:
-        series = series.withColorWhere(
-          (point) => point.y > 70,
-          Colors.red,
-        );
+        series = series.withColorWhere((point) => point.y > 70, Colors.red);
     }
 
     return series;
@@ -367,7 +367,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
           }
           if (color != null) {
             return point.copyWith(
-                pointStyle: PointStyle(color: color, size: size));
+              pointStyle: PointStyle(color: color, size: size),
+            );
           }
           return point;
         }).toList();
@@ -451,8 +452,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
 
     final styleType =
         (_chartType == ChartType.line || _chartType == ChartType.area)
-            ? 'segmentStyle'
-            : 'pointStyle';
+        ? 'segmentStyle'
+        : 'pointStyle';
 
     return '$modeDesc • Uses $styleType';
   }
@@ -460,8 +461,8 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
   Widget _buildStatusPanel() {
     final styleType =
         (_chartType == ChartType.line || _chartType == ChartType.area)
-            ? 'Segment'
-            : 'Point';
+        ? 'Segment'
+        : 'Point';
 
     return StatusPanel(
       items: [
@@ -471,23 +472,12 @@ class _SegmentStylingPageState extends State<SegmentStylingPage> {
               ? '${(_data.length / 4).floor()}'
               : '${_data.length}',
         ),
-        StatusItem(
-          label: 'Style Type',
-          value: '${styleType}Style',
-        ),
-        StatusItem(
-          label: 'Mode',
-          value: _stylingMode.name,
-        ),
+        StatusItem(label: 'Style Type', value: '${styleType}Style'),
+        StatusItem(label: 'Mode', value: _stylingMode.name),
       ],
     );
   }
 }
 
 /// Available styling modes for demonstration.
-enum StylingMode {
-  threshold,
-  range,
-  indices,
-  gradient,
-}
+enum StylingMode { threshold, range, indices, gradient }

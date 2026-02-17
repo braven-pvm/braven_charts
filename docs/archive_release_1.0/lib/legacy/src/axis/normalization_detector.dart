@@ -42,11 +42,7 @@ class SeriesRange {
   double get span => max - min;
 
   /// Creates a copy of this range with the given fields replaced.
-  SeriesRange copyWith({
-    String? seriesId,
-    double? min,
-    double? max,
-  }) {
+  SeriesRange copyWith({String? seriesId, double? min, double? max}) {
     return SeriesRange(
       seriesId: seriesId ?? this.seriesId,
       min: min ?? this.min,

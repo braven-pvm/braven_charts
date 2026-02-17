@@ -58,12 +58,4 @@ enum LineStyle {
 }
 
 /// Marker shapes (shared with scatter chart)
-enum MarkerShape {
-  circle,
-  square,
-  triangle,
-  diamond,
-  cross,
-  plus,
-  none,
-}
+enum MarkerShape { circle, square, triangle, diamond, cross, plus, none }

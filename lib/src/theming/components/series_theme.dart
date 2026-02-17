@@ -5,16 +5,7 @@
 import 'package:flutter/material.dart';
 
 /// Marker shapes for series data points.
-enum MarkerShape {
-  circle,
-  square,
-  triangle,
-  diamond,
-  cross,
-  plus,
-  star,
-  none,
-}
+enum MarkerShape { circle, square, triangle, diamond, cross, plus, star, none }
 
 /// Theming for chart data series.
 ///
@@ -38,13 +29,16 @@ class SeriesTheme {
     required this.lineWidths,
     required this.markerSizes,
     required this.markerShapes,
-  })  : assert(colors.isNotEmpty, 'colors must have at least 1 element'),
-        assert(
-            lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
-        assert(
-            markerSizes.isNotEmpty, 'markerSizes must have at least 1 element'),
-        assert(markerShapes.isNotEmpty,
-            'markerShapes must have at least 1 element');
+  }) : assert(colors.isNotEmpty, 'colors must have at least 1 element'),
+       assert(lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
+       assert(
+         markerSizes.isNotEmpty,
+         'markerSizes must have at least 1 element',
+       ),
+       assert(
+         markerShapes.isNotEmpty,
+         'markerShapes must have at least 1 element',
+       );
 
   /// Colors for series. Cycles when series count exceeds list length.
   final List<Color> colors;
@@ -113,7 +107,7 @@ class SeriesTheme {
     markerShapes: const [
       MarkerShape.circle,
       MarkerShape.square,
-      MarkerShape.triangle
+      MarkerShape.triangle,
     ],
   );
 
@@ -205,20 +199,24 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)
+      colors:
+          (json['colors'] as List<dynamic>?)
               ?.map((c) => _parseColor(c))
               .whereType<Color>()
               .toList() ??
           defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)
+      lineWidths:
+          (json['lineWidths'] as List<dynamic>?)
               ?.map((w) => (w as num).toDouble())
               .toList() ??
           defaultLight.lineWidths,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)
+      markerSizes:
+          (json['markerSizes'] as List<dynamic>?)
               ?.map((s) => (s as num).toDouble())
               .toList() ??
           defaultLight.markerSizes,
-      markerShapes: (json['markerShapes'] as List<dynamic>?)
+      markerShapes:
+          (json['markerShapes'] as List<dynamic>?)
               ?.map((s) => _parseMarkerShape(s))
               .whereType<MarkerShape>()
               .toList() ??
@@ -257,11 +255,11 @@ class SeriesTheme {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(colors),
-        Object.hashAll(lineWidths),
-        Object.hashAll(markerSizes),
-        Object.hashAll(markerShapes),
-      );
+    Object.hashAll(colors),
+    Object.hashAll(lineWidths),
+    Object.hashAll(markerSizes),
+    Object.hashAll(markerShapes),
+  );
 
   bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

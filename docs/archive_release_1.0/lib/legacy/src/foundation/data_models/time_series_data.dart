@@ -124,10 +124,7 @@ class TimeSeriesData {
           ChartError.validation(
             'TimeSeriesData point at index $i is missing timestamp',
             code: 'TIMESERIES_MISSING_TIMESTAMP',
-            context: {
-              'id': id,
-              'index': i,
-            },
+            context: {'id': id, 'index': i},
           ),
         );
       }
@@ -138,12 +135,7 @@ class TimeSeriesData {
           ChartError.validation(
             'TimeSeriesData contains invalid point at index $i',
             code: 'TIMESERIES_INVALID_POINT',
-            context: {
-              'id': id,
-              'index': i,
-              'x': point.x,
-              'y': point.y,
-            },
+            context: {'id': id, 'index': i, 'x': point.x, 'y': point.y},
           ),
         );
       }
@@ -230,11 +222,7 @@ class TimeSeriesData {
   // Note: metadata is intentionally excluded from equality
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        name,
-        Object.hashAll(data),
-      );
+  int get hashCode => Object.hash(id, name, Object.hashAll(data));
 
   @override
   String toString() {

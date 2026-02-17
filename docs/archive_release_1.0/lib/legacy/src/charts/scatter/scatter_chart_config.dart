@@ -54,24 +54,21 @@ class ScatterChartConfig {
     required this.borderWidth,
     required this.enableClustering,
     required this.clusterThreshold,
-  })  : assert(
-          sizingMode != MarkerSizingMode.fixed ||
-              (fixedSize != null && fixedSize > 0),
-          'fixedSize is required and must be > 0 when sizingMode is fixed',
-        ),
-        assert(
-          sizingMode != MarkerSizingMode.dataDriven || minSize != null,
-          'minSize is required when sizingMode is dataDriven',
-        ),
-        assert(
-          sizingMode != MarkerSizingMode.dataDriven || maxSize != null,
-          'maxSize is required when sizingMode is dataDriven',
-        ),
-        assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
-        assert(
-          clusterThreshold >= 2,
-          'clusterThreshold must be >= 2',
-        );
+  }) : assert(
+         sizingMode != MarkerSizingMode.fixed ||
+             (fixedSize != null && fixedSize > 0),
+         'fixedSize is required and must be > 0 when sizingMode is fixed',
+       ),
+       assert(
+         sizingMode != MarkerSizingMode.dataDriven || minSize != null,
+         'minSize is required when sizingMode is dataDriven',
+       ),
+       assert(
+         sizingMode != MarkerSizingMode.dataDriven || maxSize != null,
+         'maxSize is required when sizingMode is dataDriven',
+       ),
+       assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
+       assert(clusterThreshold >= 2, 'clusterThreshold must be >= 2');
 
   /// Marker shape for data points
   final MarkerShape markerShape;
@@ -150,11 +147,13 @@ class ScatterChartConfig {
     if (sizingMode == MarkerSizingMode.dataDriven) {
       if (minSize == null) {
         throw ArgumentError(
-            'minSize is required when sizingMode is dataDriven');
+          'minSize is required when sizingMode is dataDriven',
+        );
       }
       if (maxSize == null) {
         throw ArgumentError(
-            'maxSize is required when sizingMode is dataDriven');
+          'maxSize is required when sizingMode is dataDriven',
+        );
       }
       if (minSize! >= maxSize!) {
         throw ArgumentError(
@@ -191,16 +190,16 @@ class ScatterChartConfig {
 
   @override
   int get hashCode => Object.hash(
-        markerShape,
-        sizingMode,
-        fixedSize,
-        minSize,
-        maxSize,
-        markerStyle,
-        borderWidth,
-        enableClustering,
-        clusterThreshold,
-      );
+    markerShape,
+    sizingMode,
+    fixedSize,
+    minSize,
+    maxSize,
+    markerStyle,
+    borderWidth,
+    enableClustering,
+    clusterThreshold,
+  );
 
   @override
   String toString() {

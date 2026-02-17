@@ -43,36 +43,37 @@ void main() {
       test('handles negative ranges (min=-100, max=100)', () {
         // Negative range: -100 to 100
         expect(
-            MultiAxisNormalizer.normalize(-100.0, -100.0, 100.0), equals(0.0));
+          MultiAxisNormalizer.normalize(-100.0, -100.0, 100.0),
+          equals(0.0),
+        );
         expect(MultiAxisNormalizer.normalize(0.0, -100.0, 100.0), equals(0.5));
         expect(
-            MultiAxisNormalizer.normalize(100.0, -100.0, 100.0), equals(1.0));
+          MultiAxisNormalizer.normalize(100.0, -100.0, 100.0),
+          equals(1.0),
+        );
       });
 
       test('handles fully negative ranges', () {
         // Range from -200 to -100
         expect(
-            MultiAxisNormalizer.normalize(-200.0, -200.0, -100.0), equals(0.0));
+          MultiAxisNormalizer.normalize(-200.0, -200.0, -100.0),
+          equals(0.0),
+        );
         expect(
-            MultiAxisNormalizer.normalize(-150.0, -200.0, -100.0), equals(0.5));
+          MultiAxisNormalizer.normalize(-150.0, -200.0, -100.0),
+          equals(0.5),
+        );
         expect(
-            MultiAxisNormalizer.normalize(-100.0, -200.0, -100.0), equals(1.0));
+          MultiAxisNormalizer.normalize(-100.0, -200.0, -100.0),
+          equals(1.0),
+        );
       });
 
       test('handles decimal precision', () {
         // Small decimal range: 0.1 to 0.9
-        expect(
-          MultiAxisNormalizer.normalize(0.1, 0.1, 0.9),
-          equals(0.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(0.5, 0.1, 0.9),
-          equals(0.5),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(0.9, 0.1, 0.9),
-          equals(1.0),
-        );
+        expect(MultiAxisNormalizer.normalize(0.1, 0.1, 0.9), equals(0.0));
+        expect(MultiAxisNormalizer.normalize(0.5, 0.1, 0.9), equals(0.5));
+        expect(MultiAxisNormalizer.normalize(0.9, 0.1, 0.9), equals(1.0));
       });
 
       test('handles non-zero based ranges', () {
@@ -107,7 +108,9 @@ void main() {
       test('denormalizes values outside 0-1 range', () {
         // Negative normalized value
         expect(
-            MultiAxisNormalizer.denormalize(-0.2, 0.0, 100.0), equals(-20.0));
+          MultiAxisNormalizer.denormalize(-0.2, 0.0, 100.0),
+          equals(-20.0),
+        );
         // Normalized value > 1
         expect(MultiAxisNormalizer.denormalize(1.5, 0.0, 100.0), equals(150.0));
       });
@@ -132,8 +135,11 @@ void main() {
         const min = 10.0;
         const max = 200.0;
 
-        final normalized =
-            MultiAxisNormalizer.normalize(originalValue, min, max);
+        final normalized = MultiAxisNormalizer.normalize(
+          originalValue,
+          min,
+          max,
+        );
         final recovered = MultiAxisNormalizer.denormalize(normalized, min, max);
 
         expect(recovered, closeTo(originalValue, 1e-10));
@@ -145,14 +151,20 @@ void main() {
 
         // Test min value
         final normalizedMin = MultiAxisNormalizer.normalize(min, min, max);
-        final recoveredMin =
-            MultiAxisNormalizer.denormalize(normalizedMin, min, max);
+        final recoveredMin = MultiAxisNormalizer.denormalize(
+          normalizedMin,
+          min,
+          max,
+        );
         expect(recoveredMin, closeTo(min, 1e-10));
 
         // Test max value
         final normalizedMax = MultiAxisNormalizer.normalize(max, min, max);
-        final recoveredMax =
-            MultiAxisNormalizer.denormalize(normalizedMax, min, max);
+        final recoveredMax = MultiAxisNormalizer.denormalize(
+          normalizedMax,
+          min,
+          max,
+        );
         expect(recoveredMax, closeTo(max, 1e-10));
       });
 
@@ -188,18 +200,9 @@ void main() {
         const min = 1.0;
         const max = 1.001;
 
-        expect(
-          MultiAxisNormalizer.normalize(min, min, max),
-          equals(0.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(max, min, max),
-          equals(1.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(1.0005, min, max),
-          equals(0.5),
-        );
+        expect(MultiAxisNormalizer.normalize(min, min, max), equals(0.0));
+        expect(MultiAxisNormalizer.normalize(max, min, max), equals(1.0));
+        expect(MultiAxisNormalizer.normalize(1.0005, min, max), equals(0.5));
       });
 
       test('handles very large values without overflow', () {
@@ -207,18 +210,9 @@ void main() {
         const max = 2e15;
         const mid = 1.5e15;
 
-        expect(
-          MultiAxisNormalizer.normalize(min, min, max),
-          equals(0.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(max, min, max),
-          equals(1.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(mid, min, max),
-          equals(0.5),
-        );
+        expect(MultiAxisNormalizer.normalize(min, min, max), equals(0.0));
+        expect(MultiAxisNormalizer.normalize(max, min, max), equals(1.0));
+        expect(MultiAxisNormalizer.normalize(mid, min, max), equals(0.5));
       });
 
       test('handles very small values near zero', () {
@@ -226,14 +220,8 @@ void main() {
         const max = 2e-15;
         const mid = 1.5e-15;
 
-        expect(
-          MultiAxisNormalizer.normalize(min, min, max),
-          equals(0.0),
-        );
-        expect(
-          MultiAxisNormalizer.normalize(max, min, max),
-          equals(1.0),
-        );
+        expect(MultiAxisNormalizer.normalize(min, min, max), equals(0.0));
+        expect(MultiAxisNormalizer.normalize(max, min, max), equals(1.0));
         expect(
           MultiAxisNormalizer.normalize(mid, min, max),
           closeTo(0.5, 1e-10),

@@ -116,19 +116,11 @@ class ChartRenderer {
         final thickness = size * 0.2;
         // Vertical bar
         path.addRect(
-          Rect.fromCenter(
-            center: position,
-            width: thickness,
-            height: size,
-          ),
+          Rect.fromCenter(center: position, width: thickness, height: size),
         );
         // Horizontal bar
         path.addRect(
-          Rect.fromCenter(
-            center: position,
-            width: size,
-            height: thickness,
-          ),
+          Rect.fromCenter(center: position, width: size, height: thickness),
         );
         break;
 

@@ -62,16 +62,21 @@ class ChartTheme {
       padding: _parsePadding(json['padding'] as Map<String, dynamic>),
       gridStyle: GridStyle.fromJson(json['gridStyle'] as Map<String, dynamic>),
       axisStyle: AxisStyle.fromJson(json['axisStyle'] as Map<String, dynamic>),
-      seriesTheme:
-          SeriesTheme.fromJson(json['seriesTheme'] as Map<String, dynamic>),
+      seriesTheme: SeriesTheme.fromJson(
+        json['seriesTheme'] as Map<String, dynamic>,
+      ),
       interactionTheme: InteractionTheme.fromJson(
-          json['interactionTheme'] as Map<String, dynamic>),
+        json['interactionTheme'] as Map<String, dynamic>,
+      ),
       typographyTheme: TypographyTheme.fromJson(
-          json['typographyTheme'] as Map<String, dynamic>),
+        json['typographyTheme'] as Map<String, dynamic>,
+      ),
       animationTheme: AnimationTheme.fromJson(
-          json['animationTheme'] as Map<String, dynamic>),
+        json['animationTheme'] as Map<String, dynamic>,
+      ),
       scrollbarTheme: ScrollbarTheme.fromJson(
-          json['scrollbarTheme'] as Map<String, dynamic>),
+        json['scrollbarTheme'] as Map<String, dynamic>,
+      ),
     );
   }
   // ========== Chart-Level Properties ==========

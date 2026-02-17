@@ -368,10 +368,7 @@ LineChartSeries(
               // Crosshair and tooltip enabled by default via interactionConfig
               interactionConfig: const InteractionConfig(
                 crosshair: CrosshairConfig(enabled: true),
-                tooltip: TooltipConfig(
-                  enabled: true,
-                  showDelay: Duration.zero,
-                ),
+                tooltip: TooltipConfig(enabled: true, showDelay: Duration.zero),
               ),
             ),
           ),
@@ -397,18 +394,12 @@ LineChartSeries(
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
           description,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
       ],
     );
@@ -426,10 +417,7 @@ LineChartSeries(
         scrollDirection: Axis.horizontal,
         child: Text(
           code,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 12,
-          ),
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
         ),
       ),
     );
@@ -456,10 +444,7 @@ LineChartSeries(
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(description, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ),
@@ -476,10 +461,7 @@ LineChartSeries(
   List<ChartDataPoint> _generatePowerData() {
     return List.generate(60, (i) {
       final wave = math.sin(i / 10 * math.pi);
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 200 + 100 * wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 200 + 100 * wave);
     });
   }
 
@@ -487,20 +469,14 @@ LineChartSeries(
   List<ChartDataPoint> _generateHRData() {
     return List.generate(60, (i) {
       final wave = math.sin((i + 5) / 8 * math.pi);
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 130 + 50 * wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 130 + 50 * wave);
     });
   }
 
   /// Temperature data: 20-80°C range
   List<ChartDataPoint> _generateTemperatureData() {
     return List.generate(40, (i) {
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 30 + 40 * (i / 40),
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 30 + 40 * (i / 40));
     });
   }
 
@@ -508,10 +484,7 @@ LineChartSeries(
   List<ChartDataPoint> _generatePressureData() {
     return List.generate(40, (i) {
       final wave = math.sin(i / 6 * math.pi);
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 5000 + 3000 * wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 5000 + 3000 * wave);
     });
   }
 
@@ -530,10 +503,7 @@ LineChartSeries(
     return List.generate(30, (i) {
       final trend = 2000 + 2500 * (i / 30);
       final noise = (i.hashCode % 300).toDouble();
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: trend + noise,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: trend + noise);
     });
   }
 
@@ -542,10 +512,7 @@ LineChartSeries(
     return List.generate(30, (i) {
       final base = 8000 + 10000 * (i / 30);
       final wave = math.sin(i / 4 * math.pi) * 2000;
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: base + wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: base + wave);
     });
   }
 }

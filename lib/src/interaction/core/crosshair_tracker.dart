@@ -191,19 +191,19 @@ abstract final class CrosshairTracker {
         TrackingInterpolation.stepped =>
           leftPoint.y, // Step: use left point's Y
         TrackingInterpolation.linear => _linearInterpolate(
-            leftPoint.x,
-            leftPoint.y,
-            rightPoint.x,
-            rightPoint.y,
-            targetX,
-          ),
+          leftPoint.x,
+          leftPoint.y,
+          rightPoint.x,
+          rightPoint.y,
+          targetX,
+        ),
         TrackingInterpolation.bezier => _bezierInterpolate(
-            points: points,
-            leftIndex: leftIndex,
-            rightIndex: rightIndex,
-            targetX: targetX,
-            tension: _getSeriesTension(series),
-          ),
+          points: points,
+          leftIndex: leftIndex,
+          rightIndex: rightIndex,
+          targetX: targetX,
+          tension: _getSeriesTension(series),
+        ),
         TrackingInterpolation.none => leftPoint.y, // Fallback to left point
       };
 

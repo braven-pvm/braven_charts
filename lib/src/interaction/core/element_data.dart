@@ -29,9 +29,9 @@ class ElementData {
     required this.visualProperties,
     required this.currentElement,
   }) : assert(
-          (dataPoints != null) != (dataRect != null),
-          'Must provide either dataPoints or dataRect, not both',
-        );
+         (dataPoints != null) != (dataRect != null),
+         'Must provide either dataPoints or dataRect, not both',
+       );
 
   /// Creates ElementData for a series element.
   factory ElementData.series({
@@ -65,10 +65,7 @@ class ElementData {
       elementType: ChartElementType.datapoint,
       id: id,
       dataPoints: [dataPoint],
-      visualProperties: ElementVisualProperties(
-        color: color,
-        radius: radius,
-      ),
+      visualProperties: ElementVisualProperties(color: color, radius: radius),
       currentElement: currentElement,
     );
   }
@@ -153,35 +150,35 @@ class ElementVisualProperties {
   ElementVisualProperties.series({
     required Color color,
     required double strokeWidth,
-  })  : color = color,
-        strokeWidth = strokeWidth,
-        radius = null,
-        text = null,
-        backgroundColor = null,
-        borderColor = null;
+  }) : color = color,
+       strokeWidth = strokeWidth,
+       radius = null,
+       text = null,
+       backgroundColor = null,
+       borderColor = null;
 
   /// Creates properties for a datapoint element.
   ElementVisualProperties.datapoint({
     required Color color,
     required double radius,
-  })  : color = color,
-        radius = radius,
-        strokeWidth = null,
-        text = null,
-        backgroundColor = null,
-        borderColor = null;
+  }) : color = color,
+       radius = radius,
+       strokeWidth = null,
+       text = null,
+       backgroundColor = null,
+       borderColor = null;
 
   /// Creates properties for an annotation element.
   ElementVisualProperties.annotation({
     required String text,
     required Color backgroundColor,
     required Color borderColor,
-  })  : text = text,
-        backgroundColor = backgroundColor,
-        borderColor = borderColor,
-        color = null,
-        strokeWidth = null,
-        radius = null;
+  }) : text = text,
+       backgroundColor = backgroundColor,
+       borderColor = borderColor,
+       color = null,
+       strokeWidth = null,
+       radius = null;
   final Color? color;
   final double? strokeWidth;
   final double? radius;

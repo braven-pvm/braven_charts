@@ -46,12 +46,8 @@ class InterpolatedPoint {
   }
 
   @override
-  int get hashCode => Object.hash(
-        position,
-        controlPoint1,
-        controlPoint2,
-        isControlPoint,
-      );
+  int get hashCode =>
+      Object.hash(position, controlPoint1, controlPoint2, isControlPoint);
 
   @override
   String toString() {

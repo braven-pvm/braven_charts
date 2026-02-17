@@ -171,14 +171,17 @@ class CurveFittingFunctions {
   ///
   /// Returns [FitResult] with coefficients [a₀, a₁, ..., aₙ].
   /// Throws [ArgumentError] if degree < 1, degree > 5, or insufficient points.
-  static FitResult polynomialFit(List<ChartDataPoint> points,
-      {required int degree}) {
+  static FitResult polynomialFit(
+    List<ChartDataPoint> points, {
+    required int degree,
+  }) {
     if (degree < 1 || degree > 5) {
       throw ArgumentError('Polynomial degree must be between 1 and 5');
     }
     if (points.length < degree + 1) {
       throw ArgumentError(
-          'Need at least ${degree + 1} points for degree $degree polynomial');
+        'Need at least ${degree + 1} points for degree $degree polynomial',
+      );
     }
 
     final n = points.length;
@@ -307,13 +310,15 @@ class CurveFittingFunctions {
     for (final point in points) {
       if (point.y <= 0) {
         throw ArgumentError(
-            'Exponential fit requires all y values to be positive');
+          'Exponential fit requires all y values to be positive',
+        );
       }
     }
 
     // Transform to linear: ln(y) = ln(a) + b×x
-    final transformedPoints =
-        points.map((p) => ChartDataPoint(x: p.x, y: math.log(p.y))).toList();
+    final transformedPoints = points
+        .map((p) => ChartDataPoint(x: p.x, y: math.log(p.y)))
+        .toList();
 
     final linFit = linearFit(transformedPoints);
     final lnA = linFit.coefficients[0];
@@ -377,13 +382,15 @@ class CurveFittingFunctions {
     for (final point in points) {
       if (point.x <= 0) {
         throw ArgumentError(
-            'Logarithmic fit requires all x values to be positive');
+          'Logarithmic fit requires all x values to be positive',
+        );
       }
     }
 
     // Transform: y = a + b×ln(x)
-    final transformedPoints =
-        points.map((p) => ChartDataPoint(x: math.log(p.x), y: p.y)).toList();
+    final transformedPoints = points
+        .map((p) => ChartDataPoint(x: math.log(p.x), y: p.y))
+        .toList();
 
     final linFit = linearFit(transformedPoints);
     final a = linFit.coefficients[0];

@@ -47,13 +47,8 @@ class BarLayoutInfo {
   }
 
   @override
-  int get hashCode => Object.hash(
-        seriesId,
-        categoryIndex,
-        bounds,
-        value,
-        isNegative,
-      );
+  int get hashCode =>
+      Object.hash(seriesId, categoryIndex, bounds, value, isNegative);
 
   @override
   String toString() {
@@ -248,21 +243,11 @@ class BarPositioner {
         if (orientation == BarOrientation.vertical) {
           if (isNegative) {
             // Stack negative values downward
-            bounds = Rect.fromLTWH(
-              x,
-              negativeBottom,
-              barWidth,
-              value.abs(),
-            );
+            bounds = Rect.fromLTWH(x, negativeBottom, barWidth, value.abs());
             negativeBottom += value.abs();
           } else {
             // Stack positive values upward
-            bounds = Rect.fromLTWH(
-              x,
-              positiveTop - value,
-              barWidth,
-              value,
-            );
+            bounds = Rect.fromLTWH(x, positiveTop - value, barWidth, value);
             positiveTop -= value;
           }
         } else {
@@ -270,21 +255,11 @@ class BarPositioner {
           if (isNegative) {
             // Stack negative values leftward
             final left = negativeBottom - value.abs();
-            bounds = Rect.fromLTWH(
-              left,
-              x,
-              value.abs(),
-              barWidth,
-            );
+            bounds = Rect.fromLTWH(left, x, value.abs(), barWidth);
             negativeBottom = left;
           } else {
             // Stack positive values rightward
-            bounds = Rect.fromLTWH(
-              positiveTop,
-              x,
-              value,
-              barWidth,
-            );
+            bounds = Rect.fromLTWH(positiveTop, x, value, barWidth);
             positiveTop += value;
           }
         }

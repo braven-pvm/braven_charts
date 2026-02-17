@@ -112,10 +112,7 @@ abstract class ITooltipProvider {
   /// - [newPoint]: New data point to display
   ///
   /// Returns: true if tooltip content changed
-  bool shouldUpdate(
-    ChartDataPoint? oldPoint,
-    ChartDataPoint? newPoint,
-  );
+  bool shouldUpdate(ChartDataPoint? oldPoint, ChartDataPoint? newPoint);
 }
 
 /// Configuration for tooltip behavior and appearance.

@@ -1,6 +1,5 @@
-import 'package:braven_charts/src/models/chart_annotation.dart';
-import 'package:braven_charts/src/models/chart_type.dart';
 import 'package:braven_charts/src/braven_chart_plus.dart';
+import 'package:braven_charts/src/models/chart_annotation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,10 +44,7 @@ void main() {
         const json = 'invalid_json';
 
         expect(
-          () => BravenChartPlus.fromJson(
-            seriesId: 'test_series',
-            json: json,
-          ),
+          () => BravenChartPlus.fromJson(seriesId: 'test_series', json: json),
           throwsFormatException,
         );
       });

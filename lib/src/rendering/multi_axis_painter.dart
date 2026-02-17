@@ -206,7 +206,8 @@ class MultiAxisPainter {
       ..style = PaintingStyle.stroke;
 
     // Determine if this is a left-side or right-side axis
-    final isLeftSide = axis.position == YAxisPosition.left ||
+    final isLeftSide =
+        axis.position == YAxisPosition.left ||
         axis.position == YAxisPosition.leftOuter;
 
     // Paint axis line
@@ -235,8 +236,11 @@ class MultiAxisPainter {
 
       for (final tickValue in ticks) {
         // Convert tick value to Y position using shared normalizer
-        final normalizedY =
-            MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
+        final normalizedY = MultiAxisNormalizer.normalize(
+          tickValue,
+          bounds.min,
+          bounds.max,
+        );
         // Invert Y because screen coordinates go down
         final screenY = plotArea.bottom - (normalizedY * plotArea.height);
 
@@ -248,7 +252,13 @@ class MultiAxisPainter {
 
           if (axis.shouldShowTickLabels) {
             _paintTickLabel(
-                canvas, axis, axisRect, screenY, tickValue, isLeftSide);
+              canvas,
+              axis,
+              axisRect,
+              screenY,
+              tickValue,
+              isLeftSide,
+            );
           }
         }
       }
@@ -396,7 +406,8 @@ class MultiAxisPainter {
     if (isLeftSide) {
       // Right-align labels on left-side axes, positioned from axis line inward
       // Layout: [margin][axisLabel][axisLabelPadding][tickLabels][tickLabelPadding][tickMark][axisLine]
-      labelX = axisRect.right -
+      labelX =
+          axisRect.right -
           _tickLength -
           axis.tickLabelPadding -
           textPainter.width;

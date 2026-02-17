@@ -96,8 +96,8 @@ class RenderContext {
     required this.performanceMonitor,
     this.transformContext,
     this.transformer,
-  })  : assert(size.width > 0, 'Canvas width must be positive'),
-        assert(size.height > 0, 'Canvas height must be positive');
+  }) : assert(size.width > 0, 'Canvas width must be positive'),
+       assert(size.height > 0, 'Canvas height must be positive');
 
   /// Flutter canvas for drawing operations.
   ///

@@ -20,6 +20,12 @@
       "name": "benchmark",
       "path": "test/benchmark/**/*_test.dart",
       "timeout": 120000
+    },
+    {
+      "name": "red",
+      "path": "test/red/**/*_test.dart",
+      "timeout": 30000,
+      "inverted": true
     }
   ],
   "workingDir": ".",

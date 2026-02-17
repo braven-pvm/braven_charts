@@ -67,8 +67,10 @@ class MultiAxisLayoutDelegate {
       if (bounds != null) {
         // Generate representative tick values (nice round numbers) for width measurement.
         // This ensures we measure what will actually be displayed, not raw bounds.
-        final representativeTicks =
-            _generateRepresentativeTicks(bounds.min, bounds.max);
+        final representativeTicks = _generateRepresentativeTicks(
+          bounds.min,
+          bounds.max,
+        );
 
         double maxLabelWidth = 0.0;
         for (final tickValue in representativeTicks) {
@@ -117,10 +119,7 @@ class MultiAxisLayoutDelegate {
   ///
   /// Returns the sum of widths for axes at [YAxisPosition.leftOuter]
   /// and [YAxisPosition.left] positions. Invisible axes are excluded.
-  double getTotalLeftWidth(
-    List<YAxisConfig> axes,
-    Map<String, double> widths,
-  ) {
+  double getTotalLeftWidth(List<YAxisConfig> axes, Map<String, double> widths) {
     var total = 0.0;
 
     for (final axis in axes) {
@@ -312,10 +311,7 @@ class MultiAxisLayoutDelegate {
     final textPainter = TextPainter(
       text: TextSpan(
         text: labelText,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

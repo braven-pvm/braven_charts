@@ -37,7 +37,7 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
   int _lastRenderedCount = 0;
 
   StopwatchPerformanceMonitor({int maxHistorySize = 120})
-      : _maxHistorySize = maxHistorySize {
+    : _maxHistorySize = maxHistorySize {
     assert(maxHistorySize > 0, 'maxHistorySize must be greater than 0');
   }
 
@@ -46,8 +46,10 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
 
   @override
   void beginFrame() {
-    assert(!_frameInProgress,
-        'beginFrame() called twice without endFrame(). Frames must be paired.');
+    assert(
+      !_frameInProgress,
+      'beginFrame() called twice without endFrame(). Frames must be paired.',
+    );
     _frameInProgress = true;
     _stopwatch.reset();
     _stopwatch.start();
@@ -55,8 +57,10 @@ class StopwatchPerformanceMonitor implements PerformanceMonitor {
 
   @override
   void endFrame() {
-    assert(_frameInProgress,
-        'endFrame() called without beginFrame(). Frames must be paired.');
+    assert(
+      _frameInProgress,
+      'endFrame() called without beginFrame(). Frames must be paired.',
+    );
 
     _stopwatch.stop();
     _frameInProgress = false;

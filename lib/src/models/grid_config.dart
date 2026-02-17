@@ -46,9 +46,11 @@ class GridConfig {
     this.verticalColor,
     this.horizontalStrokeWidth = 0.5,
     this.verticalStrokeWidth = 0.5,
-  })  : assert(horizontalStrokeWidth > 0,
-            'horizontalStrokeWidth must be positive'),
-        assert(verticalStrokeWidth > 0, 'verticalStrokeWidth must be positive');
+  }) : assert(
+         horizontalStrokeWidth > 0,
+         'horizontalStrokeWidth must be positive',
+       ),
+       assert(verticalStrokeWidth > 0, 'verticalStrokeWidth must be positive');
 
   /// Whether to show horizontal grid lines (at Y-axis tick positions).
   ///

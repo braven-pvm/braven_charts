@@ -50,8 +50,8 @@ class LabelStyle {
     required this.padding,
     this.shadowColor,
     this.shadowBlurRadius,
-  })  : assert(borderWidth >= 0, 'borderWidth must be >= 0'),
-        assert(borderRadius >= 0, 'borderRadius must be >= 0');
+  }) : assert(borderWidth >= 0, 'borderWidth must be >= 0'),
+       assert(borderRadius >= 0, 'borderRadius must be >= 0');
 
   /// Text style for the label content.
   final TextStyle textStyle;
@@ -133,15 +133,15 @@ class LabelStyle {
 
   @override
   int get hashCode => Object.hash(
-        textStyle,
-        backgroundColor,
-        borderColor,
-        borderWidth,
-        borderRadius,
-        padding,
-        shadowColor,
-        shadowBlurRadius,
-      );
+    textStyle,
+    backgroundColor,
+    borderColor,
+    borderWidth,
+    borderRadius,
+    padding,
+    shadowColor,
+    shadowBlurRadius,
+  );
 
   // ========== Helper Methods ==========
 
@@ -152,8 +152,9 @@ class LabelStyle {
 
   static TextStyle _parseTextStyle(Map<String, dynamic> json) {
     return TextStyle(
-      color:
-          json['color'] != null ? _parseColor(json['color'] as String) : null,
+      color: json['color'] != null
+          ? _parseColor(json['color'] as String)
+          : null,
       fontSize: json['fontSize'] != null
           ? (json['fontSize'] as num).toDouble()
           : null,

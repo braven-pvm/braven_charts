@@ -49,36 +49,33 @@ class AreaBaseline {
   /// Throws [ArgumentError] if validation fails:
   /// - [type] = [AreaBaselineType.fixed] requires [fixedValue] != null
   /// - [type] = [AreaBaselineType.series] requires [seriesId] != null
-  const AreaBaseline({
-    required this.type,
-    this.fixedValue,
-    this.seriesId,
-  })  : assert(
-          type != AreaBaselineType.fixed || fixedValue != null,
-          'fixedValue is required when type is AreaBaselineType.fixed',
-        ),
-        assert(
-          type != AreaBaselineType.series || seriesId != null,
-          'seriesId is required when type is AreaBaselineType.series',
-        );
+  const AreaBaseline({required this.type, this.fixedValue, this.seriesId})
+    : assert(
+        type != AreaBaselineType.fixed || fixedValue != null,
+        'fixedValue is required when type is AreaBaselineType.fixed',
+      ),
+      assert(
+        type != AreaBaselineType.series || seriesId != null,
+        'seriesId is required when type is AreaBaselineType.series',
+      );
 
   /// Creates a baseline at y=0
   const AreaBaseline.zero()
-      : type = AreaBaselineType.zero,
-        fixedValue = null,
-        seriesId = null;
+    : type = AreaBaselineType.zero,
+      fixedValue = null,
+      seriesId = null;
 
   /// Creates a baseline at a fixed y-value
   const AreaBaseline.fixed(double value)
-      : type = AreaBaselineType.fixed,
-        fixedValue = value,
-        seriesId = null;
+    : type = AreaBaselineType.fixed,
+      fixedValue = value,
+      seriesId = null;
 
   /// Creates a baseline from another data series
   const AreaBaseline.series(String id)
-      : type = AreaBaselineType.series,
-        fixedValue = null,
-        seriesId = id;
+    : type = AreaBaselineType.series,
+      fixedValue = null,
+      seriesId = id;
 
   /// Type of baseline
   final AreaBaselineType type;
@@ -114,11 +111,13 @@ class AreaBaseline {
   void validate() {
     if (type == AreaBaselineType.fixed && fixedValue == null) {
       throw ArgumentError(
-          'fixedValue is required when type is AreaBaselineType.fixed');
+        'fixedValue is required when type is AreaBaselineType.fixed',
+      );
     }
     if (type == AreaBaselineType.series && seriesId == null) {
       throw ArgumentError(
-          'seriesId is required when type is AreaBaselineType.series');
+        'seriesId is required when type is AreaBaselineType.series',
+      );
     }
   }
 
@@ -159,14 +158,14 @@ class AreaChartConfig {
     required this.fillOpacity,
     required this.showLine,
     this.lineConfig,
-  })  : assert(
-          fillOpacity >= 0.0 && fillOpacity <= 1.0,
-          'fillOpacity must be in range [0.0, 1.0]',
-        ),
-        assert(
-          !showLine || lineConfig != null,
-          'lineConfig is required when showLine is true',
-        );
+  }) : assert(
+         fillOpacity >= 0.0 && fillOpacity <= 1.0,
+         'fillOpacity must be in range [0.0, 1.0]',
+       ),
+       assert(
+         !showLine || lineConfig != null,
+         'lineConfig is required when showLine is true',
+       );
 
   /// Fill style for the area
   final AreaFillStyle fillStyle;
@@ -217,7 +216,8 @@ class AreaChartConfig {
   void validate() {
     if (fillOpacity < 0.0 || fillOpacity > 1.0) {
       throw ArgumentError(
-          'fillOpacity must be in range [0.0, 1.0], got $fillOpacity');
+        'fillOpacity must be in range [0.0, 1.0], got $fillOpacity',
+      );
     }
     if (showLine && lineConfig == null) {
       throw ArgumentError('lineConfig is required when showLine is true');
@@ -239,13 +239,13 @@ class AreaChartConfig {
 
   @override
   int get hashCode => Object.hash(
-        fillStyle,
-        baseline,
-        stacked,
-        fillOpacity,
-        showLine,
-        lineConfig,
-      );
+    fillStyle,
+    baseline,
+    stacked,
+    fillOpacity,
+    showLine,
+    lineConfig,
+  );
 
   @override
   String toString() {

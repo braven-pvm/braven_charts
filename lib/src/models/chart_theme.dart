@@ -61,10 +61,10 @@ class ChartTheme {
     @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead')
     Color? textColor,
     @Deprecated('Use seriesTheme.colors instead') List<Color>? seriesColors,
-  })  : _gridColor = gridColor,
-        _axisColor = axisColor,
-        _textColor = textColor,
-        _seriesColors = seriesColors;
+  }) : _gridColor = gridColor,
+       _axisColor = axisColor,
+       _textColor = textColor,
+       _seriesColors = seriesColors;
 
   /// Chart background color.
   final Color backgroundColor;
@@ -278,18 +278,18 @@ class ChartTheme {
 
   @override
   int get hashCode => Object.hash(
-        backgroundColor,
-        gridStyle,
-        axisStyle,
-        seriesTheme,
-        interactionTheme,
-        typographyTheme,
-        animationTheme,
-        annotationTheme,
-        scrollbarConfig,
-        legendStyle,
-        focusBorderColor,
-        focusBorderWidth,
-        focusBorderRadius,
-      );
+    backgroundColor,
+    gridStyle,
+    axisStyle,
+    seriesTheme,
+    interactionTheme,
+    typographyTheme,
+    animationTheme,
+    annotationTheme,
+    scrollbarConfig,
+    legendStyle,
+    focusBorderColor,
+    focusBorderWidth,
+    focusBorderRadius,
+  );
 }

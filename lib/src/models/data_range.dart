@@ -20,11 +20,8 @@ class DataRange {
   ///
   /// [min] must be less than or equal to [max].
   /// [padding] must be between 0.0 and 1.0 if provided.
-  const DataRange({
-    required this.min,
-    required this.max,
-    this.padding = 0.0,
-  }) : assert(min <= max, 'min must be <= max');
+  const DataRange({required this.min, required this.max, this.padding = 0.0})
+    : assert(min <= max, 'min must be <= max');
 
   /// Creates a range from a list of values.
   ///
@@ -64,10 +61,7 @@ class DataRange {
     required double center,
     required double radius,
   }) {
-    return DataRange(
-      min: center - radius,
-      max: center + radius,
-    );
+    return DataRange(min: center - radius, max: center + radius);
   }
 
   /// Minimum value (lower bound).

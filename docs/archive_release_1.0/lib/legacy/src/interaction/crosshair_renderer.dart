@@ -27,8 +27,8 @@ class HighlightStyle {
     this.radius = 6.0,
     this.strokeWidth = 2.0,
     this.filled = false,
-  })  : assert(radius > 0, 'radius must be greater than 0'),
-        assert(strokeWidth >= 0, 'strokeWidth must be non-negative');
+  }) : assert(radius > 0, 'radius must be greater than 0'),
+       assert(strokeWidth >= 0, 'strokeWidth must be non-negative');
 
   /// The color of the highlight circle.
   final Color color;
@@ -239,7 +239,11 @@ class CrosshairRenderer implements ICrosshairRenderer {
 
       const highlightStyle = HighlightStyle();
       renderSnapPointHighlights(
-          canvas, snapPoints, transformer, highlightStyle);
+        canvas,
+        snapPoints,
+        transformer,
+        highlightStyle,
+      );
     }
   }
 
@@ -346,13 +350,15 @@ class CrosshairRenderer implements ICrosshairRenderer {
   ) {
     final paint = Paint()
       ..color = highlightStyle.color
-      ..style =
-          highlightStyle.filled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..style = highlightStyle.filled
+          ? PaintingStyle.fill
+          : PaintingStyle.stroke
       ..strokeWidth = highlightStyle.strokeWidth;
 
     for (final point in snapPoints) {
-      final screenPos =
-          coordinateTransformer.dataToScreen(Offset(point.x, point.y));
+      final screenPos = coordinateTransformer.dataToScreen(
+        Offset(point.x, point.y),
+      );
       canvas.drawCircle(screenPos, highlightStyle.radius, paint);
     }
   }
@@ -471,10 +477,7 @@ class CrosshairRenderer implements ICrosshairRenderer {
     );
 
     // Draw label text
-    textPainter.paint(
-      canvas,
-      labelPosition + const Offset(padding, padding),
-    );
+    textPainter.paint(canvas, labelPosition + const Offset(padding, padding));
   }
 }
 

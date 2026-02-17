@@ -111,9 +111,7 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       );
     } else {
       // New empty document
-      _fleatherController = FleatherController(
-        document: ParchmentDocument(),
-      );
+      _fleatherController = FleatherController(document: ParchmentDocument());
     }
 
     if (annotation != null) {
@@ -155,9 +153,7 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
 
     return Dialog(
       backgroundColor: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 650),
@@ -183,8 +179,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                           ? 'Edit Text Annotation'
                           : 'Add Text Annotation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -226,7 +222,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                       onPressed: _handleSave,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                       child: Text(isEditMode ? 'Update' : 'Add'),
                     ),
@@ -250,9 +248,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
             Text(
               'Text *',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
             const Spacer(),
             // Mode toggle
@@ -377,8 +375,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.blue.shade800, width: 0.8),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
         isDense: true,
       ),
       style: const TextStyle(fontSize: 13),
@@ -406,11 +406,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[50],
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(7)),
-              border: Border(
-                bottom: BorderSide(color: Colors.grey[300]!),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(7),
               ),
+              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
             ),
             child: FleatherToolbar.basic(
               controller: _fleatherController,
@@ -468,9 +467,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
         Text(
           'Anchor Point',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-              ),
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -495,8 +494,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
@@ -544,9 +545,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
               Text(
                 'Allow Dragging',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -611,14 +612,15 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     if (_editMode == TextEditMode.rich) {
       final plainText = _fleatherController.document.toPlainText().trim();
       if (plainText.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Text is required')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Text is required')));
         return;
       }
     }
 
-    final id = widget.annotation?.id ??
+    final id =
+        widget.annotation?.id ??
         'text_${DateTime.now().millisecondsSinceEpoch}';
 
     TextAnnotation annotation;

@@ -4,24 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// Common test utilities and helpers for Braven Charts testing
 class TestUtils {
   /// Creates a test app wrapper with Material theme
-  static Widget createTestApp({
-    required Widget child,
-    ThemeData? theme,
-  }) {
+  static Widget createTestApp({required Widget child, ThemeData? theme}) {
     return MaterialApp(
       theme: theme ?? ThemeData.light(),
-      home: Scaffold(
-        body: child,
-      ),
+      home: Scaffold(body: child),
     );
   }
 
   /// Creates a minimal test widget for widget testing
   static Widget createMinimalTestWidget(Widget child) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: child,
-    );
+    return Directionality(textDirection: TextDirection.ltr, child: child);
   }
 
   /// Common chart test data
@@ -38,12 +30,13 @@ class TestUtils {
   /// Large dataset for performance testing
   static List<Map<String, dynamic>> getLargeTestDataset(int size) {
     return List.generate(
-        size,
-        (index) => {
-              'x': index,
-              'y': (index * 0.5) + (index % 10),
-              'label': 'Point $index',
-            });
+      size,
+      (index) => {
+        'x': index,
+        'y': (index * 0.5) + (index % 10),
+        'label': 'Point $index',
+      },
+    );
   }
 
   /// Custom matcher for comparing doubles with tolerance
@@ -61,12 +54,12 @@ class TestUtils {
 
   /// Simulates device pixel ratio changes
   static void setDevicePixelRatio(WidgetTester tester, double ratio) {
-    tester.binding.window.devicePixelRatioTestValue = ratio;
+    tester.view.devicePixelRatio = ratio;
   }
 
   /// Resets device pixel ratio to default
   static void resetDevicePixelRatio(WidgetTester tester) {
-    tester.binding.window.clearDevicePixelRatioTestValue();
+    tester.view.resetDevicePixelRatio();
   }
 }
 

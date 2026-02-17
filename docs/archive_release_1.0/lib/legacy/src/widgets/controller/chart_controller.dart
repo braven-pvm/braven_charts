@@ -47,8 +47,10 @@ class ChartController extends ChangeNotifier {
   ///
   /// Throws [AssertionError] if coordinates are NaN or infinity.
   void addPoint(String seriesId, ChartDataPoint point) {
-    assert(point.x.isFinite && point.y.isFinite,
-        'Cannot add point with NaN or infinity coordinates');
+    assert(
+      point.x.isFinite && point.y.isFinite,
+      'Cannot add point with NaN or infinity coordinates',
+    );
 
     final series = _seriesData.putIfAbsent(seriesId, () => []);
     series.add(point);
@@ -87,8 +89,11 @@ class ChartController extends ChangeNotifier {
   /// Returns a new map instance to prevent external modification.
   /// Each series list is also copied.
   Map<String, List<ChartDataPoint>> getAllSeries() {
-    return Map.fromEntries(_seriesData.entries
-        .map((entry) => MapEntry(entry.key, List.from(entry.value))));
+    return Map.fromEntries(
+      _seriesData.entries.map(
+        (entry) => MapEntry(entry.key, List.from(entry.value)),
+      ),
+    );
   }
 
   // ========== Annotation Management Methods ==========

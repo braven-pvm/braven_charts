@@ -50,16 +50,11 @@ sealed class ChartResult<T> {
   }
 
   /// Returns the success value or null if this is a Failure.
-  T? getOrNull() => when(
-        success: (value) => value,
-        failure: (_) => null,
-      );
+  T? getOrNull() => when(success: (value) => value, failure: (_) => null);
 
   /// Returns the success value or the provided default if this is a Failure.
-  T getOrElse(T defaultValue) => when(
-        success: (value) => value,
-        failure: (_) => defaultValue,
-      );
+  T getOrElse(T defaultValue) =>
+      when(success: (value) => value, failure: (_) => defaultValue);
 
   /// Transform the success value while preserving failures.
   ///
@@ -69,9 +64,9 @@ sealed class ChartResult<T> {
   /// Failure(error).map((x) => x * 2) // Failure(error)
   /// ```
   ChartResult<R> map<R>(R Function(T value) transform) => when(
-        success: (value) => Success(transform(value)),
-        failure: (error) => Failure(error),
-      );
+    success: (value) => Success(transform(value)),
+    failure: (error) => Failure(error),
+  );
 
   /// Chain operations that return ChartResult.
   ///
@@ -81,9 +76,9 @@ sealed class ChartResult<T> {
   ///   .flatMap((x) => x > 0 ? Success(x * 2) : Failure(...))
   /// ```
   ChartResult<R> flatMap<R>(ChartResult<R> Function(T value) transform) => when(
-        success: (value) => transform(value),
-        failure: (error) => Failure(error),
-      );
+    success: (value) => transform(value),
+    failure: (error) => Failure(error),
+  );
 
   /// Fold both cases into a single value.
   ///
@@ -91,8 +86,7 @@ sealed class ChartResult<T> {
   R fold<R>({
     required R Function(T value) onSuccess,
     required R Function(ChartError error) onFailure,
-  }) =>
-      when(success: onSuccess, failure: onFailure);
+  }) => when(success: onSuccess, failure: onFailure);
 }
 
 /// Success variant containing a valid value.

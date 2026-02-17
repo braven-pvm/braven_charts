@@ -104,9 +104,7 @@ class _ThemingPageState extends State<ThemingPage> {
       OptionSection(
         title: 'Theme Preview',
         initiallyExpanded: false,
-        children: [
-          _buildThemePreview(_selectedPreset),
-        ],
+        children: [_buildThemePreview(_selectedPreset)],
       ),
 
       // Actions
@@ -153,9 +151,11 @@ class _ThemingPageState extends State<ThemingPage> {
           const SizedBox(height: 4),
           Row(
             children: [
-              for (var i = 0;
-                  i < 4 && i < theme.seriesTheme.colors.length;
-                  i++) ...[
+              for (
+                var i = 0;
+                i < 4 && i < theme.seriesTheme.colors.length;
+                i++
+              ) ...[
                 if (i > 0) const SizedBox(width: 4),
                 _colorSwatch('S${i + 1}', theme.seriesTheme.colors[i]),
               ],
@@ -219,8 +219,9 @@ class _ThemingPageState extends State<ThemingPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -272,9 +273,7 @@ class _ThemingPageState extends State<ThemingPage> {
             theme: preset.theme,
             showLegend: false,
             xAxisConfig: const XAxisConfig(),
-            yAxis: YAxisConfig(
-              position: YAxisPosition.left,
-            ),
+            yAxis: YAxisConfig(position: YAxisPosition.left),
           ),
         );
       },
@@ -284,14 +283,8 @@ class _ThemingPageState extends State<ThemingPage> {
   Widget _buildStatusPanel() {
     return StatusPanel(
       items: [
-        StatusItem(
-          label: 'Theme',
-          value: _selectedPreset.displayName,
-        ),
-        const StatusItem(
-          label: 'Series',
-          value: '2',
-        ),
+        StatusItem(label: 'Theme', value: _selectedPreset.displayName),
+        const StatusItem(label: 'Series', value: '2'),
         StatusItem(
           label: 'Mode',
           value: _showComparison ? 'Compare' : 'Single',

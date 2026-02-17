@@ -69,8 +69,9 @@ void main() {
     }
 
     group('Mouse Wheel Y-Zoom', () {
-      testWidgets('zoom in with Ctrl+scroll up increases Y-axis scale',
-          (tester) async {
+      testWidgets('zoom in with Ctrl+scroll up increases Y-axis scale', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -97,8 +98,9 @@ void main() {
         // The implementation should handle Y-zoom with multi-axis perSeries normalization
       });
 
-      testWidgets('zoom out with Ctrl+scroll down decreases Y-axis scale',
-          (tester) async {
+      testWidgets('zoom out with Ctrl+scroll down decreases Y-axis scale', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -147,8 +149,9 @@ void main() {
     });
 
     group('Y-Scrollbar Edge Drag Zoom', () {
-      testWidgets('dragging top edge of Y-scrollbar zooms top of range',
-          (tester) async {
+      testWidgets('dragging top edge of Y-scrollbar zooms top of range', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart(showYScrollbar: true));
         await tester.pumpAndSettle();
 
@@ -173,8 +176,9 @@ void main() {
         // The implementation should handle Y-scrollbar edge drag zoom
       });
 
-      testWidgets('dragging bottom edge of Y-scrollbar zooms bottom of range',
-          (tester) async {
+      testWidgets('dragging bottom edge of Y-scrollbar zooms bottom of range', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart(showYScrollbar: true));
         await tester.pumpAndSettle();
 
@@ -194,8 +198,9 @@ void main() {
         // The implementation should handle Y-scrollbar edge drag zoom
       });
 
-      testWidgets('dragging both edges symmetrically zooms around center',
-          (tester) async {
+      testWidgets('dragging both edges symmetrically zooms around center', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart(showYScrollbar: true));
         await tester.pumpAndSettle();
 
@@ -220,8 +225,9 @@ void main() {
     });
 
     group('Y-Axis Labels Reflect Zoomed Range', () {
-      testWidgets('axis labels update after zoom to show visible range',
-          (tester) async {
+      testWidgets('axis labels update after zoom to show visible range', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -245,8 +251,9 @@ void main() {
         // After zoom, axis labels should reflect the zoomed range
       });
 
-      testWidgets('both left and right axis labels update independently',
-          (tester) async {
+      testWidgets('both left and right axis labels update independently', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -260,7 +267,8 @@ void main() {
         final pointer = TestPointer(1, PointerDeviceKind.mouse);
         await tester.sendEventToBinding(pointer.hover(chartCenter));
         await tester.sendEventToBinding(
-            pointer.scroll(const Offset(0, 240))); // Stronger zoom
+          pointer.scroll(const Offset(0, 240)),
+        ); // Stronger zoom
         await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
         await tester.pumpAndSettle();
 
@@ -270,8 +278,9 @@ void main() {
     });
 
     group('Zoom Center Point Preservation', () {
-      testWidgets('zoom centers around cursor position when scrolling',
-          (tester) async {
+      testWidgets('zoom centers around cursor position when scrolling', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -299,54 +308,60 @@ void main() {
       });
 
       testWidgets(
-          'zoom at different vertical positions preserves respective centers',
-          (tester) async {
-        await tester.pumpWidget(createMultiAxisChart());
-        await tester.pumpAndSettle();
+        'zoom at different vertical positions preserves respective centers',
+        (tester) async {
+          await tester.pumpWidget(createMultiAxisChart());
+          await tester.pumpAndSettle();
 
-        expect(find.byType(BravenChartPlus), findsOneWidget);
+          expect(find.byType(BravenChartPlus), findsOneWidget);
 
-        final chartFinder = find.byType(BravenChartPlus);
-        final chartRect = tester.getRect(chartFinder);
+          final chartFinder = find.byType(BravenChartPlus);
+          final chartRect = tester.getRect(chartFinder);
 
-        // Test zoom at 25% height (near bottom)
-        final bottomZoomPoint = Offset(
-          chartRect.center.dx,
-          chartRect.top + chartRect.height * 0.75,
-        );
+          // Test zoom at 25% height (near bottom)
+          final bottomZoomPoint = Offset(
+            chartRect.center.dx,
+            chartRect.top + chartRect.height * 0.75,
+          );
 
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-        final pointer1 = TestPointer(1, PointerDeviceKind.mouse);
-        await tester.sendEventToBinding(pointer1.hover(bottomZoomPoint));
-        await tester.sendEventToBinding(pointer1.scroll(const Offset(0, 120)));
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-        await tester.pumpAndSettle();
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+          final pointer1 = TestPointer(1, PointerDeviceKind.mouse);
+          await tester.sendEventToBinding(pointer1.hover(bottomZoomPoint));
+          await tester.sendEventToBinding(
+            pointer1.scroll(const Offset(0, 120)),
+          );
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+          await tester.pumpAndSettle();
 
-        // Reset chart
-        await tester.pumpWidget(createMultiAxisChart());
-        await tester.pumpAndSettle();
+          // Reset chart
+          await tester.pumpWidget(createMultiAxisChart());
+          await tester.pumpAndSettle();
 
-        // Test zoom at 75% height (near top)
-        final topZoomPoint = Offset(
-          chartRect.center.dx,
-          chartRect.top + chartRect.height * 0.25,
-        );
+          // Test zoom at 75% height (near top)
+          final topZoomPoint = Offset(
+            chartRect.center.dx,
+            chartRect.top + chartRect.height * 0.25,
+          );
 
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
-        final pointer2 = TestPointer(2, PointerDeviceKind.mouse);
-        await tester.sendEventToBinding(pointer2.hover(topZoomPoint));
-        await tester.sendEventToBinding(pointer2.scroll(const Offset(0, 120)));
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-        await tester.pumpAndSettle();
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+          final pointer2 = TestPointer(2, PointerDeviceKind.mouse);
+          await tester.sendEventToBinding(pointer2.hover(topZoomPoint));
+          await tester.sendEventToBinding(
+            pointer2.scroll(const Offset(0, 120)),
+          );
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+          await tester.pumpAndSettle();
 
-        // Test passes if no exception is thrown during zoom at multiple positions
-        // The implementation should preserve zoom center at different vertical positions
-      });
+          // Test passes if no exception is thrown during zoom at multiple positions
+          // The implementation should preserve zoom center at different vertical positions
+        },
+      );
     });
 
     group('Pan After Y-Zoom', () {
-      testWidgets('pan after Y-zoom scrolls viewport correctly',
-          (tester) async {
+      testWidgets('pan after Y-zoom scrolls viewport correctly', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -376,8 +391,9 @@ void main() {
         // The implementation should handle pan after Y-zoom with multi-axis perSeries normalization
       });
 
-      testWidgets('crosshair tooltips show correct values after zoom+pan',
-          (tester) async {
+      testWidgets('crosshair tooltips show correct values after zoom+pan', (
+        tester,
+      ) async {
         await tester.pumpWidget(createMultiAxisChart());
         await tester.pumpAndSettle();
 
@@ -425,10 +441,7 @@ void main() {
 
         final chartFinder = find.byType(BravenChartPlus);
         final chartRect = tester.getRect(chartFinder);
-        final dragStartPoint = Offset(
-          chartRect.center.dx,
-          chartRect.center.dy,
-        );
+        final dragStartPoint = Offset(chartRect.center.dx, chartRect.center.dy);
 
         // 1. Perform Y-zoom first
         await tester.sendKeyDownEvent(LogicalKeyboardKey.control);

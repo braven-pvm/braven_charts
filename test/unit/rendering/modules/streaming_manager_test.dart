@@ -29,9 +29,9 @@ class MockStreamingDelegate implements StreamingDelegate {
     ChartTransform? transform,
     ChartTransform? originalTransform,
     List<ChartSeries>? series,
-  })  : _transform = transform,
-        _originalTransform = originalTransform,
-        _series = series ?? [];
+  }) : _transform = transform,
+       _originalTransform = originalTransform,
+       _series = series ?? [];
 
   @override
   ChartTransform? get transform => _transform;
@@ -69,9 +69,17 @@ class MockStreamingDelegate implements StreamingDelegate {
 
   @override
   void setPanConstraintBounds(
-      double xMin, double xMax, double yMin, double yMax) {
-    panConstraintBounds =
-        DataBounds(xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax);
+    double xMin,
+    double xMax,
+    double yMin,
+    double yMax,
+  ) {
+    panConstraintBounds = DataBounds(
+      xMin: xMin,
+      xMax: xMax,
+      yMin: yMin,
+      yMax: yMax,
+    );
   }
 
   @override
@@ -231,9 +239,17 @@ void main() {
         // Initial state: 0-1 default bounds
         final delegate = MockStreamingDelegate(
           transform: createTransform(
-              dataXMin: 0, dataXMax: 1, dataYMin: 0, dataYMax: 1),
+            dataXMin: 0,
+            dataXMax: 1,
+            dataYMin: 0,
+            dataYMax: 1,
+          ),
           originalTransform: createTransform(
-              dataXMin: 0, dataXMax: 1, dataYMin: 0, dataYMax: 1),
+            dataXMin: 0,
+            dataXMax: 1,
+            dataYMin: 0,
+            dataYMax: 1,
+          ),
         );
         final manager = StreamingManager(delegate: delegate);
 
@@ -470,9 +486,7 @@ void main() {
 
     group('paint', () {
       test('does nothing without streaming data', () {
-        final delegate = MockStreamingDelegate(
-          transform: createTransform(),
-        );
+        final delegate = MockStreamingDelegate(transform: createTransform());
         final manager = StreamingManager(delegate: delegate);
 
         // Should not crash with empty buffers
@@ -594,9 +608,15 @@ void main() {
       test('handles multiple streaming series', () {
         final series = [
           const LineChartSeries(
-              id: 'series1', points: [], color: Color(0xFF0000FF)),
+            id: 'series1',
+            points: [],
+            color: Color(0xFF0000FF),
+          ),
           const LineChartSeries(
-              id: 'series2', points: [], color: Color(0xFFFF0000)),
+            id: 'series2',
+            points: [],
+            color: Color(0xFFFF0000),
+          ),
         ];
         final delegate = MockStreamingDelegate(
           transform: createTransform(),
@@ -617,9 +637,15 @@ void main() {
       test('clearing one series preserves others', () {
         final series = [
           const LineChartSeries(
-              id: 'series1', points: [], color: Color(0xFF0000FF)),
+            id: 'series1',
+            points: [],
+            color: Color(0xFF0000FF),
+          ),
           const LineChartSeries(
-              id: 'series2', points: [], color: Color(0xFFFF0000)),
+            id: 'series2',
+            points: [],
+            color: Color(0xFFFF0000),
+          ),
         ];
         final delegate = MockStreamingDelegate(
           transform: createTransform(),
@@ -642,8 +668,7 @@ void main() {
     });
 
     group('Expand Viewport Mode', () {
-      test('expands viewport when expandViewportWhenNotAutoScrolling is true',
-          () {
+      test('expands viewport when expandViewportWhenNotAutoScrolling is true', () {
         // This test triggers animation scheduling which requires Flutter bindings.
         // Skip in unit tests since the actual expansion is tested via integration tests.
         final delegate = MockStreamingDelegate(
@@ -670,9 +695,17 @@ void main() {
         // Animation scheduling requires Flutter bindings (tested in widget tests)
         final delegate = MockStreamingDelegate(
           transform: createTransform(
-              dataXMin: 0, dataXMax: 100, dataYMin: 0, dataYMax: 100),
+            dataXMin: 0,
+            dataXMax: 100,
+            dataYMin: 0,
+            dataYMax: 100,
+          ),
           originalTransform: createTransform(
-              dataXMin: 0, dataXMax: 100, dataYMin: 0, dataYMax: 100),
+            dataXMin: 0,
+            dataXMax: 100,
+            dataYMin: 0,
+            dataYMax: 100,
+          ),
         );
         final manager = StreamingManager(delegate: delegate);
 
@@ -694,8 +727,10 @@ void main() {
 
         // Verify data was set
         expect(manager.hasStreamingData, isTrue);
-        expect(manager.streamingBounds!.xMax,
-            equals(199)); // Last point is at x=199
+        expect(
+          manager.streamingBounds!.xMax,
+          equals(199),
+        ); // Last point is at x=199
       });
     });
 
@@ -716,9 +751,17 @@ void main() {
       test('handles negative data values', () {
         final delegate = MockStreamingDelegate(
           transform: createTransform(
-              dataXMin: -100, dataXMax: 100, dataYMin: -50, dataYMax: 50),
+            dataXMin: -100,
+            dataXMax: 100,
+            dataYMin: -50,
+            dataYMax: 50,
+          ),
           originalTransform: createTransform(
-              dataXMin: -100, dataXMax: 100, dataYMin: -50, dataYMax: 50),
+            dataXMin: -100,
+            dataXMax: 100,
+            dataYMin: -50,
+            dataYMax: 50,
+          ),
         );
         final manager = StreamingManager(delegate: delegate);
 

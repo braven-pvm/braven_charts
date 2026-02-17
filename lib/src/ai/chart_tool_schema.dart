@@ -93,10 +93,7 @@ The chart will be rendered as a Flutter widget that supports:
                       'type': 'number',
                       'description': 'X-axis value (numeric)',
                     },
-                    'y': {
-                      'type': 'number',
-                      'description': 'Y-axis value',
-                    },
+                    'y': {'type': 'number', 'description': 'Y-axis value'},
                     'label': {
                       'type': 'string',
                       'description': 'Optional label for this point',
@@ -151,14 +148,8 @@ The chart will be rendered as a Flutter widget that supports:
               'type': 'string',
               'description': 'Unit suffix (e.g., "W", "°C")',
             },
-            'min': {
-              'type': 'number',
-              'description': 'Explicit minimum value',
-            },
-            'max': {
-              'type': 'number',
-              'description': 'Explicit maximum value',
-            },
+            'min': {'type': 'number', 'description': 'Explicit minimum value'},
+            'max': {'type': 'number', 'description': 'Explicit maximum value'},
             'position': {
               'type': 'string',
               'enum': ['left', 'right'],

@@ -45,10 +45,7 @@ class PointAnnotation extends ChartAnnotation {
     this.markerShape = MarkerShape.circle,
     this.markerSize = 8.0,
     this.markerColor = Colors.blue,
-  }) : assert(
-          dataPointIndex >= 0,
-          'Data point index must be non-negative',
-        );
+  }) : assert(dataPointIndex >= 0, 'Data point index must be non-negative');
 
   /// The ID of the series containing the data point to annotate.
   final String seriesId;
@@ -123,17 +120,17 @@ class PointAnnotation extends ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        seriesId,
-        dataPointIndex,
-        offset,
-        markerShape,
-        markerSize,
-        markerColor,
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    seriesId,
+    dataPointIndex,
+    offset,
+    markerShape,
+    markerSize,
+    markerColor,
+  );
 }

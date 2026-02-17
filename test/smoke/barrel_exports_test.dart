@@ -25,7 +25,11 @@ void main() {
         "export 'src/models/multi_axis_config.dart'",
       ];
       for (final export in expectedModels) {
-        expect(barrelContent, contains(export), reason: 'Missing model export: $export');
+        expect(
+          barrelContent,
+          contains(export),
+          reason: 'Missing model export: $export',
+        );
       }
     });
 
@@ -36,7 +40,11 @@ void main() {
         "export 'src/rendering/axis_color_resolver.dart'",
       ];
       for (final export in expectedRendering) {
-        expect(barrelContent, contains(export), reason: 'Missing rendering export: $export');
+        expect(
+          barrelContent,
+          contains(export),
+          reason: 'Missing rendering export: $export',
+        );
       }
     });
 
@@ -47,7 +55,11 @@ void main() {
         "export 'src/streaming/live_stream_controller.dart'",
       ];
       for (final export in expectedStreaming) {
-        expect(barrelContent, contains(export), reason: 'Missing streaming export: $export');
+        expect(
+          barrelContent,
+          contains(export),
+          reason: 'Missing streaming export: $export',
+        );
       }
     });
 
@@ -58,26 +70,45 @@ void main() {
         "export 'src/ai/chart_tool_schema.dart'",
       ];
       for (final export in expectedAi) {
-        expect(barrelContent, contains(export), reason: 'Missing AI export: $export');
+        expect(
+          barrelContent,
+          contains(export),
+          reason: 'Missing AI export: $export',
+        );
       }
     });
 
     test('barrel file should export controller classes', () {
-      const expectedControllers = ["export 'src/controllers/annotation_controller.dart'", "export 'src/controllers/chart_controller.dart'"];
+      const expectedControllers = [
+        "export 'src/controllers/annotation_controller.dart'",
+        "export 'src/controllers/chart_controller.dart'",
+      ];
       for (final export in expectedControllers) {
-        expect(barrelContent, contains(export), reason: 'Missing controller export: $export');
+        expect(
+          barrelContent,
+          contains(export),
+          reason: 'Missing controller export: $export',
+        );
       }
     });
 
     test('all exported files should exist on disk', () {
       final exportPattern = RegExp(r"export '([^']+)'");
       final matches = exportPattern.allMatches(barrelContent);
-      expect(matches.length, greaterThan(0), reason: 'Barrel file should have exports');
+      expect(
+        matches.length,
+        greaterThan(0),
+        reason: 'Barrel file should have exports',
+      );
 
       for (final match in matches) {
         final exportPath = match.group(1)!;
         final filePath = 'lib/$exportPath';
-        expect(File(filePath).existsSync(), isTrue, reason: 'Exported file does not exist: $filePath');
+        expect(
+          File(filePath).existsSync(),
+          isTrue,
+          reason: 'Exported file does not exist: $filePath',
+        );
       }
     });
   });

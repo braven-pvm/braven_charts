@@ -27,7 +27,12 @@ import '../interaction/core/chart_element.dart';
 /// final hits = tree.query(Offset(100, 100), radius: 10);
 /// ```
 class QuadTree {
-  QuadTree({required this.bounds, this.maxElementsPerNode = 4, this.maxDepth = 8, this.depth = 0});
+  QuadTree({
+    required this.bounds,
+    this.maxElementsPerNode = 4,
+    this.maxDepth = 8,
+    this.depth = 0,
+  });
 
   /// Bounding rectangle for this tree/node.
   final Rect bounds;
@@ -119,7 +124,12 @@ class QuadTree {
 
     _children = [
       // Top-left
-      QuadTree(bounds: Rect.fromLTWH(x, y, halfWidth, halfHeight), maxElementsPerNode: maxElementsPerNode, maxDepth: maxDepth, depth: depth + 1),
+      QuadTree(
+        bounds: Rect.fromLTWH(x, y, halfWidth, halfHeight),
+        maxElementsPerNode: maxElementsPerNode,
+        maxDepth: maxDepth,
+        depth: depth + 1,
+      ),
       // Top-right
       QuadTree(
         bounds: Rect.fromLTWH(x + halfWidth, y, halfWidth, halfHeight),
@@ -136,7 +146,12 @@ class QuadTree {
       ),
       // Bottom-right
       QuadTree(
-        bounds: Rect.fromLTWH(x + halfWidth, y + halfHeight, halfWidth, halfHeight),
+        bounds: Rect.fromLTWH(
+          x + halfWidth,
+          y + halfHeight,
+          halfWidth,
+          halfHeight,
+        ),
         maxElementsPerNode: maxElementsPerNode,
         maxDepth: maxDepth,
         depth: depth + 1,
@@ -180,7 +195,11 @@ class QuadTree {
   ///
   /// Returns all elements whose bounds contain the query region.
   List<ChartElement> query(Offset position, {double radius = 0}) {
-    final searchRect = Rect.fromCenter(center: position, width: radius * 2, height: radius * 2);
+    final searchRect = Rect.fromCenter(
+      center: position,
+      width: radius * 2,
+      height: radius * 2,
+    );
     return queryRect(searchRect);
   }
 
@@ -226,7 +245,10 @@ class QuadTree {
   ///
   /// Per conflict resolution scenario 4: Used for selecting nearest datapoint
   /// when multiple points are close together.
-  ({ChartElement element, double distance})? queryNearest(Offset position, {double? maxDistance}) {
+  ({ChartElement element, double distance})? queryNearest(
+    Offset position, {
+    double? maxDistance,
+  }) {
     // Get all elements within search radius
     final searchRadius = maxDistance ?? bounds.width.abs();
     final candidates = query(position, radius: searchRadius);
@@ -241,7 +263,8 @@ class QuadTree {
       final elementCenter = element.bounds.center;
       final distance = (position - elementCenter).distance;
 
-      if (distance < nearestDistance && (maxDistance == null || distance <= maxDistance)) {
+      if (distance < nearestDistance &&
+          (maxDistance == null || distance <= maxDistance)) {
         nearest = element;
         nearestDistance = distance;
       }
@@ -257,7 +280,10 @@ class QuadTree {
   /// 3px of the click, show a picker UI.
   ///
   /// Returns elements sorted by distance (nearest first).
-  List<({ChartElement element, double distance})> queryNearby(Offset position, {required double maxDistance}) {
+  List<({ChartElement element, double distance})> queryNearby(
+    Offset position, {
+    required double maxDistance,
+  }) {
     final candidates = query(position, radius: maxDistance);
     final results = <({ChartElement element, double distance})>[];
 
@@ -391,7 +417,12 @@ class QuadTree {
 
     traverse(this);
 
-    return QuadTreeStats(nodeCount: nodeCount, leafCount: leafCount, maxDepth: maxDepthReached, elementCount: totalElements);
+    return QuadTreeStats(
+      nodeCount: nodeCount,
+      leafCount: leafCount,
+      maxDepth: maxDepthReached,
+      elementCount: totalElements,
+    );
   }
 
   /// Returns a debug string representation of the tree.
@@ -399,7 +430,9 @@ class QuadTree {
     final buffer = StringBuffer();
     final prefix = '  ' * indent;
 
-    buffer.writeln('${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)');
+    buffer.writeln(
+      '${prefix}QuadTree(depth=$depth, elements=${_elements.length}, bounds=$bounds)',
+    );
 
     if (isSplit) {
       for (int i = 0; i < _children!.length; i++) {
@@ -415,7 +448,12 @@ class QuadTree {
 
 /// Statistics about a QuadTree structure.
 class QuadTreeStats {
-  const QuadTreeStats({required this.nodeCount, required this.leafCount, required this.maxDepth, required this.elementCount});
+  const QuadTreeStats({
+    required this.nodeCount,
+    required this.leafCount,
+    required this.maxDepth,
+    required this.elementCount,
+  });
 
   /// Total number of nodes (including internal and leaf nodes).
   final int nodeCount;

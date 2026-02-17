@@ -88,13 +88,17 @@ class ScrollbarConfig {
     this.enableResizeHandles = true,
     this.minZoomRatio = 0.01,
     this.maxZoomRatio = 1.0,
-  })  : assert(thickness > 0, 'Thickness must be positive'),
-        assert(minHandleSize > 0, 'Min handle size must be positive'),
-        assert(edgeGripWidth > 0 && edgeGripWidth < minHandleSize / 2,
-            'Edge grip width must be positive and less than half min handle size'),
-        assert(minZoomRatio > 0 && minZoomRatio < maxZoomRatio,
-            'Min zoom ratio must be positive and less than max zoom ratio'),
-        assert(maxZoomRatio <= 1.0, 'Max zoom ratio must be <= 1.0');
+  }) : assert(thickness > 0, 'Thickness must be positive'),
+       assert(minHandleSize > 0, 'Min handle size must be positive'),
+       assert(
+         edgeGripWidth > 0 && edgeGripWidth < minHandleSize / 2,
+         'Edge grip width must be positive and less than half min handle size',
+       ),
+       assert(
+         minZoomRatio > 0 && minZoomRatio < maxZoomRatio,
+         'Min zoom ratio must be positive and less than max zoom ratio',
+       ),
+       assert(maxZoomRatio <= 1.0, 'Max zoom ratio must be <= 1.0');
 
   // === Visual Properties ===
 
@@ -402,25 +406,24 @@ class ScrollbarConfig {
     bool? enableResizeHandles,
     double? minZoomRatio,
     double? maxZoomRatio,
-  }) =>
-      ScrollbarConfig(
-        thickness: thickness ?? this.thickness,
-        minHandleSize: minHandleSize ?? this.minHandleSize,
-        trackColor: trackColor ?? this.trackColor,
-        handleColor: handleColor ?? this.handleColor,
-        handleHoverColor: handleHoverColor ?? this.handleHoverColor,
-        handleActiveColor: handleActiveColor ?? this.handleActiveColor,
-        borderRadius: borderRadius ?? this.borderRadius,
-        edgeGripWidth: edgeGripWidth ?? this.edgeGripWidth,
-        showGripIndicator: showGripIndicator ?? this.showGripIndicator,
-        gripIndicatorColor: gripIndicatorColor ?? this.gripIndicatorColor,
-        autoHide: autoHide ?? this.autoHide,
-        autoHideDelay: autoHideDelay ?? this.autoHideDelay,
-        fadeDuration: fadeDuration ?? this.fadeDuration,
-        enableResizeHandles: enableResizeHandles ?? this.enableResizeHandles,
-        minZoomRatio: minZoomRatio ?? this.minZoomRatio,
-        maxZoomRatio: maxZoomRatio ?? this.maxZoomRatio,
-      );
+  }) => ScrollbarConfig(
+    thickness: thickness ?? this.thickness,
+    minHandleSize: minHandleSize ?? this.minHandleSize,
+    trackColor: trackColor ?? this.trackColor,
+    handleColor: handleColor ?? this.handleColor,
+    handleHoverColor: handleHoverColor ?? this.handleHoverColor,
+    handleActiveColor: handleActiveColor ?? this.handleActiveColor,
+    borderRadius: borderRadius ?? this.borderRadius,
+    edgeGripWidth: edgeGripWidth ?? this.edgeGripWidth,
+    showGripIndicator: showGripIndicator ?? this.showGripIndicator,
+    gripIndicatorColor: gripIndicatorColor ?? this.gripIndicatorColor,
+    autoHide: autoHide ?? this.autoHide,
+    autoHideDelay: autoHideDelay ?? this.autoHideDelay,
+    fadeDuration: fadeDuration ?? this.fadeDuration,
+    enableResizeHandles: enableResizeHandles ?? this.enableResizeHandles,
+    minZoomRatio: minZoomRatio ?? this.minZoomRatio,
+    maxZoomRatio: maxZoomRatio ?? this.maxZoomRatio,
+  );
 
   /// Serialize to JSON (for theme persistence).
   ///
@@ -435,23 +438,23 @@ class ScrollbarConfig {
   /// // }
   /// ```
   Map<String, dynamic> toJson() => {
-        'thickness': thickness,
-        'minHandleSize': minHandleSize,
-        'trackColor': trackColor.value,
-        'handleColor': handleColor.value,
-        'handleHoverColor': handleHoverColor.value,
-        'handleActiveColor': handleActiveColor.value,
-        'borderRadius': borderRadius,
-        'edgeGripWidth': edgeGripWidth,
-        'showGripIndicator': showGripIndicator,
-        'gripIndicatorColor': gripIndicatorColor.value,
-        'autoHide': autoHide,
-        'autoHideDelayMs': autoHideDelay.inMilliseconds,
-        'fadeDurationMs': fadeDuration.inMilliseconds,
-        'enableResizeHandles': enableResizeHandles,
-        'minZoomRatio': minZoomRatio,
-        'maxZoomRatio': maxZoomRatio,
-      };
+    'thickness': thickness,
+    'minHandleSize': minHandleSize,
+    'trackColor': trackColor.value,
+    'handleColor': handleColor.value,
+    'handleHoverColor': handleHoverColor.value,
+    'handleActiveColor': handleActiveColor.value,
+    'borderRadius': borderRadius,
+    'edgeGripWidth': edgeGripWidth,
+    'showGripIndicator': showGripIndicator,
+    'gripIndicatorColor': gripIndicatorColor.value,
+    'autoHide': autoHide,
+    'autoHideDelayMs': autoHideDelay.inMilliseconds,
+    'fadeDurationMs': fadeDuration.inMilliseconds,
+    'enableResizeHandles': enableResizeHandles,
+    'minZoomRatio': minZoomRatio,
+    'maxZoomRatio': maxZoomRatio,
+  };
 
   /// Deserialize from JSON.
   ///
@@ -503,26 +506,27 @@ class ScrollbarConfig {
 
   @override
   int get hashCode => Object.hash(
-        thickness,
-        minHandleSize,
-        trackColor,
-        handleColor,
-        handleHoverColor,
-        handleActiveColor,
-        borderRadius,
-        edgeGripWidth,
-        showGripIndicator,
-        gripIndicatorColor,
-        autoHide,
-        autoHideDelay,
-        fadeDuration,
-        enableResizeHandles,
-        minZoomRatio,
-        maxZoomRatio,
-      );
+    thickness,
+    minHandleSize,
+    trackColor,
+    handleColor,
+    handleHoverColor,
+    handleActiveColor,
+    borderRadius,
+    edgeGripWidth,
+    showGripIndicator,
+    gripIndicatorColor,
+    autoHide,
+    autoHideDelay,
+    fadeDuration,
+    enableResizeHandles,
+    minZoomRatio,
+    maxZoomRatio,
+  );
 
   @override
-  String toString() => 'ScrollbarConfig('
+  String toString() =>
+      'ScrollbarConfig('
       'thickness: $thickness, '
       'minHandleSize: $minHandleSize, '
       'trackColor: $trackColor, '

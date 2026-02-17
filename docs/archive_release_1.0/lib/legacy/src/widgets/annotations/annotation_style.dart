@@ -8,7 +8,10 @@ class AnnotationStyle {
   /// Creates an annotation style
   const AnnotationStyle({
     this.textStyle = const TextStyle(
-        fontSize: 12.0, fontWeight: FontWeight.normal, color: Colors.black),
+      fontSize: 12.0,
+      fontWeight: FontWeight.normal,
+      color: Colors.black,
+    ),
     this.backgroundColor,
     this.borderColor,
     this.borderWidth = 1.0,

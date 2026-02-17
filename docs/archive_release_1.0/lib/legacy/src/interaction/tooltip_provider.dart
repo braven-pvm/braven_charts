@@ -109,10 +109,7 @@ abstract class ITooltipProvider {
   /// - [newPoint]: New data point to display
   ///
   /// Returns: true if tooltip content changed
-  bool shouldUpdate(
-    ChartDataPoint? oldPoint,
-    ChartDataPoint? newPoint,
-  );
+  bool shouldUpdate(ChartDataPoint? oldPoint, ChartDataPoint? newPoint);
 }
 
 /// Tooltip provider implementation.
@@ -275,10 +272,7 @@ class TooltipProvider implements ITooltipProvider {
       padding: EdgeInsets.all(style.padding),
       decoration: BoxDecoration(
         color: style.backgroundColor,
-        border: Border.all(
-          color: style.borderColor,
-          width: style.borderWidth,
-        ),
+        border: Border.all(color: style.borderColor, width: style.borderWidth),
         borderRadius: BorderRadius.circular(style.borderRadius),
         boxShadow: [
           BoxShadow(
@@ -305,18 +299,12 @@ class TooltipProvider implements ITooltipProvider {
           // X value - use formatter for consistent precision
           Text(
             'X: ${MultiAxisValueFormatter.format(value: point.x)}',
-            style: TextStyle(
-              color: style.textColor,
-              fontSize: style.fontSize,
-            ),
+            style: TextStyle(color: style.textColor, fontSize: style.fontSize),
           ),
           // Y value - formatted with MultiAxisValueFormatter
           Text(
             'Y: $formattedY',
-            style: TextStyle(
-              color: style.textColor,
-              fontSize: style.fontSize,
-            ),
+            style: TextStyle(color: style.textColor, fontSize: style.fontSize),
           ),
           // Label if available
           if (point.label != null && point.label!.isNotEmpty)
@@ -344,10 +332,7 @@ class TooltipProvider implements ITooltipProvider {
       padding: EdgeInsets.all(style.padding),
       decoration: BoxDecoration(
         color: style.backgroundColor,
-        border: Border.all(
-          color: style.borderColor,
-          width: style.borderWidth,
-        ),
+        border: Border.all(color: style.borderColor, width: style.borderWidth),
         borderRadius: BorderRadius.circular(style.borderRadius),
         boxShadow: [
           BoxShadow(
@@ -404,10 +389,7 @@ class TooltipProvider implements ITooltipProvider {
   }
 
   @override
-  bool shouldUpdate(
-    ChartDataPoint? oldPoint,
-    ChartDataPoint? newPoint,
-  ) {
+  bool shouldUpdate(ChartDataPoint? oldPoint, ChartDataPoint? newPoint) {
     // Update if visibility changed
     if (oldPoint == null && newPoint != null) return true;
     if (oldPoint != null && newPoint == null) return true;

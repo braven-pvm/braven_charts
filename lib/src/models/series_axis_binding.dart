@@ -38,11 +38,9 @@ class SeriesAxisBinding {
   ///
   /// - [seriesId] should match the `id` property of a `ChartSeries`
   /// - [yAxisId] should match the `id` property of a `YAxisConfig`
-  const SeriesAxisBinding({
-    required this.seriesId,
-    required this.yAxisId,
-  })  : assert(seriesId != '', 'seriesId must be non-empty'),
-        assert(yAxisId != '', 'yAxisId must be non-empty');
+  const SeriesAxisBinding({required this.seriesId, required this.yAxisId})
+    : assert(seriesId != '', 'seriesId must be non-empty'),
+      assert(yAxisId != '', 'yAxisId must be non-empty');
 
   /// ID of the data series.
   ///

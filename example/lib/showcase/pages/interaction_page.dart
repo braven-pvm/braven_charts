@@ -116,7 +116,8 @@ class _InteractionPageState extends State<InteractionPage> {
 
       // Info
       const InfoBox(
-        message: 'Try zooming with scroll wheel, panning by dragging, '
+        message:
+            'Try zooming with scroll wheel, panning by dragging, '
             'hovering for crosshair, and clicking on data points.',
       ),
     ];
@@ -145,8 +146,9 @@ class _InteractionPageState extends State<InteractionPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -182,10 +184,7 @@ class _InteractionPageState extends State<InteractionPage> {
 
   Widget _buildStatusPanel() {
     final items = <StatusItem>[
-      StatusItem(
-        label: 'Data Points',
-        value: '${_data.length}',
-      ),
+      StatusItem(label: 'Data Points', value: '${_data.length}'),
       StatusItem(
         label: 'Zoom',
         value: _optionsController.enableZoom ? 'On' : 'Off',
@@ -197,21 +196,25 @@ class _InteractionPageState extends State<InteractionPage> {
     ];
 
     if (_hoveredPoint != null) {
-      items.add(StatusItem(
-        label: 'Hover',
-        value:
-            '(${_hoveredPoint!.x.toStringAsFixed(1)}, ${_hoveredPoint!.y.toStringAsFixed(1)})',
-        color: Colors.blue,
-      ));
+      items.add(
+        StatusItem(
+          label: 'Hover',
+          value:
+              '(${_hoveredPoint!.x.toStringAsFixed(1)}, ${_hoveredPoint!.y.toStringAsFixed(1)})',
+          color: Colors.blue,
+        ),
+      );
     }
 
     if (_tappedPoint != null) {
-      items.add(StatusItem(
-        label: 'Selected',
-        value:
-            '(${_tappedPoint!.x.toStringAsFixed(1)}, ${_tappedPoint!.y.toStringAsFixed(1)})',
-        color: Colors.green,
-      ));
+      items.add(
+        StatusItem(
+          label: 'Selected',
+          value:
+              '(${_tappedPoint!.x.toStringAsFixed(1)}, ${_tappedPoint!.y.toStringAsFixed(1)})',
+          color: Colors.green,
+        ),
+      );
     }
 
     return StatusPanel(items: items);

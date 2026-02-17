@@ -39,14 +39,11 @@ class BarGroupInfo {
   /// // With custom gap
   /// const infoWithGap = BarGroupInfo(index: 1, count: 3, gap: 4.0);
   /// ```
-  const BarGroupInfo({
-    required this.index,
-    required this.count,
-    this.gap = 2.0,
-  })  : assert(index >= 0, 'index must be non-negative'),
-        assert(count >= 1, 'count must be at least 1'),
-        assert(index < count, 'index must be less than count'),
-        assert(gap >= 0, 'gap must be non-negative');
+  const BarGroupInfo({required this.index, required this.count, this.gap = 2.0})
+    : assert(index >= 0, 'index must be non-negative'),
+      assert(count >= 1, 'count must be at least 1'),
+      assert(index < count, 'index must be less than count'),
+      assert(gap >= 0, 'gap must be non-negative');
 
   /// 0-based index of this bar series among all bar series.
   ///
@@ -124,11 +121,7 @@ class BarGroupInfo {
   /// final modified = original.copyWith(gap: 4.0);
   /// // modified has index=0, count=3, gap=4.0
   /// ```
-  BarGroupInfo copyWith({
-    int? index,
-    int? count,
-    double? gap,
-  }) {
+  BarGroupInfo copyWith({int? index, int? count, double? gap}) {
     return BarGroupInfo(
       index: index ?? this.index,
       count: count ?? this.count,

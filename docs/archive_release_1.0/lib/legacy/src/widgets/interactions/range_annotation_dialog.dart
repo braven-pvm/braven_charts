@@ -13,10 +13,7 @@ import '../annotations/range_annotation.dart';
 ///
 /// Allows users to define rectangular range highlights on charts.
 class RangeAnnotationDialog extends StatefulWidget {
-  const RangeAnnotationDialog({
-    super.key,
-    this.annotation,
-  });
+  const RangeAnnotationDialog({super.key, this.annotation});
 
   /// The annotation to edit, or null to create a new one.
   final RangeAnnotation? annotation;
@@ -45,14 +42,18 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     final annotation = widget.annotation;
 
     _labelController = TextEditingController(text: annotation?.label ?? '');
-    _startXController =
-        TextEditingController(text: annotation?.startX?.toString() ?? '');
-    _endXController =
-        TextEditingController(text: annotation?.endX?.toString() ?? '');
-    _startYController =
-        TextEditingController(text: annotation?.startY?.toString() ?? '');
-    _endYController =
-        TextEditingController(text: annotation?.endY?.toString() ?? '');
+    _startXController = TextEditingController(
+      text: annotation?.startX?.toString() ?? '',
+    );
+    _endXController = TextEditingController(
+      text: annotation?.endX?.toString() ?? '',
+    );
+    _startYController = TextEditingController(
+      text: annotation?.startY?.toString() ?? '',
+    );
+    _endYController = TextEditingController(
+      text: annotation?.endY?.toString() ?? '',
+    );
 
     if (annotation != null) {
       _fillColor = annotation.fillColor ?? Colors.blue.withOpacity(0.2);
@@ -80,9 +81,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     return Dialog(
       backgroundColor: colorScheme.surface,
       insetPadding: const EdgeInsets.all(0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 380,
         constraints: const BoxConstraints(maxHeight: 600),
@@ -109,10 +108,8 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                         isEditMode
                             ? 'Edit Range Annotation'
                             : 'Add Range Annotation',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       const Spacer(),
                       IconButton(
@@ -187,7 +184,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                         onPressed: _handleSave,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
                         ),
                         child: Text(isEditMode ? 'Update' : 'Add'),
                       ),
@@ -235,9 +234,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       children: [
         Text(
           'Label (Optional)',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -264,16 +263,13 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         if (hint != null) ...[
           const SizedBox(height: 4),
-          Text(
-            hint,
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-          ),
+          Text(hint, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
         ],
         const SizedBox(height: 8),
         Row(
@@ -286,8 +282,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
                 ],
@@ -309,8 +306,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
                 ],
@@ -348,9 +346,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       children: [
         Text(
           'Fill Color',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -378,11 +376,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                     ),
                   ),
                   child: isSelected
-                      ? const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: Colors.white,
-                        )
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
                       : null,
                 ),
               );
@@ -396,8 +390,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
               }),
               borderRadius: BorderRadius.circular(5),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   border: Border.all(color: Colors.grey.shade300),
@@ -407,14 +403,18 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                   spacing: 5,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.palette,
-                        size: 16, color: Colors.deepOrange.shade400),
+                    Icon(
+                      Icons.palette,
+                      size: 16,
+                      color: Colors.deepOrange.shade400,
+                    ),
                     const Text(
                       'Custom',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w600),
+                        fontSize: 11,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     Container(
                       width: 20,
@@ -454,9 +454,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       children: [
         Text(
           'Border Color (Optional)',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -491,14 +491,14 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                           color: isSelected ? Colors.red : Colors.grey,
                         )
                       : isSelected
-                          ? Icon(
-                              Icons.check,
-                              size: 16,
-                              color: color == Colors.black
-                                  ? Colors.white
-                                  : Colors.white,
-                            )
-                          : null,
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: color == Colors.black
+                              ? Colors.white
+                              : Colors.white,
+                        )
+                      : null,
                 ),
               );
             }),
@@ -512,8 +512,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                 }),
                 borderRadius: BorderRadius.circular(5),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     border: Border.all(color: Colors.grey.shade300),
@@ -523,14 +525,18 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
                     spacing: 5,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.palette,
-                          size: 16, color: Colors.deepOrange.shade400),
+                      Icon(
+                        Icons.palette,
+                        size: 16,
+                        color: Colors.deepOrange.shade400,
+                      ),
                       const Text(
                         'Custom',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w600),
+                          fontSize: 11,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Container(
                         width: 20,
@@ -565,9 +571,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
       children: [
         Text(
           'Label Position',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -587,8 +593,10 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
@@ -629,7 +637,9 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   }
 
   Future<void> _showCustomColorPicker(
-      Color currentColor, void Function(Color) onColorChanged) async {
+    Color currentColor,
+    void Function(Color) onColorChanged,
+  ) async {
     Color selectedColor = currentColor;
 
     final result = await showDialog<bool>(
@@ -726,7 +736,8 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
     }
 
     final annotation = RangeAnnotation(
-      id: widget.annotation?.id ??
+      id:
+          widget.annotation?.id ??
           'range_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
       style: _labelStyle,

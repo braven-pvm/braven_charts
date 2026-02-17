@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -25,11 +25,7 @@ class WebTestUtils {
   }) {
     return MaterialApp(
       title: title,
-      home: Scaffold(
-        body: Center(
-          child: child,
-        ),
-      ),
+      home: Scaffold(body: Center(child: child)),
     );
   }
 
@@ -48,10 +44,7 @@ class WebTestUtils {
   }
 
   /// Simulates mouse hover at a specific position
-  static Future<void> hoverAt(
-    WidgetTester tester,
-    Offset position,
-  ) async {
+  static Future<void> hoverAt(WidgetTester tester, Offset position) async {
     final TestGesture gesture = await tester.createGesture(
       kind: PointerDeviceKind.mouse,
     );
@@ -60,10 +53,7 @@ class WebTestUtils {
   }
 
   /// Simulates mouse click at a specific position
-  static Future<void> clickAt(
-    WidgetTester tester,
-    Offset position,
-  ) async {
+  static Future<void> clickAt(WidgetTester tester, Offset position) async {
     final TestGesture gesture = await tester.createGesture(
       kind: PointerDeviceKind.mouse,
     );

@@ -101,10 +101,26 @@ sealed class ChartAnnotation {
 }
 
 /// Anchor point for text annotations positioning.
-enum AnnotationAnchor { topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight }
+enum AnnotationAnchor {
+  topLeft,
+  topCenter,
+  topRight,
+  centerLeft,
+  center,
+  centerRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight,
+}
 
 /// Position for range annotation labels.
-enum AnnotationLabelPosition { topLeft, topRight, bottomLeft, bottomRight, center }
+enum AnnotationLabelPosition {
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+  center,
+}
 
 /// A point annotation that marks a specific data point with a custom marker.
 ///
@@ -251,10 +267,22 @@ class RangeAnnotation extends ChartAnnotation {
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
     this.labelMargin = 8.0,
-  }) : assert(startX != null || startY != null, 'At least one range (X or Y) must be specified'),
-       assert(startX == null || endX == null || startX < endX, 'startX must be less than endX'),
-       assert(startY == null || endY == null || startY < endY, 'startY must be less than endY'),
-       assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
+  }) : assert(
+         startX != null || startY != null,
+         'At least one range (X or Y) must be specified',
+       ),
+       assert(
+         startX == null || endX == null || startX < endX,
+         'startX must be less than endX',
+       ),
+       assert(
+         startY == null || endY == null || startY < endY,
+         'startY must be less than endY',
+       ),
+       assert(
+         snapTolerance >= 0 && snapTolerance <= 1,
+         'snapTolerance must be between 0 and 1',
+       ),
        assert(labelMargin >= 0, 'Label margin must be non-negative'),
        super(id: id ?? ChartAnnotation.generateId());
 
@@ -409,11 +437,17 @@ class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {
     final posJson = json['position'] as Map<String, dynamic>;
-    final position = Offset((posJson['dx'] as num).toDouble(), (posJson['dy'] as num).toDouble());
+    final position = Offset(
+      (posJson['dx'] as num).toDouble(),
+      (posJson['dy'] as num).toDouble(),
+    );
 
     final anchorName = json['anchor'] as String?;
     final anchor = anchorName != null
-        ? AnnotationAnchor.values.firstWhere((a) => a.name == anchorName, orElse: () => AnnotationAnchor.topLeft)
+        ? AnnotationAnchor.values.firstWhere(
+            (a) => a.name == anchorName,
+            orElse: () => AnnotationAnchor.topLeft,
+          )
         : AnnotationAnchor.topLeft;
 
     return TextAnnotation._internal(
@@ -423,8 +457,12 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: json['richTextDelta'] as List<dynamic>?,
       position: position,
       anchor: anchor,
-      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
-      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
+      backgroundColor: json['backgroundColor'] != null
+          ? Color(json['backgroundColor'] as int)
+          : null,
+      borderColor: json['borderColor'] != null
+          ? Color(json['borderColor'] as int)
+          : null,
       allowDragging: json['allowDragging'] as bool? ?? false,
       allowEditing: json['allowEditing'] as bool? ?? false,
       zIndex: json['zIndex'] as int? ?? 0,
@@ -445,7 +483,10 @@ class TextAnnotation extends ChartAnnotation {
     this.backgroundColor,
     this.borderColor,
   }) : richTextDelta = null,
-       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       assert(
+         position.dx >= 0 && position.dy >= 0,
+         'Position cannot have negative coordinates',
+       ),
        super(id: id ?? ChartAnnotation.generateId());
 
   /// Creates a text annotation with rich text (Delta format) at a screen position.
@@ -462,7 +503,10 @@ class TextAnnotation extends ChartAnnotation {
     this.backgroundColor,
     this.borderColor,
   }) : text = null,
-       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       assert(
+         position.dx >= 0 && position.dy >= 0,
+         'Position cannot have negative coordinates',
+       ),
        super(id: id ?? ChartAnnotation.generateId());
 
   /// Internal constructor for copyWith and fromJson.
@@ -479,7 +523,10 @@ class TextAnnotation extends ChartAnnotation {
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  }) : assert(text != null || richTextDelta != null, 'Either text or richTextDelta must be provided');
+  }) : assert(
+         text != null || richTextDelta != null,
+         'Either text or richTextDelta must be provided',
+       );
 
   /// The plain text content to display (null if using rich text).
   final String? text;
@@ -649,7 +696,10 @@ class TextAnnotation extends ChartAnnotation {
         return style; // Unknown level, no change
     }
 
-    return style.copyWith(fontSize: baseFontSize * sizeMultiplier, fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600);
+    return style.copyWith(
+      fontSize: baseFontSize * sizeMultiplier,
+      fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600,
+    );
   }
 
   /// Applies Delta attributes to a TextStyle.
@@ -672,7 +722,9 @@ class TextAnnotation extends ChartAnnotation {
     if (attrs['u'] == true || attrs['underline'] == true) {
       result = result.copyWith(decoration: TextDecoration.underline);
     }
-    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
+    if (attrs['s'] == true ||
+        attrs['strikethrough'] == true ||
+        attrs['strike'] == true) {
       result = result.copyWith(decoration: TextDecoration.lineThrough);
     }
 
@@ -831,7 +883,8 @@ class TextAnnotation extends ChartAnnotation {
       if (richTextDelta != null) 'richTextDelta': richTextDelta,
       'position': {'dx': position.dx, 'dy': position.dy},
       'anchor': anchor.name,
-      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
+      if (backgroundColor != null)
+        'backgroundColor': backgroundColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
@@ -1187,7 +1240,8 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.elevation = 0.0,
   }) : assert(
-         trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+         trendType != TrendType.movingAverage ||
+             (windowSize != null && windowSize > 0),
          'windowSize must be positive when trendType is movingAverage',
        ),
        assert(degree > 0, 'degree must be positive'),
@@ -1375,7 +1429,9 @@ class LegendAnnotation extends ChartAnnotation {
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
-      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
+      customPosition: clearCustomPosition
+          ? null
+          : (customPosition ?? _customPosition),
     );
   }
 }

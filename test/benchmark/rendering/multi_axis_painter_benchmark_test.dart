@@ -47,11 +47,15 @@ void main() {
       // Create axis bounds that will generate ~20 ticks each
       final axisBounds = {
         'power': const DataRange(min: 0.0, max: 400.0), // 0, 20, 40, ..., 400
-        'heartrate':
-            const DataRange(min: 100.0, max: 200.0), // 100, 105, ..., 200
+        'heartrate': const DataRange(
+          min: 100.0,
+          max: 200.0,
+        ), // 100, 105, ..., 200
         'cadence': const DataRange(min: 60.0, max: 120.0), // 60, 63, ..., 120
-        'elevation':
-            const DataRange(min: 0.0, max: 2000.0), // 0, 100, ..., 2000
+        'elevation': const DataRange(
+          min: 0.0,
+          max: 2000.0,
+        ), // 0, 100, ..., 2000
       };
 
       // Create painter
@@ -96,16 +100,19 @@ void main() {
       print('  Axes: ${axes.length}');
       print('  Approximate ticks per axis: ~20');
       print(
-          '  Total labels: ~${axes.length * 20 + axes.length} (ticks + axis labels)');
+        '  Total labels: ~${axes.length * 20 + axes.length} (ticks + axis labels)',
+      );
       print(
-          '  Average paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
+        '  Average paint time: ${averageMilliseconds.toStringAsFixed(3)}ms',
+      );
       print('  Target: <16.67ms (60fps)');
 
       // Assert 60fps performance (16.67ms frame budget)
       expect(
         averageMilliseconds,
         lessThan(16.67),
-        reason: 'Paint time should be under 16.67ms to maintain 60fps. '
+        reason:
+            'Paint time should be under 16.67ms to maintain 60fps. '
             'Actual: ${averageMilliseconds.toStringAsFixed(3)}ms',
       );
     });
@@ -120,9 +127,7 @@ void main() {
       ];
 
       // Initial bounds
-      var axisBounds = {
-        'test': const DataRange(min: 0.0, max: 100.0),
-      };
+      var axisBounds = {'test': const DataRange(min: 0.0, max: 100.0)};
 
       final painter = MultiAxisPainter(
         axes: axes,
@@ -140,9 +145,7 @@ void main() {
       recorder.endRecording();
 
       // Change bounds - should invalidate cache
-      axisBounds = {
-        'test': const DataRange(min: 0.0, max: 200.0),
-      };
+      axisBounds = {'test': const DataRange(min: 0.0, max: 200.0)};
 
       final painter2 = MultiAxisPainter(
         axes: axes,
@@ -169,9 +172,7 @@ void main() {
         ),
       ];
 
-      final axisBounds = {
-        'test': const DataRange(min: 0.0, max: 100.0),
-      };
+      final axisBounds = {'test': const DataRange(min: 0.0, max: 100.0)};
 
       const chartArea = Rect.fromLTWH(0, 0, 800, 600);
       const plotArea = Rect.fromLTWH(100, 50, 600, 500);
@@ -268,13 +269,15 @@ void main() {
 
       print('MultiAxisPainter benchmark (cold cache):');
       print(
-          '  Average cold paint time: ${averageMilliseconds.toStringAsFixed(3)}ms');
+        '  Average cold paint time: ${averageMilliseconds.toStringAsFixed(3)}ms',
+      );
 
       // Cold cache should still be reasonable (allow more time than cached)
       expect(
         averageMilliseconds,
         lessThan(50.0),
-        reason: 'Cold cache paint should complete in reasonable time. '
+        reason:
+            'Cold cache paint should complete in reasonable time. '
             'Actual: ${averageMilliseconds.toStringAsFixed(3)}ms',
       );
     });

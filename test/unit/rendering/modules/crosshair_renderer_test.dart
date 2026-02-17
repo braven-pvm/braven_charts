@@ -69,56 +69,67 @@ void main() {
       });
 
       test(
-          'isMultiAxisMode returns true for multiple axes with perSeries normalization',
-          () {
-        final info = MultiAxisInfo(
-          effectiveAxes: [
-            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
-          ],
-          axisBounds: const {
-            'axis1': DataRange(min: 0, max: 100),
-            'axis2': DataRange(min: 0, max: 1000),
-          },
-          axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
-          effectiveBindings: const [],
-          normalizationMode: NormalizationMode.perSeries,
-          series: const [],
-        );
+        'isMultiAxisMode returns true for multiple axes with perSeries normalization',
+        () {
+          final info = MultiAxisInfo(
+            effectiveAxes: [
+              YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+              YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            ],
+            axisBounds: const {
+              'axis1': DataRange(min: 0, max: 100),
+              'axis2': DataRange(min: 0, max: 1000),
+            },
+            axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
+            effectiveBindings: const [],
+            normalizationMode: NormalizationMode.perSeries,
+            series: const [],
+          );
 
-        expect(info.isMultiAxisMode, isTrue);
-      });
+          expect(info.isMultiAxisMode, isTrue);
+        },
+      );
 
       test(
-          'isMultiAxisMode returns false for multiple axes without perSeries normalization',
-          () {
-        final info = MultiAxisInfo(
-          effectiveAxes: [
-            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
-          ],
-          axisBounds: const {
-            'axis1': DataRange(min: 0, max: 100),
-            'axis2': DataRange(min: 0, max: 1000),
-          },
-          axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
-          effectiveBindings: const [],
-          normalizationMode: null,
-          series: const [],
-        );
+        'isMultiAxisMode returns false for multiple axes without perSeries normalization',
+        () {
+          final info = MultiAxisInfo(
+            effectiveAxes: [
+              YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+              YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            ],
+            axisBounds: const {
+              'axis1': DataRange(min: 0, max: 100),
+              'axis2': DataRange(min: 0, max: 1000),
+            },
+            axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
+            effectiveBindings: const [],
+            normalizationMode: null,
+            series: const [],
+          );
 
-        expect(info.isMultiAxisMode, isFalse);
-      });
+          expect(info.isMultiAxisMode, isFalse);
+        },
+      );
 
       test('getPositionWidth returns total width for position', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, visible: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2', position: YAxisPosition.left, visible: true),
+              id: 'axis2',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis3', position: YAxisPosition.right, visible: true),
+              id: 'axis3',
+              position: YAxisPosition.right,
+              visible: true,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -139,9 +150,15 @@ void main() {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, visible: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2', position: YAxisPosition.left, visible: false),
+              id: 'axis2',
+              position: YAxisPosition.left,
+              visible: false,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -161,7 +178,10 @@ void main() {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, color: axisColor),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              color: axisColor,
+            ),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -190,10 +210,11 @@ void main() {
           normalizationMode: null,
           series: [
             const ChartSeries(
-                id: 'series1',
-                name: 'Series 1',
-                points: [],
-                color: seriesColor),
+              id: 'series1',
+              name: 'Series 1',
+              points: [],
+              color: seriesColor,
+            ),
           ],
         );
 
@@ -277,13 +298,15 @@ void main() {
         final multiAxisInfoWithMultiple = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1',
-                position: YAxisPosition.left,
-                showCrosshairLabel: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              showCrosshairLabel: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2',
-                position: YAxisPosition.right,
-                showCrosshairLabel: true),
+              id: 'axis2',
+              position: YAxisPosition.right,
+              showCrosshairLabel: true,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),

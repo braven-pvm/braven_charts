@@ -36,7 +36,7 @@ class ViewportCuller {
   ///
   /// [margin]: Fraction of viewport to add as padding (default: 0.1)
   const ViewportCuller({this.margin = 0.1})
-      : assert(margin >= 0.0, 'margin must be non-negative');
+    : assert(margin >= 0.0, 'margin must be non-negative');
 
   /// Filters points to those visible within the viewport plus margin.
   ///
@@ -57,10 +57,7 @@ class ViewportCuller {
     if (points.isEmpty) return [];
 
     // Calculate effective bounds with margin
-    final bounds = calculateBounds(
-      viewportX: viewportX,
-      viewportY: viewportY,
-    );
+    final bounds = calculateBounds(viewportX: viewportX, viewportY: viewportY);
 
     if (isXOrdered) {
       return _cullOrdered(points, bounds);
@@ -100,10 +97,7 @@ class ViewportCuller {
     ViewportBounds bounds,
   ) {
     // Find first point within x-range using binary search
-    final startIndex = _binarySearchStart(
-      points,
-      bounds.xRange.paddedMin,
-    );
+    final startIndex = _binarySearchStart(points, bounds.xRange.paddedMin);
 
     if (startIndex == -1) return [];
 
@@ -175,10 +169,7 @@ class ViewportBounds {
   /// Y-axis range with margin
   final dr.DataRange yRange;
 
-  const ViewportBounds({
-    required this.xRange,
-    required this.yRange,
-  });
+  const ViewportBounds({required this.xRange, required this.yRange});
 
   /// Checks if a point is within the bounds.
   ///

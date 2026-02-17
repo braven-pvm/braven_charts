@@ -177,17 +177,14 @@ class YAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
-  })  : id = '',
-        assert(minWidth >= 0, 'minWidth must be non-negative'),
-        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
-        assert(
-          min == null || max == null || min < max,
-          'min must be less than max',
-        ),
-        assert(
-          tickCount == null || tickCount >= 2,
-          'tickCount must be >= 2',
-        );
+  }) : id = '',
+       assert(minWidth >= 0, 'minWidth must be non-negative'),
+       assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
+       assert(
+         min == null || max == null || min < max,
+         'min must be less than max',
+       ),
+       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 
   /// Internal constructor with explicit ID.
   ///
@@ -253,10 +250,7 @@ class YAxisConfig {
       min == null || max == null || min < max,
       'min must be less than max',
     );
-    assert(
-      tickCount == null || tickCount >= 2,
-      'tickCount must be >= 2',
-    );
+    assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
     return YAxisConfig._internal(
       id: id,
       position: position,
@@ -524,27 +518,27 @@ class YAxisConfig {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        position,
-        color,
-        label,
-        unit,
-        min,
-        max,
-        visible,
-        showAxisLine,
-        showTicks,
-        showCrosshairLabel,
-        crosshairLabelPosition,
-        labelDisplay,
-        minWidth,
-        maxWidth,
-        tickLabelPadding,
-        axisLabelPadding,
-        axisMargin,
-        tickCount,
-        labelFormatter,
-      );
+    id,
+    position,
+    color,
+    label,
+    unit,
+    min,
+    max,
+    visible,
+    showAxisLine,
+    showTicks,
+    showCrosshairLabel,
+    crosshairLabelPosition,
+    labelDisplay,
+    minWidth,
+    maxWidth,
+    tickLabelPadding,
+    axisLabelPadding,
+    axisMargin,
+    tickCount,
+    labelFormatter,
+  );
 
   @override
   String toString() {

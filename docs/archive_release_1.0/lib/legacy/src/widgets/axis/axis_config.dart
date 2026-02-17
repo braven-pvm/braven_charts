@@ -24,7 +24,7 @@ class AxisRange {
   ///
   /// Throws [AssertionError] if min >= max.
   const AxisRange(this.min, this.max)
-      : assert(min < max, 'Axis range min must be less than max');
+    : assert(min < max, 'Axis range min must be less than max');
 
   /// The minimum value of the axis range.
   final double min;
@@ -153,23 +153,23 @@ class LegacyAxisConfig {
     this.zeroLineWidth = 1.5,
     this.logarithmic = false,
     this.inverted = false,
-  })  : assert(axisWidth >= 0.0, 'axisWidth must be non-negative'),
-        assert(gridWidth >= 0.0, 'gridWidth must be non-negative'),
-        assert(tickLength >= 0.0, 'tickLength must be non-negative'),
-        assert(tickWidth >= 0.0, 'tickWidth must be non-negative'),
-        assert(zeroLineWidth >= 0.0, 'zeroLineWidth must be non-negative'),
-        assert(
-          reservedSize == null || reservedSize >= 0.0,
-          'reservedSize must be non-negative if specified',
-        ),
-        assert(
-          labelRotation >= -180.0 && labelRotation <= 180.0,
-          'labelRotation must be between -180° and 180°',
-        ),
-        assert(
-          maxLabels == null || maxLabels > 0,
-          'maxLabels must be positive if specified',
-        );
+  }) : assert(axisWidth >= 0.0, 'axisWidth must be non-negative'),
+       assert(gridWidth >= 0.0, 'gridWidth must be non-negative'),
+       assert(tickLength >= 0.0, 'tickLength must be non-negative'),
+       assert(tickWidth >= 0.0, 'tickWidth must be non-negative'),
+       assert(zeroLineWidth >= 0.0, 'zeroLineWidth must be non-negative'),
+       assert(
+         reservedSize == null || reservedSize >= 0.0,
+         'reservedSize must be non-negative if specified',
+       ),
+       assert(
+         labelRotation >= -180.0 && labelRotation <= 180.0,
+         'labelRotation must be between -180° and 180°',
+       ),
+       assert(
+         maxLabels == null || maxLabels > 0,
+         'maxLabels must be positive if specified',
+       );
 
   // ========== Visibility ==========
 
@@ -421,38 +421,38 @@ class LegacyAxisConfig {
 
   @override
   int get hashCode => Object.hashAll([
-        showAxis,
-        showGrid,
-        showTicks,
-        showLabels,
-        range,
-        allowZoom,
-        allowPan,
-        axisColor,
-        axisWidth,
-        axisPosition,
-        gridColor,
-        gridWidth,
-        Object.hashAll(gridDashPattern ?? []),
-        showMinorGrid,
-        minorGridColor,
-        tickLength,
-        tickWidth,
-        tickColor,
-        Object.hashAll(customTickPositions ?? []),
-        label,
-        labelFormatter,
-        maxLabels,
-        labelRotation,
-        labelOffset,
-        labelStyle,
-        reservedSize,
-        highlightZeroLine,
-        zeroLineColor,
-        zeroLineWidth,
-        logarithmic,
-        inverted,
-      ]);
+    showAxis,
+    showGrid,
+    showTicks,
+    showLabels,
+    range,
+    allowZoom,
+    allowPan,
+    axisColor,
+    axisWidth,
+    axisPosition,
+    gridColor,
+    gridWidth,
+    Object.hashAll(gridDashPattern ?? []),
+    showMinorGrid,
+    minorGridColor,
+    tickLength,
+    tickWidth,
+    tickColor,
+    Object.hashAll(customTickPositions ?? []),
+    label,
+    labelFormatter,
+    maxLabels,
+    labelRotation,
+    labelOffset,
+    labelStyle,
+    reservedSize,
+    highlightZeroLine,
+    zeroLineColor,
+    zeroLineWidth,
+    logarithmic,
+    inverted,
+  ]);
 
   /// Helper to compare nullable lists.
   bool _listEquals(List<double>? a, List<double>? b) {

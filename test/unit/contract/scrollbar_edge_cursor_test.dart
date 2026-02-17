@@ -188,11 +188,15 @@ void main() {
 
       // ASSERT: Cursor transitions correctly
       expect(
-          cursor7_9, equals(SystemMouseCursors.resizeLeftRight)); // Left edge
+        cursor7_9,
+        equals(SystemMouseCursors.resizeLeftRight),
+      ); // Left edge
       expect(cursor8_1, equals(SystemMouseCursors.grab)); // Center
       expect(cursor91_9, equals(SystemMouseCursors.grab)); // Center
       expect(
-          cursor92_1, equals(SystemMouseCursors.resizeLeftRight)); // Right edge
+        cursor92_1,
+        equals(SystemMouseCursors.resizeLeftRight),
+      ); // Right edge
     });
   });
 }

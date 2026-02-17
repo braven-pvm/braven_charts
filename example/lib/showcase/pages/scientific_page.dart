@@ -279,8 +279,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -320,8 +321,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -359,8 +361,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -387,10 +390,7 @@ class _ScientificPageState extends State<ScientificPage> {
             _ => 'Scatter',
           },
         ),
-        StatusItem(
-          label: 'Data Points',
-          value: '${_functionData.length}',
-        ),
+        StatusItem(label: 'Data Points', value: '${_functionData.length}'),
         if (_selectedDemo == 0) ...[
           StatusItem(label: 'Frequency', value: _frequency.toStringAsFixed(2)),
           StatusItem(label: 'Harmonics', value: '$_harmonics'),

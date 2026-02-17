@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:golden_toolkit/golden_toolkit.dart';
 
 /// Golden test utilities for visual regression testing
 class GoldenTestUtils {
@@ -9,11 +8,7 @@ class GoldenTestUtils {
   static const Size chartMedium = Size(600, 400);
   static const Size chartLarge = Size(1200, 800);
 
-  static const List<Size> chartSizes = [
-    chartSmall,
-    chartMedium,
-    chartLarge,
-  ];
+  static const List<Size> chartSizes = [chartSmall, chartMedium, chartLarge];
 
   /// Runs golden tests for different chart sizes
   static Future<void> testChartForSizes({
@@ -25,18 +20,18 @@ class GoldenTestUtils {
       final size = sizes[i];
       final sizeName = ['small', 'medium', 'large'][i];
 
-      testGoldens(
-        '${name}_$sizeName',
-        (tester) async {
-          await tester.pumpWidgetBuilder(
-            widget,
-            wrapper: materialAppWrapper(
-              theme: ThemeData.light(),
-            ),
-            surfaceSize: size,
-          );
-        },
-      );
+      testWidgets('${name}_$sizeName', (tester) async {
+        await tester.pumpWidget(
+          materialAppWrapper(theme: ThemeData.light())(
+            SizedBox(width: size.width, height: size.height, child: widget),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byWidget(widget),
+          matchesGoldenFile('goldens/${name}_$sizeName.png'),
+        );
+      });
     }
   }
 
@@ -46,22 +41,25 @@ class GoldenTestUtils {
     required Widget Function(ThemeData theme) chartBuilder,
     Size size = chartMedium,
   }) async {
-    final themes = {
-      'light': ThemeData.light(),
-      'dark': ThemeData.dark(),
-    };
+    final themes = {'light': ThemeData.light(), 'dark': ThemeData.dark()};
 
     for (final entry in themes.entries) {
-      testGoldens(
-        '${name}_${entry.key}',
-        (tester) async {
-          await tester.pumpWidgetBuilder(
-            chartBuilder(entry.value),
-            wrapper: materialAppWrapper(theme: entry.value),
-            surfaceSize: size,
-          );
-        },
-      );
+      testWidgets('${name}_${entry.key}', (tester) async {
+        await tester.pumpWidget(
+          materialAppWrapper(theme: entry.value)(
+            SizedBox(
+              width: size.width,
+              height: size.height,
+              child: chartBuilder(entry.value),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('goldens/${name}_${entry.key}.png'),
+        );
+      });
     }
   }
 
@@ -72,25 +70,31 @@ class GoldenTestUtils {
     Size size = chartMedium,
   }) async {
     for (final entry in stateWidgets.entries) {
-      testGoldens(
-        '${name}_${entry.key}',
-        (tester) async {
-          await tester.pumpWidgetBuilder(
-            entry.value,
-            wrapper: materialAppWrapper(),
-            surfaceSize: size,
-          );
-        },
-      );
+      testWidgets('${name}_${entry.key}', (tester) async {
+        await tester.pumpWidget(
+          materialAppWrapper()(
+            SizedBox(
+              width: size.width,
+              height: size.height,
+              child: entry.value,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byWidget(entry.value),
+          matchesGoldenFile('goldens/${name}_${entry.key}.png'),
+        );
+      });
     }
   }
 
   /// Helper to create material app wrapper
   static Widget Function(Widget) materialAppWrapper({ThemeData? theme}) {
     return (Widget child) => MaterialApp(
-          theme: theme ?? ThemeData.light(),
-          home: Scaffold(body: child),
-          debugShowCheckedModeBanner: false,
-        );
+      theme: theme ?? ThemeData.light(),
+      home: Scaffold(body: child),
+      debugShowCheckedModeBanner: false,
+    );
   }
 }

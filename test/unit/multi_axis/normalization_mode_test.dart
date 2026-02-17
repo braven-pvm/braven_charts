@@ -8,17 +8,11 @@ void main() {
     });
 
     test('contains none value', () {
-      expect(
-        NormalizationMode.values.contains(NormalizationMode.none),
-        isTrue,
-      );
+      expect(NormalizationMode.values.contains(NormalizationMode.none), isTrue);
     });
 
     test('contains auto value', () {
-      expect(
-        NormalizationMode.values.contains(NormalizationMode.auto),
-        isTrue,
-      );
+      expect(NormalizationMode.values.contains(NormalizationMode.auto), isTrue);
     });
 
     test('contains perSeries value', () {
@@ -43,12 +37,13 @@ void main() {
 
       test('values are in correct order', () {
         expect(
-            NormalizationMode.values,
-            equals([
-              NormalizationMode.none,
-              NormalizationMode.auto,
-              NormalizationMode.perSeries,
-            ]));
+          NormalizationMode.values,
+          equals([
+            NormalizationMode.none,
+            NormalizationMode.auto,
+            NormalizationMode.perSeries,
+          ]),
+        );
       });
     });
 

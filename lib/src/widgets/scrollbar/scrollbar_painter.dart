@@ -152,9 +152,7 @@ class ScrollbarPainter extends CustomPainter {
     }
 
     // Apply global opacity for auto-hide animation
-    final effectiveColor = trackColor.withOpacity(
-      trackColor.opacity * opacity,
-    );
+    final effectiveColor = trackColor.withOpacity(trackColor.opacity * opacity);
 
     // Render track background
     final trackPaint = Paint()
@@ -162,10 +160,7 @@ class ScrollbarPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        trackRect,
-        Radius.circular(config.borderRadius),
-      ),
+      RRect.fromRectAndRadius(trackRect, Radius.circular(config.borderRadius)),
       trackPaint,
     );
   }
@@ -191,10 +186,7 @@ class ScrollbarPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        handleRect,
-        Radius.circular(config.borderRadius),
-      ),
+      RRect.fromRectAndRadius(handleRect, Radius.circular(config.borderRadius)),
       handlePaint,
     );
 
@@ -341,10 +333,7 @@ class ScrollbarPainter extends CustomPainter {
 
     // Draw edge highlight with border radius
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        edgeRect,
-        Radius.circular(config.borderRadius),
-      ),
+      RRect.fromRectAndRadius(edgeRect, Radius.circular(config.borderRadius)),
       edgePaint,
     );
   }
@@ -391,7 +380,8 @@ class ScrollbarPainter extends CustomPainter {
     const lineCount = 3;
     const lineSpacing = 2.0;
     final lineLength = isHorizontal
-        ? config.thickness * 0.5 // Half of thickness for horizontal
+        ? config.thickness *
+              0.5 // Half of thickness for horizontal
         : config.thickness * 0.5; // Half of thickness for vertical
 
     // Calculate total grip height/width
@@ -436,7 +426,8 @@ class ScrollbarPainter extends CustomPainter {
   /// Always visible to provide permanent affordance.
   void _paintEdgeGrips(Canvas canvas, Rect handleRect) {
     // Use appropriate color: white when hovering (over blue), darker grey when not hovering
-    final bool isHoveringEdge = state.hoverZone == HitTestZone.leftEdge ||
+    final bool isHoveringEdge =
+        state.hoverZone == HitTestZone.leftEdge ||
         state.hoverZone == HitTestZone.rightEdge ||
         state.hoverZone == HitTestZone.topEdge ||
         state.hoverZone == HitTestZone.bottomEdge;
@@ -454,7 +445,8 @@ class ScrollbarPainter extends CustomPainter {
     const lineCount = 2; // Fewer lines for edges to fit in edgeGripWidth zone
     const lineSpacing = 2.0;
     final lineLength = isHorizontal
-        ? config.thickness * 0.4 // Slightly shorter for edges
+        ? config.thickness *
+              0.4 // Slightly shorter for edges
         : config.thickness * 0.4;
 
     if (isHorizontal) {
@@ -466,7 +458,8 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw left edge grips
       final leftEdgeCenter = handleRect.left + config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetX = leftEdgeCenter -
+        final offsetX =
+            leftEdgeCenter -
             (lineCount - 1) * lineSpacing / 2.0 +
             i * lineSpacing;
         canvas.drawLine(
@@ -479,7 +472,8 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw right edge grips
       final rightEdgeCenter = handleRect.right - config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetX = rightEdgeCenter -
+        final offsetX =
+            rightEdgeCenter -
             (lineCount - 1) * lineSpacing / 2.0 +
             i * lineSpacing;
         canvas.drawLine(
@@ -497,7 +491,8 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw top edge grips
       final topEdgeCenter = handleRect.top + config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetY = topEdgeCenter -
+        final offsetY =
+            topEdgeCenter -
             (lineCount - 1) * lineSpacing / 2.0 +
             i * lineSpacing;
         canvas.drawLine(
@@ -510,7 +505,8 @@ class ScrollbarPainter extends CustomPainter {
       // Always draw bottom edge grips
       final bottomEdgeCenter = handleRect.bottom - config.edgeGripWidth / 2.0;
       for (int i = 0; i < lineCount; i++) {
-        final offsetY = bottomEdgeCenter -
+        final offsetY =
+            bottomEdgeCenter -
             (lineCount - 1) * lineSpacing / 2.0 +
             i * lineSpacing;
         canvas.drawLine(

@@ -56,8 +56,11 @@ class ColorUtils {
   ///
   /// - Normal text requires 4.5:1 contrast ratio
   /// - Large text requires 3:1 contrast ratio
-  static bool meetsWCAG_AA(Color foreground, Color background,
-      {required bool isLargeText}) {
+  static bool meetsWCAG_AA(
+    Color foreground,
+    Color background, {
+    required bool isLargeText,
+  }) {
     final ratio = calculateContrastRatio(foreground, background);
     return isLargeText ? ratio >= 3.0 : ratio >= 4.5;
   }
@@ -66,8 +69,11 @@ class ColorUtils {
   ///
   /// - Normal text requires 7:1 contrast ratio
   /// - Large text requires 4.5:1 contrast ratio
-  static bool meetsWCAG_AAA(Color foreground, Color background,
-      {required bool isLargeText}) {
+  static bool meetsWCAG_AAA(
+    Color foreground,
+    Color background, {
+    required bool isLargeText,
+  }) {
     final ratio = calculateContrastRatio(foreground, background);
     return isLargeText ? ratio >= 4.5 : ratio >= 7.0;
   }
@@ -181,12 +187,18 @@ class ColorUtils {
     final g = color.green / 255.0;
     final b = color.blue / 255.0;
 
-    final newR = (r * matrix[0][0] + g * matrix[0][1] + b * matrix[0][2])
-        .clamp(0.0, 1.0);
-    final newG = (r * matrix[1][0] + g * matrix[1][1] + b * matrix[1][2])
-        .clamp(0.0, 1.0);
-    final newB = (r * matrix[2][0] + g * matrix[2][1] + b * matrix[2][2])
-        .clamp(0.0, 1.0);
+    final newR = (r * matrix[0][0] + g * matrix[0][1] + b * matrix[0][2]).clamp(
+      0.0,
+      1.0,
+    );
+    final newG = (r * matrix[1][0] + g * matrix[1][1] + b * matrix[1][2]).clamp(
+      0.0,
+      1.0,
+    );
+    final newB = (r * matrix[2][0] + g * matrix[2][1] + b * matrix[2][2]).clamp(
+      0.0,
+      1.0,
+    );
 
     return Color.fromARGB(
       color.alpha,

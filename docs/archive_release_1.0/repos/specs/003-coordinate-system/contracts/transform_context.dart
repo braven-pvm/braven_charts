@@ -166,15 +166,15 @@ class TransformContext {
   /// Cache invalidates when any field changes.
   @override
   int get hashCode => Object.hash(
-        widgetSize,
-        chartAreaBounds,
-        xDataRange,
-        yDataRange,
-        viewport,
-        markerOffset,
-        animationProgress,
-        devicePixelRatio,
-      );
+    widgetSize,
+    chartAreaBounds,
+    xDataRange,
+    yDataRange,
+    viewport,
+    markerOffset,
+    animationProgress,
+    devicePixelRatio,
+  );
 
   /// Structural equality (all fields must match).
   @override

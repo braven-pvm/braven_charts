@@ -45,7 +45,9 @@ abstract interface class AnnotationDragDelegate {
 
   /// Notify that an annotation was changed (for external callbacks).
   void notifyAnnotationChanged(
-      String annotationId, ChartAnnotation updatedAnnotation);
+    String annotationId,
+    ChartAnnotation updatedAnnotation,
+  );
 }
 
 // =============================================================================
@@ -74,9 +76,8 @@ abstract interface class AnnotationDragDelegate {
 /// Instead, we track "potential drag" state and wait for pointer movement
 /// exceeding [dragThresholdPixels] to distinguish click from drag.
 class AnnotationDragHandler {
-  AnnotationDragHandler({
-    required AnnotationDragDelegate delegate,
-  }) : _delegate = delegate;
+  AnnotationDragHandler({required AnnotationDragDelegate delegate})
+    : _delegate = delegate;
 
   // ==========================================================================
   // Dependencies
@@ -251,7 +252,9 @@ class AnnotationDragHandler {
 
   /// Starts a resize operation on a RangeAnnotation.
   void startResize(
-      RangeAnnotationElement annotation, ResizeDirection direction) {
+    RangeAnnotationElement annotation,
+    ResizeDirection direction,
+  ) {
     _resizingAnnotation = annotation;
     _activeResizeDirection = direction;
     _resizeStartBounds = annotation.bounds;
@@ -275,29 +278,61 @@ class AnnotationDragHandler {
     // Calculate new bounds based on resize direction
     switch (_activeResizeDirection!) {
       case ResizeDirection.topLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx,
-            oldBounds.top + delta.dy, oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top + delta.dy,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
       case ResizeDirection.topRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy,
-            oldBounds.right + delta.dx, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top + delta.dy,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom,
+        );
       case ResizeDirection.bottomLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top,
-            oldBounds.right, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.bottomRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top,
-            oldBounds.right + delta.dx, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.top:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy,
-            oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top + delta.dy,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
       case ResizeDirection.right:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top,
-            oldBounds.right + delta.dx, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom,
+        );
       case ResizeDirection.bottom:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top,
-            oldBounds.right, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.left:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top,
-            oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
     }
 
     // Apply minimum size constraints (40x40 minimum)
@@ -515,7 +550,9 @@ class AnnotationDragHandler {
   ///
   /// Finds the nearest data point in the same series and updates the candidate index.
   void performPointMove(
-      Offset currentPosition, Offset Function(Offset) widgetToPlot) {
+    Offset currentPosition,
+    Offset Function(Offset) widgetToPlot,
+  ) {
     if (_movingPointAnnotation == null) return;
 
     final annotation = _movingPointAnnotation!.annotation;
@@ -614,8 +651,10 @@ class AnnotationDragHandler {
 
     final delta = currentPosition - _moveTextStartPosition!;
     final originalPosition = _movingTextAnnotation!.annotation.position;
-    final newPosition =
-        Offset(originalPosition.dx + delta.dx, originalPosition.dy + delta.dy);
+    final newPosition = Offset(
+      originalPosition.dx + delta.dx,
+      originalPosition.dy + delta.dy,
+    );
 
     _movingTextAnnotation!.updateTempPosition(newPosition);
   }
@@ -660,7 +699,9 @@ class AnnotationDragHandler {
 
   /// Starts a move operation on a ThresholdAnnotation.
   void startThresholdMove(
-      ThresholdAnnotationElement annotation, Offset position) {
+    ThresholdAnnotationElement annotation,
+    Offset position,
+  ) {
     _movingThresholdAnnotation = annotation;
     _moveThresholdStartPosition = position;
     _moveThresholdStartValue = annotation.annotation.value;
@@ -710,9 +751,7 @@ class AnnotationDragHandler {
     final tempValue = element.tempValue;
 
     if (tempValue != null) {
-      final updatedAnnotation = element.annotation.copyWith(
-        value: tempValue,
-      );
+      final updatedAnnotation = element.annotation.copyWith(value: tempValue);
 
       element.clearTempValue();
       cancelThresholdMove();
@@ -784,10 +823,7 @@ class AnnotationDragHandler {
 
     if (tempPos != null) {
       final (tempX, tempY) = tempPos;
-      final updatedAnnotation = element.annotation.copyWith(
-        x: tempX,
-        y: tempY,
-      );
+      final updatedAnnotation = element.annotation.copyWith(x: tempX, y: tempY);
 
       element.clearTempPosition();
       cancelPinMove();
@@ -831,8 +867,10 @@ class AnnotationDragHandler {
 
     final delta = currentPosition - _moveLegendStartPosition!;
     final currentBounds = _movingLegendAnnotation!.bounds;
-    final newTopLeft =
-        Offset(currentBounds.left + delta.dx, currentBounds.top + delta.dy);
+    final newTopLeft = Offset(
+      currentBounds.left + delta.dx,
+      currentBounds.top + delta.dy,
+    );
 
     _movingLegendAnnotation!.updateTempPosition(newTopLeft);
     _moveLegendStartPosition = currentPosition; // Update for continuous delta
@@ -878,7 +916,9 @@ class AnnotationDragHandler {
 
   /// Sets potential drag state for PointAnnotation.
   void setPotentialPointDrag(
-      PointAnnotationElement annotation, Offset position) {
+    PointAnnotationElement annotation,
+    Offset position,
+  ) {
     _potentialDragPointAnnotation = annotation;
     _potentialDragPointStartPosition = position;
   }
@@ -895,7 +935,9 @@ class AnnotationDragHandler {
 
   /// Sets potential drag state for RangeAnnotation.
   void setPotentialRangeDrag(
-      RangeAnnotationElement annotation, Offset position) {
+    RangeAnnotationElement annotation,
+    Offset position,
+  ) {
     _potentialDragRangeAnnotation = annotation;
     _potentialDragRangeStartPosition = position;
     _potentialDragRangeStartBounds = annotation.bounds;
@@ -910,10 +952,10 @@ class AnnotationDragHandler {
 
   /// Gets potential RangeAnnotation drag info.
   (RangeAnnotationElement?, Offset?, Rect?) get potentialRangeDrag => (
-        _potentialDragRangeAnnotation,
-        _potentialDragRangeStartPosition,
-        _potentialDragRangeStartBounds
-      );
+    _potentialDragRangeAnnotation,
+    _potentialDragRangeStartPosition,
+    _potentialDragRangeStartBounds,
+  );
 
   /// Sets potential drag state for TextAnnotation.
   void setPotentialTextDrag(TextAnnotationElement annotation, Offset position) {
@@ -933,7 +975,9 @@ class AnnotationDragHandler {
 
   /// Sets potential drag state for ThresholdAnnotation.
   void setPotentialThresholdDrag(
-      ThresholdAnnotationElement annotation, Offset position) {
+    ThresholdAnnotationElement annotation,
+    Offset position,
+  ) {
     _potentialDragThresholdAnnotation = annotation;
     _potentialDragThresholdStartPosition = position;
   }
@@ -966,7 +1010,9 @@ class AnnotationDragHandler {
 
   /// Sets potential drag state for LegendAnnotation.
   void setPotentialLegendDrag(
-      LegendAnnotationElement annotation, Offset position) {
+    LegendAnnotationElement annotation,
+    Offset position,
+  ) {
     _potentialDragLegendAnnotation = annotation;
     _potentialDragLegendStartPosition = position;
   }

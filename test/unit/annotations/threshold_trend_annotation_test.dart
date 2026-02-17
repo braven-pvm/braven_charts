@@ -53,10 +53,7 @@ void main() {
         lineWidth: 2.0,
       );
 
-      final modified = original.copyWith(
-        value: 80.0,
-        lineColor: Colors.purple,
-      );
+      final modified = original.copyWith(value: 80.0, lineColor: Colors.purple);
 
       expect(modified.id, 'original'); // unchanged
       expect(modified.axis, AnnotationAxis.y); // unchanged

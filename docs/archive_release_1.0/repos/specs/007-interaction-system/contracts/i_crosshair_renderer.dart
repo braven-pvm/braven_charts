@@ -105,10 +105,7 @@ abstract class ICrosshairRenderer {
   /// - [newState]: New interaction state
   ///
   /// Returns: true if crosshair position or visibility changed
-  bool shouldRepaint(
-    InteractionState oldState,
-    InteractionState newState,
-  );
+  bool shouldRepaint(InteractionState oldState, InteractionState newState);
 }
 
 /// Visual style for crosshair lines.

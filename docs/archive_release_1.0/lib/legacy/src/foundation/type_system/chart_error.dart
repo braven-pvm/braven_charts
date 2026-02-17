@@ -80,15 +80,14 @@ class ChartError {
     String? code,
     Map<String, dynamic>? context,
     StackTrace? stackTrace,
-  }) =>
-      ChartError(
-        type: ErrorType.validation,
-        severity: ErrorSeverity.error,
-        message: message,
-        code: code,
-        context: context,
-        stackTrace: stackTrace,
-      );
+  }) => ChartError(
+    type: ErrorType.validation,
+    severity: ErrorSeverity.error,
+    message: message,
+    code: code,
+    context: context,
+    stackTrace: stackTrace,
+  );
 
   /// Create a rendering error (canvas operations, layout).
   ///
@@ -98,15 +97,14 @@ class ChartError {
     String? code,
     Map<String, dynamic>? context,
     StackTrace? stackTrace,
-  }) =>
-      ChartError(
-        type: ErrorType.rendering,
-        severity: ErrorSeverity.error,
-        message: message,
-        code: code,
-        context: context,
-        stackTrace: stackTrace,
-      );
+  }) => ChartError(
+    type: ErrorType.rendering,
+    severity: ErrorSeverity.error,
+    message: message,
+    code: code,
+    context: context,
+    stackTrace: stackTrace,
+  );
 
   /// Create a calculation error (math, statistics).
   ///
@@ -116,15 +114,14 @@ class ChartError {
     String? code,
     Map<String, dynamic>? context,
     StackTrace? stackTrace,
-  }) =>
-      ChartError(
-        type: ErrorType.calculation,
-        severity: ErrorSeverity.error,
-        message: message,
-        code: code,
-        context: context,
-        stackTrace: stackTrace,
-      );
+  }) => ChartError(
+    type: ErrorType.calculation,
+    severity: ErrorSeverity.error,
+    message: message,
+    code: code,
+    context: context,
+    stackTrace: stackTrace,
+  );
 
   /// Create a configuration error (invalid settings).
   ///
@@ -134,15 +131,14 @@ class ChartError {
     String? code,
     Map<String, dynamic>? context,
     StackTrace? stackTrace,
-  }) =>
-      ChartError(
-        type: ErrorType.configuration,
-        severity: ErrorSeverity.error,
-        message: message,
-        code: code,
-        context: context,
-        stackTrace: stackTrace,
-      );
+  }) => ChartError(
+    type: ErrorType.configuration,
+    severity: ErrorSeverity.error,
+    message: message,
+    code: code,
+    context: context,
+    stackTrace: stackTrace,
+  );
 
   /// Create an internal error (unexpected state, system failure).
   ///
@@ -152,15 +148,14 @@ class ChartError {
     String? code,
     Map<String, dynamic>? context,
     StackTrace? stackTrace,
-  }) =>
-      ChartError(
-        type: ErrorType.internal,
-        severity: ErrorSeverity.critical,
-        message: message,
-        code: code,
-        context: context,
-        stackTrace: stackTrace,
-      );
+  }) => ChartError(
+    type: ErrorType.internal,
+    severity: ErrorSeverity.critical,
+    message: message,
+    code: code,
+    context: context,
+    stackTrace: stackTrace,
+  );
 
   @override
   bool operator ==(Object other) =>

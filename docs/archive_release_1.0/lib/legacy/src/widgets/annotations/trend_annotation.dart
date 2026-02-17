@@ -50,10 +50,10 @@ class TrendAnnotation extends ChartAnnotation {
     this.lineWidth = 2.0,
     this.dashPattern,
   }) : assert(
-          trendType != TrendType.movingAverage ||
-              (windowSize != null && windowSize > 0),
-          'windowSize must be positive when trendType is movingAverage',
-        );
+         trendType != TrendType.movingAverage ||
+             (windowSize != null && windowSize > 0),
+         'windowSize must be positive when trendType is movingAverage',
+       );
 
   /// The ID of the series to calculate the trend for.
   ///
@@ -144,20 +144,20 @@ class TrendAnnotation extends ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        seriesId,
-        trendType,
-        windowSize,
-        degree,
-        lineColor,
-        lineWidth,
-        Object.hashAll(dashPattern ?? []),
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    seriesId,
+    trendType,
+    windowSize,
+    degree,
+    lineColor,
+    lineWidth,
+    Object.hashAll(dashPattern ?? []),
+  );
 
   /// Helper to compare nullable lists.
   bool _listEquals(List<double>? a, List<double>? b) {

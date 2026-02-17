@@ -47,9 +47,9 @@ class ThresholdAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.labelPosition = AnnotationLabelPosition.topLeft,
   }) : assert(
-          value.isFinite,
-          'Threshold value must be finite (not NaN or infinite)',
-        );
+         value.isFinite,
+         'Threshold value must be finite (not NaN or infinite)',
+       );
 
   /// Which axis this threshold line is perpendicular to.
   ///
@@ -128,19 +128,19 @@ class ThresholdAnnotation extends ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        axis,
-        value,
-        lineColor,
-        lineWidth,
-        Object.hashAll(dashPattern ?? []),
-        labelPosition,
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    axis,
+    value,
+    lineColor,
+    lineWidth,
+    Object.hashAll(dashPattern ?? []),
+    labelPosition,
+  );
 
   /// Helper to compare nullable lists.
   bool _listEquals(List<double>? a, List<double>? b) {

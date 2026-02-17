@@ -35,10 +35,7 @@ abstract class HitTestStrategy {
 ///
 /// Uses circular hit-zone based on distance from center point.
 class PointHitStrategy implements HitTestStrategy {
-  const PointHitStrategy({
-    required this.center,
-    required this.radius,
-  });
+  const PointHitStrategy({required this.center, required this.radius});
 
   final Offset center;
   final double radius;
@@ -58,10 +55,7 @@ class PointHitStrategy implements HitTestStrategy {
 ///
 /// Uses distance-to-line-segment algorithm with configurable tolerance.
 class LineHitStrategy implements HitTestStrategy {
-  const LineHitStrategy({
-    required this.points,
-    required this.tolerance,
-  });
+  const LineHitStrategy({required this.points, required this.tolerance});
 
   final List<Offset> points;
   final double tolerance;
@@ -96,8 +90,11 @@ class LineHitStrategy implements HitTestStrategy {
     double minDistance = double.infinity;
 
     for (int i = 0; i < points.length - 1; i++) {
-      final distance =
-          _distanceToLineSegment(position, points[i], points[i + 1]);
+      final distance = _distanceToLineSegment(
+        position,
+        points[i],
+        points[i + 1],
+      );
       if (distance < minDistance) {
         minDistance = distance;
       }
@@ -117,7 +114,8 @@ class LineHitStrategy implements HitTestStrategy {
     }
 
     // Parameter t represents position along segment (0 = start, 1 = end)
-    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
+    final t =
+        ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
         (dx * dx + dy * dy);
 
     // Clamp t to [0, 1] to stay on segment

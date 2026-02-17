@@ -30,12 +30,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'test',
-                  points: [],
-                ),
-              ],
+              series: [LineChartSeries(id: 'test', points: [])],
               // This parameter now exists - GREEN phase implementation
               xAxisConfig: XAxisConfig(
                 label: 'Time',
@@ -65,12 +60,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'sensor',
-                  points: [],
-                ),
-              ],
+              series: [LineChartSeries(id: 'sensor', points: [])],
               xAxisConfig: xAxisConfig,
             ),
           ),
@@ -85,8 +75,9 @@ void main() {
       expect(renderBox, isNotNull);
     });
 
-    testWidgets('crosshairLabelPosition.insidePlot affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.insidePlot affects rendering', (
+      tester,
+    ) async {
       const xAxisConfig = XAxisConfig(
         label: 'X-Axis',
         showCrosshairLabel: true,
@@ -129,8 +120,9 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('crosshairLabelPosition.overAxis affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.overAxis affects rendering', (
+      tester,
+    ) async {
       const xAxisConfig = XAxisConfig(
         label: 'Data Points',
         showCrosshairLabel: true,

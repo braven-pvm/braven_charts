@@ -9,11 +9,7 @@ import 'package:flutter/material.dart'
 /// Each tick has a data value and a formatted label for display.
 /// Optionally caches a laid-out TextPainter for high-performance rendering.
 class Tick {
-  Tick({
-    required this.value,
-    required this.label,
-    this.isMajor = true,
-  });
+  Tick({required this.value, required this.label, this.isMajor = true});
 
   /// The data value at this tick position.
   final double value;

@@ -100,97 +100,53 @@ void main() {
     group('validation', () {
       test('throws assertion error for negative minHeight', () {
         expect(
-          () => XAxisConfig(
-            minHeight: -10.0,
-          ),
+          () => XAxisConfig(minHeight: -10.0),
           throwsA(isA<AssertionError>()),
         );
       });
 
       test('throws assertion error for maxHeight < minHeight', () {
         expect(
-          () => XAxisConfig(
-            minHeight: 50.0,
-            maxHeight: 40.0,
-          ),
+          () => XAxisConfig(minHeight: 50.0, maxHeight: 40.0),
           throwsA(isA<AssertionError>()),
         );
       });
 
       test('throws assertion error for min >= max when both specified', () {
         expect(
-          () => XAxisConfig(
-            min: 100.0,
-            max: 50.0,
-          ),
+          () => XAxisConfig(min: 100.0, max: 50.0),
           throwsA(isA<AssertionError>()),
         );
 
         expect(
-          () => XAxisConfig(
-            min: 50.0,
-            max: 50.0,
-          ),
+          () => XAxisConfig(min: 50.0, max: 50.0),
           throwsA(isA<AssertionError>()),
         );
       });
 
       test('throws assertion error for tickCount < 2', () {
-        expect(
-          () => XAxisConfig(
-            tickCount: 1,
-          ),
-          throwsA(isA<AssertionError>()),
-        );
+        expect(() => XAxisConfig(tickCount: 1), throwsA(isA<AssertionError>()));
 
-        expect(
-          () => XAxisConfig(
-            tickCount: 0,
-          ),
-          throwsA(isA<AssertionError>()),
-        );
+        expect(() => XAxisConfig(tickCount: 0), throwsA(isA<AssertionError>()));
       });
 
       test('allows null min or max independently', () {
         // Only min specified
-        expect(
-          () => const XAxisConfig(
-            min: 0.0,
-          ),
-          returnsNormally,
-        );
+        expect(() => const XAxisConfig(min: 0.0), returnsNormally);
 
         // Only max specified
-        expect(
-          () => const XAxisConfig(
-            max: 100.0,
-          ),
-          returnsNormally,
-        );
+        expect(() => const XAxisConfig(max: 100.0), returnsNormally);
       });
 
       test('allows tickCount >= 2', () {
-        expect(
-          () => const XAxisConfig(
-            tickCount: 2,
-          ),
-          returnsNormally,
-        );
+        expect(() => const XAxisConfig(tickCount: 2), returnsNormally);
 
-        expect(
-          () => const XAxisConfig(
-            tickCount: 20,
-          ),
-          returnsNormally,
-        );
+        expect(() => const XAxisConfig(tickCount: 20), returnsNormally);
       });
 
       test('allows maxHeight == minHeight', () {
         expect(
-          () => const XAxisConfig(
-            minHeight: 50.0,
-            maxHeight: 50.0,
-          ),
+          () => const XAxisConfig(minHeight: 50.0, maxHeight: 50.0),
           returnsNormally,
         );
       });
@@ -198,9 +154,7 @@ void main() {
 
     group('computed properties', () {
       test('shouldShowAxisLabel is true for labelOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.labelOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.labelOnly);
         expect(config.shouldShowAxisLabel, isTrue);
       });
 
@@ -226,23 +180,17 @@ void main() {
       });
 
       test('shouldShowAxisLabel is false for tickUnitOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickUnitOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickUnitOnly);
         expect(config.shouldShowAxisLabel, isFalse);
       });
 
       test('shouldShowAxisLabel is false for tickOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickOnly);
         expect(config.shouldShowAxisLabel, isFalse);
       });
 
       test('shouldShowAxisLabel is false for none', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.none,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.none);
         expect(config.shouldShowAxisLabel, isFalse);
       });
 
@@ -261,9 +209,7 @@ void main() {
       });
 
       test('shouldAppendUnitToLabel is false for labelOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.labelOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.labelOnly);
         expect(config.shouldAppendUnitToLabel, isFalse);
       });
 
@@ -275,23 +221,17 @@ void main() {
       });
 
       test('shouldAppendUnitToLabel is false for tickUnitOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickUnitOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickUnitOnly);
         expect(config.shouldAppendUnitToLabel, isFalse);
       });
 
       test('shouldAppendUnitToLabel is false for tickOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickOnly);
         expect(config.shouldAppendUnitToLabel, isFalse);
       });
 
       test('shouldAppendUnitToLabel is false for none', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.none,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.none);
         expect(config.shouldAppendUnitToLabel, isFalse);
       });
 
@@ -310,16 +250,12 @@ void main() {
       });
 
       test('shouldShowTickUnit is true for tickUnitOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickUnitOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickUnitOnly);
         expect(config.shouldShowTickUnit, isTrue);
       });
 
       test('shouldShowTickUnit is false for labelOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.labelOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.labelOnly);
         expect(config.shouldShowTickUnit, isFalse);
       });
 
@@ -331,16 +267,12 @@ void main() {
       });
 
       test('shouldShowTickUnit is false for tickOnly', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.tickOnly,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.tickOnly);
         expect(config.shouldShowTickUnit, isFalse);
       });
 
       test('shouldShowTickUnit is false for none', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.none,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.none);
         expect(config.shouldShowTickUnit, isFalse);
       });
 
@@ -356,15 +288,16 @@ void main() {
 
         for (final mode in modes) {
           final config = XAxisConfig(labelDisplay: mode);
-          expect(config.shouldShowTickLabels, isTrue,
-              reason: 'shouldShowTickLabels should be true for $mode');
+          expect(
+            config.shouldShowTickLabels,
+            isTrue,
+            reason: 'shouldShowTickLabels should be true for $mode',
+          );
         }
       });
 
       test('shouldShowTickLabels is false for none', () {
-        const config = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.none,
-        );
+        const config = XAxisConfig(labelDisplay: AxisLabelDisplay.none);
         expect(config.shouldShowTickLabels, isFalse);
       });
     });
@@ -384,10 +317,7 @@ void main() {
           visible: true,
         );
 
-        final copy = original.copyWith(
-          label: 'Changed',
-          visible: false,
-        );
+        final copy = original.copyWith(label: 'Changed', visible: false);
 
         expect(copy.label, equals('Changed')); // Changed
         expect(copy.unit, equals('ms')); // Unchanged
@@ -462,17 +392,9 @@ void main() {
 
     group('equality', () {
       test('same values are equal', () {
-        const config1 = XAxisConfig(
-          label: 'Time',
-          unit: 's',
-          visible: true,
-        );
+        const config1 = XAxisConfig(label: 'Time', unit: 's', visible: true);
 
-        const config2 = XAxisConfig(
-          label: 'Time',
-          unit: 's',
-          visible: true,
-        );
+        const config2 = XAxisConfig(label: 'Time', unit: 's', visible: true);
 
         expect(config1, equals(config2));
       });
@@ -513,12 +435,8 @@ void main() {
       });
 
       test('different labelDisplay values are not equal', () {
-        const config1 = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.labelOnly,
-        );
-        const config2 = XAxisConfig(
-          labelDisplay: AxisLabelDisplay.none,
-        );
+        const config1 = XAxisConfig(labelDisplay: AxisLabelDisplay.labelOnly);
+        const config2 = XAxisConfig(labelDisplay: AxisLabelDisplay.none);
 
         expect(config1, isNot(equals(config2)));
       });
@@ -531,17 +449,9 @@ void main() {
       });
 
       test('hashCode is consistent with equality', () {
-        const config1 = XAxisConfig(
-          label: 'Time',
-          unit: 's',
-          visible: true,
-        );
+        const config1 = XAxisConfig(label: 'Time', unit: 's', visible: true);
 
-        const config2 = XAxisConfig(
-          label: 'Time',
-          unit: 's',
-          visible: true,
-        );
+        const config2 = XAxisConfig(label: 'Time', unit: 's', visible: true);
 
         expect(config1.hashCode, equals(config2.hashCode));
       });
@@ -617,11 +527,7 @@ void main() {
 
     group('toString', () {
       test('returns readable debug string', () {
-        const config = XAxisConfig(
-          label: 'Time',
-          unit: 's',
-          visible: true,
-        );
+        const config = XAxisConfig(label: 'Time', unit: 's', visible: true);
 
         final str = config.toString();
 
@@ -651,8 +557,10 @@ void main() {
       test('has default value CrosshairLabelPosition.overAxis', () {
         const config = XAxisConfig();
 
-        expect(config.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.overAxis));
+        expect(
+          config.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis),
+        );
       });
 
       test('can be set in constructor', () {
@@ -660,8 +568,10 @@ void main() {
           crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
         );
 
-        expect(config.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
+        expect(
+          config.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
       });
 
       test('can be changed via copyWith', () {
@@ -673,11 +583,15 @@ void main() {
           crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
         );
 
-        expect(copy.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
+        expect(
+          copy.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
         // Original should be unchanged
-        expect(original.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.overAxis));
+        expect(
+          original.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis),
+        );
       });
 
       test('different crosshairLabelPosition values are not equal', () {
@@ -718,10 +632,14 @@ void main() {
         );
 
         // Both should have CrosshairLabelPosition.overAxis as default
-        expect(xConfig.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.overAxis));
-        expect(yConfig.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.overAxis));
+        expect(
+          xConfig.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis),
+        );
+        expect(
+          yConfig.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis),
+        );
 
         // Both should support the same enum values
         const xConfigInside = XAxisConfig(
@@ -733,10 +651,14 @@ void main() {
           crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
         );
 
-        expect(xConfigInside.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
-        expect(yConfigInside.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
+        expect(
+          xConfigInside.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
+        expect(
+          yConfigInside.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
       });
     });
 
@@ -751,9 +673,7 @@ void main() {
       test('formatter can be assigned to XAxisConfig', () {
         String formatter(double value) => value.toStringAsFixed(1);
 
-        final config = XAxisConfig(
-          labelFormatter: formatter,
-        );
+        final config = XAxisConfig(labelFormatter: formatter);
 
         expect(config.labelFormatter, equals(formatter));
         expect(config.labelFormatter!(42.567), equals('42.6'));

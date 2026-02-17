@@ -46,9 +46,9 @@ class ObjectPool<T> {
     required T Function() factory,
     required void Function(T) reset,
     this.maxSize = 100,
-  })  : _factory = factory,
-        _reset = reset,
-        assert(maxSize > 0, 'maxSize must be greater than 0');
+  }) : _factory = factory,
+       _reset = reset,
+       assert(maxSize > 0, 'maxSize must be greater than 0');
 
   /// Returns pool usage statistics.
   PoolStatistics get statistics {
@@ -93,8 +93,10 @@ class ObjectPool<T> {
   ///
   /// Performance: <100ns per operation (FR-005.3)
   void release(T object) {
-    assert(_inUse.contains(object),
-        'Cannot release object not acquired from this pool');
+    assert(
+      _inUse.contains(object),
+      'Cannot release object not acquired from this pool',
+    );
     _inUse.remove(object);
 
     _releaseCount++;
@@ -179,16 +181,17 @@ class PoolStatistics {
 
   @override
   int get hashCode => Object.hash(
-        totalCreated,
-        currentSize,
-        currentInUse,
-        acquireCount,
-        releaseCount,
-        hitRate,
-      );
+    totalCreated,
+    currentSize,
+    currentInUse,
+    acquireCount,
+    releaseCount,
+    hitRate,
+  );
 
   @override
-  String toString() => 'PoolStatistics('
+  String toString() =>
+      'PoolStatistics('
       'created: $totalCreated, '
       'size: $currentSize, '
       'inUse: $currentInUse, '

@@ -54,8 +54,8 @@ class LineChartLayer extends ChartLayer {
     required super.animationConfig,
     required super.zIndex,
     super.isVisible,
-  })  : _interpolator = LineInterpolator(config.lineStyle),
-        _renderer = ChartRenderer();
+  }) : _interpolator = LineInterpolator(config.lineStyle),
+       _renderer = ChartRenderer();
 
   /// Configuration for line rendering (interpolation mode, markers, etc.)
   final LineChartConfig config;

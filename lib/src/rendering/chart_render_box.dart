@@ -45,7 +45,8 @@ import 'x_axis_painter.dart';
 
 /// Callback for generating chart elements based on current transform.
 /// Used for zoom/pan to regenerate elements from original data coordinates.
-typedef ElementGenerator = List<ChartElement> Function(ChartTransform transform);
+typedef ElementGenerator =
+    List<ChartElement> Function(ChartTransform transform);
 
 /// Custom RenderBox for high-performance chart rendering and interaction.
 ///
@@ -87,10 +88,16 @@ class ChartRenderBox extends RenderBox {
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
        _interactionConfig = interactionConfig,
-       assert((elements != null) != (elementGenerator != null), 'Must provide either elements or elementGenerator, but not both') {
+       assert(
+         (elements != null) != (elementGenerator != null),
+         'Must provide either elements or elementGenerator, but not both',
+       ) {
     _elements = elements ?? [];
     _tooltipAnimator = TooltipAnimator(onRepaint: markNeedsPaint);
-    _zoomAnimator = ZoomAnimator(onUpdate: _onZoomAnimationUpdate, onComplete: _onZoomAnimationComplete);
+    _zoomAnimator = ZoomAnimator(
+      onUpdate: _onZoomAnimationUpdate,
+      onComplete: _onZoomAnimationComplete,
+    );
     _initScrollbarManager(showXScrollbar, showYScrollbar, scrollbarTheme);
     _initStreamingManager();
     _initAnnotationDragHandler();
@@ -99,13 +106,20 @@ class ChartRenderBox extends RenderBox {
   }
 
   /// Initializes the MultiAxisManager with normalization mode and series.
-  void _initMultiAxisManager(NormalizationMode? normalizationMode, List<ChartSeries>? series) {
+  void _initMultiAxisManager(
+    NormalizationMode? normalizationMode,
+    List<ChartSeries>? series,
+  ) {
     _multiAxisManager.setNormalizationMode(normalizationMode);
     _multiAxisManager.setSeries(series);
   }
 
   /// Initializes the ScrollbarManager with a delegate that references this RenderBox.
-  void _initScrollbarManager(bool showXScrollbar, bool showYScrollbar, ScrollbarConfig? scrollbarTheme) {
+  void _initScrollbarManager(
+    bool showXScrollbar,
+    bool showYScrollbar,
+    ScrollbarConfig? scrollbarTheme,
+  ) {
     _scrollbarManager = ScrollbarManager(
       delegate: _ScrollbarDelegateImpl(this),
       showXScrollbar: showXScrollbar,
@@ -116,17 +130,23 @@ class ChartRenderBox extends RenderBox {
 
   /// Initializes the StreamingManager with a delegate that references this RenderBox.
   void _initStreamingManager() {
-    _streamingManager = StreamingManager(delegate: _StreamingDelegateImpl(this));
+    _streamingManager = StreamingManager(
+      delegate: _StreamingDelegateImpl(this),
+    );
   }
 
   /// Initializes the AnnotationDragHandler with a delegate that references this RenderBox.
   void _initAnnotationDragHandler() {
-    _annotationDragHandler = AnnotationDragHandler(delegate: _AnnotationDragDelegateImpl(this));
+    _annotationDragHandler = AnnotationDragHandler(
+      delegate: _AnnotationDragDelegateImpl(this),
+    );
   }
 
   /// Initializes the EventHandlerManager with a delegate that references this RenderBox.
   void _initEventHandlerManager() {
-    _eventHandlerManager = EventHandlerManager(delegate: _EventHandlerDelegateImpl(this));
+    _eventHandlerManager = EventHandlerManager(
+      delegate: _EventHandlerDelegateImpl(this),
+    );
   }
 
   /// Scrollbar manager handling all scrollbar state and interactions.
@@ -202,13 +222,15 @@ class ChartRenderBox extends RenderBox {
   /// Called when an annotation is modified through user interaction.
   /// The [annotationId] is the ID of the modified annotation, and
   /// [updatedAnnotation] is the new annotation object with updated values.
-  final void Function(String annotationId, ChartAnnotation updatedAnnotation)? onAnnotationChanged;
+  final void Function(String annotationId, ChartAnnotation updatedAnnotation)?
+  onAnnotationChanged;
 
   /// Callback for range annotation creation completion.
   ///
   /// Called when user completes drag in rangeAnnotationCreation mode.
   /// Provides data coordinates of dragged rectangle (startX, endX, startY, endY).
-  final void Function(double startX, double endX, double startY, double endY)? onRangeCreationComplete;
+  final void Function(double startX, double endX, double startY, double endY)?
+  onRangeCreationComplete;
 
   // ==================== EVENT STATE (delegated to EventHandlerManager) ====================
   // Resize, move, potential drag state, cursor position, pan position, hit test throttling
@@ -504,7 +526,10 @@ class ChartRenderBox extends RenderBox {
     // Update both transforms to show the new data range (for streaming/dynamic data)
     // CRITICAL: Update _originalTransform too, so pan constraints are calculated from correct bounds
     if (_transform != null && axis != null) {
-      _transform = _transform!.copyWith(dataXMin: axis.dataMin, dataXMax: axis.dataMax);
+      _transform = _transform!.copyWith(
+        dataXMin: axis.dataMin,
+        dataXMax: axis.dataMax,
+      );
 
       // DO NOT update _originalTransform here - it must stay frozen at initial data range
       // for scrollbar handle sizing to work correctly. Updating it causes the handle
@@ -594,7 +619,10 @@ class ChartRenderBox extends RenderBox {
         _originalTransform = null;
         // Let performLayout() recreate transforms with new bounds
       } else {
-        _transform = _transform!.copyWith(dataYMin: axis.dataMin, dataYMax: axis.dataMax);
+        _transform = _transform!.copyWith(
+          dataYMin: axis.dataMin,
+          dataYMax: axis.dataMax,
+        );
 
         // DO NOT update _originalTransform here - it must stay frozen at initial data range
         // for scrollbar handle sizing to work correctly. Updating it causes the handle
@@ -688,7 +716,9 @@ class ChartRenderBox extends RenderBox {
   /// Delegates to [MultiAxisManager.getEffectiveYAxes].
   /// Passes [_primaryYAxisConfig] so widget-level axis config is respected.
   List<YAxisConfig> _getEffectiveYAxes() {
-    return _multiAxisManager.getEffectiveYAxes(primaryYAxis: _primaryYAxisConfig);
+    return _multiAxisManager.getEffectiveYAxes(
+      primaryYAxis: _primaryYAxisConfig,
+    );
   }
 
   /// Paints multiple Y-axes using [MultiAxisPainter].
@@ -712,7 +742,10 @@ class ChartRenderBox extends RenderBox {
   /// transformation.
   /// [forPainting]: When true AND viewport is zoomed, returns bounds that match
   /// the visible portion of data. Used for series rendering transforms.
-  Map<String, DataRange> _computeAxisBounds({bool forceFullBounds = false, bool forPainting = false}) {
+  Map<String, DataRange> _computeAxisBounds({
+    bool forceFullBounds = false,
+    bool forPainting = false,
+  }) {
     return _multiAxisManager.computeAxisBounds(
       transform: _transform,
       originalTransform: _originalTransform,
@@ -726,7 +759,11 @@ class ChartRenderBox extends RenderBox {
   /// Used for threshold annotations with perSeries normalization mode.
   /// Delegates to [MultiAxisManager.computeSeriesBounds].
   Map<String, DataRange> _computeSeriesBounds({bool forPainting = false}) {
-    return _multiAxisManager.computeSeriesBounds(transform: _transform, originalTransform: _originalTransform, forPainting: forPainting);
+    return _multiAxisManager.computeSeriesBounds(
+      transform: _transform,
+      originalTransform: _originalTransform,
+      forPainting: forPainting,
+    );
   }
 
   /// Gets effective axis bindings by deriving bindings from series properties.
@@ -740,7 +777,10 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Delegates to [MultiAxisManager.buildMultiAxisInfo].
   MultiAxisInfo _buildMultiAxisInfo() {
-    return _multiAxisManager.buildMultiAxisInfo(transform: _transform, originalTransform: _originalTransform);
+    return _multiAxisManager.buildMultiAxisInfo(
+      transform: _transform,
+      originalTransform: _originalTransform,
+    );
   }
 
   /// Sets pan constraint bounds for paused streaming mode.
@@ -761,13 +801,23 @@ class ChartRenderBox extends RenderBox {
   /// ```
   ///
   /// See also: [clearPanConstraintBounds] to restore normal pan constraints.
-  void setPanConstraintBounds(double xMin, double xMax, double yMin, double yMax) {
+  void setPanConstraintBounds(
+    double xMin,
+    double xMax,
+    double yMin,
+    double yMax,
+  ) {
     if (_transform == null) {
       return;
     }
 
     // Create a transform with full dataset bounds for pan constraints
-    _panConstraintTransform = _transform!.copyWith(dataXMin: xMin, dataXMax: xMax, dataYMin: yMin, dataYMax: yMax);
+    _panConstraintTransform = _transform!.copyWith(
+      dataXMin: xMin,
+      dataXMax: xMax,
+      dataYMin: yMin,
+      dataYMax: yMax,
+    );
   }
 
   /// Clears pan constraint bounds, restoring normal sliding window constraints.
@@ -821,13 +871,16 @@ class ChartRenderBox extends RenderBox {
   void zoomChart(double factor, {Offset? plotCenter, bool animate = true}) {
     // [DEBUG OUTPUT REMOVED] Zoom chart calls - fire on user interaction
 
-    if (_transform == null || _elementGenerator == null || _originalTransform == null) {
+    if (_transform == null ||
+        _elementGenerator == null ||
+        _originalTransform == null) {
       // [DEBUG OUTPUT REMOVED] Cannot zoom warning - rare error case
       return;
     }
 
     // Use plot center if not specified
-    final center = plotCenter ?? Offset(_plotArea.width / 2, _plotArea.height / 2);
+    final center =
+        plotCenter ?? Offset(_plotArea.width / 2, _plotArea.height / 2);
 
     // Apply zoom tentatively
     final tentativeTransform = _transform!.zoom(factor, center);
@@ -879,7 +932,9 @@ class ChartRenderBox extends RenderBox {
   void panChart(double plotDx, double plotDy) {
     // [DEBUG OUTPUT REMOVED] Pan chart calls - fire frequently during dragging
 
-    if (_transform == null || _elementGenerator == null || _originalTransform == null) {
+    if (_transform == null ||
+        _elementGenerator == null ||
+        _originalTransform == null) {
       // [DEBUG OUTPUT REMOVED] Cannot pan warning - rare error case
       return;
     }
@@ -913,7 +968,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Restore original data ranges, preserve current plot dimensions
-    _transform = _originalTransform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
+    _transform = _originalTransform!.copyWith(
+      plotWidth: _plotArea.width,
+      plotHeight: _plotArea.height,
+    );
 
     // Update axes to reflect reset viewport
     _updateAxesFromTransform();
@@ -929,7 +987,12 @@ class ChartRenderBox extends RenderBox {
   ///
   /// Called when streaming data expands the data range, allowing pan constraints
   /// to permit panning to the new data regions.
-  void updateDataBounds(double dataXMin, double dataXMax, double dataYMin, double dataYMax) {
+  void updateDataBounds(
+    double dataXMin,
+    double dataXMax,
+    double dataYMin,
+    double dataYMax,
+  ) {
     if (_originalTransform == null) return;
 
     // DO NOT update _originalTransform here - it must stay frozen at initial data range
@@ -1013,14 +1076,20 @@ class ChartRenderBox extends RenderBox {
     // otherwise use original transform (normal mode or active streaming with sliding window)
     final zoomBaseTransform = _panConstraintTransform ?? _originalTransform!;
 
-    return _viewportConstraints.clampZoomLevel(transform: transform, baseTransform: zoomBaseTransform);
+    return _viewportConstraints.clampZoomLevel(
+      transform: transform,
+      baseTransform: zoomBaseTransform,
+    );
   }
 
   /// Clamps pan delta to enforce viewport bounds (limit whitespace).
   ///
   /// Delegates to ViewportConstraints module for the actual calculation.
   /// Handles null checks and pan constraint transform selection.
-  (double, double) _clampPanDelta(double requestedPlotDx, double requestedPlotDy) {
+  (double, double) _clampPanDelta(
+    double requestedPlotDx,
+    double requestedPlotDy,
+  ) {
     if (_originalTransform == null || _transform == null) {
       return (requestedPlotDx, requestedPlotDy);
     }
@@ -1101,8 +1170,14 @@ class ChartRenderBox extends RenderBox {
   /// - [marginPercent]: Percentage of visible width to keep as margin on right
   /// - [viewportDataPoints]: Number of data points to show in viewport. If null,
   ///   shows all accumulated data (viewport expands as buffer fills).
-  void snapViewportToStreamingData({double marginPercent = 5.0, int? viewportDataPoints}) {
-    _streamingManager.snapViewportToStreamingData(marginPercent: marginPercent, viewportDataPoints: viewportDataPoints);
+  void snapViewportToStreamingData({
+    double marginPercent = 5.0,
+    int? viewportDataPoints,
+  }) {
+    _streamingManager.snapViewportToStreamingData(
+      marginPercent: marginPercent,
+      viewportDataPoints: viewportDataPoints,
+    );
   }
 
   // ============================================================================
@@ -1114,14 +1189,20 @@ class ChartRenderBox extends RenderBox {
   /// Widget coordinates include axis areas, plot coordinates are relative
   /// to the plot area (0,0 at top-left of plot area).
   Offset widgetToPlot(Offset widgetPosition) {
-    return Offset(widgetPosition.dx - _plotArea.left, widgetPosition.dy - _plotArea.top);
+    return Offset(
+      widgetPosition.dx - _plotArea.left,
+      widgetPosition.dy - _plotArea.top,
+    );
   }
 
   /// Converts plot coordinates to widget coordinates.
   ///
   /// Inverse of widgetToPlot().
   Offset plotToWidget(Offset plotPosition) {
-    return Offset(plotPosition.dx + _plotArea.left, plotPosition.dy + _plotArea.top);
+    return Offset(
+      plotPosition.dx + _plotArea.left,
+      plotPosition.dy + _plotArea.top,
+    );
   }
 
   /// Rebuilds the QuadTree spatial index from current elements.
@@ -1133,7 +1214,11 @@ class ChartRenderBox extends RenderBox {
     }
 
     // QuadTree bounds = plot area (in plot space, not widget space)
-    _spatialIndex = QuadTree(bounds: Offset.zero & _plotArea.size, maxElementsPerNode: 4, maxDepth: 8);
+    _spatialIndex = QuadTree(
+      bounds: Offset.zero & _plotArea.size,
+      maxElementsPerNode: 4,
+      maxDepth: 8,
+    );
 
     // First, filter out any existing resize handles from _elements
     // (handles are generated dynamically, not persisted)
@@ -1150,13 +1235,17 @@ class ChartRenderBox extends RenderBox {
       // For resizable annotations, also insert their resize handle elements
       // ONLY if the annotation is currently resizable (typically when selected)
       if (element is ResizableElement && element.isResizable) {
-        final handleElements = element.createResizeHandleElements().cast<ResizeHandleElement>();
+        final handleElements = element
+            .createResizeHandleElements()
+            .cast<ResizeHandleElement>();
         allElements.addAll(handleElements);
         generatedHandles.addAll(handleElements);
       }
       // Legacy support for SimulatedAnnotation (test class)
       else if (element is SimulatedAnnotation && element.isResizable) {
-        final handleElements = element.createResizeHandleElements().cast<ResizeHandleElement>();
+        final handleElements = element
+            .createResizeHandleElements()
+            .cast<ResizeHandleElement>();
         allElements.addAll(handleElements);
         generatedHandles.addAll(handleElements);
       }
@@ -1222,11 +1311,15 @@ class ChartRenderBox extends RenderBox {
     size = constraints.constrain(
       constraints.isTight
           ? constraints.smallest
-          : Size(constraints.hasBoundedWidth ? constraints.maxWidth : 800, constraints.hasBoundedHeight ? constraints.maxHeight : 600),
+          : Size(
+              constraints.hasBoundedWidth ? constraints.maxWidth : 800,
+              constraints.hasBoundedHeight ? constraints.maxHeight : 600,
+            ),
     );
 
     // Get scrollbar theme (use default if not provided)
-    final scrollbarTheme = _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
+    final scrollbarTheme =
+        _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
     final scrollbarPadding = scrollbarTheme.padding;
 
     // Calculate space needed for scrollbars
@@ -1238,7 +1331,9 @@ class ChartRenderBox extends RenderBox {
     }
 
     if (_scrollbarManager.showXScrollbar) {
-      bottomReserved = scrollbarTheme.thickness + (scrollbarPadding * 2); // Padding above and below scrollbar
+      bottomReserved =
+          scrollbarTheme.thickness +
+          (scrollbarPadding * 2); // Padding above and below scrollbar
     }
 
     // Calculate plot area (reserve space for axes AND scrollbars)
@@ -1253,7 +1348,9 @@ class ChartRenderBox extends RenderBox {
 
     // Reserve space for X-axis (bottom) - only if axis is visible
     if (_xAxis != null && _xAxis!.config.showAxisLine) {
-      bottomMargin = 50 + bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
+      bottomMargin =
+          50 +
+          bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
     }
 
     // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
@@ -1262,10 +1359,14 @@ class ChartRenderBox extends RenderBox {
     final effectiveAxes = _getEffectiveYAxes();
     if (effectiveAxes.isNotEmpty) {
       final axisBounds = _computeAxisBounds();
-      final axisWidths = _multiAxisManager.computeAxisWidths(axisBounds: axisBounds);
+      final axisWidths = _multiAxisManager.computeAxisWidths(
+        axisBounds: axisBounds,
+      );
 
       // Get total width needed for left and right axes
-      final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(axisWidths);
+      final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(
+        axisWidths,
+      );
       rightAxisWidth = _multiAxisManager.getTotalRightAxisWidth(axisWidths);
 
       // Use the computed axis widths directly so that the plot area aligns
@@ -1283,7 +1384,12 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Calculate plot area (chart canvas excluding axes and scrollbars)
-    _plotArea = Rect.fromLTRB(leftMargin, topMargin, size.width - rightMargin, size.height - bottomMargin);
+    _plotArea = Rect.fromLTRB(
+      leftMargin,
+      topMargin,
+      size.width - rightMargin,
+      size.height - bottomMargin,
+    );
 
     // Calculate scrollbar rectangles if enabled
     Rect? xScrollbarRect;
@@ -1294,7 +1400,8 @@ class ChartRenderBox extends RenderBox {
       // Layout order: plot area → tick labels (~30px) → axis label (~20px) → scrollbar
       // So scrollbar should start after ~50px total
       const xAxisAndLabelHeight = 50.0; // Space for tick labels + axis label
-      final scrollbarTop = _plotArea.bottom + xAxisAndLabelHeight + scrollbarPadding;
+      final scrollbarTop =
+          _plotArea.bottom + xAxisAndLabelHeight + scrollbarPadding;
       xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
         scrollbarTop,
@@ -1317,7 +1424,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Update scrollbar manager with calculated rects
-    _scrollbarManager.setScrollbarRects(xRect: xScrollbarRect, yRect: yScrollbarRect);
+    _scrollbarManager.setScrollbarRects(
+      xRect: xScrollbarRect,
+      yRect: yScrollbarRect,
+    );
 
     // Update axis pixel ranges to match plot area
     _xAxis?.updatePixelRange(_plotArea.left, _plotArea.right);
@@ -1331,7 +1441,8 @@ class ChartRenderBox extends RenderBox {
       // when switching between charts (e.g., Athletic → Test → Scientific)
       final bool rangeChanged =
           _originalTransform != null &&
-          ((_xAxis!.dataMin - _originalTransform!.dataXMin).abs() > 10 || (_xAxis!.dataMax - _originalTransform!.dataXMax).abs() > 10);
+          ((_xAxis!.dataMin - _originalTransform!.dataXMin).abs() > 10 ||
+              (_xAxis!.dataMax - _originalTransform!.dataXMax).abs() > 10);
 
       // Create initial transform if none exists OR if data range has significantly changed
       if (_transform == null || rangeChanged) {
@@ -1367,8 +1478,12 @@ class ChartRenderBox extends RenderBox {
       } else {
         // Subsequent layouts: preserve current data ranges (zoom/pan state),
         // only update plot dimensions if they changed
-        if (_transform!.plotWidth != _plotArea.width || _transform!.plotHeight != _plotArea.height) {
-          _transform = _transform!.copyWith(plotWidth: _plotArea.width, plotHeight: _plotArea.height);
+        if (_transform!.plotWidth != _plotArea.width ||
+            _transform!.plotHeight != _plotArea.height) {
+          _transform = _transform!.copyWith(
+            plotWidth: _plotArea.width,
+            plotHeight: _plotArea.height,
+          );
         }
       }
     }
@@ -1383,7 +1498,8 @@ class ChartRenderBox extends RenderBox {
       _scrollbarManager.markInitialized();
       // Only run once on first layout
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        final scrollbarConfig = _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
+        final scrollbarConfig =
+            _scrollbarManager.scrollbarTheme ?? ScrollbarConfig.defaultLight;
         if (scrollbarConfig.autoHide) {
           // Auto-hide enabled: show only if viewport is modified, then schedule hide
           final isModified = _scrollbarManager.isViewportModified();
@@ -1455,7 +1571,10 @@ class ChartRenderBox extends RenderBox {
       _ensureSeriesTransformsUpdated(seriesElements.cast<ChartElement>());
 
       // Query spatial index for non-series elements (annotations, etc.)
-      final nonSeriesCandidates = _spatialIndex!.query(plotPosition, radius: 18).where((e) => e is! SeriesElement).toList();
+      final nonSeriesCandidates = _spatialIndex!
+          .query(plotPosition, radius: 18)
+          .where((e) => e is! SeriesElement)
+          .toList();
 
       // Combine: all series elements + spatially-nearby non-series elements
       candidates = [...seriesElements, ...nonSeriesCandidates];
@@ -1508,7 +1627,10 @@ class ChartRenderBox extends RenderBox {
     // Get axis bounds and series-to-axis mapping
     final axisBounds = _computeAxisBounds(forPainting: true);
     final effectiveBindings = _getEffectiveBindings();
-    final seriesToAxisMap = {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId};
+    final seriesToAxisMap = {
+      for (final binding in effectiveBindings)
+        binding.seriesId: binding.yAxisId,
+    };
 
     // Update transform for each SeriesElement candidate
     for (final element in candidates) {
@@ -1516,7 +1638,10 @@ class ChartRenderBox extends RenderBox {
         final axisId = seriesToAxisMap[element.id];
         if (axisId != null && axisBounds.containsKey(axisId)) {
           final axisRange = axisBounds[axisId]!;
-          final perSeriesTransform = _transform!.copyWith(dataYMin: axisRange.min, dataYMax: axisRange.max);
+          final perSeriesTransform = _transform!.copyWith(
+            dataYMin: axisRange.min,
+            dataYMax: axisRange.max,
+          );
           element.updateTransform(perSeriesTransform);
         } else {
           element.updateTransform(_transform!);
@@ -1543,7 +1668,13 @@ class ChartRenderBox extends RenderBox {
 
     // Filter to datapoints only (per conflict resolution)
     // and elements whose center is inside rect (in plot space)
-    return candidates.where((e) => e.elementType == ChartElementType.datapoint && plotRect.contains(e.bounds.center)).toList();
+    return candidates
+        .where(
+          (e) =>
+              e.elementType == ChartElementType.datapoint &&
+              plotRect.contains(e.bounds.center),
+        )
+        .toList();
   }
 
   // ============================================================================
@@ -1595,18 +1726,25 @@ class ChartRenderBox extends RenderBox {
 
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
-    final seriesElements = _elements.whereType<SeriesElement>().toList()..sort((a, b) => a.priority.compareTo(b.priority));
+    final seriesElements = _elements.whereType<SeriesElement>().toList()
+      ..sort((a, b) => a.priority.compareTo(b.priority));
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
     // Checks effective axes (including inline yAxisConfig) via MultiAxisManager
     // Use forceFullBounds=true to get the FULL data range for series painting transforms
     // (viewport transformation is only for axis labels/crosshair, not series rendering)
-    final Map<String, DataRange>? axisBounds = (_multiAxisManager.isMultiAxisNormalizationActive()) ? _computeAxisBounds(forPainting: true) : null;
+    final Map<String, DataRange>? axisBounds =
+        (_multiAxisManager.isMultiAxisNormalizationActive())
+        ? _computeAxisBounds(forPainting: true)
+        : null;
 
     // Build series-to-axis lookup for efficient transform creation (use effective bindings)
     final effectiveBindings = _getEffectiveBindings();
     final Map<String, String>? seriesToAxisMap = axisBounds != null
-        ? {for (final binding in effectiveBindings) binding.seriesId: binding.yAxisId}
+        ? {
+            for (final binding in effectiveBindings)
+              binding.seriesId: binding.yAxisId,
+          }
         : null;
 
     // Paint each series with current transform
@@ -1621,7 +1759,10 @@ class ChartRenderBox extends RenderBox {
           if (axisId != null && axisBounds.containsKey(axisId)) {
             final axisRange = axisBounds[axisId]!;
             // Create transform with per-axis Y bounds for proper normalization
-            final perSeriesTransform = _transform!.copyWith(dataYMin: axisRange.min, dataYMax: axisRange.max);
+            final perSeriesTransform = _transform!.copyWith(
+              dataYMin: axisRange.min,
+              dataYMax: axisRange.max,
+            );
             series.updateTransform(perSeriesTransform);
           } else {
             // Fallback: No axis binding found, use global transform
@@ -1684,14 +1825,19 @@ class ChartRenderBox extends RenderBox {
   /// it for idle charts saves ~20-60ms per frame.
   bool _hasActiveOverlayContent() {
     // Box selection or range creation has visible rectangle
-    if (coordinator.currentMode == InteractionMode.boxSelecting || coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
+    if (coordinator.currentMode == InteractionMode.boxSelecting ||
+        coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
       return true;
     }
 
     // Crosshair is visible
-    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final crosshairConfig =
+        _interactionConfig?.crosshair ?? const CrosshairConfig();
     final cursorPos = _eventHandlerManager.cursorPosition;
-    if (crosshairConfig.enabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
+    if (crosshairConfig.enabled &&
+        cursorPos != null &&
+        _plotArea.contains(cursorPos) &&
+        !coordinator.currentMode.isDragging) {
       return true;
     }
 
@@ -1704,10 +1850,14 @@ class ChartRenderBox extends RenderBox {
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
       final hasHoveredMarker = coordinator.hoveredMarker != null;
       final hasTappedMarker = _eventHandlerManager.tappedMarker != null;
-      if (hasHoveredMarker && (config.triggerMode == TooltipTriggerMode.hover || config.triggerMode == TooltipTriggerMode.both)) {
+      if (hasHoveredMarker &&
+          (config.triggerMode == TooltipTriggerMode.hover ||
+              config.triggerMode == TooltipTriggerMode.both)) {
         return true;
       }
-      if (hasTappedMarker && (config.triggerMode == TooltipTriggerMode.tap || config.triggerMode == TooltipTriggerMode.both)) {
+      if (hasTappedMarker &&
+          (config.triggerMode == TooltipTriggerMode.tap ||
+              config.triggerMode == TooltipTriggerMode.both)) {
         return true;
       }
     }
@@ -1723,7 +1873,8 @@ class ChartRenderBox extends RenderBox {
       final previewElements = coordinator.previewSelectedElements;
       for (final element in previewElements) {
         // Only draw preview for elements that aren't already selected
-        if (!element.isSelected && element.elementType == ChartElementType.datapoint) {
+        if (!element.isSelected &&
+            element.elementType == ChartElementType.datapoint) {
           // Convert plot bounds to widget bounds for preview rendering
           final plotBounds = element.bounds;
           final widgetCenter = plotToWidget(plotBounds.center);
@@ -1732,7 +1883,9 @@ class ChartRenderBox extends RenderBox {
           // Draw dashed preview ring (different from solid selection ring)
           final interactionTheme = _theme?.interactionTheme;
           final previewPaint = Paint()
-            ..color = (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF)).withValues(alpha: 0.5)
+            ..color =
+                (interactionTheme?.selectionColor ?? const Color(0xFF00AAFF))
+                    .withValues(alpha: 0.5)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
           canvas.drawCircle(widgetCenter, radius + 3, previewPaint);
@@ -1749,13 +1902,16 @@ class ChartRenderBox extends RenderBox {
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = interactionTheme?.selectionColor.withValues(alpha: 0.25) ?? const Color(0x4000AAFF)
+            ..color =
+                interactionTheme?.selectionColor.withValues(alpha: 0.25) ??
+                const Color(0x4000AAFF)
             ..style = PaintingStyle.fill,
         );
         canvas.drawRect(
           boxRect,
           Paint()
-            ..color = interactionTheme?.selectionColor ?? const Color(0xFF0088FF)
+            ..color =
+                interactionTheme?.selectionColor ?? const Color(0xFF0088FF)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1,
         );
@@ -1768,7 +1924,8 @@ class ChartRenderBox extends RenderBox {
       if (boxRect != null) {
         // Draw semi-transparent filled rectangle (use theme color or default blue)
         final interactionTheme = _theme?.interactionTheme;
-        final rangeColor = interactionTheme?.crosshairColor ?? const ui.Color(0xFF448AFF);
+        final rangeColor =
+            interactionTheme?.crosshairColor ?? const ui.Color(0xFF448AFF);
         canvas.drawRect(
           boxRect,
           Paint()
@@ -1788,13 +1945,24 @@ class ChartRenderBox extends RenderBox {
         // Draw coordinate labels showing data bounds
         if (_transform != null) {
           final topLeft = _transform!.plotToData(boxRect.left, boxRect.top);
-          final bottomRight = _transform!.plotToData(boxRect.right, boxRect.bottom);
+          final bottomRight = _transform!.plotToData(
+            boxRect.right,
+            boxRect.bottom,
+          );
 
           // Calculate min/max coordinates
-          final xMin = topLeft.dx < bottomRight.dx ? topLeft.dx : bottomRight.dx;
-          final xMax = topLeft.dx > bottomRight.dx ? topLeft.dx : bottomRight.dx;
-          final yMin = topLeft.dy < bottomRight.dy ? topLeft.dy : bottomRight.dy;
-          final yMax = topLeft.dy > bottomRight.dy ? topLeft.dy : bottomRight.dy;
+          final xMin = topLeft.dx < bottomRight.dx
+              ? topLeft.dx
+              : bottomRight.dx;
+          final xMax = topLeft.dx > bottomRight.dx
+              ? topLeft.dx
+              : bottomRight.dx;
+          final yMin = topLeft.dy < bottomRight.dy
+              ? topLeft.dy
+              : bottomRight.dy;
+          final yMax = topLeft.dy > bottomRight.dy
+              ? topLeft.dy
+              : bottomRight.dy;
 
           // Format coordinate text
           final coordText =
@@ -1820,10 +1988,16 @@ class ChartRenderBox extends RenderBox {
 
           // Keep tooltip inside widget bounds
           if (tooltipOffset.dx + textPainter.width > size.width) {
-            tooltipOffset = Offset(size.width - textPainter.width - 5, tooltipOffset.dy);
+            tooltipOffset = Offset(
+              size.width - textPainter.width - 5,
+              tooltipOffset.dy,
+            );
           }
           if (tooltipOffset.dy + textPainter.height > size.height) {
-            tooltipOffset = Offset(tooltipOffset.dx, boxRect.top - textPainter.height - 5);
+            tooltipOffset = Offset(
+              tooltipOffset.dx,
+              boxRect.top - textPainter.height - 5,
+            );
           }
 
           textPainter.paint(canvas, tooltipOffset);
@@ -1833,9 +2007,13 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _eventHandlerManager.cursorPosition;
-    final crosshairConfig = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final crosshairConfig =
+        _interactionConfig?.crosshair ?? const CrosshairConfig();
     final crosshairEnabled = crosshairConfig.enabled;
-    if (crosshairEnabled && cursorPos != null && _plotArea.contains(cursorPos) && !coordinator.currentMode.isDragging) {
+    if (crosshairEnabled &&
+        cursorPos != null &&
+        _plotArea.contains(cursorPos) &&
+        !coordinator.currentMode.isDragging) {
       // Only draw crosshair if cursor is inside plot area AND not dragging
       // Hide crosshair during all drag operations (datapoint, annotation, resize)
 
@@ -1856,7 +2034,8 @@ class ChartRenderBox extends RenderBox {
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: _elements.whereType<SeriesElement>().toList(),
-        isRangeCreationMode: coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
+        isRangeCreationMode:
+            coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
         trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
         xAxisConfig: xAxisConfig,
       );
@@ -1879,7 +2058,8 @@ class ChartRenderBox extends RenderBox {
           break;
         case TooltipTriggerMode.both:
           // Show tooltip for either hover or tap (prefer tapped if both exist)
-          markerToShow = _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
+          markerToShow =
+              _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
           break;
       }
 
@@ -1888,7 +2068,8 @@ class ChartRenderBox extends RenderBox {
         // Start show animation if marker changed or newly appeared
         // Use sameMarkerAs to compare by identity (seriesId + markerIndex) only,
         // ignoring plotPosition to prevent flickering from floating-point differences
-        final currentTarget = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        final currentTarget = _tooltipAnimator
+            .getTargetMarker<HoveredMarkerInfo>();
         if (!markerToShow.sameMarkerAs(currentTarget)) {
           _tooltipAnimator.show(markerToShow, config);
         }
@@ -1899,13 +2080,15 @@ class ChartRenderBox extends RenderBox {
         }
       } else {
         // Start hide animation if marker disappeared
-        final currentTarget = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        final currentTarget = _tooltipAnimator
+            .getTargetMarker<HoveredMarkerInfo>();
         if (currentTarget != null) {
           _tooltipAnimator.hide(config);
         }
 
         // Still draw tooltip during fade-out
-        final targetMarker = _tooltipAnimator.getTargetMarker<HoveredMarkerInfo>();
+        final targetMarker = _tooltipAnimator
+            .getTargetMarker<HoveredMarkerInfo>();
         if (_tooltipAnimator.isVisible && targetMarker != null) {
           _drawMarkerTooltip(canvas, size, targetMarker);
         }
@@ -1938,12 +2121,17 @@ class ChartRenderBox extends RenderBox {
     if (_xAxis != null && _yAxis != null) {
       final gridRenderer = GridRenderer(
         theme: _theme,
-        config: null, // TODO: Get from widget.grid once chart_render_box receives it
+        config:
+            null, // TODO: Get from widget.grid once chart_render_box receives it
       );
 
       // Get tick positions for grid lines
-      final xTicks = _xAxis!.ticks.map((t) => _xAxis!.scale.dataToPixel(t.value)).toList();
-      final yTicks = _yAxis!.ticks.map((t) => _yAxis!.scale.dataToPixel(t.value)).toList();
+      final xTicks = _xAxis!.ticks
+          .map((t) => _xAxis!.scale.dataToPixel(t.value))
+          .toList();
+      final yTicks = _yAxis!.ticks
+          .map((t) => _yAxis!.scale.dataToPixel(t.value))
+          .toList();
 
       gridRenderer.paintVerticalGrid(canvas, _plotArea, xTicks);
       gridRenderer.paintHorizontalGrid(canvas, _plotArea, yTicks);
@@ -1956,7 +2144,9 @@ class ChartRenderBox extends RenderBox {
     // Paint X-axis using XAxisPainter (unified approach)
     if (_xAxis != null) {
       final effectiveXAxisConfig = _xAxisConfig ?? const XAxisConfig();
-      final TextStyle labelStyle = _theme?.axisStyle.labelStyle ?? const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
+      final TextStyle labelStyle =
+          _theme?.axisStyle.labelStyle ??
+          const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
       final xAxisPainter = XAxisPainter(
         config: effectiveXAxisConfig,
         axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
@@ -1964,7 +2154,11 @@ class ChartRenderBox extends RenderBox {
         series: _multiAxisManager.series,
         tickValues: _xAxis!.ticks.map((t) => t.value).toList(),
       );
-      xAxisPainter.paint(canvas, Rect.fromLTWH(0, 0, size.width, size.height), _plotArea);
+      xAxisPainter.paint(
+        canvas,
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        _plotArea,
+      );
     }
 
     // ==========================================================================
@@ -1988,14 +2182,20 @@ class ChartRenderBox extends RenderBox {
     // LAYER 0: Background annotations (Range annotations with renderOrder < 2)
     // These must paint BEFORE series so they appear behind the data lines
     // ==========================================================================
-    final backgroundElements = _elements.where((e) => e is! SeriesElement && e.renderOrder < RenderOrder.series).toList()
-      ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
+    final backgroundElements =
+        _elements
+            .where(
+              (e) => e is! SeriesElement && e.renderOrder < RenderOrder.series,
+            )
+            .toList()
+          ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
     // Compute series bounds for range annotations in perSeries mode
     // This ensures range annotations are positioned correctly when each series
     // has its own Y-axis range. Must be computed BEFORE painting background elements.
     Map<String, DataRange>? backgroundSeriesBounds;
-    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries && _multiAxisManager.series.isNotEmpty) {
+    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries &&
+        _multiAxisManager.series.isNotEmpty) {
       backgroundSeriesBounds = _computeSeriesBounds(forPainting: true);
     }
 
@@ -2005,9 +2205,12 @@ class ChartRenderBox extends RenderBox {
         // For perSeries mode: update axis bounds for correct Y-value normalization
         if (backgroundSeriesBounds != null &&
             backgroundSeriesBounds.isNotEmpty &&
-            (element.annotation.startY != null || element.annotation.endY != null)) {
+            (element.annotation.startY != null ||
+                element.annotation.endY != null)) {
           final seriesId = element.annotation.seriesId;
-          final axisBoundsToUse = seriesId != null ? backgroundSeriesBounds[seriesId] : backgroundSeriesBounds.values.first;
+          final axisBoundsToUse = seriesId != null
+              ? backgroundSeriesBounds[seriesId]
+              : backgroundSeriesBounds.values.first;
           element.updateAxisBounds(axisBoundsToUse);
         } else {
           element.updateAxisBounds(null);
@@ -2018,7 +2221,10 @@ class ChartRenderBox extends RenderBox {
 
     // LAYER 1: Series (cached)
     // Check if we can reuse cached Picture, or need to regenerate
-    final cacheValid = _seriesCacheManager.isValid(elements: _elements, currentTransform: _transform);
+    final cacheValid = _seriesCacheManager.isValid(
+      elements: _elements,
+      currentTransform: _transform,
+    );
     // [DEBUG OUTPUT REMOVED] Cache hit/miss - was firing at 60fps
 
     if (cacheValid) {
@@ -2052,8 +2258,13 @@ class ChartRenderBox extends RenderBox {
     // Only paint elements with renderOrder >= series (already painted background in Layer 0)
     // Sort by renderOrder (lower = paint first/back, higher = paint last/front)
     // NOTE: renderOrder is SEPARATE from hit test priority!
-    final foregroundElements = _elements.where((e) => e is! SeriesElement && e.renderOrder >= RenderOrder.series).toList()
-      ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
+    final foregroundElements =
+        _elements
+            .where(
+              (e) => e is! SeriesElement && e.renderOrder >= RenderOrder.series,
+            )
+            .toList()
+          ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
     // Compute series bounds for annotations in perSeries mode
     // This ensures threshold lines and range annotations are positioned correctly
@@ -2063,7 +2274,8 @@ class ChartRenderBox extends RenderBox {
     // multiple Y-axes exist. Otherwise range annotations with Y values will render
     // off-screen because the transform uses normalized Y range (-0.05 to 1.05).
     Map<String, DataRange>? thresholdSeriesBounds;
-    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries && _multiAxisManager.series.isNotEmpty) {
+    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries &&
+        _multiAxisManager.series.isNotEmpty) {
       thresholdSeriesBounds = _computeSeriesBounds(forPainting: true);
     }
 
@@ -2083,9 +2295,12 @@ class ChartRenderBox extends RenderBox {
           // Use seriesId from annotation if specified, otherwise use first available series
           if (thresholdSeriesBounds != null &&
               thresholdSeriesBounds.isNotEmpty &&
-              (element.annotation.startY != null || element.annotation.endY != null)) {
+              (element.annotation.startY != null ||
+                  element.annotation.endY != null)) {
             final seriesId = element.annotation.seriesId;
-            final axisBoundsToUse = seriesId != null ? thresholdSeriesBounds[seriesId] : thresholdSeriesBounds.values.first;
+            final axisBoundsToUse = seriesId != null
+                ? thresholdSeriesBounds[seriesId]
+                : thresholdSeriesBounds.values.first;
             element.updateAxisBounds(axisBoundsToUse);
           } else {
             element.updateAxisBounds(null);
@@ -2094,9 +2309,13 @@ class ChartRenderBox extends RenderBox {
           element.updateTransform(_transform!);
           // For perSeries mode: update axis bounds for correct Y-value normalization
           // Use seriesId from annotation if specified, otherwise use first available series
-          if (thresholdSeriesBounds != null && thresholdSeriesBounds.isNotEmpty && element.annotation.axis == AnnotationAxis.y) {
+          if (thresholdSeriesBounds != null &&
+              thresholdSeriesBounds.isNotEmpty &&
+              element.annotation.axis == AnnotationAxis.y) {
             final seriesId = element.annotation.seriesId;
-            final axisBoundsToUse = seriesId != null ? thresholdSeriesBounds[seriesId] : thresholdSeriesBounds.values.first;
+            final axisBoundsToUse = seriesId != null
+                ? thresholdSeriesBounds[seriesId]
+                : thresholdSeriesBounds.values.first;
             element.updateAxisBounds(axisBoundsToUse);
           } else {
             element.updateAxisBounds(null);
@@ -2105,7 +2324,8 @@ class ChartRenderBox extends RenderBox {
           element.updateTransform(_transform!);
           // For perSeries mode: update axis bounds for correct Y-value normalization
           // Use seriesId from the annotation's linked series
-          if (thresholdSeriesBounds != null && thresholdSeriesBounds.isNotEmpty) {
+          if (thresholdSeriesBounds != null &&
+              thresholdSeriesBounds.isNotEmpty) {
             final seriesId = element.annotation.seriesId;
             final axisBoundsToUse = thresholdSeriesBounds[seriesId];
             element.updateAxisBounds(axisBoundsToUse);
@@ -2120,7 +2340,8 @@ class ChartRenderBox extends RenderBox {
       element.paint(canvas, _plotArea.size);
     }
 
-    canvas.restore(); // Restore canvas state (removes clipping and translation from plot area)
+    canvas
+        .restore(); // Restore canvas state (removes clipping and translation from plot area)
 
     // LAYER 3: Overlays (dynamic, always rendered fresh)
     // Crosshair, selection box, preview indicators - change every frame during hover/drag
@@ -2210,14 +2431,26 @@ class ChartRenderBox extends RenderBox {
   /// Denormalizes a Y value back to original data coordinates (FR-008).
   ///
   /// Delegates to [MultiAxisManager.denormalizeYValue].
-  double denormalizeYValue(double normalizedValue, double seriesMin, double seriesMax) {
-    return _multiAxisManager.denormalizeYValue(normalizedValue, seriesMin, seriesMax);
+  double denormalizeYValue(
+    double normalizedValue,
+    double seriesMin,
+    double seriesMax,
+  ) {
+    return _multiAxisManager.denormalizeYValue(
+      normalizedValue,
+      seriesMin,
+      seriesMax,
+    );
   }
 
   /// Draws a tooltip for the hovered marker.
   ///
   /// Delegates to [TooltipRenderer] module for the actual rendering.
-  void _drawMarkerTooltip(Canvas canvas, Size size, HoveredMarkerInfo markerInfo) {
+  void _drawMarkerTooltip(
+    Canvas canvas,
+    Size size,
+    HoveredMarkerInfo markerInfo,
+  ) {
     _tooltipRenderer.drawMarkerTooltip(
       canvas: canvas,
       size: size,
@@ -2242,8 +2475,15 @@ class ChartRenderBox extends RenderBox {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties.add(IntProperty('elementCount', _elements.length));
-    properties.add(DiagnosticsProperty<QuadTreeStats>('spatialIndexStats', _spatialIndex?.stats));
-    properties.add(StringProperty('coordinatorState', coordinator.debugState()));
+    properties.add(
+      DiagnosticsProperty<QuadTreeStats>(
+        'spatialIndexStats',
+        _spatialIndex?.stats,
+      ),
+    );
+    properties.add(
+      StringProperty('coordinatorState', coordinator.debugState()),
+    );
   }
 
   // ============================================================================
@@ -2286,7 +2526,8 @@ class _ScrollbarDelegateImpl implements ScrollbarDelegate {
   ChartTransform? get originalTransform => _renderBox._originalTransform;
 
   @override
-  DataBounds? get streamingBounds => _renderBox._streamingManager.streamingBounds;
+  DataBounds? get streamingBounds =>
+      _renderBox._streamingManager.streamingBounds;
 
   @override
   void applyTransform(ChartTransform newTransform) {
@@ -2358,7 +2599,12 @@ class _StreamingDelegateImpl implements StreamingDelegate {
   }
 
   @override
-  void setPanConstraintBounds(double minX, double maxX, double minY, double maxY) {
+  void setPanConstraintBounds(
+    double minX,
+    double maxX,
+    double minY,
+    double maxY,
+  ) {
     _renderBox.setPanConstraintBounds(minX, maxX, minY, maxY);
   }
 
@@ -2402,7 +2648,10 @@ class _AnnotationDragDelegateImpl implements AnnotationDragDelegate {
   }
 
   @override
-  void notifyAnnotationChanged(String annotationId, ChartAnnotation updatedAnnotation) {
+  void notifyAnnotationChanged(
+    String annotationId,
+    ChartAnnotation updatedAnnotation,
+  ) {
     _renderBox.onAnnotationChanged?.call(annotationId, updatedAnnotation);
   }
 }
@@ -2449,10 +2698,12 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   // ============================================================================
 
   @override
-  void Function(ChartElement, PointerEvent)? get onElementClick => _renderBox.onElementClick;
+  void Function(ChartElement, PointerEvent)? get onElementClick =>
+      _renderBox.onElementClick;
 
   @override
-  void Function(Offset, PointerEvent)? get onEmptyAreaClick => _renderBox.onEmptyAreaClick;
+  void Function(Offset, PointerEvent)? get onEmptyAreaClick =>
+      _renderBox.onEmptyAreaClick;
 
   @override
   void Function(ChartElement?)? get onElementHover => _renderBox.onElementHover;
@@ -2461,10 +2712,12 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   void Function(MouseCursor)? get onCursorChange => _renderBox.onCursorChange;
 
   @override
-  void Function(String, ChartAnnotation)? get onAnnotationChanged => _renderBox.onAnnotationChanged;
+  void Function(String, ChartAnnotation)? get onAnnotationChanged =>
+      _renderBox.onAnnotationChanged;
 
   @override
-  void Function(double, double, double, double)? get onRangeCreationComplete => _renderBox.onRangeCreationComplete;
+  void Function(double, double, double, double)? get onRangeCreationComplete =>
+      _renderBox.onRangeCreationComplete;
 
   // ============================================================================
   // Hit testing
@@ -2592,10 +2845,16 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   // ============================================================================
 
   @override
-  bool get isPerSeriesMode => _renderBox._multiAxisManager.normalizationMode == NormalizationMode.perSeries;
+  bool get isPerSeriesMode =>
+      _renderBox._multiAxisManager.normalizationMode ==
+      NormalizationMode.perSeries;
 
   @override
-  (double startY, double endY) denormalizeYRange(double normalizedStartY, double normalizedEndY, {String? seriesId}) {
+  (double startY, double endY) denormalizeYRange(
+    double normalizedStartY,
+    double normalizedEndY, {
+    String? seriesId,
+  }) {
     // Use axisBounds - this is what the Y-axis labels show and what crosshair uses.
     // The input values are already true 0-1 normalized (calculated like crosshair does).
     final axisBounds = _renderBox._computeAxisBounds();
@@ -2605,8 +2864,16 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
       final bounds = axisBounds.values.first;
 
       // Denormalize exactly like crosshair: MultiAxisNormalizer.denormalize(yValue, bounds.min, bounds.max)
-      final startY = MultiAxisNormalizer.denormalize(normalizedStartY, bounds.min, bounds.max);
-      final endY = MultiAxisNormalizer.denormalize(normalizedEndY, bounds.min, bounds.max);
+      final startY = MultiAxisNormalizer.denormalize(
+        normalizedStartY,
+        bounds.min,
+        bounds.max,
+      );
+      final endY = MultiAxisNormalizer.denormalize(
+        normalizedEndY,
+        bounds.min,
+        bounds.max,
+      );
 
       return (startY, endY);
     }

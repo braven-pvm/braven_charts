@@ -14,8 +14,6 @@
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/interaction/core/crosshair_tracker.dart';
-// Import internal classes for resolver unit tests
-import 'package:braven_charts/src/models/series_axis_binding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,9 +26,15 @@ void main() {
     setUp(() {
       testAxes = [
         YAxisConfig.withId(
-            id: 'power', position: YAxisPosition.left, unit: 'W'),
+          id: 'power',
+          position: YAxisPosition.left,
+          unit: 'W',
+        ),
         YAxisConfig.withId(
-            id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
+          id: 'hr',
+          position: YAxisPosition.right,
+          unit: 'bpm',
+        ),
       ];
 
       // Bindings used for internal resolver tests
@@ -51,7 +55,10 @@ void main() {
           ],
           color: const Color(0xFF2196F3),
           yAxisConfig: YAxisConfig.withId(
-              id: 'power', position: YAxisPosition.left, unit: 'W'),
+            id: 'power',
+            position: YAxisPosition.left,
+            unit: 'W',
+          ),
         ),
         LineChartSeries(
           id: 'hr-series',
@@ -63,7 +70,10 @@ void main() {
           ],
           color: const Color(0xFFF44336),
           yAxisConfig: YAxisConfig.withId(
-              id: 'hr', position: YAxisPosition.right, unit: 'bpm'),
+            id: 'hr',
+            position: YAxisPosition.right,
+            unit: 'bpm',
+          ),
         ),
       ];
     });
@@ -209,8 +219,9 @@ void main() {
     });
 
     group('Widget integration', () {
-      testWidgets('crosshair shows correct value for left axis series',
-          (tester) async {
+      testWidgets('crosshair shows correct value for left axis series', (
+        tester,
+      ) async {
         // Create chart with multi-axis config using inline yAxisConfig
         await tester.pumpWidget(
           MaterialApp(
@@ -245,8 +256,9 @@ void main() {
         // Actual crosshair value display is verified via visual verification.
       });
 
-      testWidgets('crosshair shows correct value for right axis series',
-          (tester) async {
+      testWidgets('crosshair shows correct value for right axis series', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -276,8 +288,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('tracking mode displays all series with per-axis values',
-          (tester) async {
+      testWidgets('tracking mode displays all series with per-axis values', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -307,8 +320,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('intersection markers positioned at correct per-axis Y',
-          (tester) async {
+      testWidgets('intersection markers positioned at correct per-axis Y', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(

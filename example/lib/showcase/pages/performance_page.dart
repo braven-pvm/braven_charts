@@ -136,7 +136,8 @@ class _PerformancePageState extends State<PerformancePage> {
 
       // Info
       InfoBox(
-        message: 'Total data points: ${_dataPointCount * _seriesCount}. '
+        message:
+            'Total data points: ${_dataPointCount * _seriesCount}. '
             'Generation time: ${_lastRenderTimeMs}ms.',
         type: _dataPointCount > 5000 ? InfoBoxType.warning : InfoBoxType.info,
       ),
@@ -169,7 +170,8 @@ class _PerformancePageState extends State<PerformancePage> {
                     ? LineInterpolation.bezier
                     : LineInterpolation.linear,
                 strokeWidth: 1.5,
-                showDataPointMarkers: _optionsController.showDataMarkers &&
+                showDataPointMarkers:
+                    _optionsController.showDataMarkers &&
                     _dataPointCount <= 100,
               );
             }),
@@ -177,8 +179,9 @@ class _PerformancePageState extends State<PerformancePage> {
             showLegend: _seriesCount > 1 && _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -201,25 +204,16 @@ class _PerformancePageState extends State<PerformancePage> {
     final performanceLevel = totalPoints < 1000
         ? 'Excellent'
         : totalPoints < 5000
-            ? 'Good'
-            : totalPoints < 10000
-                ? 'Moderate'
-                : 'Intensive';
+        ? 'Good'
+        : totalPoints < 10000
+        ? 'Moderate'
+        : 'Intensive';
 
     return StatusPanel(
       items: [
-        StatusItem(
-          label: 'Points/Series',
-          value: '$_dataPointCount',
-        ),
-        StatusItem(
-          label: 'Total Points',
-          value: '$totalPoints',
-        ),
-        StatusItem(
-          label: 'Gen Time',
-          value: '${_lastRenderTimeMs}ms',
-        ),
+        StatusItem(label: 'Points/Series', value: '$_dataPointCount'),
+        StatusItem(label: 'Total Points', value: '$totalPoints'),
+        StatusItem(label: 'Gen Time', value: '${_lastRenderTimeMs}ms'),
         StatusItem(
           label: 'Performance',
           value: performanceLevel,

@@ -178,10 +178,7 @@ void main() {
         final testBounds = const DataRange(min: 0.0, max: 100.0);
 
         // Method should exist and be callable
-        expect(
-          () => painter.generateTicks(testBounds),
-          returnsNormally,
-        );
+        expect(() => painter.generateTicks(testBounds), returnsNormally);
       });
 
       test('generateTicks returns List<double>', () {
@@ -235,10 +232,7 @@ void main() {
         );
 
         // Method should exist and be callable
-        expect(
-          () => painter.formatTickLabel(42.5),
-          returnsNormally,
-        );
+        expect(() => painter.formatTickLabel(42.5), returnsNormally);
       });
 
       test('formatTickLabel accepts double parameter', () {
@@ -286,10 +280,7 @@ void main() {
         );
 
         // Method should exist and be callable
-        expect(
-          () => painter.resolveAxisColor(),
-          returnsNormally,
-        );
+        expect(() => painter.resolveAxisColor(), returnsNormally);
       });
 
       test('resolveAxisColor returns Color', () {
@@ -326,96 +317,96 @@ void main() {
       });
 
       test(
-          'resolveAxisColor returns first series color when config color is null',
-          () {
-        const config = XAxisConfig(color: null);
-        final bounds = const DataRange(min: 0.0, max: 100.0);
-        const labelStyle = TextStyle(fontSize: 12.0);
-        const seriesColor = Color(0xFFFF0000);
-        final series = [
-          const ChartSeries(
-            id: 'series1',
-            points: [ChartDataPoint(x: 0, y: 0)],
-            color: seriesColor,
-          ),
-        ];
+        'resolveAxisColor returns first series color when config color is null',
+        () {
+          const config = XAxisConfig(color: null);
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+          const seriesColor = Color(0xFFFF0000);
+          final series = [
+            const ChartSeries(
+              id: 'series1',
+              points: [ChartDataPoint(x: 0, y: 0)],
+              color: seriesColor,
+            ),
+          ];
 
-        final painter = XAxisPainter(
-          config: config,
-          axisBounds: bounds,
-          labelStyle: labelStyle,
-          series: series,
-        );
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+            series: series,
+          );
 
-        final color = painter.resolveAxisColor();
+          final color = painter.resolveAxisColor();
 
-        expect(color, equals(seriesColor));
-      });
-
-      test(
-          'resolveAxisColor returns default color when config color is null and no series',
-          () {
-        const config = XAxisConfig(color: null);
-        final bounds = const DataRange(min: 0.0, max: 100.0);
-        const labelStyle = TextStyle(fontSize: 12.0);
-
-        final painter = XAxisPainter(
-          config: config,
-          axisBounds: bounds,
-          labelStyle: labelStyle,
-          series: null,
-        );
-
-        final color = painter.resolveAxisColor();
-
-        expect(color, equals(const Color(0xFF333333)));
-      });
+          expect(color, equals(seriesColor));
+        },
+      );
 
       test(
-          'resolveAxisColor returns default color when config color is null and series is empty',
-          () {
-        const config = XAxisConfig(color: null);
-        final bounds = const DataRange(min: 0.0, max: 100.0);
-        const labelStyle = TextStyle(fontSize: 12.0);
-        final series = <ChartSeries>[];
+        'resolveAxisColor returns default color when config color is null and no series',
+        () {
+          const config = XAxisConfig(color: null);
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
 
-        final painter = XAxisPainter(
-          config: config,
-          axisBounds: bounds,
-          labelStyle: labelStyle,
-          series: series,
-        );
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+            series: null,
+          );
 
-        final color = painter.resolveAxisColor();
+          final color = painter.resolveAxisColor();
 
-        expect(color, equals(const Color(0xFF333333)));
-      });
+          expect(color, equals(const Color(0xFF333333)));
+        },
+      );
 
       test(
-          'resolveAxisColor returns default color when series[0].color is null',
-          () {
-        const config = XAxisConfig(color: null);
-        final bounds = const DataRange(min: 0.0, max: 100.0);
-        const labelStyle = TextStyle(fontSize: 12.0);
-        final series = [
-          const ChartSeries(
-            id: 'series1',
-            points: [],
-            color: null,
-          ),
-        ];
+        'resolveAxisColor returns default color when config color is null and series is empty',
+        () {
+          const config = XAxisConfig(color: null);
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+          final series = <ChartSeries>[];
 
-        final painter = XAxisPainter(
-          config: config,
-          axisBounds: bounds,
-          labelStyle: labelStyle,
-          series: series,
-        );
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+            series: series,
+          );
 
-        final color = painter.resolveAxisColor();
+          final color = painter.resolveAxisColor();
 
-        expect(color, equals(const Color(0xFF333333)));
-      });
+          expect(color, equals(const Color(0xFF333333)));
+        },
+      );
+
+      test(
+        'resolveAxisColor returns default color when series[0].color is null',
+        () {
+          const config = XAxisConfig(color: null);
+          final bounds = const DataRange(min: 0.0, max: 100.0);
+          const labelStyle = TextStyle(fontSize: 12.0);
+          final series = [
+            const ChartSeries(id: 'series1', points: [], color: null),
+          ];
+
+          final painter = XAxisPainter(
+            config: config,
+            axisBounds: bounds,
+            labelStyle: labelStyle,
+            series: series,
+          );
+
+          final color = painter.resolveAxisColor();
+
+          expect(color, equals(const Color(0xFF333333)));
+        },
+      );
     });
 
     group('generateTicks - nice number algorithm', () {
@@ -441,9 +432,12 @@ void main() {
 
         // Check values are "nice" - should be multiples of 1, 2, 5, 10, 20, 50, etc.
         for (final tick in ticks) {
-          expect(tick >= testBounds.min && tick <= testBounds.max, isTrue,
-              reason:
-                  'Tick $tick should be within bounds ${testBounds.min} to ${testBounds.max}');
+          expect(
+            tick >= testBounds.min && tick <= testBounds.max,
+            isTrue,
+            reason:
+                'Tick $tick should be within bounds ${testBounds.min} to ${testBounds.max}',
+          );
         }
       });
 
@@ -575,9 +569,7 @@ void main() {
       test('uses custom labelFormatter when provided', () {
         String customFormatter(double value) => 'T=${value.toInt()}';
 
-        final config = XAxisConfig(
-          labelFormatter: customFormatter,
-        );
+        final config = XAxisConfig(labelFormatter: customFormatter);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -636,9 +628,7 @@ void main() {
       test('falls back to default formatting when custom formatter throws', () {
         String throwingFormatter(double value) => throw Exception('Test error');
 
-        final config = XAxisConfig(
-          labelFormatter: throwingFormatter,
-        );
+        final config = XAxisConfig(labelFormatter: throwingFormatter);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -649,10 +639,7 @@ void main() {
         );
 
         // Should fallback gracefully instead of crashing
-        expect(
-          () => painter.formatTickLabel(50.0),
-          returnsNormally,
-        );
+        expect(() => painter.formatTickLabel(50.0), returnsNormally);
       });
     });
 
@@ -684,10 +671,7 @@ void main() {
 
       test('calls resolveAxisColor to get axis color', () {
         const testColor = Color(0xFF00FF00);
-        const config = XAxisConfig(
-          visible: true,
-          color: testColor,
-        );
+        const config = XAxisConfig(visible: true, color: testColor);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -712,10 +696,7 @@ void main() {
       });
 
       test('draws axis line when showAxisLine is true', () {
-        const config = XAxisConfig(
-          visible: true,
-          showAxisLine: true,
-        );
+        const config = XAxisConfig(visible: true, showAxisLine: true);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -739,10 +720,7 @@ void main() {
       });
 
       test('draws tick marks when showTicks is true', () {
-        const config = XAxisConfig(
-          visible: true,
-          showTicks: true,
-        );
+        const config = XAxisConfig(visible: true, showTicks: true);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -766,10 +744,7 @@ void main() {
       });
 
       test('does not draw axis line when showAxisLine is false', () {
-        const config = XAxisConfig(
-          visible: true,
-          showAxisLine: false,
-        );
+        const config = XAxisConfig(visible: true, showAxisLine: false);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -792,10 +767,7 @@ void main() {
       });
 
       test('does not draw tick marks when showTicks is false', () {
-        const config = XAxisConfig(
-          visible: true,
-          showTicks: false,
-        );
+        const config = XAxisConfig(visible: true, showTicks: false);
         final bounds = const DataRange(min: 0.0, max: 100.0);
         const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -880,10 +852,7 @@ void main() {
         });
 
         test('label property appears in axis rendering', () {
-          const config = XAxisConfig(
-            label: 'Test Axis Label',
-            visible: true,
-          );
+          const config = XAxisConfig(label: 'Test Axis Label', visible: true);
           final bounds = const DataRange(min: 0.0, max: 100.0);
           const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -929,11 +898,7 @@ void main() {
 
       group('bounds properties', () {
         test('explicit min/max override data bounds', () {
-          const config = XAxisConfig(
-            min: 10.0,
-            max: 90.0,
-            visible: true,
-          );
+          const config = XAxisConfig(min: 10.0, max: 90.0, visible: true);
           final dataBounds = const DataRange(min: 0.0, max: 100.0);
           const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -951,10 +916,7 @@ void main() {
         });
 
         test('min property is respected when generating ticks', () {
-          const config = XAxisConfig(
-            min: 20.0,
-            visible: true,
-          );
+          const config = XAxisConfig(min: 20.0, visible: true);
           final bounds = const DataRange(min: 0.0, max: 100.0);
           const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -970,10 +932,7 @@ void main() {
         });
 
         test('max property is respected when generating ticks', () {
-          const config = XAxisConfig(
-            max: 80.0,
-            visible: true,
-          );
+          const config = XAxisConfig(max: 80.0, visible: true);
           final bounds = const DataRange(min: 0.0, max: 100.0);
           const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -991,10 +950,7 @@ void main() {
 
       group('visibility properties', () {
         test('visible=false prevents all rendering', () {
-          const config = XAxisConfig(
-            visible: false,
-            label: 'Hidden Axis',
-          );
+          const config = XAxisConfig(visible: false, label: 'Hidden Axis');
           final bounds = const DataRange(min: 0.0, max: 100.0);
           const labelStyle = TextStyle(fontSize: 12.0);
 
@@ -1073,18 +1029,12 @@ void main() {
         });
 
         test('showCrosshairLabel property is stored and accessible', () {
-          const config = XAxisConfig(
-            showCrosshairLabel: true,
-            visible: true,
-          );
+          const config = XAxisConfig(showCrosshairLabel: true, visible: true);
 
           // EXPECTATION: Property should be accessible
           expect(config.showCrosshairLabel, isTrue);
 
-          const config2 = XAxisConfig(
-            showCrosshairLabel: false,
-            visible: true,
-          );
+          const config2 = XAxisConfig(showCrosshairLabel: false, visible: true);
           expect(config2.showCrosshairLabel, isFalse);
         });
       });
@@ -1132,20 +1082,22 @@ void main() {
           expect(config.shouldShowTickUnit, isTrue);
         });
 
-        test('labelDisplay.labelWithUnitAndTickUnit shows all unit information',
-            () {
-          const config = XAxisConfig(
-            label: 'Time',
-            unit: 's',
-            labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
-            visible: true,
-          );
+        test(
+          'labelDisplay.labelWithUnitAndTickUnit shows all unit information',
+          () {
+            const config = XAxisConfig(
+              label: 'Time',
+              unit: 's',
+              labelDisplay: AxisLabelDisplay.labelWithUnitAndTickUnit,
+              visible: true,
+            );
 
-          // EXPECTATION: All unit display flags true
-          expect(config.shouldShowAxisLabel, isTrue);
-          expect(config.shouldAppendUnitToLabel, isTrue);
-          expect(config.shouldShowTickUnit, isTrue);
-        });
+            // EXPECTATION: All unit display flags true
+            expect(config.shouldShowAxisLabel, isTrue);
+            expect(config.shouldAppendUnitToLabel, isTrue);
+            expect(config.shouldShowTickUnit, isTrue);
+          },
+        );
 
         test('labelDisplay.tickUnitOnly hides axis label', () {
           const config = XAxisConfig(
@@ -1189,50 +1141,35 @@ void main() {
 
       group('layout properties - dimensions and spacing', () {
         test('minHeight property is respected', () {
-          const config = XAxisConfig(
-            minHeight: 50.0,
-            visible: true,
-          );
+          const config = XAxisConfig(minHeight: 50.0, visible: true);
 
           // EXPECTATION: minHeight is accessible and used in layout
           expect(config.minHeight, equals(50.0));
         });
 
         test('maxHeight property is respected', () {
-          const config = XAxisConfig(
-            maxHeight: 100.0,
-            visible: true,
-          );
+          const config = XAxisConfig(maxHeight: 100.0, visible: true);
 
           // EXPECTATION: maxHeight is accessible and used in layout
           expect(config.maxHeight, equals(100.0));
         });
 
         test('tickLabelPadding property affects spacing', () {
-          const config = XAxisConfig(
-            tickLabelPadding: 8.0,
-            visible: true,
-          );
+          const config = XAxisConfig(tickLabelPadding: 8.0, visible: true);
 
           // EXPECTATION: tickLabelPadding is used in paint calculations
           expect(config.tickLabelPadding, equals(8.0));
         });
 
         test('axisLabelPadding property affects spacing', () {
-          const config = XAxisConfig(
-            axisLabelPadding: 10.0,
-            visible: true,
-          );
+          const config = XAxisConfig(axisLabelPadding: 10.0, visible: true);
 
           // EXPECTATION: axisLabelPadding is used for label positioning
           expect(config.axisLabelPadding, equals(10.0));
         });
 
         test('axisMargin property affects spacing', () {
-          const config = XAxisConfig(
-            axisMargin: 12.0,
-            visible: true,
-          );
+          const config = XAxisConfig(axisMargin: 12.0, visible: true);
 
           // EXPECTATION: axisMargin is used for external spacing
           expect(config.axisMargin, equals(12.0));
@@ -1240,27 +1177,26 @@ void main() {
       });
 
       group('behavior properties', () {
-        test('tickCount hint generates approximately correct number of ticks',
-            () {
-          const config = XAxisConfig(
-            tickCount: 5,
-            visible: true,
-          );
-          final bounds = const DataRange(min: 0.0, max: 100.0);
-          const labelStyle = TextStyle(fontSize: 12.0);
+        test(
+          'tickCount hint generates approximately correct number of ticks',
+          () {
+            const config = XAxisConfig(tickCount: 5, visible: true);
+            final bounds = const DataRange(min: 0.0, max: 100.0);
+            const labelStyle = TextStyle(fontSize: 12.0);
 
-          final painter = XAxisPainter(
-            config: config,
-            axisBounds: bounds,
-            labelStyle: labelStyle,
-          );
+            final painter = XAxisPainter(
+              config: config,
+              axisBounds: bounds,
+              labelStyle: labelStyle,
+            );
 
-          // EXPECTATION: generateTicks should respect tickCount hint
-          // This will FAIL until painter uses config.tickCount
-          final ticks = painter.generateTicks(bounds, maxTicks: 5);
-          expect(ticks.length, lessThanOrEqualTo(7)); // Allow some tolerance
-          expect(ticks.length, greaterThanOrEqualTo(3));
-        });
+            // EXPECTATION: generateTicks should respect tickCount hint
+            // This will FAIL until painter uses config.tickCount
+            final ticks = painter.generateTicks(bounds, maxTicks: 5);
+            expect(ticks.length, lessThanOrEqualTo(7)); // Allow some tolerance
+            expect(ticks.length, greaterThanOrEqualTo(3));
+          },
+        );
 
         test('labelFormatter is used when provided', () {
           String customFormatter(double value) => 'X=${value.toInt()}';
@@ -1337,37 +1273,43 @@ void main() {
           // TODO: Verify axis title X position is centered
         });
 
-        test('axis title Y position is below tick labels with proper spacing',
-            () {
-          const config = XAxisConfig(
-            label: 'Distance',
-            unit: 'km',
-            labelDisplay: AxisLabelDisplay.labelWithUnit,
-            visible: true,
-            tickLabelPadding: 4.0,
-            axisLabelPadding: 5.0,
-          );
-          final bounds = const DataRange(min: 0.0, max: 100.0);
-          const labelStyle = TextStyle(fontSize: 12.0);
+        test(
+          'axis title Y position is below tick labels with proper spacing',
+          () {
+            const config = XAxisConfig(
+              label: 'Distance',
+              unit: 'km',
+              labelDisplay: AxisLabelDisplay.labelWithUnit,
+              visible: true,
+              tickLabelPadding: 4.0,
+              axisLabelPadding: 5.0,
+            );
+            final bounds = const DataRange(min: 0.0, max: 100.0);
+            const labelStyle = TextStyle(fontSize: 12.0);
 
-          final painter = XAxisPainter(
-            config: config,
-            axisBounds: bounds,
-            labelStyle: labelStyle,
-          );
+            final painter = XAxisPainter(
+              config: config,
+              axisBounds: bounds,
+              labelStyle: labelStyle,
+            );
 
-          final recorder = PictureRecorder();
-          final canvas = Canvas(recorder);
-          final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
+            final recorder = PictureRecorder();
+            final canvas = Canvas(recorder);
+            final plotArea = const Rect.fromLTWH(50, 20, 300, 250);
 
-          painter.paint(canvas, const Rect.fromLTWH(0, 0, 400, 300), plotArea);
+            painter.paint(
+              canvas,
+              const Rect.fromLTWH(0, 0, 400, 300),
+              plotArea,
+            );
 
-          // EXPECTATION: Y position = plotArea.bottom + tickLength + tickLabelPadding + tickLabelHeight + axisLabelPadding
-          // This will FAIL until paint() calculates Y position correctly
-          final picture = recorder.endRecording();
-          expect(picture, isNotNull);
-          // TODO: Verify axis title Y position calculation
-        });
+            // EXPECTATION: Y position = plotArea.bottom + tickLength + tickLabelPadding + tickLabelHeight + axisLabelPadding
+            // This will FAIL until paint() calculates Y position correctly
+            final picture = recorder.endRecording();
+            expect(picture, isNotNull);
+            // TODO: Verify axis title Y position calculation
+          },
+        );
 
         test('axis title respects labelDisplay mode for unit formatting', () {
           const config1 = XAxisConfig(

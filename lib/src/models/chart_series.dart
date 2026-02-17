@@ -9,20 +9,10 @@ import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 
 /// Interpolation methods for line and area charts.
-enum LineInterpolation {
-  linear,
-  bezier,
-  stepped,
-  monotone,
-}
+enum LineInterpolation { linear, bezier, stepped, monotone }
 
 /// Rendering style hints for series visualization.
-enum SeriesStyle {
-  line,
-  bar,
-  scatter,
-  area,
-}
+enum SeriesStyle { line, bar, scatter, area }
 
 /// Base class for chart series.
 ///
@@ -167,18 +157,18 @@ class ChartSeries {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        Object.hashAll(points),
-        color,
-        style,
-        isXOrdered,
-        metadata != null ? Object.hashAll(metadata!.entries) : null,
-        Object.hashAll(annotations),
-        yAxisId,
-        yAxisConfig,
-        unit,
-      );
+    id,
+    name,
+    Object.hashAll(points),
+    color,
+    style,
+    isXOrdered,
+    metadata != null ? Object.hashAll(metadata!.entries) : null,
+    Object.hashAll(annotations),
+    yAxisId,
+    yAxisConfig,
+    unit,
+  );
 
   /// Helper for list equality comparison.
   static bool _listEquals<T>(List<T>? a, List<T>? b) {
@@ -256,11 +246,14 @@ class ChartSeries {
     return ChartSeries(
       id: json['id'] as String,
       name: json['name'] as String?,
-      points: (json['points'] as List<dynamic>?)
-              ?.map((p) => ChartDataPoint(
-                    x: (p['x'] as num).toDouble(),
-                    y: (p['y'] as num).toDouble(),
-                  ))
+      points:
+          (json['points'] as List<dynamic>?)
+              ?.map(
+                (p) => ChartDataPoint(
+                  x: (p['x'] as num).toDouble(),
+                  y: (p['y'] as num).toDouble(),
+                ),
+              )
               .toList() ??
           const [],
       yAxisId: json['yAxisId'] as String?,
@@ -293,7 +286,7 @@ class LineChartSeries extends ChartSeries {
   final LineInterpolation interpolation;
   final double strokeWidth;
   final double
-      tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
+  tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
 
@@ -479,15 +472,18 @@ class BarChartSeries extends ChartSeries {
     this.barWidthPixels,
     this.minWidth = 4.0,
     this.maxWidth = 100.0,
-  })  : assert(barWidthPercent != null || barWidthPixels != null,
-            'Must specify either barWidthPercent or barWidthPixels'),
-        assert(
-            barWidthPercent == null ||
-                (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
-            'barWidthPercent must be between 0.0 and 1.0');
+  }) : assert(
+         barWidthPercent != null || barWidthPixels != null,
+         'Must specify either barWidthPercent or barWidthPixels',
+       ),
+       assert(
+         barWidthPercent == null ||
+             (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
+         'barWidthPercent must be between 0.0 and 1.0',
+       );
 
   final double?
-      barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
+  barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
   final double? barWidthPixels; // Fixed width in data units
   final double minWidth; // Minimum bar width in data units
   final double maxWidth; // Maximum bar width in data units

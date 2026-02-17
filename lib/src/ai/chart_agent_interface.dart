@@ -9,17 +9,12 @@ import 'chart_config_builder.dart';
 import 'chart_tool_schema.dart';
 
 /// Callback for when a new chart is created by the AI.
-typedef ChartCreatedCallback = void Function(
-  String chartId,
-  Widget chartWidget,
-  ChartBuildResult config,
-);
+typedef ChartCreatedCallback =
+    void Function(String chartId, Widget chartWidget, ChartBuildResult config);
 
 /// Callback for when an existing chart is modified.
-typedef ChartModifiedCallback = void Function(
-  String chartId,
-  ChartBuildResult newConfig,
-);
+typedef ChartModifiedCallback =
+    void Function(String chartId, ChartBuildResult newConfig);
 
 /// Abstract interface for AI agent chart generation.
 ///

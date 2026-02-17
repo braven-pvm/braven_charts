@@ -141,7 +141,7 @@ class ViewportConstraints {
     final requestedDataDx = requestedPlotDx * dataPerPixelX;
     final requestedDataDy = currentTransform.invertY
         ? -requestedPlotDy *
-            dataPerPixelY // Invert Y movement (match pan() logic)
+              dataPerPixelY // Invert Y movement (match pan() logic)
         : requestedPlotDy * dataPerPixelY;
 
     // 2. Calculate tentative new viewport position in data space
@@ -163,13 +163,15 @@ class ViewportConstraints {
     //   - Maximum: constraintDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
     final minAllowedDataXMin =
         constraintTransform.dataXMin - maxWhitespaceDataX;
-    final maxAllowedDataXMin = constraintTransform.dataXMax -
+    final maxAllowedDataXMin =
+        constraintTransform.dataXMax -
         currentTransform.dataXRange +
         maxWhitespaceDataX;
 
     final minAllowedDataYMin =
         constraintTransform.dataYMin - maxWhitespaceDataY;
-    final maxAllowedDataYMin = constraintTransform.dataYMax -
+    final maxAllowedDataYMin =
+        constraintTransform.dataYMax -
         currentTransform.dataYRange +
         maxWhitespaceDataY;
 
@@ -189,7 +191,8 @@ class ViewportConstraints {
 
     final actualPlotDx = actualDataDx / dataPerPixelX;
     final actualPlotDy = currentTransform.invertY
-        ? -actualDataDy / dataPerPixelY // Reverse Y inversion
+        ? -actualDataDy /
+              dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
     return (dx: actualPlotDx, dy: actualPlotDy);

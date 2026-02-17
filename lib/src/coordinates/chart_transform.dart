@@ -55,10 +55,10 @@ class ChartTransform {
     required this.plotWidth,
     required this.plotHeight,
     this.invertY = true,
-  })  : assert(dataXMax > dataXMin, 'dataXMax must be greater than dataXMin'),
-        assert(dataYMax > dataYMin, 'dataYMax must be greater than dataYMin'),
-        assert(plotWidth > 0, 'plotWidth must be positive'),
-        assert(plotHeight > 0, 'plotHeight must be positive');
+  }) : assert(dataXMax > dataXMin, 'dataXMax must be greater than dataXMin'),
+       assert(dataYMax > dataYMin, 'dataYMax must be greater than dataYMin'),
+       assert(plotWidth > 0, 'plotWidth must be positive'),
+       assert(plotHeight > 0, 'plotHeight must be positive');
 
   /// Minimum visible data value on X-axis (left edge of viewport).
   final double dataXMin;
@@ -105,12 +105,8 @@ class ChartTransform {
   double get pixelsPerDataY => plotHeight / dataYRange;
 
   /// Visible data bounds as a Rect (for viewport queries).
-  Rect get visibleDataBounds => Rect.fromLTRB(
-        dataXMin,
-        dataYMin,
-        dataXMax,
-        dataYMax,
-      );
+  Rect get visibleDataBounds =>
+      Rect.fromLTRB(dataXMin, dataYMin, dataXMax, dataYMax);
 
   // ============================================================================
   // Core Transformations
@@ -136,7 +132,8 @@ class ChartTransform {
     // Convert to plot pixels
     final plotX = relativeX * plotWidth;
     final plotY = invertY
-        ? (1.0 - relativeY) * plotHeight // Invert: Y=0 at bottom
+        ? (1.0 - relativeY) *
+              plotHeight // Invert: Y=0 at bottom
         : relativeY * plotHeight; // Standard: Y=0 at top
 
     return Offset(plotX, plotY);
@@ -160,7 +157,8 @@ class ChartTransform {
     // Calculate relative position in plot range [0, 1]
     final relativeX = plotX / plotWidth;
     final relativeY = invertY
-        ? 1.0 - (plotY / plotHeight) // Invert: Y=0 at bottom
+        ? 1.0 -
+              (plotY / plotHeight) // Invert: Y=0 at bottom
         : plotY / plotHeight; // Standard: Y=0 at top
 
     // Convert to data values
@@ -330,7 +328,8 @@ class ChartTransform {
     // Convert plot delta to data delta
     final dataDx = plotDx * dataPerPixelX;
     final dataDy = invertY
-        ? -plotDy * dataPerPixelY // Invert Y movement
+        ? -plotDy *
+              dataPerPixelY // Invert Y movement
         : plotDy * dataPerPixelY;
 
     // Shift data bounds

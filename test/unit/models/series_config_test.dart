@@ -62,18 +62,24 @@ void main() {
         // Check if toJson method exists
         // This test FAILS because toJson is not implemented
         final hasToJson = _hasMethod(series, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'ChartSeries must have toJson() for yAxisConfig serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'ChartSeries must have toJson() for yAxisConfig serialization',
+        );
       });
 
       test('ChartSeries class has fromJson static method', () {
         // Check if fromJson exists as a static method
         // This test FAILS because fromJson is not implemented
         final hasFromJson = _hasStaticMethod(ChartSeries, 'fromJson');
-        expect(hasFromJson, isTrue,
-            reason:
-                'ChartSeries must have fromJson() for yAxisConfig deserialization');
+        expect(
+          hasFromJson,
+          isTrue,
+          reason:
+              'ChartSeries must have fromJson() for yAxisConfig deserialization',
+        );
       });
     });
 
@@ -93,15 +99,21 @@ void main() {
 
         // This test FAILS because toJson doesn't exist
         final hasToJson = _hasMethod(series, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'ChartSeries must have toJson() - prerequisite for format check');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'ChartSeries must have toJson() - prerequisite for format check',
+        );
 
         // If we get here, verify the format
         if (hasToJson) {
           final json = (series as dynamic).toJson() as Map<String, dynamic>;
-          expect(json.containsKey('yAxisConfig'), isTrue,
-              reason: 'yAxisConfig must be serialized as nested object');
+          expect(
+            json.containsKey('yAxisConfig'),
+            isTrue,
+            reason: 'yAxisConfig must be serialized as nested object',
+          );
         }
       });
 
@@ -113,9 +125,12 @@ void main() {
         );
 
         final hasToJson = _hasMethod(series, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'ChartSeries must have toJson() - prerequisite for format check');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'ChartSeries must have toJson() - prerequisite for format check',
+        );
 
         if (hasToJson) {
           final json = (series as dynamic).toJson() as Map<String, dynamic>;

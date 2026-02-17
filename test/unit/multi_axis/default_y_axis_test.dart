@@ -18,52 +18,54 @@ void main() {
 
     group('FR-005: Auto-create default Y-axis when no Y-axis configured', () {
       test(
-          'creates default left Y-axis when primaryYAxis is null and no series have yAxisConfig',
-          () {
-        // Arrange: Empty series list, no primary axis
-        manager.setSeries([]);
+        'creates default left Y-axis when primaryYAxis is null and no series have yAxisConfig',
+        () {
+          // Arrange: Empty series list, no primary axis
+          manager.setSeries([]);
 
-        // Act
-        final effectiveAxes = manager.getEffectiveYAxes();
+          // Act
+          final effectiveAxes = manager.getEffectiveYAxes();
 
-        // Assert: Should have exactly one default axis
-        expect(effectiveAxes.length, equals(1));
-        expect(effectiveAxes[0].position, equals(YAxisPosition.left));
-        expect(effectiveAxes[0].id, equals('primary_axis'));
-      });
+          // Assert: Should have exactly one default axis
+          expect(effectiveAxes.length, equals(1));
+          expect(effectiveAxes[0].position, equals(YAxisPosition.left));
+          expect(effectiveAxes[0].id, equals('primary_axis'));
+        },
+      );
 
       test(
-          'creates default left Y-axis when primaryYAxis is null and series have no yAxisConfig',
-          () {
-        // Arrange: Series without yAxisConfig
-        final series = [
-          const ChartSeries(
-            id: 's1',
-            points: [
-              ChartDataPoint(x: 0, y: 10),
-              ChartDataPoint(x: 1, y: 20),
-              ChartDataPoint(x: 2, y: 15),
-            ],
-          ),
-          const ChartSeries(
-            id: 's2',
-            points: [
-              ChartDataPoint(x: 0, y: 5),
-              ChartDataPoint(x: 1, y: 15),
-              ChartDataPoint(x: 2, y: 10),
-            ],
-          ),
-        ];
-        manager.setSeries(series);
+        'creates default left Y-axis when primaryYAxis is null and series have no yAxisConfig',
+        () {
+          // Arrange: Series without yAxisConfig
+          final series = [
+            const ChartSeries(
+              id: 's1',
+              points: [
+                ChartDataPoint(x: 0, y: 10),
+                ChartDataPoint(x: 1, y: 20),
+                ChartDataPoint(x: 2, y: 15),
+              ],
+            ),
+            const ChartSeries(
+              id: 's2',
+              points: [
+                ChartDataPoint(x: 0, y: 5),
+                ChartDataPoint(x: 1, y: 15),
+                ChartDataPoint(x: 2, y: 10),
+              ],
+            ),
+          ];
+          manager.setSeries(series);
 
-        // Act
-        final effectiveAxes = manager.getEffectiveYAxes();
+          // Act
+          final effectiveAxes = manager.getEffectiveYAxes();
 
-        // Assert: Should have exactly one default axis
-        expect(effectiveAxes.length, equals(1));
-        expect(effectiveAxes[0].position, equals(YAxisPosition.left));
-        expect(effectiveAxes[0].id, equals('primary_axis'));
-      });
+          // Assert: Should have exactly one default axis
+          expect(effectiveAxes.length, equals(1));
+          expect(effectiveAxes[0].position, equals(YAxisPosition.left));
+          expect(effectiveAxes[0].id, equals('primary_axis'));
+        },
+      );
 
       test('uses primaryYAxis when provided', () {
         // Arrange: Primary axis provided
@@ -74,8 +76,9 @@ void main() {
         manager.setSeries([]);
 
         // Act
-        final effectiveAxes =
-            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes = manager.getEffectiveYAxes(
+          primaryYAxis: primaryAxis,
+        );
 
         // Assert: Should use the primary axis
         expect(effectiveAxes.length, equals(1));
@@ -132,10 +135,7 @@ void main() {
       test('YAxisConfig can be created without providing id', () {
         // Arrange & Act: Create config without id
         expect(
-          () => YAxisConfig(
-            position: YAxisPosition.left,
-            label: 'Test Axis',
-          ),
+          () => YAxisConfig(position: YAxisPosition.left, label: 'Test Axis'),
           returnsNormally,
         );
       });
@@ -161,36 +161,39 @@ void main() {
         manager.setSeries([]);
 
         // Act
-        final effectiveAxes =
-            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes = manager.getEffectiveYAxes(
+          primaryYAxis: primaryAxis,
+        );
 
         // Assert: ID should be auto-generated
         expect(effectiveAxes[0].id, isNotEmpty);
         expect(effectiveAxes[0].id, equals('primary_axis'));
       });
 
-      test('system auto-generates id for series yAxisConfig when not provided',
-          () {
-        // Arrange: Series with yAxisConfig without explicit id
-        final series = [
-          ChartSeries(
-            id: 's1',
-            points: const [ChartDataPoint(x: 0, y: 10)],
-            yAxisConfig: YAxisConfig(
-              position: YAxisPosition.right,
-              label: 'Series Axis',
+      test(
+        'system auto-generates id for series yAxisConfig when not provided',
+        () {
+          // Arrange: Series with yAxisConfig without explicit id
+          final series = [
+            ChartSeries(
+              id: 's1',
+              points: const [ChartDataPoint(x: 0, y: 10)],
+              yAxisConfig: YAxisConfig(
+                position: YAxisPosition.right,
+                label: 'Series Axis',
+              ),
             ),
-          ),
-        ];
-        manager.setSeries(series);
+          ];
+          manager.setSeries(series);
 
-        // Act
-        final effectiveAxes = manager.getEffectiveYAxes();
+          // Act
+          final effectiveAxes = manager.getEffectiveYAxes();
 
-        // Assert: ID should be auto-generated
-        expect(effectiveAxes[0].id, isNotEmpty);
-        expect(effectiveAxes[0].id, equals('s1_axis'));
-      });
+          // Assert: ID should be auto-generated
+          expect(effectiveAxes[0].id, isNotEmpty);
+          expect(effectiveAxes[0].id, equals('s1_axis'));
+        },
+      );
     });
 
     group('Edge Cases', () {
@@ -209,10 +212,7 @@ void main() {
       test('handles series with single data point', () {
         // Arrange: Series with only one data point
         final series = [
-          const ChartSeries(
-            id: 's1',
-            points: [ChartDataPoint(x: 0, y: 42)],
-          ),
+          const ChartSeries(id: 's1', points: [ChartDataPoint(x: 0, y: 42)]),
         ];
         manager.setSeries(series);
 
@@ -270,29 +270,30 @@ void main() {
 
     group('Auto-Scaling', () {
       test(
-          'default axis uses data range for auto-scaling when no explicit min/max',
-          () {
-        // Arrange: Series with varying data
-        final series = [
-          const ChartSeries(
-            id: 's1',
-            points: [
-              ChartDataPoint(x: 0, y: 10),
-              ChartDataPoint(x: 1, y: 50),
-              ChartDataPoint(x: 2, y: 30),
-            ],
-          ),
-        ];
-        manager.setSeries(series);
+        'default axis uses data range for auto-scaling when no explicit min/max',
+        () {
+          // Arrange: Series with varying data
+          final series = [
+            const ChartSeries(
+              id: 's1',
+              points: [
+                ChartDataPoint(x: 0, y: 10),
+                ChartDataPoint(x: 1, y: 50),
+                ChartDataPoint(x: 2, y: 30),
+              ],
+            ),
+          ];
+          manager.setSeries(series);
 
-        // Act
-        final effectiveAxes = manager.getEffectiveYAxes();
+          // Act
+          final effectiveAxes = manager.getEffectiveYAxes();
 
-        // Assert: Default axis should not have explicit min/max (relies on auto-scaling)
-        expect(effectiveAxes[0].min, isNull);
-        expect(effectiveAxes[0].max, isNull);
-        // Auto-scaling happens in axis creation from data range
-      });
+          // Assert: Default axis should not have explicit min/max (relies on auto-scaling)
+          expect(effectiveAxes[0].min, isNull);
+          expect(effectiveAxes[0].max, isNull);
+          // Auto-scaling happens in axis creation from data range
+        },
+      );
 
       test('respects explicit min/max when provided on primaryYAxis', () {
         // Arrange: Primary axis with explicit bounds
@@ -313,8 +314,9 @@ void main() {
         manager.setSeries(series);
 
         // Act
-        final effectiveAxes =
-            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes = manager.getEffectiveYAxes(
+          primaryYAxis: primaryAxis,
+        );
 
         // Assert: Should preserve explicit bounds
         expect(effectiveAxes[0].min, equals(0));
@@ -344,10 +346,7 @@ void main() {
 
         // Act: Update series
         manager.setSeries([
-          const ChartSeries(
-            id: 's1',
-            points: [ChartDataPoint(x: 0, y: 10)],
-          ),
+          const ChartSeries(id: 's1', points: [ChartDataPoint(x: 0, y: 10)]),
         ]);
         final axes2 = manager.getEffectiveYAxes();
 
@@ -377,15 +376,13 @@ void main() {
         manager.setSeries(series);
 
         // Act
-        final effectiveAxes =
-            manager.getEffectiveYAxes(primaryYAxis: primaryAxis);
+        final effectiveAxes = manager.getEffectiveYAxes(
+          primaryYAxis: primaryAxis,
+        );
 
         // Assert: Should have only series axis (primaryYAxis is ignored when inline configs exist)
         expect(effectiveAxes.length, equals(1));
-        expect(
-          effectiveAxes.any((a) => a.label == 'Series'),
-          isTrue,
-        );
+        expect(effectiveAxes.any((a) => a.label == 'Series'), isTrue);
       });
 
       test('deduplicates axes with same id', () {

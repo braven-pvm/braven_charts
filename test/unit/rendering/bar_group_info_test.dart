@@ -9,8 +9,11 @@ void main() {
     group('Gap Parameter (FR-003)', () {
       test('gap defaults to 2.0 pixels when not specified', () {
         const info = BarGroupInfo(index: 0, count: 3);
-        expect(info.gap, equals(2.0),
-            reason: 'FR-003 specifies default gap of 2.0 pixels');
+        expect(
+          info.gap,
+          equals(2.0),
+          reason: 'FR-003 specifies default gap of 2.0 pixels',
+        );
       });
 
       test('custom gap value is respected in construction', () {
@@ -41,50 +44,59 @@ void main() {
         // totalWidth = 22 * 1 - 2 = 20
         // startOffset = -20/2 + 20/2 = 0
         // offset = 0 + 0 * 22 = 0
-        expect(offset, equals(0.0),
-            reason: 'Single bar should be centered at 0');
-      });
-
-      test('calculateOffset with two bar series produces symmetric offsets',
-          () {
-        const info0 = BarGroupInfo(index: 0, count: 2, gap: 2.0);
-        const info1 = BarGroupInfo(index: 1, count: 2, gap: 2.0);
-
-        final offset0 = info0.calculateOffset(20.0);
-        final offset1 = info1.calculateOffset(20.0);
-
-        // Two bars: effectiveWidth = 20 + 2 = 22
-        // totalWidth = 22 * 2 - 2 = 42
-        // startOffset = -42/2 + 20/2 = -11
-        // offset0 = -11 + 0 * 22 = -11
-        // offset1 = -11 + 1 * 22 = 11
-        expect(offset0, equals(-11.0));
-        expect(offset1, equals(11.0));
-        expect(offset0 + offset1, equals(0.0),
-            reason: 'Two bars should be symmetric around center');
+        expect(
+          offset,
+          equals(0.0),
+          reason: 'Single bar should be centered at 0',
+        );
       });
 
       test(
-          'calculateOffset with three bar series (as documented in BarGroupInfo)',
-          () {
-        const info0 = BarGroupInfo(index: 0, count: 3, gap: 2.0);
-        const info1 = BarGroupInfo(index: 1, count: 3, gap: 2.0);
-        const info2 = BarGroupInfo(index: 2, count: 3, gap: 2.0);
+        'calculateOffset with two bar series produces symmetric offsets',
+        () {
+          const info0 = BarGroupInfo(index: 0, count: 2, gap: 2.0);
+          const info1 = BarGroupInfo(index: 1, count: 2, gap: 2.0);
 
-        final offset0 = info0.calculateOffset(20.0);
-        final offset1 = info1.calculateOffset(20.0);
-        final offset2 = info2.calculateOffset(20.0);
+          final offset0 = info0.calculateOffset(20.0);
+          final offset1 = info1.calculateOffset(20.0);
 
-        // Three bars: effectiveWidth = 20 + 2 = 22
-        // totalWidth = 22 * 3 - 2 = 64
-        // startOffset = -64/2 + 20/2 = -22
-        // offset0 = -22 + 0 * 22 = -22
-        // offset1 = -22 + 1 * 22 = 0
-        // offset2 = -22 + 2 * 22 = 22
-        expect(offset0, equals(-22.0));
-        expect(offset1, equals(0.0));
-        expect(offset2, equals(22.0));
-      });
+          // Two bars: effectiveWidth = 20 + 2 = 22
+          // totalWidth = 22 * 2 - 2 = 42
+          // startOffset = -42/2 + 20/2 = -11
+          // offset0 = -11 + 0 * 22 = -11
+          // offset1 = -11 + 1 * 22 = 11
+          expect(offset0, equals(-11.0));
+          expect(offset1, equals(11.0));
+          expect(
+            offset0 + offset1,
+            equals(0.0),
+            reason: 'Two bars should be symmetric around center',
+          );
+        },
+      );
+
+      test(
+        'calculateOffset with three bar series (as documented in BarGroupInfo)',
+        () {
+          const info0 = BarGroupInfo(index: 0, count: 3, gap: 2.0);
+          const info1 = BarGroupInfo(index: 1, count: 3, gap: 2.0);
+          const info2 = BarGroupInfo(index: 2, count: 3, gap: 2.0);
+
+          final offset0 = info0.calculateOffset(20.0);
+          final offset1 = info1.calculateOffset(20.0);
+          final offset2 = info2.calculateOffset(20.0);
+
+          // Three bars: effectiveWidth = 20 + 2 = 22
+          // totalWidth = 22 * 3 - 2 = 64
+          // startOffset = -64/2 + 20/2 = -22
+          // offset0 = -22 + 0 * 22 = -22
+          // offset1 = -22 + 1 * 22 = 0
+          // offset2 = -22 + 2 * 22 = 22
+          expect(offset0, equals(-22.0));
+          expect(offset1, equals(0.0));
+          expect(offset2, equals(22.0));
+        },
+      );
 
       test('calculateOffset with five bar series', () {
         final offsets = <double>[];
@@ -104,8 +116,11 @@ void main() {
         expect(offsets[4], equals(44.0));
 
         // Middle bar should always be at center
-        expect(offsets[2], equals(0.0),
-            reason: 'Middle bar of odd count should be centered');
+        expect(
+          offsets[2],
+          equals(0.0),
+          reason: 'Middle bar of odd count should be centered',
+        );
       });
 
       test('calculateOffset respects custom gap values', () {
@@ -149,34 +164,36 @@ void main() {
         );
       });
 
-      test('calculateOffset with different bar widths scales offsets correctly',
-          () {
-        const info0 = BarGroupInfo(index: 0, count: 2, gap: 2.0);
-        const info1 = BarGroupInfo(index: 1, count: 2, gap: 2.0);
+      test(
+        'calculateOffset with different bar widths scales offsets correctly',
+        () {
+          const info0 = BarGroupInfo(index: 0, count: 2, gap: 2.0);
+          const info1 = BarGroupInfo(index: 1, count: 2, gap: 2.0);
 
-        // Test with narrow bars (10px)
-        final offset0Narrow = info0.calculateOffset(10.0);
-        final offset1Narrow = info1.calculateOffset(10.0);
+          // Test with narrow bars (10px)
+          final offset0Narrow = info0.calculateOffset(10.0);
+          final offset1Narrow = info1.calculateOffset(10.0);
 
-        // effectiveWidth = 10 + 2 = 12
-        // totalWidth = 12 * 2 - 2 = 22
-        // startOffset = -22/2 + 10/2 = -6
-        expect(offset0Narrow, equals(-6.0));
-        expect(offset1Narrow, equals(6.0));
+          // effectiveWidth = 10 + 2 = 12
+          // totalWidth = 12 * 2 - 2 = 22
+          // startOffset = -22/2 + 10/2 = -6
+          expect(offset0Narrow, equals(-6.0));
+          expect(offset1Narrow, equals(6.0));
 
-        // Test with wide bars (40px)
-        final offset0Wide = info0.calculateOffset(40.0);
-        final offset1Wide = info1.calculateOffset(40.0);
+          // Test with wide bars (40px)
+          final offset0Wide = info0.calculateOffset(40.0);
+          final offset1Wide = info1.calculateOffset(40.0);
 
-        // effectiveWidth = 40 + 2 = 42
-        // totalWidth = 42 * 2 - 2 = 82
-        // startOffset = -82/2 + 40/2 = -21
-        expect(offset0Wide, equals(-21.0));
-        expect(offset1Wide, equals(21.0));
+          // effectiveWidth = 40 + 2 = 42
+          // totalWidth = 42 * 2 - 2 = 82
+          // startOffset = -82/2 + 40/2 = -21
+          expect(offset0Wide, equals(-21.0));
+          expect(offset1Wide, equals(21.0));
 
-        // Wider bars should produce larger offsets
-        expect(offset1Wide.abs(), greaterThan(offset1Narrow.abs()));
-      });
+          // Wider bars should produce larger offsets
+          expect(offset1Wide.abs(), greaterThan(offset1Narrow.abs()));
+        },
+      );
     });
 
     group('Equality and Hashing', () {

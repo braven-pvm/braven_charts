@@ -56,14 +56,14 @@ class BarChartLayer extends ChartLayer {
     required super.animationConfig,
     required super.zIndex,
     super.isVisible,
-  })  : _positioner = BarPositioner(
-          orientation: config.orientation,
-          groupingMode: config.groupingMode,
-          barWidthRatio: config.barWidthRatio,
-          barSpacing: config.barSpacing,
-          groupSpacing: config.groupSpacing,
-        ),
-        _renderer = ChartRenderer();
+  }) : _positioner = BarPositioner(
+         orientation: config.orientation,
+         groupingMode: config.groupingMode,
+         barWidthRatio: config.barWidthRatio,
+         barSpacing: config.barSpacing,
+         groupSpacing: config.groupSpacing,
+       ),
+       _renderer = ChartRenderer();
 
   /// Configuration for bar rendering (grouping, orientation, styling, etc.)
   final BarChartConfig config;
@@ -98,7 +98,8 @@ class BarChartLayer extends ChartLayer {
       final barLayouts = _positioner.calculateLayout(
         seriesData: seriesData,
         categoryWidth: _calculateCategoryWidth(
-            series.isNotEmpty ? series.first.length : 0),
+          series.isNotEmpty ? series.first.length : 0,
+        ),
         chartHeight: chartHeight,
         baseline:
             0.0, // TODO: Use proper baseline when coordinate system integrated
@@ -107,9 +108,11 @@ class BarChartLayer extends ChartLayer {
       // Render each bar (need series index to get color)
       var globalBarIndex = 0;
       for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
-        for (var categoryIndex = 0;
-            categoryIndex < series[seriesIndex].length;
-            categoryIndex++) {
+        for (
+          var categoryIndex = 0;
+          categoryIndex < series[seriesIndex].length;
+          categoryIndex++
+        ) {
           if (globalBarIndex >= barLayouts.length) break;
 
           final barLayout = barLayouts[globalBarIndex];
@@ -154,8 +157,9 @@ class BarChartLayer extends ChartLayer {
           if (config.borderWidth > 0) {
             paint.style = PaintingStyle.stroke;
             paint.strokeWidth = config.borderWidth;
-            paint.color =
-                config.borderColor != null ? Color(config.borderColor!) : color;
+            paint.color = config.borderColor != null
+                ? Color(config.borderColor!)
+                : color;
             paint.shader = null;
 
             if (config.cornerRadius > 0) {

@@ -134,23 +134,10 @@ class GestureRecognitionState {
 }
 
 /// Gesture type enumeration.
-enum GestureType {
-  tap,
-  doubleTap,
-  longPress,
-  pan,
-  pinch,
-  unknown,
-}
+enum GestureType { tap, doubleTap, longPress, pan, pinch, unknown }
 
 /// Pointer device kind (from Flutter).
-enum PointerDeviceKind {
-  touch,
-  mouse,
-  stylus,
-  trackpad,
-  unknown,
-}
+enum PointerDeviceKind { touch, mouse, stylus, trackpad, unknown }
 
 /// Complete gesture information.
 class GestureDetails {

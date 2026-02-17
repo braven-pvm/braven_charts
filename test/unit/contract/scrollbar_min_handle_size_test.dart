@@ -14,42 +14,47 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ScrollbarMinHandleSize - CONTRACT', () {
     test(
-        'MUST use calculated size when viewport ratio yields handle >= minHandleSize',
-        () {
-      // ARRANGE: Track 400px, viewport 20% of data, minHandleSize 20px
-      const trackLength = 400.0;
-      const viewportRatio = 0.2; // 20% of data visible
-      const minHandleSize = 20.0;
+      'MUST use calculated size when viewport ratio yields handle >= minHandleSize',
+      () {
+        // ARRANGE: Track 400px, viewport 20% of data, minHandleSize 20px
+        const trackLength = 400.0;
+        const viewportRatio = 0.2; // 20% of data visible
+        const minHandleSize = 20.0;
 
-      // ACT: Calculate handle size
-      final handleSize = _calculateHandleSize(
-        trackLength: trackLength,
-        viewportRatio: viewportRatio,
-        minHandleSize: minHandleSize,
-      );
+        // ACT: Calculate handle size
+        final handleSize = _calculateHandleSize(
+          trackLength: trackLength,
+          viewportRatio: viewportRatio,
+          minHandleSize: minHandleSize,
+        );
 
-      // ASSERT: Uses calculated size (80px) since it's >= minHandleSize
-      expect(handleSize, equals(80.0)); // 400 * 0.2 = 80px
-    });
+        // ASSERT: Uses calculated size (80px) since it's >= minHandleSize
+        expect(handleSize, equals(80.0)); // 400 * 0.2 = 80px
+      },
+    );
 
     test(
-        'MUST clamp to minHandleSize when viewport ratio yields handle < minHandleSize',
-        () {
-      // ARRANGE: Track 400px, viewport 1% of data, minHandleSize 20px
-      const trackLength = 400.0;
-      const viewportRatio = 0.01; // 1% of data visible (extreme zoom)
-      const minHandleSize = 20.0;
+      'MUST clamp to minHandleSize when viewport ratio yields handle < minHandleSize',
+      () {
+        // ARRANGE: Track 400px, viewport 1% of data, minHandleSize 20px
+        const trackLength = 400.0;
+        const viewportRatio = 0.01; // 1% of data visible (extreme zoom)
+        const minHandleSize = 20.0;
 
-      // ACT: Calculate handle size
-      final handleSize = _calculateHandleSize(
-        trackLength: trackLength,
-        viewportRatio: viewportRatio,
-        minHandleSize: minHandleSize,
-      );
+        // ACT: Calculate handle size
+        final handleSize = _calculateHandleSize(
+          trackLength: trackLength,
+          viewportRatio: viewportRatio,
+          minHandleSize: minHandleSize,
+        );
 
-      // ASSERT: Clamped to minHandleSize (20px) instead of calculated 4px
-      expect(handleSize, equals(20.0)); // max(400 * 0.01, 20) = max(4, 20) = 20
-    });
+        // ASSERT: Clamped to minHandleSize (20px) instead of calculated 4px
+        expect(
+          handleSize,
+          equals(20.0),
+        ); // max(400 * 0.01, 20) = max(4, 20) = 20
+      },
+    );
 
     test('MUST enforce minHandleSize at extreme zoom (0.5% viewport)', () {
       // ARRANGE: Track 400px, viewport 0.5% of data, minHandleSize 20px
@@ -66,7 +71,9 @@ void main() {
 
       // ASSERT: Clamped to minHandleSize (20px) instead of calculated 2px
       expect(
-          handleSize, equals(20.0)); // max(400 * 0.005, 20) = max(2, 20) = 20
+        handleSize,
+        equals(20.0),
+      ); // max(400 * 0.005, 20) = max(2, 20) = 20
     });
 
     test('MUST adjust handle position when clamped to minHandleSize', () {

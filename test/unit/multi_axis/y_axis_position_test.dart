@@ -8,31 +8,19 @@ void main() {
     });
 
     test('contains leftOuter value', () {
-      expect(
-        YAxisPosition.values.contains(YAxisPosition.leftOuter),
-        isTrue,
-      );
+      expect(YAxisPosition.values.contains(YAxisPosition.leftOuter), isTrue);
     });
 
     test('contains left value', () {
-      expect(
-        YAxisPosition.values.contains(YAxisPosition.left),
-        isTrue,
-      );
+      expect(YAxisPosition.values.contains(YAxisPosition.left), isTrue);
     });
 
     test('contains right value', () {
-      expect(
-        YAxisPosition.values.contains(YAxisPosition.right),
-        isTrue,
-      );
+      expect(YAxisPosition.values.contains(YAxisPosition.right), isTrue);
     });
 
     test('contains rightOuter value', () {
-      expect(
-        YAxisPosition.values.contains(YAxisPosition.rightOuter),
-        isTrue,
-      );
+      expect(YAxisPosition.values.contains(YAxisPosition.rightOuter), isTrue);
     });
 
     group('layout order (left to right)', () {
@@ -54,13 +42,14 @@ void main() {
 
       test('values are in correct layout order', () {
         expect(
-            YAxisPosition.values,
-            equals([
-              YAxisPosition.leftOuter,
-              YAxisPosition.left,
-              YAxisPosition.right,
-              YAxisPosition.rightOuter,
-            ]));
+          YAxisPosition.values,
+          equals([
+            YAxisPosition.leftOuter,
+            YAxisPosition.left,
+            YAxisPosition.right,
+            YAxisPosition.rightOuter,
+          ]),
+        );
       });
     });
 

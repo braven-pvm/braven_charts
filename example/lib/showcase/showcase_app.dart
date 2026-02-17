@@ -30,12 +30,18 @@ class ShowcaseApp extends StatelessWidget {
       title: 'BravenChartPlus Showcase',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.light),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
         cardTheme: const CardThemeData(elevation: 2, margin: EdgeInsets.all(8)),
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
         cardTheme: const CardThemeData(elevation: 2, margin: EdgeInsets.all(8)),
       ),
@@ -47,7 +53,13 @@ class ShowcaseApp extends StatelessWidget {
 
 /// Navigation destination configuration.
 class NavDestination {
-  const NavDestination({required this.label, required this.icon, required this.selectedIcon, required this.page, this.badge});
+  const NavDestination({
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    required this.page,
+    this.badge,
+  });
 
   final String label;
   final IconData icon;
@@ -76,7 +88,12 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: GalleryPage(),
       badge: '★', // Featured overview
     ),
-    const NavDestination(label: 'Chart Types', icon: Icons.show_chart_outlined, selectedIcon: Icons.show_chart, page: ChartTypesPage()),
+    const NavDestination(
+      label: 'Chart Types',
+      icon: Icons.show_chart_outlined,
+      selectedIcon: Icons.show_chart,
+      page: ChartTypesPage(),
+    ),
     const NavDestination(
       label: 'Segment Styling',
       icon: Icons.format_color_fill_outlined,
@@ -84,9 +101,24 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: SegmentStylingPage(),
       badge: '★', // New feature
     ),
-    const NavDestination(label: 'Interaction', icon: Icons.touch_app_outlined, selectedIcon: Icons.touch_app, page: InteractionPage()),
-    const NavDestination(label: 'Annotations', icon: Icons.edit_note_outlined, selectedIcon: Icons.edit_note, page: AnnotationsPage()),
-    const NavDestination(label: 'Streaming', icon: Icons.stream_outlined, selectedIcon: Icons.stream, page: StreamingPage()),
+    const NavDestination(
+      label: 'Interaction',
+      icon: Icons.touch_app_outlined,
+      selectedIcon: Icons.touch_app,
+      page: InteractionPage(),
+    ),
+    const NavDestination(
+      label: 'Annotations',
+      icon: Icons.edit_note_outlined,
+      selectedIcon: Icons.edit_note,
+      page: AnnotationsPage(),
+    ),
+    const NavDestination(
+      label: 'Streaming',
+      icon: Icons.stream_outlined,
+      selectedIcon: Icons.stream,
+      page: StreamingPage(),
+    ),
     const NavDestination(
       label: 'Live Stream',
       icon: Icons.bolt_outlined,
@@ -101,8 +133,18 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     //   page: TimerTestPage(),
     //   badge: 'TEST', // Standalone timer test
     // ),
-    const NavDestination(label: 'Theming', icon: Icons.palette_outlined, selectedIcon: Icons.palette, page: ThemingPage()),
-    const NavDestination(label: 'Performance', icon: Icons.speed_outlined, selectedIcon: Icons.speed, page: PerformancePage()),
+    const NavDestination(
+      label: 'Theming',
+      icon: Icons.palette_outlined,
+      selectedIcon: Icons.palette,
+      page: ThemingPage(),
+    ),
+    const NavDestination(
+      label: 'Performance',
+      icon: Icons.speed_outlined,
+      selectedIcon: Icons.speed,
+      page: PerformancePage(),
+    ),
     const NavDestination(
       label: 'Multi-Axis',
       icon: Icons.align_vertical_bottom_outlined,
@@ -110,7 +152,12 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: MultiAxisPage(),
       badge: '★', // Star feature
     ),
-    const NavDestination(label: 'Scientific', icon: Icons.science_outlined, selectedIcon: Icons.science, page: ScientificPage()),
+    const NavDestination(
+      label: 'Scientific',
+      icon: Icons.science_outlined,
+      selectedIcon: Icons.science,
+      page: ScientificPage(),
+    ),
   ];
 
   @override
@@ -139,7 +186,12 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
         destinations: _destinations.map((dest) {
           return NavigationDestination(
             icon: Icon(dest.icon),
-            selectedIcon: dest.badge != null ? Badge(label: Text(dest.badge!), child: Icon(dest.selectedIcon)) : Icon(dest.selectedIcon),
+            selectedIcon: dest.badge != null
+                ? Badge(
+                    label: Text(dest.badge!),
+                    child: Icon(dest.selectedIcon),
+                  )
+                : Icon(dest.selectedIcon),
             label: dest.label,
           );
         }).toList(),
@@ -158,17 +210,30 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
             },
-            labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+            labelType: extended
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: extended
-                  ? const Text('Braven Charts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+                  ? const Text(
+                      'Braven Charts',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
                   : const Icon(Icons.bar_chart, size: 32),
             ),
             destinations: _destinations.map((dest) {
               return NavigationRailDestination(
                 icon: Icon(dest.icon),
-                selectedIcon: dest.badge != null ? Badge(label: Text(dest.badge!), child: Icon(dest.selectedIcon)) : Icon(dest.selectedIcon),
+                selectedIcon: dest.badge != null
+                    ? Badge(
+                        label: Text(dest.badge!),
+                        child: Icon(dest.selectedIcon),
+                      )
+                    : Icon(dest.selectedIcon),
                 label: Text(dest.label),
               );
             }).toList(),

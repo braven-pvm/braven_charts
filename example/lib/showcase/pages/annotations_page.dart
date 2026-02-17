@@ -73,141 +73,152 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
 
     if (_showThresholds) {
       // Upper threshold
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'upper_limit',
-        axis: AnnotationAxis.y,
-        value: 80,
-        label: 'Upper Limit',
-        labelPosition: AnnotationLabelPosition.topLeft,
-        lineColor: Colors.red,
-        lineWidth: 2.0,
-        dashPattern: [5, 3],
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'upper_limit',
+          axis: AnnotationAxis.y,
+          value: 80,
+          label: 'Upper Limit',
+          labelPosition: AnnotationLabelPosition.topLeft,
+          lineColor: Colors.red,
+          lineWidth: 2.0,
+          dashPattern: [5, 3],
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
 
       // Lower threshold
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'lower_limit',
-        axis: AnnotationAxis.y,
-        value: 20,
-        label: 'Lower Limit',
-        labelPosition: AnnotationLabelPosition.bottomLeft,
-        lineColor: Colors.orange,
-        lineWidth: 2.0,
-        dashPattern: [5, 3],
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'lower_limit',
+          axis: AnnotationAxis.y,
+          value: 20,
+          label: 'Lower Limit',
+          labelPosition: AnnotationLabelPosition.bottomLeft,
+          lineColor: Colors.orange,
+          lineWidth: 2.0,
+          dashPattern: [5, 3],
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
 
       // Target line
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'target',
-        axis: AnnotationAxis.y,
-        value: 50,
-        label: 'Target',
-        labelPosition: AnnotationLabelPosition.topRight,
-        lineColor: Colors.green,
-        lineWidth: 1.5,
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'target',
+          axis: AnnotationAxis.y,
+          value: 50,
+          label: 'Target',
+          labelPosition: AnnotationLabelPosition.topRight,
+          lineColor: Colors.green,
+          lineWidth: 1.5,
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
 
       // vertical line
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'lt1',
-        axis: AnnotationAxis.x,
-        value: 95,
-        label: 'LT1',
-        labelPosition: AnnotationLabelPosition.topRight,
-        lineColor: Colors.deepOrange,
-        lineWidth: 3,
-        style: const AnnotationStyle(padding: EdgeInsets.all(0)),
-        dashPattern: [4, 4],
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'lt1',
+          axis: AnnotationAxis.x,
+          value: 95,
+          label: 'LT1',
+          labelPosition: AnnotationLabelPosition.topRight,
+          lineColor: Colors.deepOrange,
+          lineWidth: 3,
+          style: const AnnotationStyle(padding: EdgeInsets.all(0)),
+          dashPattern: [4, 4],
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
     }
 
     if (_showRanges) {
       // Optimal range
-      _annotationController.addAnnotation(RangeAnnotation(
-        id: 'optimal_zone',
-        startX: 20,
-        endX: 40,
-        label: 'Optimal Zone',
-        fillColor: Colors.green.withValues(alpha: 0.2),
-        borderColor: Colors.green.withValues(alpha: 0.5),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-        snapToValue: _snapToValue,
-      ));
+      _annotationController.addAnnotation(
+        RangeAnnotation(
+          id: 'optimal_zone',
+          startX: 20,
+          endX: 40,
+          label: 'Optimal Zone',
+          fillColor: Colors.green.withValues(alpha: 0.2),
+          borderColor: Colors.green.withValues(alpha: 0.5),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+          snapToValue: _snapToValue,
+        ),
+      );
 
       // Warning range
-      _annotationController.addAnnotation(RangeAnnotation(
-        id: 'caution_zone',
-        startX: 60,
-        endX: 80,
-        label: 'Caution Zone',
-        fillColor: Colors.orange.withValues(alpha: 0.2),
-        borderColor: Colors.orange.withValues(alpha: 0.5),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-        snapToValue: _snapToValue,
-      ));
+      _annotationController.addAnnotation(
+        RangeAnnotation(
+          id: 'caution_zone',
+          startX: 60,
+          endX: 80,
+          label: 'Caution Zone',
+          fillColor: Colors.orange.withValues(alpha: 0.2),
+          borderColor: Colors.orange.withValues(alpha: 0.5),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+          snapToValue: _snapToValue,
+        ),
+      );
     }
 
     if (_showTextAnnotations) {
       // Text at peak (plain text)
-      _annotationController.addAnnotation(TextAnnotation(
-        id: 'peak_text',
-        text: 'Peak Value',
-        position: const Offset(25, 90),
-        style: AnnotationStyle(
-            textStyle: const TextStyle(
-              color: Colors.blue,
-              fontSize: 12,
-            ),
+      _annotationController.addAnnotation(
+        TextAnnotation(
+          id: 'peak_text',
+          text: 'Peak Value',
+          position: const Offset(25, 90),
+          style: AnnotationStyle(
+            textStyle: const TextStyle(color: Colors.blue, fontSize: 12),
             backgroundColor: Colors.grey.shade100.withValues(alpha: 0.8),
             borderColor: Colors.grey.shade400,
             borderWidth: 0.5,
             padding: const EdgeInsets.all(8),
-            borderRadius: BorderRadius.circular(5)),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+            borderRadius: BorderRadius.circular(5),
+          ),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
+        ),
+      );
 
       // Rich text annotation with formatting
       // Note: Uses Fleather's standard attributes (b, i, u, s)
-      _annotationController.addAnnotation(TextAnnotation.rich(
-        id: 'rich_text_note',
-        richTextDelta: [
-          {
-            'insert': 'Important: ',
-            'attributes': {'b': true}
-          },
-          {'insert': 'This zone shows '},
-          {
-            'insert': 'critical',
-            'attributes': {'i': true, 'u': true}
-          },
-          {'insert': ' data!\n'},
-        ],
-        position: const Offset(70, 30),
-        style: AnnotationStyle(
-          textStyle: const TextStyle(
-            color: Colors.black87,
-            fontSize: 12,
+      _annotationController.addAnnotation(
+        TextAnnotation.rich(
+          id: 'rich_text_note',
+          richTextDelta: [
+            {
+              'insert': 'Important: ',
+              'attributes': {'b': true},
+            },
+            {'insert': 'This zone shows '},
+            {
+              'insert': 'critical',
+              'attributes': {'i': true, 'u': true},
+            },
+            {'insert': ' data!\n'},
+          ],
+          position: const Offset(70, 30),
+          style: AnnotationStyle(
+            textStyle: const TextStyle(color: Colors.black87, fontSize: 12),
+            backgroundColor: Colors.amber.shade50,
+            borderColor: Colors.amber.shade700,
+            borderWidth: 1.0,
+            padding: const EdgeInsets.all(10),
+            borderRadius: BorderRadius.circular(6),
           ),
-          backgroundColor: Colors.amber.shade50,
-          borderColor: Colors.amber.shade700,
-          borderWidth: 1.0,
-          padding: const EdgeInsets.all(10),
-          borderRadius: BorderRadius.circular(6),
+          allowDragging: _allowDragging,
+          allowEditing: _allowEditing,
         ),
-        allowDragging: _allowDragging,
-        allowEditing: _allowEditing,
-      ));
+      );
     }
   }
 
@@ -341,7 +352,8 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
 
       // Info
       const InfoBox(
-        message: 'Annotations help highlight important values, ranges, '
+        message:
+            'Annotations help highlight important values, ranges, '
             'and trends in your data. Enable dragging and editing to '
             'interactively modify annotations.',
       ),
@@ -372,8 +384,9 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -410,10 +423,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
       builder: (context, _) {
         return StatusPanel(
           items: [
-            StatusItem(
-              label: 'Data Points',
-              value: '${_data.length}',
-            ),
+            StatusItem(label: 'Data Points', value: '${_data.length}'),
             StatusItem(
               label: 'Annotations',
               value: '${_annotationController.length}',

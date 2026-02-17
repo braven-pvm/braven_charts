@@ -19,10 +19,7 @@ void main() {
       // Create test data
       const series = BarChartSeries(
         id: 'test',
-        points: [
-          ChartDataPoint(x: 1, y: 10),
-          ChartDataPoint(x: 2, y: 20),
-        ],
+        points: [ChartDataPoint(x: 1, y: 10), ChartDataPoint(x: 2, y: 20)],
         barWidthPercent: 0.8,
       );
 
@@ -53,10 +50,7 @@ void main() {
     test('SeriesElement barGroupInfo is optional (null by default)', () {
       const series = LineChartSeries(
         id: 'test',
-        points: [
-          ChartDataPoint(x: 1, y: 10),
-          ChartDataPoint(x: 2, y: 20),
-        ],
+        points: [ChartDataPoint(x: 1, y: 10), ChartDataPoint(x: 2, y: 20)],
       );
 
       const transform = ChartTransform(
@@ -69,10 +63,7 @@ void main() {
       );
 
       // Create SeriesElement without barGroupInfo
-      final element = SeriesElement(
-        series: series,
-        transform: transform,
-      );
+      final element = SeriesElement(series: series, transform: transform);
 
       expect(element.barGroupInfo, isNull);
     });

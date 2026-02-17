@@ -113,10 +113,11 @@ class PriorityPanGestureRecognizer
     if (_hasClaimedMode) {
       onPanUpdate?.call(
         DragUpdateDetails(
-            sourceTimeStamp: event.timeStamp,
-            delta: event.delta,
-            globalPosition: event.position,
-            localPosition: event.localPosition),
+          sourceTimeStamp: event.timeStamp,
+          delta: event.delta,
+          globalPosition: event.position,
+          localPosition: event.localPosition,
+        ),
       );
     }
   }
@@ -125,7 +126,8 @@ class PriorityPanGestureRecognizer
     if (_hasClaimedMode) {
       if (event is PointerUpEvent) {
         onPanEnd?.call(
-            DragEndDetails(velocity: Velocity.zero, primaryVelocity: 0.0));
+          DragEndDetails(velocity: Velocity.zero, primaryVelocity: 0.0),
+        );
       } else {
         onPanCancel?.call();
       }
@@ -165,9 +167,10 @@ class PriorityPanGestureRecognizer
       _hasClaimedMode = true;
       onPanStart?.call(
         DragStartDetails(
-            sourceTimeStamp: null,
-            globalPosition: _startPosition ?? Offset.zero,
-            localPosition: _startPosition ?? Offset.zero),
+          sourceTimeStamp: null,
+          globalPosition: _startPosition ?? Offset.zero,
+          localPosition: _startPosition ?? Offset.zero,
+        ),
       );
     }
   }

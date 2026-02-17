@@ -42,13 +42,13 @@ class StreamingBuffer {
   ///
   /// **Throws**: [AssertionError] if maxSize is not positive.
   StreamingBuffer({required int maxSize})
-      : assert(maxSize > 0, 'maxSize must be positive'),
-        _maxSize = maxSize,
-        // Pre-allocate with dummy values (will be overwritten)
-        _data = List<ChartDataPoint>.filled(
-          maxSize,
-          const ChartDataPoint(x: 0, y: 0),
-        );
+    : assert(maxSize > 0, 'maxSize must be positive'),
+      _maxSize = maxSize,
+      // Pre-allocate with dummy values (will be overwritten)
+      _data = List<ChartDataPoint>.filled(
+        maxSize,
+        const ChartDataPoint(x: 0, y: 0),
+      );
 
   final int _maxSize;
   final List<ChartDataPoint> _data;
@@ -143,12 +143,7 @@ class StreamingBuffer {
       // Else: use stale bounds for a few frames (acceptable for streaming UX)
     }
 
-    return DataBounds(
-      xMin: _xMin,
-      xMax: _xMax,
-      yMin: _yMin,
-      yMax: _yMax,
-    );
+    return DataBounds(xMin: _xMin, xMax: _xMax, yMin: _yMin, yMax: _yMax);
   }
 
   // ============================================================================

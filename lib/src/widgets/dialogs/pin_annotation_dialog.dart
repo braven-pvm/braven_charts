@@ -83,8 +83,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
         backgroundColor: pointDefaults.labelStyle.backgroundColor,
         borderColor: pointDefaults.labelStyle.borderColor,
         borderWidth: pointDefaults.labelStyle.borderWidth,
-        borderRadius:
-            BorderRadius.circular(pointDefaults.labelStyle.borderRadius),
+        borderRadius: BorderRadius.circular(
+          pointDefaults.labelStyle.borderRadius,
+        ),
         padding: pointDefaults.labelStyle.padding,
       );
     } else {
@@ -149,9 +150,7 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
 
     return Dialog(
       backgroundColor: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 700),
@@ -175,8 +174,8 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
                     Text(
                       isEditMode ? 'Edit Pin Annotation' : 'Add Pin Annotation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -238,7 +237,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
                       onPressed: _handleSave,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                       child: Text(isEditMode ? 'Update' : 'Add'),
                     ),
@@ -258,9 +259,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
       children: [
         Text(
           'Position',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Row(
@@ -274,11 +275,15 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
-                    signed: true, decimal: true),
+                  signed: true,
+                  decimal: true,
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Required';
@@ -300,11 +305,15 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
-                    signed: true, decimal: true),
+                  signed: true,
+                  decimal: true,
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Required';
@@ -328,23 +337,21 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
       children: [
         Text(
           'Label (optional)',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: _labelController,
           decoration: InputDecoration(
             hintText: 'Enter label text',
-            hintStyle: TextStyle(
-              color: Colors.grey.shade400,
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 14,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           ),
           maxLines: 1,
         ),
@@ -368,9 +375,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
       children: [
         Text(
           'Marker Shape',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -388,15 +395,19 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? colorScheme.primary : Colors.grey.shade100,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color:
-                        isSelected ? colorScheme.primary : Colors.grey.shade300,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : Colors.grey.shade300,
                   ),
                 ),
                 child: Row(
@@ -475,9 +486,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
           children: [
             Text(
               'Marker Size',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
@@ -526,9 +537,9 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
       children: [
         Text(
           'Marker Color',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -570,8 +581,10 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
               onTap: _showCustomColorPicker,
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   border: Border.all(color: Colors.grey.shade300),
@@ -580,13 +593,18 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.palette,
-                        size: 16, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.palette,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 4),
                     const Text(
                       'Custom',
-                      style:
-                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -685,7 +703,8 @@ class _PinAnnotationDialogState extends State<PinAnnotationDialog> {
     final y = double.parse(_yController.text);
 
     final annotation = PinAnnotation(
-      id: widget.annotation?.id ??
+      id:
+          widget.annotation?.id ??
           'pin_${DateTime.now().millisecondsSinceEpoch}',
       label: label.isEmpty ? null : label,
       style: _currentStyle,

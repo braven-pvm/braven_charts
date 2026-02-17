@@ -63,10 +63,7 @@ abstract final class NormalizationDetector {
     // Compare all pairs
     for (int i = 0; i < ranges.length; i++) {
       for (int j = i + 1; j < ranges.length; j++) {
-        final ratio = RangeRatioCalculator.calculateRatio(
-          ranges[i],
-          ranges[j],
-        );
+        final ratio = RangeRatioCalculator.calculateRatio(ranges[i], ranges[j]);
         if (ratio >= threshold) {
           return true;
         }
@@ -99,10 +96,7 @@ abstract final class NormalizationDetector {
     // Compare all pairs
     for (int i = 0; i < ranges.length; i++) {
       for (int j = i + 1; j < ranges.length; j++) {
-        final ratio = RangeRatioCalculator.calculateRatio(
-          ranges[i],
-          ranges[j],
-        );
+        final ratio = RangeRatioCalculator.calculateRatio(ranges[i], ranges[j]);
         if (ratio > maxRatio) {
           maxRatio = ratio;
         }

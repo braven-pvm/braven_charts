@@ -67,10 +67,7 @@ class InterpolationFunctions {
   /// Returns empty list for invalid input.
   ///
   /// Performance: O(n + samples) where n = number of points
-  static List<double> cubicSpline(
-    List<ChartDataPoint> points,
-    int samples,
-  ) {
+  static List<double> cubicSpline(List<ChartDataPoint> points, int samples) {
     if (points.length < 2 || samples < 2) {
       return [];
     }
@@ -115,7 +112,8 @@ class InterpolationFunctions {
 
     // Calculate alpha values
     for (int i = 1; i < n - 1; i++) {
-      alpha[i] = (3.0 / h[i]) * (points[i + 1].y - points[i].y) -
+      alpha[i] =
+          (3.0 / h[i]) * (points[i + 1].y - points[i].y) -
           (3.0 / h[i - 1]) * (points[i].y - points[i - 1].y);
     }
 
@@ -161,7 +159,8 @@ class InterpolationFunctions {
     final a = (points[i + 1].x - x) / h;
     final b = (x - points[i].x) / h;
 
-    final y = a * points[i].y +
+    final y =
+        a * points[i].y +
         b * points[i + 1].y +
         ((a * a * a - a) * secondDerivatives[i] +
                 (b * b * b - b) * secondDerivatives[i + 1]) *
@@ -183,13 +182,7 @@ class InterpolationFunctions {
   /// h(t) = h00(t)×p0 + h10(t)×m0 + h01(t)×p1 + h11(t)×m1
   ///
   /// Performance: O(1)
-  static double hermite(
-    double p0,
-    double p1,
-    double m0,
-    double m1,
-    double t,
-  ) {
+  static double hermite(double p0, double p1, double m0, double m1, double t) {
     final t2 = t * t;
     final t3 = t2 * t;
 
@@ -331,7 +324,8 @@ class InterpolationFunctions {
       final oneMinusT2 = oneMinusT * oneMinusT;
       final oneMinusT3 = oneMinusT2 * oneMinusT;
 
-      final y = oneMinusT3 * p0 +
+      final y =
+          oneMinusT3 * p0 +
           3.0 * oneMinusT2 * t * p1 +
           3.0 * oneMinusT * t2 * p2 +
           t3 * p3;

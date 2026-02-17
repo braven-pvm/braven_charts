@@ -48,18 +48,18 @@ class RangeAnnotation extends ChartAnnotation {
     this.fillColor,
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
-  })  : assert(
-          startX != null || startY != null,
-          'At least one range (X or Y) must be specified',
-        ),
-        assert(
-          startX == null || endX == null || startX < endX,
-          'startX must be less than endX',
-        ),
-        assert(
-          startY == null || endY == null || startY < endY,
-          'startY must be less than endY',
-        );
+  }) : assert(
+         startX != null || startY != null,
+         'At least one range (X or Y) must be specified',
+       ),
+       assert(
+         startX == null || endX == null || startX < endX,
+         'startX must be less than endX',
+       ),
+       assert(
+         startY == null || endY == null || startY < endY,
+         'startY must be less than endY',
+       );
 
   /// The starting X-axis value of the range.
   ///
@@ -154,22 +154,22 @@ class RangeAnnotation extends ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        snapToValue,
-        snapIncrement,
-        startX,
-        endX,
-        startY,
-        endY,
-        fillColor,
-        borderColor,
-        labelPosition,
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    snapToValue,
+    snapIncrement,
+    startX,
+    endX,
+    startY,
+    endY,
+    fillColor,
+    borderColor,
+    labelPosition,
+  );
 }
 
 /// Position for range annotation labels.

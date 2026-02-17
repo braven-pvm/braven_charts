@@ -92,8 +92,8 @@ class LinkedHashMapTextLayoutCache implements TextLayoutCache {
   /// - Complex chart (100 labels): maxSize=200
   /// - Dashboard (multiple charts): maxSize=500+
   LinkedHashMapTextLayoutCache({int maxSize = 500})
-      : _maxSize = maxSize,
-        _cache = LinkedHashMap<String, TextPainter>() {
+    : _maxSize = maxSize,
+      _cache = LinkedHashMap<String, TextPainter>() {
     assert(maxSize > 0, 'maxSize must be greater than 0');
   }
 

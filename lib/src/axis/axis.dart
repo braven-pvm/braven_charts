@@ -148,10 +148,7 @@ class Axis {
   /// 1. The tick interval would change significantly (>25% to prevent oscillation)
   /// 2. OR data extends beyond the rightmost/leftmost tick (need new gridlines)
   void updateDataRange(double newDataMin, double newDataMax) {
-    scale = scale.copyWith(
-      dataMin: newDataMin,
-      dataMax: newDataMax,
-    );
+    scale = scale.copyWith(dataMin: newDataMin, dataMax: newDataMax);
 
     // Skip tick generation entirely if nothing will be rendered
     // This is a major performance optimization for hidden axes
@@ -168,7 +165,8 @@ class Axis {
     // Check if interval changed significantly (>25% to prevent oscillation)
     // The nice number sequence is 1→2→5→10 (100%, 150%, 100% jumps)
     // Using 25% threshold prevents flickering between adjacent nice numbers
-    final intervalChanged = _lastTickInterval == null ||
+    final intervalChanged =
+        _lastTickInterval == null ||
         (niceInterval - _lastTickInterval!).abs() > _lastTickInterval! * 0.25;
 
     // Check if we need new ticks because data extends beyond current tick range
@@ -219,10 +217,10 @@ class Axis {
     final niceFraction = fraction <= 1.0
         ? 1.0
         : fraction <= 2.0
-            ? 2.0
-            : fraction <= 5.0
-                ? 5.0
-                : 10.0;
+        ? 2.0
+        : fraction <= 5.0
+        ? 5.0
+        : 10.0;
 
     return niceFraction * powerOf10;
   }
@@ -231,10 +229,7 @@ class Axis {
   ///
   /// Regenerates ticks for the new pixel range.
   void updatePixelRange(double newPixelMin, double newPixelMax) {
-    scale = scale.copyWith(
-      pixelMin: newPixelMin,
-      pixelMax: newPixelMax,
-    );
+    scale = scale.copyWith(pixelMin: newPixelMin, pixelMax: newPixelMax);
 
     ticks = _generateTicks();
   }
@@ -274,7 +269,8 @@ class Axis {
   }
 
   @override
-  String toString() => 'Axis(${config.orientation}, ${config.position}, '
+  String toString() =>
+      'Axis(${config.orientation}, ${config.position}, '
       'data: [${scale.dataMin}, ${scale.dataMax}], '
       'pixels: [${scale.pixelMin}, ${scale.pixelMax}], '
       'ticks: ${ticks.length})';

@@ -167,11 +167,10 @@ class ScrollbarTheme {
   ScrollbarTheme copyWith({
     ScrollbarConfig? xAxisScrollbar,
     ScrollbarConfig? yAxisScrollbar,
-  }) =>
-      ScrollbarTheme(
-        xAxisScrollbar: xAxisScrollbar ?? this.xAxisScrollbar,
-        yAxisScrollbar: yAxisScrollbar ?? this.yAxisScrollbar,
-      );
+  }) => ScrollbarTheme(
+    xAxisScrollbar: xAxisScrollbar ?? this.xAxisScrollbar,
+    yAxisScrollbar: yAxisScrollbar ?? this.yAxisScrollbar,
+  );
 
   /// Serialize to JSON.
   ///
@@ -184,9 +183,9 @@ class ScrollbarTheme {
   /// // }
   /// ```
   Map<String, dynamic> toJson() => {
-        'xAxisScrollbar': xAxisScrollbar.toJson(),
-        'yAxisScrollbar': yAxisScrollbar.toJson(),
-      };
+    'xAxisScrollbar': xAxisScrollbar.toJson(),
+    'yAxisScrollbar': yAxisScrollbar.toJson(),
+  };
 
   /// Deserialize from JSON.
   ///
@@ -199,11 +198,13 @@ class ScrollbarTheme {
   /// final theme = ScrollbarTheme.fromJson(json);
   /// ```
   factory ScrollbarTheme.fromJson(Map<String, dynamic> json) => ScrollbarTheme(
-        xAxisScrollbar: ScrollbarConfig.fromJson(
-            json['xAxisScrollbar'] as Map<String, dynamic>),
-        yAxisScrollbar: ScrollbarConfig.fromJson(
-            json['yAxisScrollbar'] as Map<String, dynamic>),
-      );
+    xAxisScrollbar: ScrollbarConfig.fromJson(
+      json['xAxisScrollbar'] as Map<String, dynamic>,
+    ),
+    yAxisScrollbar: ScrollbarConfig.fromJson(
+      json['yAxisScrollbar'] as Map<String, dynamic>,
+    ),
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -216,7 +217,8 @@ class ScrollbarTheme {
   int get hashCode => Object.hash(xAxisScrollbar, yAxisScrollbar);
 
   @override
-  String toString() => 'ScrollbarTheme('
+  String toString() =>
+      'ScrollbarTheme('
       'xAxisScrollbar: $xAxisScrollbar, '
       'yAxisScrollbar: $yAxisScrollbar'
       ')';

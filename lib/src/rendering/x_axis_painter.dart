@@ -90,12 +90,14 @@ class XAxisPainter {
     // Save canvas state and clip to prevent ticks from extending beyond plot area bounds
     canvas.save();
     // Clip horizontally to plot area, allow vertical overflow for labels below axis
-    canvas.clipRect(Rect.fromLTRB(
-      plotArea.left,
-      plotArea.top,
-      plotArea.right,
-      chartArea.bottom,
-    ));
+    canvas.clipRect(
+      Rect.fromLTRB(
+        plotArea.left,
+        plotArea.top,
+        plotArea.right,
+        chartArea.bottom,
+      ),
+    );
 
     for (final tickValue in ticks) {
       // Calculate X position for this tick
@@ -141,8 +143,8 @@ class XAxisPainter {
     if (config.shouldShowAxisLabel && config.label != null) {
       final axisLabelText =
           config.shouldAppendUnitToLabel && config.unit != null
-              ? '${config.label} (${config.unit})'
-              : config.label!;
+          ? '${config.label} (${config.unit})'
+          : config.label!;
 
       final axisLabelPainter = TextPainter(
         text: TextSpan(
@@ -159,7 +161,8 @@ class XAxisPainter {
       const tickLength = 6.0;
       // Estimate tick label height (approximately fontSize * 1.2)
       final tickLabelHeight = labelStyle.fontSize ?? 12.0 * 1.2;
-      final axisLabelY = plotArea.bottom +
+      final axisLabelY =
+          plotArea.bottom +
           tickLength +
           config.tickLabelPadding +
           tickLabelHeight +

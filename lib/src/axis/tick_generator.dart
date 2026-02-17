@@ -47,12 +47,16 @@ class TickGenerator {
   }) {
     assert(dataMax > dataMin, 'dataMax must be greater than dataMin');
     assert(pixelRange > 0, 'pixelRange must be positive');
-    assert(targetTickCount >= minTickCount,
-        'targetTickCount must be at least $minTickCount');
+    assert(
+      targetTickCount >= minTickCount,
+      'targetTickCount must be at least $minTickCount',
+    );
 
     // Clamp target count to reasonable range
-    final clampedTargetCount =
-        targetTickCount.clamp(minTickCount, maxTickCount);
+    final clampedTargetCount = targetTickCount.clamp(
+      minTickCount,
+      maxTickCount,
+    );
 
     // Calculate ideal tick interval
     final dataRange = dataMax - dataMin;
@@ -68,9 +72,11 @@ class TickGenerator {
     final startTick = (dataMin / niceInterval).ceil() * niceInterval;
 
     // Generate ticks up to dataMax
-    for (double value = startTick;
-        value <= dataMax + niceInterval * 0.01;
-        value += niceInterval) {
+    for (
+      double value = startTick;
+      value <= dataMax + niceInterval * 0.01;
+      value += niceInterval
+    ) {
       // Skip if outside bounds (with small tolerance for floating point)
       if (value < dataMin - niceInterval * 0.01) continue;
       if (value > dataMax + niceInterval * 0.01) break;
@@ -83,11 +89,13 @@ class TickGenerator {
     if (ticks.isEmpty || ticks.length < 2) {
       return [
         Tick(
-            value: dataMin,
-            label: formatLabel?.call(dataMin) ?? _defaultFormatLabel(dataMin)),
+          value: dataMin,
+          label: formatLabel?.call(dataMin) ?? _defaultFormatLabel(dataMin),
+        ),
         Tick(
-            value: dataMax,
-            label: formatLabel?.call(dataMax) ?? _defaultFormatLabel(dataMax)),
+          value: dataMax,
+          label: formatLabel?.call(dataMax) ?? _defaultFormatLabel(dataMax),
+        ),
       ];
     }
 
@@ -116,10 +124,10 @@ class TickGenerator {
     final niceFraction = fraction <= 1.0
         ? 1.0
         : fraction <= 2.0
-            ? 2.0
-            : fraction <= 5.0
-                ? 5.0
-                : 10.0;
+        ? 2.0
+        : fraction <= 5.0
+        ? 5.0
+        : 10.0;
 
     return niceFraction * powerOf10;
   }

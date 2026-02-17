@@ -93,10 +93,7 @@ abstract class IEventHandler {
   /// Parameters:
   /// - [handler]: Handler function
   /// - [priority]: Priority level (higher = earlier processing)
-  void registerHandler(
-    bool Function(ChartEvent) handler,
-    int priority,
-  );
+  void registerHandler(bool Function(ChartEvent) handler, int priority);
 
   /// Unregisters a previously registered handler.
   void unregisterHandler(bool Function(ChartEvent) handler);
@@ -299,10 +296,7 @@ class EventHandler implements IEventHandler {
   }
 
   @override
-  void registerHandler(
-    bool Function(ChartEvent) handler,
-    int priority,
-  ) {
+  void registerHandler(bool Function(ChartEvent) handler, int priority) {
     if (_disposed) {
       throw StateError('EventHandler has been disposed');
     }

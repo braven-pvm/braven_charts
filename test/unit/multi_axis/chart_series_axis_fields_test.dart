@@ -33,29 +33,19 @@ void main() {
       });
 
       test('accepts unit parameter', () {
-        const series = ChartSeries(
-          id: 'test',
-          points: [],
-          unit: 'W',
-        );
+        const series = ChartSeries(id: 'test', points: [], unit: 'W');
 
         expect(series.unit, equals('W'));
       });
 
       test('yAxisId defaults to null', () {
-        const series = ChartSeries(
-          id: 'test',
-          points: [],
-        );
+        const series = ChartSeries(id: 'test', points: []);
 
         expect(series.yAxisId, isNull);
       });
 
       test('unit defaults to null', () {
-        const series = ChartSeries(
-          id: 'test',
-          points: [],
-        );
+        const series = ChartSeries(id: 'test', points: []);
 
         expect(series.unit, isNull);
       });
@@ -110,11 +100,7 @@ void main() {
         });
 
         test('allows overriding unit', () {
-          final series = ChartSeries(
-            id: 'test',
-            points: testPoints,
-            unit: 'W',
-          );
+          final series = ChartSeries(id: 'test', points: testPoints, unit: 'W');
 
           final copy = series.copyWith(unit: 'kW');
 

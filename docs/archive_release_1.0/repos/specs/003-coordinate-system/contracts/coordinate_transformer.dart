@@ -97,10 +97,7 @@ class ValidationResult {
   }
 
   /// Factory for failed validation with error details.
-  factory ValidationResult.invalid(
-    String message,
-    ValidationErrorType type,
-  ) {
+  factory ValidationResult.invalid(String message, ValidationErrorType type) {
     return ValidationResult._(
       isValid: false,
       errorMessage: message,
@@ -275,10 +272,7 @@ abstract class CoordinateTransformer {
   /// );
   /// // Returns: Rect.fromLTWH(0, 0, widgetWidth, widgetHeight)
   /// ```
-  Rect getValidRange(
-    CoordinateSystem system,
-    TransformContext context,
-  );
+  Rect getValidRange(CoordinateSystem system, TransformContext context);
 }
 
 /// Placeholder for TransformContext (defined in separate contract file).

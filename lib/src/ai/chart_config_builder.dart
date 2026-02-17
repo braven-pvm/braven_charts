@@ -112,10 +112,12 @@ class ChartConfigBuilder {
         .toList();
 
     // Parse axes
-    final xAxisConfig =
-        _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
-    final yAxisConfig =
-        _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
+    final xAxisConfig = _parseXAxisConfig(
+      json['x_axis'] as Map<String, dynamic>?,
+    );
+    final yAxisConfig = _parseYAxisConfig(
+      json['y_axis'] as Map<String, dynamic>?,
+    );
 
     // Check for multi-axis mode (series have different units)
     final units = series
@@ -159,8 +161,11 @@ class ChartConfigBuilder {
   }
 
   static ChartSeries _parseSeries(
-      Map<String, dynamic> json, SeriesStyle? defaultStyle) {
-    final id = json['id'] as String? ??
+    Map<String, dynamic> json,
+    SeriesStyle? defaultStyle,
+  ) {
+    final id =
+        json['id'] as String? ??
         'series_${DateTime.now().millisecondsSinceEpoch}';
     final name = json['name'] as String?;
     final colorStr = json['color'] as String?;
@@ -200,43 +205,43 @@ class ChartConfigBuilder {
     final effectiveStyle = style ?? SeriesStyle.line;
     return switch (effectiveStyle) {
       SeriesStyle.line => LineChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          interpolation: LineInterpolation.linear,
-          strokeWidth: 2.0,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        interpolation: LineInterpolation.linear,
+        strokeWidth: 2.0,
+      ),
       SeriesStyle.area => AreaChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          interpolation: LineInterpolation.linear,
-          fillOpacity: 0.3,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        interpolation: LineInterpolation.linear,
+        fillOpacity: 0.3,
+      ),
       SeriesStyle.bar => BarChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          barWidthPercent: 0.8,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        barWidthPercent: 0.8,
+      ),
       SeriesStyle.scatter => ScatterChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          markerRadius: 5.0,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        markerRadius: 5.0,
+      ),
     };
   }
 
@@ -300,7 +305,8 @@ class ChartConfigBuilder {
   }
 
   static InteractionConfig? _parseInteractionConfig(
-      Map<String, dynamic>? json) {
+    Map<String, dynamic>? json,
+  ) {
     if (json == null) return null;
 
     final showCrosshair = json['show_crosshair'] as bool? ?? true;

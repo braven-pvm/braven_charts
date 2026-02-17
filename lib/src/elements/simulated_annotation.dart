@@ -83,8 +83,7 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   bool get showTooltip => isHovered;
 
   @override
-  Offset get tooltipPosition =>
-      _bounds.topLeft + const Offset(0, -20); // Above annotation
+  Offset get tooltipPosition => _bounds.topLeft + const Offset(0, -20); // Above annotation
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
@@ -110,7 +109,7 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   /// Returns 8 handles: corners (TL, TR, BL, BR) + midpoints (T, R, B, L).
   /// **DEPRECATED**: Use createResizeHandleElements() instead.
   List<({String id, Offset center, ResizeDirection direction})>
-      getResizeHandles() {
+  getResizeHandles() {
     final left = _bounds.left;
     final right = _bounds.right;
     final top = _bounds.top;
@@ -123,34 +122,34 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
       (
         id: 'tr',
         center: Offset(right, top),
-        direction: ResizeDirection.topRight
+        direction: ResizeDirection.topRight,
       ),
       (
         id: 'bl',
         center: Offset(left, bottom),
-        direction: ResizeDirection.bottomLeft
+        direction: ResizeDirection.bottomLeft,
       ),
       (
         id: 'br',
         center: Offset(right, bottom),
-        direction: ResizeDirection.bottomRight
+        direction: ResizeDirection.bottomRight,
       ),
       // Midpoints
       (id: 't', center: Offset(center.dx, top), direction: ResizeDirection.top),
       (
         id: 'r',
         center: Offset(right, center.dy),
-        direction: ResizeDirection.right
+        direction: ResizeDirection.right,
       ),
       (
         id: 'b',
         center: Offset(center.dx, bottom),
-        direction: ResizeDirection.bottom
+        direction: ResizeDirection.bottom,
       ),
       (
         id: 'l',
         center: Offset(left, center.dy),
-        direction: ResizeDirection.left
+        direction: ResizeDirection.left,
       ),
     ];
   }
@@ -177,54 +176,78 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
         parentAnnotation: this,
         direction: ResizeDirection.topLeft,
         bounds: Rect.fromCenter(
-            center: Offset(left, top), width: handleSize, height: handleSize),
+          center: Offset(left, top),
+          width: handleSize,
+          height: handleSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.topRight,
         bounds: Rect.fromCenter(
-            center: Offset(right, top), width: handleSize, height: handleSize),
+          center: Offset(right, top),
+          width: handleSize,
+          height: handleSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottomLeft,
         bounds: Rect.fromCenter(
-            center: Offset(left, bottom),
-            width: handleSize,
-            height: handleSize),
+          center: Offset(left, bottom),
+          width: handleSize,
+          height: handleSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottomRight,
         bounds: Rect.fromCenter(
-            center: Offset(right, bottom),
-            width: handleSize,
-            height: handleSize),
+          center: Offset(right, bottom),
+          width: handleSize,
+          height: handleSize,
+        ),
       ),
       // Edges (use continuous zones along the edge)
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.top,
         bounds: Rect.fromLTRB(
-            left + halfSize, top - halfSize, right - halfSize, top + halfSize),
+          left + halfSize,
+          top - halfSize,
+          right - halfSize,
+          top + halfSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.right,
-        bounds: Rect.fromLTRB(right - halfSize, top + halfSize,
-            right + halfSize, bottom - halfSize),
+        bounds: Rect.fromLTRB(
+          right - halfSize,
+          top + halfSize,
+          right + halfSize,
+          bottom - halfSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottom,
-        bounds: Rect.fromLTRB(left + halfSize, bottom - halfSize,
-            right - halfSize, bottom + halfSize),
+        bounds: Rect.fromLTRB(
+          left + halfSize,
+          bottom - halfSize,
+          right - halfSize,
+          bottom + halfSize,
+        ),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.left,
-        bounds: Rect.fromLTRB(left - halfSize, top + halfSize, left + halfSize,
-            bottom - halfSize),
+        bounds: Rect.fromLTRB(
+          left - halfSize,
+          top + halfSize,
+          left + halfSize,
+          bottom - halfSize,
+        ),
       ),
     ];
   }
@@ -267,7 +290,8 @@ class SimulatedAnnotation extends ChartElement with TooltipElement {
   void paint(Canvas canvas, Size size) {
     // Draw background with transparency so you can see elements behind
     final bgPaint = Paint()
-      ..color = backgroundColor.withOpacity(0.25) // Much more transparent
+      ..color = backgroundColor
+          .withOpacity(0.25) // Much more transparent
       ..style = PaintingStyle.fill;
     canvas.drawRect(_bounds, bgPaint);
 

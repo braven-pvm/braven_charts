@@ -41,12 +41,8 @@ class ClusterInfo {
   }
 
   @override
-  int get hashCode => Object.hash(
-        center,
-        pointCount,
-        Object.hashAll(pointIndices),
-        radius,
-      );
+  int get hashCode =>
+      Object.hash(center, pointCount, Object.hashAll(pointIndices), radius);
 
   @override
   String toString() {
@@ -186,10 +182,7 @@ class ScatterClusterer {
       }
     }
 
-    return ClusterResult(
-      clusters: clusters,
-      unclusteredPoints: unclustered,
-    );
+    return ClusterResult(clusters: clusters, unclusteredPoints: unclustered);
   }
 
   /// Calculates Euclidean distance between two points.

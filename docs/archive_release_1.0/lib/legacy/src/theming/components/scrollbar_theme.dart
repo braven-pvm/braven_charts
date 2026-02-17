@@ -11,13 +11,13 @@ import 'scrollbar_config.dart';
 class ScrollbarTheme {
   /// Deserialize from JSON.
   factory ScrollbarTheme.fromJson(Map<String, dynamic> json) => ScrollbarTheme(
-        xAxisScrollbar: ScrollbarConfig.fromJson(
-          json['xAxisScrollbar'] as Map<String, dynamic>,
-        ),
-        yAxisScrollbar: ScrollbarConfig.fromJson(
-          json['yAxisScrollbar'] as Map<String, dynamic>,
-        ),
-      );
+    xAxisScrollbar: ScrollbarConfig.fromJson(
+      json['xAxisScrollbar'] as Map<String, dynamic>,
+    ),
+    yAxisScrollbar: ScrollbarConfig.fromJson(
+      json['yAxisScrollbar'] as Map<String, dynamic>,
+    ),
+  );
   const ScrollbarTheme({
     required this.xAxisScrollbar,
     required this.yAxisScrollbar,
@@ -61,17 +61,16 @@ class ScrollbarTheme {
   ScrollbarTheme copyWith({
     ScrollbarConfig? xAxisScrollbar,
     ScrollbarConfig? yAxisScrollbar,
-  }) =>
-      ScrollbarTheme(
-        xAxisScrollbar: xAxisScrollbar ?? this.xAxisScrollbar,
-        yAxisScrollbar: yAxisScrollbar ?? this.yAxisScrollbar,
-      );
+  }) => ScrollbarTheme(
+    xAxisScrollbar: xAxisScrollbar ?? this.xAxisScrollbar,
+    yAxisScrollbar: yAxisScrollbar ?? this.yAxisScrollbar,
+  );
 
   /// Serialize to JSON.
   Map<String, dynamic> toJson() => {
-        'xAxisScrollbar': xAxisScrollbar.toJson(),
-        'yAxisScrollbar': yAxisScrollbar.toJson(),
-      };
+    'xAxisScrollbar': xAxisScrollbar.toJson(),
+    'yAxisScrollbar': yAxisScrollbar.toJson(),
+  };
 
   @override
   bool operator ==(Object other) =>

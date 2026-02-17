@@ -41,9 +41,9 @@ class BufferManager<T> {
   ///
   /// Throws [AssertionError] if [maxSize] is not positive.
   BufferManager({required int maxSize})
-      : assert(maxSize > 0, 'maxSize must be positive'),
-        _maxSize = maxSize,
-        _queue = Queue<T>();
+    : assert(maxSize > 0, 'maxSize must be positive'),
+      _maxSize = maxSize,
+      _queue = Queue<T>();
 
   final int _maxSize;
   final Queue<T> _queue;

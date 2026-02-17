@@ -54,9 +54,11 @@ class StreamingConfig {
     this.resumeAnimationDuration = const Duration(milliseconds: 300),
     this.onBufferUpdated,
     this.onStreamError,
-  })  : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
-        assert(
-            autoScrollWindowSize > 0, 'autoScrollWindowSize must be positive');
+  }) : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
+       assert(
+         autoScrollWindowSize > 0,
+         'autoScrollWindowSize must be positive',
+       );
 
   /// Maximum number of data points to buffer.
   ///
@@ -189,7 +191,11 @@ class StreamingConfig {
 
   @override
   int get hashCode => Object.hash(
-      maxBufferSize, autoScroll, autoScrollWindowSize, resumeAnimationDuration);
+    maxBufferSize,
+    autoScroll,
+    autoScrollWindowSize,
+    resumeAnimationDuration,
+  );
 
   @override
   String toString() {

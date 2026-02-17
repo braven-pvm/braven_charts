@@ -28,11 +28,15 @@ class GridStyle {
     this.minorWidth,
     this.minorDashPattern = const [],
     this.showMinor = false,
-  })  : assert(majorWidth >= 0.0, 'majorWidth must be >= 0'),
-        assert(
-            minorWidth == null || minorWidth >= 0.0, 'minorWidth must be >= 0'),
-        assert(!showMinor || (minorColor != null && minorWidth != null),
-            'If showMinor is true, minorColor and minorWidth must be provided');
+  }) : assert(majorWidth >= 0.0, 'majorWidth must be >= 0'),
+       assert(
+         minorWidth == null || minorWidth >= 0.0,
+         'minorWidth must be >= 0',
+       ),
+       assert(
+         !showMinor || (minorColor != null && minorWidth != null),
+         'If showMinor is true, minorColor and minorWidth must be provided',
+       );
 
   /// Color of major grid lines.
   final Color majorColor;
@@ -151,13 +155,15 @@ class GridStyle {
       majorColor: _parseColor(json['majorColor']) ?? defaultLight.majorColor,
       majorWidth:
           (json['majorWidth'] as num?)?.toDouble() ?? defaultLight.majorWidth,
-      majorDashPattern: (json['majorDashPattern'] as List<dynamic>?)
+      majorDashPattern:
+          (json['majorDashPattern'] as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
               .toList() ??
           [],
       minorColor: _parseColor(json['minorColor']),
       minorWidth: (json['minorWidth'] as num?)?.toDouble(),
-      minorDashPattern: (json['minorDashPattern'] as List<dynamic>?)
+      minorDashPattern:
+          (json['minorDashPattern'] as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
               .toList() ??
           [],
@@ -190,14 +196,14 @@ class GridStyle {
 
   @override
   int get hashCode => Object.hash(
-        majorColor,
-        majorWidth,
-        Object.hashAll(majorDashPattern),
-        minorColor,
-        minorWidth,
-        Object.hashAll(minorDashPattern),
-        showMinor,
-      );
+    majorColor,
+    majorWidth,
+    Object.hashAll(majorDashPattern),
+    minorColor,
+    minorWidth,
+    Object.hashAll(minorDashPattern),
+    showMinor,
+  );
 
   bool _listEquals(List<double>? a, List<double>? b) {
     if (a == null && b == null) return true;

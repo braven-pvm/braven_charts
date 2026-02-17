@@ -143,7 +143,7 @@ class RenderPipeline {
   /// ),
   /// ```
   final TransformContext? Function(Size size, Rect viewport)?
-      transformContextFactory;
+  transformContextFactory;
 
   /// Current viewport bounds (mutable via [updateViewport]).
   Rect _viewport;
@@ -281,10 +281,12 @@ class RenderPipeline {
         final pathStats = pathPool.statistics;
         final textStats = textPainterPool.statistics;
 
-        final totalPoolOperations = paintStats.acquireCount +
+        final totalPoolOperations =
+            paintStats.acquireCount +
             pathStats.acquireCount +
             textStats.acquireCount;
-        final totalPoolReleases = paintStats.releaseCount +
+        final totalPoolReleases =
+            paintStats.releaseCount +
             pathStats.releaseCount +
             textStats.releaseCount;
 

@@ -200,12 +200,7 @@ class _XAxisDemoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Create plot area leaving space for axis
-    final plotArea = Rect.fromLTWH(
-      40,
-      20,
-      size.width - 80,
-      size.height - 100,
-    );
+    final plotArea = Rect.fromLTWH(40, 20, size.width - 80, size.height - 100);
 
     // Create axis painter
     final painter = XAxisPainter(
@@ -216,7 +211,10 @@ class _XAxisDemoPainter extends CustomPainter {
 
     // Paint the axis
     painter.paint(
-        canvas, Rect.fromLTWH(0, 0, size.width, size.height), plotArea);
+      canvas,
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      plotArea,
+    );
   }
 
   @override
@@ -225,7 +223,6 @@ class _XAxisDemoPainter extends CustomPainter {
   }
 }
 
-void main() => runApp(const MaterialApp(
-      home: XAxisConfigDemo(),
-      debugShowCheckedModeBanner: false,
-    ));
+void main() => runApp(
+  const MaterialApp(home: XAxisConfigDemo(), debugShowCheckedModeBanner: false),
+);

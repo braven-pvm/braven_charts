@@ -52,16 +52,16 @@ class ChartAnimationConfig {
     this.curve = Curves.easeInOut,
     this.changeThreshold = 0.01,
   }) : assert(
-          changeThreshold >= 0.0 && changeThreshold <= 1.0,
-          'changeThreshold must be between 0.0 and 1.0',
-        );
+         changeThreshold >= 0.0 && changeThreshold <= 1.0,
+         'changeThreshold must be between 0.0 and 1.0',
+       );
 
   /// Creates configuration with animations disabled
   const ChartAnimationConfig.disabled()
-      : enabled = false,
-        duration = Duration.zero,
-        curve = Curves.linear,
-        changeThreshold = 0.0;
+    : enabled = false,
+      duration = Duration.zero,
+      curve = Curves.linear,
+      changeThreshold = 0.0;
 
   /// Whether animations are enabled
   final bool enabled;
@@ -132,18 +132,16 @@ class ChartSeriesStyle {
     this.markerSize,
     this.fillOpacity,
     this.barWidthRatio,
-  })  : assert(lineWidth == null || lineWidth >= 0, 'lineWidth must be >= 0'),
-        assert(
-            markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
-        assert(
-          fillOpacity == null || (fillOpacity >= 0.0 && fillOpacity <= 1.0),
-          'fillOpacity must be between 0.0 and 1.0',
-        ),
-        assert(
-          barWidthRatio == null ||
-              (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
-          'barWidthRatio must be in (0.0, 1.0]',
-        );
+  }) : assert(lineWidth == null || lineWidth >= 0, 'lineWidth must be >= 0'),
+       assert(markerSize == null || markerSize >= 0, 'markerSize must be >= 0'),
+       assert(
+         fillOpacity == null || (fillOpacity >= 0.0 && fillOpacity <= 1.0),
+         'fillOpacity must be between 0.0 and 1.0',
+       ),
+       assert(
+         barWidthRatio == null || (barWidthRatio > 0.0 && barWidthRatio <= 1.0),
+         'barWidthRatio must be in (0.0, 1.0]',
+       );
 
   /// Series color (overrides theme color)
   final Color? color;

@@ -30,12 +30,16 @@ class TypographyTheme {
     required this.labelFontSize,
     required this.fontWeight,
     this.scaleFactor = 1.0,
-  })  : assert(baseFontSize >= 8.0,
-            'baseFontSize must be >= 8.0 (minimum readable)'),
-        assert(titleFontSize >= 10.0, 'titleFontSize must be >= 10.0'),
-        assert(labelFontSize >= 8.0, 'labelFontSize must be >= 8.0'),
-        assert(scaleFactor >= 0.5 && scaleFactor <= 2.0,
-            'scaleFactor must be 0.5-2.0');
+  }) : assert(
+         baseFontSize >= 8.0,
+         'baseFontSize must be >= 8.0 (minimum readable)',
+       ),
+       assert(titleFontSize >= 10.0, 'titleFontSize must be >= 10.0'),
+       assert(labelFontSize >= 8.0, 'labelFontSize must be >= 8.0'),
+       assert(
+         scaleFactor >= 0.5 && scaleFactor <= 2.0,
+         'scaleFactor must be 0.5-2.0',
+       );
 
   /// Font family name. Should be available on target platform.
   final String fontFamily;
@@ -200,11 +204,14 @@ class TypographyTheme {
   static TypographyTheme fromJson(Map<String, dynamic> json) {
     return TypographyTheme(
       fontFamily: json['fontFamily'] as String? ?? defaultLight.fontFamily,
-      baseFontSize: (json['baseFontSize'] as num?)?.toDouble() ??
+      baseFontSize:
+          (json['baseFontSize'] as num?)?.toDouble() ??
           defaultLight.baseFontSize,
-      titleFontSize: (json['titleFontSize'] as num?)?.toDouble() ??
+      titleFontSize:
+          (json['titleFontSize'] as num?)?.toDouble() ??
           defaultLight.titleFontSize,
-      labelFontSize: (json['labelFontSize'] as num?)?.toDouble() ??
+      labelFontSize:
+          (json['labelFontSize'] as num?)?.toDouble() ??
           defaultLight.labelFontSize,
       fontWeight:
           _parseFontWeight(json['fontWeight']) ?? defaultLight.fontWeight,
@@ -243,11 +250,11 @@ class TypographyTheme {
 
   @override
   int get hashCode => Object.hash(
-        fontFamily,
-        baseFontSize,
-        titleFontSize,
-        labelFontSize,
-        fontWeight,
-        scaleFactor,
-      );
+    fontFamily,
+    baseFontSize,
+    titleFontSize,
+    labelFontSize,
+    fontWeight,
+    scaleFactor,
+  );
 }

@@ -130,12 +130,13 @@ class PerformanceTestUtils {
   static List<Map<String, dynamic>> _generateTestData(int size) {
     final random = Random(42); // Fixed seed for reproducible tests
     return List.generate(
-        size,
-        (index) => {
-              'x': index.toDouble(),
-              'y': random.nextDouble() * 100,
-              'label': 'Point $index',
-            });
+      size,
+      (index) => {
+        'x': index.toDouble(),
+        'y': random.nextDouble() * 100,
+        'label': 'Point $index',
+      },
+    );
   }
 }
 
@@ -184,8 +185,9 @@ class FramePerformance {
 
   Duration get averageFrameTime {
     if (frameTimings.isEmpty) return Duration.zero;
-    final totalMicroseconds =
-        frameTimings.map((d) => d.inMicroseconds).reduce((a, b) => a + b);
+    final totalMicroseconds = frameTimings
+        .map((d) => d.inMicroseconds)
+        .reduce((a, b) => a + b);
     return Duration(microseconds: totalMicroseconds ~/ frameTimings.length);
   }
 

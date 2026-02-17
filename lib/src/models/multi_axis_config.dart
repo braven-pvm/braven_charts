@@ -136,11 +136,8 @@ class MultiAxisConfig {
   }
 
   @override
-  int get hashCode => Object.hash(
-        Object.hashAll(axes),
-        Object.hashAll(bindings),
-        mode,
-      );
+  int get hashCode =>
+      Object.hash(Object.hashAll(axes), Object.hashAll(bindings), mode);
 
   @override
   String toString() {

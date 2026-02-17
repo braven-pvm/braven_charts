@@ -76,7 +76,11 @@ class CrosshairSeriesValue {
 
 /// Complete tracking state for crosshair rendering.
 class CrosshairTrackingState {
-  const CrosshairTrackingState({required this.dataX, required this.screenX, required this.seriesValues});
+  const CrosshairTrackingState({
+    required this.dataX,
+    required this.screenX,
+    required this.seriesValues,
+  });
 
   final double dataX;
   final double screenX;
@@ -198,7 +202,12 @@ class CrosshairStyle {
 /// ```
 class CrosshairConfig {
   /// Creates a CrosshairConfig optimized for tracking mode.
-  factory CrosshairConfig.tracking({bool interpolate = true, bool showTooltip = true, bool showMarkers = true, double markerRadius = 4.0}) {
+  factory CrosshairConfig.tracking({
+    bool interpolate = true,
+    bool showTooltip = true,
+    bool showMarkers = true,
+    double markerRadius = 4.0,
+  }) {
     return CrosshairConfig(
       displayMode: CrosshairDisplayMode.tracking,
       interpolateValues: interpolate,
@@ -225,8 +234,14 @@ class CrosshairConfig {
     this.showIntersectionMarkers = true,
     this.intersectionMarkerRadius = 4.0,
   }) : assert(snapRadius >= 0, 'snapRadius must be non-negative'),
-       assert(trackingModeThreshold > 0, 'trackingModeThreshold must be positive'),
-       assert(intersectionMarkerRadius > 0, 'intersectionMarkerRadius must be positive');
+       assert(
+         trackingModeThreshold > 0,
+         'trackingModeThreshold must be positive',
+       ),
+       assert(
+         intersectionMarkerRadius > 0,
+         'intersectionMarkerRadius must be positive',
+       );
 
   /// Creates a default crosshair configuration.
   ///
@@ -339,11 +354,14 @@ class CrosshairConfig {
       coordinateLabelStyle: coordinateLabelStyle ?? this.coordinateLabelStyle,
       style: style ?? this.style,
       displayMode: displayMode ?? this.displayMode,
-      trackingModeThreshold: trackingModeThreshold ?? this.trackingModeThreshold,
+      trackingModeThreshold:
+          trackingModeThreshold ?? this.trackingModeThreshold,
       interpolateValues: interpolateValues ?? this.interpolateValues,
       showTrackingTooltip: showTrackingTooltip ?? this.showTrackingTooltip,
-      showIntersectionMarkers: showIntersectionMarkers ?? this.showIntersectionMarkers,
-      intersectionMarkerRadius: intersectionMarkerRadius ?? this.intersectionMarkerRadius,
+      showIntersectionMarkers:
+          showIntersectionMarkers ?? this.showIntersectionMarkers,
+      intersectionMarkerRadius:
+          intersectionMarkerRadius ?? this.intersectionMarkerRadius,
     );
   }
 
@@ -520,7 +538,17 @@ class TooltipStyle {
 
   @override
   int get hashCode {
-    return Object.hash(backgroundColor, borderColor, borderWidth, borderRadius, shadowColor, shadowBlurRadius, padding, textColor, fontSize);
+    return Object.hash(
+      backgroundColor,
+      borderColor,
+      borderWidth,
+      borderRadius,
+      shadowColor,
+      shadowBlurRadius,
+      padding,
+      textColor,
+      fontSize,
+    );
   }
 }
 
@@ -528,7 +556,8 @@ class TooltipStyle {
 ///
 /// Takes a [BuildContext] and a [dataPoint] map containing the data
 /// to display, and returns a [Widget] representing the custom tooltip.
-typedef TooltipBuilder = Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
+typedef TooltipBuilder =
+    Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
 
 /// Configuration for tooltip behavior and appearance.
 ///
@@ -653,7 +682,17 @@ class TooltipConfig {
 
   @override
   int get hashCode {
-    return Object.hash(enabled, triggerMode, preferredPosition, showDelay, hideDelay, followCursor, offsetFromPoint, style, customBuilder);
+    return Object.hash(
+      enabled,
+      triggerMode,
+      preferredPosition,
+      showDelay,
+      hideDelay,
+      followCursor,
+      offsetFromPoint,
+      style,
+      customBuilder,
+    );
   }
 }
 
@@ -696,7 +735,12 @@ class GestureConfig {
   final double pinchThreshold;
 
   /// Creates a copy with some properties replaced.
-  GestureConfig copyWith({Duration? tapTimeout, Duration? longPressTimeout, double? panThreshold, double? pinchThreshold}) {
+  GestureConfig copyWith({
+    Duration? tapTimeout,
+    Duration? longPressTimeout,
+    double? panThreshold,
+    double? pinchThreshold,
+  }) {
     return GestureConfig(
       tapTimeout: tapTimeout ?? this.tapTimeout,
       longPressTimeout: longPressTimeout ?? this.longPressTimeout,
@@ -716,7 +760,8 @@ class GestureConfig {
   }
 
   @override
-  int get hashCode => Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
+  int get hashCode =>
+      Object.hash(tapTimeout, longPressTimeout, panThreshold, pinchThreshold);
 }
 
 // ==============================================================================
@@ -799,7 +844,14 @@ class KeyboardConfig {
   }
 
   @override
-  int get hashCode => Object.hash(enabled, panStep, zoomStep, enableArrowKeys, enablePlusMinusKeys, enableHomeEndKeys);
+  int get hashCode => Object.hash(
+    enabled,
+    panStep,
+    zoomStep,
+    enableArrowKeys,
+    enablePlusMinusKeys,
+    enableHomeEndKeys,
+  );
 }
 
 // ==============================================================================
@@ -906,7 +958,10 @@ class InteractionConfig {
     this.onCrosshairChanged,
     this.onTooltipChanged,
     this.onKeyboardAction,
-  }) : assert(keyboardZoomPercent > 0 && keyboardZoomPercent <= 100, 'keyboardZoomPercent must be between 1 and 100');
+  }) : assert(
+         keyboardZoomPercent > 0 && keyboardZoomPercent <= 100,
+         'keyboardZoomPercent must be between 1 and 100',
+       );
 
   /// Creates a configuration with all interaction features enabled.
   ///

@@ -28,12 +28,7 @@ class OptionsPanel extends StatelessWidget {
       width: width,
       decoration: BoxDecoration(
         color: theme.cardColor,
-        border: Border(
-          left: BorderSide(
-            color: theme.dividerColor,
-            width: 1,
-          ),
-        ),
+        border: Border(left: BorderSide(color: theme.dividerColor, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,19 +39,12 @@ class OptionsPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
               border: Border(
-                bottom: BorderSide(
-                  color: theme.dividerColor,
-                  width: 1,
-                ),
+                bottom: BorderSide(color: theme.dividerColor, width: 1),
               ),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.tune,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.tune, size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -124,11 +112,7 @@ class _OptionSectionState extends State<OptionSection> {
             child: Row(
               children: [
                 if (widget.icon != null) ...[
-                  Icon(
-                    widget.icon,
-                    size: 16,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(widget.icon, size: 16, color: theme.colorScheme.primary),
                   const SizedBox(width: 6),
                 ],
                 Expanded(
@@ -229,10 +213,7 @@ class EnumOption<T> extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).hintColor,
-          ),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
         ),
         if (subtitle != null)
           Text(
@@ -321,10 +302,7 @@ class SliderOption extends StatelessWidget {
             ),
             Text(
               suffix != null ? '$displayValue $suffix' : displayValue,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -402,10 +380,7 @@ class ColorOption extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).hintColor,
-          ),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -514,10 +489,7 @@ class TextOption extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).hintColor,
-          ),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
         ),
         const SizedBox(height: 4),
         TextFormField(
@@ -525,8 +497,10 @@ class TextOption extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             hintText: hint,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: const OutlineInputBorder(),
           ),
           style: const TextStyle(fontSize: 13),
@@ -563,11 +537,11 @@ class ActionButton extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.onPrimary,
           )
         : isDestructive
-            ? ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              )
-            : null;
+        ? ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          )
+        : null;
 
     return SizedBox(
       width: double.infinity,
@@ -602,25 +576,25 @@ class InfoBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = switch (type) {
       InfoBoxType.info => (
-          Colors.blue.shade50,
-          Colors.blue.shade200,
-          Colors.blue.shade900
-        ),
+        Colors.blue.shade50,
+        Colors.blue.shade200,
+        Colors.blue.shade900,
+      ),
       InfoBoxType.warning => (
-          Colors.orange.shade50,
-          Colors.orange.shade200,
-          Colors.orange.shade900
-        ),
+        Colors.orange.shade50,
+        Colors.orange.shade200,
+        Colors.orange.shade900,
+      ),
       InfoBoxType.success => (
-          Colors.green.shade50,
-          Colors.green.shade200,
-          Colors.green.shade900
-        ),
+        Colors.green.shade50,
+        Colors.green.shade200,
+        Colors.green.shade900,
+      ),
       InfoBoxType.error => (
-          Colors.red.shade50,
-          Colors.red.shade200,
-          Colors.red.shade900
-        ),
+        Colors.red.shade50,
+        Colors.red.shade200,
+        Colors.red.shade900,
+      ),
     };
 
     final icon = switch (type) {

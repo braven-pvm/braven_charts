@@ -44,7 +44,11 @@ abstract interface class StreamingDelegate {
 
   /// Set pan constraint bounds for pause mode.
   void setPanConstraintBounds(
-      double xMin, double xMax, double yMin, double yMax);
+    double xMin,
+    double xMax,
+    double yMin,
+    double yMax,
+  );
 
   /// Clear pan constraint bounds when resuming streaming.
   void clearPanConstraintBounds();
@@ -62,9 +66,8 @@ abstract interface class StreamingDelegate {
 /// The module uses a delegate pattern to interact with ChartRenderBox,
 /// allowing clean separation of concerns while enabling transform updates.
 class StreamingManager {
-  StreamingManager({
-    required StreamingDelegate delegate,
-  }) : _delegate = delegate;
+  StreamingManager({required StreamingDelegate delegate})
+    : _delegate = delegate;
 
   // ==========================================================================
   // Dependencies
@@ -185,11 +188,13 @@ class StreamingManager {
     // When buffer has single point or all points have same X, add epsilon.
     const epsilon = 0.001;
     final xMin = bounds.xMin;
-    final xMax =
-        bounds.xMax <= bounds.xMin ? bounds.xMin + epsilon : bounds.xMax;
+    final xMax = bounds.xMax <= bounds.xMin
+        ? bounds.xMin + epsilon
+        : bounds.xMax;
     final yMin = bounds.yMin;
-    final yMax =
-        bounds.yMax <= bounds.yMin ? bounds.yMin + epsilon : bounds.yMax;
+    final yMax = bounds.yMax <= bounds.yMin
+        ? bounds.yMin + epsilon
+        : bounds.yMax;
 
     // CRITICAL: Update _originalTransform to include FULL streaming data range.
     // This enables:
@@ -226,7 +231,8 @@ class StreamingManager {
     final transform = _delegate.transform;
     if (transform != null && buffer.isNotEmpty) {
       // Check if we're in initial state (default 0-1 bounds from empty series)
-      final isInitialState = transform.dataXMin == 0 &&
+      final isInitialState =
+          transform.dataXMin == 0 &&
           transform.dataXMax == 1 &&
           transform.dataYMin == 0 &&
           transform.dataYMax == 1;
@@ -282,8 +288,9 @@ class StreamingManager {
     if (exceedsMaxVisible) {
       // HYBRID MODE: Too many points to expand, switch to sliding window
       final dataRange = xMax - xMin;
-      final pointSpacing =
-          buffer.length > 1 ? dataRange / (buffer.length - 1) : 1.0;
+      final pointSpacing = buffer.length > 1
+          ? dataRange / (buffer.length - 1)
+          : 1.0;
       final visibleWidth = pointSpacing * maxVisiblePoints;
 
       // Smoothly slide viewport forward
@@ -323,12 +330,12 @@ class StreamingManager {
         if (needsYUpdate) {
           _expansionTargetYMin =
               targetYMin < (_expansionTargetYMin ?? transform.dataYMin)
-                  ? targetYMin
-                  : (_expansionTargetYMin ?? transform.dataYMin);
+              ? targetYMin
+              : (_expansionTargetYMin ?? transform.dataYMin);
           _expansionTargetYMax =
               targetYMax > (_expansionTargetYMax ?? transform.dataYMax)
-                  ? targetYMax
-                  : (_expansionTargetYMax ?? transform.dataYMax);
+              ? targetYMax
+              : (_expansionTargetYMax ?? transform.dataYMax);
         }
 
         _scheduleViewportExpansionAnimation();
@@ -346,7 +353,8 @@ class StreamingManager {
     required double targetYMax,
   }) {
     final bool needsInitialXSetup = isInitialState;
-    final bool needsYUpdate = isInitialState ||
+    final bool needsYUpdate =
+        isInitialState ||
         targetYMin < transform.dataYMin ||
         targetYMax > transform.dataYMax;
 
@@ -719,8 +727,9 @@ class StreamingManager {
 
     // Get styling from series config
     final color = seriesConfig.color ?? const Color(0xFF2196F3);
-    final strokeWidth =
-        (seriesConfig is LineChartSeries) ? seriesConfig.strokeWidth : 2.0;
+    final strokeWidth = (seriesConfig is LineChartSeries)
+        ? seriesConfig.strokeWidth
+        : 2.0;
 
     final paint = Paint()
       ..color = color.withValues(alpha: 0.7)

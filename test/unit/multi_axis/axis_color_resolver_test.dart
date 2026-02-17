@@ -67,11 +67,7 @@ void main() {
     color: blueColor,
   );
 
-  const hrSeries = ChartSeries(
-    id: 'hr-series',
-    points: [],
-    color: redColor,
-  );
+  const hrSeries = ChartSeries(id: 'hr-series', points: [], color: redColor);
 
   const cpuSeries = ChartSeries(
     id: 'cpu-series',

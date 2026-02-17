@@ -36,7 +36,8 @@ class InteractionState {
       hoveredSeriesId: json['hoveredSeriesId'] as String?,
       focusedPoint: json['focusedPoint'] as Map<String, dynamic>?,
       focusedPointIndex: json['focusedPointIndex'] as int? ?? -1,
-      selectedPoints: (json['selectedPoints'] as List<dynamic>?)
+      selectedPoints:
+          (json['selectedPoints'] as List<dynamic>?)
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           const [],
@@ -46,7 +47,8 @@ class InteractionState {
               (json['crosshairPosition']['dy'] as num).toDouble(),
             )
           : null,
-      snapPoints: (json['snapPoints'] as List<dynamic>?)
+      snapPoints:
+          (json['snapPoints'] as List<dynamic>?)
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           const [],
@@ -64,7 +66,8 @@ class InteractionState {
           : const ZoomPanState.initial(),
       activeGesture: json['activeGesture'] != null
           ? GestureDetails.fromJson(
-              json['activeGesture'] as Map<String, dynamic>)
+              json['activeGesture'] as Map<String, dynamic>,
+            )
           : null,
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.parse(json['lastUpdated'] as String)
@@ -94,20 +97,20 @@ class InteractionState {
   ///
   /// All interactive features are disabled and no data points are selected.
   InteractionState.initial()
-      : hoveredPoint = null,
-        hoveredSeriesId = null,
-        focusedPoint = null,
-        focusedPointIndex = -1,
-        selectedPoints = const [],
-        crosshairPosition = null,
-        snapPoints = const [],
-        isCrosshairVisible = false,
-        isTooltipVisible = false,
-        tooltipPosition = null,
-        tooltipDataPoint = null,
-        zoomPanState = const ZoomPanState.initial(),
-        activeGesture = null,
-        lastUpdated = DateTime.now();
+    : hoveredPoint = null,
+      hoveredSeriesId = null,
+      focusedPoint = null,
+      focusedPointIndex = -1,
+      selectedPoints = const [],
+      crosshairPosition = null,
+      snapPoints = const [],
+      isCrosshairVisible = false,
+      isTooltipVisible = false,
+      tooltipPosition = null,
+      tooltipDataPoint = null,
+      zoomPanState = const ZoomPanState.initial(),
+      activeGesture = null,
+      lastUpdated = DateTime.now();
 
   // Hover state (desktop mouse)
   /// The data point currently being hovered by the mouse/touch.
@@ -215,21 +218,15 @@ class InteractionState {
   /// - Tooltip visible requires tooltip position and data point
   void validate() {
     if (isCrosshairVisible && crosshairPosition == null) {
-      throw StateError(
-        'Crosshair cannot be visible without a position',
-      );
+      throw StateError('Crosshair cannot be visible without a position');
     }
 
     if (isTooltipVisible) {
       if (tooltipPosition == null) {
-        throw StateError(
-          'Tooltip cannot be visible without a position',
-        );
+        throw StateError('Tooltip cannot be visible without a position');
       }
       if (tooltipDataPoint == null) {
-        throw StateError(
-          'Tooltip cannot be visible without a data point',
-        );
+        throw StateError('Tooltip cannot be visible without a data point');
       }
     }
   }
@@ -280,19 +277,13 @@ class InteractionState {
       'focusedPointIndex': focusedPointIndex,
       'selectedPoints': selectedPoints,
       'crosshairPosition': crosshairPosition != null
-          ? {
-              'dx': crosshairPosition!.dx,
-              'dy': crosshairPosition!.dy,
-            }
+          ? {'dx': crosshairPosition!.dx, 'dy': crosshairPosition!.dy}
           : null,
       'snapPoints': snapPoints,
       'isCrosshairVisible': isCrosshairVisible,
       'isTooltipVisible': isTooltipVisible,
       'tooltipPosition': tooltipPosition != null
-          ? {
-              'dx': tooltipPosition!.dx,
-              'dy': tooltipPosition!.dy,
-            }
+          ? {'dx': tooltipPosition!.dx, 'dy': tooltipPosition!.dy}
           : null,
       'tooltipDataPoint': tooltipDataPoint,
       'zoomPanState': zoomPanState.toJson(),

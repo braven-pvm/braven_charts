@@ -278,30 +278,39 @@ class ChartTheme {
     final version = json['version'] as String? ?? '1.0';
     if (version != '1.0') {
       print(
-          'Warning: Theme schema version $version, expected 1.0. Parsing best-effort.');
+        'Warning: Theme schema version $version, expected 1.0. Parsing best-effort.',
+      );
     }
 
     final themeData = json['theme'] as Map<String, dynamic>? ?? {};
     return ChartTheme(
-      backgroundColor: _parseColor(themeData['backgroundColor']) ??
+      backgroundColor:
+          _parseColor(themeData['backgroundColor']) ??
           defaultLight.backgroundColor,
       borderColor:
           _parseColor(themeData['borderColor']) ?? defaultLight.borderColor,
-      borderWidth: (themeData['borderWidth'] as num?)?.toDouble() ??
+      borderWidth:
+          (themeData['borderWidth'] as num?)?.toDouble() ??
           defaultLight.borderWidth,
       padding: _parsePadding(themeData['padding']) ?? defaultLight.padding,
       gridStyle: GridStyle.fromJson(
-          themeData['gridStyle'] as Map<String, dynamic>? ?? {}),
+        themeData['gridStyle'] as Map<String, dynamic>? ?? {},
+      ),
       axisStyle: AxisStyle.fromJson(
-          themeData['axisStyle'] as Map<String, dynamic>? ?? {}),
+        themeData['axisStyle'] as Map<String, dynamic>? ?? {},
+      ),
       seriesTheme: SeriesTheme.fromJson(
-          themeData['seriesTheme'] as Map<String, dynamic>? ?? {}),
+        themeData['seriesTheme'] as Map<String, dynamic>? ?? {},
+      ),
       interactionTheme: InteractionTheme.fromJson(
-          themeData['interactionTheme'] as Map<String, dynamic>? ?? {}),
+        themeData['interactionTheme'] as Map<String, dynamic>? ?? {},
+      ),
       typographyTheme: TypographyTheme.fromJson(
-          themeData['typographyTheme'] as Map<String, dynamic>? ?? {}),
+        themeData['typographyTheme'] as Map<String, dynamic>? ?? {},
+      ),
       animationTheme: AnimationTheme.fromJson(
-          themeData['animationTheme'] as Map<String, dynamic>? ?? {}),
+        themeData['animationTheme'] as Map<String, dynamic>? ?? {},
+      ),
     );
   }
 
@@ -343,15 +352,15 @@ class ChartTheme {
 
   @override
   int get hashCode => Object.hash(
-        backgroundColor,
-        borderColor,
-        borderWidth,
-        padding,
-        gridStyle,
-        axisStyle,
-        seriesTheme,
-        interactionTheme,
-        typographyTheme,
-        animationTheme,
-      );
+    backgroundColor,
+    borderColor,
+    borderWidth,
+    padding,
+    gridStyle,
+    axisStyle,
+    seriesTheme,
+    interactionTheme,
+    typographyTheme,
+    animationTheme,
+  );
 }

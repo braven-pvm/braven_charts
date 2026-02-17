@@ -8,8 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Crosshair Label Position Control', () {
     group('CrosshairLabelPosition.overAxis (default)', () {
-      testWidgets('renders crosshair label outside plot area in axis strip',
-          (tester) async {
+      testWidgets('renders crosshair label outside plot area in axis strip', (
+        tester,
+      ) async {
         // Arrange: Chart with overAxis crosshair label (default)
         await tester.pumpWidget(
           MaterialApp(
@@ -52,8 +53,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('overAxis is default when not explicitly specified',
-          (tester) async {
+      testWidgets('overAxis is default when not explicitly specified', (
+        tester,
+      ) async {
         // Arrange: Chart without explicit crosshairLabelPosition
         await tester.pumpWidget(
           MaterialApp(
@@ -181,8 +183,9 @@ void main() {
     });
 
     group('CrosshairLabelPosition.insidePlot', () {
-      testWidgets('renders crosshair label inside plot area near axis edge',
-          (tester) async {
+      testWidgets('renders crosshair label inside plot area near axis edge', (
+        tester,
+      ) async {
         // Arrange: Chart with insidePlot crosshair label
         await tester.pumpWidget(
           MaterialApp(
@@ -399,70 +402,73 @@ void main() {
     });
 
     group('Mixed Crosshair Label Positions', () {
-      testWidgets('multiple axes with different crosshairLabelPosition values',
-          (tester) async {
-        // Arrange: Multi-axis chart with mixed overAxis and insidePlot
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                width: 600,
-                height: 400,
-                child: BravenChartPlus(
-                  series: [
-                    LineChartSeries(
-                      id: 'power',
-                      name: 'Power',
-                      points: const [
-                        ChartDataPoint(x: 0, y: 100),
-                        ChartDataPoint(x: 50, y: 250),
-                        ChartDataPoint(x: 100, y: 180),
-                      ],
-                      yAxisConfig: YAxisConfig(
-                        position: YAxisPosition.left,
-                        label: 'Power',
-                        unit: 'W',
-                        showCrosshairLabel: true,
-                        crosshairLabelPosition:
-                            CrosshairLabelPosition.overAxis, // Outside
+      testWidgets(
+        'multiple axes with different crosshairLabelPosition values',
+        (tester) async {
+          // Arrange: Multi-axis chart with mixed overAxis and insidePlot
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: SizedBox(
+                  width: 600,
+                  height: 400,
+                  child: BravenChartPlus(
+                    series: [
+                      LineChartSeries(
+                        id: 'power',
+                        name: 'Power',
+                        points: const [
+                          ChartDataPoint(x: 0, y: 100),
+                          ChartDataPoint(x: 50, y: 250),
+                          ChartDataPoint(x: 100, y: 180),
+                        ],
+                        yAxisConfig: YAxisConfig(
+                          position: YAxisPosition.left,
+                          label: 'Power',
+                          unit: 'W',
+                          showCrosshairLabel: true,
+                          crosshairLabelPosition:
+                              CrosshairLabelPosition.overAxis, // Outside
+                        ),
                       ),
-                    ),
-                    LineChartSeries(
-                      id: 'heartrate',
-                      name: 'Heart Rate',
-                      points: const [
-                        ChartDataPoint(x: 0, y: 120),
-                        ChartDataPoint(x: 50, y: 155),
-                        ChartDataPoint(x: 100, y: 140),
-                      ],
-                      yAxisConfig: YAxisConfig(
-                        position: YAxisPosition.right,
-                        label: 'Heart Rate',
-                        unit: 'bpm',
-                        showCrosshairLabel: true,
-                        crosshairLabelPosition:
-                            CrosshairLabelPosition.insidePlot, // Inside
+                      LineChartSeries(
+                        id: 'heartrate',
+                        name: 'Heart Rate',
+                        points: const [
+                          ChartDataPoint(x: 0, y: 120),
+                          ChartDataPoint(x: 50, y: 155),
+                          ChartDataPoint(x: 100, y: 140),
+                        ],
+                        yAxisConfig: YAxisConfig(
+                          position: YAxisPosition.right,
+                          label: 'Heart Rate',
+                          unit: 'bpm',
+                          showCrosshairLabel: true,
+                          crosshairLabelPosition:
+                              CrosshairLabelPosition.insidePlot, // Inside
+                        ),
                       ),
+                    ],
+                    normalizationMode: NormalizationMode.perSeries,
+                    interactionConfig: const InteractionConfig(
+                      crosshair: CrosshairConfig(enabled: true),
                     ),
-                  ],
-                  normalizationMode: NormalizationMode.perSeries,
-                  interactionConfig: const InteractionConfig(
-                    crosshair: CrosshairConfig(enabled: true),
                   ),
                 ),
               ),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Assert: Widget builds successfully with mixed positioning
-        expect(find.byType(BravenChartPlus), findsOneWidget);
-      });
+          // Assert: Widget builds successfully with mixed positioning
+          expect(find.byType(BravenChartPlus), findsOneWidget);
+        },
+      );
 
-      testWidgets('all four axis positions with mixed crosshair positions',
-          (tester) async {
+      testWidgets('all four axis positions with mixed crosshair positions', (
+        tester,
+      ) async {
         // Arrange: Complex multi-axis scenario with all positions
         await tester.pumpWidget(
           MaterialApp(
@@ -555,8 +561,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('three axes on same side with alternating positions',
-          (tester) async {
+      testWidgets('three axes on same side with alternating positions', (
+        tester,
+      ) async {
         // Arrange: Multiple axes on left with alternating crosshair positions
         await tester.pumpWidget(
           MaterialApp(
@@ -634,8 +641,9 @@ void main() {
     });
 
     group('Integration with Other Features', () {
-      testWidgets('crosshair label position works with custom colors',
-          (tester) async {
+      testWidgets('crosshair label position works with custom colors', (
+        tester,
+      ) async {
         // Arrange: Chart with custom axis colors and insidePlot
         await tester.pumpWidget(
           MaterialApp(
@@ -679,8 +687,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('crosshair label position works with unit display modes',
-          (tester) async {
+      testWidgets('crosshair label position works with unit display modes', (
+        tester,
+      ) async {
         // Arrange: Chart with different AxisLabelDisplay modes
         await tester.pumpWidget(
           MaterialApp(
@@ -742,8 +751,9 @@ void main() {
         expect(find.byType(BravenChartPlus), findsOneWidget);
       });
 
-      testWidgets('crosshair label position respects showCrosshairLabel flag',
-          (tester) async {
+      testWidgets('crosshair label position respects showCrosshairLabel flag', (
+        tester,
+      ) async {
         // Arrange: Mixed showCrosshairLabel settings
         await tester.pumpWidget(
           MaterialApp(
@@ -805,8 +815,9 @@ void main() {
     });
 
     group('Default Behavior Preservation', () {
-      testWidgets('existing charts without crosshairLabelPosition use overAxis',
-          (tester) async {
+      testWidgets('existing charts without crosshairLabelPosition use overAxis', (
+        tester,
+      ) async {
         // Arrange: Chart as it would have been before this feature
         await tester.pumpWidget(
           MaterialApp(
@@ -850,10 +861,7 @@ void main() {
 
       testWidgets('YAxisConfig defaults to overAxis', (tester) async {
         // Arrange: Create YAxisConfig without crosshairLabelPosition
-        final config = YAxisConfig(
-          position: YAxisPosition.left,
-          label: 'Test',
-        );
+        final config = YAxisConfig(position: YAxisPosition.left, label: 'Test');
 
         // Assert: Verify default value is overAxis
         expect(

@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('XAxisPainter Integration', () {
-    testWidgets('Chart renders successfully with X-axis configuration',
-        (tester) async {
+    testWidgets('Chart renders successfully with X-axis configuration', (
+      tester,
+    ) async {
       // Create a simple chart to verify XAxisPainter is integrated correctly
       final series = [
         const LineChartSeries(
@@ -33,10 +34,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BravenChartPlus(
-                series: series,
-                xAxisConfig: xAxisConfig,
-              ),
+              child: BravenChartPlus(series: series, xAxisConfig: xAxisConfig),
             ),
           ),
         ),
@@ -89,10 +87,7 @@ void main() {
       final series = [
         const LineChartSeries(
           id: 'test-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 10, y: 10),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 10, y: 10)],
           interpolation: LineInterpolation.linear,
           strokeWidth: 2.0,
         ),
@@ -109,10 +104,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BravenChartPlus(
-                series: series,
-                xAxisConfig: xAxisConfig,
-              ),
+              child: BravenChartPlus(series: series, xAxisConfig: xAxisConfig),
             ),
           ),
         ),
@@ -141,10 +133,7 @@ void main() {
       final series = [
         const LineChartSeries(
           id: 'test-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 10, y: 10),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 10, y: 10)],
           interpolation: LineInterpolation.linear,
           strokeWidth: 2.0,
         ),
@@ -164,10 +153,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BravenChartPlus(
-                series: series,
-                xAxisConfig: xAxisConfig,
-              ),
+              child: BravenChartPlus(series: series, xAxisConfig: xAxisConfig),
             ),
           ),
         ),
@@ -193,66 +179,65 @@ void main() {
     });
 
     testWidgets(
-        'Chart derives axis color from first series when config color is null',
-        (tester) async {
-      const seriesColor = Color(0xFFFF0000); // Red
+      'Chart derives axis color from first series when config color is null',
+      (tester) async {
+        const seriesColor = Color(0xFFFF0000); // Red
 
-      final series = [
-        const LineChartSeries(
-          id: 'test-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 10, y: 10),
-          ],
-          color: seriesColor,
-          interpolation: LineInterpolation.linear,
-          strokeWidth: 2.0,
-        ),
-      ];
+        final series = [
+          const LineChartSeries(
+            id: 'test-series',
+            points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 10, y: 10)],
+            color: seriesColor,
+            interpolation: LineInterpolation.linear,
+            strokeWidth: 2.0,
+          ),
+        ];
 
-      const xAxisConfig = XAxisConfig(
-        label: 'Time',
-        color: null, // Should derive from series
-        showAxisLine: true,
-        showTicks: true,
-        labelDisplay: AxisLabelDisplay.labelWithUnit,
-      );
+        const xAxisConfig = XAxisConfig(
+          label: 'Time',
+          color: null, // Should derive from series
+          showAxisLine: true,
+          showTicks: true,
+          labelDisplay: AxisLabelDisplay.labelWithUnit,
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 400,
-              height: 300,
-              child: BravenChartPlus(
-                series: series,
-                xAxisConfig: xAxisConfig,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: BravenChartPlus(
+                  series: series,
+                  xAxisConfig: xAxisConfig,
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // This test will FAIL because:
-      // 1. resolveAxisColor() stub doesn't derive from series
-      // 2. paint() stub doesn't draw anything to verify color usage
+        // This test will FAIL because:
+        // 1. resolveAxisColor() stub doesn't derive from series
+        // 2. paint() stub doesn't draw anything to verify color usage
 
-      final renderBox = tester.firstRenderObject<RenderBox>(
-        find.byType(BravenChartPlus),
-      );
+        final renderBox = tester.firstRenderObject<RenderBox>(
+          find.byType(BravenChartPlus),
+        );
 
-      expect(renderBox, isNotNull);
+        expect(renderBox, isNotNull);
 
-      // The test verifies that:
-      // - resolveAxisColor() examines series list when config.color is null
-      // - First series color is used as axis color
-      // - Falls back to default color if no series or series has no color
-    });
+        // The test verifies that:
+        // - resolveAxisColor() examines series list when config.color is null
+        // - First series color is used as axis color
+        // - Falls back to default color if no series or series has no color
+      },
+    );
 
-    testWidgets('legacy XAxisRenderer is NOT used for X-axis rendering',
-        (tester) async {
+    testWidgets('legacy XAxisRenderer is NOT used for X-axis rendering', (
+      tester,
+    ) async {
       // This test verifies that the new XAxisPainter is used instead of
       // the legacy XAxisRenderer class.
       //
@@ -262,10 +247,7 @@ void main() {
       final series = [
         const LineChartSeries(
           id: 'test-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 10, y: 10),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 10, y: 10)],
           interpolation: LineInterpolation.linear,
           strokeWidth: 2.0,
         ),
@@ -284,10 +266,7 @@ void main() {
             body: SizedBox(
               width: 400,
               height: 300,
-              child: BravenChartPlus(
-                series: series,
-                xAxisConfig: xAxisConfig,
-              ),
+              child: BravenChartPlus(series: series, xAxisConfig: xAxisConfig),
             ),
           ),
         ),

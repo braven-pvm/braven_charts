@@ -110,7 +110,7 @@ class ChartScrollbar extends StatefulWidget {
   ///
   /// See: docs/architecture/SCROLLBAR_ARCHITECTURE_ANALYSIS.md
   final void Function(Offset pixelDelta, ScrollbarInteraction interaction)
-      onPixelDeltaChanged;
+  onPixelDeltaChanged;
 
   /// Visual configuration (colors, sizes, interaction settings).
   ///
@@ -196,13 +196,17 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     // Create flash opacity animation: 0.8 → 0.4 → 0.8 (T091A)
     _flashOpacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.8, end: 0.4)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 0.8,
+          end: 0.4,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50.0,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.4, end: 0.8)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 0.4,
+          end: 0.8,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50.0,
       ),
     ]).animate(_flashAnimationController);
@@ -337,8 +341,9 @@ class _ChartScrollbarState extends State<ChartScrollbar>
                         ? trackLength
                         : widget.theme.thickness,
                     child: MouseRegion(
-                      cursor: _getCursorForZone(state
-                          .hoverZone), // T093: Dynamic cursor based on hover zone
+                      cursor: _getCursorForZone(
+                        state.hoverZone,
+                      ), // T093: Dynamic cursor based on hover zone
                       onHover:
                           _onHover, // T084: Detect edge zones and update hoverZone
                       onExit: (_) => _onExit(), // T084: Clear hoverZone on exit
@@ -347,9 +352,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
                         onPanStart: _onPanStart,
                         onPanUpdate: _onPanUpdate,
                         onPanEnd: _onPanEnd,
-                        child: CustomPaint(
-                          painter: painter,
-                        ),
+                        child: CustomPaint(painter: painter),
                       ),
                     ),
                   );
@@ -367,9 +370,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     _cancelAutoHide();
     _autoHideTimer = Timer(widget.theme.autoHideDelay, () {
       // Fade out scrollbar
-      _stateNotifier.value = _stateNotifier.value.copyWith(
-        isVisible: false,
-      );
+      _stateNotifier.value = _stateNotifier.value.copyWith(isVisible: false);
     });
   }
 
@@ -608,9 +609,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     }
 
     // Set isDragging flag to true
-    _stateNotifier.value = _stateNotifier.value.copyWith(
-      isDragging: true,
-    );
+    _stateNotifier.value = _stateNotifier.value.copyWith(isDragging: true);
 
     // Cancel auto-hide while dragging
     if (widget.theme.autoHide) {
@@ -674,8 +673,9 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     final dragDelta = currentPosition - _dragStartPosition!;
 
     // Extract relevant coordinate based on axis
-    final pixelDelta =
-        widget.axis == Axis.horizontal ? dragDelta.dx : dragDelta.dy;
+    final pixelDelta = widget.axis == Axis.horizontal
+        ? dragDelta.dx
+        : dragDelta.dy;
 
     // Determine interaction type based on drag zone
     ScrollbarInteraction interactionType;
@@ -719,11 +719,11 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     // This tells parent to clear its drag start baseline
     final lastInteraction =
         _dragZone == HitTestZone.leftEdge || _dragZone == HitTestZone.topEdge
-            ? ScrollbarInteraction.zoomLeftOrTop
-            : _dragZone == HitTestZone.rightEdge ||
-                    _dragZone == HitTestZone.bottomEdge
-                ? ScrollbarInteraction.zoomRightOrBottom
-                : ScrollbarInteraction.pan;
+        ? ScrollbarInteraction.zoomLeftOrTop
+        : _dragZone == HitTestZone.rightEdge ||
+              _dragZone == HitTestZone.bottomEdge
+        ? ScrollbarInteraction.zoomRightOrBottom
+        : ScrollbarInteraction.pan;
 
     widget.onPixelDeltaChanged(Offset.zero, lastInteraction);
 
@@ -733,9 +733,7 @@ class _ChartScrollbarState extends State<ChartScrollbar>
     _isAtZoomLimit = false;
 
     // Reset isDragging flag
-    _stateNotifier.value = _stateNotifier.value.copyWith(
-      isDragging: false,
-    );
+    _stateNotifier.value = _stateNotifier.value.copyWith(isDragging: false);
 
     // Restart auto-hide timer if enabled
     if (widget.theme.autoHide) {

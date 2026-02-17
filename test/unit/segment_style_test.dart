@@ -23,10 +23,7 @@ void main() {
     });
 
     test('creates with both properties', () {
-      const style = SegmentStyle(
-        color: Color(0xFF00FF00),
-        strokeWidth: 3.0,
-      );
+      const style = SegmentStyle(color: Color(0xFF00FF00), strokeWidth: 3.0);
       expect(style.color, const Color(0xFF00FF00));
       expect(style.strokeWidth, 3.0);
       expect(style.hasOverrides, isTrue);
@@ -183,9 +180,7 @@ void main() {
         ],
       );
 
-      final colored = series.withSegmentColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withSegmentColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].segmentStyle, isNull);
       expect(colored.points[1].segmentStyle?.color, const Color(0xFFFF0000));
@@ -196,10 +191,7 @@ void main() {
     test('withSegmentColors ignores invalid indices', () {
       final series = const LineChartSeries(
         id: 'test',
-        points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
-        ],
+        points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 1, y: 1)],
       );
 
       // Index 1 is last point - should be ignored (no segment after it)
@@ -233,11 +225,17 @@ void main() {
 
       expect(styled.points[0].segmentStyle, isNull); // x=0, outside
       expect(
-          styled.points[1].segmentStyle?.color, const Color(0xFFFF0000)); // x=5
-      expect(styled.points[2].segmentStyle?.color,
-          const Color(0xFFFF0000)); // x=10
+        styled.points[1].segmentStyle?.color,
+        const Color(0xFFFF0000),
+      ); // x=5
       expect(
-          styled.points[3].segmentStyle, isNull); // x=15, excluded (half-open)
+        styled.points[2].segmentStyle?.color,
+        const Color(0xFFFF0000),
+      ); // x=10
+      expect(
+        styled.points[3].segmentStyle,
+        isNull,
+      ); // x=15, excluded (half-open)
       expect(styled.points[4].segmentStyle, isNull); // x=20, outside
     });
 
@@ -310,10 +308,7 @@ void main() {
     });
 
     test('creates with both properties', () {
-      const style = PointStyle(
-        color: Color(0xFF00FF00),
-        size: 12.0,
-      );
+      const style = PointStyle(color: Color(0xFF00FF00), size: 12.0);
       expect(style.color, const Color(0xFF00FF00));
       expect(style.size, 12.0);
       expect(style.hasOverrides, isTrue);
@@ -469,9 +464,7 @@ void main() {
         ],
       );
 
-      final colored = series.withPointColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withPointColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].pointStyle, isNull);
       expect(colored.points[1].pointStyle?.color, const Color(0xFFFF0000));
@@ -530,10 +523,7 @@ void main() {
       final series = const BarChartSeries(
         id: 'test',
         barWidthPercent: 0.8,
-        points: [
-          ChartDataPoint(x: 0, y: 10),
-          ChartDataPoint(x: 1, y: 20),
-        ],
+        points: [ChartDataPoint(x: 0, y: 10), ChartDataPoint(x: 1, y: 20)],
       );
       expect(series.hasPointOverrides, isFalse);
     });
@@ -585,11 +575,7 @@ void main() {
             y: 10,
             pointStyle: PointStyle.color(Color(0xFFFF0000)),
           ),
-          ChartDataPoint(
-            x: 1,
-            y: 20,
-            pointStyle: PointStyle.size(2.0),
-          ),
+          ChartDataPoint(x: 1, y: 20, pointStyle: PointStyle.size(2.0)),
         ],
       );
 
@@ -639,9 +625,7 @@ void main() {
         ],
       );
 
-      final colored = series.withSegmentColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withSegmentColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].segmentStyle, isNull);
       expect(colored.points[1].segmentStyle?.color, const Color(0xFFFF0000));

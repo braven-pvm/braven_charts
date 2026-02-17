@@ -59,10 +59,12 @@ abstract class EventHandlerDelegate {
   void Function(MouseCursor cursor)? get onCursorChange;
 
   /// Callback for annotation changes.
-  void Function(String annotationId, ChartAnnotation updatedAnnotation)? get onAnnotationChanged;
+  void Function(String annotationId, ChartAnnotation updatedAnnotation)?
+  get onAnnotationChanged;
 
   /// Callback for range annotation creation completion.
-  void Function(double startX, double endX, double startY, double endY)? get onRangeCreationComplete;
+  void Function(double startX, double endX, double startY, double endY)?
+  get onRangeCreationComplete;
 
   // ==================== Delegated Operations ====================
 
@@ -98,7 +100,10 @@ abstract class EventHandlerDelegate {
   void rebuildElementsWithTransform();
 
   /// Clamps pan delta to enforce viewport bounds.
-  (double, double) clampPanDelta(double requestedPlotDx, double requestedPlotDy);
+  (double, double) clampPanDelta(
+    double requestedPlotDx,
+    double requestedPlotDy,
+  );
 
   /// Clamps zoom level to min/max constraints.
   ChartTransform clampZoomLevel(ChartTransform transform);
@@ -153,7 +158,11 @@ abstract class EventHandlerDelegate {
   ///
   /// [normalizedStartY] and [normalizedEndY] are in 0-1 normalized space.
   /// [seriesId] is optional - if null, uses first series for translation.
-  (double startY, double endY) denormalizeYRange(double normalizedStartY, double normalizedEndY, {String? seriesId});
+  (double startY, double endY) denormalizeYRange(
+    double normalizedStartY,
+    double normalizedEndY, {
+    String? seriesId,
+  });
 
   /// Gets the actual Y data range for snapping calculations.
   ///
@@ -177,7 +186,8 @@ abstract class EventHandlerDelegate {
 /// ChartRenderBox owns the spatial index and transform state, while this
 /// module handles all event dispatch and annotation drag logic.
 class EventHandlerManager {
-  EventHandlerManager({required EventHandlerDelegate delegate}) : _delegate = delegate;
+  EventHandlerManager({required EventHandlerDelegate delegate})
+    : _delegate = delegate;
 
   final EventHandlerDelegate _delegate;
 
@@ -380,7 +390,8 @@ class EventHandlerManager {
 
     // Modal states block all events except themselves
     // EXCEPTION: rangeAnnotationCreation mode needs pointer events to work
-    if (coordinator.isModal && coordinator.currentMode != InteractionMode.rangeAnnotationCreation) {
+    if (coordinator.isModal &&
+        coordinator.currentMode != InteractionMode.rangeAnnotationCreation) {
       return;
     }
 
@@ -412,7 +423,8 @@ class EventHandlerManager {
       position,
       event.buttons,
       isModal: coordinator.isModal,
-      onClaimMode: () => coordinator.claimMode(InteractionMode.scrollbarDragging),
+      onClaimMode: () =>
+          coordinator.claimMode(InteractionMode.scrollbarDragging),
       cancelAutoScroll: _delegate.cancelAutoScroll,
     )) {
       return; // Scrollbar claimed the event
@@ -424,7 +436,8 @@ class EventHandlerManager {
     coordinator.startInteraction(position, element: hitElement);
 
     // Check if we hit a resize handle (priority 7)
-    if (event.buttons == kPrimaryMouseButton && hitElement is ResizeHandleElement) {
+    if (event.buttons == kPrimaryMouseButton &&
+        hitElement is ResizeHandleElement) {
       final annotation = hitElement.parentAnnotation;
       final direction = hitElement.direction;
 
@@ -441,7 +454,10 @@ class EventHandlerManager {
       _activeResizeDirection = direction;
       _resizingAnnotation = annotation;
       _resizeStartBounds = annotation.bounds;
-      coordinator.claimMode(InteractionMode.resizingAnnotation, element: annotation);
+      coordinator.claimMode(
+        InteractionMode.resizingAnnotation,
+        element: annotation,
+      );
       _delegate.markNeedsPaint();
       return;
     }
@@ -460,7 +476,10 @@ class EventHandlerManager {
       _delegate.showScrollbarsAndScheduleHide();
     } else if (event.buttons == kSecondaryMouseButton) {
       // Right-click: EXCLUSIVELY context menu (per scenario 8)
-      coordinator.claimMode(InteractionMode.contextMenuOpen, element: hitElement);
+      coordinator.claimMode(
+        InteractionMode.contextMenuOpen,
+        element: hitElement,
+      );
     } else if (event.buttons == kPrimaryMouseButton) {
       // Left-click: Select, or start drag/box-select (determined on move)
       if (hitElement != null) {
@@ -477,25 +496,34 @@ class EventHandlerManager {
   }
 
   /// Handles primary button down on a specific element.
-  void _handlePrimaryButtonDownOnElement(ChartElement hitElement, PointerDownEvent event, Offset position) {
+  void _handlePrimaryButtonDownOnElement(
+    ChartElement hitElement,
+    PointerDownEvent event,
+    Offset position,
+  ) {
     // Check for various annotation types that support potential drag
     if (hitElement is RangeAnnotationElement) {
       _potentialDragRangeAnnotation = hitElement;
       _potentialDragRangeStartPosition = position;
       _potentialDragRangeStartBounds = hitElement.bounds;
-    } else if (hitElement is TextAnnotationElement && hitElement.annotation.allowDragging) {
+    } else if (hitElement is TextAnnotationElement &&
+        hitElement.annotation.allowDragging) {
       _potentialDragTextAnnotation = hitElement;
       _potentialDragTextStartPosition = position;
-    } else if (hitElement is ThresholdAnnotationElement && hitElement.annotation.allowDragging) {
+    } else if (hitElement is ThresholdAnnotationElement &&
+        hitElement.annotation.allowDragging) {
       _potentialDragThresholdAnnotation = hitElement;
       _potentialDragThresholdStartPosition = position;
-    } else if (hitElement is PinAnnotationElement && hitElement.annotation.allowDragging) {
+    } else if (hitElement is PinAnnotationElement &&
+        hitElement.annotation.allowDragging) {
       _potentialDragPinAnnotation = hitElement;
       _potentialDragPinStartPosition = position;
-    } else if (hitElement is LegendAnnotationElement && hitElement.annotation.legendStyle.allowDragging) {
+    } else if (hitElement is LegendAnnotationElement &&
+        hitElement.annotation.legendStyle.allowDragging) {
       _potentialDragLegendAnnotation = hitElement;
       _potentialDragLegendStartPosition = position;
-    } else if (hitElement is PointAnnotationElement && hitElement.annotation.allowDragging) {
+    } else if (hitElement is PointAnnotationElement &&
+        hitElement.annotation.allowDragging) {
       _potentialDragPointAnnotation = hitElement;
       _potentialDragStartPosition = position;
     } else {
@@ -526,7 +554,8 @@ class EventHandlerManager {
     }
 
     // PRIORITY 1.5: Handle range annotation creation mode
-    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation && event.buttons == kPrimaryMouseButton) {
+    if (coordinator.currentMode == InteractionMode.rangeAnnotationCreation &&
+        event.buttons == kPrimaryMouseButton) {
       if (!coordinator.isInteracting) {
         coordinator.startInteraction(position);
       }
@@ -557,16 +586,24 @@ class EventHandlerManager {
   /// Returns true if a potential drag was being checked (handled).
   bool _checkPotentialDrags(PointerMoveEvent event, Offset position) {
     // TextAnnotation potential drag
-    if (_potentialDragTextAnnotation != null && _potentialDragTextStartPosition != null) {
-      final dragDistance = (position - _potentialDragTextStartPosition!).distance;
+    if (_potentialDragTextAnnotation != null &&
+        _potentialDragTextStartPosition != null) {
+      final dragDistance =
+          (position - _potentialDragTextStartPosition!).distance;
 
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragTextAnnotation!;
         _movingTextAnnotation = hitElement;
         _moveTextStartPosition = _potentialDragTextStartPosition;
 
-        _delegate.coordinator.startInteraction(_potentialDragTextStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragTextStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
 
         _potentialDragTextAnnotation = null;
         _potentialDragTextStartPosition = null;
@@ -579,8 +616,10 @@ class EventHandlerManager {
     }
 
     // ThresholdAnnotation potential drag
-    if (_potentialDragThresholdAnnotation != null && _potentialDragThresholdStartPosition != null) {
-      final dragDistance = (position - _potentialDragThresholdStartPosition!).distance;
+    if (_potentialDragThresholdAnnotation != null &&
+        _potentialDragThresholdStartPosition != null) {
+      final dragDistance =
+          (position - _potentialDragThresholdStartPosition!).distance;
 
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragThresholdAnnotation!;
@@ -588,8 +627,14 @@ class EventHandlerManager {
         _moveThresholdStartPosition = _potentialDragThresholdStartPosition;
         _moveThresholdStartValue = hitElement.annotation.value;
 
-        _delegate.coordinator.startInteraction(_potentialDragThresholdStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragThresholdStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
 
         _potentialDragThresholdAnnotation = null;
         _potentialDragThresholdStartPosition = null;
@@ -602,8 +647,10 @@ class EventHandlerManager {
     }
 
     // PinAnnotation potential drag
-    if (_potentialDragPinAnnotation != null && _potentialDragPinStartPosition != null) {
-      final dragDistance = (position - _potentialDragPinStartPosition!).distance;
+    if (_potentialDragPinAnnotation != null &&
+        _potentialDragPinStartPosition != null) {
+      final dragDistance =
+          (position - _potentialDragPinStartPosition!).distance;
 
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragPinAnnotation!;
@@ -612,8 +659,14 @@ class EventHandlerManager {
         _movePinStartX = hitElement.annotation.x;
         _movePinStartY = hitElement.annotation.y;
 
-        _delegate.coordinator.startInteraction(_potentialDragPinStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragPinStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
         _delegate.coordinator.selectElement(hitElement);
 
         _potentialDragPinAnnotation = null;
@@ -627,16 +680,24 @@ class EventHandlerManager {
     }
 
     // LegendAnnotation potential drag
-    if (_potentialDragLegendAnnotation != null && _potentialDragLegendStartPosition != null) {
-      final dragDistance = (position - _potentialDragLegendStartPosition!).distance;
+    if (_potentialDragLegendAnnotation != null &&
+        _potentialDragLegendStartPosition != null) {
+      final dragDistance =
+          (position - _potentialDragLegendStartPosition!).distance;
 
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragLegendAnnotation!;
         _movingLegendAnnotation = hitElement;
         _moveLegendStartPosition = _potentialDragLegendStartPosition;
 
-        _delegate.coordinator.startInteraction(_potentialDragLegendStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragLegendStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
 
         _potentialDragLegendAnnotation = null;
         _potentialDragLegendStartPosition = null;
@@ -649,8 +710,11 @@ class EventHandlerManager {
     }
 
     // RangeAnnotation potential drag
-    if (_potentialDragRangeAnnotation != null && _potentialDragRangeStartPosition != null && _potentialDragRangeStartBounds != null) {
-      final dragDistance = (position - _potentialDragRangeStartPosition!).distance;
+    if (_potentialDragRangeAnnotation != null &&
+        _potentialDragRangeStartPosition != null &&
+        _potentialDragRangeStartBounds != null) {
+      final dragDistance =
+          (position - _potentialDragRangeStartPosition!).distance;
 
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragRangeAnnotation!;
@@ -658,8 +722,14 @@ class EventHandlerManager {
         _moveStartPosition = _potentialDragRangeStartPosition;
         _moveStartBounds = _potentialDragRangeStartBounds;
 
-        _delegate.coordinator.startInteraction(_potentialDragRangeStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragRangeStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
 
         _potentialDragRangeAnnotation = null;
         _potentialDragRangeStartPosition = null;
@@ -673,7 +743,8 @@ class EventHandlerManager {
     }
 
     // PointAnnotation potential drag
-    if (_potentialDragPointAnnotation != null && _potentialDragStartPosition != null) {
+    if (_potentialDragPointAnnotation != null &&
+        _potentialDragStartPosition != null) {
       final dragDistance = (position - _potentialDragStartPosition!).distance;
       if (dragDistance >= _dragThresholdPixels) {
         final hitElement = _potentialDragPointAnnotation!;
@@ -682,8 +753,14 @@ class EventHandlerManager {
         _originalDataPointIndex = hitElement.annotation.dataPointIndex;
         _candidateDataPointIndex = hitElement.annotation.dataPointIndex;
 
-        _delegate.coordinator.startInteraction(_potentialDragStartPosition!, element: hitElement);
-        _delegate.coordinator.claimMode(InteractionMode.draggingAnnotation, element: hitElement);
+        _delegate.coordinator.startInteraction(
+          _potentialDragStartPosition!,
+          element: hitElement,
+        );
+        _delegate.coordinator.claimMode(
+          InteractionMode.draggingAnnotation,
+          element: hitElement,
+        );
 
         _potentialDragPointAnnotation = null;
         _potentialDragStartPosition = null;
@@ -700,7 +777,11 @@ class EventHandlerManager {
 
   /// Handles active annotation drags.
   /// Returns true if an active drag was handled.
-  bool _handleActiveDrags(PointerMoveEvent event, Offset position, Offset startPos) {
+  bool _handleActiveDrags(
+    PointerMoveEvent event,
+    Offset position,
+    Offset startPos,
+  ) {
     final coordinator = _delegate.coordinator;
 
     // Handle resize dragging
@@ -724,35 +805,44 @@ class EventHandlerManager {
     }
 
     // Handle TextAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingTextAnnotation != null && _moveTextStartPosition != null) {
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingTextAnnotation != null &&
+        _moveTextStartPosition != null) {
       _performTextAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
     }
 
     // Handle ThresholdAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingThresholdAnnotation != null && _moveThresholdStartPosition != null) {
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingThresholdAnnotation != null &&
+        _moveThresholdStartPosition != null) {
       _performThresholdAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
     }
 
     // Handle PinAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPinAnnotation != null && _movePinStartPosition != null) {
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingPinAnnotation != null &&
+        _movePinStartPosition != null) {
       _performPinAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
     }
 
     // Handle LegendAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingLegendAnnotation != null && _moveLegendStartPosition != null) {
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingLegendAnnotation != null &&
+        _moveLegendStartPosition != null) {
       _performLegendAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
     }
 
     // Handle PointAnnotation move dragging
-    if (coordinator.currentMode == InteractionMode.draggingAnnotation && _movingPointAnnotation != null) {
+    if (coordinator.currentMode == InteractionMode.draggingAnnotation &&
+        _movingPointAnnotation != null) {
       _performPointAnnotationMove(position);
       _delegate.markNeedsPaint();
       return true;
@@ -762,15 +852,27 @@ class EventHandlerManager {
   }
 
   /// Handles panning and box selection.
-  void _handlePanAndBoxSelection(PointerMoveEvent event, Offset position, Offset startPos) {
+  void _handlePanAndBoxSelection(
+    PointerMoveEvent event,
+    Offset position,
+    Offset startPos,
+  ) {
     final coordinator = _delegate.coordinator;
 
     // Middle-button drag = pan
-    if (event.buttons == kMiddleMouseButton && coordinator.currentMode == InteractionMode.panning) {
-      if (_lastPanPosition != null && _delegate.transform != null && _delegate.originalTransform != null) {
-        final plotDelta = _delegate.widgetToPlot(position) - _delegate.widgetToPlot(_lastPanPosition!);
+    if (event.buttons == kMiddleMouseButton &&
+        coordinator.currentMode == InteractionMode.panning) {
+      if (_lastPanPosition != null &&
+          _delegate.transform != null &&
+          _delegate.originalTransform != null) {
+        final plotDelta =
+            _delegate.widgetToPlot(position) -
+            _delegate.widgetToPlot(_lastPanPosition!);
 
-        final (clampedDx, clampedDy) = _delegate.clampPanDelta(-plotDelta.dx, -plotDelta.dy);
+        final (clampedDx, clampedDy) = _delegate.clampPanDelta(
+          -plotDelta.dx,
+          -plotDelta.dy,
+        );
 
         _delegate.transform = _delegate.transform!.pan(clampedDx, clampedDy);
         _delegate.updateAxesFromTransform();
@@ -802,9 +904,15 @@ class EventHandlerManager {
 
       if (startElement != null && startElement.isDraggable) {
         if (startElement.elementType == ChartElementType.datapoint) {
-          coordinator.claimMode(InteractionMode.draggingDataPoint, element: startElement);
+          coordinator.claimMode(
+            InteractionMode.draggingDataPoint,
+            element: startElement,
+          );
         } else if (startElement.elementType == ChartElementType.annotation) {
-          coordinator.claimMode(InteractionMode.draggingAnnotation, element: startElement);
+          coordinator.claimMode(
+            InteractionMode.draggingAnnotation,
+            element: startElement,
+          );
         }
       } else if (coordinator.shouldStartBoxSelect(position)) {
         // Clear deferred selection states since we're transitioning to box select
@@ -905,7 +1013,9 @@ class EventHandlerManager {
         final topLeft = transform.plotToData(boxRect.left, boxRect.top);
         final bottomRight = transform.plotToData(boxRect.right, boxRect.bottom);
 
-        final startX = topLeft.dx < bottomRight.dx ? topLeft.dx : bottomRight.dx;
+        final startX = topLeft.dx < bottomRight.dx
+            ? topLeft.dx
+            : bottomRight.dx;
         final endX = topLeft.dx > bottomRight.dx ? topLeft.dx : bottomRight.dx;
 
         double startY;
@@ -915,13 +1025,19 @@ class EventHandlerManager {
           // For perSeries mode, calculate normalized Y the SAME way crosshair does:
           // normalizedY = (plotArea.bottom - pixelY) / plotArea.height
           // This gives a true 0-1 value (0 at bottom, 1 at top)
-          final normalizedTopY = (plotArea.bottom - boxRect.top) / plotArea.height;
-          final normalizedBottomY = (plotArea.bottom - boxRect.bottom) / plotArea.height;
+          final normalizedTopY =
+              (plotArea.bottom - boxRect.top) / plotArea.height;
+          final normalizedBottomY =
+              (plotArea.bottom - boxRect.bottom) / plotArea.height;
 
           // Denormalize using axisBounds (same as crosshair)
           final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
-            normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
-            normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
+            normalizedBottomY < normalizedTopY
+                ? normalizedBottomY
+                : normalizedTopY,
+            normalizedBottomY > normalizedTopY
+                ? normalizedBottomY
+                : normalizedTopY,
           );
           startY = denormStartY;
           endY = denormEndY;
@@ -962,25 +1078,38 @@ class EventHandlerManager {
         final plotArea = _delegate.plotArea;
 
         // For X coordinates, use transform.plotToData as usual
-        final leftData = transform.plotToData(resizedBounds.left, resizedBounds.top);
-        final rightData = transform.plotToData(resizedBounds.right, resizedBounds.bottom);
+        final leftData = transform.plotToData(
+          resizedBounds.left,
+          resizedBounds.top,
+        );
+        final rightData = transform.plotToData(
+          resizedBounds.right,
+          resizedBounds.bottom,
+        );
 
         var newStartX = leftData.dx;
         var newEndX = rightData.dx;
         double? newStartY;
         double? newEndY;
 
-        if (resizedAnnotation.startY != null && resizedAnnotation.endY != null) {
+        if (resizedAnnotation.startY != null &&
+            resizedAnnotation.endY != null) {
           if (_delegate.isPerSeriesMode) {
             // For perSeries mode, calculate normalized Y the SAME way crosshair does:
             // normalizedY = (plotArea.bottom - pixelY) / plotArea.height
-            final normalizedTopY = (plotArea.bottom - resizedBounds.top) / plotArea.height;
-            final normalizedBottomY = (plotArea.bottom - resizedBounds.bottom) / plotArea.height;
+            final normalizedTopY =
+                (plotArea.bottom - resizedBounds.top) / plotArea.height;
+            final normalizedBottomY =
+                (plotArea.bottom - resizedBounds.bottom) / plotArea.height;
 
             // Denormalize using axisBounds (same as crosshair)
             final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
-              normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
-              normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
+              normalizedBottomY < normalizedTopY
+                  ? normalizedBottomY
+                  : normalizedTopY,
+              normalizedBottomY > normalizedTopY
+                  ? normalizedBottomY
+                  : normalizedTopY,
             );
             newStartY = denormStartY;
             newEndY = denormEndY;
@@ -1025,16 +1154,28 @@ class EventHandlerManager {
     double? startY,
     double? endY,
   ) {
-    final xTolerance = (transform.dataXMax - transform.dataXMin) * annotation.snapTolerance;
+    final xTolerance =
+        (transform.dataXMax - transform.dataXMin) * annotation.snapTolerance;
     // Use actual Y range for tolerance (not transform range which is 0-1 in perSeries mode)
     final (yMin, yMax) = _delegate.getActualYRange();
     final yTolerance = (yMax - yMin) * annotation.snapTolerance;
 
-    final needsSnapStartX = direction == ResizeDirection.left || direction == ResizeDirection.topLeft || direction == ResizeDirection.bottomLeft;
-    final needsSnapEndX = direction == ResizeDirection.right || direction == ResizeDirection.topRight || direction == ResizeDirection.bottomRight;
+    final needsSnapStartX =
+        direction == ResizeDirection.left ||
+        direction == ResizeDirection.topLeft ||
+        direction == ResizeDirection.bottomLeft;
+    final needsSnapEndX =
+        direction == ResizeDirection.right ||
+        direction == ResizeDirection.topRight ||
+        direction == ResizeDirection.bottomRight;
     final needsSnapStartY =
-        direction == ResizeDirection.bottom || direction == ResizeDirection.bottomLeft || direction == ResizeDirection.bottomRight;
-    final needsSnapEndY = direction == ResizeDirection.top || direction == ResizeDirection.topLeft || direction == ResizeDirection.topRight;
+        direction == ResizeDirection.bottom ||
+        direction == ResizeDirection.bottomLeft ||
+        direction == ResizeDirection.bottomRight;
+    final needsSnapEndY =
+        direction == ResizeDirection.top ||
+        direction == ResizeDirection.topLeft ||
+        direction == ResizeDirection.topRight;
 
     var newStartX = startX;
     var newEndX = endX;
@@ -1042,19 +1183,35 @@ class EventHandlerManager {
     var newEndY = endY;
 
     if (needsSnapStartX) {
-      final snapped = _findNearestDataValue(startX, axis: 'x', tolerance: xTolerance);
+      final snapped = _findNearestDataValue(
+        startX,
+        axis: 'x',
+        tolerance: xTolerance,
+      );
       if (snapped != null) newStartX = snapped;
     }
     if (needsSnapEndX) {
-      final snapped = _findNearestDataValue(endX, axis: 'x', tolerance: xTolerance);
+      final snapped = _findNearestDataValue(
+        endX,
+        axis: 'x',
+        tolerance: xTolerance,
+      );
       if (snapped != null) newEndX = snapped;
     }
     if (needsSnapStartY && startY != null) {
-      final snapped = _findNearestDataValue(startY, axis: 'y', tolerance: yTolerance);
+      final snapped = _findNearestDataValue(
+        startY,
+        axis: 'y',
+        tolerance: yTolerance,
+      );
       if (snapped != null) newStartY = snapped;
     }
     if (needsSnapEndY && endY != null) {
-      final snapped = _findNearestDataValue(endY, axis: 'y', tolerance: yTolerance);
+      final snapped = _findNearestDataValue(
+        endY,
+        axis: 'y',
+        tolerance: yTolerance,
+      );
       if (snapped != null) newEndY = snapped;
     }
 
@@ -1079,8 +1236,14 @@ class EventHandlerManager {
         final plotArea = _delegate.plotArea;
 
         // For X coordinates, use transform.plotToData as usual
-        final leftData = transform.plotToData(movedBounds.left, movedBounds.top);
-        final rightData = transform.plotToData(movedBounds.right, movedBounds.bottom);
+        final leftData = transform.plotToData(
+          movedBounds.left,
+          movedBounds.top,
+        );
+        final rightData = transform.plotToData(
+          movedBounds.right,
+          movedBounds.bottom,
+        );
 
         var newStartX = leftData.dx;
         var newEndX = rightData.dx;
@@ -1091,13 +1254,19 @@ class EventHandlerManager {
           if (_delegate.isPerSeriesMode) {
             // For perSeries mode, calculate normalized Y the SAME way crosshair does:
             // normalizedY = (plotArea.bottom - pixelY) / plotArea.height
-            final normalizedTopY = (plotArea.bottom - movedBounds.top) / plotArea.height;
-            final normalizedBottomY = (plotArea.bottom - movedBounds.bottom) / plotArea.height;
+            final normalizedTopY =
+                (plotArea.bottom - movedBounds.top) / plotArea.height;
+            final normalizedBottomY =
+                (plotArea.bottom - movedBounds.bottom) / plotArea.height;
 
             // Denormalize using axisBounds (same as crosshair)
             final (denormStartY, denormEndY) = _delegate.denormalizeYRange(
-              normalizedBottomY < normalizedTopY ? normalizedBottomY : normalizedTopY,
-              normalizedBottomY > normalizedTopY ? normalizedBottomY : normalizedTopY,
+              normalizedBottomY < normalizedTopY
+                  ? normalizedBottomY
+                  : normalizedTopY,
+              normalizedBottomY > normalizedTopY
+                  ? normalizedBottomY
+                  : normalizedTopY,
             );
             newStartY = denormStartY;
             newEndY = denormEndY;
@@ -1110,13 +1279,19 @@ class EventHandlerManager {
 
         // Apply snapping if enabled
         if (movedAnnotation.snapToValue) {
-          final xTolerance = (transform.dataXMax - transform.dataXMin) * movedAnnotation.snapTolerance;
+          final xTolerance =
+              (transform.dataXMax - transform.dataXMin) *
+              movedAnnotation.snapTolerance;
           // Use actual Y range for tolerance (not transform range which is 0-1 in perSeries mode)
           final (yMin, yMax) = _delegate.getActualYRange();
           final yTolerance = (yMax - yMin) * movedAnnotation.snapTolerance;
 
           if (movedAnnotation.startX != null && movedAnnotation.endX != null) {
-            final snappedStartX = _findNearestDataValue(newStartX, axis: 'x', tolerance: xTolerance);
+            final snappedStartX = _findNearestDataValue(
+              newStartX,
+              axis: 'x',
+              tolerance: xTolerance,
+            );
             if (snappedStartX != null) {
               final width = newEndX - newStartX;
               newStartX = snappedStartX;
@@ -1124,8 +1299,15 @@ class EventHandlerManager {
             }
           }
 
-          if (movedAnnotation.startY != null && movedAnnotation.endY != null && newStartY != null && newEndY != null) {
-            final snappedStartY = _findNearestDataValue(newStartY, axis: 'y', tolerance: yTolerance);
+          if (movedAnnotation.startY != null &&
+              movedAnnotation.endY != null &&
+              newStartY != null &&
+              newEndY != null) {
+            final snappedStartY = _findNearestDataValue(
+              newStartY,
+              axis: 'y',
+              tolerance: yTolerance,
+            );
             if (snappedStartY != null) {
               final height = newEndY - newStartY;
               newStartY = snappedStartY;
@@ -1146,14 +1328,20 @@ class EventHandlerManager {
     }
   }
 
-  void _handlePotentialDragReleases(PointerUpEvent event, bool completedResizeOrMove) {
+  void _handlePotentialDragReleases(
+    PointerUpEvent event,
+    bool completedResizeOrMove,
+  ) {
     // Handle deferred empty-area click (was deferred from pointer-down)
     if (_pointerDownOnEmptyArea) {
       final coordinator = _delegate.coordinator;
       coordinator.clearSelection();
       _delegate.markSpatialIndexDirty();
       if (_emptyAreaClickPosition != null && _emptyAreaClickEvent != null) {
-        _delegate.onEmptyAreaClick?.call(_emptyAreaClickPosition!, _emptyAreaClickEvent!);
+        _delegate.onEmptyAreaClick?.call(
+          _emptyAreaClickPosition!,
+          _emptyAreaClickEvent!,
+        );
       }
       _delegate.markNeedsPaint();
       _pointerDownOnEmptyArea = false;
@@ -1164,7 +1352,8 @@ class EventHandlerManager {
     // Handle deferred non-draggable element selection (was deferred from pointer-down)
     if (_potentialSelectElement != null) {
       final coordinator = _delegate.coordinator;
-      final enableSelection = _delegate.interactionConfig?.enableSelection ?? true;
+      final enableSelection =
+          _delegate.interactionConfig?.enableSelection ?? true;
       if (enableSelection) {
         if (coordinator.isCtrlPressed) {
           coordinator.toggleElementSelection(_potentialSelectElement!);
@@ -1172,8 +1361,14 @@ class EventHandlerManager {
           coordinator.selectElement(_potentialSelectElement!);
         }
         _delegate.markSpatialIndexDirty();
-        coordinator.claimMode(InteractionMode.selecting, element: _potentialSelectElement);
-        _delegate.onElementClick?.call(_potentialSelectElement!, _potentialSelectEvent ?? event);
+        coordinator.claimMode(
+          InteractionMode.selecting,
+          element: _potentialSelectElement,
+        );
+        _delegate.onElementClick?.call(
+          _potentialSelectElement!,
+          _potentialSelectEvent ?? event,
+        );
       }
       _potentialSelectElement = null;
       _potentialSelectEvent = null;
@@ -1243,15 +1438,21 @@ class EventHandlerManager {
     // PointAnnotation
     if (_movingPointAnnotation != null) {
       final movedAnnotation = _movingPointAnnotation!.annotation;
-      final newIndex = _candidateDataPointIndex ?? _originalDataPointIndex ?? movedAnnotation.dataPointIndex;
+      final newIndex =
+          _candidateDataPointIndex ??
+          _originalDataPointIndex ??
+          movedAnnotation.dataPointIndex;
 
       _movingPointAnnotation!.clearCandidateIndex();
       _movingPointAnnotation = null;
       _originalDataPointIndex = null;
       _candidateDataPointIndex = null;
 
-      if (_delegate.onAnnotationChanged != null && newIndex != movedAnnotation.dataPointIndex) {
-        final updatedAnnotation = movedAnnotation.copyWith(dataPointIndex: newIndex);
+      if (_delegate.onAnnotationChanged != null &&
+          newIndex != movedAnnotation.dataPointIndex) {
+        final updatedAnnotation = movedAnnotation.copyWith(
+          dataPointIndex: newIndex,
+        );
         _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
       }
     }
@@ -1268,8 +1469,11 @@ class EventHandlerManager {
       _movingTextAnnotation = null;
       _moveTextStartPosition = null;
 
-      if (_delegate.onAnnotationChanged != null && newPosition != originalPosition) {
-        final updatedAnnotation = movedAnnotation.copyWith(position: newPosition);
+      if (_delegate.onAnnotationChanged != null &&
+          newPosition != originalPosition) {
+        final updatedAnnotation = movedAnnotation.copyWith(
+          position: newPosition,
+        );
         _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
       }
     }
@@ -1309,7 +1513,8 @@ class EventHandlerManager {
       _movePinStartX = null;
       _movePinStartY = null;
 
-      if (_delegate.onAnnotationChanged != null && (newX != originalX || newY != originalY)) {
+      if (_delegate.onAnnotationChanged != null &&
+          (newX != originalX || newY != originalY)) {
         final updatedAnnotation = movedAnnotation.copyWith(x: newX, y: newY);
         _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
       }
@@ -1317,7 +1522,8 @@ class EventHandlerManager {
 
     // LegendAnnotation
     if (_movingLegendAnnotation != null) {
-      final originalPosition = _movingLegendAnnotation!.annotation.customPosition;
+      final originalPosition =
+          _movingLegendAnnotation!.annotation.customPosition;
       final tempPosition = _movingLegendAnnotation!.tempPosition;
       final newPosition = tempPosition ?? originalPosition;
 
@@ -1327,15 +1533,19 @@ class EventHandlerManager {
       _movingLegendAnnotation = null;
       _moveLegendStartPosition = null;
 
-      if (_delegate.onAnnotationChanged != null && newPosition != originalPosition) {
-        final updatedAnnotation = movedAnnotation.copyWith(customPosition: newPosition);
+      if (_delegate.onAnnotationChanged != null &&
+          newPosition != originalPosition) {
+        final updatedAnnotation = movedAnnotation.copyWith(
+          customPosition: newPosition,
+        );
         _delegate.onAnnotationChanged!(movedAnnotation.id, updatedAnnotation);
       }
     }
   }
 
   void _completePan() {
-    final wasPanning = _delegate.coordinator.currentMode == InteractionMode.panning;
+    final wasPanning =
+        _delegate.coordinator.currentMode == InteractionMode.panning;
     _lastPanPosition = null;
 
     if (wasPanning) {
@@ -1347,9 +1557,11 @@ class EventHandlerManager {
 
   void _handleTapForTooltip() {
     final coordinator = _delegate.coordinator;
-    final config = _delegate.interactionConfig?.tooltip ?? const TooltipConfig();
+    final config =
+        _delegate.interactionConfig?.tooltip ?? const TooltipConfig();
 
-    if ((config.triggerMode == TooltipTriggerMode.tap || config.triggerMode == TooltipTriggerMode.both) &&
+    if ((config.triggerMode == TooltipTriggerMode.tap ||
+            config.triggerMode == TooltipTriggerMode.both) &&
         coordinator.hoveredMarker != null &&
         !coordinator.isPanning &&
         coordinator.currentMode != InteractionMode.panning) {
@@ -1442,7 +1654,11 @@ class EventHandlerManager {
 
         if (distance < minDistance) {
           minDistance = distance;
-          nearestMarker = HoveredMarkerInfo(seriesId: element.id, markerIndex: i, plotPosition: markerPlotPos);
+          nearestMarker = HoveredMarkerInfo(
+            seriesId: element.id,
+            markerIndex: i,
+            plotPosition: markerPlotPos,
+          );
         }
       }
     }
@@ -1454,7 +1670,8 @@ class EventHandlerManager {
         (previousMarker == null) != (nearestMarker == null) ||
         (previousMarker != null &&
             nearestMarker != null &&
-            (previousMarker.seriesId != nearestMarker.seriesId || previousMarker.markerIndex != nearestMarker.markerIndex));
+            (previousMarker.seriesId != nearestMarker.seriesId ||
+                previousMarker.markerIndex != nearestMarker.markerIndex));
 
     if (markerChanged) {
       _delegate.invalidateSeriesCache();
@@ -1473,7 +1690,9 @@ class EventHandlerManager {
 
     if (coordinator.currentMode == InteractionMode.scrollbarDragging) return;
 
-    if (coordinator.isShiftPressed && _delegate.transform != null && _delegate.originalTransform != null) {
+    if (coordinator.isShiftPressed &&
+        _delegate.transform != null &&
+        _delegate.originalTransform != null) {
       coordinator.claimMode(InteractionMode.zooming);
 
       final double scrollAmount = event.scrollDelta.dy;
@@ -1486,7 +1705,8 @@ class EventHandlerManager {
       _delegate.zoomChart(zoomFactor, plotCenter: plotPosition, animate: false);
 
       Future.delayed(const Duration(milliseconds: 200), () {
-        if (!coordinator.isDisposed && coordinator.currentMode == InteractionMode.zooming) {
+        if (!coordinator.isDisposed &&
+            coordinator.currentMode == InteractionMode.zooming) {
           coordinator.releaseMode();
         }
       });
@@ -1494,7 +1714,8 @@ class EventHandlerManager {
       coordinator.claimMode(InteractionMode.zooming);
 
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (!coordinator.isDisposed && coordinator.currentMode == InteractionMode.zooming) {
+        if (!coordinator.isDisposed &&
+            coordinator.currentMode == InteractionMode.zooming) {
           coordinator.releaseMode();
         }
       });
@@ -1506,7 +1727,9 @@ class EventHandlerManager {
   // ==========================================================================
 
   void _performResize(Offset currentPosition, Offset startPosition) {
-    if (_resizingAnnotation == null || _activeResizeDirection == null || _resizeStartBounds == null) {
+    if (_resizingAnnotation == null ||
+        _activeResizeDirection == null ||
+        _resizeStartBounds == null) {
       return;
     }
 
@@ -1516,21 +1739,61 @@ class EventHandlerManager {
 
     switch (_activeResizeDirection!) {
       case ResizeDirection.topLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top + delta.dy, oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top + delta.dy,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
       case ResizeDirection.topRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy, oldBounds.right + delta.dx, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top + delta.dy,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom,
+        );
       case ResizeDirection.bottomLeft:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top, oldBounds.right, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.bottomRight:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right + delta.dx, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.top:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top + delta.dy, oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top + delta.dy,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
       case ResizeDirection.right:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right + delta.dx, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right + delta.dx,
+          oldBounds.bottom,
+        );
       case ResizeDirection.bottom:
-        newBounds = Rect.fromLTRB(oldBounds.left, oldBounds.top, oldBounds.right, oldBounds.bottom + delta.dy);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom + delta.dy,
+        );
       case ResizeDirection.left:
-        newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top, oldBounds.right, oldBounds.bottom);
+        newBounds = Rect.fromLTRB(
+          oldBounds.left + delta.dx,
+          oldBounds.top,
+          oldBounds.right,
+          oldBounds.bottom,
+        );
     }
 
     const minSize = 40.0;
@@ -1583,19 +1846,31 @@ class EventHandlerManager {
         tempEndY = leftData.dy;
       }
 
-      _resizingAnnotation!.updateTempValues(startX: tempStartX, endX: tempEndX, startY: tempStartY, endY: tempEndY);
+      _resizingAnnotation!.updateTempValues(
+        startX: tempStartX,
+        endX: tempEndX,
+        startY: tempStartY,
+        endY: tempEndY,
+      );
     }
   }
 
   void _performMove(Offset currentPosition) {
-    if (_movingAnnotation == null || _moveStartPosition == null || _moveStartBounds == null) {
+    if (_movingAnnotation == null ||
+        _moveStartPosition == null ||
+        _moveStartBounds == null) {
       return;
     }
 
     final delta = currentPosition - _moveStartPosition!;
     final oldBounds = _moveStartBounds!;
 
-    final newBounds = Rect.fromLTRB(oldBounds.left + delta.dx, oldBounds.top + delta.dy, oldBounds.right + delta.dx, oldBounds.bottom + delta.dy);
+    final newBounds = Rect.fromLTRB(
+      oldBounds.left + delta.dx,
+      oldBounds.top + delta.dy,
+      oldBounds.right + delta.dx,
+      oldBounds.bottom + delta.dy,
+    );
 
     _movingAnnotation!.updateBounds(newBounds);
   }
@@ -1658,7 +1933,9 @@ class EventHandlerManager {
   }
 
   void _performThresholdAnnotationMove(Offset currentPosition) {
-    if (_movingThresholdAnnotation == null || _moveThresholdStartPosition == null || _moveThresholdStartValue == null) {
+    if (_movingThresholdAnnotation == null ||
+        _moveThresholdStartPosition == null ||
+        _moveThresholdStartValue == null) {
       return;
     }
 
@@ -1690,15 +1967,24 @@ class EventHandlerManager {
   }
 
   void _performPinAnnotationMove(Offset currentPosition) {
-    if (_movingPinAnnotation == null || _movePinStartPosition == null || _movePinStartX == null || _movePinStartY == null) {
+    if (_movingPinAnnotation == null ||
+        _movePinStartPosition == null ||
+        _movePinStartX == null ||
+        _movePinStartY == null) {
       return;
     }
 
     final transform = _delegate.transform;
     if (transform == null) return;
 
-    final dataStart = transform.plotToData(_movePinStartPosition!.dx, _movePinStartPosition!.dy);
-    final dataEnd = transform.plotToData(currentPosition.dx, currentPosition.dy);
+    final dataStart = transform.plotToData(
+      _movePinStartPosition!.dx,
+      _movePinStartPosition!.dy,
+    );
+    final dataEnd = transform.plotToData(
+      currentPosition.dx,
+      currentPosition.dy,
+    );
 
     final dataDelta = dataEnd - dataStart;
 
@@ -1716,7 +2002,10 @@ class EventHandlerManager {
 
     final delta = currentPosition - _moveLegendStartPosition!;
     final currentBounds = _movingLegendAnnotation!.bounds;
-    final newTopLeft = Offset(currentBounds.left + delta.dx, currentBounds.top + delta.dy);
+    final newTopLeft = Offset(
+      currentBounds.left + delta.dx,
+      currentBounds.top + delta.dy,
+    );
 
     _movingLegendAnnotation!.updateTempPosition(newTopLeft);
     _moveLegendStartPosition = currentPosition; // Update for continuous delta
@@ -1744,7 +2033,11 @@ class EventHandlerManager {
     }
   }
 
-  double? _findNearestDataValue(double targetValue, {required String axis, required double tolerance}) {
+  double? _findNearestDataValue(
+    double targetValue, {
+    required String axis,
+    required double tolerance,
+  }) {
     double? nearestValue;
     double minDistance = double.infinity;
 

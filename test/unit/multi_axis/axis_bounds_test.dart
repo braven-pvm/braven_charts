@@ -85,7 +85,10 @@ void main() {
       test('respects explicit min from YAxisConfig', () {
         final axisConfigs = [
           YAxisConfig.withId(
-              id: 'power', position: YAxisPosition.left, min: 0.0),
+            id: 'power',
+            position: YAxisPosition.left,
+            min: 0.0,
+          ),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -107,7 +110,10 @@ void main() {
       test('respects explicit max from YAxisConfig', () {
         final axisConfigs = [
           YAxisConfig.withId(
-              id: 'power', position: YAxisPosition.left, max: 500.0),
+            id: 'power',
+            position: YAxisPosition.left,
+            max: 500.0,
+          ),
         ];
         final bindings = [
           const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
@@ -287,7 +293,9 @@ void main() {
       test('uses custom default axis id', () {
         final axisConfigs = [
           YAxisConfig.withId(
-              id: 'custom-default', position: YAxisPosition.left),
+            id: 'custom-default',
+            position: YAxisPosition.left,
+          ),
         ];
         final bindings = <SeriesAxisBinding>[];
         final seriesYValues = {
@@ -450,32 +458,34 @@ void main() {
         expect(bounds['power']!.max, equals(199.0)); // series99 max
       });
 
-      test('explicit config bounds override data even if outside data range',
-          () {
-        final axisConfigs = [
-          YAxisConfig.withId(
-            id: 'power',
-            position: YAxisPosition.left,
-            min: -100.0, // Below all data
-            max: 1000.0, // Above all data
-          ),
-        ];
-        final bindings = [
-          const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
-        ];
-        final seriesYValues = {
-          'series1': [50.0, 100.0, 150.0],
-        };
+      test(
+        'explicit config bounds override data even if outside data range',
+        () {
+          final axisConfigs = [
+            YAxisConfig.withId(
+              id: 'power',
+              position: YAxisPosition.left,
+              min: -100.0, // Below all data
+              max: 1000.0, // Above all data
+            ),
+          ];
+          final bindings = [
+            const SeriesAxisBinding(seriesId: 'series1', yAxisId: 'power'),
+          ];
+          final seriesYValues = {
+            'series1': [50.0, 100.0, 150.0],
+          };
 
-        final bounds = MultiAxisNormalizer.computeAxisBounds(
-          axisConfigs: axisConfigs,
-          bindings: bindings,
-          seriesYValues: seriesYValues,
-        );
+          final bounds = MultiAxisNormalizer.computeAxisBounds(
+            axisConfigs: axisConfigs,
+            bindings: bindings,
+            seriesYValues: seriesYValues,
+          );
 
-        expect(bounds['power']!.min, equals(-100.0)); // explicit
-        expect(bounds['power']!.max, equals(1000.0)); // explicit
-      });
+          expect(bounds['power']!.min, equals(-100.0)); // explicit
+          expect(bounds['power']!.max, equals(1000.0)); // explicit
+        },
+      );
     });
 
     group('multiple axes', () {

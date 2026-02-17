@@ -125,9 +125,7 @@ class GestureRecognizer {
             .distance;
 
     // Update state
-    _currentState = _currentState!.copyWith(
-      currentPosition: event.position,
-    );
+    _currentState = _currentState!.copyWith(currentPosition: event.position);
 
     // Check for pan gesture
     if (distance > panThreshold && _currentState!.pointerCount == 1) {
@@ -599,10 +597,7 @@ class GestureRecognitionState {
 
 /// Information about an active pointer.
 class _PointerInfo {
-  _PointerInfo({
-    required this.position,
-    required this.timestamp,
-  });
+  _PointerInfo({required this.position, required this.timestamp});
 
   final Offset position;
   final DateTime timestamp;

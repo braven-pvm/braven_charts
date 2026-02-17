@@ -46,8 +46,9 @@ class InteractionTheme {
           .map((e) => (e as num).toDouble())
           .toList(),
       tooltipBackground: _parseColor(json['tooltipBackground'] as String),
-      tooltipTextStyle:
-          _parseTextStyle(json['tooltipTextStyle'] as Map<String, dynamic>),
+      tooltipTextStyle: _parseTextStyle(
+        json['tooltipTextStyle'] as Map<String, dynamic>,
+      ),
       selectionColor: _parseColor(json['selectionColor'] as String),
     );
   }
@@ -251,8 +252,9 @@ class InteractionTheme {
   /// Parses a TextStyle from JSON.
   static TextStyle _parseTextStyle(Map<String, dynamic> json) {
     return TextStyle(
-      color:
-          json['color'] != null ? _parseColor(json['color'] as String) : null,
+      color: json['color'] != null
+          ? _parseColor(json['color'] as String)
+          : null,
       fontSize: json['fontSize'] != null
           ? (json['fontSize'] as num).toDouble()
           : null,

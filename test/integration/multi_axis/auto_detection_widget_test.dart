@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Auto-Detection Widget Tests', () {
-    testWidgets('detects normalization need for >10x range difference',
-        (tester) async {
+    testWidgets('detects normalization need for >10x range difference', (
+      tester,
+    ) async {
       // Power: 0-4000W range = 4000
       // Heart rate: 60-180bpm range = 120
       // Ratio: 4000/120 = 33x (>10x threshold for auto-detection)
@@ -148,8 +149,9 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('respects NormalizationMode.perSeries override',
-        (tester) async {
+    testWidgets('respects NormalizationMode.perSeries override', (
+      tester,
+    ) async {
       // Force normalization even with similar ranges
 
       await tester.pumpWidget(

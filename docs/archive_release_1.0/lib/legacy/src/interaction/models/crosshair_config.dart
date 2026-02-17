@@ -36,8 +36,8 @@ class CrosshairStyle {
     this.labelBackgroundColor = const Color(0xFF333333),
     this.labelTextColor = const Color(0xFFFFFFFF),
     this.labelPadding = 4.0,
-  })  : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
-        assert(labelPadding >= 0, 'labelPadding must be non-negative');
+  }) : assert(lineWidth > 0, 'lineWidth must be greater than 0'),
+       assert(labelPadding >= 0, 'labelPadding must be non-negative');
 
   /// The color of the crosshair lines.
   final Color lineColor;

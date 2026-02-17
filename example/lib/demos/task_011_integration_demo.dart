@@ -65,10 +65,7 @@ class Task011IntegrationDemo extends StatelessWidget {
             'This demo shows BravenChartPlus with multiple Y-axes:\n'
             '• Left axis (Blue): Power in Watts (0-400W)\n'
             '• Right axis (Red): Heart Rate in BPM (60-180)',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -82,8 +79,8 @@ class Task011IntegrationDemo extends StatelessWidget {
       final variation = (i % 3 == 0)
           ? 20
           : (i % 3 == 1)
-              ? -15
-              : 10;
+          ? -15
+          : 10;
       return ChartDataPoint(x: i.toDouble(), y: (base + variation).toDouble());
     });
 
@@ -93,8 +90,8 @@ class Task011IntegrationDemo extends StatelessWidget {
       final variation = (i % 4 == 0)
           ? 8
           : (i % 4 == 2)
-              ? -5
-              : 3;
+          ? -5
+          : 3;
       return ChartDataPoint(x: i.toDouble(), y: (base + variation).toDouble());
     });
 
@@ -170,11 +167,7 @@ class Task011IntegrationDemo extends StatelessWidget {
             '• NormalizationMode.perSeries ensures each series uses full height\n'
             '• Multi-axis rendering via MultiAxisPainter in ChartRenderBox\n'
             '• Alternative: Use yAxisId + yAxes for shared axes',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
           SizedBox(height: 16),
           Text(
@@ -193,11 +186,7 @@ class Task011IntegrationDemo extends StatelessWidget {
             '✅ T018: SeriesAxisResolver for bindings\n'
             '✅ T026: Auto-detection widget test\n'
             '✅ T032: Color axes widget test',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
         ],
       ),

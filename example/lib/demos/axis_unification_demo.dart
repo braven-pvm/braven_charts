@@ -75,9 +75,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: _buildChart(),
-            ),
+            Expanded(child: _buildChart()),
           ],
         ),
       ),
@@ -171,8 +169,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate sine wave data
-  List<ChartDataPoint> _generateSineData(int count,
-      {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
+  List<ChartDataPoint> _generateSineData(
+    int count, {
+    double amplitude = 40,
+    double offset = 50,
+    double frequency = 0.1,
+  }) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.sin(x * frequency);
@@ -181,8 +183,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate cosine wave data
-  List<ChartDataPoint> _generateCosineData(int count,
-      {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
+  List<ChartDataPoint> _generateCosineData(
+    int count, {
+    double amplitude = 30,
+    double offset = 150,
+    double frequency = 0.15,
+  }) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.cos(x * frequency);
@@ -197,8 +203,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points:
-            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.08),
+        points: _generateSineData(
+          100,
+          amplitude: 50,
+          offset: 200,
+          frequency: 0.08,
+        ),
         color: Colors.blue,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -213,8 +223,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'heart_rate',
         name: 'Heart Rate (bpm)',
-        points:
-            _generateSineData(100, amplitude: 20, offset: 150, frequency: 0.12),
+        points: _generateSineData(
+          100,
+          amplitude: 20,
+          offset: 150,
+          frequency: 0.12,
+        ),
         color: Colors.red,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -346,8 +360,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points:
-            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.1),
+        points: _generateSineData(
+          100,
+          amplitude: 50,
+          offset: 200,
+          frequency: 0.1,
+        ),
         color: Colors.blue,
         strokeWidth: 2.5,
         showDataPointMarkers: true,
@@ -369,8 +387,10 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
 
 /// Entry point for standalone demo.
 void main() {
-  runApp(const MaterialApp(
-    title: 'Axis Unification Demo',
-    home: AxisUnificationDemo(),
-  ));
+  runApp(
+    const MaterialApp(
+      title: 'Axis Unification Demo',
+      home: AxisUnificationDemo(),
+    ),
+  );
 }

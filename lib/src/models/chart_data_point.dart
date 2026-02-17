@@ -154,8 +154,9 @@ class ChartDataPoint {
       timestamp: timestamp ?? this.timestamp,
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,
-      segmentStyle:
-          clearSegmentStyle ? null : (segmentStyle ?? this.segmentStyle),
+      segmentStyle: clearSegmentStyle
+          ? null
+          : (segmentStyle ?? this.segmentStyle),
       pointStyle: clearPointStyle ? null : (pointStyle ?? this.pointStyle),
     );
   }

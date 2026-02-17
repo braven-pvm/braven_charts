@@ -13,11 +13,7 @@ import 'package:flutter/material.dart';
 /// - Support for dividers and disabled items
 /// - Optional keyboard shortcuts display
 class WebContextMenu extends StatelessWidget {
-  const WebContextMenu({
-    super.key,
-    required this.items,
-    this.onDismiss,
-  });
+  const WebContextMenu({super.key, required this.items, this.onDismiss});
   final List<WebContextMenuItem> items;
   final VoidCallback? onDismiss;
 
@@ -28,22 +24,16 @@ class WebContextMenu extends StatelessWidget {
     required Offset position,
     required List<WebContextMenuItem> items,
   }) {
-    return Navigator.of(context).push(
-      _WebContextMenuRoute(
-        position: position,
-        items: items,
-      ),
-    );
+    return Navigator.of(
+      context,
+    ).push(_WebContextMenuRoute(position: position, items: items));
   }
 
   @override
   Widget build(BuildContext context) {
     return IntrinsicWidth(
       child: Container(
-        constraints: const BoxConstraints(
-          minWidth: 180,
-          maxWidth: 320,
-        ),
+        constraints: const BoxConstraints(minWidth: 180, maxWidth: 320),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
@@ -110,10 +100,7 @@ class WebContextMenuAction extends WebContextMenuItem {
 
 /// Individual menu item widget with hover state
 class _WebContextMenuItemWidget extends StatefulWidget {
-  const _WebContextMenuItemWidget({
-    required this.item,
-    required this.onTap,
-  });
+  const _WebContextMenuItemWidget({required this.item, required this.onTap});
   final WebContextMenuAction item;
   final VoidCallback onTap;
 
@@ -155,11 +142,7 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
             children: [
               // Icon (18px with 8px right margin)
               if (widget.item.icon != null) ...[
-                Icon(
-                  widget.item.icon,
-                  size: 18,
-                  color: finalIconColor,
-                ),
+                Icon(widget.item.icon, size: 18, color: finalIconColor),
                 const SizedBox(width: 8),
               ] else ...[
                 // Spacer for alignment when no icon
@@ -200,10 +183,7 @@ class _WebContextMenuItemWidgetState extends State<_WebContextMenuItemWidget> {
 
 /// Route for displaying the context menu as an overlay
 class _WebContextMenuRoute extends PopupRoute<String> {
-  _WebContextMenuRoute({
-    required this.position,
-    required this.items,
-  });
+  _WebContextMenuRoute({required this.position, required this.items});
   final Offset position;
   final List<WebContextMenuItem> items;
 
@@ -245,10 +225,7 @@ class _WebContextMenuRoute extends PopupRoute<String> {
           left: position.dx,
           top: position.dy,
           child: FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            ),
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
             child: Material(
               color: Colors.transparent,
               child: WebContextMenu(

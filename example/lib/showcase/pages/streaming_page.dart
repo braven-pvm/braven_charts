@@ -77,14 +77,14 @@ class _StreamingPageState extends State<StreamingPage> {
 
     setState(() {
       // Random walk for realistic streaming data
-      final change = (DateTime.now().millisecondsSinceEpoch % 2 == 0 ? 1 : -1) *
+      final change =
+          (DateTime.now().millisecondsSinceEpoch % 2 == 0 ? 1 : -1) *
           (1 + DateTime.now().millisecondsSinceEpoch % 5).toDouble();
       _lastValue = (_lastValue + change).clamp(10.0, 90.0);
 
-      _streamingData.add(ChartDataPoint(
-        x: _pointCounter.toDouble(),
-        y: _lastValue,
-      ));
+      _streamingData.add(
+        ChartDataPoint(x: _pointCounter.toDouble(), y: _lastValue),
+      );
       _pointCounter++;
 
       // Remove old points if over limit
@@ -180,7 +180,8 @@ class _StreamingPageState extends State<StreamingPage> {
 
       // Info
       InfoBox(
-        message: 'Click Start to begin streaming live data. '
+        message:
+            'Click Start to begin streaming live data. '
             'The chart will update in real-time.',
         type: _isStreaming ? InfoBoxType.success : InfoBoxType.info,
       ),
@@ -238,8 +239,9 @@ class _StreamingPageState extends State<StreamingPage> {
             showLegend: false,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
@@ -248,10 +250,7 @@ class _StreamingPageState extends State<StreamingPage> {
               showAxisLine: _optionsController.showAxisLines,
             ),
             autoScrollConfig: _autoScroll
-                ? const AutoScrollConfig(
-                    enabled: true,
-                    maxVisiblePoints: 100,
-                  )
+                ? const AutoScrollConfig(enabled: true, maxVisiblePoints: 100)
                 : null,
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
@@ -272,18 +271,9 @@ class _StreamingPageState extends State<StreamingPage> {
           value: _isStreaming ? 'Streaming' : 'Paused',
           color: _isStreaming ? Colors.green : Colors.grey,
         ),
-        StatusItem(
-          label: 'Points',
-          value: '${_streamingData.length}',
-        ),
-        StatusItem(
-          label: 'Rate',
-          value: '${1000 ~/ _updateRateMs} Hz',
-        ),
-        StatusItem(
-          label: 'Latest',
-          value: _lastValue.toStringAsFixed(1),
-        ),
+        StatusItem(label: 'Points', value: '${_streamingData.length}'),
+        StatusItem(label: 'Rate', value: '${1000 ~/ _updateRateMs} Hz'),
+        StatusItem(label: 'Latest', value: _lastValue.toStringAsFixed(1)),
       ],
     );
   }

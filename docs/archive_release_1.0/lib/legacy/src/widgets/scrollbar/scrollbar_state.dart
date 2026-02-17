@@ -10,13 +10,13 @@ import 'hit_test_zone.dart';
 class ScrollbarState {
   /// Create initial state (no interaction, default geometry).
   factory ScrollbarState.initial() => const ScrollbarState(
-        handlePosition: 0.0,
-        handleSize: 20.0, // Will be recalculated on first build
-        isDragging: false,
-        hoverZone: null,
-        isFocused: false,
-        isVisible: true,
-      );
+    handlePosition: 0.0,
+    handleSize: 20.0, // Will be recalculated on first build
+    isDragging: false,
+    hoverZone: null,
+    isFocused: false,
+    isVisible: true,
+  );
   const ScrollbarState({
     required this.handlePosition,
     required this.handleSize,
@@ -73,25 +73,24 @@ class ScrollbarState {
     HitTestZone? hoverZone,
     bool? isFocused,
     bool? isVisible,
-  }) =>
-      ScrollbarState(
-        handlePosition: handlePosition ?? this.handlePosition,
-        handleSize: handleSize ?? this.handleSize,
-        isDragging: isDragging ?? this.isDragging,
-        hoverZone: hoverZone ?? this.hoverZone,
-        isFocused: isFocused ?? this.isFocused,
-        isVisible: isVisible ?? this.isVisible,
-      );
+  }) => ScrollbarState(
+    handlePosition: handlePosition ?? this.handlePosition,
+    handleSize: handleSize ?? this.handleSize,
+    isDragging: isDragging ?? this.isDragging,
+    hoverZone: hoverZone ?? this.hoverZone,
+    isFocused: isFocused ?? this.isFocused,
+    isVisible: isVisible ?? this.isVisible,
+  );
 
   /// Create copy with hoverZone explicitly set to null (copyWith with null doesn't work for nullable fields).
   ScrollbarState clearHoverZone() => ScrollbarState(
-        handlePosition: handlePosition,
-        handleSize: handleSize,
-        isDragging: isDragging,
-        hoverZone: null,
-        isFocused: isFocused,
-        isVisible: isVisible,
-      );
+    handlePosition: handlePosition,
+    handleSize: handleSize,
+    isDragging: isDragging,
+    hoverZone: null,
+    isFocused: isFocused,
+    isVisible: isVisible,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -106,11 +105,11 @@ class ScrollbarState {
 
   @override
   int get hashCode => Object.hash(
-        handlePosition,
-        handleSize,
-        isDragging,
-        hoverZone,
-        isFocused,
-        isVisible,
-      );
+    handlePosition,
+    handleSize,
+    isDragging,
+    hoverZone,
+    isFocused,
+    isVisible,
+  );
 }

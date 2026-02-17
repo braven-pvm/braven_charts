@@ -30,11 +30,15 @@ class GridStyle {
     this.minorWidth,
     this.minorDashPattern,
     this.showMinor = false,
-  })  : assert(majorWidth >= 0.0, 'majorWidth must be >= 0'),
-        assert(
-            minorWidth == null || minorWidth >= 0.0, 'minorWidth must be >= 0'),
-        assert(!showMinor || (minorColor != null && minorWidth != null),
-            'If showMinor is true, minorColor and minorWidth must be provided');
+  }) : assert(majorWidth >= 0.0, 'majorWidth must be >= 0'),
+       assert(
+         minorWidth == null || minorWidth >= 0.0,
+         'minorWidth must be >= 0',
+       ),
+       assert(
+         !showMinor || (minorColor != null && minorWidth != null),
+         'If showMinor is true, minorColor and minorWidth must be provided',
+       );
 
   /// Color of major grid lines.
   final Color majorColor;
@@ -190,14 +194,14 @@ class GridStyle {
 
   @override
   int get hashCode => Object.hash(
-        majorColor,
-        majorWidth,
-        Object.hashAll(majorDashPattern ?? []),
-        minorColor,
-        minorWidth,
-        Object.hashAll(minorDashPattern ?? []),
-        showMinor,
-      );
+    majorColor,
+    majorWidth,
+    Object.hashAll(majorDashPattern ?? []),
+    minorColor,
+    minorWidth,
+    Object.hashAll(minorDashPattern ?? []),
+    showMinor,
+  );
 
   bool _listEquals(List<double>? a, List<double>? b) {
     if (a == null && b == null) return true;

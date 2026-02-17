@@ -58,10 +58,11 @@ class AreaChartLayer extends ChartLayer {
     required super.animationConfig,
     required super.zIndex,
     super.isVisible,
-  })  : _stacker = const AreaStacking(),
-        _interpolator = LineInterpolator(
-            config.lineConfig?.lineStyle ?? LineStyle.straight),
-        _renderer = ChartRenderer();
+  }) : _stacker = const AreaStacking(),
+       _interpolator = LineInterpolator(
+         config.lineConfig?.lineStyle ?? LineStyle.straight,
+       ),
+       _renderer = ChartRenderer();
 
   /// Configuration for area rendering (stacking, fill opacity, etc.)
   final AreaChartConfig config;
@@ -98,10 +99,7 @@ class AreaChartLayer extends ChartLayer {
         }).toList();
 
         // Stack the series
-        stackedAreas = _stacker.stack(
-          seriesPoints,
-          baseline: config.baseline,
-        );
+        stackedAreas = _stacker.stack(seriesPoints, baseline: config.baseline);
       } else {
         // Single series or stacking disabled
         // Convert each series to Offset list
@@ -181,7 +179,11 @@ class AreaChartLayer extends ChartLayer {
 
   /// Draws a line overlay on top of the area.
   void _drawLineOverlay(
-      RenderContext context, List<Offset> points, Color color, Paint paint) {
+    RenderContext context,
+    List<Offset> points,
+    Color color,
+    Paint paint,
+  ) {
     final lineConfig = config.lineConfig!;
 
     paint.style = PaintingStyle.stroke;

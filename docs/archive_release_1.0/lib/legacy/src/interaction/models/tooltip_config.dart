@@ -51,11 +51,11 @@ class TooltipStyle {
     this.padding = 8.0,
     this.textColor = const Color(0xFF333333),
     this.fontSize = 12.0,
-  })  : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
-        assert(borderRadius >= 0, 'borderRadius must be non-negative'),
-        assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
-        assert(padding >= 0, 'padding must be non-negative'),
-        assert(fontSize > 0, 'fontSize must be greater than 0');
+  }) : assert(borderWidth >= 0, 'borderWidth must be non-negative'),
+       assert(borderRadius >= 0, 'borderRadius must be non-negative'),
+       assert(shadowBlurRadius >= 0, 'shadowBlurRadius must be non-negative'),
+       assert(padding >= 0, 'padding must be non-negative'),
+       assert(fontSize > 0, 'fontSize must be greater than 0');
 
   /// The background color of the tooltip.
   final Color backgroundColor;
@@ -155,10 +155,8 @@ class TooltipStyle {
 ///
 /// Takes a [BuildContext] and a [dataPoint] map containing the data
 /// to display, and returns a [Widget] representing the custom tooltip.
-typedef TooltipBuilder = Widget Function(
-  BuildContext context,
-  Map<String, dynamic> dataPoint,
-);
+typedef TooltipBuilder =
+    Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
 
 /// Configuration for tooltip behavior and appearance.
 ///

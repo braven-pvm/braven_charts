@@ -61,10 +61,7 @@ class SimulatedDatapoint extends ChartElement with TooltipElement {
     // Per conflict resolution scenario 5: hit radius = 10px for interaction
     // Uses PointHitStrategy for center-based circular hit-zone
     const hitRadius = 10.0;
-    return PointHitStrategy(
-      center: center,
-      radius: hitRadius,
-    ).test(position);
+    return PointHitStrategy(center: center, radius: hitRadius).test(position);
   }
 
   @override

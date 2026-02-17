@@ -55,9 +55,11 @@ class StreamingConfig {
     this.onBufferUpdated,
     this.onReturnToLive,
     this.onStreamError,
-  })  : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
-        assert(autoResumeTimeout > Duration.zero,
-            'autoResumeTimeout must be positive');
+  }) : assert(maxBufferSize > 0, 'maxBufferSize must be positive'),
+       assert(
+         autoResumeTimeout > Duration.zero,
+         'autoResumeTimeout must be positive',
+       );
 
   /// Duration of inactivity before auto-resuming streaming mode (FR-007).
   ///

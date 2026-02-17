@@ -1,7 +1,7 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-/// Tests to verify X-axis padding is applied correctly in multi-axis mode.
+// Tests to verify X-axis padding is applied correctly in multi-axis mode.
 
 import 'package:braven_charts/src/axis/axis.dart' as chart_axis;
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
@@ -23,7 +23,9 @@ void main() {
           id: 'test',
           name: 'Test',
           points: List.generate(
-              61, (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0)),
+            61,
+            (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0),
+          ),
         ),
       ];
 
@@ -32,10 +34,16 @@ void main() {
       // Data range is 0-60
       // 5% padding = 3 on each side
       // Expected: xMin = -3, xMax = 63
-      expect(bounds.xMin, closeTo(-3.0, 0.1),
-          reason: 'xMin should be -3 (5% below 0)');
-      expect(bounds.xMax, closeTo(63.0, 0.1),
-          reason: 'xMax should be 63 (5% above 60)');
+      expect(
+        bounds.xMin,
+        closeTo(-3.0, 0.1),
+        reason: 'xMin should be -3 (5% below 0)',
+      );
+      expect(
+        bounds.xMax,
+        closeTo(63.0, 0.1),
+        reason: 'xMax should be 63 (5% above 60)',
+      );
     });
 
     test('computeDataBounds adds 5% Y padding to data bounds', () {
@@ -45,7 +53,9 @@ void main() {
           id: 'test',
           name: 'Test',
           points: List.generate(
-              61, (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0)),
+            61,
+            (i) => ChartDataPoint(x: i.toDouble(), y: i * 2.0),
+          ),
         ),
       ];
 
@@ -53,10 +63,16 @@ void main() {
 
       // Data Y range is 0-120
       // 5% padding = 6 on each side
-      expect(bounds.yMin, closeTo(-6.0, 0.1),
-          reason: 'yMin should be -6 (5% below 0)');
-      expect(bounds.yMax, closeTo(126.0, 0.1),
-          reason: 'yMax should be 126 (5% above 120)');
+      expect(
+        bounds.yMin,
+        closeTo(-6.0, 0.1),
+        reason: 'yMin should be -6 (5% below 0)',
+      );
+      expect(
+        bounds.yMax,
+        closeTo(126.0, 0.1),
+        reason: 'yMax should be 126 (5% above 120)',
+      );
     });
 
     test('Multi-series bounds include 5% X padding', () {
@@ -66,25 +82,27 @@ void main() {
           id: 'power',
           name: 'Power',
           points: List.generate(
-              200,
-              (i) => ChartDataPoint(
-                  x: i.toDouble(), y: 150 + (i % 50).toDouble())),
+            200,
+            (i) =>
+                ChartDataPoint(x: i.toDouble(), y: 150 + (i % 50).toDouble()),
+          ),
         ),
         LineChartSeries(
           id: 'hr',
           name: 'Heart Rate',
           points: List.generate(
-              200,
-              (i) => ChartDataPoint(
-                  x: i.toDouble(), y: 140 + (i % 30).toDouble())),
+            200,
+            (i) =>
+                ChartDataPoint(x: i.toDouble(), y: 140 + (i % 30).toDouble()),
+          ),
         ),
         LineChartSeries(
           id: 'cadence',
           name: 'Cadence',
           points: List.generate(
-              200,
-              (i) =>
-                  ChartDataPoint(x: i.toDouble(), y: 85 + (i % 10).toDouble())),
+            200,
+            (i) => ChartDataPoint(x: i.toDouble(), y: 85 + (i % 10).toDouble()),
+          ),
         ),
       ];
 
@@ -95,16 +113,21 @@ void main() {
       final xRange = 199.0 - 0.0;
       final expectedXPadding = xRange * 0.05;
 
-      expect(bounds.xMin, lessThan(0),
-          reason: 'xMin should be negative (padded below 0)');
-      expect(bounds.xMax, greaterThan(199),
-          reason: 'xMax should be greater than 199 (padded above)');
+      expect(
+        bounds.xMin,
+        lessThan(0),
+        reason: 'xMin should be negative (padded below 0)',
+      );
+      expect(
+        bounds.xMax,
+        greaterThan(199),
+        reason: 'xMax should be greater than 199 (padded above)',
+      );
       expect(bounds.xMin, closeTo(-expectedXPadding, 0.5));
       expect(bounds.xMax, closeTo(199 + expectedXPadding, 0.5));
     });
 
-    test('Multi-axis mode with perSeries normalization preserves X padding',
-        () {
+    test('Multi-axis mode with perSeries normalization preserves X padding', () {
       // Simulate what happens in BravenChartPlus._buildChartState
       // for multi-axis charts with perSeries normalization
 
@@ -114,9 +137,10 @@ void main() {
           id: 'power',
           name: 'Power',
           points: List.generate(
-              60,
-              (i) => ChartDataPoint(
-                  x: i.toDouble(), y: 150 + (i % 50).toDouble())),
+            60,
+            (i) =>
+                ChartDataPoint(x: i.toDouble(), y: 150 + (i % 50).toDouble()),
+          ),
           yAxisConfig: YAxisConfig(
             position: YAxisPosition.left,
             label: 'Power',
@@ -126,13 +150,11 @@ void main() {
           id: 'hr',
           name: 'Heart Rate',
           points: List.generate(
-              60,
-              (i) => ChartDataPoint(
-                  x: i.toDouble(), y: 140 + (i % 30).toDouble())),
-          yAxisConfig: YAxisConfig(
-            position: YAxisPosition.right,
-            label: 'HR',
+            60,
+            (i) =>
+                ChartDataPoint(x: i.toDouble(), y: 140 + (i % 30).toDouble()),
           ),
+          yAxisConfig: YAxisConfig(position: YAxisPosition.right, label: 'HR'),
         ),
       ];
 
@@ -141,18 +163,29 @@ void main() {
 
       // Verify initial X bounds have 5% padding
       // Data X range: 0-59, 5% = 2.95
-      expect(dataBounds.xMin, lessThan(0),
-          reason: 'Initial xMin should have negative padding');
-      expect(dataBounds.xMax, greaterThan(59),
-          reason: 'Initial xMax should exceed data max');
+      expect(
+        dataBounds.xMin,
+        lessThan(0),
+        reason: 'Initial xMin should have negative padding',
+      );
+      expect(
+        dataBounds.xMax,
+        greaterThan(59),
+        reason: 'Initial xMax should exceed data max',
+      );
 
       // Step 2: Apply perSeries normalization modification (as in _buildChartState)
       // Check if multi-axis config is active
-      final hasMultiAxisConfig = series.any((s) =>
-          s.yAxisConfig != null ||
-          (s.yAxisId != null && s.yAxisId!.isNotEmpty));
-      expect(hasMultiAxisConfig, isTrue,
-          reason: 'Series should have multi-axis config');
+      final hasMultiAxisConfig = series.any(
+        (s) =>
+            s.yAxisConfig != null ||
+            (s.yAxisId != null && s.yAxisId!.isNotEmpty),
+      );
+      expect(
+        hasMultiAxisConfig,
+        isTrue,
+        reason: 'Series should have multi-axis config',
+      );
 
       // Simulate the dataBounds override for perSeries mode
       const normalizationMode = NormalizationMode.perSeries;
@@ -167,10 +200,16 @@ void main() {
       }
 
       // X bounds should STILL have padding after the modification
-      expect(dataBounds.xMin, lessThan(0),
-          reason: 'xMin should preserve negative padding');
-      expect(dataBounds.xMax, greaterThan(59),
-          reason: 'xMax should preserve padding above data max');
+      expect(
+        dataBounds.xMin,
+        lessThan(0),
+        reason: 'xMin should preserve negative padding',
+      );
+      expect(
+        dataBounds.xMax,
+        greaterThan(59),
+        reason: 'xMax should preserve padding above data max',
+      );
 
       // Step 3: Create axis and transform (as in _buildChartState)
       const xAxisConfig = XAxisConfig();
@@ -180,10 +219,16 @@ void main() {
         dataMax: xAxisConfig.max ?? dataBounds.xMax,
       );
 
-      expect(xAxis.dataMin, lessThan(0),
-          reason: 'X-axis dataMin should have padding');
-      expect(xAxis.dataMax, greaterThan(59),
-          reason: 'X-axis dataMax should have padding');
+      expect(
+        xAxis.dataMin,
+        lessThan(0),
+        reason: 'X-axis dataMin should have padding',
+      );
+      expect(
+        xAxis.dataMax,
+        greaterThan(59),
+        reason: 'X-axis dataMax should have padding',
+      );
 
       // Step 4: Create transform (as in chart_render_box)
       final transform = ChartTransform(
@@ -196,20 +241,32 @@ void main() {
         invertY: true,
       );
 
-      expect(transform.dataXMin, lessThan(0),
-          reason: 'Transform dataXMin should have padding');
-      expect(transform.dataXMax, greaterThan(59),
-          reason: 'Transform dataXMax should have padding');
+      expect(
+        transform.dataXMin,
+        lessThan(0),
+        reason: 'Transform dataXMin should have padding',
+      );
+      expect(
+        transform.dataXMax,
+        greaterThan(59),
+        reason: 'Transform dataXMax should have padding',
+      );
 
       // Step 5: Verify data points don't render at the edges
       // First data point at x=0 should map to a position INSIDE the plot area
       final firstPointPos = transform.dataToPlot(0, 0.5);
       final lastPointPos = transform.dataToPlot(59, 0.5);
 
-      expect(firstPointPos.dx, greaterThan(0),
-          reason: 'x=0 should NOT be at left edge');
-      expect(lastPointPos.dx, lessThan(transform.plotWidth),
-          reason: 'x=59 should NOT be at right edge');
+      expect(
+        firstPointPos.dx,
+        greaterThan(0),
+        reason: 'x=0 should NOT be at left edge',
+      );
+      expect(
+        lastPointPos.dx,
+        lessThan(transform.plotWidth),
+        reason: 'x=59 should NOT be at right edge',
+      );
 
       // Calculate expected padding in pixels
       final xRange = transform.dataXMax - transform.dataXMin;
@@ -217,8 +274,11 @@ void main() {
           (-transform.dataXMin) / xRange; // How much of range is left padding
       final expectedLeftPadding = paddingRatio * transform.plotWidth;
 
-      expect(firstPointPos.dx, closeTo(expectedLeftPadding, 1.0),
-          reason: 'First point should be at ~5% from left edge');
+      expect(
+        firstPointPos.dx,
+        closeTo(expectedLeftPadding, 1.0),
+        reason: 'First point should be at ~5% from left edge',
+      );
     });
   });
 }

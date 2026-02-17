@@ -10,12 +10,7 @@ import 'package:braven_charts/legacy/src/widgets/annotations/chart_annotation.da
 import 'package:flutter/material.dart';
 
 /// Rendering style hints for series visualization.
-enum SeriesStyle {
-  line,
-  bar,
-  scatter,
-  area,
-}
+enum SeriesStyle { line, bar, scatter, area }
 
 /// Collection of related ChartDataPoint objects representing a data series.
 ///
@@ -182,12 +177,7 @@ class ChartSeries {
           ChartError.validation(
             'ChartSeries contains invalid point at index $i',
             code: 'SERIES_INVALID_POINT',
-            context: {
-              'id': id,
-              'index': i,
-              'x': point.x,
-              'y': point.y,
-            },
+            context: {'id': id, 'index': i, 'x': point.x, 'y': point.y},
           ),
         );
       }
@@ -241,14 +231,8 @@ class ChartSeries {
   // Note: metadata is intentionally excluded from equality
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        name,
-        Object.hashAll(points),
-        color,
-        style,
-        isXOrdered,
-      );
+  int get hashCode =>
+      Object.hash(id, name, Object.hashAll(points), color, style, isXOrdered);
 
   @override
   String toString() {

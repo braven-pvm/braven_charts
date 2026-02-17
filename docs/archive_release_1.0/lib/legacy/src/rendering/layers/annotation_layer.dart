@@ -77,8 +77,10 @@ final class AnnotationLayer extends RenderLayer {
     required this.positions,
     required this.textStyle,
     required super.zIndex,
-  }) : assert(labels.length == positions.length,
-            'labels and positions must have same length');
+  }) : assert(
+         labels.length == positions.length,
+         'labels and positions must have same length',
+       );
 
   /// Returns true when no labels to render.
   ///

@@ -31,11 +31,9 @@ class BatchProcessor<T, K> {
   ///
   /// [keyExtractor]: Function to extract the grouping key from each item
   /// [batchSize]: Maximum items per batch (default: 100)
-  BatchProcessor({
-    required K Function(T) keyExtractor,
-    this.batchSize = 100,
-  })  : _keyExtractor = keyExtractor,
-        assert(batchSize > 0, 'batchSize must be greater than 0');
+  BatchProcessor({required K Function(T) keyExtractor, this.batchSize = 100})
+    : _keyExtractor = keyExtractor,
+      assert(batchSize > 0, 'batchSize must be greater than 0');
 
   /// Groups items by extracted key.
   ///

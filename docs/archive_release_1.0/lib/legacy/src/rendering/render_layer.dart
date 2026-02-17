@@ -120,10 +120,7 @@ abstract class RenderLayer {
   ///
   /// [zIndex] determines rendering order (lower = earlier/bottom).
   /// [isVisible] defaults to true (layer renders by default).
-  RenderLayer({
-    required this.zIndex,
-    this.isVisible = true,
-  });
+  RenderLayer({required this.zIndex, this.isVisible = true});
 
   /// Execute layer-specific rendering operations.
   ///

@@ -56,10 +56,7 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     } else {
       // Default style for new annotations
       _currentStyle = const AnnotationStyle(
-        textStyle: TextStyle(
-          color: Colors.black,
-          fontSize: 14.0,
-        ),
+        textStyle: TextStyle(color: Colors.black, fontSize: 14.0),
         backgroundColor: Colors.white,
         borderColor: Colors.grey,
         borderWidth: 1.0,
@@ -80,9 +77,7 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
 
     return Dialog(
       backgroundColor: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: 380,
         constraints: const BoxConstraints(maxHeight: 600),
@@ -108,8 +103,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                           ? 'Edit Text Annotation'
                           : 'Add Text Annotation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -147,7 +142,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
                       onPressed: _handleSave,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                       ),
                       child: Text(isEditMode ? 'Update' : 'Add'),
                     ),
@@ -168,9 +165,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
         Text(
           'Text *',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -194,8 +191,10 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.blue.shade800, width: 0.8),
             ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 14,
+            ),
             isDense: true,
           ),
           style: const TextStyle(fontSize: 13),
@@ -230,9 +229,9 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
         Text(
           'Anchor Point',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-              ),
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -322,7 +321,8 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     final text = _textController.text.trim();
 
     final annotation = TextAnnotation(
-      id: widget.annotation?.id ??
+      id:
+          widget.annotation?.id ??
           'text_${DateTime.now().millisecondsSinceEpoch}',
       text: text,
       position: widget.clickPosition,

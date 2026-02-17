@@ -52,9 +52,9 @@ class TextAnnotation extends ChartAnnotation {
     this.backgroundColor,
     this.borderColor,
   }) : assert(
-          position.dx >= 0 && position.dy >= 0,
-          'Position cannot have negative coordinates',
-        );
+         position.dx >= 0 && position.dy >= 0,
+         'Position cannot have negative coordinates',
+       );
 
   /// The text content to display.
   final String text;
@@ -129,16 +129,16 @@ class TextAnnotation extends ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        text,
-        position,
-        anchor,
-        backgroundColor,
-        borderColor,
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    text,
+    position,
+    anchor,
+    backgroundColor,
+    borderColor,
+  );
 }

@@ -33,7 +33,8 @@ class DataGenerator {
   }) {
     return List.generate(count, (i) {
       final x = startX + i * stepX;
-      final y = yOffset +
+      final y =
+          yOffset +
           amplitude * math.sin(frequency * x + phase) +
           (noise > 0 ? (_random.nextDouble() - 0.5) * noise : 0.0);
       return ChartDataPoint(x: x, y: y);
@@ -53,7 +54,8 @@ class DataGenerator {
   }) {
     return List.generate(count, (i) {
       final x = startX + i * stepX;
-      final y = yOffset +
+      final y =
+          yOffset +
           amplitude * math.cos(frequency * x + phase) +
           (noise > 0 ? (_random.nextDouble() - 0.5) * noise : 0.0);
       return ChartDataPoint(x: x, y: y);
@@ -71,7 +73,8 @@ class DataGenerator {
   }) {
     return List.generate(count, (i) {
       final x = startX + i * stepX;
-      final y = intercept +
+      final y =
+          intercept +
           slope * x +
           (noise > 0 ? (_random.nextDouble() - 0.5) * noise : 0.0);
       return ChartDataPoint(x: x, y: y);

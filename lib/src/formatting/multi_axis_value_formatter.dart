@@ -57,11 +57,7 @@ class MultiAxisValueFormatter {
   /// format(value: -50.5, unit: 'W')      // '-50.5 W'
   /// format(value: 100.0, precision: 2)   // '100'
   /// ```
-  static String format({
-    required double value,
-    String? unit,
-    int? precision,
-  }) {
+  static String format({required double value, String? unit, int? precision}) {
     final p = precision ?? optimalPrecision(value);
     final formatted = value.toStringAsFixed(p);
     final clean = _cleanTrailingZeros(formatted);

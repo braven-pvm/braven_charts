@@ -23,9 +23,9 @@ void main() {
   // Initialize Flutter test binding for SchedulerBinding
   TestWidgetsFlutterBinding.ensureInitialized();
 
-// =============================================================================
-// Test Helpers
-// =============================================================================
+  // =============================================================================
+  // Test Helpers
+  // =============================================================================
 
   /// Creates a test transform for series elements.
   ChartTransform createTestTransform() {
@@ -51,7 +51,8 @@ void main() {
     final series = LineChartSeries(
       id: id,
       name: name,
-      points: points ??
+      points:
+          points ??
           const [
             ChartDataPoint(x: 0, y: 0),
             ChartDataPoint(x: 50, y: 100),
@@ -61,10 +62,7 @@ void main() {
       dataPointMarkerRadius: markerRadius,
     );
 
-    return SeriesElement(
-      series: series,
-      transform: createTestTransform(),
-    );
+    return SeriesElement(series: series, transform: createTestTransform());
   }
 
   /// Creates a mock HoveredMarkerInfo for testing.
@@ -80,9 +78,9 @@ void main() {
     );
   }
 
-// =============================================================================
-// Tests
-// =============================================================================
+  // =============================================================================
+  // Tests
+  // =============================================================================
 
   group('TooltipRenderer', () {
     late TooltipRenderer renderer;
@@ -162,10 +160,7 @@ void main() {
 
       test('uses series name in tooltip when available', () {
         elements = [
-          createTestSeriesElement(
-            id: 'test-series',
-            name: 'Test Series Name',
-          ),
+          createTestSeriesElement(id: 'test-series', name: 'Test Series Name'),
         ];
 
         final markerInfo = createTestMarkerInfo();
@@ -365,7 +360,9 @@ void main() {
 
         const effectiveBindings = [
           SeriesAxisBinding(
-              seriesId: 'test-series', yAxisId: 'test-series_axis'),
+            seriesId: 'test-series',
+            yAxisId: 'test-series_axis',
+          ),
         ];
 
         expect(
@@ -416,19 +413,13 @@ void main() {
       test('handles ScatterChartSeries', () {
         const series = ScatterChartSeries(
           id: 'scatter-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 50, y: 100),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 50, y: 100)],
           color: Color(0xFF0000FF),
           markerRadius: 6.0,
         );
 
         elements = [
-          SeriesElement(
-            series: series,
-            transform: createTestTransform(),
-          ),
+          SeriesElement(series: series, transform: createTestTransform()),
         ];
 
         final markerInfo = createTestMarkerInfo(seriesId: 'scatter-series');
@@ -456,19 +447,13 @@ void main() {
       test('handles AreaChartSeries', () {
         const series = AreaChartSeries(
           id: 'area-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 50, y: 100),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 50, y: 100)],
           color: Color(0xFF0000FF),
           dataPointMarkerRadius: 5.0,
         );
 
         elements = [
-          SeriesElement(
-            series: series,
-            transform: createTestTransform(),
-          ),
+          SeriesElement(series: series, transform: createTestTransform()),
         ];
 
         final markerInfo = createTestMarkerInfo(seriesId: 'area-series');

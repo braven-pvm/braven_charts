@@ -37,8 +37,8 @@ class LinearScale {
     required this.pixelMin,
     required this.pixelMax,
     this.invertY = false,
-  })  : assert(dataMax > dataMin, 'dataMax must be greater than dataMin'),
-        assert(pixelMax > pixelMin, 'pixelMax must be greater than pixelMin');
+  }) : assert(dataMax > dataMin, 'dataMax must be greater than dataMin'),
+       assert(pixelMax > pixelMin, 'pixelMax must be greater than pixelMin');
 
   /// Range of data values.
   double get dataRange => dataMax - dataMin;
@@ -70,8 +70,9 @@ class LinearScale {
   /// If [invertY] is true, inverts the mapping so lower pixel positions
   /// (top of screen) map to higher data values.
   double pixelToData(double pixelValue) {
-    final adjustedPixel =
-        invertY ? pixelMax - (pixelValue - pixelMin) : pixelValue;
+    final adjustedPixel = invertY
+        ? pixelMax - (pixelValue - pixelMin)
+        : pixelValue;
 
     final normalizedPixel = (adjustedPixel - pixelMin) / pixelRange;
     return dataMin + normalizedPixel * dataRange;
@@ -115,6 +116,7 @@ class LinearScale {
   }
 
   @override
-  String toString() => 'LinearScale(data: [$dataMin, $dataMax], '
+  String toString() =>
+      'LinearScale(data: [$dataMin, $dataMax], '
       'pixels: [$pixelMin, $pixelMax], invertY: $invertY)';
 }

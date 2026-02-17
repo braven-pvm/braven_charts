@@ -154,10 +154,7 @@ void main() {
       }
 
       test('allows pan within bounds', () {
-        final currentTransform = createTransform(
-          dataXMin: 25,
-          dataXMax: 75,
-        );
+        final currentTransform = createTransform(dataXMin: 25, dataXMax: 75);
         final constraintTransform = createTransform();
 
         // Small pan that stays within bounds
@@ -245,10 +242,7 @@ void main() {
 
       test('allows full movement when viewport larger than data', () {
         // Zoomed out so viewport is larger than data
-        final currentTransform = createTransform(
-          dataXMin: -50,
-          dataXMax: 150,
-        );
+        final currentTransform = createTransform(dataXMin: -50, dataXMax: 150);
         final constraintTransform = createTransform();
 
         // Large pan request

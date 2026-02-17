@@ -44,15 +44,20 @@ class SeriesTheme {
     required this.dashPatterns,
     required this.markerShapes,
     required this.markerSizes,
-  })  : assert(colors.length > 0, 'colors must have at least 1 element'),
-        assert(
-            lineWidths.length > 0, 'lineWidths must have at least 1 element'),
-        assert(dashPatterns.length > 0,
-            'dashPatterns must have at least 1 element'),
-        assert(markerShapes.length > 0,
-            'markerShapes must have at least 1 element'),
-        assert(
-            markerSizes.length > 0, 'markerSizes must have at least 1 element');
+  }) : assert(colors.length > 0, 'colors must have at least 1 element'),
+       assert(lineWidths.length > 0, 'lineWidths must have at least 1 element'),
+       assert(
+         dashPatterns.length > 0,
+         'dashPatterns must have at least 1 element',
+       ),
+       assert(
+         markerShapes.length > 0,
+         'markerShapes must have at least 1 element',
+       ),
+       assert(
+         markerSizes.length > 0,
+         'markerSizes must have at least 1 element',
+       );
 
   /// Series colors. Cycles for series index >= colors.length.
   final List<Color> colors;
@@ -165,7 +170,7 @@ class SeriesTheme {
     dashPatterns: [
       null,
       [5.0, 5.0],
-      [10.0, 5.0, 2.0, 5.0]
+      [10.0, 5.0, 2.0, 5.0],
     ], // Varied patterns
     markerShapes: [MarkerShape.none],
     markerSizes: [6.0],
@@ -184,7 +189,7 @@ class SeriesTheme {
       MarkerShape.circle,
       MarkerShape.square,
       MarkerShape.triangle,
-      MarkerShape.diamond
+      MarkerShape.diamond,
     ],
     markerSizes: [12.0],
   );
@@ -203,7 +208,7 @@ class SeriesTheme {
     dashPatterns: [
       null,
       [8.0, 4.0],
-      [2.0, 2.0]
+      [2.0, 2.0],
     ], // Varied for redundant encoding
     markerShapes: [
       MarkerShape.circle,
@@ -251,29 +256,36 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)
+      colors:
+          (json['colors'] as List<dynamic>?)
               ?.map((c) => _parseColor(c))
               .whereType<Color>()
               .toList() ??
           defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)
+      lineWidths:
+          (json['lineWidths'] as List<dynamic>?)
               ?.map((w) => (w as num).toDouble())
               .toList() ??
           defaultLight.lineWidths,
-      dashPatterns: (json['dashPatterns'] as List<dynamic>?)
-              ?.map((p) => p == null
-                  ? null
-                  : (p as List<dynamic>)
-                      .map((e) => (e as num).toDouble())
-                      .toList())
+      dashPatterns:
+          (json['dashPatterns'] as List<dynamic>?)
+              ?.map(
+                (p) => p == null
+                    ? null
+                    : (p as List<dynamic>)
+                          .map((e) => (e as num).toDouble())
+                          .toList(),
+              )
               .toList() ??
           defaultLight.dashPatterns,
-      markerShapes: (json['markerShapes'] as List<dynamic>?)
+      markerShapes:
+          (json['markerShapes'] as List<dynamic>?)
               ?.map((s) => _parseMarkerShape(s))
               .whereType<MarkerShape>()
               .toList() ??
           defaultLight.markerShapes,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)
+      markerSizes:
+          (json['markerSizes'] as List<dynamic>?)
               ?.map((s) => (s as num).toDouble())
               .toList() ??
           defaultLight.markerSizes,
@@ -290,8 +302,10 @@ class SeriesTheme {
 
   static MarkerShape? _parseMarkerShape(dynamic value) {
     if (value is! String) return null;
-    return MarkerShape.values
-        .firstWhere((s) => s.name == value, orElse: () => MarkerShape.circle);
+    return MarkerShape.values.firstWhere(
+      (s) => s.name == value,
+      orElse: () => MarkerShape.circle,
+    );
   }
 
   // ========== Equality ==========
@@ -309,13 +323,12 @@ class SeriesTheme {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(colors),
-        Object.hashAll(lineWidths),
-        Object.hashAll(
-            dashPatterns.map((p) => p == null ? 0 : Object.hashAll(p))),
-        Object.hashAll(markerShapes),
-        Object.hashAll(markerSizes),
-      );
+    Object.hashAll(colors),
+    Object.hashAll(lineWidths),
+    Object.hashAll(dashPatterns.map((p) => p == null ? 0 : Object.hashAll(p))),
+    Object.hashAll(markerShapes),
+    Object.hashAll(markerSizes),
+  );
 
   bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

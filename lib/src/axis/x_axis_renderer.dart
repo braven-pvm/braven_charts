@@ -68,8 +68,9 @@ class XAxisRenderer {
     final ticks = axis.ticks;
 
     // Determine Y position of axis
-    final axisY =
-        config.position == AxisPosition.bottom ? plotArea.bottom : plotArea.top;
+    final axisY = config.position == AxisPosition.bottom
+        ? plotArea.bottom
+        : plotArea.top;
 
     // Draw axis line
     if (config.showAxisLine) {
@@ -117,14 +118,11 @@ class XAxisRenderer {
         final labelY = config.position == AxisPosition.bottom
             ? axisY + config.tickLength + config.labelPadding
             : axisY -
-                config.tickLength -
-                config.labelPadding -
-                textPainter.height;
+                  config.tickLength -
+                  config.labelPadding -
+                  textPainter.height;
 
-        textPainter.paint(
-          canvas,
-          Offset(x - textPainter.width / 2, labelY),
-        );
+        textPainter.paint(canvas, Offset(x - textPainter.width / 2, labelY));
       }
     }
 
@@ -140,9 +138,9 @@ class XAxisRenderer {
       // For top axis: place above at top of chart
       final labelY = config.position == AxisPosition.bottom
           ? axisY +
-              config.tickLength +
-              config.labelPadding +
-              20 // Between tick labels and scrollbar
+                config.tickLength +
+                config.labelPadding +
+                20 // Between tick labels and scrollbar
           : 12.0; // Top of chart
 
       labelPainter.paint(

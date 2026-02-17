@@ -142,10 +142,7 @@ class AreaStacking {
 
   /// Creates a baseline at y=0
   List<Offset> _createZeroBaseline(List<Offset> referencePoints, int length) {
-    return List.generate(
-      length,
-      (i) => Offset(referencePoints[i].dx, 0),
-    );
+    return List.generate(length, (i) => Offset(referencePoints[i].dx, 0));
   }
 
   /// Creates a baseline at a fixed y-value

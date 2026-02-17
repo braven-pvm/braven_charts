@@ -66,7 +66,7 @@ class TransformMatrix {
   /// - [TransformMatrix.scale]
   /// - [TransformMatrix.combined]
   const TransformMatrix._(this._values)
-      : assert(_values.length == 9, 'Matrix must have exactly 9 values');
+    : assert(_values.length == 9, 'Matrix must have exactly 9 values');
 
   /// Create identity matrix (no transformation).
   ///
@@ -85,11 +85,13 @@ class TransformMatrix {
   /// // result == Point(10.0, 20.0)
   /// ```
   factory TransformMatrix.identity() {
-    return TransformMatrix._(Float32List.fromList([
-      1.0, 0.0, 0.0, // Column 0
-      0.0, 1.0, 0.0, // Column 1
-      0.0, 0.0, 1.0, // Column 2
-    ]));
+    return TransformMatrix._(
+      Float32List.fromList([
+        1.0, 0.0, 0.0, // Column 0
+        0.0, 1.0, 0.0, // Column 1
+        0.0, 0.0, 1.0, // Column 2
+      ]),
+    );
   }
 
   /// Create translation matrix (shift by offset).
@@ -115,11 +117,13 @@ class TransformMatrix {
   /// // result == Point(60.0, 50.0)
   /// ```
   factory TransformMatrix.translation(double dx, double dy) {
-    return TransformMatrix._(Float32List.fromList([
-      1.0, 0.0, 0.0, // Column 0
-      0.0, 1.0, 0.0, // Column 1
-      dx, dy, 1.0, // Column 2
-    ]));
+    return TransformMatrix._(
+      Float32List.fromList([
+        1.0, 0.0, 0.0, // Column 0
+        0.0, 1.0, 0.0, // Column 1
+        dx, dy, 1.0, // Column 2
+      ]),
+    );
   }
 
   /// Create scale matrix (scale about origin).
@@ -145,11 +149,13 @@ class TransformMatrix {
   /// // result == Point(20.0, 60.0)
   /// ```
   factory TransformMatrix.scale(double sx, double sy) {
-    return TransformMatrix._(Float32List.fromList([
-      sx, 0.0, 0.0, // Column 0
-      0.0, sy, 0.0, // Column 1
-      0.0, 0.0, 1.0, // Column 2
-    ]));
+    return TransformMatrix._(
+      Float32List.fromList([
+        sx, 0.0, 0.0, // Column 0
+        0.0, sy, 0.0, // Column 1
+        0.0, 0.0, 1.0, // Column 2
+      ]),
+    );
   }
 
   /// Compose multiple transformations (matrix multiplication).
@@ -254,26 +260,18 @@ class TransformMatrix {
     assert(points.length >= 4, 'transformBatch4 requires at least 4 points');
 
     // Load 4 x-coordinates and 4 y-coordinates
-    final xVec = Float32x4(
-      points[0].x,
-      points[1].x,
-      points[2].x,
-      points[3].x,
-    );
-    final yVec = Float32x4(
-      points[0].y,
-      points[1].y,
-      points[2].y,
-      points[3].y,
-    );
+    final xVec = Float32x4(points[0].x, points[1].x, points[2].x, points[3].x);
+    final yVec = Float32x4(points[0].y, points[1].y, points[2].y, points[3].y);
 
     // Apply matrix in parallel: x' = x * m00 + y * m10 + m20
-    final xPrime = xVec.scale(_values[0]) +
+    final xPrime =
+        xVec.scale(_values[0]) +
         yVec.scale(_values[3]) +
         Float32x4.splat(_values[6]);
 
     // y' = x * m01 + y * m11 + m21
-    final yPrime = xVec.scale(_values[1]) +
+    final yPrime =
+        xVec.scale(_values[1]) +
         yVec.scale(_values[4]) +
         Float32x4.splat(_values[7]);
 
@@ -321,11 +319,13 @@ class TransformMatrix {
     }
 
     final invDet = 1.0 / det;
-    return TransformMatrix._(Float32List.fromList([
-      d * invDet, -b * invDet, 0.0, // Column 0
-      -c * invDet, a * invDet, 0.0, // Column 1
-      (c * f - d * e) * invDet, (b * e - a * f) * invDet, 1.0, // Column 2
-    ]));
+    return TransformMatrix._(
+      Float32List.fromList([
+        d * invDet, -b * invDet, 0.0, // Column 0
+        -c * invDet, a * invDet, 0.0, // Column 1
+        (c * f - d * e) * invDet, (b * e - a * f) * invDet, 1.0, // Column 2
+      ]),
+    );
   }
 
   /// Matrix multiplication (composition operator).
@@ -345,17 +345,19 @@ class TransformMatrix {
   /// ```
   TransformMatrix operator *(TransformMatrix other) {
     final a = _values, b = other._values;
-    return TransformMatrix._(Float32List.fromList([
-      a[0] * b[0] + a[3] * b[1], // m00
-      a[1] * b[0] + a[4] * b[1], // m01
-      0.0, // m02 (always 0 for affine)
-      a[0] * b[3] + a[3] * b[4], // m10
-      a[1] * b[3] + a[4] * b[4], // m11
-      0.0, // m12 (always 0 for affine)
-      a[0] * b[6] + a[3] * b[7] + a[6], // m20
-      a[1] * b[6] + a[4] * b[7] + a[7], // m21
-      1.0, // m22 (always 1 for affine)
-    ]));
+    return TransformMatrix._(
+      Float32List.fromList([
+        a[0] * b[0] + a[3] * b[1], // m00
+        a[1] * b[0] + a[4] * b[1], // m01
+        0.0, // m02 (always 0 for affine)
+        a[0] * b[3] + a[3] * b[4], // m10
+        a[1] * b[3] + a[4] * b[4], // m11
+        0.0, // m12 (always 0 for affine)
+        a[0] * b[6] + a[3] * b[7] + a[6], // m20
+        a[1] * b[6] + a[4] * b[7] + a[7], // m21
+        1.0, // m22 (always 1 for affine)
+      ]),
+    );
   }
 
   /// Get matrix element at column-major index.

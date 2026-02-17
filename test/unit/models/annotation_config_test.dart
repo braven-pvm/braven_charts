@@ -36,9 +36,12 @@ void main() {
         // Check if toJson method exists using reflection-like approach
         // This test FAILS because toJson is not implemented
         final hasToJson = _hasMethod(annotation, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'FR-004: ThresholdAnnotation must have toJson() for id serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'FR-004: ThresholdAnnotation must have toJson() for id serialization',
+        );
       });
     });
 
@@ -61,9 +64,12 @@ void main() {
         );
 
         final hasToJson = _hasMethod(annotation, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'FR-004: RangeAnnotation must have toJson() for id serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'FR-004: RangeAnnotation must have toJson() for id serialization',
+        );
       });
     });
 
@@ -86,9 +92,12 @@ void main() {
         );
 
         final hasToJson = _hasMethod(annotation, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'FR-004: PointAnnotation must have toJson() for id serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'FR-004: PointAnnotation must have toJson() for id serialization',
+        );
       });
     });
 
@@ -111,34 +120,32 @@ void main() {
         );
 
         final hasToJson = _hasMethod(annotation, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'FR-004: TextAnnotation must have toJson() for id serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'FR-004: TextAnnotation must have toJson() for id serialization',
+        );
       });
     });
 
     group('PinAnnotation', () {
       test('id is accessible on PinAnnotation', () {
-        final annotation = PinAnnotation(
-          id: 'test-pin-001',
-          x: 50.0,
-          y: 75.0,
-        );
+        final annotation = PinAnnotation(id: 'test-pin-001', x: 50.0, y: 75.0);
 
         expect(annotation.id, equals('test-pin-001'));
       });
 
       test('PinAnnotation has toJson method for serialization', () {
-        final annotation = PinAnnotation(
-          id: 'test-pin-001',
-          x: 50.0,
-          y: 75.0,
-        );
+        final annotation = PinAnnotation(id: 'test-pin-001', x: 50.0, y: 75.0);
 
         final hasToJson = _hasMethod(annotation, 'toJson');
-        expect(hasToJson, isTrue,
-            reason:
-                'FR-004: PinAnnotation must have toJson() for id serialization');
+        expect(
+          hasToJson,
+          isTrue,
+          reason:
+              'FR-004: PinAnnotation must have toJson() for id serialization',
+        );
       });
     });
   });

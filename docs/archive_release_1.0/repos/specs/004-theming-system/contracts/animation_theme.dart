@@ -116,11 +116,13 @@ class AnimationTheme {
 
   static AnimationTheme fromJson(Map<String, dynamic> json) {
     return AnimationTheme(
-      dataUpdateDuration:
-          Duration(milliseconds: json['dataUpdateDuration'] as int? ?? 300),
+      dataUpdateDuration: Duration(
+        milliseconds: json['dataUpdateDuration'] as int? ?? 300,
+      ),
       dataUpdateCurve: _parseCurve(json['dataUpdateCurve']) ?? Curves.easeInOut,
-      themeSwitchDuration:
-          Duration(milliseconds: json['themeSwitchDuration'] as int? ?? 200),
+      themeSwitchDuration: Duration(
+        milliseconds: json['themeSwitchDuration'] as int? ?? 200,
+      ),
       themeSwitchCurve:
           _parseCurve(json['themeSwitchCurve']) ?? Curves.easeInOut,
     );
@@ -170,9 +172,9 @@ class AnimationTheme {
 
   @override
   int get hashCode => Object.hash(
-        dataUpdateDuration,
-        dataUpdateCurve,
-        themeSwitchDuration,
-        themeSwitchCurve,
-      );
+    dataUpdateDuration,
+    dataUpdateCurve,
+    themeSwitchDuration,
+    themeSwitchCurve,
+  );
 }

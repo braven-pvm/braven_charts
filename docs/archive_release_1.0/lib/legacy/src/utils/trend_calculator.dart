@@ -83,7 +83,9 @@ class TrendCalculator {
   ///
   /// Returns null if windowSize > data length or windowSize < 1.
   static List<ChartDataPoint>? movingAverage(
-      List<ChartDataPoint> points, int windowSize) {
+    List<ChartDataPoint> points,
+    int windowSize,
+  ) {
     if (windowSize < 1 || windowSize > points.length) return null;
 
     final result = <ChartDataPoint>[];
@@ -112,15 +114,19 @@ class TrendCalculator {
   /// Requires degree >= 1 and degree <= 5, and at least (degree + 1) data points.
   /// Returns null if requirements not met.
   static TrendResult? polynomialRegression(
-      List<ChartDataPoint> points, int degree) {
+    List<ChartDataPoint> points,
+    int degree,
+  ) {
     if (degree < 1 || degree > 5 || points.length < degree + 1) return null;
 
     final n = points.length;
 
     // Build the system of normal equations: X^T * X * coeffs = X^T * y
     // For polynomial, we need to solve a (degree+1) x (degree+1) system
-    final matrix =
-        List.generate(degree + 1, (_) => List.filled(degree + 1, 0.0));
+    final matrix = List.generate(
+      degree + 1,
+      (_) => List.filled(degree + 1, 0.0),
+    );
     final vector = List.filled(degree + 1, 0.0);
 
     // Fill matrix and vector
@@ -186,7 +192,9 @@ class TrendCalculator {
   /// First smoothed value is set to the first actual value.
   /// Returns null if alpha is not in range (0, 1] or points is empty.
   static List<ChartDataPoint>? exponentialSmoothing(
-      List<ChartDataPoint> points, double alpha) {
+    List<ChartDataPoint> points,
+    double alpha,
+  ) {
     if (points.isEmpty || alpha <= 0 || alpha > 1) return null;
 
     final result = <ChartDataPoint>[];
@@ -204,7 +212,9 @@ class TrendCalculator {
   ///
   /// Used internally for polynomial regression. Returns coefficients or null if system is singular.
   static List<double>? _gaussianElimination(
-      List<List<double>> matrix, List<double> vector) {
+    List<List<double>> matrix,
+    List<double> vector,
+  ) {
     final n = matrix.length;
     final augmented = List.generate(n, (i) => [...matrix[i], vector[i]]);
 

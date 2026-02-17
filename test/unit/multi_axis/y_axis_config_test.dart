@@ -47,8 +47,10 @@ void main() {
         expect(config.max, equals(400));
         expect(config.showTicks, isFalse);
         expect(config.showAxisLine, isFalse);
-        expect(config.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
+        expect(
+          config.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
         expect(config.shouldShowTickLabels, isFalse);
         expect(config.minWidth, equals(50.0));
         expect(config.maxWidth, equals(100.0));
@@ -74,18 +76,17 @@ void main() {
         expect(config.maxWidth, equals(80.0));
         expect(config.tickCount, isNull);
         expect(config.labelFormatter, isNull);
-        expect(config.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.overAxis));
+        expect(
+          config.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.overAxis),
+        );
       });
     });
 
     group('validation', () {
       test('throws assertion error for empty id', () {
         expect(
-          () => YAxisConfig.withId(
-            id: '',
-            position: YAxisPosition.left,
-          ),
+          () => YAxisConfig.withId(id: '', position: YAxisPosition.left),
           throwsA(isA<AssertionError>()),
         );
       });
@@ -300,8 +301,10 @@ void main() {
           crosshairLabelPosition: CrosshairLabelPosition.insidePlot,
         );
 
-        expect(copy.crosshairLabelPosition,
-            equals(CrosshairLabelPosition.insidePlot));
+        expect(
+          copy.crosshairLabelPosition,
+          equals(CrosshairLabelPosition.insidePlot),
+        );
       });
     });
 

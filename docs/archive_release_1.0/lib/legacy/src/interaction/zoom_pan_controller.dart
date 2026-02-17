@@ -39,10 +39,11 @@ class ZoomPanController {
   ZoomPanController({
     this.frictionCoefficient = 0.95,
     this.velocityThreshold = 50.0,
-  })  : assert(frictionCoefficient > 0 && frictionCoefficient < 1,
-            'frictionCoefficient must be between 0 and 1'),
-        assert(
-            velocityThreshold >= 0, 'velocityThreshold must be non-negative');
+  }) : assert(
+         frictionCoefficient > 0 && frictionCoefficient < 1,
+         'frictionCoefficient must be between 0 and 1',
+       ),
+       assert(velocityThreshold >= 0, 'velocityThreshold must be non-negative');
 
   /// Friction coefficient for inertial scrolling (0-1).
   ///
@@ -132,11 +133,7 @@ class ZoomPanController {
   /// within those data bounds.
   ///
   /// Returns a new [ZoomPanState] with updated pan offset.
-  ZoomPanState pan(
-    ZoomPanState state,
-    Offset delta, {
-    Rect? bounds,
-  }) {
+  ZoomPanState pan(ZoomPanState state, Offset delta, {Rect? bounds}) {
     // Calculate new pan offset
     final newPanX = state.panOffset.dx + delta.dx;
     final newPanY = state.panOffset.dy + delta.dy;
@@ -189,11 +186,7 @@ class ZoomPanController {
         final scale = gesture.currentScale ?? 1.0;
         final focalPoint =
             gesture.currentPosition; // Use current position as focal point
-        return zoom(
-          state,
-          zoomFactor: scale,
-          focalPoint: focalPoint,
-        );
+        return zoom(state, zoomFactor: scale, focalPoint: focalPoint);
 
       case GestureType.pan:
         // Pan gesture (drag)
@@ -225,10 +218,7 @@ class ZoomPanController {
   /// [deltaTime] is the elapsed time since the last frame.
   ///
   /// Returns the state unchanged (inertia requires panVelocity field).
-  ZoomPanState applyInertia(
-    ZoomPanState state, {
-    required Duration deltaTime,
-  }) {
+  ZoomPanState applyInertia(ZoomPanState state, {required Duration deltaTime}) {
     // Inertia requires panVelocity field in ZoomPanState
     // Since it's not present in the current model, return state unchanged
     // This would need to be implemented if panVelocity is added to the model
@@ -247,10 +237,7 @@ class ZoomPanController {
   /// ```
   ///
   /// Returns the point in data coordinates.
-  Offset screenToData(
-    Offset screenPoint,
-    ZoomPanState state,
-  ) {
+  Offset screenToData(Offset screenPoint, ZoomPanState state) {
     final dataX = (screenPoint.dx - state.panOffset.dx) / state.zoomLevelX;
     final dataY = (screenPoint.dy - state.panOffset.dy) / state.zoomLevelY;
     return Offset(dataX, dataY);
@@ -268,10 +255,7 @@ class ZoomPanController {
   /// ```
   ///
   /// Returns the point in screen coordinates.
-  Offset dataToScreen(
-    Offset dataPoint,
-    ZoomPanState state,
-  ) {
+  Offset dataToScreen(Offset dataPoint, ZoomPanState state) {
     final screenX = dataPoint.dx * state.zoomLevelX + state.panOffset.dx;
     final screenY = dataPoint.dy * state.zoomLevelY + state.panOffset.dy;
     return Offset(screenX, screenY);

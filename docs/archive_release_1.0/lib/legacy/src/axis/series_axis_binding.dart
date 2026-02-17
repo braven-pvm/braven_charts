@@ -25,10 +25,7 @@ class SeriesAxisBinding {
   /// Both [seriesId] and [axisId] are required and should match
   /// the identifiers used in your chart's data series and axis
   /// configurations respectively.
-  const SeriesAxisBinding({
-    required this.seriesId,
-    required this.axisId,
-  });
+  const SeriesAxisBinding({required this.seriesId, required this.axisId});
 
   /// The identifier of the data series.
   ///
@@ -43,10 +40,7 @@ class SeriesAxisBinding {
   final String axisId;
 
   /// Creates a copy of this binding with the given fields replaced.
-  SeriesAxisBinding copyWith({
-    String? seriesId,
-    String? axisId,
-  }) {
+  SeriesAxisBinding copyWith({String? seriesId, String? axisId}) {
     return SeriesAxisBinding(
       seriesId: seriesId ?? this.seriesId,
       axisId: axisId ?? this.axisId,

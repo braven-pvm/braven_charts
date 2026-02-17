@@ -36,10 +36,7 @@ class GridRenderer {
   ///
   /// [theme] provides default colors/styles from the chart theme.
   /// [config] provides grid-specific configuration (visibility, colors, widths).
-  const GridRenderer({
-    this.theme,
-    this.config,
-  });
+  const GridRenderer({this.theme, this.config});
 
   /// Chart theme for default styling.
   final ChartTheme? theme;
@@ -64,7 +61,8 @@ class GridRenderer {
     }
 
     // Determine color (config takes precedence over theme)
-    final Color gridColor = effectiveConfig.horizontalColor ??
+    final Color gridColor =
+        effectiveConfig.horizontalColor ??
         theme?.gridStyle.majorColor ??
         const Color(0xFFE0E0E0);
 
@@ -103,7 +101,8 @@ class GridRenderer {
     }
 
     // Determine color (config takes precedence over theme)
-    final Color gridColor = effectiveConfig.verticalColor ??
+    final Color gridColor =
+        effectiveConfig.verticalColor ??
         theme?.gridStyle.majorColor ??
         const Color(0xFFE0E0E0);
 

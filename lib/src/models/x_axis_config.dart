@@ -54,16 +54,13 @@ class XAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
-  })  : assert(minHeight >= 0, 'minHeight must be non-negative'),
-        assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight'),
-        assert(
-          min == null || max == null || min < max,
-          'min must be less than max',
-        ),
-        assert(
-          tickCount == null || tickCount >= 2,
-          'tickCount must be >= 2',
-        );
+  }) : assert(minHeight >= 0, 'minHeight must be non-negative'),
+       assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight'),
+       assert(
+         min == null || max == null || min < max,
+         'min must be less than max',
+       ),
+       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 
   // ========== Appearance ==========
 
@@ -283,25 +280,25 @@ class XAxisConfig {
 
   @override
   int get hashCode => Object.hash(
-        color,
-        label,
-        unit,
-        min,
-        max,
-        visible,
-        showAxisLine,
-        showTicks,
-        showCrosshairLabel,
-        crosshairLabelPosition,
-        labelDisplay,
-        minHeight,
-        maxHeight,
-        tickLabelPadding,
-        axisLabelPadding,
-        axisMargin,
-        tickCount,
-        labelFormatter,
-      );
+    color,
+    label,
+    unit,
+    min,
+    max,
+    visible,
+    showAxisLine,
+    showTicks,
+    showCrosshairLabel,
+    crosshairLabelPosition,
+    labelDisplay,
+    minHeight,
+    maxHeight,
+    tickLabelPadding,
+    axisLabelPadding,
+    axisMargin,
+    tickCount,
+    labelFormatter,
+  );
 
   @override
   String toString() {

@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
 
 /// Integration test utilities for end-to-end testing
 class IntegrationTestUtils {
-  static late IntegrationTestWidgetsFlutterBinding binding;
-
   /// Initialize integration testing
   static void initialize() {
-    binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+    // Integration test initialization if needed
+    WidgetsFlutterBinding.ensureInitialized();
   }
 
   /// Creates a test app with charts for integration testing
@@ -29,10 +27,7 @@ class IntegrationTestUtils {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              SizedBox(
-                height: 400,
-                child: chart,
-              ),
+              SizedBox(height: 400, child: chart),
               const SizedBox(height: 20),
               // Add test controls
               _buildTestControls(),
@@ -98,23 +93,19 @@ class IntegrationTestUtils {
     ];
 
     for (final size in sizes) {
-      binding.window.physicalSizeTestValue = size;
-      binding.window.devicePixelRatioTestValue = 1.0;
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
 
       await tester.pumpWidget(createTestApp(chart: chart));
       await tester.pumpAndSettle();
 
       // Verify chart renders correctly at this size
       expect(find.byWidget(chart), findsOneWidget);
-
-      // Take screenshot for manual verification
-      await binding
-          .takeScreenshot('chart_${size.width.toInt()}x${size.height.toInt()}');
     }
 
     // Reset to default
-    binding.window.clearPhysicalSizeTestValue();
-    binding.window.clearDevicePixelRatioTestValue();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
   }
 
   /// Test accessibility features
@@ -133,7 +124,7 @@ class IntegrationTestUtils {
     await tester.pumpAndSettle();
 
     // Test screen reader announcements
-    final semantics = tester.binding.pipelineOwner.semanticsOwner;
+    final semantics = tester.binding.rootPipelineOwner.semanticsOwner;
     expect(semantics, isNotNull);
   }
 
@@ -146,12 +137,9 @@ class IntegrationTestUtils {
 
     for (final size in largeSizes) {
       final data = List.generate(
-          size,
-          (i) => {
-                'x': i.toDouble(),
-                'y': (i * 0.1) % 100,
-                'label': 'Point $i',
-              });
+        size,
+        (i) => {'x': i.toDouble(), 'y': (i * 0.1) % 100, 'label': 'Point $i'},
+      );
 
       final chart = chartBuilder(data);
       await tester.pumpWidget(createTestApp(chart: chart));
@@ -162,8 +150,11 @@ class IntegrationTestUtils {
       stopwatch.stop();
 
       // Verify reasonable performance (less than 500ms for initial render)
-      expect(stopwatch.elapsedMilliseconds, lessThan(500),
-          reason: 'Chart with $size points took too long to render');
+      expect(
+        stopwatch.elapsedMilliseconds,
+        lessThan(500),
+        reason: 'Chart with $size points took too long to render',
+      );
 
       // Test interaction performance
       final chartFinder = find.byWidget(chart);

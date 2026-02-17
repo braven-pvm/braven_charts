@@ -131,13 +131,13 @@ abstract class ChartAnnotation {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        style,
-        allowDragging,
-        allowEditing,
-        zIndex,
-        snapToValue,
-        snapIncrement,
-      );
+    id,
+    label,
+    style,
+    allowDragging,
+    allowEditing,
+    zIndex,
+    snapToValue,
+    snapIncrement,
+  );
 }

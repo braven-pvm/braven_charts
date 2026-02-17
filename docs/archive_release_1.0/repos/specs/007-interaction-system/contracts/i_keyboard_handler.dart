@@ -166,12 +166,7 @@ abstract class IKeyboardHandler {
 }
 
 /// Pan direction for keyboard navigation.
-enum PanDirection {
-  up,
-  down,
-  left,
-  right,
-}
+enum PanDirection { up, down, left, right }
 
 /// Logical keyboard key (from Flutter).
 ///

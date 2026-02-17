@@ -97,9 +97,11 @@ class TransformContext {
     this.markerOffset,
     this.animationProgress = 1.0,
     this.devicePixelRatio = 1.0,
-  })  : assert(animationProgress >= 0.0 && animationProgress <= 1.0,
-            'animationProgress must be in [0.0, 1.0]'),
-        assert(devicePixelRatio > 0.0, 'devicePixelRatio must be > 0');
+  }) : assert(
+         animationProgress >= 0.0 && animationProgress <= 1.0,
+         'animationProgress must be in [0.0, 1.0]',
+       ),
+       assert(devicePixelRatio > 0.0, 'devicePixelRatio must be > 0');
 
   /// Create context from RenderContext (convenience factory).
   ///
@@ -391,15 +393,15 @@ class TransformContext {
   /// content changes, consider creating new context instance.
   @override
   int get hashCode => Object.hash(
-        widgetSize,
-        chartAreaBounds,
-        xDataRange,
-        yDataRange,
-        viewport,
-        markerOffset,
-        animationProgress,
-        devicePixelRatio,
-      );
+    widgetSize,
+    chartAreaBounds,
+    xDataRange,
+    yDataRange,
+    viewport,
+    markerOffset,
+    animationProgress,
+    devicePixelRatio,
+  );
 
   /// Structural equality (all fields must match).
   ///
@@ -428,7 +430,8 @@ class TransformContext {
   ///
   /// Shows key context information in human-readable format.
   @override
-  String toString() => 'TransformContext('
+  String toString() =>
+      'TransformContext('
       'widgetSize: $widgetSize, '
       'chartAreaBounds: $chartAreaBounds, '
       'xDataRange: $xDataRange, '

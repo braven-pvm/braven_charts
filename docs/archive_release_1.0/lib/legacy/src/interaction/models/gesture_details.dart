@@ -49,9 +49,7 @@ class GestureDetails {
   /// Creates gesture details from a JSON map.
   factory GestureDetails.fromJson(Map<String, dynamic> json) {
     return GestureDetails(
-      type: GestureType.values.firstWhere(
-        (e) => e.name == json['type'],
-      ),
+      type: GestureType.values.firstWhere((e) => e.name == json['type']),
       startPosition: Offset(
         (json['startPosition']['dx'] as num).toDouble(),
         (json['startPosition']['dy'] as num).toDouble(),
@@ -106,25 +104,24 @@ class GestureDetails {
     this.endTime,
     this.pointerCount = 1,
     this.deviceKind = PointerDeviceKind.mouse,
-  })  : assert(pointerCount > 0, 'pointerCount must be greater than 0'),
-        assert(
-          type != GestureType.pinch || pointerCount >= 2,
-          'Pinch gesture requires at least 2 pointers',
-        ),
-        assert(
-          type != GestureType.pinch ||
-              (initialScale != null && currentScale != null),
-          'Pinch gesture requires initialScale and currentScale',
-        ),
-        assert(
-          type != GestureType.pan ||
-              (panDelta != null && totalPanDelta != null),
-          'Pan gesture requires panDelta and totalPanDelta',
-        ),
-        assert(
-          endPosition == null || endTime != null,
-          'endPosition requires endTime (completed gesture)',
-        );
+  }) : assert(pointerCount > 0, 'pointerCount must be greater than 0'),
+       assert(
+         type != GestureType.pinch || pointerCount >= 2,
+         'Pinch gesture requires at least 2 pointers',
+       ),
+       assert(
+         type != GestureType.pinch ||
+             (initialScale != null && currentScale != null),
+         'Pinch gesture requires initialScale and currentScale',
+       ),
+       assert(
+         type != GestureType.pan || (panDelta != null && totalPanDelta != null),
+         'Pan gesture requires panDelta and totalPanDelta',
+       ),
+       assert(
+         endPosition == null || endTime != null,
+         'endPosition requires endTime (completed gesture)',
+       );
 
   /// Creates gesture details for a tap gesture.
   factory GestureDetails.tap({
@@ -297,33 +294,18 @@ class GestureDetails {
   Map<String, dynamic> toJson() {
     return {
       'type': type.name,
-      'startPosition': {
-        'dx': startPosition.dx,
-        'dy': startPosition.dy,
-      },
-      'currentPosition': {
-        'dx': currentPosition.dx,
-        'dy': currentPosition.dy,
-      },
+      'startPosition': {'dx': startPosition.dx, 'dy': startPosition.dy},
+      'currentPosition': {'dx': currentPosition.dx, 'dy': currentPosition.dy},
       'endPosition': endPosition != null
-          ? {
-              'dx': endPosition!.dx,
-              'dy': endPosition!.dy,
-            }
+          ? {'dx': endPosition!.dx, 'dy': endPosition!.dy}
           : null,
       'initialScale': initialScale,
       'currentScale': currentScale,
       'panDelta': panDelta != null
-          ? {
-              'dx': panDelta!.dx,
-              'dy': panDelta!.dy,
-            }
+          ? {'dx': panDelta!.dx, 'dy': panDelta!.dy}
           : null,
       'totalPanDelta': totalPanDelta != null
-          ? {
-              'dx': totalPanDelta!.dx,
-              'dy': totalPanDelta!.dy,
-            }
+          ? {'dx': totalPanDelta!.dx, 'dy': totalPanDelta!.dy}
           : null,
       'pointerCount': pointerCount,
       'deviceKind': deviceKind.name,

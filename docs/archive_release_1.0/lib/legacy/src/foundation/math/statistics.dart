@@ -194,10 +194,7 @@ class StatisticalFunctions {
   /// Uses two-pass algorithm for numerical stability.
   /// Returns NaN for empty list.
   /// Performance: O(n), <10ms for 10k values
-  static double standardDeviation(
-    List<double> values, {
-    bool sample = true,
-  }) {
+  static double standardDeviation(List<double> values, {bool sample = true}) {
     final v = variance(values, sample: sample);
     return math.sqrt(v);
   }
@@ -213,10 +210,7 @@ class StatisticalFunctions {
   ///
   /// Returns NaN for empty list or single value (when sample=true).
   /// Performance: O(n), <10ms for 10k values
-  static double variance(
-    List<double> values, {
-    bool sample = true,
-  }) {
+  static double variance(List<double> values, {bool sample = true}) {
     if (values.isEmpty) return double.nan;
     if (sample && values.length == 1) return double.nan;
 
@@ -288,11 +282,7 @@ class StatisticalFunctions {
   /// Performance: O(n log n) due to sorting
   static Quartiles quartiles(List<double> values) {
     if (values.isEmpty) {
-      return const Quartiles(
-        q1: double.nan,
-        q2: double.nan,
-        q3: double.nan,
-      );
+      return const Quartiles(q1: double.nan, q2: double.nan, q3: double.nan);
     }
 
     return Quartiles(
@@ -352,10 +342,7 @@ class StatisticalFunctions {
   /// Performance: O(n), ~33% faster than separate min/max calls
   static MinMax minMax(List<double> values) {
     if (values.isEmpty) {
-      return const MinMax(
-        min: double.infinity,
-        max: double.negativeInfinity,
-      );
+      return const MinMax(min: double.infinity, max: double.negativeInfinity);
     }
 
     double minimum = values[0];
@@ -400,11 +387,7 @@ class Quartiles {
   /// Third quartile (75th percentile)
   final double q3;
 
-  const Quartiles({
-    required this.q1,
-    required this.q2,
-    required this.q3,
-  });
+  const Quartiles({required this.q1, required this.q2, required this.q3});
 
   /// Interquartile range (Q3 - Q1)
   double get iqr => q3 - q1;
@@ -433,10 +416,7 @@ class MinMax {
   /// Maximum value
   final double max;
 
-  const MinMax({
-    required this.min,
-    required this.max,
-  });
+  const MinMax({required this.min, required this.max});
 
   /// Range (max - min)
   double get range => max - min;

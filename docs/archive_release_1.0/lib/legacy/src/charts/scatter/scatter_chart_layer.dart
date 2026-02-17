@@ -56,14 +56,14 @@ class ScatterChartLayer extends ChartLayer {
     required super.animationConfig,
     required super.zIndex,
     super.isVisible,
-  })  : _renderer = ChartRenderer(),
-        _clusterer = config.enableClustering
-            ? ScatterClusterer(
-                enableClustering: true,
-                clusterThreshold: config.clusterThreshold,
-                clusterRadius: 20.0, // TODO: Make configurable
-              )
-            : null;
+  }) : _renderer = ChartRenderer(),
+       _clusterer = config.enableClustering
+           ? ScatterClusterer(
+               enableClustering: true,
+               clusterThreshold: config.clusterThreshold,
+               clusterRadius: 20.0, // TODO: Make configurable
+             )
+           : null;
 
   /// Configuration for scatter rendering (sizing, styling, clustering, etc.)
   final ScatterChartConfig config;
@@ -147,13 +147,7 @@ class ScatterChartLayer extends ChartLayer {
       final markerSize = _calculateMarkerSize(index, dataPoints);
 
       // Render marker based on style
-      _renderMarker(
-        context,
-        paint,
-        position,
-        markerSize,
-        seriesColor,
-      );
+      _renderMarker(context, paint, position, markerSize, seriesColor);
     }
   }
 

@@ -98,7 +98,8 @@ class MultiAxisPainter extends CustomPainter {
 
     // Draw ticks and labels
     final ticks = getTickValues(axis);
-    final isLeftSide = axis.position == YAxisPosition.left ||
+    final isLeftSide =
+        axis.position == YAxisPosition.left ||
         axis.position == YAxisPosition.leftOuter;
 
     for (final tickValue in ticks) {
@@ -130,10 +131,7 @@ class MultiAxisPainter extends CustomPainter {
     bool isLeftSide,
     Color color,
   ) {
-    final textStyle = TextStyle(
-      color: color,
-      fontSize: 10,
-    );
+    final textStyle = TextStyle(color: color, fontSize: 10);
     final textSpan = TextSpan(text: label, style: textStyle);
     final textPainter = TextPainter(
       text: textSpan,
@@ -173,8 +171,9 @@ class MultiAxisPainter extends CustomPainter {
 
     // Position at the center of the axis
     final centerY = chartRect.top + chartRect.height / 2;
-    final offsetX =
-        isLeftSide ? axisX - axisWidth + 12 : axisX + axisWidth - 12;
+    final offsetX = isLeftSide
+        ? axisX - axisWidth + 12
+        : axisX + axisWidth - 12;
 
     canvas.translate(offsetX, centerY);
     canvas.rotate(isLeftSide ? -math.pi / 2 : math.pi / 2);

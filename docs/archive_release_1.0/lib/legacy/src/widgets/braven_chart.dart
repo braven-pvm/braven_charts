@@ -136,10 +136,12 @@ class BravenChart extends StatefulWidget {
     this.onAnnotationDragged,
     this.interactionConfig,
     this.multiAxisConfig,
-  })  : assert(series.isNotEmpty || dataStream != null,
-            'At least one series or dataStream is required'),
-        assert(width == null || width > 0, 'Width must be positive'),
-        assert(height == null || height > 0, 'Height must be positive');
+  }) : assert(
+         series.isNotEmpty || dataStream != null,
+         'At least one series or dataStream is required',
+       ),
+       assert(width == null || width > 0, 'Width must be positive'),
+       assert(height == null || height > 0, 'Height must be positive');
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
@@ -185,23 +187,31 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)?
-        onAnnotationDragged,
+    onAnnotationDragged,
     InteractionConfig? interactionConfig,
   }) {
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
 
     // Validate lengths match
-    assert(xVals.length == yValues.length,
-        'X and Y value lists must have the same length');
+    assert(
+      xVals.length == yValues.length,
+      'X and Y value lists must have the same length',
+    );
 
     // Create data points
     final points = List.generate(
-        yValues.length, (i) => ChartDataPoint(x: xVals[i], y: yValues[i]));
+      yValues.length,
+      (i) => ChartDataPoint(x: xVals[i], y: yValues[i]),
+    );
 
     // Create series
     final series = ChartSeries(
-        id: seriesId, name: seriesName, points: points, color: seriesColor);
+      id: seriesId,
+      name: seriesName,
+      points: points,
+      color: seriesColor,
+    );
 
     return BravenChart(
       key: key,
@@ -277,7 +287,7 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)?
-        onAnnotationDragged,
+    onAnnotationDragged,
     InteractionConfig? interactionConfig,
   }) {
     // Convert map to data points
@@ -294,7 +304,11 @@ class BravenChart extends StatefulWidget {
 
     // Create series
     final series = ChartSeries(
-        id: seriesId, name: seriesName, points: points, color: seriesColor);
+      id: seriesId,
+      name: seriesName,
+      points: points,
+      color: seriesColor,
+    );
 
     return BravenChart(
       key: key,
@@ -367,7 +381,7 @@ class BravenChart extends StatefulWidget {
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
     void Function(ChartAnnotation annotation, Offset newPosition)?
-        onAnnotationDragged,
+    onAnnotationDragged,
     InteractionConfig? interactionConfig,
   }) {
     // Parse JSON
@@ -379,12 +393,14 @@ class BravenChart extends StatefulWidget {
       points = decoded.map((item) {
         if (item is Map<String, dynamic>) {
           return ChartDataPoint(
-              x: (item['x'] as num).toDouble(),
-              y: (item['y'] as num).toDouble(),
-              label: item['label'] as String?);
+            x: (item['x'] as num).toDouble(),
+            y: (item['y'] as num).toDouble(),
+            label: item['label'] as String?,
+          );
         } else {
           throw ArgumentError(
-              'JSON array must contain objects with x and y properties');
+            'JSON array must contain objects with x and y properties',
+          );
         }
       }).toList();
     } else {
@@ -393,7 +409,11 @@ class BravenChart extends StatefulWidget {
 
     // Create series
     final series = ChartSeries(
-        id: seriesId, name: seriesName, points: points, color: seriesColor);
+      id: seriesId,
+      name: seriesName,
+      points: points,
+      color: seriesColor,
+    );
 
     return BravenChart(
       key: key,
@@ -640,7 +660,7 @@ class BravenChart extends StatefulWidget {
 
   /// Called when an annotation is dragged to a new position.
   final void Function(ChartAnnotation annotation, Offset newPosition)?
-      onAnnotationDragged;
+  onAnnotationDragged;
 
   // ==================== INTERACTION SYSTEM ====================
 
@@ -908,8 +928,9 @@ class _BravenChartState extends State<BravenChart>
     }
 
     // Initialize ValueNotifier for interaction state
-    _interactionStateNotifier =
-        ValueNotifier<InteractionState>(InteractionState.initial());
+    _interactionStateNotifier = ValueNotifier<InteractionState>(
+      InteractionState.initial(),
+    );
 
     // Initialize dual-mode streaming state (T011: FR-002, FR-003)
     // Determine initial mode: streaming if streamingConfig provided, interactive otherwise
@@ -926,33 +947,41 @@ class _BravenChartState extends State<BravenChart>
     _autoResumeTimer = null;
 
     // Initialize zoom animation controller (250ms for smooth transitions)
-    _zoomAnimationController = AnimationController(
-        duration: const Duration(milliseconds: 250), vsync: this)
-      ..addListener(() {
-        // Update zoom state during animation via notifier (NOT setState)
-        if (_zoomAnimationX != null && _zoomAnimationY != null) {
-          final currentZoomState = _interactionStateNotifier.value.zoomPanState;
-          final newZoomState = currentZoomState.copyWith(
+    _zoomAnimationController =
+        AnimationController(
+          duration: const Duration(milliseconds: 250),
+          vsync: this,
+        )..addListener(() {
+          // Update zoom state during animation via notifier (NOT setState)
+          if (_zoomAnimationX != null && _zoomAnimationY != null) {
+            final currentZoomState =
+                _interactionStateNotifier.value.zoomPanState;
+            final newZoomState = currentZoomState.copyWith(
               zoomLevelX: _zoomAnimationX!.value,
-              zoomLevelY: _zoomAnimationY!.value);
-          _interactionStateNotifier.value = _interactionStateNotifier.value
-              .copyWith(zoomPanState: newZoomState);
-        }
-      });
+              zoomLevelY: _zoomAnimationY!.value,
+            );
+            _interactionStateNotifier.value = _interactionStateNotifier.value
+                .copyWith(zoomPanState: newZoomState);
+          }
+        });
 
     // Initialize pan animation controller (250ms for smooth transitions)
-    _panAnimationController = AnimationController(
-        duration: const Duration(milliseconds: 250), vsync: this)
-      ..addListener(() {
-        // Update pan state during animation via notifier (NOT setState)
-        if (_panAnimation != null) {
-          final currentZoomState = _interactionStateNotifier.value.zoomPanState;
-          final newZoomState =
-              currentZoomState.copyWith(panOffset: _panAnimation!.value);
-          _interactionStateNotifier.value = _interactionStateNotifier.value
-              .copyWith(zoomPanState: newZoomState);
-        }
-      });
+    _panAnimationController =
+        AnimationController(
+          duration: const Duration(milliseconds: 250),
+          vsync: this,
+        )..addListener(() {
+          // Update pan state during animation via notifier (NOT setState)
+          if (_panAnimation != null) {
+            final currentZoomState =
+                _interactionStateNotifier.value.zoomPanState;
+            final newZoomState = currentZoomState.copyWith(
+              panOffset: _panAnimation!.value,
+            );
+            _interactionStateNotifier.value = _interactionStateNotifier.value
+                .copyWith(zoomPanState: newZoomState);
+          }
+        });
 
     // Create internal controller if not provided
     if (widget.controller == null) {
@@ -1227,8 +1256,9 @@ class _BravenChartState extends State<BravenChart>
 
     // Update crosshair position
     final newState = _interactionStateNotifier.value.copyWith(
-        crosshairPosition: position,
-        isCrosshairVisible: config.crosshair.enabled);
+      crosshairPosition: position,
+      isCrosshairVisible: config.crosshair.enabled,
+    );
 
     // Find nearest data point for snap and tooltip
     final nearestPointData = _findNearestDataPoint(position);
@@ -1256,12 +1286,17 @@ class _BravenChartState extends State<BravenChart>
         final dataY = (nearestPointData['y'] as num?)?.toDouble() ?? 0;
 
         if (_cachedChartRect != null) {
-          final bounds =
-              _calculateDataBounds(allSeries, chartRect: _cachedChartRect);
+          final bounds = _calculateDataBounds(
+            allSeries,
+            chartRect: _cachedChartRect,
+          );
 
           final point = ChartDataPoint(x: dataX, y: dataY);
-          final screenPos =
-              _dataToScreenPoint(point, _cachedChartRect!, bounds);
+          final screenPos = _dataToScreenPoint(
+            point,
+            _cachedChartRect!,
+            bounds,
+          );
 
           if (screenPos.dx.isFinite && screenPos.dy.isFinite) {
             // _dataToScreenPoint already returns absolute screen coordinates
@@ -1470,7 +1505,8 @@ class _BravenChartState extends State<BravenChart>
     _autoResumeTimer?.cancel();
 
     // Get timeout duration from config
-    final timeout = widget.streamingConfig?.autoResumeTimeout ??
+    final timeout =
+        widget.streamingConfig?.autoResumeTimeout ??
         const Duration(seconds: 10);
 
     // Start new timer from current moment
@@ -1488,7 +1524,8 @@ class _BravenChartState extends State<BravenChart>
     _autoResumeTimer?.cancel();
 
     // Get timeout duration from config (default 10 seconds per FR-007)
-    final timeout = widget.streamingConfig?.autoResumeTimeout ??
+    final timeout =
+        widget.streamingConfig?.autoResumeTimeout ??
         const Duration(seconds: 10);
 
     // Start new timer
@@ -1722,8 +1759,9 @@ class _BravenChartState extends State<BravenChart>
 
     // CRITICAL: Clamp window start to buffer bounds to prevent showing empty space
     // If buffer is smaller than targetVisibleRangeX, show entire buffer
-    final clampedWindowStart =
-        windowStart < bounds.minX ? bounds.minX : windowStart;
+    final clampedWindowStart = windowStart < bounds.minX
+        ? bounds.minX
+        : windowStart;
 
     // === CRITICAL FIX: Pan offset calculation ===
     // Pan offset is stored in PIXEL units and gets divided by zoom when applied (line 2832)
@@ -1747,16 +1785,20 @@ class _BravenChartState extends State<BravenChart>
     debugPrint('\n🎯 [AutoScroll - Rightmost Window (No Data Deletion)]');
     debugPrint('  Buffer: $maxPointCount points (all historic data preserved)');
     debugPrint(
-        '  Buffer X-range: ${dataRangeX.toStringAsFixed(1)} units (${bounds.minX.toStringAsFixed(1)} to ${bounds.maxX.toStringAsFixed(1)})');
+      '  Buffer X-range: ${dataRangeX.toStringAsFixed(1)} units (${bounds.minX.toStringAsFixed(1)} to ${bounds.maxX.toStringAsFixed(1)})',
+    );
     debugPrint(
-        '  Target visible: ${targetVisibleRangeX.toStringAsFixed(1)} X-units (${dataPointsToShow.toInt()} points)');
+      '  Target visible: ${targetVisibleRangeX.toStringAsFixed(1)} X-units (${dataPointsToShow.toInt()} points)',
+    );
     debugPrint(
       '  Calculated zoom: ${calculatedZoom.toStringAsFixed(3)} (${dataRangeX.toStringAsFixed(1)} / ${targetVisibleRangeX.toStringAsFixed(1)})',
     );
     debugPrint(
-        '  Desired window: ${windowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+      '  Desired window: ${windowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}',
+    );
     debugPrint(
-        '  Clamped window: ${clampedWindowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}');
+      '  Clamped window: ${clampedWindowStart.toStringAsFixed(1)} to ${windowEnd.toStringAsFixed(1)}',
+    );
     debugPrint('  Pan offset: ${panOffsetX.toStringAsFixed(1)} px');
 
     // SAFETY: Validate final pan offset (must be finite and reasonable)
@@ -1771,8 +1813,9 @@ class _BravenChartState extends State<BravenChart>
 
     // Return the new zoom/pan state with BOTH zoom and pan updated
     return currentZoomState.copyWith(
-        zoomLevelX: clampedZoomX,
-        panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy));
+      zoomLevelX: clampedZoomX,
+      panOffset: Offset(panOffsetX, currentZoomState.panOffset.dy),
+    );
   }
 
   /// Animates zoom level changes for smooth transitions.
@@ -1781,17 +1824,20 @@ class _BravenChartState extends State<BravenChart>
   /// - [newZoomX]: Target zoom level for X axis
   /// - [newZoomY]: Target zoom level for Y axis
   /// - [onComplete]: Optional callback when animation completes
-  void _animateZoom(
-      {required double newZoomX,
-      required double newZoomY,
-      VoidCallback? onComplete}) {
+  void _animateZoom({
+    required double newZoomX,
+    required double newZoomY,
+    VoidCallback? onComplete,
+  }) {
     if (_zoomAnimationController == null) {
       // Fallback: instant zoom if no animation controller
       final currentZoomState = _interactionStateNotifier.value.zoomPanState;
-      final newZoomState =
-          currentZoomState.copyWith(zoomLevelX: newZoomX, zoomLevelY: newZoomY);
-      _interactionStateNotifier.value =
-          _interactionStateNotifier.value.copyWith(zoomPanState: newZoomState);
+      final newZoomState = currentZoomState.copyWith(
+        zoomLevelX: newZoomX,
+        zoomLevelY: newZoomY,
+      );
+      _interactionStateNotifier.value = _interactionStateNotifier.value
+          .copyWith(zoomPanState: newZoomState);
       onComplete?.call();
       return;
     }
@@ -1802,17 +1848,13 @@ class _BravenChartState extends State<BravenChart>
     final currentZoomY = currentZoomState.zoomLevelY;
 
     // Create tween animations
-    _zoomAnimationX = Tween<double>(
-      begin: currentZoomX,
-      end: newZoomX,
-    ).animate(CurvedAnimation(
-        parent: _zoomAnimationController!, curve: Curves.easeOut));
+    _zoomAnimationX = Tween<double>(begin: currentZoomX, end: newZoomX).animate(
+      CurvedAnimation(parent: _zoomAnimationController!, curve: Curves.easeOut),
+    );
 
-    _zoomAnimationY = Tween<double>(
-      begin: currentZoomY,
-      end: newZoomY,
-    ).animate(CurvedAnimation(
-        parent: _zoomAnimationController!, curve: Curves.easeOut));
+    _zoomAnimationY = Tween<double>(begin: currentZoomY, end: newZoomY).animate(
+      CurvedAnimation(parent: _zoomAnimationController!, curve: Curves.easeOut),
+    );
 
     // Reset and start animation
     _zoomAnimationController!.reset();
@@ -1831,8 +1873,8 @@ class _BravenChartState extends State<BravenChart>
       // Fallback: instant pan if no animation controller
       final currentZoomState = _interactionStateNotifier.value.zoomPanState;
       final newZoomState = currentZoomState.copyWith(panOffset: newPanOffset);
-      _interactionStateNotifier.value =
-          _interactionStateNotifier.value.copyWith(zoomPanState: newZoomState);
+      _interactionStateNotifier.value = _interactionStateNotifier.value
+          .copyWith(zoomPanState: newZoomState);
       onComplete?.call();
       return;
     }
@@ -1842,11 +1884,13 @@ class _BravenChartState extends State<BravenChart>
     final currentPanOffset = currentZoomState.panOffset;
 
     // Create tween animation
-    _panAnimation = Tween<Offset>(
-      begin: currentPanOffset,
-      end: newPanOffset,
-    ).animate(CurvedAnimation(
-        parent: _panAnimationController!, curve: Curves.easeOut));
+    _panAnimation = Tween<Offset>(begin: currentPanOffset, end: newPanOffset)
+        .animate(
+          CurvedAnimation(
+            parent: _panAnimationController!,
+            curve: Curves.easeOut,
+          ),
+        );
 
     // Reset and start animation
     _panAnimationController!.reset();
@@ -1872,12 +1916,12 @@ class _BravenChartState extends State<BravenChart>
     const persistDelay = Duration(seconds: 5);
     _tooltipHideTimer = Timer(persistDelay, () {
       if (mounted) {
-        _interactionStateNotifier.value =
-            _interactionStateNotifier.value.copyWith(
-          isTooltipVisible: false,
-          tooltipPosition: null,
-          tooltipDataPoint: null,
-        );
+        _interactionStateNotifier.value = _interactionStateNotifier.value
+            .copyWith(
+              isTooltipVisible: false,
+              tooltipPosition: null,
+              tooltipDataPoint: null,
+            );
       }
     });
   }
@@ -1911,7 +1955,8 @@ class _BravenChartState extends State<BravenChart>
     // Get effective axis configurations
     // NOTE: Y-axis should default to left position for standard charts
     final effectiveXAxis = widget.xAxis ?? LegacyAxisConfig.defaults();
-    final effectiveYAxis = widget.yAxis ??
+    final effectiveYAxis =
+        widget.yAxis ??
         LegacyAxisConfig.defaults().copyWith(axisPosition: AxisPosition.left);
 
     // Get all series (widget series + controller series)
@@ -1947,8 +1992,9 @@ class _BravenChartState extends State<BravenChart>
               // This causes buffered streaming points to fall outside viewport after zoom/pan.
               // For streaming scenarios, we must recalculate bounds on every paint.
               // TODO: Optimize by tracking controller series changes and only invalidating when needed.
-              originalDataBounds:
-                  _getController() == null ? preliminaryBounds : null,
+              originalDataBounds: _getController() == null
+                  ? preliminaryBounds
+                  : null,
               // CRITICAL FIX: Pass callback to receive chartRect calculated with ACTUAL render size
               onChartRectCalculated: (Rect chartRect, Size size) {
                 // Calculate title offset: difference between Stack size and CustomPaint size
@@ -2008,14 +2054,17 @@ class _BravenChartState extends State<BravenChart>
                   if (controller != null &&
                       controller.getAnnotation(updatedAnnotation.id) != null) {
                     controller.updateAnnotation(
-                        updatedAnnotation.id, updatedAnnotation);
+                      updatedAnnotation.id,
+                      updatedAnnotation,
+                    );
                   }
 
                   // ALSO update series-level annotations (FIX: handle both locations)
                   setState(() {
                     for (final series in widget.series) {
-                      final index = series.annotations
-                          .indexWhere((a) => a.id == updatedAnnotation.id);
+                      final index = series.annotations.indexWhere(
+                        (a) => a.id == updatedAnnotation.id,
+                      );
                       if (index != -1) {
                         series.annotations[index] = updatedAnnotation;
                         break; // Found and updated, no need to check other series
@@ -2043,7 +2092,10 @@ class _BravenChartState extends State<BravenChart>
     // Wrap with dimensions if specified
     if (widget.width != null || widget.height != null) {
       chartWidget = SizedBox(
-          width: widget.width, height: widget.height, child: chartWidget);
+        width: widget.width,
+        height: widget.height,
+        child: chartWidget,
+      );
     }
 
     // Add title/subtitle if provided
@@ -2054,9 +2106,11 @@ class _BravenChartState extends State<BravenChart>
         children.add(
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(widget.title!,
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center),
+            child: Text(
+              widget.title!,
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
         );
       }
@@ -2065,9 +2119,11 @@ class _BravenChartState extends State<BravenChart>
         children.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(widget.subtitle!,
-                style: Theme.of(context).textTheme.titleSmall,
-                textAlign: TextAlign.center),
+            child: Text(
+              widget.subtitle!,
+              style: Theme.of(context).textTheme.titleSmall,
+              textAlign: TextAlign.center,
+            ),
           ),
         );
       }
@@ -2093,27 +2149,39 @@ class _BravenChartState extends State<BravenChart>
             // 1. ORIGINAL data bounds (no zoom/pan) - for dataRange (full range)
             // 2. CURRENT visible bounds (with zoom/pan) - for viewportRange (what's visible)
             final originalDataBounds = _calculatePreliminaryBounds(allSeries);
-            final visibleDataBounds = _calculateDataBounds(allSeries,
-                chartRect: _cachedChartRect, includePadding: false);
+            final visibleDataBounds = _calculateDataBounds(
+              allSeries,
+              chartRect: _cachedChartRect,
+              includePadding: false,
+            );
 
             // dataRange = FULL original data range (constant regardless of zoom/pan)
             final xDataRange = DataRange(
-                min: originalDataBounds.minX, max: originalDataBounds.maxX);
+              min: originalDataBounds.minX,
+              max: originalDataBounds.maxX,
+            );
             final yDataRange = DataRange(
-                min: originalDataBounds.minY, max: originalDataBounds.maxY);
+              min: originalDataBounds.minY,
+              max: originalDataBounds.maxY,
+            );
 
             // viewportRange = CURRENT visible range (changes with zoom/pan)
             final xViewportRange = DataRange(
-                min: visibleDataBounds.minX, max: visibleDataBounds.maxX);
+              min: visibleDataBounds.minX,
+              max: visibleDataBounds.maxX,
+            );
             final yViewportRange = DataRange(
-                min: visibleDataBounds.minY, max: visibleDataBounds.maxY);
+              min: visibleDataBounds.minY,
+              max: visibleDataBounds.maxY,
+            );
 
             // Get scrollbar theme
             final scrollbarTheme = effectiveTheme.scrollbarTheme;
 
             // Track X-scrollbar height for coordinate offset correction
-            _scrollbarHeightOffset =
-                showX ? scrollbarTheme.xAxisScrollbar.thickness : 0.0;
+            _scrollbarHeightOffset = showX
+                ? scrollbarTheme.xAxisScrollbar.thickness
+                : 0.0;
 
             // Build scrollbar layout aligned with chart viewport (Issue #1 fix)
             // Strategy: Add padding to chart for scrollbar space, then overlay scrollbars using Stack
@@ -2150,9 +2218,10 @@ class _BravenChartState extends State<BravenChart>
                     bottom: 0,
                     child: Padding(
                       padding: EdgeInsets.only(
-                          right: showY
-                              ? scrollbarTheme.yAxisScrollbar.thickness
-                              : 0.0),
+                        right: showY
+                            ? scrollbarTheme.yAxisScrollbar.thickness
+                            : 0.0,
+                      ),
                       child: SizedBox(
                         height: scrollbarTheme.xAxisScrollbar.thickness,
                         child: ChartScrollbar(
@@ -2160,8 +2229,11 @@ class _BravenChartState extends State<BravenChart>
                           dataRange: xDataRange,
                           viewportRange: xViewportRange,
                           onPixelDeltaChanged: (pixelDelta, interaction) {
-                            _onScrollbarPixelDelta(pixelDelta, interaction,
-                                isXAxis: true);
+                            _onScrollbarPixelDelta(
+                              pixelDelta,
+                              interaction,
+                              isXAxis: true,
+                            );
                           },
                           theme: scrollbarTheme.xAxisScrollbar,
                         ),
@@ -2180,9 +2252,10 @@ class _BravenChartState extends State<BravenChart>
                     bottom: 0,
                     child: Padding(
                       padding: EdgeInsets.only(
-                          bottom: showX
-                              ? scrollbarTheme.xAxisScrollbar.thickness
-                              : 0.0),
+                        bottom: showX
+                            ? scrollbarTheme.xAxisScrollbar.thickness
+                            : 0.0,
+                      ),
                       child: SizedBox(
                         width: scrollbarTheme.yAxisScrollbar.thickness,
                         child: ChartScrollbar(
@@ -2190,8 +2263,11 @@ class _BravenChartState extends State<BravenChart>
                           dataRange: yDataRange,
                           viewportRange: yViewportRange,
                           onPixelDeltaChanged: (pixelDelta, interaction) {
-                            _onScrollbarPixelDelta(pixelDelta, interaction,
-                                isXAxis: false);
+                            _onScrollbarPixelDelta(
+                              pixelDelta,
+                              interaction,
+                              isXAxis: false,
+                            );
                           },
                           theme: scrollbarTheme.yAxisScrollbar,
                         ),
@@ -2202,8 +2278,9 @@ class _BravenChartState extends State<BravenChart>
               }
 
               // Overlay scrollbars on top of padded chart using Stack
-              chartWithScrollbars =
-                  Stack(children: [paddedChart, ...scrollbarOverlays]);
+              chartWithScrollbars = Stack(
+                children: [paddedChart, ...scrollbarOverlays],
+              );
             } else {
               // Fallback: No chart rect available, use original full-width layout
               // Add Y scrollbar (vertical, on right side)
@@ -2219,8 +2296,11 @@ class _BravenChartState extends State<BravenChart>
                         dataRange: yDataRange,
                         viewportRange: yViewportRange,
                         onPixelDeltaChanged: (pixelDelta, interaction) {
-                          _onScrollbarPixelDelta(pixelDelta, interaction,
-                              isXAxis: false);
+                          _onScrollbarPixelDelta(
+                            pixelDelta,
+                            interaction,
+                            isXAxis: false,
+                          );
                         },
                         theme: scrollbarTheme.yAxisScrollbar,
                       ),
@@ -2242,8 +2322,11 @@ class _BravenChartState extends State<BravenChart>
                         dataRange: xDataRange,
                         viewportRange: xViewportRange,
                         onPixelDeltaChanged: (pixelDelta, interaction) {
-                          _onScrollbarPixelDelta(pixelDelta, interaction,
-                              isXAxis: true);
+                          _onScrollbarPixelDelta(
+                            pixelDelta,
+                            interaction,
+                            isXAxis: true,
+                          );
                         },
                         theme: scrollbarTheme.xAxisScrollbar,
                       ),
@@ -2298,9 +2381,11 @@ class _BravenChartState extends State<BravenChart>
           // If no streamingConfig, mode should always be interactive (see line 863)
           // Log error and wrap with interaction system as safeguard
           debugPrint(
-              '🔴 WARNING: Unexpected chart mode state: $currentMode with streamingConfig=${widget.streamingConfig != null}');
+            '🔴 WARNING: Unexpected chart mode state: $currentMode with streamingConfig=${widget.streamingConfig != null}',
+          );
           debugPrint(
-              '🟢 Applying fallback: wrapping with FULL interaction system');
+            '🟢 Applying fallback: wrapping with FULL interaction system',
+          );
           return _wrapWithInteractionSystem(child!);
         },
         child: chartWidget,
@@ -2324,10 +2409,7 @@ class _BravenChartState extends State<BravenChart>
       cursor = SystemMouseCursors.resizeUpDown;
     }
 
-    return MouseRegion(
-      cursor: cursor,
-      child: chartWidget,
-    );
+    return MouseRegion(cursor: cursor, child: chartWidget);
   }
 
   /// Wraps the chart widget with interaction system components.
@@ -2378,32 +2460,40 @@ class _BravenChartState extends State<BravenChart>
                   }
 
                   // Translate chartRect from CustomPaint space to Stack space
-                  final stackChartRect =
-                      chartRect.translate(_titleOffset.dx, _titleOffset.dy);
+                  final stackChartRect = chartRect.translate(
+                    _titleOffset.dx,
+                    _titleOffset.dy,
+                  );
 
                   // Calculate shared painter data
-                  final nearestPoint = interactionState.hoveredPoint != null &&
+                  final nearestPoint =
+                      interactionState.hoveredPoint != null &&
                           interactionState.hoveredPoint!.containsKey('x') &&
                           interactionState.hoveredPoint!.containsKey('y')
                       ? () {
                           // Transform DATA coordinates to SCREEN coordinates with current zoom/pan
                           final dataX =
                               (interactionState.hoveredPoint!['x'] as num?)
-                                      ?.toDouble() ??
-                                  0;
+                                  ?.toDouble() ??
+                              0;
                           final dataY =
                               (interactionState.hoveredPoint!['y'] as num?)
-                                      ?.toDouble() ??
-                                  0;
+                                  ?.toDouble() ??
+                              0;
 
                           final allSeries = _getAllSeries();
                           if (allSeries.isEmpty) return null;
 
-                          final bounds = _calculateDataBounds(allSeries,
-                              chartRect: chartRect);
+                          final bounds = _calculateDataBounds(
+                            allSeries,
+                            chartRect: chartRect,
+                          );
                           final point = ChartDataPoint(x: dataX, y: dataY);
-                          final screenPosBase =
-                              _dataToScreenPoint(point, chartRect, bounds);
+                          final screenPosBase = _dataToScreenPoint(
+                            point,
+                            chartRect,
+                            bounds,
+                          );
 
                           // CRITICAL: Add titleOffset for crosshair snap point (same as tooltip)
                           final screenPos = screenPosBase + _titleOffset;
@@ -2419,8 +2509,10 @@ class _BravenChartState extends State<BravenChart>
                   final dataBounds = () {
                     final allSeries = _getAllSeries();
                     if (allSeries.isEmpty) return null;
-                    return _calculateDataBounds(allSeries,
-                        chartRect: chartRect);
+                    return _calculateDataBounds(
+                      allSeries,
+                      chartRect: chartRect,
+                    );
                   }();
 
                   // LAYER 1: Crosshair LINES (clipped to chart area to prevent drawing over scrollbars)
@@ -2526,9 +2618,11 @@ class _BravenChartState extends State<BravenChart>
           // Handle right-click for annotation context menu
           onSecondaryTapDown: (details) {
             debugPrint(
-                '🔴 GestureDetector.onSecondaryTapDown FIRED at ${details.localPosition}');
+              '🔴 GestureDetector.onSecondaryTapDown FIRED at ${details.localPosition}',
+            );
             debugPrint(
-                '🔴 widget.interactiveAnnotations = ${widget.interactiveAnnotations}');
+              '🔴 widget.interactiveAnnotations = ${widget.interactiveAnnotations}',
+            );
             debugPrint('🔴 mounted = $mounted');
             _handleRightClick(details);
           },
@@ -2545,28 +2639,32 @@ class _BravenChartState extends State<BravenChart>
 
             // Handle selection if enabled
             if (config.enableSelection) {
-              final nearestPointData =
-                  _findNearestDataPoint(details.localPosition);
+              final nearestPointData = _findNearestDataPoint(
+                details.localPosition,
+              );
               if (nearestPointData != null) {
                 final point = _mapToDataPoint(nearestPointData);
 
                 // Add to selected points
                 final updatedSelection = List<Map<String, dynamic>>.from(
-                    _interactionStateNotifier.value.selectedPoints);
+                  _interactionStateNotifier.value.selectedPoints,
+                );
                 updatedSelection.add(nearestPointData);
 
-                _interactionStateNotifier.value =
-                    _interactionStateNotifier.value.copyWith(
-                  selectedPoints: updatedSelection,
-                  focusedPoint: nearestPointData,
-                );
+                _interactionStateNotifier.value = _interactionStateNotifier
+                    .value
+                    .copyWith(
+                      selectedPoints: updatedSelection,
+                      focusedPoint: nearestPointData,
+                    );
 
                 // Invoke tap callback
                 config.onDataPointTap?.call(point, details.localPosition);
 
                 // Invoke selection callback
                 final selectedPointsList = _interactionStateNotifier
-                    .value.selectedPoints
+                    .value
+                    .selectedPoints
                     .map((data) => _mapToDataPoint(data))
                     .toList();
                 config.onSelectionChanged?.call(selectedPointsList);
@@ -2576,8 +2674,9 @@ class _BravenChartState extends State<BravenChart>
 
           // Long press handling
           onLongPressStart: (details) {
-            final nearestPointData =
-                _findNearestDataPoint(details.localPosition);
+            final nearestPointData = _findNearestDataPoint(
+              details.localPosition,
+            );
             if (nearestPointData != null) {
               final point = _mapToDataPoint(nearestPointData);
               config.onDataPointLongPress?.call(point, details.localPosition);
@@ -2606,9 +2705,11 @@ class _BravenChartState extends State<BravenChart>
                     _resetAutoResumeTimer();
 
                     final ZoomPanState newZoomPanState = _zoomPanController!
-                        .zoom(_interactionStateNotifier.value.zoomPanState,
-                            zoomFactor: details.scale,
-                            focalPoint: details.focalPoint);
+                        .zoom(
+                          _interactionStateNotifier.value.zoomPanState,
+                          zoomFactor: details.scale,
+                          focalPoint: details.focalPoint,
+                        );
 
                     // Update state
                     _interactionStateNotifier.value = _interactionStateNotifier
@@ -2617,7 +2718,9 @@ class _BravenChartState extends State<BravenChart>
 
                     // Invoke zoom callback
                     config.onZoomChanged?.call(
-                        newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
+                      newZoomPanState.zoomLevelX,
+                      newZoomPanState.zoomLevelY,
+                    );
 
                     // Invoke viewport callback
                     _invokeViewportCallback();
@@ -2634,8 +2737,9 @@ class _BravenChartState extends State<BravenChart>
           // Double-tap to reset zoom
           onDoubleTap: config.enableZoom && _zoomPanController != null
               ? () {
-                  final newZoomPanState = _zoomPanController!
-                      .resetZoom(_interactionStateNotifier.value.zoomPanState);
+                  final newZoomPanState = _zoomPanController!.resetZoom(
+                    _interactionStateNotifier.value.zoomPanState,
+                  );
 
                   _interactionStateNotifier.value = _interactionStateNotifier
                       .value
@@ -2677,8 +2781,11 @@ class _BravenChartState extends State<BravenChart>
                   final zoomFactor = scrollDelta < 0 ? 1.1 : 0.9;
 
                   final oldState = _interactionStateNotifier.value.zoomPanState;
-                  final newZoomPanState = _zoomPanController!.zoom(oldState,
-                      zoomFactor: zoomFactor, focalPoint: signal.localPosition);
+                  final newZoomPanState = _zoomPanController!.zoom(
+                    oldState,
+                    zoomFactor: zoomFactor,
+                    focalPoint: signal.localPosition,
+                  );
 
                   // CRITICAL FIX: Apply state immediately, don't throttle zoom/pan!
                   // Throttling these makes interactions feel broken
@@ -2688,7 +2795,9 @@ class _BravenChartState extends State<BravenChart>
 
                   // Invoke zoom callback with NEW state
                   config.onZoomChanged?.call(
-                      newZoomPanState.zoomLevelX, newZoomPanState.zoomLevelY);
+                    newZoomPanState.zoomLevelX,
+                    newZoomPanState.zoomLevelY,
+                  );
 
                   // Invoke viewport callback (visible bounds changed due to zoom)
                   _invokeViewportCallback();
@@ -2701,12 +2810,14 @@ class _BravenChartState extends State<BravenChart>
             // Handle middle-mouse button pan (PRIMARY pan method)
             onPointerDown: (event) {
               debugPrint(
-                  '🟣 MAIN CHART Listener.onPointerDown - button=${event.buttons}');
+                '🟣 MAIN CHART Listener.onPointerDown - button=${event.buttons}',
+              );
               // CRITICAL: Only handle middle mouse button
               // Let other buttons (left=1, right=2) pass through to GestureDetector below
               if (event.buttons != kMiddleMouseButton) {
                 debugPrint(
-                    '   ➡️ NOT middle button - returning early to pass through');
+                  '   ➡️ NOT middle button - returning early to pass through',
+                );
                 return;
               }
 
@@ -2729,8 +2840,10 @@ class _BravenChartState extends State<BravenChart>
 
                 final delta = event.localPosition - _panStartPosition!;
 
-                final newZoomPanState = _zoomPanController!
-                    .pan(_interactionStateNotifier.value.zoomPanState, delta);
+                final newZoomPanState = _zoomPanController!.pan(
+                  _interactionStateNotifier.value.zoomPanState,
+                  delta,
+                );
 
                 // CRITICAL: Clamp pan offset to prevent panning beyond data boundaries
                 final clampedState = _clampPanOffset(newZoomPanState);
@@ -2788,7 +2901,7 @@ class _BravenChartState extends State<BravenChart>
                     'y': point.y,
                     'label': point.label,
                     'metadata': point.metadata,
-                    'seriesId': series.id
+                    'seriesId': series.id,
                   });
                 }
               }
@@ -2808,11 +2921,13 @@ class _BravenChartState extends State<BravenChart>
                   final currentZoomState =
                       _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 1.2).clamp(
-                      currentZoomState.minZoomLevel,
-                      currentZoomState.maxZoomLevel);
+                    currentZoomState.minZoomLevel,
+                    currentZoomState.maxZoomLevel,
+                  );
                   final newZoomY = (currentZoomState.zoomLevelY * 1.2).clamp(
-                      currentZoomState.minZoomLevel,
-                      currentZoomState.maxZoomLevel);
+                    currentZoomState.minZoomLevel,
+                    currentZoomState.maxZoomLevel,
+                  );
 
                   _animateZoom(
                     newZoomX: newZoomX,
@@ -2836,11 +2951,15 @@ class _BravenChartState extends State<BravenChart>
                   final currentZoomState =
                       _interactionStateNotifier.value.zoomPanState;
                   final newZoomX = (currentZoomState.zoomLevelX * 0.83333)
-                      .clamp(currentZoomState.minZoomLevel,
-                          currentZoomState.maxZoomLevel);
+                      .clamp(
+                        currentZoomState.minZoomLevel,
+                        currentZoomState.maxZoomLevel,
+                      );
                   final newZoomY = (currentZoomState.zoomLevelY * 0.83333)
-                      .clamp(currentZoomState.minZoomLevel,
-                          currentZoomState.maxZoomLevel);
+                      .clamp(
+                        currentZoomState.minZoomLevel,
+                        currentZoomState.maxZoomLevel,
+                      );
 
                   _animateZoom(
                     newZoomX: newZoomX,
@@ -2877,17 +2996,25 @@ class _BravenChartState extends State<BravenChart>
                   Offset newPanOffset;
                   if (key == LogicalKeyboardKey.arrowLeft) {
                     newPanOffset = Offset(
-                        currentPanOffset.dx - panAmount, currentPanOffset.dy);
+                      currentPanOffset.dx - panAmount,
+                      currentPanOffset.dy,
+                    );
                   } else if (key == LogicalKeyboardKey.arrowRight) {
                     newPanOffset = Offset(
-                        currentPanOffset.dx + panAmount, currentPanOffset.dy);
+                      currentPanOffset.dx + panAmount,
+                      currentPanOffset.dy,
+                    );
                   } else if (key == LogicalKeyboardKey.arrowUp) {
                     newPanOffset = Offset(
-                        currentPanOffset.dx, currentPanOffset.dy - panAmount);
+                      currentPanOffset.dx,
+                      currentPanOffset.dy - panAmount,
+                    );
                   } else {
                     // arrowDown
                     newPanOffset = Offset(
-                        currentPanOffset.dx, currentPanOffset.dy + panAmount);
+                      currentPanOffset.dx,
+                      currentPanOffset.dy + panAmount,
+                    );
                   }
 
                   // DIFFERENTIATE: First press (smooth animation) vs held down (instant pan)
@@ -2897,8 +3024,11 @@ class _BravenChartState extends State<BravenChart>
                       newPanOffset: newPanOffset,
                       onComplete: () {
                         widget.interactionConfig!.onPanChanged?.call(
-                            _interactionStateNotifier
-                                .value.zoomPanState.panOffset);
+                          _interactionStateNotifier
+                              .value
+                              .zoomPanState
+                              .panOffset,
+                        );
                         _invokeViewportCallback();
                       },
                     );
@@ -2907,15 +3037,17 @@ class _BravenChartState extends State<BravenChart>
                     // This prevents animation stuttering from rapid repeat events (~30ms intervals)
                     final currentZoomState =
                         _interactionStateNotifier.value.zoomPanState;
-                    final newZoomState =
-                        currentZoomState.copyWith(panOffset: newPanOffset);
+                    final newZoomState = currentZoomState.copyWith(
+                      panOffset: newPanOffset,
+                    );
                     _interactionStateNotifier.value = _interactionStateNotifier
                         .value
                         .copyWith(zoomPanState: newZoomState);
 
                     // Invoke callbacks immediately
                     widget.interactionConfig!.onPanChanged?.call(
-                        _interactionStateNotifier.value.zoomPanState.panOffset);
+                      _interactionStateNotifier.value.zoomPanState.panOffset,
+                    );
                     _invokeViewportCallback();
                   }
 
@@ -2925,8 +3057,10 @@ class _BravenChartState extends State<BravenChart>
 
               // Process key event through keyboard handler
               final newState = _keyboardHandler!.handleKeyEvent(
-                  event, _interactionStateNotifier.value,
-                  dataPoints: allDataPoints);
+                event,
+                _interactionStateNotifier.value,
+                dataPoints: allDataPoints,
+              );
 
               if (newState != null &&
                   newState != _interactionStateNotifier.value) {
@@ -2935,11 +3069,13 @@ class _BravenChartState extends State<BravenChart>
                 // If focused point changed, invoke callback
                 if (_interactionStateNotifier.value.focusedPoint != null) {
                   final point = _mapToDataPoint(
-                      _interactionStateNotifier.value.focusedPoint!);
+                    _interactionStateNotifier.value.focusedPoint!,
+                  );
                   config.onDataPointHover?.call(
-                      point,
-                      _interactionStateNotifier.value.crosshairPosition ??
-                          Offset.zero);
+                    point,
+                    _interactionStateNotifier.value.crosshairPosition ??
+                        Offset.zero,
+                  );
                 }
 
                 // If zoom/pan state changed, invoke callbacks
@@ -2956,7 +3092,8 @@ class _BravenChartState extends State<BravenChart>
                 if (_interactionStateNotifier.value.selectedPoints !=
                     newState.selectedPoints) {
                   final selectedPointsList = _interactionStateNotifier
-                      .value.selectedPoints
+                      .value
+                      .selectedPoints
                       .map((data) => _mapToDataPoint(data))
                       .toList();
                   config.onSelectionChanged?.call(selectedPointsList);
@@ -3022,19 +3159,22 @@ class _BravenChartState extends State<BravenChart>
   /// Helper for callback invocations that require ChartDataPoint.
   ChartDataPoint _mapToDataPoint(Map<String, dynamic> data) {
     return ChartDataPoint(
-        x: (data['x'] as num?)?.toDouble() ?? 0,
-        y: (data['y'] as num?)?.toDouble() ?? 0,
-        metadata: {...data});
+      x: (data['x'] as num?)?.toDouble() ?? 0,
+      y: (data['y'] as num?)?.toDouble() ?? 0,
+      metadata: {...data},
+    );
   }
 
   /// Handles right-click events to show annotation context menu
   void _handleRightClick(TapDownDetails details) {
     debugPrint(
-        '🟡 _handleRightClick CALLED - mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}');
+      '🟡 _handleRightClick CALLED - mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}',
+    );
 
     if (!mounted || !widget.interactiveAnnotations) {
       debugPrint(
-          '🔴 EARLY RETURN: mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}');
+        '🔴 EARLY RETURN: mounted=$mounted, interactiveAnnotations=${widget.interactiveAnnotations}',
+      );
       return;
     }
 
@@ -3051,12 +3191,14 @@ class _BravenChartState extends State<BravenChart>
     if (availableSeriesIds.isEmpty) return;
 
     // Check if right-click hit an existing text annotation (use adjusted position!)
-    final clickedTextAnnotation =
-        _findAnnotationAtPosition(adjustedLocalPosition);
+    final clickedTextAnnotation = _findAnnotationAtPosition(
+      adjustedLocalPosition,
+    );
 
     // Check if right-click hit an existing point annotation
-    final clickedPointAnnotationData =
-        _findPointAnnotationAtPosition(adjustedLocalPosition);
+    final clickedPointAnnotationData = _findPointAnnotationAtPosition(
+      adjustedLocalPosition,
+    );
 
     // Detect nearest data point for context determination
     final nearestPoint = _findNearestDataPoint(details.localPosition);
@@ -3077,8 +3219,9 @@ class _BravenChartState extends State<BravenChart>
         targetSeriesId = nearestPoint['seriesId'] as String;
 
         // Find the data point index in the series
-        final series =
-            _getAllSeries().firstWhere((s) => s.id == targetSeriesId);
+        final series = _getAllSeries().firstWhere(
+          (s) => s.id == targetSeriesId,
+        );
         final pointX = nearestPoint['x'] as double;
         final pointY = nearestPoint['y'] as double;
 
@@ -3223,17 +3366,15 @@ class _BravenChartState extends State<BravenChart>
           final annotationScreenPos = screenPoint + annotation.offset;
 
           // Hit test with marker size as radius
-          final hitRadius = annotation.markerSize +
+          final hitRadius =
+              annotation.markerSize +
               4.0; // Add 4px padding for easier clicking
           final dx = position.dx - annotationScreenPos.dx;
           final dy = position.dy - annotationScreenPos.dy;
           final distance = sqrt(dx * dx + dy * dy);
 
           if (distance <= hitRadius) {
-            return {
-              'annotation': annotation,
-              'seriesId': series.id,
-            };
+            return {'annotation': annotation, 'seriesId': series.id};
           }
         }
       }
@@ -3252,8 +3393,9 @@ class _BravenChartState extends State<BravenChart>
       );
 
       // Add or update annotation
-      final existingIndex =
-          series.annotations.indexWhere((a) => a.id == annotation.id);
+      final existingIndex = series.annotations.indexWhere(
+        (a) => a.id == annotation.id,
+      );
       if (existingIndex >= 0) {
         series.annotations[existingIndex] = annotation;
       } else {
@@ -3347,7 +3489,10 @@ class _BravenChartState extends State<BravenChart>
   /// Uses the same transformation logic as _BravenChartPainter._dataToPixel.
   /// Returns coordinates in STACK space (includes title offset if present).
   Offset _dataToScreenPoint(
-      ChartDataPoint point, Rect chartRect, _DataBounds bounds) {
+    ChartDataPoint point,
+    Rect chartRect,
+    _DataBounds bounds,
+  ) {
     final xRange = bounds.maxX - bounds.minX;
     final yRange = bounds.maxY - bounds.minY;
 
@@ -3374,7 +3519,8 @@ class _BravenChartState extends State<BravenChart>
     // Get effective axis configurations
     // NOTE: Y-axis should default to left position for standard charts
     final effectiveXAxis = widget.xAxis ?? LegacyAxisConfig.defaults();
-    final effectiveYAxis = widget.yAxis ??
+    final effectiveYAxis =
+        widget.yAxis ??
         LegacyAxisConfig.defaults().copyWith(axisPosition: AxisPosition.left);
 
     // Get all series for bounds calculation
@@ -3387,28 +3533,33 @@ class _BravenChartState extends State<BravenChart>
     final preliminaryBounds = _calculatePreliminaryBounds(allSeries);
 
     // Calculate padding based on dynamic axis sizing or user-provided reservedSize
-    final leftPadding = (effectiveYAxis.showAxis &&
+    final leftPadding =
+        (effectiveYAxis.showAxis &&
             effectiveYAxis.axisPosition == AxisPosition.left)
         ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false)
         : 0.0;
-    final rightPadding = (effectiveYAxis.showAxis &&
+    final rightPadding =
+        (effectiveYAxis.showAxis &&
             effectiveYAxis.axisPosition == AxisPosition.right)
         ? _calculateAxisPadding(effectiveYAxis, preliminaryBounds, false)
         : 0.0;
-    final topPadding = (effectiveXAxis.showAxis &&
+    final topPadding =
+        (effectiveXAxis.showAxis &&
             effectiveXAxis.axisPosition == AxisPosition.top)
         ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true)
         : 0.0;
-    final bottomPadding = (effectiveXAxis.showAxis &&
+    final bottomPadding =
+        (effectiveXAxis.showAxis &&
             effectiveXAxis.axisPosition == AxisPosition.bottom)
         ? _calculateAxisPadding(effectiveXAxis, preliminaryBounds, true)
         : 0.0;
 
     return Rect.fromLTWH(
-        leftPadding,
-        topPadding,
-        size.width - leftPadding - rightPadding,
-        size.height - topPadding - bottomPadding);
+      leftPadding,
+      topPadding,
+      size.width - leftPadding - rightPadding,
+      size.height - topPadding - bottomPadding,
+    );
   }
 
   /// Calculates preliminary data bounds from series (for axis sizing).
@@ -3439,7 +3590,10 @@ class _BravenChartState extends State<BravenChart>
 
   /// Calculates axis padding (same logic as _BravenChartPainter._calculateAxisReservedSize).
   double _calculateAxisPadding(
-      LegacyAxisConfig axis, _DataBounds bounds, bool isXAxis) {
+    LegacyAxisConfig axis,
+    _DataBounds bounds,
+    bool isXAxis,
+  ) {
     // If user provided explicit size, use it
     if (axis.reservedSize != null) {
       return axis.reservedSize!;
@@ -3454,8 +3608,9 @@ class _BravenChartState extends State<BravenChart>
     final effectiveTheme = widget.theme ?? ChartTheme.defaultLight;
 
     // Calculate the data range
-    final range =
-        isXAxis ? (bounds.maxX - bounds.minX) : (bounds.maxY - bounds.minY);
+    final range = isXAxis
+        ? (bounds.maxX - bounds.minX)
+        : (bounds.maxY - bounds.minY);
 
     // If range is invalid (NaN, infinite, or zero), return default padding
     if (range.isNaN || range.isInfinite || range <= 0) {
@@ -3478,10 +3633,14 @@ class _BravenChartState extends State<BravenChart>
     // Measure all labels to find the maximum size
     while (current <= last) {
       final label = _formatAxisLabel(current);
-      final textSpan =
-          TextSpan(text: label, style: effectiveTheme.axisStyle.labelStyle);
-      final textPainter =
-          TextPainter(text: textSpan, textDirection: TextDirection.ltr);
+      final textSpan = TextSpan(
+        text: label,
+        style: effectiveTheme.axisStyle.labelStyle,
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
       textPainter.layout();
 
       if (isXAxis) {
@@ -3661,8 +3820,11 @@ class _BravenChartState extends State<BravenChart>
     return state.copyWith(panOffset: Offset(clampedPanX, clampedPanY));
   }
 
-  _DataBounds _calculateDataBounds(List<ChartSeries> series,
-      {Rect? chartRect, bool includePadding = true}) {
+  _DataBounds _calculateDataBounds(
+    List<ChartSeries> series, {
+    Rect? chartRect,
+    bool includePadding = true,
+  }) {
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
@@ -3722,7 +3884,8 @@ class _BravenChartState extends State<BravenChart>
         maxY = dataMaxY;
       } else {
         final panDataX = -panX * (dataRangeX / rect.width);
-        final panDataY = panY *
+        final panDataY =
+            panY *
             (dataRangeY / rect.height); // Invert Y for screen coordinates
 
         // Calculate visible bounds after zoom/pan (BEFORE padding)
@@ -3788,8 +3951,11 @@ class _BravenChartState extends State<BravenChart>
     // Transform marker from data coordinates to screen coordinates
     // _dataToScreenPoint returns chartRect-local coordinates (for annotations)
     final markerDataPoint = ChartDataPoint(x: markerX, y: markerY);
-    final markerScreenPosBase =
-        _dataToScreenPoint(markerDataPoint, _cachedChartRect!, bounds);
+    final markerScreenPosBase = _dataToScreenPoint(
+      markerDataPoint,
+      _cachedChartRect!,
+      bounds,
+    );
 
     // CRITICAL: Add titleOffset for tooltip positioning (tooltips render differently than annotations)
     // Annotations use chartRect coords directly; tooltips need titleOffset adjustment
@@ -3818,12 +3984,19 @@ class _BravenChartState extends State<BravenChart>
     // Calculate tooltip position using directional Positioned properties
     // No need for size estimates - Flutter handles sizing automatically
     // Pass both Stack size (for positioning) and chartRect (for clipping bounds)
-    final tooltipPosition = _calculateTooltipPosition(markerScreenPos,
-        config.preferredPosition, _cachedStackSize!, _cachedChartRect!);
+    final tooltipPosition = _calculateTooltipPosition(
+      markerScreenPos,
+      config.preferredPosition,
+      _cachedStackSize!,
+      _cachedChartRect!,
+    );
 
     // Build tooltip with arrow pointer (integrated into border)
     final tooltipWithArrow = _buildTooltipWithArrow(
-        tooltipContent, tooltipStyle, config.preferredPosition);
+      tooltipContent,
+      tooltipStyle,
+      config.preferredPosition,
+    );
 
     // Return positioned tooltip without clipping
     return Positioned(
@@ -3860,7 +4033,7 @@ class _BravenChartState extends State<BravenChart>
   /// - [stackSize]: Full widget size (RED area) - used for Positioned coordinates
   /// - [chartRect]: Chart plotting area (BLUE area) - used for clipping reference
   ({double? left, double? right, double? top, double? bottom})
-      _calculateTooltipPosition(
+  _calculateTooltipPosition(
     Offset markerPos,
     TooltipPosition preferredPosition,
     Size stackSize,
@@ -3890,7 +4063,7 @@ class _BravenChartState extends State<BravenChart>
           left: markerPos.dx - arrowOffsetX,
           bottom: screenHeight - markerEdgeTop + arrowSize,
           top: null,
-          right: null
+          right: null,
         );
 
       case TooltipPosition.top:
@@ -3901,7 +4074,7 @@ class _BravenChartState extends State<BravenChart>
           left: markerPos.dx - arrowOffsetX,
           bottom: screenHeight - markerEdgeTop + arrowSize,
           top: null,
-          right: null
+          right: null,
         );
 
       case TooltipPosition.bottom:
@@ -3912,7 +4085,7 @@ class _BravenChartState extends State<BravenChart>
           left: markerPos.dx - arrowOffsetX,
           top: markerEdgeBottom + arrowSize,
           bottom: null,
-          right: null
+          right: null,
         );
 
       case TooltipPosition.left:
@@ -3923,7 +4096,7 @@ class _BravenChartState extends State<BravenChart>
           right: screenWidth - markerEdgeLeft + arrowSize,
           top: markerPos.dy - arrowOffsetY,
           left: null,
-          bottom: null
+          bottom: null,
         );
 
       case TooltipPosition.right:
@@ -3934,7 +4107,7 @@ class _BravenChartState extends State<BravenChart>
           left: markerEdgeRight + arrowSize,
           top: markerPos.dy - arrowOffsetY,
           right: null,
-          bottom: null
+          bottom: null,
         );
     }
   }
@@ -3957,8 +4130,9 @@ class _BravenChartState extends State<BravenChart>
       double borderRadius,
       double padding,
       double shadowBlurRadius,
-      Color shadowColor
-    }) tooltipStyle,
+      Color shadowColor,
+    })
+    tooltipStyle,
     TooltipPosition position,
   ) {
     // Build shadow if needed
@@ -3991,8 +4165,9 @@ class _BravenChartState extends State<BravenChart>
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12.0),
             child: Padding(
-                padding: EdgeInsets.all(tooltipStyle.padding),
-                child: tooltipContent),
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
+            ),
           ),
         );
 
@@ -4014,8 +4189,9 @@ class _BravenChartState extends State<BravenChart>
           child: Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: Padding(
-                padding: EdgeInsets.all(tooltipStyle.padding),
-                child: tooltipContent),
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
+            ),
           ),
         );
 
@@ -4037,8 +4213,9 @@ class _BravenChartState extends State<BravenChart>
           child: Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Padding(
-                padding: EdgeInsets.all(tooltipStyle.padding),
-                child: tooltipContent),
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
+            ),
           ),
         );
 
@@ -4060,8 +4237,9 @@ class _BravenChartState extends State<BravenChart>
           child: Padding(
             padding: const EdgeInsets.only(left: 12.0),
             child: Padding(
-                padding: EdgeInsets.all(tooltipStyle.padding),
-                child: tooltipContent),
+              padding: EdgeInsets.all(tooltipStyle.padding),
+              child: tooltipContent,
+            ),
           ),
         );
 
@@ -4072,8 +4250,9 @@ class _BravenChartState extends State<BravenChart>
           decoration: BoxDecoration(
             color: tooltipStyle.backgroundColor,
             border: Border.all(
-                color: tooltipStyle.borderColor,
-                width: tooltipStyle.borderWidth),
+              color: tooltipStyle.borderColor,
+              width: tooltipStyle.borderWidth,
+            ),
             borderRadius: BorderRadius.circular(tooltipStyle.borderRadius),
             boxShadow: boxShadow,
           ),
@@ -4084,29 +4263,42 @@ class _BravenChartState extends State<BravenChart>
 
   /// Builds the default tooltip content.
   Widget _buildDefaultTooltip(
-      Map<String, dynamic> dataPoint, TooltipConfig config) {
+    Map<String, dynamic> dataPoint,
+    TooltipConfig config,
+  ) {
     final x = dataPoint['x'];
     final y = dataPoint['y'];
 
     final textStyle = TextStyle(
-        color: config.style.textColor, fontSize: config.style.fontSize);
+      color: config.style.textColor,
+      fontSize: config.style.fontSize,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('X: ${x is num ? x.toStringAsFixed(2) : x.toString()}',
-            style: textStyle),
+        Text(
+          'X: ${x is num ? x.toStringAsFixed(2) : x.toString()}',
+          style: textStyle,
+        ),
         const SizedBox(height: 4),
-        Text('Y: ${y is num ? y.toStringAsFixed(2) : y.toString()}',
-            style: textStyle),
+        Text(
+          'Y: ${y is num ? y.toStringAsFixed(2) : y.toString()}',
+          style: textStyle,
+        ),
         // Show additional properties if present
-        ...dataPoint.entries.where((e) => e.key != 'x' && e.key != 'y').map(
+        ...dataPoint.entries
+            .where((e) => e.key != 'x' && e.key != 'y')
+            .map(
               (e) => Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text('${e.key}: ${e.value}',
-                    style: textStyle.copyWith(
-                        fontSize: config.style.fontSize * 0.83)),
+                child: Text(
+                  '${e.key}: ${e.value}',
+                  style: textStyle.copyWith(
+                    fontSize: config.style.fontSize * 0.83,
+                  ),
+                ),
               ),
             ),
       ],
@@ -4128,8 +4320,10 @@ class _BravenChartState extends State<BravenChart>
         final existingIndex = result.indexWhere((s) => s.id == entry.key);
         if (existingIndex >= 0) {
           // Replace with controller version (controller has priority)
-          result[existingIndex] =
-              ChartSeries(id: entry.key, points: entry.value);
+          result[existingIndex] = ChartSeries(
+            id: entry.key,
+            points: entry.value,
+          );
         } else {
           // Add new series
           result.add(ChartSeries(id: entry.key, points: entry.value));
@@ -4188,8 +4382,10 @@ class _BravenChartState extends State<BravenChart>
   ///
   /// New approach: Convert pixel delta directly to pan offset delta (for pan) or zoom level delta (for zoom edges).
   void _onScrollbarPixelDelta(
-      Offset pixelDelta, ScrollbarInteraction interaction,
-      {required bool isXAxis}) {
+    Offset pixelDelta,
+    ScrollbarInteraction interaction, {
+    required bool isXAxis,
+  }) {
     // DRAG END SIGNAL: Scrollbar sends Offset.zero when drag ends
     // Clear drag start baseline so next drag starts fresh
     if (pixelDelta == Offset.zero) {
@@ -4236,8 +4432,10 @@ class _BravenChartState extends State<BravenChart>
         final viewportSize = dataRangeX / currentState.zoomLevelX;
 
         // Calculate new viewport centered at target position
-        final newViewportMin = (targetDataPosition - viewportSize / 2)
-            .clamp(dataMinX, dataMaxX - viewportSize);
+        final newViewportMin = (targetDataPosition - viewportSize / 2).clamp(
+          dataMinX,
+          dataMaxX - viewportSize,
+        );
         final newViewportMax = newViewportMin + viewportSize;
 
         // Convert viewport to zoom/pan (zoom stays same, only pan changes)
@@ -4249,7 +4447,8 @@ class _BravenChartState extends State<BravenChart>
         final newPanX = -panDataX * (trackLength / dataRangeX);
 
         final newZoomPanState = currentState.copyWith(
-            panOffset: Offset(newPanX, currentState.panOffset.dy));
+          panOffset: Offset(newPanX, currentState.panOffset.dy),
+        );
 
         _interactionStateNotifier.value = _interactionStateNotifier.value
             .copyWith(zoomPanState: newZoomPanState);
@@ -4293,17 +4492,20 @@ class _BravenChartState extends State<BravenChart>
             // When viewport is at RIGHT edge: maxX = dataMaxX → panDataX = (dataRangeX - rangeX)/2
             // Converting to panX: panX = -panDataX * (trackLength / dataRangeX)
             final viewportSize = dataRangeX / currentState.zoomLevelX;
-            final minPanX = -(dataRangeX - viewportSize) /
+            final minPanX =
+                -(dataRangeX - viewportSize) /
                 2 *
                 (trackLength / dataRangeX); // Viewport at left edge
-            final maxPanX = (dataRangeX - viewportSize) /
+            final maxPanX =
+                (dataRangeX - viewportSize) /
                 2 *
                 (trackLength / dataRangeX); // Viewport at right edge
 
             final clampedPanX = newPanX.clamp(minPanX, maxPanX);
 
             final newZoomPanState = currentState.copyWith(
-                panOffset: Offset(clampedPanX, currentState.panOffset.dy));
+              panOffset: Offset(clampedPanX, currentState.panOffset.dy),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4331,8 +4533,10 @@ class _BravenChartState extends State<BravenChart>
             // Initialize drag start viewport on first frame or interaction change
             if (_scrollbarDragStartPan == null ||
                 _lastScrollbarInteraction != interaction) {
-              _scrollbarDragStartPan =
-                  Offset(currentViewportMinX, currentViewportMaxX);
+              _scrollbarDragStartPan = Offset(
+                currentViewportMinX,
+                currentViewportMaxX,
+              );
               _lastScrollbarInteraction = interaction;
               return; // CRITICAL: Return immediately on first frame to skip processing
             }
@@ -4350,15 +4554,18 @@ class _BravenChartState extends State<BravenChart>
 
             if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
               // Anchor right edge, adjust left edge from STARTING position
-              newViewportMinX = (startViewportMinX + dataDeltaX).clamp(dataMinX,
-                  startViewportMaxX - (dataRangeX * 0.01)); // Min 1% viewport
+              newViewportMinX = (startViewportMinX + dataDeltaX).clamp(
+                dataMinX,
+                startViewportMaxX - (dataRangeX * 0.01),
+              ); // Min 1% viewport
               newViewportMaxX = startViewportMaxX;
             } else {
               // Anchor left edge, adjust right edge from STARTING position
               newViewportMinX = startViewportMinX;
               newViewportMaxX = (startViewportMaxX + dataDeltaX).clamp(
-                  startViewportMinX + (dataRangeX * 0.01),
-                  dataMaxX); // Min 1% viewport
+                startViewportMinX + (dataRangeX * 0.01),
+                dataMaxX,
+              ); // Min 1% viewport
             }
 
             // Convert new viewport to zoom/pan state
@@ -4371,8 +4578,9 @@ class _BravenChartState extends State<BravenChart>
             final newPanX = -newPanDataX * (trackLength / dataRangeX);
 
             final newZoomPanState = currentState.copyWith(
-                zoomLevelX: newZoomX,
-                panOffset: Offset(newPanX, currentState.panOffset.dy));
+              zoomLevelX: newZoomX,
+              panOffset: Offset(newPanX, currentState.panOffset.dy),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4391,7 +4599,8 @@ class _BravenChartState extends State<BravenChart>
             final clampedPanX = newPanX.clamp(minPanX, maxPanX);
 
             final newZoomPanState = currentState.copyWith(
-                panOffset: Offset(clampedPanX, currentState.panOffset.dy));
+              panOffset: Offset(clampedPanX, currentState.panOffset.dy),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4417,8 +4626,10 @@ class _BravenChartState extends State<BravenChart>
         final viewportSize = dataRangeY / currentState.zoomLevelY;
 
         // Calculate new viewport centered at target position
-        final newViewportMin = (targetDataPosition - viewportSize / 2)
-            .clamp(dataMinY, dataMaxY - viewportSize);
+        final newViewportMin = (targetDataPosition - viewportSize / 2).clamp(
+          dataMinY,
+          dataMaxY - viewportSize,
+        );
         final newViewportMax = newViewportMin + viewportSize;
 
         // Convert viewport to zoom/pan (zoom stays same, only pan changes)
@@ -4428,7 +4639,8 @@ class _BravenChartState extends State<BravenChart>
         final newPanY = panDataY * (trackLength / dataRangeY);
 
         final newZoomPanState = currentState.copyWith(
-            panOffset: Offset(currentState.panOffset.dx, newPanY));
+          panOffset: Offset(currentState.panOffset.dx, newPanY),
+        );
 
         _interactionStateNotifier.value = _interactionStateNotifier.value
             .copyWith(zoomPanState: newZoomPanState);
@@ -4466,17 +4678,20 @@ class _BravenChartState extends State<BravenChart>
             // When viewport is at TOP edge: maxY = dataMaxY → panDataY = (dataRangeY - rangeY)/2
             // Converting to panY: panY = panDataY * (trackLength / dataRangeY)
             final viewportSize = dataRangeY / currentState.zoomLevelY;
-            final minPanY = -(dataRangeY - viewportSize) /
+            final minPanY =
+                -(dataRangeY - viewportSize) /
                 2 *
                 (trackLength / dataRangeY); // Viewport at bottom edge
-            final maxPanY = (dataRangeY - viewportSize) /
+            final maxPanY =
+                (dataRangeY - viewportSize) /
                 2 *
                 (trackLength / dataRangeY); // Viewport at top edge
 
             final clampedPanY = newPanY.clamp(minPanY, maxPanY);
 
             final newZoomPanState = currentState.copyWith(
-                panOffset: Offset(currentState.panOffset.dx, clampedPanY));
+              panOffset: Offset(currentState.panOffset.dx, clampedPanY),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4504,8 +4719,10 @@ class _BravenChartState extends State<BravenChart>
             // For Y-axis, store in separate variable to avoid conflict with X-axis
             if (_scrollbarDragStartPan == null ||
                 _lastScrollbarInteraction != interaction) {
-              _scrollbarDragStartPan =
-                  Offset(currentViewportMinY, currentViewportMaxY);
+              _scrollbarDragStartPan = Offset(
+                currentViewportMinY,
+                currentViewportMaxY,
+              );
               _lastScrollbarInteraction = interaction;
               return; // CRITICAL: Return immediately on first frame to skip processing
             }
@@ -4523,14 +4740,18 @@ class _BravenChartState extends State<BravenChart>
 
             if (interaction == ScrollbarInteraction.zoomLeftOrTop) {
               // Anchor bottom edge, adjust top edge from STARTING position
-              newViewportMinY = (startViewportMinY + dataDeltaY)
-                  .clamp(dataMinY, startViewportMaxY - (dataRangeY * 0.01));
+              newViewportMinY = (startViewportMinY + dataDeltaY).clamp(
+                dataMinY,
+                startViewportMaxY - (dataRangeY * 0.01),
+              );
               newViewportMaxY = startViewportMaxY;
             } else {
               // Anchor top edge, adjust bottom edge from STARTING position
               newViewportMinY = startViewportMinY;
-              newViewportMaxY = (startViewportMaxY + dataDeltaY)
-                  .clamp(startViewportMinY + (dataRangeY * 0.01), dataMaxY);
+              newViewportMaxY = (startViewportMaxY + dataDeltaY).clamp(
+                startViewportMinY + (dataRangeY * 0.01),
+                dataMaxY,
+              );
             }
 
             // Convert new viewport to zoom/pan state
@@ -4541,8 +4762,9 @@ class _BravenChartState extends State<BravenChart>
             final newPanY = newPanDataY * (trackLength / dataRangeY);
 
             final newZoomPanState = currentState.copyWith(
-                zoomLevelY: newZoomY,
-                panOffset: Offset(currentState.panOffset.dx, newPanY));
+              zoomLevelY: newZoomY,
+              panOffset: Offset(currentState.panOffset.dx, newPanY),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4561,7 +4783,8 @@ class _BravenChartState extends State<BravenChart>
             final clampedPanY = newPanY.clamp(minPanY, maxPanY);
 
             final newZoomPanState = currentState.copyWith(
-                panOffset: Offset(currentState.panOffset.dx, clampedPanY));
+              panOffset: Offset(currentState.panOffset.dx, clampedPanY),
+            );
 
             _interactionStateNotifier.value = _interactionStateNotifier.value
                 .copyWith(zoomPanState: newZoomPanState);
@@ -4671,7 +4894,9 @@ class _BravenChartPainter extends CustomPainter {
       ..color = theme.backgroundColor
       ..style = PaintingStyle.fill;
     canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height), backgroundPaint);
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      backgroundPaint,
+    );
 
     // Draw border if specified
     if (theme.borderWidth > 0) {
@@ -4680,9 +4905,14 @@ class _BravenChartPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = theme.borderWidth;
       canvas.drawRect(
-          Rect.fromLTWH(0, 0, size.width, size.height)
-              .deflate(theme.borderWidth / 2),
-          borderPaint);
+        Rect.fromLTWH(
+          0,
+          0,
+          size.width,
+          size.height,
+        ).deflate(theme.borderWidth / 2),
+        borderPaint,
+      );
     }
 
     // Calculate data bounds first (needed for dynamic axis sizing)
@@ -4700,26 +4930,27 @@ class _BravenChartPainter extends CustomPainter {
     // Use dynamic calculation or user-provided reservedSize
     final leftPadding =
         (yAxis.showAxis && yAxis.axisPosition == AxisPosition.left)
-            ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
-            : 0.0;
+        ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
+        : 0.0;
     final rightPadding =
         (yAxis.showAxis && yAxis.axisPosition == AxisPosition.right)
-            ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
-            : 0.0;
+        ? _calculateAxisReservedSize(yAxis, preliminaryBounds, false)
+        : 0.0;
     final topPadding =
         (xAxis.showAxis && xAxis.axisPosition == AxisPosition.top)
-            ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true)
-            : 0.0;
+        ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true)
+        : 0.0;
     final bottomPadding =
         (xAxis.showAxis && xAxis.axisPosition == AxisPosition.bottom)
-            ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true)
-            : 0.0;
+        ? _calculateAxisReservedSize(xAxis, preliminaryBounds, true)
+        : 0.0;
 
     final chartRect = Rect.fromLTWH(
-        leftPadding,
-        topPadding,
-        size.width - leftPadding - rightPadding,
-        size.height - topPadding - bottomPadding);
+      leftPadding,
+      topPadding,
+      size.width - leftPadding - rightPadding,
+      size.height - topPadding - bottomPadding,
+    );
 
     // CRITICAL FIX: Notify State of the chartRect calculated with ACTUAL render size.
     // This ensures cached chartRect matches the size CustomPaint uses for rendering.
@@ -4835,7 +5066,8 @@ class _BravenChartPainter extends CustomPainter {
         double panDataY = 0.0;
         if (chartRect != null) {
           panDataX = -panX * (dataRangeX / chartRect.width);
-          panDataY = panY *
+          panDataY =
+              panY *
               (dataRangeY /
                   chartRect.height); // Invert Y for screen coordinates
         }
@@ -4898,7 +5130,10 @@ class _BravenChartPainter extends CustomPainter {
         // Only draw if within chart bounds
         if (y >= chartRect.top && y <= chartRect.bottom) {
           canvas.drawLine(
-              Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
+            Offset(chartRect.left, y),
+            Offset(chartRect.right, y),
+            gridPaint,
+          );
         }
 
         currentY += yInterval;
@@ -4919,7 +5154,10 @@ class _BravenChartPainter extends CustomPainter {
         // Only draw if within chart bounds
         if (x >= chartRect.left && x <= chartRect.right) {
           canvas.drawLine(
-              Offset(x, chartRect.top), Offset(x, chartRect.bottom), gridPaint);
+            Offset(x, chartRect.top),
+            Offset(x, chartRect.bottom),
+            gridPaint,
+          );
         }
 
         currentX += xInterval;
@@ -4933,7 +5171,10 @@ class _BravenChartPainter extends CustomPainter {
   /// If [axis.reservedSize] is provided, returns that value.
   /// Otherwise, calculates based on actual label sizes with a buffer.
   double _calculateAxisReservedSize(
-      LegacyAxisConfig axis, _DataBounds bounds, bool isXAxis) {
+    LegacyAxisConfig axis,
+    _DataBounds bounds,
+    bool isXAxis,
+  ) {
     // If user provided explicit size, use it
     if (axis.reservedSize != null) {
       return axis.reservedSize!;
@@ -4945,8 +5186,9 @@ class _BravenChartPainter extends CustomPainter {
     }
 
     // Calculate the data range
-    final range =
-        isXAxis ? (bounds.maxX - bounds.minX) : (bounds.maxY - bounds.minY);
+    final range = isXAxis
+        ? (bounds.maxX - bounds.minX)
+        : (bounds.maxY - bounds.minY);
 
     // If range is invalid (NaN, infinite, or zero), return default padding
     if (range.isNaN || range.isInfinite || range <= 0) {
@@ -4970,8 +5212,10 @@ class _BravenChartPainter extends CustomPainter {
     while (current <= last) {
       final label = _formatAxisLabel(current);
       final textSpan = TextSpan(text: label, style: theme.axisStyle.labelStyle);
-      final textPainter =
-          TextPainter(text: textSpan, textDirection: TextDirection.ltr);
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
       textPainter.layout();
 
       if (isXAxis) {
@@ -5057,7 +5301,8 @@ class _BravenChartPainter extends CustomPainter {
       // This ensures line segments entering/exiting the viewport are drawn correctly
       final points = s.points
           .map(
-              (point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id))
+            (point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id),
+          )
           .toList();
 
       // Use LineInterpolator to generate path with the specified line style
@@ -5109,7 +5354,8 @@ class _BravenChartPainter extends CustomPainter {
       // Convert data points to screen coordinates
       final screenPoints = s.points
           .map(
-              (point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id))
+            (point) => _dataToPixel(point, chartRect, bounds, seriesId: s.id),
+          )
           .toList();
 
       // Create the area fill path
@@ -5147,9 +5393,13 @@ class _BravenChartPainter extends CustomPainter {
 
               // Catmull-Rom to Bezier control points
               final cp1 = Offset(
-                  p1.dx + (p2.dx - p0.dx) / 6, p1.dy + (p2.dy - p0.dy) / 6);
+                p1.dx + (p2.dx - p0.dx) / 6,
+                p1.dy + (p2.dy - p0.dy) / 6,
+              );
               final cp2 = Offset(
-                  p2.dx - (p3.dx - p1.dx) / 6, p2.dy - (p3.dy - p1.dy) / 6);
+                p2.dx - (p3.dx - p1.dx) / 6,
+                p2.dy - (p3.dy - p1.dy) / 6,
+              );
 
               path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
             }
@@ -5256,7 +5506,8 @@ class _BravenChartPainter extends CustomPainter {
     final yRange = bounds.maxY - bounds.minY;
 
     // If ranges are invalid, we can still draw axis lines, but not labels
-    final bool validRanges = !xRange.isNaN &&
+    final bool validRanges =
+        !xRange.isNaN &&
         !xRange.isInfinite &&
         xRange > 0 &&
         !yRange.isNaN &&
@@ -5271,8 +5522,11 @@ class _BravenChartPainter extends CustomPainter {
       final double axisY = xAxis.axisPosition == AxisPosition.top
           ? chartRect.top
           : chartRect.bottom;
-      canvas.drawLine(Offset(chartRect.left, axisY),
-          Offset(chartRect.right, axisY), axisPaint);
+      canvas.drawLine(
+        Offset(chartRect.left, axisY),
+        Offset(chartRect.right, axisY),
+        axisPaint,
+      );
 
       // Draw X-axis labels at grid intervals
       if (xAxis.showLabels && validRanges) {
@@ -5287,11 +5541,15 @@ class _BravenChartPainter extends CustomPainter {
             // Format label (remove unnecessary decimals)
             final label = _formatAxisLabel(currentX);
 
-            final textSpan =
-                TextSpan(text: label, style: theme.axisStyle.labelStyle);
+            final textSpan = TextSpan(
+              text: label,
+              style: theme.axisStyle.labelStyle,
+            );
 
-            final textPainter =
-                TextPainter(text: textSpan, textDirection: TextDirection.ltr);
+            final textPainter = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+            );
 
             textPainter.layout();
 
@@ -5301,7 +5559,9 @@ class _BravenChartPainter extends CustomPainter {
                 : chartRect.bottom + 5;
 
             textPainter.paint(
-                canvas, Offset(x - textPainter.width / 2, labelY));
+              canvas,
+              Offset(x - textPainter.width / 2, labelY),
+            );
           }
 
           currentX += xInterval;
@@ -5314,8 +5574,11 @@ class _BravenChartPainter extends CustomPainter {
       final double axisX = yAxis.axisPosition == AxisPosition.right
           ? chartRect.right
           : chartRect.left;
-      canvas.drawLine(Offset(axisX, chartRect.top),
-          Offset(axisX, chartRect.bottom), axisPaint);
+      canvas.drawLine(
+        Offset(axisX, chartRect.top),
+        Offset(axisX, chartRect.bottom),
+        axisPaint,
+      );
 
       // Draw Y-axis labels at grid intervals
       if (yAxis.showLabels && validRanges) {
@@ -5330,11 +5593,15 @@ class _BravenChartPainter extends CustomPainter {
             // Format label (remove unnecessary decimals)
             final label = _formatAxisLabel(currentY);
 
-            final textSpan =
-                TextSpan(text: label, style: theme.axisStyle.labelStyle);
+            final textSpan = TextSpan(
+              text: label,
+              style: theme.axisStyle.labelStyle,
+            );
 
-            final textPainter =
-                TextPainter(text: textSpan, textDirection: TextDirection.ltr);
+            final textPainter = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+            );
 
             textPainter.layout();
 
@@ -5344,7 +5611,9 @@ class _BravenChartPainter extends CustomPainter {
                 : chartRect.left - textPainter.width - 5;
 
             textPainter.paint(
-                canvas, Offset(labelX, y - textPainter.height / 2));
+              canvas,
+              Offset(labelX, y - textPainter.height / 2),
+            );
           }
 
           currentY += yInterval;
@@ -5396,7 +5665,9 @@ class _BravenChartPainter extends CustomPainter {
   /// If multiAxisConfig is provided and the series is bound to an axis,
   /// returns the axis-specific bounds. Otherwise, returns the global bounds.
   ({double minY, double maxY}) _getSeriesYBounds(
-      String seriesId, _DataBounds globalBounds) {
+    String seriesId,
+    _DataBounds globalBounds,
+  ) {
     if (multiAxisConfig == null) {
       return (minY: globalBounds.minY, maxY: globalBounds.maxY);
     }
@@ -5410,8 +5681,9 @@ class _BravenChartPainter extends CustomPainter {
     }
 
     // Find the axis for this binding
-    final axis =
-        multiAxisConfig!.axes.where((a) => a.id == binding.axisId).firstOrNull;
+    final axis = multiAxisConfig!.axes
+        .where((a) => a.id == binding.axisId)
+        .firstOrNull;
     if (axis == null) {
       return (minY: globalBounds.minY, maxY: globalBounds.maxY);
     }
@@ -5423,9 +5695,11 @@ class _BravenChartPainter extends CustomPainter {
     }
 
     // Compute series range if axis doesn't specify explicit bounds
-    final minY = axis.minValue ??
+    final minY =
+        axis.minValue ??
         targetSeries.points.map((p) => p.y).reduce((a, b) => a < b ? a : b);
-    final maxY = axis.maxValue ??
+    final maxY =
+        axis.maxValue ??
         targetSeries.points.map((p) => p.y).reduce((a, b) => a > b ? a : b);
 
     return (minY: minY, maxY: maxY);
@@ -5446,11 +5720,16 @@ class _BravenChartPainter extends CustomPainter {
         for (final s in series) {
           if (s.points.isEmpty) continue;
           final seriesYBounds = _getSeriesYBounds(
-              s.id, _DataBounds(minX: 0, maxX: 1, minY: 0, maxY: 1));
-          ranges.add(SeriesRange(
+            s.id,
+            _DataBounds(minX: 0, maxX: 1, minY: 0, maxY: 1),
+          );
+          ranges.add(
+            SeriesRange(
               seriesId: s.id,
               min: seriesYBounds.minY,
-              max: seriesYBounds.maxY));
+              max: seriesYBounds.maxY,
+            ),
+          );
         }
         return NormalizationDetector.shouldNormalize(ranges);
     }
@@ -5460,8 +5739,12 @@ class _BravenChartPainter extends CustomPainter {
   ///
   /// When multiAxisConfig is provided with normalization enabled, uses
   /// series-specific Y bounds for the conversion. Otherwise uses global bounds.
-  Offset _dataToPixel(ChartDataPoint point, Rect chartRect, _DataBounds bounds,
-      {String? seriesId}) {
+  Offset _dataToPixel(
+    ChartDataPoint point,
+    Rect chartRect,
+    _DataBounds bounds, {
+    String? seriesId,
+  }) {
     final xRange = bounds.maxX - bounds.minX;
 
     final xPercent = xRange == 0 ? 0.5 : (point.x - bounds.minX) / xRange;
@@ -5473,7 +5756,10 @@ class _BravenChartPainter extends CustomPainter {
       final seriesYBounds = _getSeriesYBounds(seriesId, bounds);
       // Use DataNormalizer for consistent normalization
       yPercent = DataNormalizer.normalize(
-          point.y, seriesYBounds.minY, seriesYBounds.maxY);
+        point.y,
+        seriesYBounds.minY,
+        seriesYBounds.maxY,
+      );
     } else {
       final yRange = bounds.maxY - bounds.minY;
       yPercent = yRange == 0 ? 0.5 : (point.y - bounds.minY) / yRange;
@@ -5538,11 +5824,12 @@ class ChartAreaClipper extends CustomClipper<Rect> {
 
 /// Helper class to store data bounds for chart rendering
 class _DataBounds {
-  _DataBounds(
-      {required this.minX,
-      required this.maxX,
-      required this.minY,
-      required this.maxY});
+  _DataBounds({
+    required this.minX,
+    required this.maxX,
+    required this.minY,
+    required this.maxY,
+  });
   final double minX;
   final double maxX;
   final double minY;
@@ -5587,17 +5874,20 @@ class _AnnotationOverlay extends StatelessWidget {
   final bool interactiveAnnotations;
   final void Function(ChartAnnotation annotation)? onAnnotationTap;
   final void Function(ChartAnnotation annotation, Offset newPosition)?
-      onAnnotationDragged;
+  onAnnotationDragged;
   final void Function(ChartAnnotation annotation)? onAnnotationUpdate;
   final List<ChartSeries> series;
   final Rect? chartRect;
   final Offset titleOffset;
   final ZoomPanState zoomPanState;
   final Offset Function(
-          ChartDataPoint point, Rect chartRect, _DataBounds bounds)
-      dataToScreenPoint;
+    ChartDataPoint point,
+    Rect chartRect,
+    _DataBounds bounds,
+  )
+  dataToScreenPoint;
   final void Function(String? edge)?
-      onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
+  onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
 
   @override
   Widget build(BuildContext context) {
@@ -5641,7 +5931,8 @@ class _AnnotationOverlay extends StatelessWidget {
           ? () => onAnnotationTap!(annotation)
           : null,
       child: Container(
-        padding: annotation.style.padding ??
+        padding:
+            annotation.style.padding ??
             const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: annotation.backgroundColor,
@@ -5695,8 +5986,9 @@ class _AnnotationOverlay extends StatelessWidget {
   /// Builds a point annotation widget (marker on specific data point).
   Widget _buildPointAnnotation(PointAnnotation annotation) {
     // Get the series containing the data point
-    final targetSeries =
-        series.where((s) => s.id == annotation.seriesId).firstOrNull;
+    final targetSeries = series
+        .where((s) => s.id == annotation.seriesId)
+        .firstOrNull;
 
     if (targetSeries == null ||
         annotation.dataPointIndex >= targetSeries.points.length) {
@@ -5742,9 +6034,10 @@ class _AnnotationOverlay extends StatelessWidget {
             CustomPaint(
               size: Size(annotation.markerSize * 2, annotation.markerSize * 2),
               painter: _MarkerPainter(
-                  shape: annotation.markerShape,
-                  size: annotation.markerSize,
-                  color: annotation.markerColor),
+                shape: annotation.markerShape,
+                size: annotation.markerSize,
+                color: annotation.markerColor,
+              ),
             ),
             // Label (if present)
             if (annotation.label != null && annotation.label!.isNotEmpty)
@@ -5753,28 +6046,40 @@ class _AnnotationOverlay extends StatelessWidget {
                 top: annotation
                     .markerSize, // Position at marker's vertical center
                 child: Transform.translate(
-                  offset: const Offset(0,
-                      -0.5), // Shift up by half its own height (using fractional offset)
+                  offset: const Offset(
+                    0,
+                    -0.5,
+                  ), // Shift up by half its own height (using fractional offset)
                   child: FractionalTranslation(
                     translation: const Offset(
-                        0, -0.5), // Center vertically relative to marker center
+                      0,
+                      -0.5,
+                    ), // Center vertically relative to marker center
                     child: Container(
-                      padding: annotation.style.padding ??
+                      padding:
+                          annotation.style.padding ??
                           const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 3),
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
                       decoration: BoxDecoration(
-                        color: annotation.style.backgroundColor ??
+                        color:
+                            annotation.style.backgroundColor ??
                             Colors.white.withOpacity(0.9),
-                        borderRadius: annotation.style.borderRadius ??
+                        borderRadius:
+                            annotation.style.borderRadius ??
                             BorderRadius.circular(4),
                         border: annotation.style.borderColor != null
                             ? Border.all(
                                 color: annotation.style.borderColor!,
-                                width: annotation.style.borderWidth)
+                                width: annotation.style.borderWidth,
+                              )
                             : null,
                       ),
-                      child: Text(annotation.label!,
-                          style: annotation.style.textStyle),
+                      child: Text(
+                        annotation.label!,
+                        style: annotation.style.textStyle,
+                      ),
                     ),
                   ),
                 ),
@@ -5806,13 +6111,15 @@ class _AnnotationOverlay extends StatelessWidget {
     if (annotation.startX != null && annotation.endX != null) {
       // Explicit X range - transform data coordinates to screen coordinates
       final startPoint = dataToScreenPoint(
-          ChartDataPoint(x: annotation.startX!, y: bounds.minY),
-          chartRect!,
-          bounds);
+        ChartDataPoint(x: annotation.startX!, y: bounds.minY),
+        chartRect!,
+        bounds,
+      );
       final endPoint = dataToScreenPoint(
-          ChartDataPoint(x: annotation.endX!, y: bounds.maxY),
-          chartRect!,
-          bounds);
+        ChartDataPoint(x: annotation.endX!, y: bounds.maxY),
+        chartRect!,
+        bounds,
+      );
       left = startPoint.dx;
       width = (endPoint.dx - startPoint.dx).abs();
     } else {
@@ -5824,13 +6131,15 @@ class _AnnotationOverlay extends StatelessWidget {
     if (annotation.startY != null && annotation.endY != null) {
       // Explicit Y range - transform data coordinates to screen coordinates
       final startPoint = dataToScreenPoint(
-          ChartDataPoint(x: bounds.minX, y: annotation.startY!),
-          chartRect!,
-          bounds);
+        ChartDataPoint(x: bounds.minX, y: annotation.startY!),
+        chartRect!,
+        bounds,
+      );
       final endPoint = dataToScreenPoint(
-          ChartDataPoint(x: bounds.maxX, y: annotation.endY!),
-          chartRect!,
-          bounds);
+        ChartDataPoint(x: bounds.maxX, y: annotation.endY!),
+        chartRect!,
+        bounds,
+      );
       top = endPoint.dy; // endY has smaller screen coordinate (Y is inverted)
       height = (startPoint.dy - endPoint.dy).abs();
     } else {
@@ -5936,8 +6245,9 @@ class _AnnotationOverlay extends StatelessWidget {
     if (annotation.axis == AnnotationAxis.y) {
       // Horizontal line - calculate Y position
       final yRange = bounds.maxY - bounds.minY;
-      final yPercent =
-          yRange == 0 ? 0.5 : (annotation.value - bounds.minY) / yRange;
+      final yPercent = yRange == 0
+          ? 0.5
+          : (annotation.value - bounds.minY) / yRange;
       final pixelY = chartRect!.bottom - (yPercent * chartRect!.height);
       final y = pixelY + titleOffset.dy;
 
@@ -5946,14 +6256,18 @@ class _AnnotationOverlay extends StatelessWidget {
         case AnnotationLabelPosition.topLeft:
           labelLeft = chartRect!.left + titleOffset.dx + 8;
           labelTop = y;
-          translation =
-              const Offset(0, -1.0); // Above line (shift up by full height)
+          translation = const Offset(
+            0,
+            -1.0,
+          ); // Above line (shift up by full height)
           break;
         case AnnotationLabelPosition.topRight:
           labelRight = 8; // 8px from right edge
           labelTop = y;
-          translation =
-              const Offset(0, -1.0); // Above line (shift up by full height)
+          translation = const Offset(
+            0,
+            -1.0,
+          ); // Above line (shift up by full height)
           break;
         case AnnotationLabelPosition.bottomLeft:
           labelLeft = chartRect!.left + titleOffset.dx + 8;
@@ -5974,8 +6288,9 @@ class _AnnotationOverlay extends StatelessWidget {
     } else {
       // Vertical line - calculate X position
       final xRange = bounds.maxX - bounds.minX;
-      final xPercent =
-          xRange == 0 ? 0.5 : (annotation.value - bounds.minX) / xRange;
+      final xPercent = xRange == 0
+          ? 0.5
+          : (annotation.value - bounds.minX) / xRange;
       final pixelX = chartRect!.left + (xPercent * chartRect!.width);
       final x = pixelX + titleOffset.dx;
 
@@ -5984,8 +6299,10 @@ class _AnnotationOverlay extends StatelessWidget {
         case AnnotationLabelPosition.topLeft:
           labelLeft = x;
           labelTop = chartRect!.top + titleOffset.dy + 8;
-          translation =
-              const Offset(-1.0, 0); // Left of line (shift left by full width)
+          translation = const Offset(
+            -1.0,
+            0,
+          ); // Left of line (shift left by full width)
           break;
         case AnnotationLabelPosition.topRight:
           labelLeft = x;
@@ -5995,8 +6312,10 @@ class _AnnotationOverlay extends StatelessWidget {
         case AnnotationLabelPosition.bottomLeft:
           labelLeft = x;
           labelBottom = 8; // 8px from bottom edge
-          translation =
-              const Offset(-1.0, 0); // Left of line (shift left by full width)
+          translation = const Offset(
+            -1.0,
+            0,
+          ); // Left of line (shift left by full width)
           break;
         case AnnotationLabelPosition.bottomRight:
           labelLeft = x;
@@ -6006,8 +6325,10 @@ class _AnnotationOverlay extends StatelessWidget {
         case AnnotationLabelPosition.center:
           labelLeft = x;
           labelTop = chartRect!.top + (chartRect!.height / 2) + titleOffset.dy;
-          translation =
-              const Offset(-0.5, 0); // Centered on line (horizontal centering)
+          translation = const Offset(
+            -0.5,
+            0,
+          ); // Centered on line (horizontal centering)
           break;
       }
     }
@@ -6043,21 +6364,27 @@ class _AnnotationOverlay extends StatelessWidget {
                 child: FractionalTranslation(
                   translation: translation, // Position-aware translation
                   child: Container(
-                    padding: annotation.style.padding ??
+                    padding:
+                        annotation.style.padding ??
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: annotation.style.backgroundColor ??
+                      color:
+                          annotation.style.backgroundColor ??
                           Colors.white.withOpacity(0.9),
-                      borderRadius: annotation.style.borderRadius ??
+                      borderRadius:
+                          annotation.style.borderRadius ??
                           BorderRadius.circular(4),
                       border: annotation.style.borderColor != null
                           ? Border.all(
                               color: annotation.style.borderColor!,
-                              width: annotation.style.borderWidth)
+                              width: annotation.style.borderWidth,
+                            )
                           : null,
                     ),
-                    child: Text(annotation.label!,
-                        style: annotation.style.textStyle),
+                    child: Text(
+                      annotation.label!,
+                      style: annotation.style.textStyle,
+                    ),
                   ),
                 ),
               ),
@@ -6090,7 +6417,8 @@ class _AnnotationOverlay extends StatelessWidget {
         targetSeries = series.firstWhere((s) => s.id == annotation.seriesId);
       } catch (e) {
         debugPrint(
-            'TrendAnnotation: Series "${annotation.seriesId}" not found');
+          'TrendAnnotation: Series "${annotation.seriesId}" not found',
+        );
         return const SizedBox.shrink();
       }
     }
@@ -6098,7 +6426,8 @@ class _AnnotationOverlay extends StatelessWidget {
     // If still no series found, annotation is invalid
     if (targetSeries == null) {
       debugPrint(
-          'TrendAnnotation: No parent series found for annotation "${annotation.id}"');
+        'TrendAnnotation: No parent series found for annotation "${annotation.id}"',
+      );
       return const SizedBox.shrink();
     }
 
@@ -6115,28 +6444,35 @@ class _AnnotationOverlay extends StatelessWidget {
 
       case TrendType.polynomial:
         final degree = annotation.degree; // Default is 2 in data model
-        trendResult =
-            TrendCalculator.polynomialRegression(targetSeries.points, degree);
+        trendResult = TrendCalculator.polynomialRegression(
+          targetSeries.points,
+          degree,
+        );
         trendPoints = trendResult?.trendPoints;
         break;
 
       case TrendType.movingAverage:
         final windowSize = annotation.windowSize ?? 5; // Default window
-        trendPoints =
-            TrendCalculator.movingAverage(targetSeries.points, windowSize);
+        trendPoints = TrendCalculator.movingAverage(
+          targetSeries.points,
+          windowSize,
+        );
         break;
 
       case TrendType.exponential:
         const alpha = 0.3; // Standard smoothing factor
-        trendPoints =
-            TrendCalculator.exponentialSmoothing(targetSeries.points, alpha);
+        trendPoints = TrendCalculator.exponentialSmoothing(
+          targetSeries.points,
+          alpha,
+        );
         break;
     }
 
     // If calculation failed or no data, don't render
     if (trendPoints == null || trendPoints.isEmpty) {
       debugPrint(
-          'TrendAnnotation: Failed to calculate trend for series "${targetSeries.id}"');
+        'TrendAnnotation: Failed to calculate trend for series "${targetSeries.id}"',
+      );
       return const SizedBox.shrink();
     }
 
@@ -6276,7 +6612,7 @@ class _RangeAnnotationWidget extends StatefulWidget {
   final void Function(RangeAnnotation)? onAnnotationUpdate;
   final Offset Function(ChartDataPoint, Rect, _DataBounds) dataToScreenPoint;
   final void Function(String? edge)?
-      onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
+  onDragStateChanged; // edge is 'left', 'right', 'top', 'bottom', or null
 
   @override
   State<_RangeAnnotationWidget> createState() => _RangeAnnotationWidgetState();
@@ -6327,7 +6663,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
     print('   hasExplicitXRange=$hasExplicitXRange');
     print('   hasExplicitYRange=$hasExplicitYRange');
     print(
-        '   Handles will show: ${(hasExplicitXRange || hasExplicitYRange) && widget.interactiveAnnotations && widget.annotation.allowEditing}');
+      '   Handles will show: ${(hasExplicitXRange || hasExplicitYRange) && widget.interactiveAnnotations && widget.annotation.allowEditing}',
+    );
 
     return Stack(
       clipBehavior: Clip.none,
@@ -6337,7 +6674,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
         Positioned.fill(
           child: IgnorePointer(
             child: GestureDetector(
-              onTap: widget.interactiveAnnotations &&
+              onTap:
+                  widget.interactiveAnnotations &&
                       widget.onAnnotationTap != null
                   ? () => widget.onAnnotationTap!(widget.annotation)
                   : null,
@@ -6358,8 +6696,11 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                   isInteractive: widget.interactiveAnnotations,
                 ),
                 child: widget.annotation.label != null
-                    ? _buildRangeLabel(widget.annotation, widget.clampedWidth,
-                        widget.clampedHeight)
+                    ? _buildRangeLabel(
+                        widget.annotation,
+                        widget.clampedWidth,
+                        widget.clampedHeight,
+                      )
                     : null,
               ),
             ),
@@ -6397,12 +6738,14 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
                 behavior: HitTestBehavior.opaque,
                 onPointerDown: (event) {
                   print(
-                      '🟠 LEFT HANDLE Listener.onPointerDown - button=${event.buttons}');
+                    '🟠 LEFT HANDLE Listener.onPointerDown - button=${event.buttons}',
+                  );
                   // CRITICAL: Only handle left mouse button (primary button)
                   // Let right-clicks, middle-clicks pass through to GestureDetector for context menu and panning
                   if (event.buttons != 1) {
                     print(
-                        '   ➡️ NOT button 1 - returning early to pass through');
+                      '   ➡️ NOT button 1 - returning early to pass through',
+                    );
                     return;
                   }
 
@@ -6490,7 +6833,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               cursor: SystemMouseCursors.resizeUpDown,
               onEnter: (_) {
                 print(
-                    '🔵 Top handle ENTER event - _draggingEdge=$_draggingEdge');
+                  '🔵 Top handle ENTER event - _draggingEdge=$_draggingEdge',
+                );
                 if (_draggingEdge == null) {
                   setState(() => _hoveringTopHandle = true);
                   print('   ✅ Set _hoveringTopHandle = true');
@@ -6498,7 +6842,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               },
               onExit: (_) {
                 print(
-                    '🔴 Top handle EXIT event - _draggingEdge=$_draggingEdge');
+                  '🔴 Top handle EXIT event - _draggingEdge=$_draggingEdge',
+                );
                 if (_draggingEdge == null) {
                   setState(() => _hoveringTopHandle = false);
                   print('   ✅ Set _hoveringTopHandle = false');
@@ -6546,7 +6891,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               cursor: SystemMouseCursors.resizeUpDown,
               onEnter: (_) {
                 print(
-                    '🔵 Bottom handle ENTER event - _draggingEdge=$_draggingEdge');
+                  '🔵 Bottom handle ENTER event - _draggingEdge=$_draggingEdge',
+                );
                 if (_draggingEdge == null) {
                   setState(() => _hoveringBottomHandle = true);
                   print('   ✅ Set _hoveringBottomHandle = true');
@@ -6554,7 +6900,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
               },
               onExit: (_) {
                 print(
-                    '🔴 Bottom handle EXIT event - _draggingEdge=$_draggingEdge');
+                  '🔴 Bottom handle EXIT event - _draggingEdge=$_draggingEdge',
+                );
                 if (_draggingEdge == null) {
                   setState(() => _hoveringBottomHandle = false);
                   print('   ✅ Set _hoveringBottomHandle = false');
@@ -6612,7 +6959,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
   /// Updates the range based on current drag position
   void _updateDrag(double? currentX, double? currentY, String edge) {
     print(
-        '📍 _updateDrag called: currentX=$currentX, currentY=$currentY, edge=$edge');
+      '📍 _updateDrag called: currentX=$currentX, currentY=$currentY, edge=$edge',
+    );
 
     if (edge == 'left' || edge == 'right') {
       // Handle X-axis dragging
@@ -6661,7 +7009,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       );
 
       print(
-          '   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX');
+        '   ✅ Calling onAnnotationUpdate: newStartX=$newStartX, newEndX=$newEndX',
+      );
       widget.onAnnotationUpdate?.call(updatedAnnotation);
     } else if (edge == 'top' || edge == 'bottom') {
       // Handle Y-axis dragging
@@ -6713,7 +7062,8 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       );
 
       print(
-          '   ✅ Calling onAnnotationUpdate: newStartY=$newStartY, newEndY=$newEndY');
+        '   ✅ Calling onAnnotationUpdate: newStartY=$newStartY, newEndY=$newEndY',
+      );
       widget.onAnnotationUpdate?.call(updatedAnnotation);
     }
   }
@@ -6752,7 +7102,10 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
 
   /// Builds a positioned label widget for range annotations.
   Widget _buildRangeLabel(
-      RangeAnnotation annotation, double width, double height) {
+    RangeAnnotation annotation,
+    double width,
+    double height,
+  ) {
     Alignment alignment;
     EdgeInsets padding;
 
@@ -6785,10 +7138,12 @@ class _RangeAnnotationWidgetState extends State<_RangeAnnotationWidget> {
       child: Padding(
         padding: padding,
         child: Container(
-          padding: annotation.style.padding ??
+          padding:
+              annotation.style.padding ??
               const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
-            color: annotation.style.backgroundColor ??
+            color:
+                annotation.style.backgroundColor ??
                 Colors.white.withOpacity(0.9),
             borderRadius:
                 annotation.style.borderRadius ?? BorderRadius.circular(4),
@@ -6839,9 +7194,11 @@ class _RangeAnnotationPainter extends CustomPainter {
         leftBorderHover ||
         rightBorderHover) {
       print(
-          '🎨 PAINTER: topHover=$topBorderHover, bottomHover=$bottomBorderHover, leftHover=$leftBorderHover, rightHover=$rightBorderHover');
+        '🎨 PAINTER: topHover=$topBorderHover, bottomHover=$bottomBorderHover, leftHover=$leftBorderHover, rightHover=$rightBorderHover',
+      );
       print(
-          '   hasExplicitYRange=$hasExplicitYRange, isInteractive=$isInteractive');
+        '   hasExplicitYRange=$hasExplicitYRange, isInteractive=$isInteractive',
+      );
     }
 
     // Draw fill
@@ -6858,13 +7215,19 @@ class _RangeAnnotationPainter extends CustomPainter {
       if (hasExplicitYRange && isInteractive && topBorderHover) {
         final topPaint = Paint()
           ..color = borderColor!
-          ..strokeWidth = 3.0 // Thicker when hovering
+          ..strokeWidth =
+              3.0 // Thicker when hovering
           ..style = PaintingStyle.stroke;
 
         // Draw dashed line
         _drawDashedLine(
-            canvas, const Offset(0, 0), Offset(size.width, 0), topPaint,
-            dashLength: 8, gapLength: 4);
+          canvas,
+          const Offset(0, 0),
+          Offset(size.width, 0),
+          topPaint,
+          dashLength: 8,
+          gapLength: 4,
+        );
       } else {
         final topPaint = Paint()
           ..color = borderColor!
@@ -6877,33 +7240,48 @@ class _RangeAnnotationPainter extends CustomPainter {
       if (hasExplicitYRange && isInteractive && bottomBorderHover) {
         final bottomPaint = Paint()
           ..color = borderColor!
-          ..strokeWidth = 3.0 // Thicker when hovering
+          ..strokeWidth =
+              3.0 // Thicker when hovering
           ..style = PaintingStyle.stroke;
 
         // Draw dashed line
-        _drawDashedLine(canvas, Offset(0, size.height),
-            Offset(size.width, size.height), bottomPaint,
-            dashLength: 8, gapLength: 4);
+        _drawDashedLine(
+          canvas,
+          Offset(0, size.height),
+          Offset(size.width, size.height),
+          bottomPaint,
+          dashLength: 8,
+          gapLength: 4,
+        );
       } else {
         final bottomPaint = Paint()
           ..color = borderColor!
           ..strokeWidth = borderWidth
           ..style = PaintingStyle.stroke;
-        canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height),
-            bottomPaint);
+        canvas.drawLine(
+          Offset(0, size.height),
+          Offset(size.width, size.height),
+          bottomPaint,
+        );
       }
 
       // Left border (special styling if interactive X-range and hovering)
       if (hasExplicitXRange && isInteractive && leftBorderHover) {
         final leftPaint = Paint()
           ..color = borderColor!
-          ..strokeWidth = 3.0 // Thicker when hovering
+          ..strokeWidth =
+              3.0 // Thicker when hovering
           ..style = PaintingStyle.stroke;
 
         // Draw dashed line
         _drawDashedLine(
-            canvas, const Offset(0, 0), Offset(0, size.height), leftPaint,
-            dashLength: 8, gapLength: 4);
+          canvas,
+          const Offset(0, 0),
+          Offset(0, size.height),
+          leftPaint,
+          dashLength: 8,
+          gapLength: 4,
+        );
       } else {
         final leftPaint = Paint()
           ..color = borderColor!
@@ -6916,27 +7294,42 @@ class _RangeAnnotationPainter extends CustomPainter {
       if (hasExplicitXRange && isInteractive && rightBorderHover) {
         final rightPaint = Paint()
           ..color = borderColor!
-          ..strokeWidth = 3.0 // Thicker when hovering
+          ..strokeWidth =
+              3.0 // Thicker when hovering
           ..style = PaintingStyle.stroke;
 
         // Draw dashed line
-        _drawDashedLine(canvas, Offset(size.width, 0),
-            Offset(size.width, size.height), rightPaint,
-            dashLength: 8, gapLength: 4);
+        _drawDashedLine(
+          canvas,
+          Offset(size.width, 0),
+          Offset(size.width, size.height),
+          rightPaint,
+          dashLength: 8,
+          gapLength: 4,
+        );
       } else {
         final rightPaint = Paint()
           ..color = borderColor!
           ..strokeWidth = borderWidth
           ..style = PaintingStyle.stroke;
         canvas.drawLine(
-            Offset(size.width, 0), Offset(size.width, size.height), rightPaint);
+          Offset(size.width, 0),
+          Offset(size.width, size.height),
+          rightPaint,
+        );
       }
     }
   }
 
   /// Helper to draw dashed lines
-  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint,
-      {required double dashLength, required double gapLength}) {
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint, {
+    required double dashLength,
+    required double gapLength,
+  }) {
     final totalDistance = (end - start).distance;
     final dashCount = (totalDistance / (dashLength + gapLength)).floor();
 
@@ -6964,8 +7357,11 @@ class _RangeAnnotationPainter extends CustomPainter {
 
 /// Custom painter for marker shapes.
 class _MarkerPainter extends CustomPainter {
-  _MarkerPainter(
-      {required this.shape, required this.size, required this.color});
+  _MarkerPainter({
+    required this.shape,
+    required this.size,
+    required this.color,
+  });
 
   final MarkerShape shape;
   final double size;
@@ -6985,8 +7381,9 @@ class _MarkerPainter extends CustomPainter {
         break;
       case MarkerShape.square:
         canvas.drawRect(
-            Rect.fromCenter(center: center, width: size * 2, height: size * 2),
-            paint);
+          Rect.fromCenter(center: center, width: size * 2, height: size * 2),
+          paint,
+        );
         break;
       case MarkerShape.triangle:
         final path = Path()
@@ -7008,18 +7405,30 @@ class _MarkerPainter extends CustomPainter {
       case MarkerShape.cross:
         paint.style = PaintingStyle.stroke;
         paint.strokeWidth = 2;
-        canvas.drawLine(Offset(center.dx - size, center.dy),
-            Offset(center.dx + size, center.dy), paint);
-        canvas.drawLine(Offset(center.dx, center.dy - size),
-            Offset(center.dx, center.dy + size), paint);
+        canvas.drawLine(
+          Offset(center.dx - size, center.dy),
+          Offset(center.dx + size, center.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - size),
+          Offset(center.dx, center.dy + size),
+          paint,
+        );
         break;
       case MarkerShape.plus:
         paint.style = PaintingStyle.stroke;
         paint.strokeWidth = 2;
-        canvas.drawLine(Offset(center.dx - size, center.dy),
-            Offset(center.dx + size, center.dy), paint);
-        canvas.drawLine(Offset(center.dx, center.dy - size),
-            Offset(center.dx, center.dy + size), paint);
+        canvas.drawLine(
+          Offset(center.dx - size, center.dy),
+          Offset(center.dx + size, center.dy),
+          paint,
+        );
+        canvas.drawLine(
+          Offset(center.dx, center.dy - size),
+          Offset(center.dx, center.dy + size),
+          paint,
+        );
         break;
       case MarkerShape.star:
         // Draw a simple star shape
@@ -7093,7 +7502,12 @@ class _ThresholdPainter extends CustomPainter {
 
       if (dashPattern != null && dashPattern!.isNotEmpty) {
         _drawDashedLine(
-            canvas, Offset(startX, y), Offset(endX, y), paint, dashPattern!);
+          canvas,
+          Offset(startX, y),
+          Offset(endX, y),
+          paint,
+          dashPattern!,
+        );
       } else {
         canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
       }
@@ -7111,7 +7525,12 @@ class _ThresholdPainter extends CustomPainter {
 
       if (dashPattern != null && dashPattern!.isNotEmpty) {
         _drawDashedLine(
-            canvas, Offset(x, startY), Offset(x, endY), paint, dashPattern!);
+          canvas,
+          Offset(x, startY),
+          Offset(x, endY),
+          paint,
+          dashPattern!,
+        );
       } else {
         canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
       }
@@ -7119,8 +7538,13 @@ class _ThresholdPainter extends CustomPainter {
   }
 
   /// Draws a dashed line between two points.
-  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint,
-      List<double> dashPattern) {
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint,
+    List<double> dashPattern,
+  ) {
     final path = Path();
     final totalDistance = (end - start).distance;
     var currentDistance = 0.0;
@@ -7129,8 +7553,10 @@ class _ThresholdPainter extends CustomPainter {
 
     while (currentDistance < totalDistance) {
       final dashLength = dashPattern[patternIndex % dashPattern.length];
-      final nextDistance =
-          (currentDistance + dashLength).clamp(0.0, totalDistance);
+      final nextDistance = (currentDistance + dashLength).clamp(
+        0.0,
+        totalDistance,
+      );
 
       if (isDash) {
         final t1 = currentDistance / totalDistance;
@@ -7228,7 +7654,11 @@ class _TrendPainter extends CustomPainter {
 
   /// Helper method to draw a dashed path through multiple points
   void _drawDashedPath(
-      Canvas canvas, List<Offset> points, Paint paint, List<double> pattern) {
+    Canvas canvas,
+    List<Offset> points,
+    Paint paint,
+    List<double> pattern,
+  ) {
     if (points.length < 2) return;
 
     for (int i = 0; i < points.length - 1; i++) {
@@ -7245,8 +7675,10 @@ class _TrendPainter extends CustomPainter {
 
       while (distance < segmentLength) {
         final patternLength = pattern[patternIndex % pattern.length];
-        final nextDistance =
-            (distance + patternLength).clamp(0.0, segmentLength);
+        final nextDistance = (distance + patternLength).clamp(
+          0.0,
+          segmentLength,
+        );
 
         if (draw) {
           final t1 = distance / segmentLength;
@@ -7284,11 +7716,12 @@ class _TrendPainter extends CustomPainter {
 /// Renders crosshair lines and snap point circle, but NOT coordinate labels.
 /// Designed to be clipped to chart bounds to prevent drawing over scrollbars.
 class _CrosshairLinesPainter extends CustomPainter {
-  _CrosshairLinesPainter(
-      {required this.position,
-      required this.config,
-      this.nearestPoint,
-      required this.chartSize});
+  _CrosshairLinesPainter({
+    required this.position,
+    required this.config,
+    this.nearestPoint,
+    required this.chartSize,
+  });
 
   final Offset position;
   final CrosshairConfig config;
@@ -7310,11 +7743,19 @@ class _CrosshairLinesPainter extends CustomPainter {
         config.mode == CrosshairMode.both) {
       if (config.style.dashPattern != null &&
           config.style.dashPattern!.isNotEmpty) {
-        _drawDashedLine(canvas, Offset(position.dx, 0),
-            Offset(position.dx, size.height), paint, config.style.dashPattern!);
+        _drawDashedLine(
+          canvas,
+          Offset(position.dx, 0),
+          Offset(position.dx, size.height),
+          paint,
+          config.style.dashPattern!,
+        );
       } else {
         canvas.drawLine(
-            Offset(position.dx, 0), Offset(position.dx, size.height), paint);
+          Offset(position.dx, 0),
+          Offset(position.dx, size.height),
+          paint,
+        );
       }
     }
 
@@ -7323,11 +7764,19 @@ class _CrosshairLinesPainter extends CustomPainter {
         config.mode == CrosshairMode.both) {
       if (config.style.dashPattern != null &&
           config.style.dashPattern!.isNotEmpty) {
-        _drawDashedLine(canvas, Offset(0, position.dy),
-            Offset(size.width, position.dy), paint, config.style.dashPattern!);
+        _drawDashedLine(
+          canvas,
+          Offset(0, position.dy),
+          Offset(size.width, position.dy),
+          paint,
+          config.style.dashPattern!,
+        );
       } else {
         canvas.drawLine(
-            Offset(0, position.dy), Offset(size.width, position.dy), paint);
+          Offset(0, position.dy),
+          Offset(size.width, position.dy),
+          paint,
+        );
       }
     }
 
@@ -7351,8 +7800,13 @@ class _CrosshairLinesPainter extends CustomPainter {
     }
   }
 
-  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint,
-      List<double> dashPattern) {
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint,
+    List<double> dashPattern,
+  ) {
     final path = Path();
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
@@ -7394,11 +7848,12 @@ class _CrosshairLinesPainter extends CustomPainter {
 /// Renders X and Y coordinate labels at chart edges.
 /// NOT clipped so labels remain visible even when crosshair is near chart bounds.
 class _CrosshairLabelsPainter extends CustomPainter {
-  _CrosshairLabelsPainter(
-      {required this.position,
-      required this.config,
-      this.dataBounds,
-      this.chartRect});
+  _CrosshairLabelsPainter({
+    required this.position,
+    required this.config,
+    this.dataBounds,
+    this.chartRect,
+  });
 
   final Offset position;
   final CrosshairConfig config;
@@ -7439,12 +7894,13 @@ class _CrosshairLabelsPainter extends CustomPainter {
         dataY = dataBounds!.minY + (yPercent * yRange);
       }
 
-      final textStyle = config.coordinateLabelStyle ??
+      final textStyle =
+          config.coordinateLabelStyle ??
           TextStyle(
-              color: config.style.labelTextColor,
-              fontSize: 10,
-              backgroundColor:
-                  config.style.labelBackgroundColor.withOpacity(0.8));
+            color: config.style.labelTextColor,
+            fontSize: 10,
+            backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
+          );
 
       // X coordinate label (positioned at bottom edge of chart area, INSIDE chartRect)
       if (config.mode == CrosshairMode.vertical ||
@@ -7465,20 +7921,22 @@ class _CrosshairLabelsPainter extends CustomPainter {
 
         // Calculate label position with bounds checking
         var xLabelX = position.dx - xTextPainter.width / 2;
-        final xLabelY = chartBottom -
+        final xLabelY =
+            chartBottom -
             xTextPainter.height -
             8; // 8px padding from chart bottom
 
         // Clamp X position to keep label within chart bounds (if chartRect available)
         if (chartRect != null) {
           xLabelX = xLabelX.clamp(
-              chartRect!.left + config.style.labelPadding,
-              chartRect!.right -
-                  xTextPainter.width -
-                  config.style.labelPadding);
+            chartRect!.left + config.style.labelPadding,
+            chartRect!.right - xTextPainter.width - config.style.labelPadding,
+          );
         } else {
-          xLabelX = xLabelX.clamp(config.style.labelPadding,
-              size.width - xTextPainter.width - config.style.labelPadding);
+          xLabelX = xLabelX.clamp(
+            config.style.labelPadding,
+            size.width - xTextPainter.width - config.style.labelPadding,
+          );
         }
 
         // Only draw if Y position is valid and all values are finite
@@ -7503,7 +7961,9 @@ class _CrosshairLabelsPainter extends CustomPainter {
               bgHeight > 0) {
             final xBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
             canvas.drawRect(
-                xBgRect, Paint()..color = config.style.labelBackgroundColor);
+              xBgRect,
+              Paint()..color = config.style.labelBackgroundColor,
+            );
             xTextPainter.paint(canvas, xLabelOffset);
           }
         }
@@ -7533,13 +7993,14 @@ class _CrosshairLabelsPainter extends CustomPainter {
         // Clamp Y position to keep label within chart bounds (if chartRect available)
         if (chartRect != null) {
           yLabelY = yLabelY.clamp(
-              chartRect!.top + config.style.labelPadding,
-              chartRect!.bottom -
-                  yTextPainter.height -
-                  config.style.labelPadding);
+            chartRect!.top + config.style.labelPadding,
+            chartRect!.bottom - yTextPainter.height - config.style.labelPadding,
+          );
         } else {
-          yLabelY = yLabelY.clamp(config.style.labelPadding,
-              size.height - yTextPainter.height - config.style.labelPadding);
+          yLabelY = yLabelY.clamp(
+            config.style.labelPadding,
+            size.height - yTextPainter.height - config.style.labelPadding,
+          );
         }
 
         // Only draw if X position is valid and all values are finite
@@ -7564,7 +8025,9 @@ class _CrosshairLabelsPainter extends CustomPainter {
               bgHeight > 0) {
             final yBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
             canvas.drawRect(
-                yBgRect, Paint()..color = config.style.labelBackgroundColor);
+              yBgRect,
+              Paint()..color = config.style.labelBackgroundColor,
+            );
             yTextPainter.paint(canvas, yLabelOffset);
           }
         }
@@ -7609,13 +8072,14 @@ class _CrosshairLabelsPainter extends CustomPainter {
 /// This painter is no longer used but kept for reference during migration.
 /// Use _CrosshairLinesPainter + _CrosshairLabelsPainter instead.
 class _CrosshairPainter extends CustomPainter {
-  _CrosshairPainter(
-      {required this.position,
-      required this.config,
-      this.nearestPoint,
-      required this.chartSize,
-      this.dataBounds,
-      this.chartRect});
+  _CrosshairPainter({
+    required this.position,
+    required this.config,
+    this.nearestPoint,
+    required this.chartSize,
+    this.dataBounds,
+    this.chartRect,
+  });
 
   final Offset position;
   final CrosshairConfig config;
@@ -7639,11 +8103,19 @@ class _CrosshairPainter extends CustomPainter {
         config.mode == CrosshairMode.both) {
       if (config.style.dashPattern != null &&
           config.style.dashPattern!.isNotEmpty) {
-        _drawDashedLine(canvas, Offset(position.dx, 0),
-            Offset(position.dx, size.height), paint, config.style.dashPattern!);
+        _drawDashedLine(
+          canvas,
+          Offset(position.dx, 0),
+          Offset(position.dx, size.height),
+          paint,
+          config.style.dashPattern!,
+        );
       } else {
         canvas.drawLine(
-            Offset(position.dx, 0), Offset(position.dx, size.height), paint);
+          Offset(position.dx, 0),
+          Offset(position.dx, size.height),
+          paint,
+        );
       }
     }
 
@@ -7652,11 +8124,19 @@ class _CrosshairPainter extends CustomPainter {
         config.mode == CrosshairMode.both) {
       if (config.style.dashPattern != null &&
           config.style.dashPattern!.isNotEmpty) {
-        _drawDashedLine(canvas, Offset(0, position.dy),
-            Offset(size.width, position.dy), paint, config.style.dashPattern!);
+        _drawDashedLine(
+          canvas,
+          Offset(0, position.dy),
+          Offset(size.width, position.dy),
+          paint,
+          config.style.dashPattern!,
+        );
       } else {
         canvas.drawLine(
-            Offset(0, position.dy), Offset(size.width, position.dy), paint);
+          Offset(0, position.dy),
+          Offset(size.width, position.dy),
+          paint,
+        );
       }
     }
 
@@ -7685,8 +8165,13 @@ class _CrosshairPainter extends CustomPainter {
     }
   }
 
-  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint,
-      List<double> dashPattern) {
+  void _drawDashedLine(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    Paint paint,
+    List<double> dashPattern,
+  ) {
     final path = Path();
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
@@ -7742,12 +8227,13 @@ class _CrosshairPainter extends CustomPainter {
         dataY = dataBounds!.minY + (yPercent * yRange);
       }
 
-      final textStyle = config.coordinateLabelStyle ??
+      final textStyle =
+          config.coordinateLabelStyle ??
           TextStyle(
-              color: config.style.labelTextColor,
-              fontSize: 10,
-              backgroundColor:
-                  config.style.labelBackgroundColor.withOpacity(0.8));
+            color: config.style.labelTextColor,
+            fontSize: 10,
+            backgroundColor: config.style.labelBackgroundColor.withOpacity(0.8),
+          );
 
       // X coordinate label (bottom of vertical line)
       if (config.mode == CrosshairMode.vertical ||
@@ -7767,8 +8253,10 @@ class _CrosshairPainter extends CustomPainter {
         final xLabelY = size.height - xTextPainter.height - 4;
 
         // Clamp X position to keep label within canvas bounds
-        xLabelX = xLabelX.clamp(config.style.labelPadding,
-            size.width - xTextPainter.width - config.style.labelPadding);
+        xLabelX = xLabelX.clamp(
+          config.style.labelPadding,
+          size.width - xTextPainter.width - config.style.labelPadding,
+        );
 
         // Only draw if Y position is valid and all values are finite
         if (xLabelY >= 0 &&
@@ -7792,7 +8280,9 @@ class _CrosshairPainter extends CustomPainter {
               bgHeight > 0) {
             final xBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
             canvas.drawRect(
-                xBgRect, Paint()..color = config.style.labelBackgroundColor);
+              xBgRect,
+              Paint()..color = config.style.labelBackgroundColor,
+            );
             xTextPainter.paint(canvas, xLabelOffset);
           }
         }
@@ -7816,8 +8306,10 @@ class _CrosshairPainter extends CustomPainter {
         var yLabelY = position.dy - yTextPainter.height / 2;
 
         // Clamp Y position to keep label within canvas bounds
-        yLabelY = yLabelY.clamp(config.style.labelPadding,
-            size.height - yTextPainter.height - config.style.labelPadding);
+        yLabelY = yLabelY.clamp(
+          config.style.labelPadding,
+          size.height - yTextPainter.height - config.style.labelPadding,
+        );
 
         // Only draw if X position is valid and all values are finite
         if (yLabelX >= 0 &&
@@ -7841,7 +8333,9 @@ class _CrosshairPainter extends CustomPainter {
               bgHeight > 0) {
             final yBgRect = Rect.fromLTWH(bgLeft, bgTop, bgWidth, bgHeight);
             canvas.drawRect(
-                yBgRect, Paint()..color = config.style.labelBackgroundColor);
+              yBgRect,
+              Paint()..color = config.style.labelBackgroundColor,
+            );
             yTextPainter.paint(canvas, yLabelOffset);
           }
         }
@@ -7949,19 +8443,35 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Top-right corner
         path.lineTo(rect.right - radius, rect.top);
         path.quadraticBezierTo(
-            rect.right, rect.top, rect.right, rect.top + radius);
+          rect.right,
+          rect.top,
+          rect.right,
+          rect.top + radius,
+        );
         // Right side
         path.lineTo(rect.right, rect.bottom - radius);
         path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+          rect.right,
+          rect.bottom,
+          rect.right - radius,
+          rect.bottom,
+        );
         // Bottom-right to bottom-left
         path.lineTo(rect.left + radius, rect.bottom);
         path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+          rect.left,
+          rect.bottom,
+          rect.left,
+          rect.bottom - radius,
+        );
         // Left side back to start
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(
-            rect.left, rect.top, rect.left + radius, rect.top);
+          rect.left,
+          rect.top,
+          rect.left + radius,
+          rect.top,
+        );
         break;
 
       case _ArrowPosition.bottom:
@@ -7975,11 +8485,19 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Top side
         path.lineTo(rect.right - radius, rect.top);
         path.quadraticBezierTo(
-            rect.right, rect.top, rect.right, rect.top + radius);
+          rect.right,
+          rect.top,
+          rect.right,
+          rect.top + radius,
+        );
         // Right side
         path.lineTo(rect.right, rect.bottom - radius);
         path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+          rect.right,
+          rect.bottom,
+          rect.right - radius,
+          rect.bottom,
+        );
         // Bottom-right to arrow start
         path.lineTo(rect.left + arrowRight, rect.bottom);
         // Arrow notch down
@@ -7989,11 +8507,19 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Bottom-left corner
         path.lineTo(rect.left + radius, rect.bottom);
         path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+          rect.left,
+          rect.bottom,
+          rect.left,
+          rect.bottom - radius,
+        );
         // Left side
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(
-            rect.left, rect.top, rect.left + radius, rect.top);
+          rect.left,
+          rect.top,
+          rect.left + radius,
+          rect.top,
+        );
         break;
 
       case _ArrowPosition.left:
@@ -8013,19 +8539,35 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Left side continues down
         path.lineTo(rect.left, rect.bottom - radius);
         path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left + radius, rect.bottom);
+          rect.left,
+          rect.bottom,
+          rect.left + radius,
+          rect.bottom,
+        );
         // Bottom side
         path.lineTo(rect.right - radius, rect.bottom);
         path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right, rect.bottom - radius);
+          rect.right,
+          rect.bottom,
+          rect.right,
+          rect.bottom - radius,
+        );
         // Right side
         path.lineTo(rect.right, rect.top + radius);
         path.quadraticBezierTo(
-            rect.right, rect.top, rect.right - radius, rect.top);
+          rect.right,
+          rect.top,
+          rect.right - radius,
+          rect.top,
+        );
         // Top side back to start
         path.lineTo(rect.left + radius, rect.top);
         path.quadraticBezierTo(
-            rect.left, rect.top, rect.left, rect.top + radius);
+          rect.left,
+          rect.top,
+          rect.left,
+          rect.top + radius,
+        );
         break;
 
       case _ArrowPosition.right:
@@ -8039,7 +8581,11 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Top side
         path.lineTo(rect.right - radius, rect.top);
         path.quadraticBezierTo(
-            rect.right, rect.top, rect.right, rect.top + radius);
+          rect.right,
+          rect.top,
+          rect.right,
+          rect.top + radius,
+        );
         // Right side to arrow start
         path.lineTo(rect.right, rect.top + arrowTop);
         // Arrow notch right
@@ -8049,15 +8595,27 @@ class _TooltipShapeBorder extends ShapeBorder {
         // Right side continues down
         path.lineTo(rect.right, rect.bottom - radius);
         path.quadraticBezierTo(
-            rect.right, rect.bottom, rect.right - radius, rect.bottom);
+          rect.right,
+          rect.bottom,
+          rect.right - radius,
+          rect.bottom,
+        );
         // Bottom side
         path.lineTo(rect.left + radius, rect.bottom);
         path.quadraticBezierTo(
-            rect.left, rect.bottom, rect.left, rect.bottom - radius);
+          rect.left,
+          rect.bottom,
+          rect.left,
+          rect.bottom - radius,
+        );
         // Left side back to start
         path.lineTo(rect.left, rect.top + radius);
         path.quadraticBezierTo(
-            rect.left, rect.top, rect.left + radius, rect.top);
+          rect.left,
+          rect.top,
+          rect.left + radius,
+          rect.top,
+        );
         break;
     }
 

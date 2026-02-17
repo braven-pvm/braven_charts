@@ -69,10 +69,7 @@ class Task012TooltipDemo extends StatelessWidget {
             '• Power values show "W" unit (e.g., "250 W")\n'
             '• Heart Rate values show "bpm" unit (e.g., "145 bpm")\n'
             '• Values are formatted with appropriate precision (no over-precision)',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -86,8 +83,8 @@ class Task012TooltipDemo extends StatelessWidget {
       final variation = (i % 3 == 0)
           ? 25.5
           : (i % 3 == 1)
-              ? -18.3
-              : 12.7;
+          ? -18.3
+          : 12.7;
       return ChartDataPoint(x: i.toDouble(), y: base + variation);
     });
 
@@ -97,8 +94,8 @@ class Task012TooltipDemo extends StatelessWidget {
       final variation = (i % 4 == 0)
           ? 10.25
           : (i % 4 == 2)
-              ? -6.8
-              : 4.3;
+          ? -6.8
+          : 4.3;
       return ChartDataPoint(x: i.toDouble(), y: base + variation);
     });
 
@@ -189,12 +186,12 @@ class Task012TooltipDemo extends StatelessWidget {
       (
         '145.678',
         'bpm',
-        MultiAxisValueFormatter.format(value: 145.678, unit: 'bpm')
+        MultiAxisValueFormatter.format(value: 145.678, unit: 'bpm'),
       ),
       (
         '0.00456',
         'L',
-        MultiAxisValueFormatter.format(value: 0.00456, unit: 'L')
+        MultiAxisValueFormatter.format(value: 0.00456, unit: 'L'),
       ),
       ('-50.5', 'W', MultiAxisValueFormatter.format(value: -50.5, unit: 'W')),
       ('1234.5', null, MultiAxisValueFormatter.format(value: 1234.5)),
@@ -206,7 +203,7 @@ class Task012TooltipDemo extends StatelessWidget {
           min: 100,
           max: 300,
           unit: 'W',
-        )
+        ),
       ),
     ];
 
@@ -241,45 +238,57 @@ class Task012TooltipDemo extends StatelessWidget {
                 children: [
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Input Value',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Input Value',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Unit',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Unit',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   Padding(
                     padding: EdgeInsets.all(8),
-                    child: Text('Output',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Output',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
-              ...examples.map((e) => TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(e.$1,
-                            style: const TextStyle(color: Colors.white70)),
+              ...examples.map(
+                (e) => TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        e.$1,
+                        style: const TextStyle(color: Colors.white70),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(e.$2 ?? '(none)',
-                            style: const TextStyle(color: Colors.white70)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        e.$2 ?? '(none)',
+                        style: const TextStyle(color: Colors.white70),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          e.$3,
-                          style: const TextStyle(
-                            color: Colors.greenAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        e.$3,
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  )),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -312,11 +321,7 @@ class Task012TooltipDemo extends StatelessWidget {
             '• formatWithDenormalization() converts 0-1 values back to original\n'
             '• Tooltip uses axis unit from YAxisConfig for each series\n'
             '• No over-precision: "250.00000001" becomes "250"',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
           SizedBox(height: 16),
           Text(
@@ -333,11 +338,7 @@ class Task012TooltipDemo extends StatelessWidget {
             '✅ T042: MultiAxisValueFormatter created\n'
             '✅ T045: Decimal values formatted appropriately\n'
             '✅ T040: Unit tests for value formatting',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
         ],
       ),

@@ -14,8 +14,9 @@ class EcgDataGenerator {
     final int totalSamples = (durationInSeconds * samplesPerSecond).round();
 
     // A simple template for a single beat
-    List<double> singleBeatTemplate =
-        _generateSingleBeatTemplate(samplesPerBeat);
+    List<double> singleBeatTemplate = _generateSingleBeatTemplate(
+      samplesPerBeat,
+    );
 
     for (int i = 0; i < totalSamples; i++) {
       int beatIndex = i % samplesPerBeat;
@@ -54,8 +55,13 @@ class EcgDataGenerator {
     return template;
   }
 
-  void _addWave(List<double> template, int start, int end, int peakPos,
-      double amplitude) {
+  void _addWave(
+    List<double> template,
+    int start,
+    int end,
+    int peakPos,
+    double amplitude,
+  ) {
     for (int i = start; i < end; i++) {
       // Use a simple sine wave shape for a smooth transition
       double phase = (i - start) / (end - start) * pi;

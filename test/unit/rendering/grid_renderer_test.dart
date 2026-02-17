@@ -64,14 +64,13 @@ void main() {
         const renderer = GridRenderer(config: config);
         final canvas = MockCanvas();
 
-        renderer.paintHorizontalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintHorizontalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, equals(0),
-            reason: 'Should not draw any lines when horizontal=false');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(0),
+          reason: 'Should not draw any lines when horizontal=false',
+        );
       });
 
       test('paintHorizontalGrid renders when horizontal=true', () {
@@ -79,14 +78,13 @@ void main() {
         const renderer = GridRenderer(config: config);
         final canvas = MockCanvas();
 
-        renderer.paintHorizontalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintHorizontalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, greaterThan(0),
-            reason: 'Should draw lines when horizontal=true');
+        expect(
+          canvas.drawLineCalls.length,
+          greaterThan(0),
+          reason: 'Should draw lines when horizontal=true',
+        );
       });
 
       test('paintHorizontalGrid uses default config when not provided', () {
@@ -94,14 +92,13 @@ void main() {
         final canvas = MockCanvas();
 
         // Default GridConfig has horizontal=true
-        renderer.paintHorizontalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintHorizontalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, equals(3),
-            reason: 'Should draw lines with default config (horizontal=true)');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(3),
+          reason: 'Should draw lines with default config (horizontal=true)',
+        );
       });
     });
 
@@ -111,14 +108,13 @@ void main() {
         const renderer = GridRenderer(config: config);
         final canvas = MockCanvas();
 
-        renderer.paintVerticalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintVerticalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, equals(0),
-            reason: 'Should not draw any lines when vertical=false');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(0),
+          reason: 'Should not draw any lines when vertical=false',
+        );
       });
 
       test('paintVerticalGrid renders when vertical=true', () {
@@ -126,14 +122,13 @@ void main() {
         const renderer = GridRenderer(config: config);
         final canvas = MockCanvas();
 
-        renderer.paintVerticalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintVerticalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, greaterThan(0),
-            reason: 'Should draw lines when vertical=true');
+        expect(
+          canvas.drawLineCalls.length,
+          greaterThan(0),
+          reason: 'Should draw lines when vertical=true',
+        );
       });
 
       test('paintVerticalGrid uses default config when not provided', () {
@@ -141,14 +136,13 @@ void main() {
         final canvas = MockCanvas();
 
         // Default GridConfig has vertical=true
-        renderer.paintVerticalGrid(
-          canvas,
-          plotArea,
-          [100.0, 150.0, 200.0],
-        );
+        renderer.paintVerticalGrid(canvas, plotArea, [100.0, 150.0, 200.0]);
 
-        expect(canvas.drawLineCalls.length, equals(3),
-            reason: 'Should draw lines with default config (vertical=true)');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(3),
+          reason: 'Should draw lines with default config (vertical=true)',
+        );
       });
     });
 
@@ -168,18 +162,18 @@ void main() {
         renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color, equals(configColor),
-            reason: 'Should use config color when set');
+        expect(
+          canvas.drawLineCalls.first.paint.color,
+          equals(configColor),
+          reason: 'Should use config color when set',
+        );
       });
 
       test('uses theme.gridStyle.majorColor when config color is null', () {
         const themeColor = Color(0xFF00FF00);
         const config = GridConfig(); // No horizontalColor set
         final theme = ChartTheme.light.copyWith(
-          gridStyle: const GridStyle(
-            majorColor: themeColor,
-            majorWidth: 1.0,
-          ),
+          gridStyle: const GridStyle(majorColor: themeColor, majorWidth: 1.0),
         );
         final renderer = GridRenderer(theme: theme, config: config);
         final canvas = MockCanvas();
@@ -187,24 +181,31 @@ void main() {
         renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color, equals(themeColor),
-            reason: 'Should use theme color when config color is null');
+        expect(
+          canvas.drawLineCalls.first.paint.color,
+          equals(themeColor),
+          reason: 'Should use theme color when config color is null',
+        );
       });
 
-      test('uses hardcoded default when both config and theme color are null',
-          () {
-        const config = GridConfig(); // No horizontalColor set
-        const renderer = GridRenderer(config: config); // No theme
-        final canvas = MockCanvas();
+      test(
+        'uses hardcoded default when both config and theme color are null',
+        () {
+          const config = GridConfig(); // No horizontalColor set
+          const renderer = GridRenderer(config: config); // No theme
+          final canvas = MockCanvas();
 
-        renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
+          renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
 
-        expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color.toARGB32(),
+          expect(canvas.drawLineCalls.length, equals(1));
+          expect(
+            canvas.drawLineCalls.first.paint.color.toARGB32(),
             equals(0xFFE0E0E0),
             reason:
-                'Should use hardcoded default (0xFFE0E0E0) when both are null');
-      });
+                'Should use hardcoded default (0xFFE0E0E0) when both are null',
+          );
+        },
+      );
     });
 
     group('Color Fallback Precedence - Vertical', () {
@@ -223,18 +224,18 @@ void main() {
         renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color, equals(configColor),
-            reason: 'Should use config color when set');
+        expect(
+          canvas.drawLineCalls.first.paint.color,
+          equals(configColor),
+          reason: 'Should use config color when set',
+        );
       });
 
       test('uses theme.gridStyle.majorColor when config color is null', () {
         const themeColor = Color(0xFF00FF00);
         const config = GridConfig(); // No verticalColor set
         final theme = ChartTheme.light.copyWith(
-          gridStyle: const GridStyle(
-            majorColor: themeColor,
-            majorWidth: 1.0,
-          ),
+          gridStyle: const GridStyle(majorColor: themeColor, majorWidth: 1.0),
         );
         final renderer = GridRenderer(theme: theme, config: config);
         final canvas = MockCanvas();
@@ -242,24 +243,31 @@ void main() {
         renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color, equals(themeColor),
-            reason: 'Should use theme color when config color is null');
+        expect(
+          canvas.drawLineCalls.first.paint.color,
+          equals(themeColor),
+          reason: 'Should use theme color when config color is null',
+        );
       });
 
-      test('uses hardcoded default when both config and theme color are null',
-          () {
-        const config = GridConfig(); // No verticalColor set
-        const renderer = GridRenderer(config: config); // No theme
-        final canvas = MockCanvas();
+      test(
+        'uses hardcoded default when both config and theme color are null',
+        () {
+          const config = GridConfig(); // No verticalColor set
+          const renderer = GridRenderer(config: config); // No theme
+          final canvas = MockCanvas();
 
-        renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
+          renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
 
-        expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.color.toARGB32(),
+          expect(canvas.drawLineCalls.length, equals(1));
+          expect(
+            canvas.drawLineCalls.first.paint.color.toARGB32(),
             equals(0xFFE0E0E0),
             reason:
-                'Should use hardcoded default (0xFFE0E0E0) when both are null');
-      });
+                'Should use hardcoded default (0xFFE0E0E0) when both are null',
+          );
+        },
+      );
     });
 
     group('PlotArea Bounds Clipping - Horizontal', () {
@@ -277,12 +285,16 @@ void main() {
         ]);
 
         // Should only draw lines for 100.0 and 200.0
-        expect(canvas.drawLineCalls.length, equals(2),
-            reason: 'Should clip lines outside plotArea bounds');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(2),
+          reason: 'Should clip lines outside plotArea bounds',
+        );
 
         // Verify the Y coordinates of drawn lines
-        final yPositions =
-            canvas.drawLineCalls.map((call) => call.p1.dy).toList();
+        final yPositions = canvas.drawLineCalls
+            .map((call) => call.p1.dy)
+            .toList();
         expect(yPositions, containsAll([100.0, 200.0]));
         expect(yPositions, isNot(contains(25.0)));
         expect(yPositions, isNot(contains(400.0)));
@@ -299,8 +311,11 @@ void main() {
           plotArea.bottom, // Exactly at bottom boundary (350.0)
         ]);
 
-        expect(canvas.drawLineCalls.length, equals(2),
-            reason: 'Should draw lines at plotArea boundaries');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(2),
+          reason: 'Should draw lines at plotArea boundaries',
+        );
       });
     });
 
@@ -319,12 +334,16 @@ void main() {
         ]);
 
         // Should only draw lines for 100.0 and 200.0
-        expect(canvas.drawLineCalls.length, equals(2),
-            reason: 'Should clip lines outside plotArea bounds');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(2),
+          reason: 'Should clip lines outside plotArea bounds',
+        );
 
         // Verify the X coordinates of drawn lines
-        final xPositions =
-            canvas.drawLineCalls.map((call) => call.p1.dx).toList();
+        final xPositions = canvas.drawLineCalls
+            .map((call) => call.p1.dx)
+            .toList();
         expect(xPositions, containsAll([100.0, 200.0]));
         expect(xPositions, isNot(contains(25.0)));
         expect(xPositions, isNot(contains(500.0)));
@@ -341,8 +360,11 @@ void main() {
           plotArea.right, // Exactly at right boundary (450.0)
         ]);
 
-        expect(canvas.drawLineCalls.length, equals(2),
-            reason: 'Should draw lines at plotArea boundaries');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(2),
+          reason: 'Should draw lines at plotArea boundaries',
+        );
       });
     });
 
@@ -357,8 +379,10 @@ void main() {
 
         expect(canvas.drawLineCalls.length, equals(1));
         expect(
-            canvas.drawLineCalls.first.paint.strokeWidth, equals(customWidth),
-            reason: 'Should apply custom stroke width from config');
+          canvas.drawLineCalls.first.paint.strokeWidth,
+          equals(customWidth),
+          reason: 'Should apply custom stroke width from config',
+        );
       });
 
       test('uses default horizontalStrokeWidth when not specified', () {
@@ -369,8 +393,11 @@ void main() {
         renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.strokeWidth, equals(0.5),
-            reason: 'Should use default stroke width (0.5)');
+        expect(
+          canvas.drawLineCalls.first.paint.strokeWidth,
+          equals(0.5),
+          reason: 'Should use default stroke width (0.5)',
+        );
       });
     });
 
@@ -385,8 +412,10 @@ void main() {
 
         expect(canvas.drawLineCalls.length, equals(1));
         expect(
-            canvas.drawLineCalls.first.paint.strokeWidth, equals(customWidth),
-            reason: 'Should apply custom stroke width from config');
+          canvas.drawLineCalls.first.paint.strokeWidth,
+          equals(customWidth),
+          reason: 'Should apply custom stroke width from config',
+        );
       });
 
       test('uses default verticalStrokeWidth when not specified', () {
@@ -397,8 +426,11 @@ void main() {
         renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
 
         expect(canvas.drawLineCalls.length, equals(1));
-        expect(canvas.drawLineCalls.first.paint.strokeWidth, equals(0.5),
-            reason: 'Should use default stroke width (0.5)');
+        expect(
+          canvas.drawLineCalls.first.paint.strokeWidth,
+          equals(0.5),
+          reason: 'Should use default stroke width (0.5)',
+        );
       });
     });
 
@@ -409,8 +441,11 @@ void main() {
 
         renderer.paintHorizontalGrid(canvas, plotArea, []);
 
-        expect(canvas.drawLineCalls.length, equals(0),
-            reason: 'Should handle empty position list gracefully');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(0),
+          reason: 'Should handle empty position list gracefully',
+        );
       });
 
       test('handles empty position lists for vertical grid', () {
@@ -419,8 +454,11 @@ void main() {
 
         renderer.paintVerticalGrid(canvas, plotArea, []);
 
-        expect(canvas.drawLineCalls.length, equals(0),
-            reason: 'Should handle empty position list gracefully');
+        expect(
+          canvas.drawLineCalls.length,
+          equals(0),
+          reason: 'Should handle empty position list gracefully',
+        );
       });
 
       test('horizontal grid uses PaintingStyle.stroke', () {
@@ -429,9 +467,11 @@ void main() {
 
         renderer.paintHorizontalGrid(canvas, plotArea, [100.0]);
 
-        expect(canvas.drawLineCalls.first.paint.style,
-            equals(PaintingStyle.stroke),
-            reason: 'Should use stroke painting style');
+        expect(
+          canvas.drawLineCalls.first.paint.style,
+          equals(PaintingStyle.stroke),
+          reason: 'Should use stroke painting style',
+        );
       });
 
       test('vertical grid uses PaintingStyle.stroke', () {
@@ -440,9 +480,11 @@ void main() {
 
         renderer.paintVerticalGrid(canvas, plotArea, [100.0]);
 
-        expect(canvas.drawLineCalls.first.paint.style,
-            equals(PaintingStyle.stroke),
-            reason: 'Should use stroke painting style');
+        expect(
+          canvas.drawLineCalls.first.paint.style,
+          equals(PaintingStyle.stroke),
+          reason: 'Should use stroke painting style',
+        );
       });
     });
   });
@@ -464,20 +506,37 @@ class MockCanvas implements Canvas {
   void clipRRect(RRect rrect, {bool doAntiAlias = true}) {}
 
   @override
-  void clipRect(Rect rect,
-      {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {}
+  void clipRect(
+    Rect rect, {
+    ClipOp clipOp = ClipOp.intersect,
+    bool doAntiAlias = true,
+  }) {}
 
   @override
-  void clipRSuperellipse(RSuperellipse rsuperellipse,
-      {bool doAntiAlias = true}) {}
+  void clipRSuperellipse(
+    RSuperellipse rsuperellipse, {
+    bool doAntiAlias = true,
+  }) {}
 
   @override
-  void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter,
-      Paint paint) {}
+  void drawArc(
+    Rect rect,
+    double startAngle,
+    double sweepAngle,
+    bool useCenter,
+    Paint paint,
+  ) {}
 
   @override
-  void drawAtlas(Image atlas, List<RSTransform> transforms, List<Rect> rects,
-      List<Color>? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
+  void drawAtlas(
+    Image atlas,
+    List<RSTransform> transforms,
+    List<Rect> rects,
+    List<Color>? colors,
+    BlendMode? blendMode,
+    Rect? cullRect,
+    Paint paint,
+  ) {}
 
   @override
   void drawCircle(Offset c, double radius, Paint paint) {}
@@ -522,8 +581,15 @@ class MockCanvas implements Canvas {
   void drawRSuperellipse(RSuperellipse rsuperellipse, Paint paint) {}
 
   @override
-  void drawRawAtlas(Image atlas, Float32List rstTransforms, Float32List rects,
-      Int32List? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {}
+  void drawRawAtlas(
+    Image atlas,
+    Float32List rstTransforms,
+    Float32List rects,
+    Int32List? colors,
+    BlendMode? blendMode,
+    Rect? cullRect,
+    Paint paint,
+  ) {}
 
   @override
   void drawRawPoints(PointMode pointMode, Float32List points, Paint paint) {}
@@ -533,7 +599,11 @@ class MockCanvas implements Canvas {
 
   @override
   void drawShadow(
-      Path path, Color color, double elevation, bool transparentOccluder) {}
+    Path path,
+    Color color,
+    double elevation,
+    bool transparentOccluder,
+  ) {}
 
   @override
   void drawVertices(Vertices vertices, BlendMode blendMode, Paint paint) {}
@@ -585,8 +655,8 @@ class DrawLineCall {
   final Paint paint;
 
   DrawLineCall(this.p1, this.p2, Paint originalPaint)
-      : paint = Paint()
-          ..color = originalPaint.color
-          ..strokeWidth = originalPaint.strokeWidth
-          ..style = originalPaint.style;
+    : paint = Paint()
+        ..color = originalPaint.color
+        ..strokeWidth = originalPaint.strokeWidth
+        ..style = originalPaint.style;
 }

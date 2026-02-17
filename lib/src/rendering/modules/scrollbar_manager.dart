@@ -69,10 +69,10 @@ class ScrollbarManager {
     bool showXScrollbar = false,
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
-  })  : _delegate = delegate,
-        _showXScrollbar = showXScrollbar,
-        _showYScrollbar = showYScrollbar,
-        _scrollbarTheme = scrollbarTheme;
+  }) : _delegate = delegate,
+       _showXScrollbar = showXScrollbar,
+       _showYScrollbar = showYScrollbar,
+       _scrollbarTheme = scrollbarTheme;
 
   // ==========================================================================
   // Dependencies
@@ -355,12 +355,14 @@ class ScrollbarManager {
     final originalTransform = _delegate.originalTransform;
     if (transform == null || originalTransform == null) return null;
 
-    final scrollbarRect =
-        axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
+    final scrollbarRect = axis == Axis.horizontal
+        ? _xScrollbarRect
+        : _yScrollbarRect;
     if (scrollbarRect == null) return null;
 
-    final trackLength =
-        axis == Axis.horizontal ? scrollbarRect.width : scrollbarRect.height;
+    final trackLength = axis == Axis.horizontal
+        ? scrollbarRect.width
+        : scrollbarRect.height;
 
     // CRITICAL: Use streaming bounds when available for correct handle positioning
     final double dataMin;
@@ -380,18 +382,22 @@ class ScrollbarManager {
           ? originalTransform.dataXMax
           : originalTransform.dataYMax;
     }
-    final viewportMin =
-        axis == Axis.horizontal ? transform.dataXMin : transform.dataYMin;
-    final viewportMax =
-        axis == Axis.horizontal ? transform.dataXMax : transform.dataYMax;
+    final viewportMin = axis == Axis.horizontal
+        ? transform.dataXMin
+        : transform.dataYMin;
+    final viewportMax = axis == Axis.horizontal
+        ? transform.dataXMax
+        : transform.dataYMax;
 
     final dataSpan = dataMax - dataMin;
     final viewportSpan = viewportMax - viewportMin;
     final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
 
     // Calculate handle geometry
-    final handleSize = (viewportSpan / dataSpan * trackLength)
-        .clamp(scrollbarTheme.minHandleSize, trackLength);
+    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(
+      scrollbarTheme.minHandleSize,
+      trackLength,
+    );
 
     // Calculate handle position (same logic for both axes - no inversion!)
     // For Y-axis: Chart Y increases upward, but screen Y increases downward
@@ -516,14 +522,16 @@ class ScrollbarManager {
     }
 
     // Get scrollbar rect based on axis
-    final scrollbarRect =
-        axis == Axis.horizontal ? _xScrollbarRect : _yScrollbarRect;
+    final scrollbarRect = axis == Axis.horizontal
+        ? _xScrollbarRect
+        : _yScrollbarRect;
     if (scrollbarRect == null) return false;
 
     // Calculate handle geometry
     final isHorizontal = axis == Axis.horizontal;
-    final trackLength =
-        isHorizontal ? scrollbarRect.width : scrollbarRect.height;
+    final trackLength = isHorizontal
+        ? scrollbarRect.width
+        : scrollbarRect.height;
 
     // CRITICAL: Use streaming bounds when available for correct handle positioning
     final double dataMin;
@@ -551,8 +559,10 @@ class ScrollbarManager {
     final scrollbarTheme = _scrollbarTheme ?? ScrollbarConfig.defaultLight;
 
     // Calculate handle size and position using same formulas as paint
-    final handleSize = (viewportSpan / dataSpan * trackLength)
-        .clamp(scrollbarTheme.minHandleSize, trackLength);
+    final handleSize = (viewportSpan / dataSpan * trackLength).clamp(
+      scrollbarTheme.minHandleSize,
+      trackLength,
+    );
 
     // Calculate handle position (same formula for both axes - natural mapping works!)
     final handlePosition = ((viewportMin - dataMin) / dataSpan * trackLength)
@@ -675,7 +685,11 @@ class ScrollbarManager {
 
   /// Handles track click (jump to clicked position).
   void _handleScrollbarTrackClick(
-      Axis axis, double clickPosition, double trackLength, double handleSize) {
+    Axis axis,
+    double clickPosition,
+    double trackLength,
+    double handleSize,
+  ) {
     // Calculate where the handle CENTER should be positioned (clicked position)
     final targetHandleCenter = clickPosition;
 
@@ -704,8 +718,9 @@ class ScrollbarManager {
     final scrollbarRect = isHorizontal ? _xScrollbarRect : _yScrollbarRect;
     if (scrollbarRect == null) return 0.0;
 
-    final trackLength =
-        isHorizontal ? scrollbarRect.width : scrollbarRect.height;
+    final trackLength = isHorizontal
+        ? scrollbarRect.width
+        : scrollbarRect.height;
 
     // CRITICAL: Use streaming bounds when available for correct scrollbar behavior
     final double dataMin;
@@ -737,7 +752,9 @@ class ScrollbarManager {
 
   /// Converts HitTestZone to ScrollbarInteraction type.
   ScrollbarInteraction _scrollbarZoneToInteractionType(
-      HitTestZone zone, Axis axis) {
+    HitTestZone zone,
+    Axis axis,
+  ) {
     switch (zone) {
       case HitTestZone.leftEdge:
       case HitTestZone.topEdge:
@@ -765,7 +782,9 @@ class ScrollbarManager {
   /// - `pixelDelta`: Horizontal pixel offset from scrollbar drag
   /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
   void _handleXScrollbarDelta(
-      double pixelDelta, ScrollbarInteraction interactionType) {
+    double pixelDelta,
+    ScrollbarInteraction interactionType,
+  ) {
     final transform = _delegate.transform;
     final originalTransform = _delegate.originalTransform;
     if (transform == null ||
@@ -828,7 +847,9 @@ class ScrollbarManager {
 
         // Clamp to prevent inversion and respect data bounds
         newMin = newMin.clamp(
-            dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
+          dataMin,
+          viewportMax - (dataSpan * 0.01),
+        ); // Min 1% of data range
 
         newTransform = transform.copyWith(dataXMin: newMin);
         break;
@@ -839,7 +860,9 @@ class ScrollbarManager {
 
         // Clamp to prevent inversion and respect data bounds
         newMax = newMax.clamp(
-            viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
+          viewportMin + (dataSpan * 0.01),
+          dataMax,
+        ); // Min 1% of data range
 
         newTransform = transform.copyWith(dataXMax: newMax);
         break;
@@ -902,7 +925,9 @@ class ScrollbarManager {
   /// - `pixelDelta`: Vertical pixel offset from scrollbar drag
   /// - `interactionType`: Type of scrollbar interaction (pan, zoom, track click)
   void _handleYScrollbarDelta(
-      double pixelDelta, ScrollbarInteraction interactionType) {
+    double pixelDelta,
+    ScrollbarInteraction interactionType,
+  ) {
     final transform = _delegate.transform;
     final originalTransform = _delegate.originalTransform;
     if (transform == null ||
@@ -966,7 +991,9 @@ class ScrollbarManager {
 
         // Clamp to prevent inversion and respect data bounds
         newMin = newMin.clamp(
-            dataMin, viewportMax - (dataSpan * 0.01)); // Min 1% of data range
+          dataMin,
+          viewportMax - (dataSpan * 0.01),
+        ); // Min 1% of data range
 
         newTransform = transform.copyWith(dataYMin: newMin);
         break;
@@ -977,7 +1004,9 @@ class ScrollbarManager {
 
         // Clamp to prevent inversion and respect data bounds
         newMax = newMax.clamp(
-            viewportMin + (dataSpan * 0.01), dataMax); // Min 1% of data range
+          viewportMin + (dataSpan * 0.01),
+          dataMax,
+        ); // Min 1% of data range
 
         newTransform = transform.copyWith(dataYMax: newMax);
         break;
@@ -1094,13 +1123,17 @@ class ScrollbarManager {
     // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
     final viewportSpan = viewportMax - viewportMin;
     final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
-    final handleSize = (visibleRatio * trackLength)
-        .clamp(scrollbarTheme.minHandleSize, trackLength);
+    final handleSize = (visibleRatio * trackLength).clamp(
+      scrollbarTheme.minHandleSize,
+      trackLength,
+    );
 
     // Calculate handle position (where viewport starts relative to data)
     final viewportOffset = viewportMin - dataMin;
-    final handlePosition = (viewportOffset / dataSpan * trackLength)
-        .clamp(0.0, trackLength - handleSize);
+    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(
+      0.0,
+      trackLength - handleSize,
+    );
 
     // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
     // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 8px)
@@ -1145,7 +1178,9 @@ class ScrollbarManager {
     canvas.save();
     canvas.translate(_xScrollbarRect!.left, _xScrollbarRect!.top);
     painter.paint(
-        canvas, Size(_xScrollbarRect!.width, _xScrollbarRect!.height));
+      canvas,
+      Size(_xScrollbarRect!.width, _xScrollbarRect!.height),
+    );
     canvas.restore();
   }
 
@@ -1173,8 +1208,10 @@ class ScrollbarManager {
     // Example: 200% zoom → handle = 40% of track (showing you're viewing half the data)
     final viewportSpan = viewportMax - viewportMin;
     final visibleRatio = viewportSpan / dataSpan; // Gets smaller as you zoom in
-    final handleSize = (visibleRatio * trackLength)
-        .clamp(scrollbarTheme.minHandleSize, trackLength);
+    final handleSize = (visibleRatio * trackLength).clamp(
+      scrollbarTheme.minHandleSize,
+      trackLength,
+    );
 
     // Calculate handle position (where viewport starts relative to data)
     // Y-AXIS INVERTED: In chart space, Y increases upward, but in screen space Y increases downward
@@ -1182,8 +1219,10 @@ class ScrollbarManager {
     // When viewport shows HIGHER Y values (top of chart), handle should be at BOTTOM of scrollbar
     // Therefore: use viewportMin (not viewportMax) and NO inversion needed!
     final viewportOffset = viewportMin - dataMin;
-    final handlePosition = (viewportOffset / dataSpan * trackLength)
-        .clamp(0.0, trackLength - handleSize);
+    final handlePosition = (viewportOffset / dataSpan * trackLength).clamp(
+      0.0,
+      trackLength - handleSize,
+    );
 
     // Calculate zoom-adjusted edge grip width (blue zones grow with zoom level)
     // At 100% zoom (visibleRatio=1.0): edgeGripWidth = base size (e.g., 40px)
@@ -1228,7 +1267,9 @@ class ScrollbarManager {
     canvas.save();
     canvas.translate(_yScrollbarRect!.left, _yScrollbarRect!.top);
     painter.paint(
-        canvas, Size(_yScrollbarRect!.width, _yScrollbarRect!.height));
+      canvas,
+      Size(_yScrollbarRect!.width, _yScrollbarRect!.height),
+    );
     canvas.restore();
   }
 

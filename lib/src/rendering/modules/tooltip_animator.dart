@@ -55,9 +55,7 @@ void prewarmTooltipRendering() {
 /// - Properly cancels timers to prevent memory leaks
 /// - Minimal overhead when not animating
 class TooltipAnimator {
-  TooltipAnimator({
-    required this.onRepaint,
-  });
+  TooltipAnimator({required this.onRepaint});
 
   /// Callback invoked when a repaint is needed (opacity changed).
   final RepaintCallback onRepaint;

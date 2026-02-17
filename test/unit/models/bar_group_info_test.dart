@@ -24,24 +24,15 @@ void main() {
       });
 
       test('throws assertion error when index is negative', () {
-        expect(
-          () => BarGroupInfo(index: -1, count: 3),
-          throwsAssertionError,
-        );
+        expect(() => BarGroupInfo(index: -1, count: 3), throwsAssertionError);
       });
 
       test('throws assertion error when count is less than 1', () {
-        expect(
-          () => BarGroupInfo(index: 0, count: 0),
-          throwsAssertionError,
-        );
+        expect(() => BarGroupInfo(index: 0, count: 0), throwsAssertionError);
       });
 
       test('throws assertion error when index >= count', () {
-        expect(
-          () => BarGroupInfo(index: 3, count: 3),
-          throwsAssertionError,
-        );
+        expect(() => BarGroupInfo(index: 3, count: 3), throwsAssertionError);
       });
 
       test('throws assertion error when gap is negative', () {
@@ -73,25 +64,27 @@ void main() {
         expect(offset, equals(0.0));
       });
 
-      test('calculates correct offsets for three bar series with default gap',
-          () {
-        const info0 = BarGroupInfo(index: 0, count: 3);
-        const info1 = BarGroupInfo(index: 1, count: 3);
-        const info2 = BarGroupInfo(index: 2, count: 3);
+      test(
+        'calculates correct offsets for three bar series with default gap',
+        () {
+          const info0 = BarGroupInfo(index: 0, count: 3);
+          const info1 = BarGroupInfo(index: 1, count: 3);
+          const info2 = BarGroupInfo(index: 2, count: 3);
 
-        final offset0 = info0.calculateOffset(20.0);
-        final offset1 = info1.calculateOffset(20.0);
-        final offset2 = info2.calculateOffset(20.0);
+          final offset0 = info0.calculateOffset(20.0);
+          final offset1 = info1.calculateOffset(20.0);
+          final offset2 = info2.calculateOffset(20.0);
 
-        // With 20px bars and 2px gap:
-        // effectiveWidth = 22px
-        // totalWidth = 22*3 - 2 = 64px
-        // startOffset = -64/2 + 20/2 = -22px
-        // offsets: -22, 0, 22
-        expect(offset0, equals(-22.0));
-        expect(offset1, equals(0.0));
-        expect(offset2, equals(22.0));
-      });
+          // With 20px bars and 2px gap:
+          // effectiveWidth = 22px
+          // totalWidth = 22*3 - 2 = 64px
+          // startOffset = -64/2 + 20/2 = -22px
+          // offsets: -22, 0, 22
+          expect(offset0, equals(-22.0));
+          expect(offset1, equals(0.0));
+          expect(offset2, equals(22.0));
+        },
+      );
 
       test('calculates correct offsets for two bar series', () {
         const info0 = BarGroupInfo(index: 0, count: 2);
@@ -322,11 +315,7 @@ void main() {
     group('documentation examples', () {
       test('example from class documentation works correctly', () {
         // Example from BarGroupInfo class doc
-        const groupInfo = BarGroupInfo(
-          index: 1,
-          count: 3,
-          gap: 2.0,
-        );
+        const groupInfo = BarGroupInfo(index: 1, count: 3, gap: 2.0);
 
         final offset = groupInfo.calculateOffset(20.0);
         expect(offset, equals(0.0)); // Middle of three bars

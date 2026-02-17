@@ -149,12 +149,12 @@ class AnnotationTheme {
 
   @override
   int get hashCode => Object.hash(
-        pointDefaults,
-        rangeDefaults,
-        textDefaults,
-        thresholdDefaults,
-        trendDefaults,
-      );
+    pointDefaults,
+    rangeDefaults,
+    textDefaults,
+    thresholdDefaults,
+    trendDefaults,
+  );
 }
 
 /// Default styling for point annotations with state-based colors.
@@ -335,29 +335,29 @@ class PointAnnotationDefaults {
 
   static const PointAnnotationDefaults colorblindFriendly =
       PointAnnotationDefaults(
-    markerShape: MarkerShape.diamond,
-    markerSize: 9.0,
-    normalColor: Color(0xFF0173B2), // Blue (Okabe-Ito)
-    selectedColor: Color(0xFF005A8C),
-    hoveredColor: Color(0xFF3399CC),
-    draggingColor: Color(0xFF005A8C),
-    ghostOpacity: 0.3,
-    previewOpacity: 0.8,
-    previewScale: 1.2,
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFF000000),
-        fontWeight: FontWeight.normal,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFF0173B2),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        markerShape: MarkerShape.diamond,
+        markerSize: 9.0,
+        normalColor: Color(0xFF0173B2), // Blue (Okabe-Ito)
+        selectedColor: Color(0xFF005A8C),
+        hoveredColor: Color(0xFF3399CC),
+        draggingColor: Color(0xFF005A8C),
+        ghostOpacity: 0.3,
+        previewOpacity: 0.8,
+        previewScale: 1.2,
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFF000000),
+            fontWeight: FontWeight.normal,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFF0173B2),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   PointAnnotationDefaults copyWith({
     MarkerShape? markerShape,
@@ -403,17 +403,17 @@ class PointAnnotationDefaults {
 
   @override
   int get hashCode => Object.hash(
-        markerShape,
-        markerSize,
-        normalColor,
-        selectedColor,
-        hoveredColor,
-        draggingColor,
-        ghostOpacity,
-        previewOpacity,
-        previewScale,
-        labelStyle,
-      );
+    markerShape,
+    markerSize,
+    normalColor,
+    selectedColor,
+    hoveredColor,
+    draggingColor,
+    ghostOpacity,
+    previewOpacity,
+    previewScale,
+    labelStyle,
+  );
 }
 
 /// Default styling for range annotations with state-based colors.
@@ -606,29 +606,29 @@ class RangeAnnotationDefaults {
 
   static const RangeAnnotationDefaults colorblindFriendly =
       RangeAnnotationDefaults(
-    normalFillColor: Color(0x33DE8F05), // 20% orange (Okabe-Ito)
-    selectedFillColor: Color(0x4DDE8F05), // 30% orange
-    hoveredFillColor: Color(0x40F0A030), // 25% light orange
-    draggingFillColor: Color(0x4DC07004), // 30% darker orange
-    normalBorderColor: Color(0xFFDE8F05),
-    selectedBorderColor: Color(0xFFC07004),
-    hoveredBorderColor: Color(0xFFF0A030),
-    draggingBorderColor: Color(0xFFC07004),
-    borderWidth: 2.0,
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFF000000),
-        fontWeight: FontWeight.w500,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFFDE8F05),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        normalFillColor: Color(0x33DE8F05), // 20% orange (Okabe-Ito)
+        selectedFillColor: Color(0x4DDE8F05), // 30% orange
+        hoveredFillColor: Color(0x40F0A030), // 25% light orange
+        draggingFillColor: Color(0x4DC07004), // 30% darker orange
+        normalBorderColor: Color(0xFFDE8F05),
+        selectedBorderColor: Color(0xFFC07004),
+        hoveredBorderColor: Color(0xFFF0A030),
+        draggingBorderColor: Color(0xFFC07004),
+        borderWidth: 2.0,
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFF000000),
+            fontWeight: FontWeight.w500,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFFDE8F05),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   RangeAnnotationDefaults copyWith({
     Color? normalFillColor,
@@ -674,17 +674,17 @@ class RangeAnnotationDefaults {
 
   @override
   int get hashCode => Object.hash(
-        normalFillColor,
-        selectedFillColor,
-        hoveredFillColor,
-        draggingFillColor,
-        normalBorderColor,
-        selectedBorderColor,
-        hoveredBorderColor,
-        draggingBorderColor,
-        borderWidth,
-        labelStyle,
-      );
+    normalFillColor,
+    selectedFillColor,
+    hoveredFillColor,
+    draggingFillColor,
+    normalBorderColor,
+    selectedBorderColor,
+    hoveredBorderColor,
+    draggingBorderColor,
+    borderWidth,
+    labelStyle,
+  );
 }
 
 /// Default styling for text annotations.
@@ -803,18 +803,18 @@ class TextAnnotationDefaults {
 
   static const TextAnnotationDefaults colorblindFriendly =
       TextAnnotationDefaults(
-    textStyle: TextStyle(
-      fontSize: 14.0,
-      fontFamily: 'Roboto',
-      color: Color(0xFF000000),
-      fontWeight: FontWeight.w500,
-    ),
-    backgroundColor: Color(0xF0FFFFFF),
-    borderColor: Color(0xFF0173B2),
-    borderWidth: 0.5,
-    borderRadius: 4.0,
-    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-  );
+        textStyle: TextStyle(
+          fontSize: 14.0,
+          fontFamily: 'Roboto',
+          color: Color(0xFF000000),
+          fontWeight: FontWeight.w500,
+        ),
+        backgroundColor: Color(0xF0FFFFFF),
+        borderColor: Color(0xFF0173B2),
+        borderWidth: 0.5,
+        borderRadius: 4.0,
+        padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      );
 
   TextAnnotationDefaults copyWith({
     TextStyle? textStyle,
@@ -848,13 +848,13 @@ class TextAnnotationDefaults {
 
   @override
   int get hashCode => Object.hash(
-        textStyle,
-        backgroundColor,
-        borderColor,
-        borderWidth,
-        borderRadius,
-        padding,
-      );
+    textStyle,
+    backgroundColor,
+    borderColor,
+    borderWidth,
+    borderRadius,
+    padding,
+  );
 }
 
 /// Default styling for threshold annotations (horizontal/vertical lines).
@@ -885,143 +885,143 @@ class ThresholdAnnotationDefaults {
 
   static const ThresholdAnnotationDefaults defaultLight =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFF44336), // Red
-    lineWidth: 2.0,
-    dashPattern: [5.0, 3.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFFF44336),
-        fontWeight: FontWeight.w500,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFFF44336),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFF44336), // Red
+        lineWidth: 2.0,
+        dashPattern: [5.0, 3.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFFF44336),
+            fontWeight: FontWeight.w500,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFFF44336),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults defaultDark =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFEF5350), // Light red
-    lineWidth: 2.0,
-    dashPattern: [5.0, 3.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFFEF5350),
-        fontWeight: FontWeight.w500,
-      ),
-      backgroundColor: Color(0xE6212121),
-      borderColor: Color(0xFFEF5350),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFEF5350), // Light red
+        lineWidth: 2.0,
+        dashPattern: [5.0, 3.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFFEF5350),
+            fontWeight: FontWeight.w500,
+          ),
+          backgroundColor: Color(0xE6212121),
+          borderColor: Color(0xFFEF5350),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults corporateBlue =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFD32F2F), // Dark red
-    lineWidth: 2.5,
-    dashPattern: [6.0, 3.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Arial',
-        color: Color(0xFFD32F2F),
-        fontWeight: FontWeight.w600,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFFD32F2F),
-      borderWidth: 0.5,
-      borderRadius: 2.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFD32F2F), // Dark red
+        lineWidth: 2.5,
+        dashPattern: [6.0, 3.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Arial',
+            color: Color(0xFFD32F2F),
+            fontWeight: FontWeight.w600,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFFD32F2F),
+          borderWidth: 0.5,
+          borderRadius: 2.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults vibrant =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFFF5722), // Deep orange
-    lineWidth: 3.0,
-    dashPattern: [8.0, 4.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 13.0,
-        fontFamily: 'Helvetica',
-        color: Color(0xFFBF360C),
-        fontWeight: FontWeight.bold,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFFFF5722),
-      borderWidth: 0.5,
-      borderRadius: 6.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFFF5722), // Deep orange
+        lineWidth: 3.0,
+        dashPattern: [8.0, 4.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 13.0,
+            fontFamily: 'Helvetica',
+            color: Color(0xFFBF360C),
+            fontWeight: FontWeight.bold,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFFFF5722),
+          borderWidth: 0.5,
+          borderRadius: 6.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults minimal =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFF757575), // Grey
-    lineWidth: 1.5,
-    dashPattern: [4.0, 2.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 11.0,
-        fontFamily: 'Helvetica',
-        color: Color(0xFF616161),
-        fontWeight: FontWeight.normal,
-      ),
-      backgroundColor: Color(0xF5F5F5F5),
-      borderColor: Color(0xFF757575),
-      borderWidth: 0.5,
-      borderRadius: 3.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFF757575), // Grey
+        lineWidth: 1.5,
+        dashPattern: [4.0, 2.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 11.0,
+            fontFamily: 'Helvetica',
+            color: Color(0xFF616161),
+            fontWeight: FontWeight.normal,
+          ),
+          backgroundColor: Color(0xF5F5F5F5),
+          borderColor: Color(0xFF757575),
+          borderWidth: 0.5,
+          borderRadius: 3.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults highContrast =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFFF0000), // Pure red
-    lineWidth: 4.0,
-    dashPattern: [],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 14.0,
-        fontFamily: 'Arial',
-        color: Color(0xFF000000),
-        fontWeight: FontWeight.bold,
-      ),
-      backgroundColor: Color(0xFFFFFFFF),
-      borderColor: Color(0xFFFF0000),
-      borderWidth: 2.0,
-      borderRadius: 2.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFFF0000), // Pure red
+        lineWidth: 4.0,
+        dashPattern: [],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 14.0,
+            fontFamily: 'Arial',
+            color: Color(0xFF000000),
+            fontWeight: FontWeight.bold,
+          ),
+          backgroundColor: Color(0xFFFFFFFF),
+          borderColor: Color(0xFFFF0000),
+          borderWidth: 2.0,
+          borderRadius: 2.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   static const ThresholdAnnotationDefaults colorblindFriendly =
       ThresholdAnnotationDefaults(
-    lineColor: Color(0xFFCC78BC), // Pink (Okabe-Ito)
-    lineWidth: 2.5,
-    dashPattern: [6.0, 3.0],
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFF9C4B99),
-        fontWeight: FontWeight.w500,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFFCC78BC),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFFCC78BC), // Pink (Okabe-Ito)
+        lineWidth: 2.5,
+        dashPattern: [6.0, 3.0],
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFF9C4B99),
+            fontWeight: FontWeight.w500,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFFCC78BC),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   ThresholdAnnotationDefaults copyWith({
     Color? lineColor,
@@ -1049,11 +1049,11 @@ class ThresholdAnnotationDefaults {
 
   @override
   int get hashCode => Object.hash(
-        lineColor,
-        lineWidth,
-        Object.hashAll(dashPattern),
-        labelStyle,
-      );
+    lineColor,
+    lineWidth,
+    Object.hashAll(dashPattern),
+    labelStyle,
+  );
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
@@ -1222,25 +1222,25 @@ class TrendAnnotationDefaults {
 
   static const TrendAnnotationDefaults colorblindFriendly =
       TrendAnnotationDefaults(
-    lineColor: Color(0xFF029E73), // Teal (Okabe-Ito)
-    lineWidth: 2.5,
-    dashPattern: [6.0, 4.0],
-    confidenceBandColor: Color(0xFF029E73),
-    confidenceBandOpacity: 0.15,
-    labelStyle: LabelStyle(
-      textStyle: TextStyle(
-        fontSize: 12.0,
-        fontFamily: 'Roboto',
-        color: Color(0xFF017A5A),
-        fontWeight: FontWeight.w500,
-      ),
-      backgroundColor: Color(0xF0FFFFFF),
-      borderColor: Color(0xFF029E73),
-      borderWidth: 0.5,
-      borderRadius: 4.0,
-      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-    ),
-  );
+        lineColor: Color(0xFF029E73), // Teal (Okabe-Ito)
+        lineWidth: 2.5,
+        dashPattern: [6.0, 4.0],
+        confidenceBandColor: Color(0xFF029E73),
+        confidenceBandOpacity: 0.15,
+        labelStyle: LabelStyle(
+          textStyle: TextStyle(
+            fontSize: 12.0,
+            fontFamily: 'Roboto',
+            color: Color(0xFF017A5A),
+            fontWeight: FontWeight.w500,
+          ),
+          backgroundColor: Color(0xF0FFFFFF),
+          borderColor: Color(0xFF029E73),
+          borderWidth: 0.5,
+          borderRadius: 4.0,
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        ),
+      );
 
   TrendAnnotationDefaults copyWith({
     Color? lineColor,
@@ -1275,13 +1275,13 @@ class TrendAnnotationDefaults {
 
   @override
   int get hashCode => Object.hash(
-        lineColor,
-        lineWidth,
-        Object.hashAll(dashPattern),
-        confidenceBandColor,
-        confidenceBandOpacity,
-        labelStyle,
-      );
+    lineColor,
+    lineWidth,
+    Object.hashAll(dashPattern),
+    confidenceBandColor,
+    confidenceBandOpacity,
+    labelStyle,
+  );
 
   static bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

@@ -1,8 +1,7 @@
+import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:braven_charts/src/models/auto_scroll_config.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
-import 'package:braven_charts/src/models/chart_type.dart';
-import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,10 +15,7 @@ void main() {
 
       final series = const ChartSeries(
         id: 's1',
-        points: [
-          ChartDataPoint(x: 10, y: 10),
-          ChartDataPoint(x: 20, y: 20),
-        ],
+        points: [ChartDataPoint(x: 10, y: 10), ChartDataPoint(x: 20, y: 20)],
         color: Colors.blue,
       );
 
@@ -55,9 +51,11 @@ void main() {
       // For now, we verify the widget builds without error with the callback.
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Use variables to avoid unused warning
-      if (hoverCalled) {
-        print('Hover called for $hoveredSeriesId at $hoveredPoint');
+      // Variables used to ensure no warnings — onPointHover can be called
+      // with (null, null) when hovering empty space, so only assert non-null
+      // when a specific point was actually hit.
+      if (hoverCalled && hoveredPoint != null) {
+        expect(hoveredSeriesId, isNotNull);
       }
     });
 

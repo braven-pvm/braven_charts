@@ -246,30 +246,30 @@ class MultiAxisManager {
             ? series.yAxisConfig!.id
             : '${series.id}_axis';
 
-        effectiveBindings.add(SeriesAxisBinding(
-          seriesId: series.id,
-          yAxisId: axisId,
-        ));
+        effectiveBindings.add(
+          SeriesAxisBinding(seriesId: series.id, yAxisId: axisId),
+        );
         continue;
       }
 
       // Priority 2: Explicit yAxisId reference
       if (series.yAxisId != null && series.yAxisId!.isNotEmpty) {
-        effectiveBindings.add(SeriesAxisBinding(
-          seriesId: series.id,
-          yAxisId: series.yAxisId!,
-        ));
+        effectiveBindings.add(
+          SeriesAxisBinding(seriesId: series.id, yAxisId: series.yAxisId!),
+        );
         continue;
       }
 
       // Priority 3: Auto-bind to primary/default axis
       // Series without explicit axis config should use the default axis
       // to ensure axis bounds are computed from series data
-      effectiveBindings.add(SeriesAxisBinding(
-        seriesId: series.id,
-        yAxisId:
-            'primary_axis', // Matches the ID generated for widget-level yAxis
-      ));
+      effectiveBindings.add(
+        SeriesAxisBinding(
+          seriesId: series.id,
+          yAxisId:
+              'primary_axis', // Matches the ID generated for widget-level yAxis
+        ),
+      );
     }
 
     // Cache and return
@@ -328,8 +328,10 @@ class MultiAxisManager {
 
     // Check if series have multi-axis config (inline yAxisConfig or yAxisId)
     // This determines whether the transform is in normalized (0-1) or actual data space
-    final hasMultiAxisConfig = _series.any((s) =>
-        s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+    final hasMultiAxisConfig = _series.any(
+      (s) =>
+          s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty),
+    );
 
     // For non-normalized modes (none/auto), the transform's Y range IS the actual
     // data viewport. When zoomed, we can use it directly as axis bounds.
@@ -337,10 +339,12 @@ class MultiAxisManager {
     // data values (not normalized 0-1), so use transform bounds directly.
     final isNonNormalizedMode =
         _normalizationMode != NormalizationMode.perSeries;
-    final transformHasRealDataValues = isNonNormalizedMode ||
+    final transformHasRealDataValues =
+        isNonNormalizedMode ||
         (_normalizationMode == NormalizationMode.perSeries &&
             !hasMultiAxisConfig);
-    final useTransformYBounds = !forceFullBounds &&
+    final useTransformYBounds =
+        !forceFullBounds &&
         transformHasRealDataValues &&
         t != null &&
         ot != null &&
@@ -357,7 +361,8 @@ class MultiAxisManager {
     // Used in perSeries normalization mode for BOTH:
     // - Series rendering transforms (so series scale correctly during zoom)
     // - Axis label rendering (so axis labels show zoomed range, e.g., 40-60 instead of 0-100)
-    final usePaintingBounds = forPainting &&
+    final usePaintingBounds =
+        forPainting &&
         !forceFullBounds &&
         _normalizationMode == NormalizationMode.perSeries &&
         hasMultiAxisConfig && // Only when transform is in normalized space
@@ -370,10 +375,7 @@ class MultiAxisManager {
       // Do NOT add padding here - the transform represents the exact viewport,
       // and the crosshair uses the same transform for coordinate conversion
       if (useTransformYBounds) {
-        bounds[axis.id] = DataRange(
-          min: t.dataYMin,
-          max: t.dataYMax,
-        );
+        bounds[axis.id] = DataRange(min: t.dataYMin, max: t.dataYMax);
         continue;
       }
 
@@ -400,8 +402,10 @@ class MultiAxisManager {
             max: explicitPaddedMin + (viewportRatioMax * paddedRange),
           );
         } else {
-          bounds[axis.id] =
-              DataRange(min: explicitPaddedMin, max: explicitPaddedMax);
+          bounds[axis.id] = DataRange(
+            min: explicitPaddedMin,
+            max: explicitPaddedMax,
+          );
         }
         continue;
       }
@@ -482,11 +486,14 @@ class MultiAxisManager {
     final ot = originalTransform;
 
     // Check if multi-axis config is active (perSeries normalization in effect)
-    final hasMultiAxisConfig = _series.any((s) =>
-        s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty));
+    final hasMultiAxisConfig = _series.any(
+      (s) =>
+          s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty),
+    );
 
     // Determine if we should apply viewport transformation
-    final usePaintingBounds = forPainting &&
+    final usePaintingBounds =
+        forPainting &&
         _normalizationMode == NormalizationMode.perSeries &&
         hasMultiAxisConfig &&
         t != null &&
@@ -545,8 +552,10 @@ class MultiAxisManager {
   /// - [labelStyle]: Text style for tick labels (defaults to 11px gray)
   Map<String, double> computeAxisWidths({
     required Map<String, DataRange> axisBounds,
-    TextStyle labelStyle =
-        const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+    TextStyle labelStyle = const TextStyle(
+      fontSize: 11,
+      color: Color(0xFF666666),
+    ),
   }) {
     final effectiveAxes = getEffectiveYAxes();
     if (effectiveAxes.isEmpty) return {};
@@ -677,9 +686,15 @@ class MultiAxisManager {
   ///
   /// **Returns**: Original data value in series range
   double denormalizeYValue(
-      double normalizedValue, double seriesMin, double seriesMax) {
+    double normalizedValue,
+    double seriesMin,
+    double seriesMax,
+  ) {
     return MultiAxisNormalizer.denormalize(
-        normalizedValue, seriesMin, seriesMax);
+      normalizedValue,
+      seriesMin,
+      seriesMax,
+    );
   }
 
   /// Normalizes a value from data space to normalized [0, 1] space.

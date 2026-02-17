@@ -53,18 +53,18 @@ class BarChartConfig {
     required this.useGradient,
     this.gradientStart,
     this.gradientEnd,
-  })  : assert(
-          barWidthRatio > 0.0 && barWidthRatio <= 1.0,
-          'barWidthRatio must be in range (0.0, 1.0]',
-        ),
-        assert(barSpacing >= 0.0, 'barSpacing must be >= 0.0'),
-        assert(groupSpacing >= 0.0, 'groupSpacing must be >= 0.0'),
-        assert(cornerRadius >= 0.0, 'cornerRadius must be >= 0.0'),
-        assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
-        assert(
-          !useGradient || gradientStart != null || gradientEnd != null,
-          'useGradient=true requires at least one gradient color',
-        );
+  }) : assert(
+         barWidthRatio > 0.0 && barWidthRatio <= 1.0,
+         'barWidthRatio must be in range (0.0, 1.0]',
+       ),
+       assert(barSpacing >= 0.0, 'barSpacing must be >= 0.0'),
+       assert(groupSpacing >= 0.0, 'groupSpacing must be >= 0.0'),
+       assert(cornerRadius >= 0.0, 'cornerRadius must be >= 0.0'),
+       assert(borderWidth >= 0.0, 'borderWidth must be >= 0.0'),
+       assert(
+         !useGradient || gradientStart != null || gradientEnd != null,
+         'useGradient=true requires at least one gradient color',
+       );
 
   /// Chart orientation (vertical or horizontal)
   final BarOrientation orientation;
@@ -185,18 +185,18 @@ class BarChartConfig {
 
   @override
   int get hashCode => Object.hash(
-        orientation,
-        groupingMode,
-        barWidthRatio,
-        barSpacing,
-        groupSpacing,
-        cornerRadius,
-        borderWidth,
-        borderColor,
-        useGradient,
-        gradientStart,
-        gradientEnd,
-      );
+    orientation,
+    groupingMode,
+    barWidthRatio,
+    barSpacing,
+    groupSpacing,
+    cornerRadius,
+    borderWidth,
+    borderColor,
+    useGradient,
+    gradientStart,
+    gradientEnd,
+  );
 
   @override
   String toString() {

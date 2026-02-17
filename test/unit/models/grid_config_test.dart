@@ -37,10 +37,7 @@ void main() {
       });
 
       test('creates with both grids disabled', () {
-        const config = GridConfig(
-          horizontal: false,
-          vertical: false,
-        );
+        const config = GridConfig(horizontal: false, vertical: false);
         expect(config.horizontal, isFalse);
         expect(config.vertical, isFalse);
       });
@@ -151,8 +148,9 @@ void main() {
 
       test('overrides horizontalColor', () {
         const original = GridConfig(horizontalColor: Color(0xFFFF0000));
-        final copy =
-            original.copyWith(horizontalColor: const Color(0xFF0000FF));
+        final copy = original.copyWith(
+          horizontalColor: const Color(0xFF0000FF),
+        );
         expect(copy.horizontalColor, const Color(0xFF0000FF));
         expect(copy.verticalColor, original.verticalColor);
       });
@@ -217,8 +215,10 @@ void main() {
         expect(copy.horizontal, original.horizontal); // unchanged
         expect(copy.vertical, isTrue); // changed
         expect(copy.horizontalStrokeWidth, 5.0); // changed
-        expect(copy.verticalStrokeWidth,
-            original.verticalStrokeWidth); // unchanged
+        expect(
+          copy.verticalStrokeWidth,
+          original.verticalStrokeWidth,
+        ); // unchanged
       });
     });
 

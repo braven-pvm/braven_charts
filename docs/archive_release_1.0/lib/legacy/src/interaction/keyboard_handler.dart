@@ -69,7 +69,7 @@ class KeyboardHandler {
 
   // Custom key bindings registry
   final Map<LogicalKeyboardKey, void Function(InteractionState state)>
-      _customBindings = {};
+  _customBindings = {};
 
   /// Processes a keyboard event when chart has focus.
   ///
@@ -232,15 +232,16 @@ class KeyboardHandler {
   ) {
     final factor = zoomIn ? zoomFactor : (1.0 / zoomFactor);
 
-    final newZoomX = (currentState.zoomLevelX * factor)
-        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
-    final newZoomY = (currentState.zoomLevelY * factor)
-        .clamp(currentState.minZoomLevel, currentState.maxZoomLevel);
-
-    return currentState.copyWith(
-      zoomLevelX: newZoomX,
-      zoomLevelY: newZoomY,
+    final newZoomX = (currentState.zoomLevelX * factor).clamp(
+      currentState.minZoomLevel,
+      currentState.maxZoomLevel,
     );
+    final newZoomY = (currentState.zoomLevelY * factor).clamp(
+      currentState.minZoomLevel,
+      currentState.maxZoomLevel,
+    );
+
+    return currentState.copyWith(zoomLevelX: newZoomX, zoomLevelY: newZoomY);
   }
 
   /// Activates focused element (shows tooltip).
@@ -250,10 +251,7 @@ class KeyboardHandler {
     Map<String, dynamic> focusedPoint,
     InteractionState state,
   ) {
-    return state.copyWith(
-      isTooltipVisible: true,
-      hoveredPoint: focusedPoint,
-    );
+    return state.copyWith(isTooltipVisible: true, hoveredPoint: focusedPoint);
   }
 
   /// Closes tooltip or clears selection.
@@ -276,10 +274,7 @@ class KeyboardHandler {
   /// Uses Flutter's SemanticsService to announce data point details.
   /// Requires Flutter binding to be initialized - safe to call in production,
   /// but may fail silently in unit tests without binding.
-  void announceToScreenReader(
-    Map<String, dynamic> point,
-    String seriesName,
-  ) {
+  void announceToScreenReader(Map<String, dynamic> point, String seriesName) {
     try {
       final xValue = point['x'] ?? 'unknown';
       final yValue = point['y'] ?? 'unknown';
@@ -330,17 +325,15 @@ class KeyboardHandler {
     if (dataPoints == null || dataPoints.isEmpty) return state;
 
     final currentIndex = state.focusedPointIndex;
-    final newIndex =
-        currentIndex >= dataPoints.length - 1 ? 0 : currentIndex + 1;
+    final newIndex = currentIndex >= dataPoints.length - 1
+        ? 0
+        : currentIndex + 1;
 
     final newPoint = dataPoints[newIndex];
     // Note: Screen reader announcement should be called by widget layer
     // announceToScreenReader(newPoint, state.hoveredSeriesId ?? 'Series');
 
-    return state.copyWith(
-      focusedPointIndex: newIndex,
-      hoveredPoint: newPoint,
-    );
+    return state.copyWith(focusedPointIndex: newIndex, hoveredPoint: newPoint);
   }
 
   InteractionState _handleArrowLeft(
@@ -350,17 +343,15 @@ class KeyboardHandler {
     if (dataPoints == null || dataPoints.isEmpty) return state;
 
     final currentIndex = state.focusedPointIndex;
-    final newIndex =
-        currentIndex <= 0 ? dataPoints.length - 1 : currentIndex - 1;
+    final newIndex = currentIndex <= 0
+        ? dataPoints.length - 1
+        : currentIndex - 1;
 
     final newPoint = dataPoints[newIndex];
     // Note: Screen reader announcement should be called by widget layer
     // announceToScreenReader(newPoint, state.hoveredSeriesId ?? 'Series');
 
-    return state.copyWith(
-      focusedPointIndex: newIndex,
-      hoveredPoint: newPoint,
-    );
+    return state.copyWith(focusedPointIndex: newIndex, hoveredPoint: newPoint);
   }
 
   InteractionState _handleArrowUp(InteractionState state) {
@@ -387,10 +378,7 @@ class KeyboardHandler {
     // Note: Screen reader announcement should be called by widget layer
     // announceToScreenReader(firstPoint, state.hoveredSeriesId ?? 'Series');
 
-    return state.copyWith(
-      focusedPointIndex: 0,
-      hoveredPoint: firstPoint,
-    );
+    return state.copyWith(focusedPointIndex: 0, hoveredPoint: firstPoint);
   }
 
   InteractionState _handleEnd(
@@ -413,10 +401,14 @@ class KeyboardHandler {
   InteractionState _handleZoomIn(InteractionState state) {
     // Apply zoom to current zoom/pan state
     final currentZoomState = state.zoomPanState;
-    final newZoomX = (currentZoomState.zoomLevelX * zoomInFactor)
-        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-    final newZoomY = (currentZoomState.zoomLevelY * zoomInFactor)
-        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomX = (currentZoomState.zoomLevelX * zoomInFactor).clamp(
+      currentZoomState.minZoomLevel,
+      currentZoomState.maxZoomLevel,
+    );
+    final newZoomY = (currentZoomState.zoomLevelY * zoomInFactor).clamp(
+      currentZoomState.minZoomLevel,
+      currentZoomState.maxZoomLevel,
+    );
 
     final newZoomState = currentZoomState.copyWith(
       zoomLevelX: newZoomX,
@@ -429,10 +421,14 @@ class KeyboardHandler {
   InteractionState _handleZoomOut(InteractionState state) {
     // Apply zoom to current zoom/pan state
     final currentZoomState = state.zoomPanState;
-    final newZoomX = (currentZoomState.zoomLevelX * zoomOutFactor)
-        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
-    final newZoomY = (currentZoomState.zoomLevelY * zoomOutFactor)
-        .clamp(currentZoomState.minZoomLevel, currentZoomState.maxZoomLevel);
+    final newZoomX = (currentZoomState.zoomLevelX * zoomOutFactor).clamp(
+      currentZoomState.minZoomLevel,
+      currentZoomState.maxZoomLevel,
+    );
+    final newZoomY = (currentZoomState.zoomLevelY * zoomOutFactor).clamp(
+      currentZoomState.minZoomLevel,
+      currentZoomState.maxZoomLevel,
+    );
 
     final newZoomState = currentZoomState.copyWith(
       zoomLevelX: newZoomX,

@@ -39,12 +39,12 @@ class LineChartConfig {
     required this.lineWidth,
     this.dashPattern,
     required this.connectNulls,
-  })  : assert(markerSize > 0, 'markerSize must be > 0'),
-        assert(lineWidth > 0, 'lineWidth must be > 0'),
-        assert(
-          dashPattern == null || dashPattern.length % 2 == 0,
-          'dashPattern must have even length (on/off pairs)',
-        );
+  }) : assert(markerSize > 0, 'markerSize must be > 0'),
+       assert(lineWidth > 0, 'lineWidth must be > 0'),
+       assert(
+         dashPattern == null || dashPattern.length % 2 == 0,
+         'dashPattern must have even length (on/off pairs)',
+       );
 
   /// Line rendering style
   final LineStyle lineStyle;
@@ -135,14 +135,14 @@ class LineChartConfig {
 
   @override
   int get hashCode => Object.hash(
-        lineStyle,
-        markerShape,
-        markerSize,
-        showMarkers,
-        lineWidth,
-        Object.hashAll(dashPattern ?? const []),
-        connectNulls,
-      );
+    lineStyle,
+    markerShape,
+    markerSize,
+    showMarkers,
+    lineWidth,
+    Object.hashAll(dashPattern ?? const []),
+    connectNulls,
+  );
 
   @override
   String toString() {

@@ -41,12 +41,12 @@ class TypographyTheme {
     required this.scaleFactorDesktop,
     required this.titleMultiplier,
     required this.labelMultiplier,
-  })  : assert(baseFontSize > 0, 'baseFontSize must be > 0'),
-        assert(scaleFactorMobile > 0, 'scaleFactorMobile must be > 0'),
-        assert(scaleFactorTablet > 0, 'scaleFactorTablet must be > 0'),
-        assert(scaleFactorDesktop > 0, 'scaleFactorDesktop must be > 0'),
-        assert(titleMultiplier > 0, 'titleMultiplier must be > 0'),
-        assert(labelMultiplier > 0, 'labelMultiplier must be > 0');
+  }) : assert(baseFontSize > 0, 'baseFontSize must be > 0'),
+       assert(scaleFactorMobile > 0, 'scaleFactorMobile must be > 0'),
+       assert(scaleFactorTablet > 0, 'scaleFactorTablet must be > 0'),
+       assert(scaleFactorDesktop > 0, 'scaleFactorDesktop must be > 0'),
+       assert(titleMultiplier > 0, 'titleMultiplier must be > 0'),
+       assert(labelMultiplier > 0, 'labelMultiplier must be > 0');
 
   /// Creates a theme from a JSON map.
   factory TypographyTheme.fromJson(Map<String, dynamic> json) {

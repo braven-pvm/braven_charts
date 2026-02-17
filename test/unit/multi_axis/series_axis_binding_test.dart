@@ -44,30 +44,21 @@ void main() {
     group('validation', () {
       test('throws assertion error for empty seriesId', () {
         expect(
-          () => SeriesAxisBinding(
-            seriesId: '',
-            yAxisId: 'valid-axis',
-          ),
+          () => SeriesAxisBinding(seriesId: '', yAxisId: 'valid-axis'),
           throwsA(isA<AssertionError>()),
         );
       });
 
       test('throws assertion error for empty yAxisId', () {
         expect(
-          () => SeriesAxisBinding(
-            seriesId: 'valid-series',
-            yAxisId: '',
-          ),
+          () => SeriesAxisBinding(seriesId: 'valid-series', yAxisId: ''),
           throwsA(isA<AssertionError>()),
         );
       });
 
       test('throws assertion error for both empty', () {
         expect(
-          () => SeriesAxisBinding(
-            seriesId: '',
-            yAxisId: '',
-          ),
+          () => SeriesAxisBinding(seriesId: '', yAxisId: ''),
           throwsA(isA<AssertionError>()),
         );
       });

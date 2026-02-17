@@ -63,7 +63,7 @@ class AnnotationContextMenu {
     void Function(RangeAnnotation)? onSaveRangeAnnotation,
     void Function(String annotationId)? onDeleteTextAnnotation,
     void Function(String seriesId, String annotationId)?
-        onDeletePointAnnotation,
+    onDeletePointAnnotation,
     void Function(String annotationId)? onDeleteRangeAnnotation,
   }) async {
     final RenderBox? overlay =
@@ -76,25 +76,21 @@ class AnnotationContextMenu {
     );
 
     // Determine if we're editing or adding
-    final isEditMode = existingTextAnnotation != null ||
+    final isEditMode =
+        existingTextAnnotation != null ||
         existingPointAnnotation != null ||
         existingRangeAnnotation != null;
 
     final result = await showMenu<String>(
       context: context,
       position: menuPosition,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(5),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       elevation: 8,
       color: Colors.white,
       menuPadding: const EdgeInsets.all(0),
       surfaceTintColor: Colors.white,
       shadowColor: Colors.black,
-      constraints: const BoxConstraints(
-        minWidth: 140,
-        maxWidth: 180,
-      ),
+      constraints: const BoxConstraints(minWidth: 140, maxWidth: 180),
       items: isEditMode
           ? _buildEditMenuItems(context, contextType)
           : _buildAddMenuItems(context, contextType),
@@ -161,7 +157,9 @@ class AnnotationContextMenu {
         } else if (existingPointAnnotation != null &&
             onDeletePointAnnotation != null) {
           onDeletePointAnnotation(
-              existingPointAnnotation.seriesId, existingPointAnnotation.id);
+            existingPointAnnotation.seriesId,
+            existingPointAnnotation.id,
+          );
         } else if (existingRangeAnnotation != null &&
             onDeleteRangeAnnotation != null) {
           onDeleteRangeAnnotation(existingRangeAnnotation.id);
@@ -171,7 +169,9 @@ class AnnotationContextMenu {
   }
 
   static List<PopupMenuEntry<String>> _buildAddMenuItems(
-      BuildContext context, AnnotationContextType contextType) {
+    BuildContext context,
+    AnnotationContextType contextType,
+  ) {
     if (contextType == AnnotationContextType.pointAnnotation) {
       // Point annotation context - only show point option
       return [
@@ -182,11 +182,7 @@ class AnnotationContextMenu {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.place,
-                size: 16,
-                color: Colors.grey[700],
-              ),
+              Icon(Icons.place, size: 16, color: Colors.grey[700]),
               const SizedBox(width: 10),
               Text(
                 'Add Point Annotation',
@@ -227,10 +223,7 @@ class AnnotationContextMenu {
             ],
           ),
         ),
-        PopupMenuDivider(
-          height: 0.5,
-          color: Colors.grey.shade300,
-        ),
+        PopupMenuDivider(height: 0.5, color: Colors.grey.shade300),
         PopupMenuItem<String>(
           value: 'add_range',
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -238,11 +231,7 @@ class AnnotationContextMenu {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.select_all,
-                size: 16,
-                color: Colors.grey[700],
-              ),
+              Icon(Icons.select_all, size: 16, color: Colors.grey[700]),
               const SizedBox(width: 10),
               Text(
                 'Add Range Annotation',
@@ -260,7 +249,9 @@ class AnnotationContextMenu {
   }
 
   static List<PopupMenuEntry<String>> _buildEditMenuItems(
-      BuildContext context, AnnotationContextType contextType) {
+    BuildContext context,
+    AnnotationContextType contextType,
+  ) {
     String editLabel;
     if (contextType == AnnotationContextType.pointAnnotation) {
       editLabel = 'Edit Point Annotation';
@@ -278,11 +269,7 @@ class AnnotationContextMenu {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.edit_outlined,
-              size: 16,
-              color: Colors.grey[700],
-            ),
+            Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
             const SizedBox(width: 10),
             Text(
               editLabel,
@@ -295,10 +282,7 @@ class AnnotationContextMenu {
           ],
         ),
       ),
-      PopupMenuDivider(
-        height: 0.5,
-        color: Colors.grey.shade300,
-      ),
+      PopupMenuDivider(height: 0.5, color: Colors.grey.shade300),
       PopupMenuItem<String>(
         value: 'delete',
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -306,11 +290,7 @@ class AnnotationContextMenu {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.delete_outline,
-              size: 16,
-              color: Colors.red[400],
-            ),
+            Icon(Icons.delete_outline, size: 16, color: Colors.red[400]),
             const SizedBox(width: 10),
             Text(
               'Delete',
@@ -334,9 +314,7 @@ class AnnotationContextMenu {
   }) async {
     final annotation = await showDialog<TextAnnotation>(
       context: context,
-      builder: (ctx) => TextAnnotationDialog(
-        clickPosition: localPosition,
-      ),
+      builder: (ctx) => TextAnnotationDialog(clickPosition: localPosition),
     );
 
     if (annotation != null) {
@@ -422,9 +400,7 @@ class AnnotationContextMenu {
   }) async {
     final updatedAnnotation = await showDialog<RangeAnnotation>(
       context: context,
-      builder: (ctx) => RangeAnnotationDialog(
-        annotation: annotation,
-      ),
+      builder: (ctx) => RangeAnnotationDialog(annotation: annotation),
     );
 
     if (updatedAnnotation != null) {
