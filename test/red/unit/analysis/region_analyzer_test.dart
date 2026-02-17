@@ -32,7 +32,7 @@ void main() {
       //   firstY   = 1.0
       //   lastY    = 99.0
       //   delta    = 98.0  (lastY - firstY)
-      //   duration = 49.0  (last.x - first.x)
+      //   duration = 49.0  (regionEndX - regionStartX = 49.0 - 0.0)
       //   stdDev   = sqrt(833) ≈ 28.861739379323623 (population formula)
       final points = List.generate(
         50,
@@ -41,64 +41,80 @@ void main() {
 
       test('returns non-null SeriesRegionSummary for 50-point input', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result, isNotNull);
       });
 
       test('count equals 50', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.count, equals(50));
       });
 
       test('min equals 1.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.min, closeTo(1.0, 1e-10));
       });
 
       test('max equals 99.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.max, closeTo(99.0, 1e-10));
       });
 
       test('sum equals 2500.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.sum, closeTo(2500.0, 1e-10));
       });
 
       test('average equals 50.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.average, closeTo(50.0, 1e-10));
       });
 
       test('range equals 98.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.range, closeTo(98.0, 1e-10));
       });
 
       test('firstY equals 1.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.firstY, isNotNull);
         expect(result!.firstY!, closeTo(1.0, 1e-10));
@@ -106,8 +122,10 @@ void main() {
 
       test('lastY equals 99.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.lastY, isNotNull);
         expect(result!.lastY!, closeTo(99.0, 1e-10));
@@ -115,40 +133,52 @@ void main() {
 
       test('delta equals 98.0 with closeTo precision', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'test-series',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.delta, isNotNull);
         expect(result!.delta!, closeTo(98.0, 1e-10));
       });
 
       test(
-        'duration equals 49.0 (last.x - first.x) with closeTo precision',
+        'duration equals regionEndX - regionStartX (49.0) per data-model spec',
         () {
+          // duration = endX - startX from the parent region's bounds
           final result = analyzer.computeSeriesSummary(
-            points: points,
+            points,
             seriesId: 'test-series',
+            regionStartX: 0.0,
+            regionEndX: 49.0,
           );
           expect(result!.duration, closeTo(49.0, 1e-10));
         },
       );
 
-      test('stdDev equals sqrt(833) ≈ 28.8617 (population formula) '
-          'with closeTo precision', () {
-        final result = analyzer.computeSeriesSummary(
-          points: points,
-          seriesId: 'test-series',
-        );
-        expect(result!.stdDev, isNotNull);
-        // Population standard deviation: sqrt(Σ(yi - mean)² / N)
-        // For y = 2*x + 1, x=0..49: variance = 833, stdDev = sqrt(833)
-        expect(result!.stdDev!, closeTo(math.sqrt(833), 1e-10));
-      });
+      test(
+        'stdDev equals sqrt(833) ≈ 28.8617 (population formula) '
+        'with closeTo precision',
+        () {
+          final result = analyzer.computeSeriesSummary(
+            points,
+            seriesId: 'test-series',
+            regionStartX: 0.0,
+            regionEndX: 49.0,
+          );
+          expect(result!.stdDev, isNotNull);
+          // Population standard deviation: sqrt(Σ(yi - mean)² / N)
+          // For y = 2*x + 1, x=0..49: variance = 833, stdDev = sqrt(833)
+          expect(result!.stdDev!, closeTo(math.sqrt(833), 1e-10));
+        },
+      );
 
       test('seriesId is passed through correctly', () {
         final result = analyzer.computeSeriesSummary(
-          points: points,
+          points,
           seriesId: 'my-series-id',
+          regionStartX: 0.0,
+          regionEndX: 49.0,
         );
         expect(result!.seriesId, equals('my-series-id'));
       });
@@ -160,26 +190,36 @@ void main() {
     group('1-point series', () {
       final singlePoint = [const ChartDataPoint(x: 5.0, y: 42.0)];
 
+      // Region bounds intentionally different from data point x to verify
+      // duration is computed from region bounds, not data points.
+      // regionStartX=0.0, regionEndX=10.0 → duration=10.0 (not 0.0)
+
       test('returns non-null for 1-point input', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result, isNotNull);
       });
 
       test('count equals 1', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.count, equals(1));
       });
 
       test('min and max equal the single Y value', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.min, closeTo(42.0, 1e-10));
         expect(result!.max, closeTo(42.0, 1e-10));
@@ -187,8 +227,10 @@ void main() {
 
       test('sum and average equal the single Y value', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.sum, closeTo(42.0, 1e-10));
         expect(result!.average, closeTo(42.0, 1e-10));
@@ -196,50 +238,64 @@ void main() {
 
       test('range equals 0.0 (max - min with one point)', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.range, closeTo(0.0, 1e-10));
       });
 
       test('stdDev is null when count < 2', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.stdDev, isNull);
       });
 
       test('delta is null when count < 2', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.delta, isNull);
       });
 
       test('firstY equals the single Y value', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.firstY, closeTo(42.0, 1e-10));
       });
 
       test('lastY equals the single Y value', () {
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result!.lastY, closeTo(42.0, 1e-10));
       });
 
-      test('duration equals 0.0 (single point span)', () {
+      test('duration equals regionEndX - regionStartX (10.0), not 0.0', () {
+        // Per data-model.md: duration = endX - startX from the parent
+        // region's bounds, NOT from the data points.
         final result = analyzer.computeSeriesSummary(
-          points: singlePoint,
+          singlePoint,
           seriesId: 'single',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
-        expect(result!.duration, closeTo(0.0, 1e-10));
+        expect(result!.duration, closeTo(10.0, 1e-10));
       });
     });
 
@@ -249,8 +305,10 @@ void main() {
     group('0-point (empty) series', () {
       test('returns null for empty points list', () {
         final result = analyzer.computeSeriesSummary(
-          points: <ChartDataPoint>[],
+          <ChartDataPoint>[],
           seriesId: 'empty',
+          regionStartX: 0.0,
+          regionEndX: 10.0,
         );
         expect(result, isNull);
       });
@@ -271,8 +329,10 @@ void main() {
           ];
 
           final result = analyzer.computeSeriesSummary(
-            points: points,
+            points,
             seriesId: 'precision',
+            regionStartX: 0.0,
+            regionEndX: 2.0,
           );
 
           expect(result, isNotNull);
@@ -318,7 +378,7 @@ void main() {
           );
 
           // Act
-          final result = analyzer.computeRegionSummary(region: region);
+          final result = analyzer.computeRegionSummary(region);
 
           // Assert — both series should have summaries
           expect(result, isNotNull);
@@ -345,7 +405,7 @@ void main() {
         );
 
         // Act
-        final result = analyzer.computeRegionSummary(region: region);
+        final result = analyzer.computeRegionSummary(region);
 
         // Assert
         final tempSummary = result.seriesSummaries['temperature']!;
@@ -358,7 +418,8 @@ void main() {
         expect(tempSummary.firstY, closeTo(20.0, 1e-10));
         expect(tempSummary.lastY, closeTo(25.0, 1e-10));
         expect(tempSummary.delta, closeTo(5.0, 1e-10));
-        expect(tempSummary.duration, closeTo(2.0, 1e-10));
+        // duration = region.endX - region.startX = 10.0 - 0.0 = 10.0
+        expect(tempSummary.duration, closeTo(10.0, 1e-10));
       });
 
       test('region reference is preserved in result', () {
@@ -374,7 +435,7 @@ void main() {
         );
 
         // Act
-        final result = analyzer.computeRegionSummary(region: region);
+        final result = analyzer.computeRegionSummary(region);
 
         // Assert
         expect(result.region, equals(region));
@@ -404,7 +465,7 @@ void main() {
         );
 
         // Act
-        final result = analyzer.computeRegionSummary(region: region);
+        final result = analyzer.computeRegionSummary(region);
 
         // Assert — 'empty' series should be omitted
         expect(result.seriesSummaries.containsKey('has-data'), isTrue);
@@ -428,7 +489,7 @@ void main() {
           );
 
           // Act
-          final result = analyzer.computeRegionSummary(region: region);
+          final result = analyzer.computeRegionSummary(region);
 
           // Assert
           expect(result.seriesSummaries, isEmpty);
@@ -461,8 +522,11 @@ void main() {
 
         // Act
         final result = analyzer.computeRegionSummary(
-          region: region,
-          seriesNames: {'power': 'Power Output', 'heartrate': 'Heart Rate'},
+          region,
+          seriesNames: {
+            'power': 'Power Output',
+            'heartrate': 'Heart Rate',
+          },
         );
 
         // Assert
@@ -497,8 +561,11 @@ void main() {
 
         // Act
         final result = analyzer.computeRegionSummary(
-          region: region,
-          seriesUnits: {'power': 'W', 'temperature': '°C'},
+          region,
+          seriesUnits: {
+            'power': 'W',
+            'temperature': '°C',
+          },
         );
 
         // Assert
@@ -523,7 +590,7 @@ void main() {
 
         // Act
         final result = analyzer.computeRegionSummary(
-          region: region,
+          region,
           seriesNames: {'speed': 'Speed'},
           seriesUnits: {'speed': 'km/h'},
         );
@@ -552,7 +619,7 @@ void main() {
 
           // Act
           final result = analyzer.computeRegionSummary(
-            region: region,
+            region,
             seriesNames: {'mapped': 'Mapped Series'},
             seriesUnits: {'mapped': 'units'},
           );
