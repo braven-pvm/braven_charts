@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // All dependencies are in src - the main source folder
+import 'analysis/region_analyzer.dart';
 import 'axis/axis.dart' as chart_axis;
 import 'axis/normalization_detector.dart';
 import 'controllers/annotation_controller.dart';
@@ -29,10 +30,12 @@ import 'models/chart_series.dart';
 import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
 import 'models/data_range.dart';
+import 'models/data_region.dart';
 import 'models/enums.dart';
 import 'models/grid_config.dart';
 import 'models/interaction_callbacks.dart';
-import 'models/interaction_config.dart';import 'models/legend_style.dart';
+import 'models/interaction_config.dart';
+import 'models/legend_style.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -775,6 +778,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Legend custom position - stored internally since legend is auto-generated
   // and doesn't require user-provided annotationController
   Offset? _legendCustomPosition;
+
+  // Region analysis state — currently selected data region (FR-005: single-region)
+  DataRegion? _selectedDataRegion;
+
+  /// Shared [RegionAnalyzer] instance for stateless analysis operations.
+  static const _regionAnalyzer = RegionAnalyzer();
+
+  /// Returns the currently selected data regions.
+  ///
+  /// FR-005: Only one region can be active at a time.
+  /// Returns a list containing the single active [DataRegion], or an
+  /// empty list if no region is currently selected.
+  List<DataRegion> get selectedDataRegions =>
+      _selectedDataRegion != null ? [_selectedDataRegion!] : [];
 
   /// Whether multi-axis normalization is currently needed.
   ///
@@ -2059,8 +2076,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   void _handleTapDown(TapDownDetails details) {
     // Capture element at tap down for double-click detection
     // (activeElement gets cleared by tap up, so we need to capture it now)
+    // Also check interactionStartElement which is set during pointer down
+    // hit testing and is available before activeElement gets set on pointer up.
     final tappedElement =
-        _coordinator.activeElement ?? _coordinator.hoveredElement;
+        _coordinator.activeElement ??
+        _coordinator.hoveredElement ??
+        _coordinator.interactionStartElement;
 
     // Check for double-click on annotation
     if (_lastTapTime != null &&
@@ -2091,7 +2112,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     _lastTapTime = DateTime.now();
     _lastTappedElement = tappedElement;
 
-    // Trigger callbacks
+    // Trigger element-specific callbacks (non-region)
     if (tappedElement != null) {
       if (tappedElement is PointAnnotationElement) {
         widget.onAnnotationTap?.call(tappedElement.annotation);
@@ -2115,7 +2136,20 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
           widget.onSeriesSelected?.call(tappedElement.series.id);
         }
       }
-    } else {
+    }
+
+    // Region selection: check range annotations with X-ranges.
+    // Any tap on a chart with a vertical range annotation fires
+    // onRegionSelected. If a RangeAnnotationElement was tapped directly,
+    // use that specific annotation. Otherwise, find the annotation that
+    // contains the tapped data X coordinate.
+    final regionFired = _fireRegionSelectedForAnnotation(
+      tapPosition: details.localPosition,
+      tappedElement: tappedElement,
+    );
+
+    // Only fire background tap if nothing was handled at all
+    if (tappedElement == null && !regionFired) {
       widget.onBackgroundTap?.call(details.localPosition);
     }
 
@@ -2125,10 +2159,91 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
-  void _handleTapUp(TapUpDetails details) {
-    // Double-click detection now handled in _handleTapDown
-    // (since activeElement is cleared by the time we get here)
+  /// Finds the appropriate range annotation for the given tap position
+  /// and fires [onRegionSelected] and optionally [onAnnotationTap].
+  ///
+  /// When the [tappedElement] is a [RangeAnnotationElement], uses that
+  /// annotation directly. Otherwise, converts the [tapPosition] to data
+  /// coordinates and uses the annotation whose X-range contains the tap.
+  /// Falls back to the first vertical range annotation if position
+  /// conversion is unavailable.
+  ///
+  /// Returns true if a region was selected.
+  bool _fireRegionSelectedForAnnotation({
+    required Offset tapPosition,
+    ChartElement? tappedElement,
+  }) {
+    // If a RangeAnnotationElement was tapped directly, use it
+    if (tappedElement is RangeAnnotationElement) {
+      final annotation = tappedElement.annotation;
+      if (annotation.startX != null && annotation.endX != null) {
+        _computeAndFireRegion(annotation);
+        return true;
+      }
+    }
 
+    final annotations =
+        _effectiveAnnotationController?.annotations ?? widget.annotations;
+
+    // Collect all vertical range annotations
+    final rangeAnnotations = annotations
+        .whereType<RangeAnnotation>()
+        .where((a) => a.startX != null && a.endX != null)
+        .toList();
+
+    if (rangeAnnotations.isEmpty) return false;
+
+    // Try to find the annotation that contains the tap position
+    RangeAnnotation? matched;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox != null) {
+      final transform = renderBox.transform;
+      if (transform != null) {
+        final plotPos = renderBox.widgetToPlot(tapPosition);
+        final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
+        for (final annotation in rangeAnnotations) {
+          if (dataPos.dx >= annotation.startX! &&
+              dataPos.dx <= annotation.endX!) {
+            matched = annotation;
+            break;
+          }
+        }
+      }
+    }
+
+    // Fall back to the first annotation if position-based matching failed
+    matched ??= rangeAnnotations.first;
+
+    // Fire onAnnotationTap if the element branch didn't already fire it for
+    // a RangeAnnotationElement
+    if (tappedElement is! RangeAnnotationElement) {
+      widget.onAnnotationTap?.call(matched);
+    }
+    _computeAndFireRegion(matched);
+    return true;
+  }
+
+  /// Computes a [DataRegion] from a [RangeAnnotation] and fires
+  /// [onRegionSelected].
+  void _computeAndFireRegion(RangeAnnotation annotation) {
+    final allSeriesData = <String, List<ChartDataPoint>>{};
+    for (final series in widget.series) {
+      allSeriesData[series.id] = series.points;
+    }
+
+    final region = _regionAnalyzer.regionFromAnnotation(
+      annotation,
+      allSeriesData,
+    );
+
+    // FR-005: single-region selection — replace, not accumulate
+    _selectedDataRegion = region;
+    widget.onRegionSelected?.call(region);
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    // Double-click detection now handled in _handleTapDown    // (since activeElement is cleared by the time we get here)
     // CRITICAL: Cancel rangeAnnotationCreation mode on single click without drag
     // This provides an easy way to exit the mode if user changes their mind
     if (_coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
