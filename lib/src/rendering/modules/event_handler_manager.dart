@@ -172,6 +172,20 @@ abstract class EventHandlerDelegate {
 
   /// Whether perSeries normalization mode is active.
   bool get isPerSeriesMode;
+
+  /// Called when a box-select drag completes with a valid selection rect.
+  ///
+  /// [startX] and [endX] are the data-coordinate X boundaries of the
+  /// selection region, where [startX] <= [endX].
+  /// Implementations should create a [DataRegion] and fire
+  /// appropriate callbacks (e.g., [onRegionSelected]).
+  void onBoxSelectComplete(double startX, double endX);
+
+  /// Called when the box selection should be cleared.
+  ///
+  /// This is triggered when the user taps outside the current box-select
+  /// region on a chart that has an active box selection.
+  void onBoxSelectCleared();
 }
 
 /// Manages all pointer event handling for the chart.
@@ -1001,6 +1015,16 @@ class EventHandlerManager {
       final selectedElements = _delegate.hitTestRect(boxRect);
       coordinator.clearPreviewSelection();
       coordinator.addToSelection(selectedElements.toSet());
+
+      // Convert pixel rect to data coordinates and fire callback
+      final transform = _delegate.transform;
+      if (transform != null) {
+        final topLeft = transform.plotToData(boxRect.left, boxRect.top);
+        final bottomRight = transform.plotToData(boxRect.right, boxRect.bottom);
+        final dataStartX = math.min(topLeft.dx, bottomRight.dx);
+        final dataEndX = math.max(topLeft.dx, bottomRight.dx);
+        _delegate.onBoxSelectComplete(dataStartX, dataEndX);
+      }
     }
   }
 
@@ -1348,12 +1372,13 @@ class EventHandlerManager {
           _emptyAreaClickEvent!,
         );
       }
+      // Clear any active box-select region
+      _delegate.onBoxSelectCleared();
       _delegate.markNeedsPaint();
       _pointerDownOnEmptyArea = false;
       _emptyAreaClickPosition = null;
       _emptyAreaClickEvent = null;
     }
-
     // Handle deferred non-draggable element selection (was deferred from pointer-down)
     if (_potentialSelectElement != null) {
       final coordinator = _delegate.coordinator;

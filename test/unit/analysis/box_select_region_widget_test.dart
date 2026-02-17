@@ -1,8 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-// @orchestra-task: 9
-
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

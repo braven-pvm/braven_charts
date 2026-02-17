@@ -1877,6 +1877,58 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     // (called from ChartRenderBox when drag finishes)
   }
 
+  /// Called when user completes a box-select drag.
+  ///
+  /// Converts the data-coordinate X range to a [DataRegion] with
+  /// [DataRegionSource.boxSelect] source, populates [seriesData],
+  /// and fires [onRegionSelected] and [onSelectionChanged] callbacks.
+  void _onBoxSelectComplete(double startX, double endX) {
+    if (!mounted) return;
+
+    // Build seriesData by filtering points within the X range for each series
+    final seriesData = <String, List<ChartDataPoint>>{};
+    final allPoints = <ChartDataPoint>[];
+
+    for (final series in widget.series) {
+      final filtered = _regionAnalyzer.filterPointsInRange(
+        series.points,
+        startX: startX,
+        endX: endX,
+      );
+      seriesData[series.id] = filtered;
+      allPoints.addAll(filtered);
+    }
+
+    final region = DataRegion(
+      id: 'box-select-${startX.toStringAsFixed(2)}-${endX.toStringAsFixed(2)}',
+      startX: startX,
+      endX: endX,
+      source: DataRegionSource.boxSelect,
+      seriesData: seriesData,
+    );
+
+    // FR-005: single-region selection — replace, not accumulate
+    _regionSummaryCache.clear();
+    _selectedDataRegion = region;
+    widget.onRegionSelected?.call(region);
+
+    // Co-fire onSelectionChanged with all selected points
+    widget.interactionConfig?.onSelectionChanged?.call(allPoints);
+  }
+
+  /// Called when user taps to clear an active box selection.
+  ///
+  /// Clears the selected region and fires [onRegionSelected] with null.
+  void _onBoxSelectCleared() {
+    if (!mounted) return;
+
+    if (_selectedDataRegion != null) {
+      _regionSummaryCache.clear();
+      _selectedDataRegion = null;
+      widget.onRegionSelected?.call(null);
+    }
+  }
+
   /// Called when user completes drag in rangeAnnotationCreation mode.
   /// Opens dialog with pre-filled coordinates from drag bounds.
   Future<void> _onRangeCreationComplete(
@@ -3064,7 +3116,9 @@ class BravenChartPlusState extends State<BravenChartPlus> {
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
                         onRangeCreationComplete: _onRangeCreationComplete,
-                        // Multi-axis parameters
+                        onBoxSelectComplete: _onBoxSelectComplete,
+                        onBoxSelectCleared:
+                            _onBoxSelectCleared, // Multi-axis parameters
                         normalizationMode: widget.normalizationMode,
                         series: widget.series,
                       ),
@@ -3187,7 +3241,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.onAnnotationChanged,
     this.onElementHover,
     this.onRangeCreationComplete,
-    // Multi-axis parameters
+    this.onBoxSelectComplete,
+    this.onBoxSelectCleared, // Multi-axis parameters
     this.normalizationMode,
     this.series,
   });
@@ -3220,7 +3275,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final void Function(ChartElement? element)? onElementHover;
   final void Function(double startX, double endX, double startY, double endY)?
   onRangeCreationComplete;
-  // Multi-axis fields
+  final void Function(double startX, double endX)? onBoxSelectComplete;
+  final VoidCallback? onBoxSelectCleared; // Multi-axis fields
   final NormalizationMode? normalizationMode;
   final List<ChartSeries>? series;
 
@@ -3241,6 +3297,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         onAnnotationChanged: onAnnotationChanged,
         onElementHover: onElementHover,
         onRangeCreationComplete: onRangeCreationComplete,
+        onBoxSelectComplete: onBoxSelectComplete,
+        onBoxSelectCleared: onBoxSelectCleared,
       )
       ..setXAxis(xAxis)
       ..setXAxisConfig(xAxisConfig)
@@ -3264,7 +3322,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setInteractionConfig(interactionConfig)
       ..setNormalizationMode(normalizationMode)
       ..setSeries(series)
-      ..onElementHover = onElementHover;
+      ..onElementHover = onElementHover
+      ..onBoxSelectComplete = onBoxSelectComplete
+      ..onBoxSelectCleared = onBoxSelectCleared;
   }
 }
 

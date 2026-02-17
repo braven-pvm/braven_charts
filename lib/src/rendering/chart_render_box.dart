@@ -84,6 +84,8 @@ class ChartRenderBox extends RenderBox {
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
+    this.onBoxSelectComplete,
+    this.onBoxSelectCleared,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
@@ -232,8 +234,20 @@ class ChartRenderBox extends RenderBox {
   final void Function(double startX, double endX, double startY, double endY)?
   onRangeCreationComplete;
 
-  // ==================== EVENT STATE (delegated to EventHandlerManager) ====================
-  // Resize, move, potential drag state, cursor position, pan position, hit test throttling
+  /// Callback when box-select drag completes with a valid selection region.
+  ///
+  /// [startX] and [endX] are the data-coordinate X boundaries of the
+  /// selection region, where [startX] <= [endX].
+  /// Implementations should create a [DataRegion] and fire [onRegionSelected].
+  void Function(double startX, double endX)? onBoxSelectComplete;
+
+  /// Callback when the box selection should be cleared.
+  ///
+  /// Triggered when the user taps outside the current box-select region,
+  /// signaling that the active selection should be dismissed.
+  VoidCallback? onBoxSelectCleared;
+
+  // ==================== EVENT STATE (delegated to EventHandlerManager) ====================  // Resize, move, potential drag state, cursor position, pan position, hit test throttling
   // are now managed by EventHandlerManager module.
 
   /// Whether tooltips are enabled.
@@ -2719,6 +2733,15 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   void Function(double, double, double, double)? get onRangeCreationComplete =>
       _renderBox.onRangeCreationComplete;
 
+  @override
+  void onBoxSelectComplete(double startX, double endX) {
+    _renderBox.onBoxSelectComplete?.call(startX, endX);
+  }
+
+  @override
+  void onBoxSelectCleared() {
+    _renderBox.onBoxSelectCleared?.call();
+  }
   // ============================================================================
   // Hit testing
   // ============================================================================
