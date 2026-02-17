@@ -36,6 +36,7 @@ import 'models/grid_config.dart';
 import 'models/interaction_callbacks.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
+import 'models/region_summary.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -713,10 +714,25 @@ class BravenChartPlus extends StatefulWidget {
   final NormalizationMode? normalizationMode;
 
   @override
-  State<BravenChartPlus> createState() => _BravenChartPlusState();
+  State<BravenChartPlus> createState() => BravenChartPlusState();
 }
 
-class _BravenChartPlusState extends State<BravenChartPlus> {
+/// The [State] for a [BravenChartPlus] widget.
+///
+/// Exposes programmatic APIs such as [selectedDataRegions] and
+/// [computeRegionSummaries] for consumers who access the state via
+/// a [GlobalKey<BravenChartPlusState>].
+///
+/// Example:
+/// ```dart
+/// final chartKey = GlobalKey<BravenChartPlusState>();
+///
+/// BravenChartPlus(key: chartKey, series: [...]);
+///
+/// // Later, retrieve region summaries:
+/// final summaries = chartKey.currentState!.computeRegionSummaries();
+/// ```
+class BravenChartPlusState extends State<BravenChartPlus> {
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
   late PriorityPanGestureRecognizer _panRecognizer;
@@ -793,8 +809,32 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   List<DataRegion> get selectedDataRegions =>
       _selectedDataRegion != null ? [_selectedDataRegion!] : [];
 
-  /// Whether multi-axis normalization is currently needed.
+  /// Computes [RegionSummary] objects for the given [regions], or for
+  /// [selectedDataRegions] if [regions] is null.
   ///
+  /// Delegates to [RegionAnalyzer.computeRegionSummary] for each region.
+  /// Returns an empty list when no regions are provided and no region is
+  /// currently selected.
+  ///
+  /// Example:
+  /// ```dart
+  /// final chartKey = GlobalKey<BravenChartPlusState>();
+  /// // ... build chart with key ...
+  /// final summaries = chartKey.currentState!.computeRegionSummaries();
+  /// for (final summary in summaries) {
+  ///   for (final entry in summary.seriesSummaries.entries) {
+  ///     print('${entry.key}: avg=${entry.value.average}');
+  ///   }
+  /// }
+  /// ```
+  List<RegionSummary> computeRegionSummaries([List<DataRegion>? regions]) {
+    final effectiveRegions = regions ?? selectedDataRegions;
+    return effectiveRegions
+        .map((region) => _regionAnalyzer.computeRegionSummary(region))
+        .toList();
+  }
+
+  /// Whether multi-axis normalization is currently needed.  ///
   /// This is automatically determined by [NormalizationDetector] based on
   /// the Y-range ratios between series. When series have ranges that differ
   /// by 10x or more, normalization is recommended.

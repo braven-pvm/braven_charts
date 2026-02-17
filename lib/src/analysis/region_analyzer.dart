@@ -11,9 +11,12 @@
 /// analysis is performed on-demand. No internal caching or persistence.
 library;
 
+import 'dart:math' as math;
+
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/data_region.dart';
+import '../models/region_summary.dart';
 
 /// Stateless utility class for region data analysis.
 ///
@@ -184,5 +187,160 @@ class RegionAnalyzer {
       source: DataRegionSource.rangeAnnotation,
       seriesData: seriesData,
     );
+  }
+
+  /// Computes statistical summary metrics for a single series.
+  ///
+  /// Calculates all 11 metrics (count, min, max, sum, average, range,
+  /// stdDev, firstY, lastY, delta, duration) from the given [points].
+  ///
+  /// Returns null if [points] is empty (no data to summarise).
+  ///
+  /// **Null rules**:
+  /// - [SeriesRegionSummary.stdDev] is null when count < 2.
+  /// - [SeriesRegionSummary.delta] is null when count < 2.
+  /// - [SeriesRegionSummary.firstY] and [SeriesRegionSummary.lastY] are
+  ///   always non-null when count >= 1 (null only when count == 0, but
+  ///   that case returns null from this method).
+  ///
+  /// **Standard deviation**: Uses population formula
+  /// (`sqrt(Σ(yi − mean)² / N)`) — not sample formula (`N − 1`).
+  ///
+  /// **Duration**: Computed from [regionStartX] / [regionEndX] (the
+  /// parent region's bounds), NOT from data point X values.
+  ///
+  /// [points] is the list of data points to analyse.
+  /// [seriesId] uniquely identifies the series.
+  /// [regionStartX] is the inclusive start of the parent region's X-range.
+  /// [regionEndX] is the inclusive end of the parent region's X-range.
+  /// [seriesName] is an optional human-readable name for the series.
+  /// [unit] is an optional unit of measurement (e.g., 'W', '°C').
+  ///
+  /// Example:
+  /// ```dart
+  /// const analyzer = RegionAnalyzer();
+  /// final summary = analyzer.computeSeriesSummary(
+  ///   [
+  ///     ChartDataPoint(x: 1, y: 10),
+  ///     ChartDataPoint(x: 2, y: 20),
+  ///     ChartDataPoint(x: 3, y: 30),
+  ///   ],
+  ///   seriesId: 'power',
+  ///   regionStartX: 0.0,
+  ///   regionEndX: 5.0,
+  /// );
+  /// // summary!.average == 20.0, summary!.duration == 5.0
+  /// ```
+  SeriesRegionSummary? computeSeriesSummary(
+    List<ChartDataPoint> points, {
+    required String seriesId,
+    required double regionStartX,
+    required double regionEndX,
+    String? seriesName,
+    String? unit,
+  }) {
+    if (points.isEmpty) {
+      return null;
+    }
+
+    final count = points.length;
+
+    double minY = points.first.y;
+    double maxY = points.first.y;
+    double sum = 0.0;
+
+    for (final point in points) {
+      final y = point.y;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      sum += y;
+    }
+
+    final average = sum / count;
+    final range = maxY - minY;
+    final duration = regionEndX - regionStartX;
+
+    final firstY = points.first.y;
+    final lastY = points.last.y;
+
+    // stdDev and delta require count >= 2
+    double? stdDev;
+    double? delta;
+
+    if (count >= 2) {
+      // Population standard deviation: sqrt(Σ(yi − mean)² / N)
+      double sumSquaredDiffs = 0.0;
+      for (final point in points) {
+        final diff = point.y - average;
+        sumSquaredDiffs += diff * diff;
+      }
+      stdDev = math.sqrt(sumSquaredDiffs / count);
+      delta = lastY - firstY;
+    }
+
+    return SeriesRegionSummary(
+      seriesId: seriesId,
+      seriesName: seriesName,
+      unit: unit,
+      count: count,
+      min: minY,
+      max: maxY,
+      sum: sum,
+      average: average,
+      range: range,
+      stdDev: stdDev,
+      firstY: firstY,
+      lastY: lastY,
+      delta: delta,
+      duration: duration,
+    );
+  }
+
+  /// Computes an aggregated [RegionSummary] for all series in a [DataRegion].
+  ///
+  /// Iterates each series in [region.seriesData], calls
+  /// [computeSeriesSummary] per series, and omits series with zero data
+  /// points from the result.
+  ///
+  /// Optional [seriesNames] and [seriesUnits] maps are passed through to
+  /// each [SeriesRegionSummary] for display purposes.
+  ///
+  /// [region] is the [DataRegion] to analyse.
+  /// [seriesNames] maps series identifiers to human-readable names.
+  /// [seriesUnits] maps series identifiers to measurement units.
+  ///
+  /// Example:
+  /// ```dart
+  /// const analyzer = RegionAnalyzer();
+  /// final regionSummary = analyzer.computeRegionSummary(
+  ///   myRegion,
+  ///   seriesNames: {'power': 'Power Output'},
+  ///   seriesUnits: {'power': 'W'},
+  /// );
+  /// ```
+  RegionSummary computeRegionSummary(
+    DataRegion region, {
+    Map<String, String>? seriesNames,
+    Map<String, String>? seriesUnits,
+  }) {
+    final seriesSummaries = <String, SeriesRegionSummary>{};
+
+    for (final entry in region.seriesData.entries) {
+      final summary = computeSeriesSummary(
+        entry.value,
+        seriesId: entry.key,
+        regionStartX: region.startX,
+        regionEndX: region.endX,
+        seriesName: seriesNames?[entry.key],
+        unit: seriesUnits?[entry.key],
+      );
+
+      // Omit series with zero data points (computeSeriesSummary returns null)
+      if (summary != null) {
+        seriesSummaries[entry.key] = summary;
+      }
+    }
+
+    return RegionSummary(region: region, seriesSummaries: seriesSummaries);
   }
 }

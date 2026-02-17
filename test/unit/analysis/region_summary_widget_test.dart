@@ -1,4 +1,3 @@
-// @orchestra-task: 5
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
@@ -50,8 +49,6 @@ void main() {
         final series = buildTestSeries();
 
         // GlobalKey to access BravenChartPlusState programmatically
-        // NOTE: BravenChartPlusState is not yet public — this import will fail
-        // in the red phase (expected TDD behavior).
         final globalKey = GlobalKey<BravenChartPlusState>();
 
         final annotation = RangeAnnotation(
