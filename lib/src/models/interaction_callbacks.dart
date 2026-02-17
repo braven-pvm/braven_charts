@@ -7,7 +7,8 @@ library;
 import 'dart:ui' show Offset;
 
 import 'chart_data_point.dart';
-
+import 'data_region.dart';
+import 'region_summary.dart';
 // ==============================================================================
 // Callback Type Definitions (FR-007)
 // ==============================================================================
@@ -125,9 +126,55 @@ typedef KeyboardActionCallback =
     void Function(String action, ChartDataPoint? targetPoint);
 
 // ==============================================================================
-// Callback Invoker Helper Class
+// Region Analysis Callback Type Definitions (006-segment-area-analysis)
 // ==============================================================================
 
+/// Called when a region is selected or deselected on the chart.
+///
+/// Parameters:
+/// - [region]: The selected [DataRegion], or null when the selection is cleared.
+///
+/// Example:
+/// ```dart
+/// InteractionConfig(
+///   onRegionSelected: (region) {
+///     if (region != null) {
+///       print('Selected region: ${region.id}');
+///     } else {
+///       print('Selection cleared');
+///     }
+///   },
+/// )
+/// ```
+typedef RegionSelectedCallback = void Function(DataRegion? region);
+
+/// Called to compute custom metrics for a region summary overlay.
+///
+/// Receives the [DataRegion] and its computed [RegionSummary], and returns
+/// a map of custom metric labels to formatted value strings for display
+/// in the overlay.
+///
+/// Parameters:
+/// - [region]: The [DataRegion] being analyzed.
+/// - [summary]: The computed [RegionSummary] with per-series statistics.
+///
+/// Returns a [Map<String, String>] of label → formatted value pairs.
+///
+/// Example:
+/// ```dart
+/// CustomRegionAnalysisCallback customAnalysis = (region, summary) {
+///   return {
+///     'Custom Score': '${summary.seriesSummaries.length * 10}',
+///     'Region Width': '${region.endX - region.startX}',
+///   };
+/// };
+/// ```
+typedef CustomRegionAnalysisCallback =
+    Map<String, String> Function(DataRegion region, RegionSummary summary);
+
+// ==============================================================================
+// Callback Invoker Helper Class
+// ==============================================================================
 /// Utility class for safely invoking callbacks with error handling.
 ///
 /// Prevents callback exceptions from crashing the interaction system.

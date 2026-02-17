@@ -1,10 +1,9 @@
-// @orchestra-task: 1
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:braven_charts/src/models/data_region.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:braven_charts/src/models/data_region.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('DataRegionSource', () {
@@ -101,10 +100,10 @@ void main() {
         startX: 0.0,
         endX: 100.0,
         source: DataRegionSource.segment,
-        seriesData: {
-          'series-a': [const ChartDataPoint(x: 10.0, y: 20.0)],
-          'series-b': [const ChartDataPoint(x: 30.0, y: 40.0)],
-          'series-c': [const ChartDataPoint(x: 50.0, y: 60.0)],
+        seriesData: const {
+          'series-a': [ChartDataPoint(x: 10.0, y: 20.0)],
+          'series-b': [ChartDataPoint(x: 30.0, y: 40.0)],
+          'series-c': [ChartDataPoint(x: 50.0, y: 60.0)],
         },
       );
 
@@ -222,8 +221,8 @@ void main() {
         startX: 0.0,
         endX: 10.0,
         source: DataRegionSource.boxSelect,
-        seriesData: {
-          'series-1': [const ChartDataPoint(x: 5.0, y: 10.0)],
+        seriesData: const {
+          'series-1': [ChartDataPoint(x: 5.0, y: 10.0)],
         },
       );
       final region2 = DataRegion(
@@ -345,8 +344,8 @@ void main() {
         startX: 10.0,
         endX: 20.0,
         source: DataRegionSource.rangeAnnotation,
-        seriesData: {
-          'series-1': [const ChartDataPoint(x: 12.0, y: 30.0)],
+        seriesData: const {
+          'series-1': [ChartDataPoint(x: 12.0, y: 30.0)],
         },
       );
     });

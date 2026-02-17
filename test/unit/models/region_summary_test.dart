@@ -1,12 +1,10 @@
-// @orchestra-task: 1
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:braven_charts/src/models/data_region.dart';
 import 'package:braven_charts/src/models/region_summary.dart';
 import 'package:braven_charts/src/models/region_summary_config.dart';
-import 'package:braven_charts/src/models/data_region.dart';
-import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('RegionMetric', () {
@@ -91,7 +89,7 @@ void main() {
   group('SeriesRegionSummary', () {
     group('constructor', () {
       test('creates instance with all required fields', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'series-1',
           count: 5,
           min: 10.0,
@@ -113,7 +111,7 @@ void main() {
       });
 
       test('creates instance with optional fields', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'series-2',
           seriesName: 'Temperature',
           unit: '°C',
@@ -139,7 +137,7 @@ void main() {
       });
 
       test('optional fields default to null', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'series-3',
           count: 3,
           min: 1.0,
@@ -161,7 +159,7 @@ void main() {
 
     group('null rules for stdDev', () {
       test('stdDev is null when count is 0', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'empty-series',
           count: 0,
           min: 0.0,
@@ -176,7 +174,7 @@ void main() {
       });
 
       test('stdDev is null when count is 1', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'single-point',
           count: 1,
           min: 5.0,
@@ -193,7 +191,7 @@ void main() {
       });
 
       test('stdDev can have value when count >= 2', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'multi-point',
           count: 3,
           min: 1.0,
@@ -215,7 +213,7 @@ void main() {
 
     group('null rules for delta', () {
       test('delta is null when count is 0', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'empty-delta',
           count: 0,
           min: 0.0,
@@ -230,7 +228,7 @@ void main() {
       });
 
       test('delta is null when count is 1', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'single-delta',
           count: 1,
           min: 7.0,
@@ -247,7 +245,7 @@ void main() {
       });
 
       test('delta can have value when count >= 2', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'multi-delta',
           count: 4,
           min: 2.0,
@@ -269,7 +267,7 @@ void main() {
 
     group('null rules for firstY and lastY', () {
       test('firstY is null when count is 0', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'empty-firsty',
           count: 0,
           min: 0.0,
@@ -284,7 +282,7 @@ void main() {
       });
 
       test('lastY is null when count is 0', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'empty-lasty',
           count: 0,
           min: 0.0,
@@ -299,7 +297,7 @@ void main() {
       });
 
       test('firstY has value when count >= 1', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'has-firsty',
           count: 1,
           min: 5.0,
@@ -317,7 +315,7 @@ void main() {
       });
 
       test('lastY has value when count >= 1', () {
-        final summary = SeriesRegionSummary(
+        final summary = const SeriesRegionSummary(
           seriesId: 'has-lasty',
           count: 1,
           min: 5.0,
@@ -339,7 +337,7 @@ void main() {
       test(
         'all numeric fields are 0.0 and all nullable fields are null when count is 0',
         () {
-          final summary = SeriesRegionSummary(
+          final summary = const SeriesRegionSummary(
             seriesId: 'zero-count',
             count: 0,
             min: 0.0,
@@ -390,7 +388,7 @@ void main() {
         seriesData: const {},
       );
 
-      final seriesSummary = SeriesRegionSummary(
+      final seriesSummary = const SeriesRegionSummary(
         seriesId: 'series-1',
         seriesName: 'Power',
         unit: 'W',
@@ -425,7 +423,7 @@ void main() {
         seriesData: const {},
       );
 
-      final summary1 = SeriesRegionSummary(
+      final summary1 = const SeriesRegionSummary(
         seriesId: 'series-a',
         count: 3,
         min: 1.0,
@@ -436,7 +434,7 @@ void main() {
         duration: 100.0,
       );
 
-      final summary2 = SeriesRegionSummary(
+      final summary2 = const SeriesRegionSummary(
         seriesId: 'series-b',
         count: 5,
         min: 10.0,
