@@ -801,6 +801,7 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   // Cache for computed region summaries, keyed by region ID.
   // Invalidated when selected region changes (T027 spec requirement).
   final Map<String, RegionSummary> _regionSummaryCache = {};
+
   /// Shared [RegionAnalyzer] instance for stateless analysis operations.
   static const _regionAnalyzer = RegionAnalyzer();
 
@@ -846,6 +847,7 @@ class BravenChartPlusState extends State<BravenChartPlus> {
       return summary;
     }).toList();
   }
+
   /// Whether multi-axis normalization is currently needed.  ///
   /// This is automatically determined by [NormalizationDetector] based on
   /// the Y-range ratios between series. When series have ranges that differ
@@ -2307,7 +2309,8 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     // Invalidate region summary cache on selection change (T027)
     _regionSummaryCache.clear();
     _selectedDataRegion = region;
-    widget.onRegionSelected?.call(region);  }
+    widget.onRegionSelected?.call(region);
+  }
 
   void _handleTapUp(TapUpDetails details) {
     // Double-click detection now handled in _handleTapDown    // (since activeElement is cleared by the time we get here)
