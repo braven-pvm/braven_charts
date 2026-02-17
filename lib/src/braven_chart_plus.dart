@@ -798,6 +798,9 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   // Region analysis state — currently selected data region (FR-005: single-region)
   DataRegion? _selectedDataRegion;
 
+  // Cache for computed region summaries, keyed by region ID.
+  // Invalidated when selected region changes (T027 spec requirement).
+  final Map<String, RegionSummary> _regionSummaryCache = {};
   /// Shared [RegionAnalyzer] instance for stateless analysis operations.
   static const _regionAnalyzer = RegionAnalyzer();
 
@@ -811,6 +814,10 @@ class BravenChartPlusState extends State<BravenChartPlus> {
 
   /// Computes [RegionSummary] objects for the given [regions], or for
   /// [selectedDataRegions] if [regions] is null.
+  ///
+  /// Results are cached per region ID and returned from cache on repeat
+  /// calls. The cache is invalidated automatically when the selected
+  /// region changes (T027).
   ///
   /// Delegates to [RegionAnalyzer.computeRegionSummary] for each region.
   /// Returns an empty list when no regions are provided and no region is
@@ -829,11 +836,16 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   /// ```
   List<RegionSummary> computeRegionSummaries([List<DataRegion>? regions]) {
     final effectiveRegions = regions ?? selectedDataRegions;
-    return effectiveRegions
-        .map((region) => _regionAnalyzer.computeRegionSummary(region))
-        .toList();
+    return effectiveRegions.map((region) {
+      final cached = _regionSummaryCache[region.id];
+      if (cached != null) {
+        return cached;
+      }
+      final summary = _regionAnalyzer.computeRegionSummary(region);
+      _regionSummaryCache[region.id] = summary;
+      return summary;
+    }).toList();
   }
-
   /// Whether multi-axis normalization is currently needed.  ///
   /// This is automatically determined by [NormalizationDetector] based on
   /// the Y-range ratios between series. When series have ranges that differ
@@ -2292,9 +2304,10 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     );
 
     // FR-005: single-region selection — replace, not accumulate
+    // Invalidate region summary cache on selection change (T027)
+    _regionSummaryCache.clear();
     _selectedDataRegion = region;
-    widget.onRegionSelected?.call(region);
-  }
+    widget.onRegionSelected?.call(region);  }
 
   void _handleTapUp(TapUpDetails details) {
     // Double-click detection now handled in _handleTapDown    // (since activeElement is cleared by the time we get here)
