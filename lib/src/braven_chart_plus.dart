@@ -2138,17 +2138,21 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
     }
 
-    // Region selection: check range annotations with X-ranges.
-    // Any tap on a chart with a vertical range annotation fires
-    // onRegionSelected. If a RangeAnnotationElement was tapped directly,
-    // use that specific annotation. Otherwise, find the annotation that
-    // contains the tapped data X coordinate.
-    final regionFired = _fireRegionSelectedForAnnotation(
-      tapPosition: details.localPosition,
-      tappedElement: tappedElement,
-    );
-
-    // Only fire background tap if nothing was handled at all
+    // Region selection: fire onRegionSelected when the user taps a
+    // RangeAnnotationElement directly, taps the background within an
+    // annotation's X-range, or taps a series element within an annotation's
+    // X-range (since series are drawn on top of annotations). Do NOT fire
+    // when the user explicitly taps a different annotation type (threshold,
+    // point, text, pin, trend) that happens to overlap an annotation's range.
+    final bool eligibleForRegion = tappedElement == null ||
+        tappedElement is RangeAnnotationElement ||
+        tappedElement is SeriesElement;
+    final regionFired = eligibleForRegion
+        ? _fireRegionSelectedForAnnotation(
+            tapPosition: details.localPosition,
+            tappedElement: tappedElement,
+          )
+        : false;    // Only fire background tap if nothing was handled at all
     if (tappedElement == null && !regionFired) {
       widget.onBackgroundTap?.call(details.localPosition);
     }
@@ -2164,9 +2168,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   ///
   /// When the [tappedElement] is a [RangeAnnotationElement], uses that
   /// annotation directly. Otherwise, converts the [tapPosition] to data
-  /// coordinates and uses the annotation whose X-range contains the tap.
-  /// Falls back to the first vertical range annotation if position
-  /// conversion is unavailable.
+  /// coordinates and checks if the tap falls within any annotation's
+  /// X-range. Returns false if no matching annotation is found.
   ///
   /// Returns true if a region was selected.
   bool _fireRegionSelectedForAnnotation({
@@ -2195,11 +2198,13 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Try to find the annotation that contains the tap position
     RangeAnnotation? matched;
+    bool positionResolved = false;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     if (renderBox != null) {
       final transform = renderBox.transform;
       if (transform != null) {
+        positionResolved = true;
         final plotPos = renderBox.widgetToPlot(tapPosition);
         final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
         for (final annotation in rangeAnnotations) {
@@ -2212,17 +2217,23 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
     }
 
-    // Fall back to the first annotation if position-based matching failed
-    matched ??= rangeAnnotations.first;
+    if (positionResolved && matched == null) {
+      // Tap position was resolved to data coordinates but falls outside
+      // all annotation X-ranges — do not fire.
+      return false;
+    }
 
-    // Fire onAnnotationTap if the element branch didn't already fire it for
+    // If position could not be resolved (no transform available yet),
+    // fall back to the first vertical range annotation. This handles
+    // the case where the chart layout hasn't fully initialized its
+    // coordinate transform when the tap occurs.
+    matched ??= rangeAnnotations.first;    // Fire onAnnotationTap if the element branch didn't already fire it for
     // a RangeAnnotationElement
     if (tappedElement is! RangeAnnotationElement) {
       widget.onAnnotationTap?.call(matched);
     }
     _computeAndFireRegion(matched);
-    return true;
-  }
+    return true;  }
 
   /// Computes a [DataRegion] from a [RangeAnnotation] and fires
   /// [onRegionSelected].

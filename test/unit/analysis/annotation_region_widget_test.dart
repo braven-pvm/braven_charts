@@ -242,13 +242,17 @@ void main() {
     testWidgets(
       'zero data scenario: annotation covers no points results in empty seriesData',
       (WidgetTester tester) async {
-        // Arrange — series data all outside the annotation range
+        // Arrange — series data exists but is entirely outside the
+        // annotation's X-range. Data is at x=1,2 and x=8,9 with a gap
+        // at x=4..6 where the annotation lives.
         final series = [
           const LineChartSeries(
             id: 'outside',
             points: [
               ChartDataPoint(x: 1.0, y: 10.0),
               ChartDataPoint(x: 2.0, y: 20.0),
+              ChartDataPoint(x: 8.0, y: 80.0),
+              ChartDataPoint(x: 9.0, y: 90.0),
             ],
             color: Colors.blue,
           ),
@@ -256,10 +260,11 @@ void main() {
 
         DataRegion? receivedRegion;
 
+        // Annotation covers x=4..6 where no data points exist
         final annotation = RangeAnnotation(
           id: 'no-data-annotation',
-          startX: 50.0,
-          endX: 60.0,
+          startX: 4.0,
+          endX: 6.0,
           fillColor: Colors.grey.withValues(alpha: 0.2),
         );
 
@@ -282,7 +287,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Act
+        // Act — tap center which maps to ~x=5, within annotation [4,6]
         await tester.tap(find.byType(BravenChartPlus));
         await tester.pumpAndSettle();
 
@@ -291,11 +296,12 @@ void main() {
         expect(receivedRegion!.seriesData, isEmpty);
       },
     );
-
     testWidgets(
       'partial match: multiple series but only some have data in range',
       (WidgetTester tester) async {
-        // Arrange
+        // Arrange — two series spanning x=1..9, annotation covers x=4..8.
+        // 'in-range' has points at x=5,6 (inside annotation),
+        // 'out-of-range' has points at x=1,2 (outside annotation).
         final series = [
           const LineChartSeries(
             id: 'in-range',
@@ -310,6 +316,7 @@ void main() {
             points: [
               ChartDataPoint(x: 1.0, y: 10.0),
               ChartDataPoint(x: 2.0, y: 20.0),
+              ChartDataPoint(x: 9.0, y: 90.0),
             ],
             color: Colors.red,
           ),
@@ -343,7 +350,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Act
+        // Act — tap center which maps to ~x=5, within annotation [4,8]
         await tester.tap(find.byType(BravenChartPlus));
         await tester.pumpAndSettle();
 
@@ -354,7 +361,6 @@ void main() {
         expect(receivedRegion!.seriesData['in-range'], hasLength(2));
       },
     );
-
     testWidgets('horizontal-only annotation with null startX/endX is ignored — '
         'no onRegionSelected fires', (WidgetTester tester) async {
       // Arrange — horizontal annotation with only Y-range, no X-range
