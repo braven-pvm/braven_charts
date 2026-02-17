@@ -343,4 +343,61 @@ class RegionAnalyzer {
 
     return RegionSummary(region: region, seriesSummaries: seriesSummaries);
   }
+
+  /// Detects contiguous segment groups in a series.
+  ///
+  /// Iterates [points], grouping consecutive points with the same non-null
+  /// [SegmentStyle] by value equality. Returns a [DataRegion] for each
+  /// group with [DataRegionSource.segment] as source.
+  ///
+  /// **Grouping rules**:
+  /// - Consecutive points sharing the same [SegmentStyle] form one group.
+  /// - Non-adjacent groups with the same style are kept separate (FR-017).
+  /// - Points with `segmentStyle == null` are excluded and break contiguity.
+  /// - Single-point segments are valid (`startX == endX`).
+  ///
+  /// **ID format**: `'segment_<seriesId>_<startIndex>'` where startIndex is
+  /// the index of the first point in the group within [points].
+  ///
+  /// [seriesId] uniquely identifies the series.
+  /// [points] is the list of data points to scan.
+  ///
+  /// Example:
+  /// ```dart
+  /// const analyzer = RegionAnalyzer();
+  /// final groups = analyzer.detectSegmentGroups('power', styledPoints);
+  /// // Returns List<DataRegion> for each contiguous styled group
+  /// ```
+  List<DataRegion> detectSegmentGroups(
+    String seriesId,
+    List<ChartDataPoint> points,
+  ) {
+    // TODO(task-8): Implement in green phase.
+    throw UnimplementedError('detectSegmentGroups not yet implemented');
+  }
+
+  /// Finds which segment group (if any) contains the given point index.
+  ///
+  /// Scans [points] for contiguous styled groups and returns the
+  /// [DataRegion] whose index range includes [pointIndex], or `null`
+  /// if the point has no segment style.
+  ///
+  /// [seriesId] uniquely identifies the series.
+  /// [points] is the list of data points to scan.
+  /// [pointIndex] is the index of the point to look up.
+  ///
+  /// Example:
+  /// ```dart
+  /// const analyzer = RegionAnalyzer();
+  /// final region = analyzer.segmentGroupForPoint('power', points, 5);
+  /// // Returns DataRegion if point 5 is in a styled group, else null
+  /// ```
+  DataRegion? segmentGroupForPoint(
+    String seriesId,
+    List<ChartDataPoint> points,
+    int pointIndex,
+  ) {
+    // TODO(task-8): Implement in green phase.
+    throw UnimplementedError('segmentGroupForPoint not yet implemented');
+  }
 }
