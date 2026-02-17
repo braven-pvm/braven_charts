@@ -4,6 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:braven_charts/src/models/region_summary.dart';
+import 'package:braven_charts/src/models/region_summary_config.dart';
 import 'package:braven_charts/src/models/data_region.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 

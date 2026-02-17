@@ -1,61 +1,391 @@
 # Project Coding Standards
 
-These are the coding standards for this project. All agents must adhere to these standards during implementation, review, and verification.
+These are the coding standards for **Braven Charts** - a pure Flutter charting library. All agents must adhere to these standards during implementation, review, and verification.
 
-{{!--
-  CUSTOMIZATION GUIDE:
-
-  This template is injected into ALL agent sessions (orchestrator, implementor, controller)
-  as a hidden system prompt. Customize the sections below to match your project's standards.
-
-  The controller agent will additionally review implementations against these standards
-  during code review.
-
-  To customize:
-  1. Edit this file at .orchestra/templates/prompts/coding-standards.hbs
-  2. Your changes are preserved across extension updates (never overwritten)
-  3. You can use Handlebars syntax if needed, but plain markdown works fine
-  4. Remove or add sections as needed for your project
---}}
+---
 
 ## Architecture
 
-{{!-- Define your project's architectural patterns and constraints here --}}
-{{!-- Examples:
-- Use dependency injection for all service classes
-- Follow hexagonal architecture: domain logic must not depend on infrastructure
-- All database access goes through the repository pattern
-- API endpoints must use the controller → service → repository layering
---}}
+### Pure Flutter Implementation (MANDATORY)
+
+- **NO HTML elements or web-specific APIs** - All components must use pure Flutter/Dart
+- **Cross-platform compatibility** - Code must work on web, iOS, Android, and desktop
+- **No platform-specific hacks** - Use Flutter's abstraction layers
+
+### SOLID Design Principles (MANDATORY)
+
+1. **Single Responsibility Principle**
+   - One class, one purpose - Models hold data, Renderers paint, Controllers coordinate
+   - File names reflect their single responsibility
+   - Example: `region_analyzer.dart` (analysis only), `region_summary_renderer.dart` (painting only)
+
+2. **Open-Closed Principle**
+   - Extend behavior through composition and inheritance, not modification
+   - Use abstract base classes for extensibility
+   - Configuration objects over hardcoded values
+
+3. **Liskov Substitution Principle**
+   - Subclasses must be substitutable for their base classes
+   - Override methods must maintain base class contracts
+
+4. **Interface Segregation Principle**
+   - Small, focused interfaces over large monolithic ones
+   - Clients shouldn't depend on methods they don't use
+
+5. **Dependency Inversion Principle**
+   - Depend on abstractions, not concrete implementations
+   - High-level modules don't depend on low-level modules
+
+### Layered Architecture
+
+```
+lib/src/
+├── models/           # Data structures (immutable, Equatable)
+├── analysis/         # Business logic (stateless utilities)
+├── rendering/        # Paint/draw logic (Canvas operations)
+├── interaction/      # User input coordination
+├── controllers/      # State management (ValueNotifier)
+├── coordinates/      # Coordinate transformations
+└── widgets/          # Flutter widgets (stateful/stateless)
+```
+
+**Rules:**
+- Models depend on nothing (pure data)
+- Analysis depends only on models
+- Rendering depends on models + coordinates
+- Controllers coordinate between layers but don't contain business logic
+- No circular dependencies between directories
+- Import paths must be explicit - no barrel export abuse
+
+### State Management for High-Frequency Updates (CRITICAL)
+
+- **NEVER use `setState` for updates >10Hz** (mouse tracking, pointer events, animations)
+- **MUST use `ValueNotifier` + `ValueListenableBuilder`** for high-frequency state
+- **MUST isolate with `RepaintBoundary`** to prevent cascade rebuilds
+- **MouseTracker conflicts**: `setState` during pointer events causes crashes (box.dart:3345, mouse_tracker.dart:199 assertions)
+- **60fps target**: Frame budget is 16ms - excessive rebuilds break this
+
+---
 
 ## Coding Conventions
 
-{{!-- Define naming conventions, code style, and language-specific rules here --}}
-{{!-- Examples:
-- TypeScript strict mode required; no `any` types
-- Use PascalCase for types/interfaces, camelCase for variables/functions
-- Prefer `unknown` over `any` for untyped values
-- Use Zod schemas for runtime validation, not TypeScript enums
-- One responsibility per file
---}}
+### Dart/Flutter Style (MANDATORY)
+
+**Naming Conventions:**
+- `UpperCamelCase` for classes, enums, typedefs, type parameters: `ChartDataPoint`, `RegionMetric`
+- `lowerCamelCase` for variables, functions, parameters, constants: `regionAnalyzer`, `computeSummary`
+- `SCREAMING_SNAKE_CASE` only for compile-time constants: `const double MAX_ZOOM = 10.0`
+- Prefix private members with underscore: `_internalState`, `_computeLayout()`
+- File names: `snake_case.dart` matching primary class name
+
+**Immutability Patterns (MANDATORY):**
+- Use `const` constructors wherever possible
+- Prefer `final` fields over mutable fields
+- Use `@immutable` annotation on immutable classes
+- Models should extend `Equatable` for value equality
+- Use `copyWith()` methods for immutable updates
+
+**Code Style:**
+- Single quotes for strings: `'hello'` not `"hello"`
+- Prefer `final` over `var` for local variables
+- Exhaustive `switch` statements (analyzer enforces this)
+- No `print` statements in production code (use logging if needed)
+- Avoid unnecessary containers and widgets
+
+**File Organization:**
+```dart
+// Copyright 2025 Braven Charts
+// SPDX-License-Identifier: MIT
+
+// Imports: dart core → flutter → package → relative
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:equatable/equatable.dart';
+import 'segment_style.dart';
+
+// Class documentation
+/// Brief description on one line.
+///
+/// Detailed explanation with multiple paragraphs.
+///
+/// Example:
+/// ```dart
+/// final example = MyClass(value: 42);
+/// ```
+class MyClass {
+  // Constructor
+  const MyClass({required this.value});
+  
+  // Public fields
+  final int value;
+  
+  // Public methods
+  void publicMethod() {}
+  
+  // Private fields
+  int? _cache;
+  
+  // Private methods
+  void _internalMethod() {}
+}
+```
+
+### Documentation Standards (MANDATORY)
+
+**All public APIs MUST have dartdoc comments with:**
+1. Brief one-line summary (sentence case, ends with period)
+2. Detailed description (multiple paragraphs if needed)
+3. Parameter descriptions (use `[paramName]` syntax)
+4. Return value description
+5. Usage example in code fence
+6. Any performance or behavior notes
+
+**Example:**
+```dart
+/// Filters data points within an X-range using binary search.
+///
+/// Returns all points where `startX <= point.x <= endX`. If the data
+/// is sorted by X, uses O(log n) binary search. Otherwise falls back
+/// to O(n) linear scan.
+///
+/// **Performance**: <10ms for 10,000 points on sorted data.
+///
+/// Example:
+/// ```dart
+/// final points = [
+///   ChartDataPoint(x: 1, y: 10),
+///   ChartDataPoint(x: 2, y: 20),
+///   ChartDataPoint(x: 3, y: 30),
+/// ];
+/// final filtered = RegionAnalyzer.filterPointsInRange(
+///   points: points,
+///   startX: 1.5,
+///   endX: 2.5,
+/// );
+/// // Returns: [ChartDataPoint(x: 2, y: 20)]
+/// ```
+List<ChartDataPoint> filterPointsInRange({
+  required List<ChartDataPoint> points,
+  required double startX,
+  required double endX,
+});
+```
+
+**Inline comments:**
+- Explain **WHY**, not **WHAT**
+- Complex algorithms need step-by-step explanation
+- Performance optimizations must be justified
+- Known limitations or edge cases
+
+---
 
 ## Testing Standards
 
-{{!-- Define testing requirements and patterns here --}}
-{{!-- Examples:
-- All new features must include unit tests
-- Test files mirror source structure: src/foo.ts → test/foo.test.ts
-- Use Vitest with global test APIs (describe, it, expect)
-- Minimum 80% code coverage for new code
-- Tests must validate behavior, not just existence
---}}
+### Test-First Development (TDD) - NON-NEGOTIABLE
+
+**Red-Green-Refactor Cycle:**
+1. Write failing test first
+2. Implement minimum code to pass
+3. Refactor while keeping tests green
+4. Repeat
+
+**Test Coverage Requirements:**
+- 100% coverage for new code (blocking requirement)
+- Tests must validate **behavior**, not just existence
+- No code merges without passing tests
+
+### Test Types
+
+**Unit Tests** (`test/unit/`):
+- Test single classes/functions in isolation
+- Mock external dependencies with `mockito`
+- Fast (<100ms per test)
+- Filename: `*_test.dart` mirroring source structure
+
+**Widget Tests** (`test/unit/`):
+- Test widget behavior and rendering
+- Use `WidgetTester` and `pumpWidget`
+- Verify widget tree structure and state changes
+- Test user interactions (tap, drag, etc.)
+
+**Golden Tests** (`test/golden/`):
+- Visual regression tests
+- Compare rendered output to golden images
+- Required for all visual changes
+- Update goldens only after PR review approval
+
+**Integration Tests** (`test/integration/`):
+- Test full feature workflows
+- Use ChromeDriver for web testing: `chromedriver --port=4444`
+- Run with: `flutter drive --driver=test/test_driver/integration_test.dart --target=test/integration_test/web_app_test.dart -d chrome`
+
+**Performance Benchmarks** (`test/benchmark/`):
+- Measure execution time for critical paths
+- Verify 60fps/16ms frame budget
+- Example: Filter 100k points in <10ms
+- Must pass before merging performance-critical code
+
+### Test Organization
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:braven_charts/src/analysis/region_analyzer.dart';
+
+void main() {
+  group('RegionAnalyzer', () {
+    group('filterPointsInRange', () {
+      test('returns points within range (inclusive)', () {
+        // Arrange
+        final points = [
+          ChartDataPoint(x: 1, y: 10),
+          ChartDataPoint(x: 2, y: 20),
+          ChartDataPoint(x: 3, y: 30),
+        ];
+        
+        // Act
+        final result = RegionAnalyzer.filterPointsInRange(
+          points: points,
+          startX: 1.5,
+          endX: 2.5,
+        );
+        
+        // Assert
+        expect(result, hasLength(1));
+        expect(result.first.x, equals(2));
+      });
+      
+      test('handles empty input', () {
+        final result = RegionAnalyzer.filterPointsInRange(
+          points: [],
+          startX: 0,
+          endX: 10,
+        );
+        expect(result, isEmpty);
+      });
+      
+      // More edge cases...
+    });
+  });
+}
+```
+
+### Test Quality Standards
+
+- **Arrange-Act-Assert** pattern for clarity
+- Descriptive test names that document behavior
+- One logical assertion per test (multiple `expect()` for same concept OK)
+- Test edge cases: empty input, null values, boundaries, duplicates
+- No test interdependencies - each test runs in isolation
+- Fast execution - no unnecessary delays or animations
+
+---
 
 ## Error Handling
 
-{{!-- Define error handling patterns here --}}
-{{!-- Examples:
-- Use custom error classes that extend Error
-- Never swallow errors silently in catch blocks
-- Log errors with structured context (not just error.message)
-- All async operations must have proper error handling
---}}
+### Error Handling Principles
+
+**Fail Fast:**
+- Use assertions for programmer errors: `assert(startX <= endX, 'startX must be <= endX')`
+- Validate inputs at API boundaries
+- Throw exceptions for invalid states
+
+**Graceful Degradation:**
+- Handle user errors gracefully (invalid data formats)
+- Provide meaningful error messages
+- Don't crash on edge cases - return empty/default values when appropriate
+
+**Flutter-Specific:**
+- Use `try-catch` for async operations
+- Catch specific exceptions, not generic `Exception`
+- Log errors with context (not just `error.message`)
+- Never swallow errors silently
+
+**Example:**
+```dart
+/// Computes summary statistics for a series.
+///
+/// Returns null if [points] is empty or all values are NaN.
+SeriesRegionSummary? computeSeriesSummary({
+  required List<ChartDataPoint> points,
+}) {
+  if (points.isEmpty) {
+    return null; // Graceful: empty input → null result
+  }
+  
+  final validPoints = points.where((p) => p.y.isFinite).toList();
+  if (validPoints.isEmpty) {
+    return null; // Graceful: no valid data → null
+  }
+  
+  // ... computation
+}
+```
+
+---
+
+## Performance Requirements
+
+### 60fps Target (16ms frame budget) - MANDATORY
+
+**Rendering Performance:**
+- All paint operations must complete in <2ms
+- Layout calculations must complete in <5ms
+- User interactions must respond in <100ms
+- No dropped frames during animations or scrolling
+
+**Analysis Performance:**
+- Region filtering: <10ms for 10,000 points
+- Summary computation: <5ms for 1,000 points
+- Binary search for sorted data (O(log n))
+- Lazy evaluation - compute on-demand only
+
+**Memory Management:**
+- No memory leaks (use DevTools to verify)
+- Aggressive virtualization for large datasets
+- Object pooling for frequently created objects
+- Minimize allocations in hot paths (paint/layout)
+
+**Profiling Requirements:**
+- Profile performance-critical code before merging
+- Include benchmark results in PR description
+- Justify any regression with migration plan
+
+---
+
+## Quality Gates (All BLOCKING)
+
+Before any code merge, ALL gates must pass:
+
+1. **Dart Analyzer**: `flutter analyze` returns zero warnings
+2. **Test Suite**: All tests passing (`flutter test`)
+3. **Test Coverage**: 100% coverage for new code
+4. **Performance**: Benchmarks within targets for affected paths
+5. **Documentation**: All public APIs documented with examples
+6. **Golden Tests**: Approved for visual changes
+7. **Constitution Compliance**: PR checklist verified
+8. **Code Review**: At least one maintainer approval
+
+---
+
+## Development Workflow
+
+### Branching & Commits
+
+- **Branch naming**: `###-feature-name` (from spec number)
+- **Commit format**: Conventional commits - `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `perf:`, `chore:`
+- **Commit messages**: Clear, descriptive - explain what and why
+- **Atomic commits**: Each commit represents one logical change
+
+### Pre-Merge Checklist
+
+- [ ] All tests passing
+- [ ] `flutter analyze` clean (zero warnings)
+- [ ] Documentation complete for public APIs
+- [ ] Golden tests updated (if visual changes)
+- [ ] Performance benchmarks run (if perf-critical)
+- [ ] Constitution compliance verified
+- [ ] Code review approved
+
+---
+
+**Authority**: This document derives from the Braven Charts Constitution v1.1.0 and supersedes any conflicting guidance. All implementations must comply with these standards.
