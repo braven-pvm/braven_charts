@@ -2144,7 +2144,8 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // X-range (since series are drawn on top of annotations). Do NOT fire
     // when the user explicitly taps a different annotation type (threshold,
     // point, text, pin, trend) that happens to overlap an annotation's range.
-    final bool eligibleForRegion = tappedElement == null ||
+    final bool eligibleForRegion =
+        tappedElement == null ||
         tappedElement is RangeAnnotationElement ||
         tappedElement is SeriesElement;
     final regionFired = eligibleForRegion
@@ -2152,7 +2153,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
             tapPosition: details.localPosition,
             tappedElement: tappedElement,
           )
-        : false;    // Only fire background tap if nothing was handled at all
+        : false; // Only fire background tap if nothing was handled at all
     if (tappedElement == null && !regionFired) {
       widget.onBackgroundTap?.call(details.localPosition);
     }
@@ -2227,13 +2228,15 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // fall back to the first vertical range annotation. This handles
     // the case where the chart layout hasn't fully initialized its
     // coordinate transform when the tap occurs.
-    matched ??= rangeAnnotations.first;    // Fire onAnnotationTap if the element branch didn't already fire it for
+    matched ??= rangeAnnotations
+        .first; // Fire onAnnotationTap if the element branch didn't already fire it for
     // a RangeAnnotationElement
     if (tappedElement is! RangeAnnotationElement) {
       widget.onAnnotationTap?.call(matched);
     }
     _computeAndFireRegion(matched);
-    return true;  }
+    return true;
+  }
 
   /// Computes a [DataRegion] from a [RangeAnnotation] and fires
   /// [onRegionSelected].
