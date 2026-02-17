@@ -1,0 +1,37 @@
+{
+  "framework": "flutter",
+  "tiers": [
+    {
+      "name": "smoke",
+      "path": "test/smoke/**/*_test.dart",
+      "timeout": 10000
+    },
+    {
+      "name": "unit",
+      "path": "test/unit/**/*_test.dart",
+      "timeout": 30000
+    },
+    {
+      "name": "integration",
+      "path": "test/integration/**/*_test.dart",
+      "timeout": 60000
+    },
+    {
+      "name": "benchmark",
+      "path": "test/benchmark/**/*_test.dart",
+      "timeout": 120000
+    }
+  ],
+  "workingDir": ".",
+  "defaultTimeout": 30000,
+  "maxFailureLines": 20,
+  "configFingerprint": [
+    "pubspec.yaml",
+    "dart_test.yaml",
+    ".agent-test-config.json"
+  ],
+  "dartExcludeTags": ["slow"],
+  "promotion": {
+    "dryRun": true
+  }
+}

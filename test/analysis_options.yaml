@@ -1,6 +1,8 @@
-# Test configuration for braven_charts
+# Test-specific analyzer configuration for braven_charts
+#
+# Inherits from root analysis_options.yaml via Flutter lints.
+# Only generated and archived files are excluded.
 
-# Coverage configuration
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
@@ -8,16 +10,9 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "**/*.mocks.dart"
-    - "test/**"
-    - "integration_test/**"
-
-  strong-mode:
-    implicit-casts: false
-    implicit-dynamic: false
 
 linter:
   rules:
-    # Additional rules for testing
     - prefer_const_constructors
     - prefer_const_literals_to_create_immutables
     - prefer_final_locals

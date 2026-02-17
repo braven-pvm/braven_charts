@@ -1,0 +1,13 @@
+# Dart test configuration for braven_charts
+# See: https://github.com/dart-lang/test/blob/master/pkgs/test/doc/configuration.md
+
+tags:
+  red:
+    # TDD red-phase tests: failing tests awaiting implementation.
+    # Excluded from normal runs; run explicitly with --tags=red.
+  smoke:
+    # Smoke tests: fast sanity checks for quick CI feedback.
+  e2e:
+    # End-to-end tests: may be slow, excluded from local dev runs.
+  slow:
+    # Slow tests: excluded from default runs to keep feedback fast.

@@ -15,7 +15,7 @@ Before setting up tiered tests, ensure you have:
 | TypeScript / Node | Vitest      | `vitest.config.ts` | `*.test.ts`       |
 | Dart / Flutter    | `dart test` | `dart_test.yaml`   | `*_test.dart`     |
 
-> **Note**: Orchestra currently provides full tool support for Vitest. Dart/Flutter tool support is planned. However, the **directory structure, tier configuration, and workflow** are identical across platforms. Set up your Dart/Flutter project with the same tiered structure now, and it will work seamlessly when Dart tool support ships.
+> **Note**: Orchestra provides full tool support for both Vitest and Dart/Flutter. The **directory structure, tier configuration, and workflow** are identical across platforms — only the `framework` field and test file naming convention differ.
 
 ## Understanding the Five Test Tiers
 
@@ -250,15 +250,22 @@ your-project/
 ```yaml
 # Tag-based test filtering for TDD workflow
 tags:
-  tdd-red:
-    # Tests expected to fail during red phase
+  red:
+    # TDD red-phase tests: failing tests awaiting implementation.
+    # Excluded from normal runs; run explicitly with --tags=red.
+  smoke:
+    # Smoke tests: fast sanity checks for quick CI feedback.
+  e2e:
+    # End-to-end tests: may be slow, excluded from local dev runs.
+  slow:
+    # Slow tests: excluded from default runs to keep feedback fast.
 ```
 
 **3. Configure Orchestra** (`.agent-test-config.json`):
 
 ```json
 {
-  "framework": "dart_test",
+  "framework": "dart",
   "tiers": [
     {
       "name": "smoke",
@@ -284,11 +291,14 @@ tags:
     "dart_test.yaml",
     ".agent-test-config.json"
   ],
+  "dartExcludeTags": ["slow"],
   "promotion": {
     "dryRun": true
   }
 }
 ```
+
+> **Dart vs Flutter**: Use `"framework": "dart"` for pure Dart projects (no Flutter SDK dependency in `pubspec.yaml`). Use `"framework": "flutter"` for Flutter projects. Flutter projects automatically get `--no-pub` to skip `pub get` on each test run. For pure Dart projects, set `"dartNoPub": true` to enable the same optimization.
 
 **4. Write your first smoke test** (`test/smoke/project_structure_test.dart`):
 
@@ -349,13 +359,15 @@ The `.agent-test-config.json` file is the single source of truth for Orchestra's
 
 | Field               | Type       | Required | Default                                                           | Description                                                                                                             |
 | ------------------- | ---------- | -------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `framework`         | `string`   | Yes      | `"vitest"`                                                        | Test framework. Currently `"vitest"` is fully supported. `"dart_test"` is planned.                                      |
+| `framework`         | `string`   | Yes      | `"vitest"`                                                        | Test framework: `"vitest"`, `"dart"`, or `"flutter"`.                                                                   |
 | `tiers`             | `array`    | Yes      | —                                                                 | One or more tier definitions (see below). At least one tier must be declared.                                           |
 | `workingDir`        | `string`   | No       | `"."`                                                             | Working directory for test execution, relative to workspace root.                                                       |
 | `defaultTimeout`    | `number`   | No       | `30000`                                                           | Default timeout in milliseconds for test runs. Overridable per tier and per invocation.                                 |
 | `maxFailureLines`   | `number`   | No       | `20`                                                              | Maximum lines of failure detail shown per failing test. Controls output verbosity.                                      |
 | `configFingerprint` | `string[]` | No       | `["vitest.config.*", "tsconfig.json", ".agent-test-config.json"]` | Glob patterns for config files included in the fingerprint cache. Changes to these files invalidate all cached results. |
 | `projects`          | `string[]` | No       | —                                                                 | Vitest project names for multi-project workspaces. Omit for single-project setups.                                      |
+| `dartNoPub`         | `boolean`  | No       | —                                                                 | Dart-specific: apply `--no-pub` for pure Dart projects (Flutter gets it by default). Skips `pub get` before test runs.  |
+| `dartExcludeTags`   | `string[]` | No       | —                                                                 | Dart-specific: tags to always exclude from test runs (e.g., `["slow", "e2e"]`). Applied as `--exclude-tags`.            |
 | `promotion`         | `object`   | No       | `{ "dryRun": true }`                                              | Promotion defaults. `dryRun: true` means promotion previews changes without moving files.                               |
 
 ### Tier Definition
@@ -384,6 +396,88 @@ The `configFingerprint` array tells Orchestra which config files to monitor for 
 - **Compiler/build config**: `tsconfig.json` for TS, `pubspec.yaml` for Dart
 - **This file**: Always include `".agent-test-config.json"`
 - **Additional runner configs**: If you have per-package vitest configs (e.g., `extension/vitest.config.ts`), add them explicitly — the glob `vitest.config.*` only matches the workspace root
+
+---
+
+## Dart / Flutter Platform Details
+
+This section covers Dart and Flutter-specific behaviors, requirements, and configuration. If you're using Vitest, skip to [Migrating Existing Tests](#migrating-existing-tests).
+
+### SDK Version Requirements
+
+| SDK     | Minimum Version | Required For                                           |
+| ------- | --------------- | ------------------------------------------------------ |
+| Dart    | 3.0+            | JSON reporter (`--reporter=json`), tag-based filtering |
+| Flutter | 3.10+           | `--machine` flag for structured test output            |
+
+> Orchestra's DartRunner uses `dart test --reporter=json` (pure Dart) or `flutter test --machine` (Flutter) to parse structured test events. Older SDK versions that lack these flags are not supported.
+
+### Framework Auto-Detection
+
+If `.agent-test-config.json` is absent or has no `framework` field, Orchestra auto-detects the framework by scanning the workspace root:
+
+| File Found          | Detected Framework                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `pubspec.yaml` only | `"dart"` or `"flutter"` (based on Flutter SDK dependency)                                 |
+| `vitest.config.*`   | `"vitest"`                                                                                |
+| Both present        | **Error** — dual-marker conflict. You must provide an explicit `.agent-test-config.json`. |
+| Neither             | **Error** — no detectable framework.                                                      |
+
+The auto-detection logic lives in `TestRunnerFactory.detect()`. It checks for `pubspec.yaml` (Dart/Flutter marker) and `vitest.config.*` (Vitest marker). If a `pubspec.yaml` is found, it inspects the `dependencies` and `dev_dependencies` sections for `flutter` to distinguish Dart from Flutter.
+
+### CLI Differences: Dart vs Flutter
+
+| Feature             | Pure Dart (`dart test`)                | Flutter (`flutter test`)           |
+| ------------------- | -------------------------------------- | ---------------------------------- |
+| Structured output   | `--reporter=json`                      | `--machine`                        |
+| Tag include         | `--tags=smoke`                         | `--tags smoke`                     |
+| Tag exclude         | `--exclude-tags=slow`                  | `--exclude-tags slow`              |
+| No-pub optimization | Requires `dartNoPub: true` in config   | Applied automatically (`--no-pub`) |
+| Concurrency         | `--concurrency=N`                      | `--concurrency=N`                  |
+| File specification  | Paths after `--` or as positional args | Positional args                    |
+
+Orchestra's `DartRunner` handles these differences transparently. You only need to set the correct `framework` value.
+
+### The `--no-pub` Optimization
+
+By default, `dart test` and `flutter test` run `pub get` before each test invocation to ensure dependencies are current. In CI or agent workflows where dependencies are already resolved, this adds unnecessary overhead.
+
+- **Flutter projects**: `--no-pub` is applied automatically on every test run.
+- **Pure Dart projects**: Set `"dartNoPub": true` in `.agent-test-config.json` to enable the same behavior.
+
+### Tag-Based Filtering with `dart_test.yaml`
+
+Dart's native test runner supports tag-based filtering via `dart_test.yaml`. Orchestra leverages this for:
+
+- **TDD red-phase**: Tests tagged `@Tags(['red'])` are excluded from normal runs and only executed during red-phase verification.
+- **Exclude tags**: The `dartExcludeTags` config field maps to `--exclude-tags`, letting you skip slow or e2e tests in default runs.
+
+Example test with tags:
+
+```dart
+@Tags(['unit'])
+import 'package:test/test.dart';
+
+void main() {
+  test('example unit test', () {
+    expect(1 + 1, equals(2));
+  });
+}
+```
+
+### Related Scope Resolution for Dart
+
+When `scope: "related"` is used with `run_tests`, Orchestra finds tests related to a given source file. For Dart projects, this uses a three-strategy approach:
+
+1. **Naming convention**: `lib/src/math.dart` → looks for `test/**/*math_test.dart`
+2. **Import graph analysis**: Builds a dependency graph from `import` / `export` / `part` directives using `DartImportGraph`. Walks up to depth 3 to find test files that transitively import the source file.
+3. **Directory fallback**: If no matches from naming or imports, searches the corresponding test directory structure.
+
+**Import graph caching**: The import graph is cached using an mtime-based fingerprint. When any `.dart` file's modification time changes, the cache is invalidated. The graph builder uses `ripgrep` when available for faster file scanning, falling back to Node.js `fs` operations. Cycle detection prevents infinite loops in circular import chains.
+
+### Flutter Engine Log Filtering
+
+Flutter's test output includes non-JSON engine log lines (e.g., `flutter: ...` debug messages, observatory URIs). Orchestra's `DartRunner.extractJsonEvents()` automatically filters these, extracting only valid JSON test event lines for result parsing. No configuration is needed — this happens transparently.
 
 ---
 
@@ -651,11 +745,11 @@ Create `.agent-test-config.json` in your workspace root. See [Configuration Refe
 }
 ```
 
-**Dart / Flutter:**
+**Dart (pure):**
 
 ```json
 {
-  "framework": "dart_test",
+  "framework": "dart",
   "tiers": [
     { "name": "smoke", "path": "test/smoke/**/*_test.dart", "timeout": 10000 },
     { "name": "unit", "path": "test/unit/**/*_test.dart", "timeout": 30000 },
@@ -673,11 +767,47 @@ Create `.agent-test-config.json` in your workspace root. See [Configuration Refe
     "dart_test.yaml",
     ".agent-test-config.json"
   ],
+  "dartNoPub": true,
+  "dartExcludeTags": ["slow"],
+  "promotion": { "dryRun": true }
+}
+```
+
+**Flutter:**
+
+```json
+{
+  "framework": "flutter",
+  "tiers": [
+    { "name": "smoke", "path": "test/smoke/**/*_test.dart", "timeout": 10000 },
+    { "name": "unit", "path": "test/unit/**/*_test.dart", "timeout": 30000 },
+    {
+      "name": "widget",
+      "path": "test/widget/**/*_test.dart",
+      "timeout": 60000
+    },
+    {
+      "name": "integration",
+      "path": "test/integration/**/*_test.dart",
+      "timeout": 120000
+    }
+  ],
+  "workingDir": ".",
+  "defaultTimeout": 60000,
+  "maxFailureLines": 20,
+  "configFingerprint": [
+    "pubspec.yaml",
+    "dart_test.yaml",
+    ".agent-test-config.json"
+  ],
+  "dartExcludeTags": ["slow", "e2e"],
   "promotion": { "dryRun": true }
 }
 ```
 
 > **Important**: Match the `path` glob patterns to your platform's test file naming convention: `**/*.test.ts` for TypeScript, `**/*_test.dart` for Dart.
+>
+> Use `"framework": "dart"` for pure Dart projects and `"framework": "flutter"` for Flutter projects. Flutter projects automatically get `--no-pub` on every test run; for pure Dart projects, set `"dartNoPub": true` to enable the same optimization.
 
 Also update your test runner configuration to include the new tier directories:
 
