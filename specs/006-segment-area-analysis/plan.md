@@ -77,18 +77,21 @@ lib/braven_charts.dart                # MODIFIED: Export new public types
 test/
 ├── unit/
 │   ├── analysis/
-│   │   └── region_analyzer_test.dart     # NEW: Filter, summary, edge cases
-│   └── models/
-│       ├── data_region_test.dart          # NEW: Equality, copyWith
-│       └── region_summary_test.dart       # NEW: Metric validation
-├── widget/
-│   └── region_analysis/
-│       ├── annotation_region_test.dart    # NEW: Tap annotation → callback
-│       ├── segment_region_test.dart       # NEW: Tap segment → callback
-│       └── box_select_region_test.dart    # NEW: Box-select → callback
+│   │   ├── region_analyzer_test.dart          # NEW: Filter, summary, edge cases
+│   │   ├── annotation_region_widget_test.dart # NEW: Tap annotation → callback
+│   │   ├── segment_region_widget_test.dart    # NEW: Tap segment → callback
+│   │   ├── box_select_region_widget_test.dart # NEW: Box-select → callback
+│   │   ├── region_summary_widget_test.dart    # NEW: Summary via state method
+│   │   └── custom_analysis_widget_test.dart   # NEW: Custom analysis callback
+│   ├── models/
+│   │   ├── data_region_test.dart              # NEW: Equality, copyWith
+│   │   └── region_summary_test.dart           # NEW: Metric validation
+│   └── rendering/
+│       └── modules/
+│           └── region_summary_renderer_test.dart # NEW: Overlay renderer
 ├── golden/
 │   └── region_summary_overlay_test.dart   # NEW: Overlay rendering
-└── performance/
+└── benchmark/
     └── region_analysis_benchmark.dart     # NEW: 100k point analysis
 ```
 

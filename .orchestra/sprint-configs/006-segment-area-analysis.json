@@ -1,0 +1,449 @@
+{
+  "sprint": {
+    "id": "006-segment-area-analysis",
+    "name": "Segment & Area Data Analysis - Region Queries, Summary Statistics, and Visual Overlays"
+  },
+  "spec_path": "specs/006-segment-area-analysis/spec.md",
+  "environment": {
+    "test_command": "flutter test",
+    "test_file_pattern": "test/**/*_test.dart",
+    "source_base_dir": "lib"
+  },
+  "phases": [
+    {
+      "phase_id": "phase-1",
+      "phase_name": "Foundation: Data Models (Blocking)",
+      "speckit_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014"
+      ]
+    },
+    {
+      "phase_id": "phase-2",
+      "phase_name": "US1: Query Data Within Range Annotations (P1)",
+      "speckit_tasks": [
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023"
+      ]
+    },
+    {
+      "phase_id": "phase-3",
+      "phase_name": "US2: Built-in Summary Statistics (P1)",
+      "speckit_tasks": ["T024", "T025", "T026", "T027", "T028", "T029"]
+    },
+    {
+      "phase_id": "phase-4",
+      "phase_name": "US3: Analyse Data in Segmented Series (P2)",
+      "speckit_tasks": ["T030", "T031", "T032", "T033", "T034", "T035", "T036"]
+    },
+    {
+      "phase_id": "phase-5",
+      "phase_name": "US4: Box-Select to Analyse Ad-Hoc Regions (P2)",
+      "speckit_tasks": ["T037", "T038", "T039", "T040", "T041"]
+    },
+    {
+      "phase_id": "phase-6",
+      "phase_name": "US5: Visual Summary Overlay (P3)",
+      "speckit_tasks": ["T042", "T043", "T044", "T046", "T047", "T048"]
+    },
+    {
+      "phase_id": "phase-7",
+      "phase_name": "US6: Custom Analysis Extensions (P3)",
+      "speckit_tasks": ["T049", "T050", "T051", "T052", "T053"]
+    },
+    {
+      "phase_id": "phase-8",
+      "phase_name": "Polish, Performance & Demo",
+      "speckit_tasks": ["T054", "T055", "T056", "T057", "T058", "T059"]
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": 1,
+      "phase_id": "phase-1",
+      "title": "Red: Failing tests for all foundational data models",
+      "description": "Write failing TDD tests for DataRegion (equality, copyWith, validation of startX<=endX and non-empty id, different sources), DataRegionSource enum, RegionMetric enum with display labels, SeriesRegionSummary (field values, null rules: count<2 → null stdDev/delta, edge cases count=0 and count=1), RegionSummary (per-series map, empty map), RegionSummaryConfig defaults ({min,max,average}, aboveRegion), and RegionSummaryPosition enum.\n\nTest files:\n- test/red/unit/models/data_region_test.dart\n- test/red/unit/models/region_summary_test.dart\n\nCovers spec tasks: T003, T004, T012, T013, T014",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T003,T004,T012,T013,T014",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test files exist in test/red/ directories, compile successfully, contain meaningful assertions, and fail with assertion failures (not compile errors). Each test file must have // @orchestra-task: 1 annotation.",
+        "success_criteria": [
+          "Test file test/red/unit/models/data_region_test.dart exists with // @orchestra-task: 1 annotation",
+          "Test file test/red/unit/models/region_summary_test.dart exists with // @orchestra-task: 1 annotation",
+          "Tests compile successfully (no syntax/import errors)",
+          "Tests contain expect() assertions for DataRegion equality, copyWith, validation",
+          "Tests contain expect() assertions for SeriesRegionSummary null rules (stdDev/delta null when count<2)",
+          "Tests contain expect() assertions for RegionSummaryConfig defaults",
+          "Tests fail with assertion failures (not compile errors) when run"
+        ]
+      }
+    },
+    {
+      "task_id": 2,
+      "phase_id": "phase-1",
+      "title": "Green: Implement foundational models, enums, typedefs & barrel exports",
+      "description": "Create lib/src/analysis/ directory. Implement:\n1. DataRegionSource enum and DataRegion model class with id, label, startX, endX, source, seriesData fields, Equatable equality (by id/startX/endX/source), copyWith, validation (startX<=endX, non-empty id) in lib/src/models/data_region.dart. Document that startX==endX is valid for single-point queries.\n2. RegionMetric enum with display labels in lib/src/models/region_summary.dart\n3. SeriesRegionSummary model with all statistical fields, Equatable equality, null rules (stdDev/delta null when count<2) in lib/src/models/region_summary.dart\n4. RegionSummary model (region + seriesSummaries map) with Equatable in lib/src/models/region_summary.dart\n5. RegionSummaryPosition enum and RegionSummaryConfig model (metrics set, valueFormatter, position) with defaults ({min,max,average}, aboveRegion) in lib/src/models/region_summary_config.dart\n6. RegionSelectedCallback and CustomRegionAnalysisCallback typedefs in lib/src/models/interaction_callbacks.dart\n7. Empty region_analyzer.dart with library doc comment in lib/src/analysis/\n8. Barrel exports for all new public types in lib/braven_charts.dart\n\nMake all red-phase tests pass. Promote test files from test/red/ to test/.\n\nCovers spec tasks: T001-T011",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [1],
+      "speckit_task_ref": "T001,T002,T005,T006,T007,T008,T009,T010,T011",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify all model files exist, classes implement Equatable correctly, validation works, null rules enforced, barrel exports present, all promoted tests pass, dart analyze clean.",
+        "success_criteria": [
+          "File lib/src/models/data_region.dart exists with DataRegion class and DataRegionSource enum",
+          "DataRegion extends Equatable with props [id, startX, endX, source]",
+          "DataRegion validates startX <= endX and non-empty id (assertion or ArgumentError)",
+          "DataRegion has copyWith method",
+          "File lib/src/models/region_summary.dart exists with RegionMetric enum, SeriesRegionSummary, and RegionSummary classes",
+          "RegionMetric enum has all 11 values with display labels",
+          "SeriesRegionSummary enforces null stdDev/delta when count < 2",
+          "File lib/src/models/region_summary_config.dart exists with RegionSummaryConfig and RegionSummaryPosition",
+          "RegionSummaryConfig defaults to metrics={min,max,average} and position=aboveRegion",
+          "File lib/src/models/interaction_callbacks.dart contains RegionSelectedCallback and CustomRegionAnalysisCallback typedefs",
+          "File lib/src/analysis/region_analyzer.dart exists with library doc comment",
+          "lib/braven_charts.dart exports data_region.dart, region_summary.dart, region_summary_config.dart, region_analyzer.dart",
+          "All promoted model tests pass (flutter test test/unit/models/data_region_test.dart test/unit/models/region_summary_test.dart)",
+          "dart analyze reports zero issues for new files"
+        ]
+      }
+    },
+    {
+      "task_id": 3,
+      "phase_id": "phase-2",
+      "title": "Red: Failing tests for US1 range annotation analysis",
+      "description": "Write failing TDD tests for:\n1. RegionAnalyzer.filterPointsInRange() — sorted binary-search path, unsorted linear-scan fallback, inclusive boundaries, empty input, boundary duplicates, single-point match, range outside data\n2. RegionAnalyzer.regionFromAnnotation() — builds DataRegion from RangeAnnotation + multi-series data, maps filtered points per series, excludes series with no matches, handles empty series\n3. Widget test: chart with 3 series + range annotation spanning X=3.2..7.8, simulate tap on annotation, verify onRegionSelected fires with correct DataRegion (source=rangeAnnotation, correct seriesData per series); assert onAnnotationTap still fires alongside onRegionSelected (both callbacks co-fire per base spec integration contract); verify selectedDataRegions getter returns matching DataRegion after tap\n4. Widget test: range annotation covers zero data points → callback fires with empty seriesData; multiple series where only some have data → only matching series included; horizontal-only annotation (null startX/endX) is ignored; single-region selection (FR-005): tap annotation A then B → only B active\n\nTest files:\n- test/red/unit/analysis/region_analyzer_test.dart (filter + regionFromAnnotation tests)\n- test/red/unit/analysis/annotation_region_widget_test.dart (widget tests)\n\nCovers spec tasks: T015, T016, T022, T023",
+      "category": "INTEGRATION",
+      "dependencies": [2],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T015,T016,T022,T023",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test files exist in test/red/, compile, contain meaningful assertions for filter and annotation-tap flows, fail with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/analysis/region_analyzer_test.dart exists with // @orchestra-task: 3",
+          "Test file test/red/unit/analysis/annotation_region_widget_test.dart exists with // @orchestra-task: 3",
+          "FilterPointsInRange tests cover: sorted path, unsorted fallback, inclusive boundaries, empty input, boundary duplicates, range outside data",
+          "RegionFromAnnotation tests cover: multi-series, excludes empty series, handles empty series",
+          "Widget tests cover: onRegionSelected fires on annotation tap, co-fires with onAnnotationTap, selectedDataRegions getter, zero-data annotation, horizontal annotation ignored, single-region selection",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 4,
+      "phase_id": "phase-2",
+      "title": "Green: Implement US1 range annotation query & callback wiring",
+      "description": "Implement:\n1. RegionAnalyzer.filterPointsInRange() with binary search on sorted data (O(log n + k)) and linear-scan fallback. Sorted heuristic: points.first.x <= points.last.x. Inclusive bounds. In lib/src/analysis/region_analyzer.dart\n2. RegionAnalyzer.regionFromAnnotation() that builds a DataRegion from a RangeAnnotation and Map<String, List<ChartDataPoint>> series data, filtering each series via filterPointsInRange(). In lib/src/analysis/region_analyzer.dart\n3. Add onRegionSelected callback property (RegionSelectedCallback?) to BravenChartPlus widget in lib/src/braven_chart_plus.dart\n4. Wire annotation-tap flow: in EventHandlerManager._handleElementTap() (or equivalent), detect RangeAnnotationElement, extract startX/endX, call RegionAnalyzer.regionFromAnnotation(), fire onRegionSelected with resulting DataRegion. Only vertical range annotations with non-null startX and endX qualify. In lib/src/rendering/modules/event_handler_manager.dart + lib/src/braven_chart_plus.dart\n5. Add selectedDataRegions getter to BravenChartPlusState that lazily builds List<DataRegion> from current coordinator selection state in lib/src/braven_chart_plus.dart\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass.\n\nCovers spec tasks: T017-T021",
+      "category": "INTEGRATION",
+      "dependencies": [3],
+      "speckit_task_ref": "T017,T018,T019,T020,T021",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify RegionAnalyzer methods work correctly, callback wiring fires onRegionSelected on annotation tap, selectedDataRegions returns correct data, all promoted tests pass.",
+        "success_criteria": [
+          "RegionAnalyzer.filterPointsInRange() uses binary search on sorted data with O(log n + k) complexity",
+          "RegionAnalyzer.filterPointsInRange() falls back to linear scan for unsorted data",
+          "RegionAnalyzer.regionFromAnnotation() builds DataRegion with source=rangeAnnotation",
+          "BravenChartPlus has onRegionSelected callback property (RegionSelectedCallback?)",
+          "Annotation tap flow: tapping a vertical RangeAnnotation fires onRegionSelected with DataRegion",
+          "onAnnotationTap continues to co-fire alongside onRegionSelected",
+          "Horizontal-only annotations do not fire onRegionSelected",
+          "selectedDataRegions getter returns lazy List<DataRegion> from coordinator state",
+          "Single-region selection: new annotation tap replaces previous selection",
+          "All promoted tests pass (flutter test test/unit/analysis/region_analyzer_test.dart test/unit/analysis/annotation_region_widget_test.dart)",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 5,
+      "phase_id": "phase-3",
+      "title": "Red: Failing tests for US2 summary statistics computation",
+      "description": "Write failing TDD tests for:\n1. RegionAnalyzer.computeSeriesSummary() — correct computation of all metrics (count, min, max, sum, average, range, stdDev, firstY, lastY, delta, duration) for 50-point series, 1-point series (stdDev=null, delta=null), 0-point series (returns null), floating-point precision (within 1e-10)\n2. RegionAnalyzer.computeRegionSummary() — multi-series region, omits series with zero data, custom seriesNames/seriesUnits pass-through\n3. Widget test: programmatic analysis via GlobalKey<BravenChartPlusState> — select region, call computeRegionSummaries(), verify all metrics match expected values\n\nTest files:\n- test/red/unit/analysis/region_analyzer_test.dart (computeSeriesSummary + computeRegionSummary tests — append to existing file from Task 3)\n- test/red/unit/analysis/region_summary_widget_test.dart (widget test)\n\nCovers spec tasks: T024, T025, T029",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [2],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T024,T025,T029",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test files exist in test/red/, compile, contain meaningful assertions for all metric computations, fail with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/analysis/region_analyzer_test.dart exists with // @orchestra-task: 5 (or appended to existing)",
+          "Test file test/red/unit/analysis/region_summary_widget_test.dart exists with // @orchestra-task: 5",
+          "computeSeriesSummary tests cover: 50-point series with all metrics, 1-point series nulls, 0-point returns null, precision within 1e-10",
+          "computeRegionSummary tests cover: multi-series, omits empty series, seriesNames/seriesUnits pass-through",
+          "Widget test covers: programmatic computeRegionSummaries() via GlobalKey returns correct values",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 6,
+      "phase_id": "phase-3",
+      "title": "Green: Implement US2 summary statistics & widget state method",
+      "description": "Implement:\n1. RegionAnalyzer.computeSeriesSummary() that computes count, min, max, sum, average, range, stdDev (population), firstY, lastY, delta, duration from a list of ChartDataPoint. Returns null for empty input. stdDev/delta null when count<2. In lib/src/analysis/region_analyzer.dart\n2. RegionAnalyzer.computeRegionSummary() that iterates all series in a DataRegion, calls computeSeriesSummary() per series, returns RegionSummary (omitting empty series). Cache result per region and invalidate on selection change. In lib/src/analysis/region_analyzer.dart\n3. Add computeRegionSummaries([List<DataRegion>? regions]) method to BravenChartPlusState that delegates to RegionAnalyzer.computeRegionSummary() for each region (defaults to selectedDataRegions if null). In lib/src/braven_chart_plus.dart\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass.\n\nCovers spec tasks: T026, T027, T028",
+      "category": "INFRASTRUCTURE",
+      "dependencies": [5],
+      "speckit_task_ref": "T026,T027,T028",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify all metrics computed correctly to floating-point precision, null rules enforced, caching works, widget method returns correct summaries.",
+        "success_criteria": [
+          "RegionAnalyzer.computeSeriesSummary() computes all 11 metrics correctly",
+          "Population standard deviation formula used (not sample)",
+          "Returns null for empty input list",
+          "stdDev and delta null when count < 2 (FR-015)",
+          "Floating-point precision within 1e-10 for computed metrics (SC-004)",
+          "RegionAnalyzer.computeRegionSummary() omits series with zero data points",
+          "seriesNames and seriesUnits pass through to SeriesRegionSummary",
+          "BravenChartPlusState.computeRegionSummaries() delegates correctly, defaults to selectedDataRegions",
+          "All promoted tests pass",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 7,
+      "phase_id": "phase-4",
+      "title": "Red: Failing tests for US3 segment group detection & tap",
+      "description": "Write failing TDD tests for:\n1. RegionAnalyzer.detectSegmentGroups() — contiguous same-style groups, non-adjacent same-style treated as separate (FR-017), unstyled points excluded, single-point segments, all-same-style series\n2. RegionAnalyzer.segmentGroupForPoint() — point inside a group returns correct DataRegion, point outside any group returns null, boundary points included\n3. Widget test: series with points 0-9 styled blue and 10-19 styled red, tap point 5, verify callback delivers region with points 0-9; tap unstyled point → no segment region callback\n4. Widget test: non-adjacent same-style groups (blue 0-4, red 5-9, blue 10-14), tap point 12, verify only points 10-14 returned (contiguity check)\n\nTest files:\n- test/red/unit/analysis/region_analyzer_test.dart (detectSegmentGroups + segmentGroupForPoint tests)\n- test/red/unit/analysis/segment_region_widget_test.dart (widget tests)\n\nCovers spec tasks: T030, T031, T035, T036",
+      "category": "INTEGRATION",
+      "dependencies": [2],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T030,T031,T035,T036",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test files in test/red/, compile, contain assertions for segment group detection and contiguity, fail with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/analysis/region_analyzer_test.dart has segment group tests with // @orchestra-task: 7",
+          "Test file test/red/unit/analysis/segment_region_widget_test.dart exists with // @orchestra-task: 7",
+          "detectSegmentGroups tests cover: contiguous groups, non-adjacent same-style as separate (FR-017), unstyled exclusion, single-point segments",
+          "segmentGroupForPoint tests cover: inside group, outside group, boundary points",
+          "Widget tests cover: segment tap delivers correct region, unstyled point no callback, contiguity check with non-adjacent same-style",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 8,
+      "phase_id": "phase-4",
+      "title": "Green: Implement US3 segment group detection & tap wiring",
+      "description": "Implement:\n1. RegionAnalyzer.detectSegmentGroups() that iterates List<ChartDataPoint>, groups consecutive non-null SegmentStyle by value equality, returns List<DataRegion> (source=segment) with X-range from group's first/last point. Use ID format 'segment_<seriesId>_<startIndex>' per data-model.md convention. In lib/src/analysis/region_analyzer.dart\n2. RegionAnalyzer.segmentGroupForPoint() that finds which segment group contains a given point index, returns DataRegion or null. In lib/src/analysis/region_analyzer.dart\n3. Wire segment-tap flow: in point-tap handler, check if tapped ChartDataPoint.segmentStyle != null, call RegionAnalyzer.segmentGroupForPoint(), fire onRegionSelected with the segment group DataRegion (source=segment). Detection logic in lib/src/rendering/modules/event_handler_manager.dart, callback dispatch through BravenChartPlusState. Existing onPointTap continues to co-fire.\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass.\n\nCovers spec tasks: T032, T033, T034",
+      "category": "INTEGRATION",
+      "dependencies": [7],
+      "speckit_task_ref": "T032,T033,T034",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify segment group detection identifies groups by contiguity not just style, tap wiring fires onRegionSelected, all tests pass.",
+        "success_criteria": [
+          "detectSegmentGroups() groups consecutive non-null SegmentStyle by value equality",
+          "Non-adjacent groups with same style are treated as separate regions (FR-017)",
+          "Segment DataRegion IDs follow format 'segment_<seriesId>_<startIndex>'",
+          "segmentGroupForPoint() returns correct DataRegion for point inside group, null for outside",
+          "Segment tap fires onRegionSelected with source=segment DataRegion",
+          "Unstyled point tap does not fire segment-based onRegionSelected",
+          "Existing onPointTap callback continues to co-fire alongside onRegionSelected",
+          "All promoted tests pass",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 9,
+      "phase_id": "phase-5",
+      "title": "Red: Failing tests for US4 box-select region analysis",
+      "description": "Write failing TDD widget tests for:\n1. Box-select drag from X=2.0 to X=8.0, verify onRegionSelected fires with DataRegion (source=boxSelect) containing correct series data in the X-range; assert callback fires synchronously upon drag completion; assert onSelectionChanged still fires alongside onRegionSelected (both callbacks co-fire per base spec integration contract)\n2. Active box-select region is cleared on click elsewhere (callback fires with null); starting a new box-select replaces the previous region; assert only one box-select DataRegion exists at a time (replacement, not accumulation)\n\nTest files:\n- test/red/unit/analysis/box_select_region_widget_test.dart\n\nCovers spec tasks: T037, T038",
+      "category": "INTEGRATION",
+      "dependencies": [4],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T037,T038",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify widget test file exists in test/red/, compiles, contains assertions for box-select region creation and clearing, fails with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/analysis/box_select_region_widget_test.dart exists with // @orchestra-task: 9",
+          "Tests cover: box-select drag creates DataRegion with source=boxSelect, correct X-range data",
+          "Tests cover: onSelectionChanged co-fires alongside onRegionSelected",
+          "Tests cover: click-elsewhere clears region (fires null), new box-select replaces previous",
+          "Tests cover: only one box-select region at a time (replacement semantics)",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 10,
+      "phase_id": "phase-5",
+      "title": "Green: Implement US4 box-select region flow & clearing",
+      "description": "Implement:\n1. Wire box-select flow: in EventHandlerManager._completeBoxSelection() (or equivalent), convert box rect to data-space X-range, build transient DataRegion (source=boxSelect) via RegionAnalyzer.filterPointsInRange(), fire onRegionSelected. Detection logic in lib/src/rendering/modules/event_handler_manager.dart, callback dispatch through BravenChartPlusState.\n2. Implement region clearing: on click-elsewhere or new interaction, fire onRegionSelected(null) and clear the transient box-select state. In lib/src/braven_chart_plus.dart\n3. Ensure selectedDataRegions getter includes the transient box-select region when active. In lib/src/braven_chart_plus.dart\n4. Box-select region callback must fire within 1 frame of drag completion (SC-008).\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass.\n\nCovers spec tasks: T039, T040, T041",
+      "category": "INTEGRATION",
+      "dependencies": [9],
+      "speckit_task_ref": "T039,T040,T041",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify box-select creates transient DataRegion, clearing works, selectedDataRegions includes box-select region, all tests pass.",
+        "success_criteria": [
+          "Box-select completion builds DataRegion with source=boxSelect and correct X-range data",
+          "Box rect is converted to data-space X-range coordinates",
+          "onRegionSelected fires synchronously on drag completion",
+          "onSelectionChanged continues to co-fire for point-level selection",
+          "Click-elsewhere fires onRegionSelected(null) and clears transient state (FR-014)",
+          "New box-select replaces previous region (FR-005 single-region selection)",
+          "selectedDataRegions getter includes active box-select region",
+          "All promoted tests pass",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 11,
+      "phase_id": "phase-6",
+      "title": "Red: Failing tests for US5 visual summary overlay",
+      "description": "Write failing TDD tests for:\n1. RegionSummaryRenderer.paint() — renders card with configured metrics, formats values, positions above region with inside-top fallback, handles multi-series display. In test/red/unit/rendering/modules/region_summary_renderer_test.dart\n2. Golden tests: overlay card appearance with min/max/avg metrics for 1 series, 2 series, and 3 series; include variants for both positions — above region (default) and inside-top fallback (when card would exceed chart top boundary). In test/red/golden/region_summary_overlay_test.dart\n\nTest files:\n- test/red/unit/rendering/modules/region_summary_renderer_test.dart\n- test/red/golden/region_summary_overlay_test.dart\n\nCovers spec tasks: T042, T043",
+      "category": "VISUAL",
+      "dependencies": [6],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T042,T043",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test files exist in test/red/, compile, contain assertions for overlay rendering and golden comparisons, fail with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/rendering/modules/region_summary_renderer_test.dart exists with // @orchestra-task: 11",
+          "Test file test/red/golden/region_summary_overlay_test.dart exists with // @orchestra-task: 11",
+          "Renderer tests cover: card rendering, metric formatting, above-region positioning, inside-top fallback, multi-series",
+          "Golden tests cover: 1-series, 2-series, 3-series overlay cards, both position variants",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 12,
+      "phase_id": "phase-6",
+      "title": "Green: Implement US5 RegionSummaryRenderer & overlay wiring",
+      "description": "Implement:\n1. RegionSummaryRenderer as a stateless const module (matching TooltipRenderer pattern) with paint(Canvas, Size, RegionSummary, RegionSummaryConfig, Rect regionBounds) method that renders a card with metric labels and values, including position calculation (center above region bounds, fall back to inside-top if card would exceed chart area top boundary). In lib/src/rendering/modules/region_summary_renderer.dart\n2. Add showRegionSummary (bool, default false) and regionSummaryConfig (RegionSummaryConfig?) properties to BravenChartPlus widget. In lib/src/braven_chart_plus.dart\n3. Wire overlay painting: extend _paintOverlayLayer() and _hasActiveOverlayContent() in ChartRenderBox to invoke RegionSummaryRenderer.paint() when showRegionSummary is true and a region is selected. In lib/src/rendering/chart_render_box.dart. Verify series layer cache (_seriesLayerPicture) is NOT invalidated by overlay repaint (FR-013).\n4. Add showRegionSummaryOverlay(DataRegion) and hideRegionSummaryOverlay() methods to BravenChartPlusState for programmatic overlay control. Write widget tests verifying overlay is dismissed on region deselection (US5 acceptance #3) and toggling showRegionSummary hides overlay.\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass. Update golden files.\n\nCovers spec tasks: T044, T046, T047, T048",
+      "category": "VISUAL",
+      "dependencies": [11],
+      "speckit_task_ref": "T044,T046,T047,T048",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify renderer follows TooltipRenderer pattern, overlay paints in Layer 2 without invalidating series cache, widget properties work, programmatic show/hide works, golden tests match.",
+        "success_criteria": [
+          "File lib/src/rendering/modules/region_summary_renderer.dart exists with RegionSummaryRenderer class",
+          "RegionSummaryRenderer is const and stateless (matches TooltipRenderer pattern)",
+          "paint() method renders card with metric labels and values from RegionSummaryConfig",
+          "Position calculation: center above region, fallback to inside-top when exceeding chart top",
+          "BravenChartPlus has showRegionSummary (bool, default false) and regionSummaryConfig properties",
+          "_paintOverlayLayer() invokes RegionSummaryRenderer when enabled and region selected",
+          "_hasActiveOverlayContent() returns true when region summary is active",
+          "Series layer cache (_seriesLayerPicture) is NOT invalidated by overlay repaint (FR-013, SC-007)",
+          "showRegionSummaryOverlay() and hideRegionSummaryOverlay() methods work programmatically",
+          "Overlay dismissed when region is deselected",
+          "All promoted tests and golden tests pass",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 13,
+      "phase_id": "phase-7",
+      "title": "Red: Failing tests for US6 custom analysis extensions",
+      "description": "Write failing TDD widget tests for:\n1. Register customRegionAnalysis callback returning {'NP': '250 W'}, select region, verify custom metrics appear in summary overlay card\n2. No custom callback registered → only built-in metrics shown, no error\n\nTest files:\n- test/red/unit/analysis/custom_analysis_widget_test.dart\n\nCovers spec tasks: T049, T050",
+      "category": "INTEGRATION",
+      "dependencies": [12],
+      "tdd_red_phase": true,
+      "speckit_task_ref": "T049,T050",
+      "verification": {
+        "test_strategy": "TDD red-phase: verify test file exists in test/red/, compiles, contains assertions for custom analysis callback integration, fails with assertion failures.",
+        "success_criteria": [
+          "Test file test/red/unit/analysis/custom_analysis_widget_test.dart exists with // @orchestra-task: 13",
+          "Tests cover: custom callback returns map, custom metrics appear in overlay",
+          "Tests cover: no callback registered, only built-in metrics, no error",
+          "All tests compile and fail with assertion failures (not compile errors)"
+        ]
+      }
+    },
+    {
+      "task_id": 14,
+      "phase_id": "phase-7",
+      "title": "Green: Implement US6 custom analysis hook & renderer update",
+      "description": "Implement:\n1. Add customRegionAnalysis (CustomRegionAnalysisCallback?) property to BravenChartPlus widget in lib/src/braven_chart_plus.dart\n2. Wire custom analysis: after computing RegionSummary, invoke customRegionAnalysis(region, summary) if non-null, merge returned Map<String, String> into overlay display data. In lib/src/braven_chart_plus.dart\n3. Update RegionSummaryRenderer.paint() to accept and display custom metric entries alongside built-in metrics. In lib/src/rendering/modules/region_summary_renderer.dart\n\nPromote test files from test/red/ to test/. Make all red-phase tests pass.\n\nCovers spec tasks: T051, T052, T053",
+      "category": "INTEGRATION",
+      "dependencies": [13],
+      "speckit_task_ref": "T051,T052,T053",
+      "verification": {
+        "test_strategy": "TDD green-phase: verify custom callback invoked after summary computation, custom metrics merged into overlay, null callback handled gracefully.",
+        "success_criteria": [
+          "BravenChartPlus has customRegionAnalysis property (CustomRegionAnalysisCallback?)",
+          "Custom callback invoked AFTER built-in RegionSummary is computed (FR-012)",
+          "Custom callback receives DataRegion and RegionSummary as parameters",
+          "Returned Map<String, String> is merged into overlay display data",
+          "Null callback results in no error — only built-in metrics shown",
+          "RegionSummaryRenderer.paint() renders custom metrics alongside built-in ones",
+          "All promoted tests pass",
+          "dart analyze reports zero issues for modified files"
+        ]
+      }
+    },
+    {
+      "task_id": 15,
+      "phase_id": "phase-8",
+      "title": "Performance benchmarks, edge-case tests & code quality",
+      "description": "1. Write performance benchmark: RegionAnalyzer.filterPointsInRange() with 100k sorted points completes under 10ms (SC-001), computeSeriesSummary() with 1k points completes under 5ms (SC-002); verify no measurable increase in series-layer paint time when hovering/crosshair is active with summary overlay visible. In test/benchmark/region_analysis_benchmark.dart\n2. Write edge-case unit tests: region X-range extends beyond data boundaries (returns only actual data per edge case spec), unsorted data fallback produces correct results, duplicate X values at boundary are included, multi-axis series where X values use different scales (filtering uses raw data coordinates per FR-008), analysis of region mid-stream produces correct results. In test/unit/analysis/region_analyzer_test.dart\n3. Run dart analyze on all new and modified files — zero issues required for: lib/src/models/data_region.dart, lib/src/models/region_summary.dart, lib/src/models/region_summary_config.dart, lib/src/analysis/region_analyzer.dart, lib/src/rendering/modules/region_summary_renderer.dart\n4. Add dartdoc comments with /// examples to all public APIs: DataRegion, RegionAnalyzer, RegionSummary, RegionSummaryConfig, new BravenChartPlus properties\n\nCovers spec tasks: T054, T055, T056, T057",
+      "category": "REFACTOR",
+      "dependencies": [4, 6, 8, 10, 12, 14],
+      "speckit_task_ref": "T054,T055,T056,T057",
+      "verification": {
+        "test_strategy": "Verify benchmarks exist and pass thresholds, edge-case tests pass, dart analyze clean, dartdoc on all public APIs.",
+        "success_criteria": [
+          "File test/benchmark/region_analysis_benchmark.dart exists with performance tests",
+          "filterPointsInRange with 100k points benchmark exists (SC-001 target: <10ms)",
+          "computeSeriesSummary with 1k points benchmark exists (SC-002 target: <5ms)",
+          "Edge-case tests in test/unit/analysis/region_analyzer_test.dart cover: beyond-boundary, unsorted fallback, boundary duplicates, multi-axis raw coordinates, streaming snapshot",
+          "dart analyze reports zero issues for all new/modified files",
+          "All public APIs (DataRegion, RegionAnalyzer, RegionSummary, RegionSummaryConfig, BravenChartPlus region properties) have dartdoc /// comments with examples",
+          "All edge-case tests pass"
+        ]
+      }
+    },
+    {
+      "task_id": 16,
+      "phase_id": "phase-8",
+      "title": "Demo page & main.dart navigation integration",
+      "description": "1. Create demo page showing all 3 region sources (annotation tap, segment tap, box-select) with summary overlay enabled. In example/lib/screens/region_analysis_demo.dart\n2. Update example/lib/main.dart to include navigation to the region analysis demo page\n\nThe demo should showcase:\n- A chart with range annotations that trigger onRegionSelected on tap\n- A chart with styled segments that trigger segment-group analysis on tap\n- A chart with box-select enabled for ad-hoc region analysis\n- Summary overlay enabled (showRegionSummary: true) with configured metrics\n- Custom analysis callback demonstrating domain-specific metrics\n- A sidebar or bottom panel displaying the DataRegion and RegionSummary data from callbacks\n\nCovers spec tasks: T058, T059",
+      "category": "INTEGRATION",
+      "dependencies": [14],
+      "speckit_task_ref": "T058,T059",
+      "verification": {
+        "test_strategy": "Verify demo page exists with all three region sources, navigation entry exists in main.dart, demo compiles and runs.",
+        "success_criteria": [
+          "File example/lib/screens/region_analysis_demo.dart exists",
+          "Demo page displays chart with range annotations and onRegionSelected callback",
+          "Demo page displays chart with styled segments and segment-tap analysis",
+          "Demo page displays chart with box-select for ad-hoc region analysis",
+          "Demo page enables showRegionSummary with configured metrics",
+          "Demo page includes customRegionAnalysis callback demonstration",
+          "example/lib/main.dart has navigation entry for region analysis demo",
+          "Demo compiles without errors (dart analyze example/lib/screens/region_analysis_demo.dart)"
+        ]
+      }
+    }
+  ],
+  "tdd_relationships": [
+    { "red_task_id": 1, "green_task_id": 2 },
+    { "red_task_id": 3, "green_task_id": 4 },
+    { "red_task_id": 5, "green_task_id": 6 },
+    { "red_task_id": 7, "green_task_id": 8 },
+    { "red_task_id": 9, "green_task_id": 10 },
+    { "red_task_id": 11, "green_task_id": 12 },
+    { "red_task_id": 13, "green_task_id": 14 }
+  ]
+}

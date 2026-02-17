@@ -1,0 +1,11 @@
+version: '1.0'
+sprintId: 006-segment-area-analysis
+sprintName: 006-segment-area-analysis
+goals: []
+architectureDecisions: []
+taskSummaries: []
+implementorPatterns: []
+compactionCount: 0
+lastCompactedAt: null
+createdAt: '2026-02-17T14:21:34.326Z'
+updatedAt: '2026-02-17T14:21:34.326Z'
