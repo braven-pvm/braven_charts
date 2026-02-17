@@ -17,6 +17,7 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/data_region.dart';
 import '../models/region_summary.dart';
+import '../models/segment_style.dart';
 
 /// Stateless utility class for region data analysis.
 ///
@@ -372,8 +373,63 @@ class RegionAnalyzer {
     String seriesId,
     List<ChartDataPoint> points,
   ) {
-    // TODO(task-8): Implement in green phase.
-    throw UnimplementedError('detectSegmentGroups not yet implemented');
+    if (points.isEmpty) {
+      return [];
+    }
+
+    final groups = <DataRegion>[];
+
+    int? groupStartIndex;
+    SegmentStyle? currentStyle;
+
+    for (int i = 0; i < points.length; i++) {
+      final point = points[i];
+      final style = point.segmentStyle;
+
+      if (style != null && style == currentStyle) {
+        // Continue the current group — same non-null style
+        continue;
+      }
+
+      // Flush the previous group (if any) before starting a new one
+      if (groupStartIndex != null) {
+        final groupPoints = points.sublist(groupStartIndex, i);
+        groups.add(
+          DataRegion(
+            id: 'segment_${seriesId}_$groupStartIndex',
+            startX: groupPoints.first.x,
+            endX: groupPoints.last.x,
+            source: DataRegionSource.segment,
+            seriesData: {seriesId: groupPoints},
+          ),
+        );
+      }
+
+      // Start a new group or reset
+      if (style != null) {
+        groupStartIndex = i;
+        currentStyle = style;
+      } else {
+        groupStartIndex = null;
+        currentStyle = null;
+      }
+    }
+
+    // Flush the last group if it extends to the end of the list
+    if (groupStartIndex != null) {
+      final groupPoints = points.sublist(groupStartIndex);
+      groups.add(
+        DataRegion(
+          id: 'segment_${seriesId}_$groupStartIndex',
+          startX: groupPoints.first.x,
+          endX: groupPoints.last.x,
+          source: DataRegionSource.segment,
+          seriesData: {seriesId: groupPoints},
+        ),
+      );
+    }
+
+    return groups;
   }
 
   /// Finds which segment group (if any) contains the given point index.
@@ -397,7 +453,34 @@ class RegionAnalyzer {
     List<ChartDataPoint> points,
     int pointIndex,
   ) {
-    // TODO(task-8): Implement in green phase.
-    throw UnimplementedError('segmentGroupForPoint not yet implemented');
+    if (pointIndex < 0 || pointIndex >= points.length) {
+      return null;
+    }
+
+    // Quick check: if the target point has no segment style, return null
+    if (points[pointIndex].segmentStyle == null) {
+      return null;
+    }
+
+    // Delegate to detectSegmentGroups and find the group containing pointIndex
+    final groups = detectSegmentGroups(seriesId, points);
+
+    for (final group in groups) {
+      // Check if pointIndex falls within this group's index range.
+      // The group's seriesData contains the actual points; we need
+      // to check by X-value range and point identity.
+      final groupPoints = group.seriesData[seriesId]!;
+      // The group contains consecutive points starting from the
+      // start index embedded in the ID.
+      final idParts = group.id.split('_');
+      final startIdx = int.parse(idParts.last);
+      final endIdx = startIdx + groupPoints.length - 1;
+
+      if (pointIndex >= startIdx && pointIndex <= endIdx) {
+        return group;
+      }
+    }
+
+    return null;
   }
 }

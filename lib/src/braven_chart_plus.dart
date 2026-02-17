@@ -2185,15 +2185,64 @@ class BravenChartPlusState extends State<BravenChartPlus> {
         final marker = _coordinator.hoveredMarker;
         if (marker != null && marker.seriesId == tappedElement.series.id) {
           final point = tappedElement.series.points[marker.markerIndex];
+          // onPointTap always co-fires for any point tap (per api-contracts.md s4)
           widget.onPointTap?.call(point, tappedElement.series.id);
+
+          // Segment-tap wiring: additionally fire onRegionSelected if the
+          // tapped point has a non-null segmentStyle (US3)
+          if (point.segmentStyle != null && widget.onRegionSelected != null) {
+            final segmentRegion = _regionAnalyzer.segmentGroupForPoint(
+              tappedElement.series.id,
+              tappedElement.series.points,
+              marker.markerIndex,
+            );
+            if (segmentRegion != null) {
+              // FR-005: single-region selection — replace, not accumulate
+              _regionSummaryCache.clear();
+              _selectedDataRegion = segmentRegion;
+              widget.onRegionSelected!(segmentRegion);
+            }
+          }
         } else {
-          widget.onSeriesSelected?.call(tappedElement.series.id);
+          // No specific marker hovered — find the nearest point to the tap
+          // position and check for segment-tap wiring.
+          final nearestIndex = _findNearestPointIndex(
+            tappedElement.series,
+            details.localPosition,
+          );
+          if (nearestIndex != null) {
+            final point = tappedElement.series.points[nearestIndex];
+            widget.onPointTap?.call(point, tappedElement.series.id);
+
+            // Segment-tap wiring for nearest point
+            if (point.segmentStyle != null && widget.onRegionSelected != null) {
+              final segmentRegion = _regionAnalyzer.segmentGroupForPoint(
+                tappedElement.series.id,
+                tappedElement.series.points,
+                nearestIndex,
+              );
+              if (segmentRegion != null) {
+                _regionSummaryCache.clear();
+                _selectedDataRegion = segmentRegion;
+                widget.onRegionSelected!(segmentRegion);
+              }
+            }
+          } else {
+            widget.onSeriesSelected?.call(tappedElement.series.id);
+          }
         }
       }
     }
 
-    // Region selection: fire onRegionSelected when the user taps a
-    // RangeAnnotationElement directly, taps the background within an
+    // Segment-tap fallback: if no element was directly hit but the tap
+    // is within the plot area, find the nearest styled point across all
+    // series and fire onRegionSelected. This handles touch taps and
+    // widget test scenarios where the tap doesn't precisely hit a line.
+    if (tappedElement == null || tappedElement is! SeriesElement) {
+      _trySegmentTapFallback(details.localPosition);
+    }
+
+    // Region selection: fire onRegionSelected when the user taps a    // RangeAnnotationElement directly, taps the background within an
     // annotation's X-range, or taps a series element within an annotation's
     // X-range (since series are drawn on top of annotations). Do NOT fire
     // when the user explicitly taps a different annotation type (threshold,
@@ -2310,6 +2359,106 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     _regionSummaryCache.clear();
     _selectedDataRegion = region;
     widget.onRegionSelected?.call(region);
+  }
+
+  /// Finds the index of the nearest data point to [widgetPosition] in
+  /// [series], or `null` if the chart render box or transform is unavailable.
+  ///
+  /// Uses the chart's coordinate transform to convert [widgetPosition]
+  /// (in widget-local coordinates) to data coordinates, then finds the
+  /// nearest point by X-distance in data space.
+  int? _findNearestPointIndex(ChartSeries series, Offset widgetPosition) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return null;
+
+    final transform = renderBox.transform;
+    if (transform == null) return null;
+
+    final points = series.points;
+    if (points.isEmpty) return null;
+
+    // Convert widget position to plot coordinates, then to data coordinates
+    final plotPos = renderBox.widgetToPlot(widgetPosition);
+    final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
+
+    // Find the nearest point by X-distance in data space
+    int nearestIndex = 0;
+    double nearestDist = (points[0].x - dataPos.dx).abs();
+
+    for (int i = 1; i < points.length; i++) {
+      final dist = (points[i].x - dataPos.dx).abs();
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIndex = i;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  /// Attempts segment-tap detection when no [SeriesElement] was directly hit.
+  ///
+  /// Converts [widgetPosition] to data coordinates, then scans all series
+  /// to find the nearest styled data point. If found, fires [onPointTap]
+  /// and [onRegionSelected] for the segment group.
+  void _trySegmentTapFallback(Offset widgetPosition) {
+    if (widget.onRegionSelected == null && widget.onPointTap == null) return;
+
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return;
+
+    final transform = renderBox.transform;
+    if (transform == null) return;
+
+    // Convert widget position to data coordinates
+    final plotPos = renderBox.widgetToPlot(widgetPosition);
+    final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
+
+    // Find the nearest styled point across all series
+    String? bestSeriesId;
+    int? bestIndex;
+    double bestDist = double.infinity;
+    List<ChartDataPoint>? bestSeriesPoints;
+
+    for (final series in widget.series) {
+      for (int i = 0; i < series.points.length; i++) {
+        final point = series.points[i];
+        if (point.segmentStyle == null) continue;
+
+        // Distance in data space (X only for nearest point on a line chart)
+        final dx = (point.x - dataPos.dx).abs();
+        if (dx < bestDist) {
+          bestDist = dx;
+          bestSeriesId = series.id;
+          bestIndex = i;
+          bestSeriesPoints = series.points;
+        }
+      }
+    }
+
+    if (bestSeriesId == null || bestIndex == null || bestSeriesPoints == null) {
+      return;
+    }
+
+    // Fire onPointTap for the nearest styled point
+    final point = bestSeriesPoints[bestIndex];
+    widget.onPointTap?.call(point, bestSeriesId);
+
+    // Fire onRegionSelected with the segment group
+    if (widget.onRegionSelected != null) {
+      final segmentRegion = _regionAnalyzer.segmentGroupForPoint(
+        bestSeriesId,
+        bestSeriesPoints,
+        bestIndex,
+      );
+      if (segmentRegion != null) {
+        _regionSummaryCache.clear();
+        _selectedDataRegion = segmentRegion;
+        widget.onRegionSelected!(segmentRegion);
+      }
+    }
   }
 
   void _handleTapUp(TapUpDetails details) {

@@ -433,8 +433,13 @@ class EventHandlerManager {
     // Use unified hit testing with priority-based conflict resolution
     final hitElement = _delegate.hitTestElements(position);
 
-    coordinator.startInteraction(position, element: hitElement);
+    // Update hovered marker on pointer-down so that tap handlers in the
+    // widget layer can access the nearest marker info. Previously this was
+    // only done during pointer-hover events, which meant that taps without
+    // prior hover (common in touch and widget tests) had no marker info.
+    _updateHoveredMarker(position);
 
+    coordinator.startInteraction(position, element: hitElement);
     // Check if we hit a resize handle (priority 7)
     if (event.buttons == kPrimaryMouseButton &&
         hitElement is ResizeHandleElement) {
@@ -1645,8 +1650,15 @@ class EventHandlerManager {
 
     for (final element in _delegate.elements.whereType<SeriesElement>()) {
       final series = element.series;
-      if (series is LineChartSeries && !series.showDataPointMarkers) continue;
-
+      // Skip LineChartSeries without visible markers UNLESS any point has a
+      // segmentStyle — styled segment points need marker detection for
+      // segment-tap wiring even when showDataPointMarkers is false.
+      if (series is LineChartSeries && !series.showDataPointMarkers) {
+        final hasStyledPoints = series.points.any(
+          (p) => p.segmentStyle != null,
+        );
+        if (!hasStyledPoints) continue;
+      }
       for (int i = 0; i < element.series.points.length; i++) {
         final point = element.series.points[i];
         final markerPlotPos = transform.dataToPlot(point.x, point.y);
