@@ -1930,12 +1930,14 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
+    // Region summary overlay card is visible
+    if (_overlaySummary != null) {
+      return true;
+    }
     return false;
   }
 
-  void _paintOverlayLayer(Canvas canvas, Size size) {
-    // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
-    // Paint preview selection indicators (during box drag)
+  void _paintOverlayLayer(Canvas canvas, Size size) {    // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       final previewElements = coordinator.previewSelectedElements;

@@ -168,8 +168,7 @@ class RegionSummaryRenderer {
     // 3. Compute card position
     // -------------------------------------------------------------------
     final cardLeft = (regionBounds.center.dx - cardWidth / 2)
-        .clamp(0.0, (size.width - cardWidth).clampMin(0.0));
-
+        .clamp(0.0, (size.width - cardWidth).clamp(0.0, double.infinity));
     final effectivePosition = _effectivePosition(
       config.position,
       regionBounds,
@@ -362,12 +361,4 @@ class _RowData {
   final String? value;
   final bool isHeader;
   final bool isSpacer;
-}
-
-// ---------------------------------------------------------------------------
-// Extension for cleaner clamping
-// ---------------------------------------------------------------------------
-extension on double {
-  // ignore: unused_element
-  double clampMin(double min) => this < min ? min : this;
 }
