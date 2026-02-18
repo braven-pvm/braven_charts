@@ -1350,6 +1350,13 @@ class ChartRenderBox extends RenderBox {
     // Generate new elements using current transform
     _elements = generator(transform);
 
+    // Refresh any tracked drag/resize references in the event handler so they
+    // point to the new element instances instead of stale old ones. This
+    // prevents the "frozen annotation during drag" bug that occurs when a
+    // parent widget rebuild (e.g., from onRegionSelected → setState) causes
+    // element regeneration mid-interaction.
+    _eventHandlerManager.refreshTrackedElements(_elements);
+
     // Restore selection state on new elements that match by ID
     if (selectedIds.isNotEmpty) {
       // Clear old selection (references to old elements)

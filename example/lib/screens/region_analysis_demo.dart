@@ -81,9 +81,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         ChartDataPoint(
           x: x,
           y: y,
-          segmentStyle: inHighZone
-              ? const SegmentStyle(color: Colors.orange, strokeWidth: 3.5)
-              : null,
+          segmentStyle: inHighZone ? const SegmentStyle(color: Colors.orange, strokeWidth: 3.5) : null,
         ),
       );
     }
@@ -119,11 +117,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Region Analysis'),
-        backgroundColor: theme.colorScheme.surface,
-        elevation: 1,
-      ),
+      appBar: AppBar(title: const Text('Region Analysis'), backgroundColor: theme.colorScheme.surface, elevation: 1),
       body: Column(
         children: [
           // ── Instructions ──────────────────────────────────────────────────
@@ -148,12 +142,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Three ways to select a region:',
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text('Three ways to select a region:', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,6 +192,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
             color: Colors.blue,
             interpolation: LineInterpolation.bezier,
             strokeWidth: 2.0,
+            showDataPointMarkers: false,
           ),
           // Cosine with styled segments – supports segment tap
           LineChartSeries(
@@ -212,6 +202,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
             color: Colors.deepOrange.withValues(alpha: 0.7),
             interpolation: LineInterpolation.bezier,
             strokeWidth: 2.0,
+            showDataPointMarkers: false,
           ),
         ],
 
@@ -221,13 +212,8 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         // ── Region summary overlay ────────────────────────────────────────
         showRegionSummary: true,
         regionSummaryConfig: RegionSummaryConfig(
-          metrics: {
-            RegionMetric.min,
-            RegionMetric.max,
-            RegionMetric.average,
-            RegionMetric.count,
-          },
-          position: RegionSummaryPosition.aboveRegion,
+          metrics: {RegionMetric.min, RegionMetric.max, RegionMetric.average, RegionMetric.count},
+          position: RegionSummaryPosition.insideBottom,
         ),
 
         // ── Box-select & interaction ──────────────────────────────────────
@@ -235,6 +221,8 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
           enableZoom: true,
           enablePan: true,
           enableSelection: true,
+          enableFocusOnHover: true,
+          tooltip: TooltipConfig(enabled: false),
         ),
         // ── Axis config ───────────────────────────────────────────────────
         xAxisConfig: const XAxisConfig(label: 'X'),
@@ -261,19 +249,13 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         color: theme.colorScheme.surfaceContainerHighest,
         child: Text(
           'No region selected — try one of the three interactions above.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.hintColor,
-            fontStyle: FontStyle.italic,
-          ),
+          style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor, fontStyle: FontStyle.italic),
         ),
       );
     }
 
     // Count total data points across all series in the region.
-    final totalPoints = region.seriesData.values.fold<int>(
-      0,
-      (sum, pts) => sum + pts.length,
-    );
+    final totalPoints = region.seriesData.values.fold<int>(0, (sum, pts) => sum + pts.length);
     final seriesCount = region.seriesData.length;
 
     final sourceLabel = switch (region.source) {
@@ -298,16 +280,8 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _InfoChip(label: 'Source', value: sourceLabel, color: sourceColor),
-          _InfoChip(
-            label: 'Series',
-            value: '$seriesCount',
-            color: theme.colorScheme.primary,
-          ),
-          _InfoChip(
-            label: 'Points',
-            value: '$totalPoints',
-            color: theme.colorScheme.primary,
-          ),
+          _InfoChip(label: 'Series', value: '$seriesCount', color: theme.colorScheme.primary),
+          _InfoChip(label: 'Points', value: '$totalPoints', color: theme.colorScheme.primary),
           _InfoChip(
             label: 'X range',
             value:
@@ -325,11 +299,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
 
 /// A single labelled metric chip in the bottom info panel.
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _InfoChip({required this.label, required this.value, required this.color});
 
   final String label;
   final String value;
@@ -341,17 +311,11 @@ class _InfoChip extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor),
-        ),
+        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
         const SizedBox(height: 2),
         Text(
           value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+          style: theme.textTheme.bodyMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -360,12 +324,7 @@ class _InfoChip extends StatelessWidget {
 
 /// A single instruction item in the banner.
 class _InstructionItem extends StatelessWidget {
-  const _InstructionItem({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.detail,
-  });
+  const _InstructionItem({required this.icon, required this.color, required this.label, required this.detail});
 
   final IconData icon;
   final Color color;
@@ -387,10 +346,7 @@ class _InstructionItem extends StatelessWidget {
               Text(label, style: theme.textTheme.bodySmall),
               Text(
                 detail,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.hintColor,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor, fontStyle: FontStyle.italic),
               ),
             ],
           ),

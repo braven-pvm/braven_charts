@@ -39,24 +39,31 @@ class RegionSummaryRenderer {
   const RegionSummaryRenderer();
 
   // ---------------------------------------------------------------------------
-  // Design constants
+  // Design constants — subtle, compact, low-prominence style
   // ---------------------------------------------------------------------------
 
-  static const double _cardPaddingH = 12.0;
-  static const double _cardPaddingV = 8.0;
-  static const double _headerFontSize = 11.0;
-  static const double _valueFontSize = 12.0;
-  static const double _rowSpacing = 3.0;
-  static const double _seriesSpacing = 8.0;
-  static const double _cardShadowBlur = 6.0;
-  static const double _cardBorderRadius = 6.0;
+  static const double _cardPaddingH = 10.0;
+  static const double _cardPaddingV = 6.0;
+  static const double _headerFontSize = 9.5;
+  static const double _metricFontSize = 9.5;
+  static const double _rowSpacing = 2.0;
+  static const double _seriesSpacing = 6.0;
+  static const double _cardShadowBlur = 4.0;
+  static const double _cardBorderRadius = 5.0;
   static const double _cardGapAbove = 6.0; // gap between card and regionBounds
 
-  static const ui.Color _cardBackground = ui.Color(0xF2FFFFFF);
-  static const ui.Color _cardBorder = ui.Color(0xFFCCCCCC);
-  static const ui.Color _cardShadow = ui.Color(0x33000000);
-  static const ui.Color _headerColor = ui.Color(0xFF555555);
-  static const ui.Color _valueColor = ui.Color(0xFF111111);
+  // Glassy white card with a very faint tint
+  static const ui.Color _cardBackground = ui.Color(0xEEF9FAFB);
+  static const ui.Color _cardBorder = ui.Color(0xFFDDE1E6);
+  static const ui.Color _cardShadow = ui.Color(0x18000000);
+  // Series header — medium-weight, muted blue-grey
+  static const ui.Color _headerColor = ui.Color(0xFF6B7A8D);
+  // Metric label — light grey
+  static const ui.Color _labelColor = ui.Color(0xFF8C96A3);
+  // Metric value — dark but not black
+  static const ui.Color _valueColor = ui.Color(0xFF2E3A47);
+  // Separator line between series blocks
+  static const ui.Color _dividerColor = ui.Color(0xFFE4E8ED);
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -83,13 +90,7 @@ class RegionSummaryRenderer {
   /// const renderer = RegionSummaryRenderer();
   /// renderer.paint(canvas, size, regionSummary, summaryConfig, boundsRect);
   /// ```
-  void paint(
-    ui.Canvas canvas,
-    ui.Size size,
-    RegionSummary summary,
-    RegionSummaryConfig config,
-    Rect regionBounds,
-  ) {
+  void paint(ui.Canvas canvas, ui.Size size, RegionSummary summary, RegionSummaryConfig config, Rect regionBounds) {
     // Nothing to render when there are no metrics configured, or no series.
     if (config.metrics.isEmpty || summary.seriesSummaries.isEmpty) {
       return;
@@ -116,25 +117,12 @@ class RegionSummaryRenderer {
         if (rawValue == null) continue;
 
         final formatted = _formatValue(rawValue, seriesSummary.unit, config);
-        rows.add(
-          _RowData(
-            label: metric.displayLabel,
-            value: formatted,
-            isHeader: false,
-          ),
-        );
+        rows.add(_RowData(label: metric.displayLabel, value: formatted, isHeader: false));
       }
 
       // Add spacing row between series (not after last series)
       if (i < seriesEntries.length - 1) {
-        rows.add(
-          const _RowData(
-            label: '',
-            value: null,
-            isHeader: false,
-            isSpacer: true,
-          ),
-        );
+        rows.add(const _RowData(label: '', value: null, isHeader: false, isSpacer: true));
       }
     }
 
@@ -154,9 +142,7 @@ class RegionSummaryRenderer {
         continue;
       }
 
-      final painter = row.isHeader
-          ? _buildHeaderPainter(row.label)
-          : _buildRowPainter(row.label, row.value ?? '');
+      final painter = row.isHeader ? _buildHeaderPainter(row.label) : _buildRowPainter(row.label, row.value ?? '');
       painter.layout();
       textPainters.add(painter);
       if (painter.width > maxWidth) maxWidth = painter.width;
@@ -174,15 +160,8 @@ class RegionSummaryRenderer {
     // -------------------------------------------------------------------
     // 3. Compute card position
     // -------------------------------------------------------------------
-    final cardLeft = (regionBounds.center.dx - cardWidth / 2).clamp(
-      0.0,
-      (size.width - cardWidth).clamp(0.0, double.infinity),
-    );
-    final effectivePosition = _effectivePosition(
-      config.position,
-      regionBounds,
-      cardHeight,
-    );
+    final cardLeft = (regionBounds.center.dx - cardWidth / 2).clamp(0.0, (size.width - cardWidth).clamp(0.0, double.infinity));
+    final effectivePosition = _effectivePosition(config.position, regionBounds, cardHeight);
 
     final double cardTop;
     switch (effectivePosition) {
@@ -202,13 +181,7 @@ class RegionSummaryRenderer {
     // -------------------------------------------------------------------
     // 4. Draw shadow
     // -------------------------------------------------------------------
-    final shadowPath = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          cardRect.shift(const Offset(0, 2)),
-          const Radius.circular(_cardBorderRadius),
-        ),
-      );
+    final shadowPath = Path()..addRRect(RRect.fromRectAndRadius(cardRect.shift(const Offset(0, 2)), const Radius.circular(_cardBorderRadius)));
     canvas.drawPath(
       shadowPath,
       Paint()
@@ -219,10 +192,7 @@ class RegionSummaryRenderer {
     // -------------------------------------------------------------------
     // 5. Draw card background
     // -------------------------------------------------------------------
-    final rrect = RRect.fromRectAndRadius(
-      cardRect,
-      const Radius.circular(_cardBorderRadius),
-    );
+    final rrect = RRect.fromRectAndRadius(cardRect, const Radius.circular(_cardBorderRadius));
     canvas.drawRRect(rrect, Paint()..color = _cardBackground);
     canvas.drawRRect(
       rrect,
@@ -233,12 +203,21 @@ class RegionSummaryRenderer {
     );
 
     // -------------------------------------------------------------------
-    // 6. Paint text rows
+    // 6. Paint text rows (spacer rows draw a thin divider line)
     // -------------------------------------------------------------------
     var y = cardTop + _cardPaddingV;
     for (var i = 0; i < rows.length; i++) {
       final row = rows[i];
       if (row.isSpacer) {
+        // Thin divider centred in the spacer gap
+        final dividerY = y + _seriesSpacing / 2;
+        canvas.drawLine(
+          Offset(cardLeft + _cardPaddingH, dividerY),
+          Offset(cardLeft + cardWidth - _cardPaddingH, dividerY),
+          Paint()
+            ..color = _dividerColor
+            ..strokeWidth = 0.5,
+        );
         y += _seriesSpacing;
         continue;
       }
@@ -254,11 +233,7 @@ class RegionSummaryRenderer {
 
   /// Determines the effective position, applying the insideTop fallback when
   /// [RegionSummaryPosition.aboveRegion] would clip past the canvas top.
-  RegionSummaryPosition _effectivePosition(
-    RegionSummaryPosition requested,
-    Rect regionBounds,
-    double cardHeight,
-  ) {
+  RegionSummaryPosition _effectivePosition(RegionSummaryPosition requested, Rect regionBounds, double cardHeight) {
     if (requested == RegionSummaryPosition.aboveRegion) {
       // Fall back to insideTop if card would extend above the canvas.
       final projectedTop = regionBounds.top - cardHeight - _cardGapAbove;
@@ -301,41 +276,31 @@ class RegionSummaryRenderer {
     return formatted;
   }
 
-  /// Builds a [TextPainter] for a series header (bold, muted colour).
+  /// Builds a [TextPainter] for a series header — medium-weight, muted.
   TextPainter _buildHeaderPainter(String label) {
     return TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(
-          fontSize: _headerFontSize,
-          fontWeight: FontWeight.w700,
-          color: _headerColor,
-        ),
+        style: const TextStyle(fontSize: _headerFontSize, fontWeight: FontWeight.w600, color: _headerColor, letterSpacing: 0.2),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
   }
 
-  /// Builds a [TextPainter] for a metric row: "Label: value".
+  /// Builds a [TextPainter] for a metric row: "label  value".
+  ///
+  /// The label is light grey and the value slightly darker for soft hierarchy.
   TextPainter _buildRowPainter(String label, String value) {
     return TextPainter(
       text: TextSpan(
         children: [
           TextSpan(
-            text: '$label: ',
-            style: const TextStyle(
-              fontSize: _valueFontSize,
-              fontWeight: FontWeight.w400,
-              color: _headerColor,
-            ),
+            text: '$label  ',
+            style: const TextStyle(fontSize: _metricFontSize, fontWeight: FontWeight.w400, color: _labelColor),
           ),
           TextSpan(
             text: value,
-            style: const TextStyle(
-              fontSize: _valueFontSize,
-              fontWeight: FontWeight.w600,
-              color: _valueColor,
-            ),
+            style: const TextStyle(fontSize: _metricFontSize, fontWeight: FontWeight.w600, color: _valueColor),
           ),
         ],
       ),
@@ -358,12 +323,7 @@ class RegionSummaryRenderer {
 
 /// Internal utility for building the card row list.
 class _RowData {
-  const _RowData({
-    required this.label,
-    required this.value,
-    required this.isHeader,
-    this.isSpacer = false,
-  });
+  const _RowData({required this.label, required this.value, required this.isHeader, this.isSpacer = false});
 
   final String label;
   final String? value;

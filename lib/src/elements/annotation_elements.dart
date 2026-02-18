@@ -24,13 +24,10 @@ enum EdgeLabelPosition { left, right, top, bottom }
 ///
 /// Marks a specific data point with a custom marker shape and color.
 class PointAnnotationElement extends ChartElement {
-  PointAnnotationElement({
-    required this.annotation,
-    required this.series,
-    required this.transform,
-  }) : _isSelected = false,
-       _isHovered = false,
-       _currentTransform = transform {
+  PointAnnotationElement({required this.annotation, required this.series, required this.transform})
+    : _isSelected = false,
+      _isHovered = false,
+      _currentTransform = transform {
     // Get the data point from the series and store data coordinates
     if (annotation.dataPointIndex < series.points.length) {
       final point = series.points[annotation.dataPointIndex];
@@ -47,8 +44,7 @@ class PointAnnotationElement extends ChartElement {
   Offset? _dataPosition; // Data coordinates (never changes)
   bool _isSelected;
   bool _isHovered;
-  int?
-  _candidateDataPointIndex; // For drag preview - shows where annotation will move to
+  int? _candidateDataPointIndex; // For drag preview - shows where annotation will move to
 
   /// Cached label TextPainter to avoid recreating on every bounds/paint call.
   TextPainter? _cachedLabelPainter;
@@ -61,10 +57,7 @@ class PointAnnotationElement extends ChartElement {
 
     final textStyle = annotation.style.textStyle;
     final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    _cachedLabelPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    _cachedLabelPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
     _cachedLabelSize = _cachedLabelPainter!.size;
   }
 
@@ -87,24 +80,17 @@ class PointAnnotationElement extends ChartElement {
   /// Recalculate screen position using current transform.
   Offset? _getScreenPosition() {
     if (_dataPosition == null) return null;
-    final screenPos = _currentTransform.dataToPlot(
-      _dataPosition!.dx,
-      _dataPosition!.dy,
-    );
+    final screenPos = _currentTransform.dataToPlot(_dataPosition!.dx, _dataPosition!.dy);
     return screenPos + annotation.offset;
   }
 
   /// Get screen position for candidate data point (during drag preview).
   Offset? _getCandidateScreenPosition() {
-    if (_candidateDataPointIndex == null ||
-        _candidateDataPointIndex! >= series.points.length) {
+    if (_candidateDataPointIndex == null || _candidateDataPointIndex! >= series.points.length) {
       return null;
     }
     final candidatePoint = series.points[_candidateDataPointIndex!];
-    final screenPos = _currentTransform.dataToPlot(
-      candidatePoint.x,
-      candidatePoint.y,
-    );
+    final screenPos = _currentTransform.dataToPlot(candidatePoint.x, candidatePoint.y);
     return screenPos + annotation.offset;
   }
 
@@ -129,22 +115,13 @@ class PointAnnotationElement extends ChartElement {
     final screenPos = _getScreenPosition();
     if (screenPos == null) return null;
 
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth =
-        _cachedLabelSize!.width + padding.left + padding.right;
-    final containerHeight =
-        _cachedLabelSize!.height + padding.top + padding.bottom;
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = _cachedLabelSize!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelSize!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Label positioned to the right of the marker, vertically centered
-    return Rect.fromLTWH(
-      screenPos.dx + annotation.markerSize + labelMargin,
-      screenPos.dy - containerHeight / 2,
-      containerWidth,
-      containerHeight,
-    );
+    return Rect.fromLTWH(screenPos.dx + annotation.markerSize + labelMargin, screenPos.dy - containerHeight / 2, containerWidth, containerHeight);
   }
 
   @override
@@ -202,21 +179,14 @@ class PointAnnotationElement extends ChartElement {
     if (screenPos == null) return;
 
     // If dragging, show preview at candidate position
-    if (_candidateDataPointIndex != null &&
-        _candidateDataPointIndex != annotation.dataPointIndex) {
+    if (_candidateDataPointIndex != null && _candidateDataPointIndex != annotation.dataPointIndex) {
       final candidatePos = _getCandidateScreenPosition();
       if (candidatePos != null) {
         // Draw ghost marker at original position (semi-transparent)
         final ghostPaint = Paint()
           ..color = annotation.markerColor.withValues(alpha: 0.3)
           ..style = PaintingStyle.fill;
-        _drawMarker(
-          canvas,
-          screenPos,
-          annotation.markerShape,
-          annotation.markerSize,
-          ghostPaint,
-        );
+        _drawMarker(canvas, screenPos, annotation.markerShape, annotation.markerSize, ghostPaint);
 
         // Draw ghost label at original position (if present)
         if (annotation.label != null && annotation.label!.isNotEmpty) {
@@ -227,26 +197,14 @@ class PointAnnotationElement extends ChartElement {
         final previewPaint = Paint()
           ..color = annotation.markerColor.withValues(alpha: 0.8)
           ..style = PaintingStyle.fill;
-        _drawMarker(
-          canvas,
-          candidatePos,
-          annotation.markerShape,
-          annotation.markerSize * 1.2,
-          previewPaint,
-        );
+        _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, previewPaint);
 
         // Draw outline on preview marker
         final outlinePaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.0;
-        _drawMarker(
-          canvas,
-          candidatePos,
-          annotation.markerShape,
-          annotation.markerSize * 1.2,
-          outlinePaint,
-        );
+        _drawMarker(canvas, candidatePos, annotation.markerShape, annotation.markerSize * 1.2, outlinePaint);
 
         // Draw preview label at candidate position (if present)
         if (annotation.label != null && annotation.label!.isNotEmpty) {
@@ -267,9 +225,7 @@ class PointAnnotationElement extends ChartElement {
     }
 
     // Draw marker slightly larger when selected
-    final markerSize = _isSelected
-        ? annotation.markerSize * 1.2
-        : annotation.markerSize;
+    final markerSize = _isSelected ? annotation.markerSize * 1.2 : annotation.markerSize;
     _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, paint);
 
     // Draw selection border (simple ring around the marker)
@@ -281,13 +237,7 @@ class PointAnnotationElement extends ChartElement {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
       // Draw border slightly larger than the marker
-      _drawMarker(
-        canvas,
-        screenPos,
-        annotation.markerShape,
-        markerSize + 6,
-        borderPaint,
-      );
+      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize + 6, borderPaint);
     }
 
     // Draw label if present
@@ -296,13 +246,7 @@ class PointAnnotationElement extends ChartElement {
     }
   }
 
-  void _drawMarker(
-    Canvas canvas,
-    Offset center,
-    MarkerShape shape,
-    double size,
-    Paint paint,
-  ) {
+  void _drawMarker(Canvas canvas, Offset center, MarkerShape shape, double size, Paint paint) {
     final radius = size / 2;
 
     switch (shape) {
@@ -391,12 +335,7 @@ class PointAnnotationElement extends ChartElement {
     }
   }
 
-  void _drawLabel(
-    Canvas canvas,
-    Offset position,
-    String label, {
-    double alpha = 1.0,
-  }) {
+  void _drawLabel(Canvas canvas, Offset position, String label, {double alpha = 1.0}) {
     if (_cachedLabelSize == null) return;
 
     // Use cached painter for full opacity, create new one for ghost effect
@@ -404,23 +343,16 @@ class PointAnnotationElement extends ChartElement {
     if (alpha < 1.0) {
       // Ghost effect needs modified color
       final baseTextStyle = annotation.style.textStyle;
-      final textStyle = baseTextStyle.copyWith(
-        color: (baseTextStyle.color ?? Colors.black).withValues(alpha: alpha),
-      );
+      final textStyle = baseTextStyle.copyWith(color: (baseTextStyle.color ?? Colors.black).withValues(alpha: alpha));
       final textSpan = TextSpan(text: label, style: textStyle);
-      textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
+      textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
     } else {
       // Use cached painter for normal rendering
       textPainter = _cachedLabelPainter!;
     }
 
     // Get padding from style or use default
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
     // Calculate label container dimensions (includes padding)
     final containerWidth = textPainter.width + padding.left + padding.right;
@@ -439,41 +371,31 @@ class PointAnnotationElement extends ChartElement {
 
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
-      final bgColor = alpha < 1.0
-          ? annotation.style.backgroundColor!.withValues(alpha: alpha)
-          : annotation.style.backgroundColor!;
+      final bgColor = alpha < 1.0 ? annotation.style.backgroundColor!.withValues(alpha: alpha) : annotation.style.backgroundColor!;
       final bgPaint = Paint()
         ..color = bgColor
         ..style = PaintingStyle.fill;
 
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, bgPaint);
     }
 
     // Draw border if specified
-    if (annotation.style.borderColor != null &&
-        annotation.style.borderWidth > 0) {
-      final borderColor = alpha < 1.0
-          ? annotation.style.borderColor!.withValues(alpha: alpha)
-          : annotation.style.borderColor!;
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
+      final borderColor = alpha < 1.0 ? annotation.style.borderColor!.withValues(alpha: alpha) : annotation.style.borderColor!;
       final borderPaint = Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = annotation.style.borderWidth;
 
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, borderPaint);
     }
 
     // Draw text inside container (accounting for padding)
-    final textPosition = Offset(
-      bgRect.left + padding.left,
-      bgRect.top + padding.top,
-    );
+    final textPosition = Offset(bgRect.left + padding.left, bgRect.top + padding.top);
     textPainter.paint(canvas, textPosition);
   }
 
@@ -491,11 +413,7 @@ class PointAnnotationElement extends ChartElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = PointAnnotationElement(
-      annotation: annotation,
-      series: series,
-      transform: transform,
-    );
+    final copy = PointAnnotationElement(annotation: annotation, series: series, transform: transform);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._dataPosition = _dataPosition;
@@ -511,10 +429,7 @@ class PointAnnotationElement extends ChartElement {
 /// Similar to [PointAnnotationElement] but not tied to any series.
 /// Uses explicit x/y coordinates for positioning.
 class PinAnnotationElement extends ChartElement {
-  PinAnnotationElement({required this.annotation, required this.transform})
-    : _isSelected = false,
-      _isHovered = false,
-      _currentTransform = transform {
+  PinAnnotationElement({required this.annotation, required this.transform}) : _isSelected = false, _isHovered = false, _currentTransform = transform {
     _cacheLabelPainter();
   }
 
@@ -539,10 +454,7 @@ class PinAnnotationElement extends ChartElement {
 
     final textStyle = annotation.style.textStyle;
     final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    _cachedLabelPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    _cachedLabelPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
     _cachedLabelSize = _cachedLabelPainter!.size;
   }
 
@@ -564,8 +476,7 @@ class PinAnnotationElement extends ChartElement {
   }
 
   /// Get current temp position (if dragging).
-  (double, double)? get tempPosition =>
-      _tempX != null && _tempY != null ? (_tempX!, _tempY!) : null;
+  (double, double)? get tempPosition => _tempX != null && _tempY != null ? (_tempX!, _tempY!) : null;
 
   /// Recalculate screen position using current transform.
   Offset _getScreenPosition() {
@@ -591,22 +502,13 @@ class PinAnnotationElement extends ChartElement {
 
     final screenPos = _getScreenPosition();
 
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth =
-        _cachedLabelSize!.width + padding.left + padding.right;
-    final containerHeight =
-        _cachedLabelSize!.height + padding.top + padding.bottom;
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = _cachedLabelSize!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelSize!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Label positioned to the right of the marker, vertically centered
-    return Rect.fromLTWH(
-      screenPos.dx + annotation.markerSize + labelMargin,
-      screenPos.dy - containerHeight / 2,
-      containerWidth,
-      containerHeight,
-    );
+    return Rect.fromLTWH(screenPos.dx + annotation.markerSize + labelMargin, screenPos.dy - containerHeight / 2, containerWidth, containerHeight);
   }
 
   @override
@@ -668,9 +570,7 @@ class PinAnnotationElement extends ChartElement {
     }
 
     // Draw marker slightly larger when selected
-    final markerSize = _isSelected
-        ? annotation.markerSize * 1.2
-        : annotation.markerSize;
+    final markerSize = _isSelected ? annotation.markerSize * 1.2 : annotation.markerSize;
     _drawMarker(canvas, screenPos, annotation.markerShape, markerSize, paint);
 
     // Draw selection border
@@ -679,13 +579,7 @@ class PinAnnotationElement extends ChartElement {
         ..color = annotation.markerColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
-      _drawMarker(
-        canvas,
-        screenPos,
-        annotation.markerShape,
-        markerSize + 6,
-        borderPaint,
-      );
+      _drawMarker(canvas, screenPos, annotation.markerShape, markerSize + 6, borderPaint);
     }
 
     // Draw drag value label during drag
@@ -699,13 +593,7 @@ class PinAnnotationElement extends ChartElement {
     }
   }
 
-  void _drawMarker(
-    Canvas canvas,
-    Offset center,
-    MarkerShape shape,
-    double size,
-    Paint paint,
-  ) {
+  void _drawMarker(Canvas canvas, Offset center, MarkerShape shape, double size, Paint paint) {
     final radius = size / 2;
 
     switch (shape) {
@@ -797,13 +685,9 @@ class PinAnnotationElement extends ChartElement {
   void _drawLabel(Canvas canvas, Offset position, String label) {
     if (_cachedLabelPainter == null) return;
 
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final containerWidth =
-        _cachedLabelPainter!.width + padding.left + padding.right;
-    final containerHeight =
-        _cachedLabelPainter!.height + padding.top + padding.bottom;
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final containerWidth = _cachedLabelPainter!.width + padding.left + padding.right;
+    final containerHeight = _cachedLabelPainter!.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
     // Position label container to the right of the marker, vertically centered
@@ -819,40 +703,30 @@ class PinAnnotationElement extends ChartElement {
       final bgPaint = Paint()
         ..color = annotation.style.backgroundColor!
         ..style = PaintingStyle.fill;
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, bgPaint);
     }
 
     // Draw border if specified
-    if (annotation.style.borderColor != null &&
-        annotation.style.borderWidth > 0) {
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
       final borderPaint = Paint()
         ..color = annotation.style.borderColor!
         ..style = PaintingStyle.stroke
         ..strokeWidth = annotation.style.borderWidth;
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, borderPaint);
     }
 
     // Draw text inside container using cached painter
-    final textPosition = Offset(
-      bgRect.left + padding.left,
-      bgRect.top + padding.top,
-    );
+    final textPosition = Offset(bgRect.left + padding.left, bgRect.top + padding.top);
     _cachedLabelPainter!.paint(canvas, textPosition);
   }
 
   /// Draws coordinate value labels during drag (similar to ThresholdAnnotation).
   void _drawDragValueLabel(Canvas canvas, Size size, Offset screenPos) {
-    const textStyle = TextStyle(
-      color: Color(0xFF000000),
-      fontSize: 10,
-      backgroundColor: Color(0xF0FFFFFF),
-    );
+    const textStyle = TextStyle(color: Color(0xFF000000), fontSize: 10, backgroundColor: Color(0xF0FFFFFF));
 
     const labelPadding = 4.0;
     final labelBackgroundPaint = Paint()..color = const Color(0xF0FFFFFF);
@@ -871,14 +745,8 @@ class PinAnnotationElement extends ChartElement {
     double labelY = screenPos.dy + annotation.markerSize + 8;
 
     // Clamp to keep within bounds
-    labelX = labelX.clamp(
-      labelPadding,
-      _currentTransform.plotWidth - textPainter.width - labelPadding,
-    );
-    labelY = labelY.clamp(
-      labelPadding,
-      _currentTransform.plotHeight - textPainter.height - labelPadding,
-    );
+    labelX = labelX.clamp(labelPadding, _currentTransform.plotWidth - textPainter.width - labelPadding);
+    labelY = labelY.clamp(labelPadding, _currentTransform.plotHeight - textPainter.height - labelPadding);
 
     // Draw background
     final bgRect = Rect.fromLTWH(
@@ -922,10 +790,7 @@ class PinAnnotationElement extends ChartElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = PinAnnotationElement(
-      annotation: annotation,
-      transform: transform,
-    );
+    final copy = PinAnnotationElement(annotation: annotation, transform: transform);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._currentTransform = _currentTransform;
@@ -942,15 +807,11 @@ class PinAnnotationElement extends ChartElement {
 /// Highlights a rectangular region on the chart with optional fill and border.
 /// Implements ResizableElement to support resizing via edge/corner handles.
 class RangeAnnotationElement extends ChartElement with ResizableElement {
-  RangeAnnotationElement({
-    required this.annotation,
-    required this.transform,
-    required this.chartSize,
-    this.axisBounds,
-  }) : _isSelected = false,
-       _isHovered = false,
-       _currentTransform = transform,
-       _axisBounds = axisBounds;
+  RangeAnnotationElement({required this.annotation, required this.transform, required this.chartSize, this.axisBounds})
+    : _isSelected = false,
+      _isHovered = false,
+      _currentTransform = transform,
+      _axisBounds = axisBounds;
 
   final RangeAnnotation annotation;
   final ChartTransform transform; // Initial transform for construction
@@ -971,6 +832,9 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
   // Temporary resize bounds (in screen space)
   Rect? _tempResizeBounds;
+
+  /// Returns the current temporary resize/move bounds, or null if not active.
+  Rect? get tempResizeBounds => _tempResizeBounds;
 
   // Temporary values during resize (in data coordinates)
   double? _tempStartX;
@@ -1029,12 +893,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   }
 
   /// Updates temporary edge values during resize (in data coordinates).
-  void updateTempValues({
-    double? startX,
-    double? endX,
-    double? startY,
-    double? endY,
-  }) {
+  void updateTempValues({double? startX, double? endX, double? startY, double? endY}) {
     _tempStartX = startX;
     _tempEndX = endX;
     _tempStartY = startY;
@@ -1048,21 +907,15 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       return _tempResizeBounds!;
     }
     // Transform data ranges to screen coordinates
-    final left = annotation.startX != null
-        ? _currentTransform.dataToPlot(annotation.startX!, 0).dx
-        : 0.0;
+    final left = annotation.startX != null ? _currentTransform.dataToPlot(annotation.startX!, 0).dx : 0.0;
 
-    final right = annotation.endX != null
-        ? _currentTransform.dataToPlot(annotation.endX!, 0).dx
-        : chartSize.width;
+    final right = annotation.endX != null ? _currentTransform.dataToPlot(annotation.endX!, 0).dx : chartSize.width;
 
     // Y-axis: endY (higher value) maps to top (lower screen Y), startY (lower value) maps to bottom (higher screen Y)
     // Use _valueToPlotY for perSeries normalization support
     final top = annotation.endY != null ? _valueToPlotY(annotation.endY!) : 0.0;
 
-    final bottom = annotation.startY != null
-        ? _valueToPlotY(annotation.startY!)
-        : chartSize.height;
+    final bottom = annotation.startY != null ? _valueToPlotY(annotation.startY!) : chartSize.height;
 
     final rect = Rect.fromLTRB(
       left.clamp(0.0, chartSize.width),
@@ -1116,9 +969,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         ..style = PaintingStyle.fill;
 
       if (_isHovered) {
-        fillPaint.color = fillPaint.color.withValues(
-          alpha: fillPaint.color.a * 1.2,
-        );
+        fillPaint.color = fillPaint.color.withValues(alpha: fillPaint.color.a * 1.2);
       }
 
       canvas.drawRect(fillRect, fillPaint);
@@ -1136,38 +987,22 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
       // Top border - only if endY is defined (endY = higher Y value = top of range)
       if (annotation.endY != null) {
-        canvas.drawLine(
-          Offset(fillRect.left, fillRect.top),
-          Offset(fillRect.right, fillRect.top),
-          borderPaint,
-        );
+        canvas.drawLine(Offset(fillRect.left, fillRect.top), Offset(fillRect.right, fillRect.top), borderPaint);
       }
 
       // Right border - only if endX is defined (not spanning to right)
       if (annotation.endX != null) {
-        canvas.drawLine(
-          Offset(fillRect.right, fillRect.top),
-          Offset(fillRect.right, fillRect.bottom),
-          borderPaint,
-        );
+        canvas.drawLine(Offset(fillRect.right, fillRect.top), Offset(fillRect.right, fillRect.bottom), borderPaint);
       }
 
       // Bottom border - only if startY is defined (startY = lower Y value = bottom of range)
       if (annotation.startY != null) {
-        canvas.drawLine(
-          Offset(fillRect.right, fillRect.bottom),
-          Offset(fillRect.left, fillRect.bottom),
-          borderPaint,
-        );
+        canvas.drawLine(Offset(fillRect.right, fillRect.bottom), Offset(fillRect.left, fillRect.bottom), borderPaint);
       }
 
       // Left border - only if startX is defined (not spanning to left)
       if (annotation.startX != null) {
-        canvas.drawLine(
-          Offset(fillRect.left, fillRect.bottom),
-          Offset(fillRect.left, fillRect.top),
-          borderPaint,
-        );
+        canvas.drawLine(Offset(fillRect.left, fillRect.bottom), Offset(fillRect.left, fillRect.top), borderPaint);
       }
     }
 
@@ -1182,10 +1017,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     }
 
     // Draw value labels during resize (similar to threshold drag labels)
-    if (_tempStartX != null ||
-        _tempEndX != null ||
-        _tempStartY != null ||
-        _tempEndY != null) {
+    if (_tempStartX != null || _tempEndX != null || _tempStartY != null || _tempEndY != null) {
       _drawResizeValueLabels(canvas, size, fillRect);
     }
   }
@@ -1215,11 +1047,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
     // Draw each handle
     for (final center in handles) {
-      final handleRect = Rect.fromCenter(
-        center: center,
-        width: handleSize,
-        height: handleSize,
-      );
+      final handleRect = Rect.fromCenter(center: center, width: handleSize, height: handleSize);
       canvas.drawRect(handleRect, handlePaint);
       canvas.drawRect(handleRect, handleBorderPaint);
     }
@@ -1228,15 +1056,10 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   void _drawLabel(Canvas canvas, Rect rect, String label) {
     final textStyle = annotation.style.textStyle;
     final textSpan = TextSpan(text: label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
 
     // Get padding from style or use default
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
     // Calculate label container dimensions (includes padding)
     final containerWidth = textPainter.width + padding.left + padding.right;
@@ -1251,30 +1074,15 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     switch (annotation.labelPosition) {
       case AnnotationLabelPosition.topLeft:
         // Container's top-left corner is labelMargin from range's top-left corner
-        bgRect = Rect.fromLTWH(
-          rect.left + labelMargin,
-          rect.top + labelMargin,
-          containerWidth,
-          containerHeight,
-        );
+        bgRect = Rect.fromLTWH(rect.left + labelMargin, rect.top + labelMargin, containerWidth, containerHeight);
         break;
       case AnnotationLabelPosition.topRight:
         // Container's top-right corner is labelMargin from range's top-right corner
-        bgRect = Rect.fromLTWH(
-          rect.right - containerWidth - labelMargin,
-          rect.top + labelMargin,
-          containerWidth,
-          containerHeight,
-        );
+        bgRect = Rect.fromLTWH(rect.right - containerWidth - labelMargin, rect.top + labelMargin, containerWidth, containerHeight);
         break;
       case AnnotationLabelPosition.bottomLeft:
         // Container's bottom-left corner is labelMargin from range's bottom-left corner
-        bgRect = Rect.fromLTWH(
-          rect.left + labelMargin,
-          rect.bottom - containerHeight - labelMargin,
-          containerWidth,
-          containerHeight,
-        );
+        bgRect = Rect.fromLTWH(rect.left + labelMargin, rect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
         break;
       case AnnotationLabelPosition.bottomRight:
         // Container's bottom-right corner is labelMargin from range's bottom-right corner
@@ -1287,42 +1095,31 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         break;
       case AnnotationLabelPosition.center:
         // Container centered within the range
-        bgRect = Rect.fromLTWH(
-          rect.center.dx - containerWidth / 2,
-          rect.center.dy - containerHeight / 2,
-          containerWidth,
-          containerHeight,
-        );
+        bgRect = Rect.fromLTWH(rect.center.dx - containerWidth / 2, rect.center.dy - containerHeight / 2, containerWidth, containerHeight);
         break;
     }
 
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
       final bgPaint = Paint()..color = annotation.style.backgroundColor!;
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, bgPaint);
     }
 
     // Draw border if specified
-    if (annotation.style.borderColor != null &&
-        annotation.style.borderWidth > 0) {
+    if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
       final borderPaint = Paint()
         ..color = annotation.style.borderColor!
         ..style = PaintingStyle.stroke
         ..strokeWidth = annotation.style.borderWidth;
-      final borderRadius =
-          annotation.style.borderRadius ?? BorderRadius.circular(4);
+      final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
       final rrect = borderRadius.toRRect(bgRect);
       canvas.drawRRect(rrect, borderPaint);
     }
 
     // Draw text inside container (accounting for padding)
-    final textPosition = Offset(
-      bgRect.left + padding.left,
-      bgRect.top + padding.top,
-    );
+    final textPosition = Offset(bgRect.left + padding.left, bgRect.top + padding.top);
     textPainter.paint(canvas, textPosition);
   }
 
@@ -1342,64 +1139,28 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     if (_tempStartX != null) {
       final displayValue = _formatDataValue(_tempStartX!);
       final labelText = 'X: $displayValue';
-      _drawEdgeLabel(
-        canvas,
-        labelText,
-        textStyle,
-        labelBackgroundPaint,
-        labelPadding,
-        fillRect.left,
-        fillRect.center.dy,
-        EdgeLabelPosition.left,
-      );
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.left, fillRect.center.dy, EdgeLabelPosition.left);
     }
 
     // Right edge (endX)
     if (_tempEndX != null) {
       final displayValue = _formatDataValue(_tempEndX!);
       final labelText = 'X: $displayValue';
-      _drawEdgeLabel(
-        canvas,
-        labelText,
-        textStyle,
-        labelBackgroundPaint,
-        labelPadding,
-        fillRect.right,
-        fillRect.center.dy,
-        EdgeLabelPosition.right,
-      );
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.right, fillRect.center.dy, EdgeLabelPosition.right);
     }
 
     // Top edge (endY - higher value)
     if (_tempEndY != null) {
       final displayValue = _formatDataValue(_tempEndY!);
       final labelText = 'Y: $displayValue';
-      _drawEdgeLabel(
-        canvas,
-        labelText,
-        textStyle,
-        labelBackgroundPaint,
-        labelPadding,
-        fillRect.center.dx,
-        fillRect.top,
-        EdgeLabelPosition.top,
-      );
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.center.dx, fillRect.top, EdgeLabelPosition.top);
     }
 
     // Bottom edge (startY - lower value)
     if (_tempStartY != null) {
       final displayValue = _formatDataValue(_tempStartY!);
       final labelText = 'Y: $displayValue';
-      _drawEdgeLabel(
-        canvas,
-        labelText,
-        textStyle,
-        labelBackgroundPaint,
-        labelPadding,
-        fillRect.center.dx,
-        fillRect.bottom,
-        EdgeLabelPosition.bottom,
-      );
+      _drawEdgeLabel(canvas, labelText, textStyle, labelBackgroundPaint, labelPadding, fillRect.center.dx, fillRect.bottom, EdgeLabelPosition.bottom);
     }
   }
 
@@ -1427,66 +1188,37 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
         labelX = edgeX - textPainter.width - padding * 3;
         labelY = edgeY - textPainter.height / 2;
         // Clamp to keep within bounds
-        labelX = labelX.clamp(
-          padding,
-          _currentTransform.plotWidth - textPainter.width - padding,
-        );
-        labelY = labelY.clamp(
-          padding,
-          _currentTransform.plotHeight - textPainter.height - padding,
-        );
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
         break;
       case EdgeLabelPosition.right:
         // Position label to the right of the edge
         labelX = edgeX + padding * 3;
         labelY = edgeY - textPainter.height / 2;
         // Clamp to keep within bounds
-        labelX = labelX.clamp(
-          padding,
-          _currentTransform.plotWidth - textPainter.width - padding,
-        );
-        labelY = labelY.clamp(
-          padding,
-          _currentTransform.plotHeight - textPainter.height - padding,
-        );
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
         break;
       case EdgeLabelPosition.top:
         // Position label above the edge
         labelX = edgeX - textPainter.width / 2;
         labelY = edgeY - textPainter.height - padding * 3;
         // Clamp to keep within bounds
-        labelX = labelX.clamp(
-          padding,
-          _currentTransform.plotWidth - textPainter.width - padding,
-        );
-        labelY = labelY.clamp(
-          padding,
-          _currentTransform.plotHeight - textPainter.height - padding,
-        );
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
         break;
       case EdgeLabelPosition.bottom:
         // Position label below the edge
         labelX = edgeX - textPainter.width / 2;
         labelY = edgeY + padding * 3;
         // Clamp to keep within bounds
-        labelX = labelX.clamp(
-          padding,
-          _currentTransform.plotWidth - textPainter.width - padding,
-        );
-        labelY = labelY.clamp(
-          padding,
-          _currentTransform.plotHeight - textPainter.height - padding,
-        );
+        labelX = labelX.clamp(padding, _currentTransform.plotWidth - textPainter.width - padding);
+        labelY = labelY.clamp(padding, _currentTransform.plotHeight - textPainter.height - padding);
         break;
     }
 
     // Draw background
-    final bgRect = Rect.fromLTWH(
-      labelX - padding,
-      labelY - padding,
-      textPainter.width + padding * 2,
-      textPainter.height + padding * 2,
-    );
+    final bgRect = Rect.fromLTWH(labelX - padding, labelY - padding, textPainter.width + padding * 2, textPainter.height + padding * 2);
     canvas.drawRect(bgRect, backgroundPaint);
 
     // Draw text
@@ -1544,79 +1276,43 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.topLeft,
-        bounds: Rect.fromCenter(
-          center: Offset(left, top),
-          width: handleSize,
-          height: handleSize,
-        ),
+        bounds: Rect.fromCenter(center: Offset(left, top), width: handleSize, height: handleSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.topRight,
-        bounds: Rect.fromCenter(
-          center: Offset(right, top),
-          width: handleSize,
-          height: handleSize,
-        ),
+        bounds: Rect.fromCenter(center: Offset(right, top), width: handleSize, height: handleSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottomLeft,
-        bounds: Rect.fromCenter(
-          center: Offset(left, bottom),
-          width: handleSize,
-          height: handleSize,
-        ),
+        bounds: Rect.fromCenter(center: Offset(left, bottom), width: handleSize, height: handleSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottomRight,
-        bounds: Rect.fromCenter(
-          center: Offset(right, bottom),
-          width: handleSize,
-          height: handleSize,
-        ),
+        bounds: Rect.fromCenter(center: Offset(right, bottom), width: handleSize, height: handleSize),
       ),
       // Edges (continuous zones along the edge)
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.top,
-        bounds: Rect.fromLTRB(
-          left + halfSize,
-          top - halfSize,
-          right - halfSize,
-          top + halfSize,
-        ),
+        bounds: Rect.fromLTRB(left + halfSize, top - halfSize, right - halfSize, top + halfSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.right,
-        bounds: Rect.fromLTRB(
-          right - halfSize,
-          top + halfSize,
-          right + halfSize,
-          bottom - halfSize,
-        ),
+        bounds: Rect.fromLTRB(right - halfSize, top + halfSize, right + halfSize, bottom - halfSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.bottom,
-        bounds: Rect.fromLTRB(
-          left + halfSize,
-          bottom - halfSize,
-          right - halfSize,
-          bottom + halfSize,
-        ),
+        bounds: Rect.fromLTRB(left + halfSize, bottom - halfSize, right - halfSize, bottom + halfSize),
       ),
       ResizeHandleElement(
         parentAnnotation: this,
         direction: ResizeDirection.left,
-        bounds: Rect.fromLTRB(
-          left - halfSize,
-          top + halfSize,
-          left + halfSize,
-          bottom - halfSize,
-        ),
+        bounds: Rect.fromLTRB(left - halfSize, top + halfSize, left + halfSize, bottom - halfSize),
       ),
     ];
   }
@@ -1654,11 +1350,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = RangeAnnotationElement(
-      annotation: annotation,
-      transform: transform,
-      chartSize: chartSize,
-    );
+    final copy = RangeAnnotationElement(annotation: annotation, transform: transform, chartSize: chartSize);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._currentTransform = _currentTransform;
@@ -1670,9 +1362,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
 ///
 /// Displays text at a fixed screen position with optional background.
 class TextAnnotationElement extends ChartElement {
-  TextAnnotationElement({required this.annotation})
-    : _isSelected = false,
-      _isHovered = false {
+  TextAnnotationElement({required this.annotation}) : _isSelected = false, _isHovered = false {
     _calculateBoundsAndPainter();
   }
 
@@ -1706,10 +1396,7 @@ class TextAnnotationElement extends ChartElement {
     _cachedTextSpan = annotation.toTextSpan(baseStyle: textStyle);
 
     // Create and cache the TextPainter
-    _cachedTextPainter = TextPainter(
-      text: _cachedTextSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    _cachedTextPainter = TextPainter(text: _cachedTextSpan, textDirection: TextDirection.ltr)..layout();
 
     final textSize = _cachedTextPainter!.size;
     final padding = annotation.style.padding ?? const EdgeInsets.all(4.0);
@@ -1718,11 +1405,7 @@ class TextAnnotationElement extends ChartElement {
     final effectivePosition = _tempPosition ?? annotation.position;
 
     // Calculate anchored position
-    _anchoredPosition = _getAnchoredPosition(
-      effectivePosition,
-      textSize + Offset(padding.horizontal, padding.vertical),
-      annotation.anchor,
-    );
+    _anchoredPosition = _getAnchoredPosition(effectivePosition, textSize + Offset(padding.horizontal, padding.vertical), annotation.anchor);
 
     _bounds = Rect.fromLTWH(
       _anchoredPosition!.dx - padding.left,
@@ -1732,11 +1415,7 @@ class TextAnnotationElement extends ChartElement {
     );
   }
 
-  Offset _getAnchoredPosition(
-    Offset position,
-    Size size,
-    AnnotationAnchor anchor,
-  ) {
+  Offset _getAnchoredPosition(Offset position, Size size, AnnotationAnchor anchor) {
     switch (anchor) {
       case AnnotationAnchor.topLeft:
         return position;
@@ -1747,10 +1426,7 @@ class TextAnnotationElement extends ChartElement {
       case AnnotationAnchor.centerLeft:
         return Offset(position.dx, position.dy - size.height / 2);
       case AnnotationAnchor.center:
-        return Offset(
-          position.dx - size.width / 2,
-          position.dy - size.height / 2,
-        );
+        return Offset(position.dx - size.width / 2, position.dy - size.height / 2);
       case AnnotationAnchor.centerRight:
         return Offset(position.dx - size.width, position.dy - size.height / 2);
       case AnnotationAnchor.bottomLeft:
@@ -1797,16 +1473,12 @@ class TextAnnotationElement extends ChartElement {
     if (_bounds == null || _anchoredPosition == null) return;
 
     // Draw background
-    if (annotation.backgroundColor != null ||
-        annotation.style.backgroundColor != null) {
-      final bgColor =
-          annotation.backgroundColor ?? annotation.style.backgroundColor!;
+    if (annotation.backgroundColor != null || annotation.style.backgroundColor != null) {
+      final bgColor = annotation.backgroundColor ?? annotation.style.backgroundColor!;
       final bgPaint = Paint()..color = bgColor;
 
       if (_isHovered) {
-        bgPaint.color = bgPaint.color.withValues(
-          alpha: (bgPaint.color.a * 1.1).clamp(0.0, 1.0),
-        );
+        bgPaint.color = bgPaint.color.withValues(alpha: (bgPaint.color.a * 1.1).clamp(0.0, 1.0));
       }
 
       if (annotation.style.borderRadius != null) {
@@ -1824,16 +1496,12 @@ class TextAnnotationElement extends ChartElement {
     }
 
     // Draw border
-    if (annotation.borderColor != null ||
-        annotation.style.borderColor != null) {
-      final borderColor =
-          annotation.borderColor ?? annotation.style.borderColor!;
+    if (annotation.borderColor != null || annotation.style.borderColor != null) {
+      final borderColor = annotation.borderColor ?? annotation.style.borderColor!;
       final borderPaint = Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = _isSelected
-            ? annotation.style.borderWidth * 1.5
-            : annotation.style.borderWidth;
+        ..strokeWidth = _isSelected ? annotation.style.borderWidth * 1.5 : annotation.style.borderWidth;
 
       if (annotation.style.borderRadius != null) {
         final rRect = RRect.fromRectAndCorners(
@@ -1851,10 +1519,7 @@ class TextAnnotationElement extends ChartElement {
 
     // Draw text using cached TextPainter (created in _calculateBoundsAndPainter)
     if (_cachedTextPainter != null) {
-      _cachedTextPainter!.paint(
-        canvas,
-        Offset(_anchoredPosition!.dx, _anchoredPosition!.dy),
-      );
+      _cachedTextPainter!.paint(canvas, Offset(_anchoredPosition!.dx, _anchoredPosition!.dy));
     }
   }
 
@@ -1903,14 +1568,11 @@ class TextAnnotationElement extends ChartElement {
 /// must be normalized using the appropriate axis bounds. Pass [axisBounds]
 /// to enable this normalization.
 class ThresholdAnnotationElement extends ChartElement {
-  ThresholdAnnotationElement({
-    required this.annotation,
-    required this.transform,
-    this.axisBounds,
-  }) : _isSelected = false,
-       _isHovered = false,
-       _currentTransform = transform,
-       _axisBounds = axisBounds;
+  ThresholdAnnotationElement({required this.annotation, required this.transform, this.axisBounds})
+    : _isSelected = false,
+      _isHovered = false,
+      _currentTransform = transform,
+      _axisBounds = axisBounds;
 
   final ThresholdAnnotation annotation;
   final ChartTransform transform;
@@ -1982,26 +1644,15 @@ class ThresholdAnnotationElement extends ChartElement {
   /// Calculate the line hit zone bounds (strip along the line).
   Rect _calculateLineBounds() {
     final value = _tempValue ?? annotation.value;
-    const hitMargin =
-        20.0; // 20px margin on each side of line for easier clicking
+    const hitMargin = 20.0; // 20px margin on each side of line for easier clicking
 
     if (annotation.axis == AnnotationAxis.y) {
       // Use _valueToPlotY for perSeries normalization support
       final plotY = _valueToPlotY(value);
-      return Rect.fromLTWH(
-        0,
-        plotY - annotation.lineWidth / 2 - hitMargin,
-        _currentTransform.plotWidth,
-        annotation.lineWidth + (hitMargin * 2),
-      );
+      return Rect.fromLTWH(0, plotY - annotation.lineWidth / 2 - hitMargin, _currentTransform.plotWidth, annotation.lineWidth + (hitMargin * 2));
     } else {
       final plotX = _currentTransform.dataToPlot(value, 0).dx;
-      return Rect.fromLTWH(
-        plotX - annotation.lineWidth / 2 - hitMargin,
-        0,
-        annotation.lineWidth + (hitMargin * 2),
-        _currentTransform.plotHeight,
-      );
+      return Rect.fromLTWH(plotX - annotation.lineWidth / 2 - hitMargin, 0, annotation.lineWidth + (hitMargin * 2), _currentTransform.plotHeight);
     }
   }
 
@@ -2028,14 +1679,9 @@ class ThresholdAnnotationElement extends ChartElement {
     // Calculate label dimensions (same as paint())
     final textStyle = annotation.style.textStyle;
     final textSpan = TextSpan(text: annotation.label, style: textStyle);
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
 
-    final padding =
-        annotation.style.padding ??
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
     final containerWidth = textPainter.width + padding.left + padding.right;
     final containerHeight = textPainter.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
@@ -2046,79 +1692,29 @@ class ThresholdAnnotationElement extends ChartElement {
       final lineY = start.dy;
       switch (annotation.labelPosition) {
         case AnnotationLabelPosition.topLeft:
-          bgRect = Rect.fromLTWH(
-            start.dx + labelMargin,
-            lineY - containerHeight - labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.topRight:
-          bgRect = Rect.fromLTWH(
-            end.dx - containerWidth - labelMargin,
-            lineY - containerHeight - labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.bottomLeft:
-          bgRect = Rect.fromLTWH(
-            start.dx + labelMargin,
-            lineY + labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY + labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.bottomRight:
-          bgRect = Rect.fromLTWH(
-            end.dx - containerWidth - labelMargin,
-            lineY + labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY + labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.center:
-          bgRect = Rect.fromLTWH(
-            (start.dx + end.dx) / 2 - containerWidth / 2,
-            lineY - containerHeight / 2,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH((start.dx + end.dx) / 2 - containerWidth / 2, lineY - containerHeight / 2, containerWidth, containerHeight);
       }
     } else {
       final lineX = start.dx;
       switch (annotation.labelPosition) {
         case AnnotationLabelPosition.topLeft:
-          bgRect = Rect.fromLTWH(
-            lineX - containerWidth - labelMargin,
-            start.dy + labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.topRight:
-          bgRect = Rect.fromLTWH(
-            lineX + labelMargin,
-            start.dy + labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(lineX + labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.bottomLeft:
-          bgRect = Rect.fromLTWH(
-            lineX - containerWidth - labelMargin,
-            end.dy - containerHeight - labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.bottomRight:
-          bgRect = Rect.fromLTWH(
-            lineX + labelMargin,
-            end.dy - containerHeight - labelMargin,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(lineX + labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
         case AnnotationLabelPosition.center:
-          bgRect = Rect.fromLTWH(
-            lineX - containerWidth / 2,
-            (start.dy + end.dy) / 2 - containerHeight / 2,
-            containerWidth,
-            containerHeight,
-          );
+          bgRect = Rect.fromLTWH(lineX - containerWidth / 2, (start.dy + end.dy) / 2 - containerHeight / 2, containerWidth, containerHeight);
       }
     }
 
@@ -2196,20 +1792,10 @@ class ThresholdAnnotationElement extends ChartElement {
       Rect haloRect;
       if (annotation.axis == AnnotationAxis.y) {
         // Horizontal line - halo above and below
-        haloRect = Rect.fromLTRB(
-          0,
-          start.dy - haloWidth,
-          _currentTransform.plotWidth,
-          start.dy + haloWidth,
-        );
+        haloRect = Rect.fromLTRB(0, start.dy - haloWidth, _currentTransform.plotWidth, start.dy + haloWidth);
       } else {
         // Vertical line - halo left and right
-        haloRect = Rect.fromLTRB(
-          start.dx - haloWidth,
-          0,
-          start.dx + haloWidth,
-          _currentTransform.plotHeight,
-        );
+        haloRect = Rect.fromLTRB(start.dx - haloWidth, 0, start.dx + haloWidth, _currentTransform.plotHeight);
       }
       canvas.drawRect(haloRect, haloPaint);
 
@@ -2226,15 +1812,8 @@ class ThresholdAnnotationElement extends ChartElement {
         ..style = PaintingStyle.stroke
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, annotation.elevation);
 
-      if (annotation.dashPattern != null &&
-          annotation.dashPattern!.isNotEmpty) {
-        _drawDashedLine(
-          canvas,
-          start,
-          end,
-          elevationPaint,
-          annotation.dashPattern!,
-        );
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedLine(canvas, start, end, elevationPaint, annotation.dashPattern!);
       } else {
         canvas.drawLine(start, end, elevationPaint);
       }
@@ -2248,8 +1827,7 @@ class ThresholdAnnotationElement extends ChartElement {
         ..style = PaintingStyle.stroke
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
 
-      if (annotation.dashPattern != null &&
-          annotation.dashPattern!.isNotEmpty) {
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
         _drawDashedLine(canvas, start, end, glowPaint, annotation.dashPattern!);
       } else {
         canvas.drawLine(start, end, glowPaint);
@@ -2259,9 +1837,7 @@ class ThresholdAnnotationElement extends ChartElement {
     // Draw main line
     final paint = Paint()
       ..color = annotation.lineColor
-      ..strokeWidth = _isSelected
-          ? annotation.lineWidth * 2.0
-          : annotation.lineWidth
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 2.0 : annotation.lineWidth
       ..style = PaintingStyle.stroke;
 
     // Draw line (with dash pattern if specified)
@@ -2275,15 +1851,10 @@ class ThresholdAnnotationElement extends ChartElement {
     if (annotation.label != null && annotation.label!.isNotEmpty) {
       final textStyle = annotation.style.textStyle;
       final textSpan = TextSpan(text: annotation.label, style: textStyle);
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
 
       // Get padding from style or use default
-      final padding =
-          annotation.style.padding ??
-          const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+      final padding = annotation.style.padding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
       // Calculate label container dimensions (includes padding)
       final containerWidth = textPainter.width + padding.left + padding.right;
@@ -2300,48 +1871,23 @@ class ThresholdAnnotationElement extends ChartElement {
         switch (annotation.labelPosition) {
           case AnnotationLabelPosition.topLeft:
             // Container above line, aligned left
-            bgRect = Rect.fromLTWH(
-              start.dx + labelMargin,
-              lineY - containerHeight - labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.topRight:
             // Container above line, aligned right
-            bgRect = Rect.fromLTWH(
-              end.dx - containerWidth - labelMargin,
-              lineY - containerHeight - labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.bottomLeft:
             // Container below line, aligned left
-            bgRect = Rect.fromLTWH(
-              start.dx + labelMargin,
-              lineY + labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY + labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.bottomRight:
             // Container below line, aligned right
-            bgRect = Rect.fromLTWH(
-              end.dx - containerWidth - labelMargin,
-              lineY + labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY + labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.center:
             // Container centered on line
-            bgRect = Rect.fromLTWH(
-              (start.dx + end.dx) / 2 - containerWidth / 2,
-              lineY - containerHeight / 2,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH((start.dx + end.dx) / 2 - containerWidth / 2, lineY - containerHeight / 2, containerWidth, containerHeight);
             break;
         }
       } else {
@@ -2350,48 +1896,23 @@ class ThresholdAnnotationElement extends ChartElement {
         switch (annotation.labelPosition) {
           case AnnotationLabelPosition.topLeft:
             // Container left of line, aligned top
-            bgRect = Rect.fromLTWH(
-              lineX - containerWidth - labelMargin,
-              start.dy + labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.topRight:
             // Container right of line, aligned top
-            bgRect = Rect.fromLTWH(
-              lineX + labelMargin,
-              start.dy + labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(lineX + labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.bottomLeft:
             // Container left of line, aligned bottom
-            bgRect = Rect.fromLTWH(
-              lineX - containerWidth - labelMargin,
-              end.dy - containerHeight - labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.bottomRight:
             // Container right of line, aligned bottom
-            bgRect = Rect.fromLTWH(
-              lineX + labelMargin,
-              end.dy - containerHeight - labelMargin,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(lineX + labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
             break;
           case AnnotationLabelPosition.center:
             // Container centered on line
-            bgRect = Rect.fromLTWH(
-              lineX - containerWidth / 2,
-              (start.dy + end.dy) / 2 - containerHeight / 2,
-              containerWidth,
-              containerHeight,
-            );
+            bgRect = Rect.fromLTWH(lineX - containerWidth / 2, (start.dy + end.dy) / 2 - containerHeight / 2, containerWidth, containerHeight);
             break;
         }
       }
@@ -2401,42 +1922,30 @@ class ThresholdAnnotationElement extends ChartElement {
         final bgPaint = Paint()
           ..color = annotation.style.backgroundColor!
           ..style = PaintingStyle.fill;
-        final borderRadius =
-            annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
         final rrect = borderRadius.toRRect(bgRect);
         canvas.drawRRect(rrect, bgPaint);
       }
 
       // Draw border if borderColor and borderWidth are set
-      if (annotation.style.borderColor != null &&
-          annotation.style.borderWidth > 0) {
+      if (annotation.style.borderColor != null && annotation.style.borderWidth > 0) {
         final borderPaint = Paint()
           ..color = annotation.style.borderColor!
           ..style = PaintingStyle.stroke
           ..strokeWidth = annotation.style.borderWidth;
-        final borderRadius =
-            annotation.style.borderRadius ?? BorderRadius.circular(4);
+        final borderRadius = annotation.style.borderRadius ?? BorderRadius.circular(4);
         final rrect = borderRadius.toRRect(bgRect);
         canvas.drawRRect(rrect, borderPaint);
       }
 
       // Draw text inside container (accounting for padding)
-      final textPosition = Offset(
-        bgRect.left + padding.left,
-        bgRect.top + padding.top,
-      );
+      final textPosition = Offset(bgRect.left + padding.left, bgRect.top + padding.top);
       textPainter.paint(canvas, textPosition);
     }
   }
 
   /// Draws a dashed line using the provided dash pattern.
-  void _drawDashedLine(
-    Canvas canvas,
-    Offset start,
-    Offset end,
-    Paint paint,
-    List<double> dashPattern,
-  ) {
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, List<double> dashPattern) {
     final totalLength = (end - start).distance;
     var currentLength = 0.0;
     var patternIndex = 0;
@@ -2461,13 +1970,7 @@ class ThresholdAnnotationElement extends ChartElement {
   }
 
   /// Draws a value label during threshold drag (similar to crosshair labels).
-  void _drawDragValueLabel(
-    Canvas canvas,
-    Size size,
-    double value,
-    Offset start,
-    Offset end,
-  ) {
+  void _drawDragValueLabel(Canvas canvas, Size size, double value, Offset start, Offset end) {
     const textStyle = TextStyle(
       color: Color(0xFF000000),
       fontSize: 10,
@@ -2479,9 +1982,7 @@ class ThresholdAnnotationElement extends ChartElement {
 
     // Format the value for display
     final displayValue = _formatDataValue(value);
-    final labelText = annotation.axis == AnnotationAxis.y
-        ? 'Y: $displayValue'
-        : 'X: $displayValue';
+    final labelText = annotation.axis == AnnotationAxis.y ? 'Y: $displayValue' : 'X: $displayValue';
 
     final textPainter = TextPainter(
       text: TextSpan(text: labelText, style: textStyle),
@@ -2495,22 +1996,13 @@ class ThresholdAnnotationElement extends ChartElement {
       labelX = 8; // 8px from left edge
       labelY = start.dy - textPainter.height / 2;
       // Clamp Y position to keep within plot bounds
-      labelY = labelY.clamp(
-        labelPadding,
-        _currentTransform.plotHeight - textPainter.height - labelPadding,
-      );
+      labelY = labelY.clamp(labelPadding, _currentTransform.plotHeight - textPainter.height - labelPadding);
     } else {
       // Vertical line - position label at bottom of chart
       labelX = start.dx - textPainter.width / 2;
-      labelY =
-          _currentTransform.plotHeight -
-          textPainter.height -
-          8; // 8px from bottom
+      labelY = _currentTransform.plotHeight - textPainter.height - 8; // 8px from bottom
       // Clamp X position to keep within plot bounds
-      labelX = labelX.clamp(
-        labelPadding,
-        _currentTransform.plotWidth - textPainter.width - labelPadding,
-      );
+      labelX = labelX.clamp(labelPadding, _currentTransform.plotWidth - textPainter.width - labelPadding);
     }
 
     // Draw background
@@ -2559,11 +2051,7 @@ class ThresholdAnnotationElement extends ChartElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = ThresholdAnnotationElement(
-      annotation: annotation,
-      transform: _currentTransform,
-      axisBounds: _axisBounds,
-    );
+    final copy = ThresholdAnnotationElement(annotation: annotation, transform: _currentTransform, axisBounds: _axisBounds);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     return copy;
@@ -2578,15 +2066,11 @@ class ThresholdAnnotationElement extends ChartElement {
 /// normalized using the appropriate axis bounds. Pass [axisBounds]
 /// to enable correct positioning when each series has its own Y range.
 class TrendAnnotationElement extends ChartElement {
-  TrendAnnotationElement({
-    required this.annotation,
-    required this.series,
-    required this.transform,
-    this.axisBounds,
-  }) : _isSelected = false,
-       _isHovered = false,
-       _currentTransform = transform,
-       _axisBounds = axisBounds {
+  TrendAnnotationElement({required this.annotation, required this.series, required this.transform, this.axisBounds})
+    : _isSelected = false,
+      _isHovered = false,
+      _currentTransform = transform,
+      _axisBounds = axisBounds {
     _calculateTrendPoints();
   }
 
@@ -2614,14 +2098,10 @@ class TrendAnnotationElement extends ChartElement {
   /// and `paint` invocation — previously the dominant cost when a
   /// TrendAnnotation was present (hundreds of coordinate transforms per frame).
   List<Offset> get _plotPoints {
-    if (_cachedPlotPoints != null &&
-        identical(_plotPointsCachedTransform, _currentTransform) &&
-        _plotPointsCachedAxisBounds == _axisBounds) {
+    if (_cachedPlotPoints != null && identical(_plotPointsCachedTransform, _currentTransform) && _plotPointsCachedAxisBounds == _axisBounds) {
       return _cachedPlotPoints!;
     }
-    _cachedPlotPoints = _trendPoints
-        .map((p) => _dataToPlot(p.dx, p.dy))
-        .toList();
+    _cachedPlotPoints = _trendPoints.map((p) => _dataToPlot(p.dx, p.dy)).toList();
     _plotPointsCachedTransform = _currentTransform;
     _plotPointsCachedAxisBounds = _axisBounds;
     _cachedBounds = null; // bounds depend on plot points
@@ -2690,16 +2170,10 @@ class TrendAnnotationElement extends ChartElement {
         _trendPoints = _calculatePolynomialTrend(dataPoints, annotation.degree);
         break;
       case TrendType.movingAverage:
-        _trendPoints = _calculateMovingAverage(
-          dataPoints,
-          annotation.windowSize!,
-        );
+        _trendPoints = _calculateMovingAverage(dataPoints, annotation.windowSize!);
         break;
       case TrendType.exponentialMovingAverage:
-        _trendPoints = _calculateExponentialMovingAverage(
-          dataPoints,
-          annotation.windowSize ?? 10,
-        );
+        _trendPoints = _calculateExponentialMovingAverage(dataPoints, annotation.windowSize ?? 10);
         break;
     }
   }
@@ -2729,10 +2203,7 @@ class TrendAnnotationElement extends ChartElement {
   }
 
   /// Calculate polynomial regression trend line.
-  List<Offset> _calculatePolynomialTrend(
-    List<ChartDataPoint> points,
-    int degree,
-  ) {
+  List<Offset> _calculatePolynomialTrend(List<ChartDataPoint> points, int degree) {
     if (points.isEmpty) return [];
     if (degree < 1) return _calculateLinearTrend(points);
     if (points.length <= degree) {
@@ -2775,11 +2246,7 @@ class TrendAnnotationElement extends ChartElement {
 
   /// Solve polynomial least squares using normal equations.
   /// Returns coefficients [a0, a1, a2, ..., an] for polynomial y = a0 + a1*x + a2*x^2 + ... + an*x^n
-  List<double> _solvePolynomialLeastSquares(
-    List<double> xValues,
-    List<double> yValues,
-    int degree,
-  ) {
+  List<double> _solvePolynomialLeastSquares(List<double> xValues, List<double> yValues, int degree) {
     final n = xValues.length;
     final m = degree + 1; // Number of coefficients
 
@@ -2886,10 +2353,7 @@ class TrendAnnotationElement extends ChartElement {
   /// Calculate simple moving average.
   /// Uses right-aligned window: each average is placed at the last point in the window.
   /// This is the standard approach used in financial charting.
-  List<Offset> _calculateMovingAverage(
-    List<ChartDataPoint> points,
-    int windowSize,
-  ) {
+  List<Offset> _calculateMovingAverage(List<ChartDataPoint> points, int windowSize) {
     if (points.length < windowSize) return [];
     if (windowSize < 1) return [];
 
@@ -2910,10 +2374,7 @@ class TrendAnnotationElement extends ChartElement {
 
   /// Calculate exponential moving average.
   /// Uses standard EMA formula with smoothing factor alpha = 2 / (period + 1).
-  List<Offset> _calculateExponentialMovingAverage(
-    List<ChartDataPoint> points,
-    int period,
-  ) {
+  List<Offset> _calculateExponentialMovingAverage(List<ChartDataPoint> points, int period) {
     if (points.isEmpty) return [];
     if (period < 1) return [];
 
@@ -3030,33 +2491,20 @@ class TrendAnnotationElement extends ChartElement {
     // Check if click is near any line segment (12px matches threshold's UX feel)
     final hitRadius = annotation.lineWidth + 12;
     for (int i = 0; i < plotPoints.length - 1; i++) {
-      final distance = _distanceToLineSegment(
-        position,
-        plotPoints[i],
-        plotPoints[i + 1],
-      );
+      final distance = _distanceToLineSegment(position, plotPoints[i], plotPoints[i + 1]);
       if (distance <= hitRadius) return true;
     }
     return false;
   }
 
   /// Calculate distance from point to line segment.
-  double _distanceToLineSegment(
-    Offset point,
-    Offset lineStart,
-    Offset lineEnd,
-  ) {
+  double _distanceToLineSegment(Offset point, Offset lineStart, Offset lineEnd) {
     final lengthSquared = (lineEnd - lineStart).distanceSquared;
     if (lengthSquared == 0) return (point - lineStart).distance;
 
     final t = math.max(
       0.0,
-      math.min(
-        1.0,
-        ((point - lineStart).dx * (lineEnd - lineStart).dx +
-                (point - lineStart).dy * (lineEnd - lineStart).dy) /
-            lengthSquared,
-      ),
+      math.min(1.0, ((point - lineStart).dx * (lineEnd - lineStart).dx + (point - lineStart).dy * (lineEnd - lineStart).dy) / lengthSquared),
     );
     final projection = lineStart + (lineEnd - lineStart) * t;
     return (point - projection).distance;
@@ -3078,17 +2526,10 @@ class TrendAnnotationElement extends ChartElement {
         ..style = PaintingStyle.stroke
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, annotation.elevation);
 
-      if (annotation.dashPattern != null &&
-          annotation.dashPattern!.isNotEmpty) {
-        _drawDashedPolyline(
-          canvas,
-          plotPoints,
-          elevationPaint,
-          annotation.dashPattern!,
-        );
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedPolyline(canvas, plotPoints, elevationPaint, annotation.dashPattern!);
       } else {
-        final elevationPath = Path()
-          ..moveTo(plotPoints.first.dx, plotPoints.first.dy);
+        final elevationPath = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
         for (int i = 1; i < plotPoints.length; i++) {
           elevationPath.lineTo(plotPoints[i].dx, plotPoints[i].dy);
         }
@@ -3103,22 +2544,12 @@ class TrendAnnotationElement extends ChartElement {
         ..color = annotation.lineColor.withAlpha(130)
         ..strokeWidth = annotation.lineWidth * 4.0 + annotation.elevation * 2
         ..style = PaintingStyle.stroke
-        ..maskFilter = MaskFilter.blur(
-          BlurStyle.normal,
-          5.0 + annotation.elevation,
-        );
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5.0 + annotation.elevation);
 
-      if (annotation.dashPattern != null &&
-          annotation.dashPattern!.isNotEmpty) {
-        _drawDashedPolyline(
-          canvas,
-          plotPoints,
-          glowPaint,
-          annotation.dashPattern!,
-        );
+      if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
+        _drawDashedPolyline(canvas, plotPoints, glowPaint, annotation.dashPattern!);
       } else {
-        final glowPath = Path()
-          ..moveTo(plotPoints.first.dx, plotPoints.first.dy);
+        final glowPath = Path()..moveTo(plotPoints.first.dx, plotPoints.first.dy);
         for (int i = 1; i < plotPoints.length; i++) {
           glowPath.lineTo(plotPoints[i].dx, plotPoints[i].dy);
         }
@@ -3129,9 +2560,7 @@ class TrendAnnotationElement extends ChartElement {
     // Draw main line
     final paint = Paint()
       ..color = annotation.lineColor
-      ..strokeWidth = _isSelected
-          ? annotation.lineWidth * 2.5
-          : annotation.lineWidth
+      ..strokeWidth = _isSelected ? annotation.lineWidth * 2.5 : annotation.lineWidth
       ..style = PaintingStyle.stroke;
 
     if (annotation.dashPattern != null && annotation.dashPattern!.isNotEmpty) {
@@ -3150,12 +2579,7 @@ class TrendAnnotationElement extends ChartElement {
   /// Unlike per-segment dashing, this ensures the dash pattern flows
   /// continuously along the entire polyline — critical for moving average
   /// and EMA trends that have many short segments.
-  void _drawDashedPolyline(
-    Canvas canvas,
-    List<Offset> points,
-    Paint paint,
-    List<double> dashPattern,
-  ) {
+  void _drawDashedPolyline(Canvas canvas, List<Offset> points, Paint paint, List<double> dashPattern) {
     if (points.length < 2) return;
 
     var patternIndex = 0;
@@ -3207,11 +2631,7 @@ class TrendAnnotationElement extends ChartElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = TrendAnnotationElement(
-      annotation: annotation,
-      series: series,
-      transform: _currentTransform,
-    );
+    final copy = TrendAnnotationElement(annotation: annotation, series: series, transform: _currentTransform);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._trendPoints = _trendPoints;
@@ -3229,10 +2649,7 @@ class TrendAnnotationElement extends ChartElement {
 /// charting software legends. The legend can be dragged to any position
 /// within the chart area.
 class LegendAnnotationElement extends ChartElement {
-  LegendAnnotationElement({required this.annotation, required Size chartSize})
-    : _chartSize = chartSize,
-      _isSelected = false,
-      _isHovered = false {
+  LegendAnnotationElement({required this.annotation, required Size chartSize}) : _chartSize = chartSize, _isSelected = false, _isHovered = false {
     _calculateBounds();
   }
 
@@ -3298,9 +2715,7 @@ class LegendAnnotationElement extends ChartElement {
           text: 'Trends',
           style: style.textStyle.copyWith(
             fontStyle: FontStyle.italic,
-            color:
-                style.textStyle.color?.withAlpha(140) ??
-                const Color(0x8C000000),
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
             fontSize: (style.textStyle.fontSize ?? 11) - 1,
           ),
         ),
@@ -3334,46 +2749,25 @@ class LegendAnnotationElement extends ChartElement {
     if (style.orientation == LegendOrientation.vertical) {
       if (!hasTrends) {
         // Single column: series items stacked
-        legendWidth =
-            padding.left + markerItemWidth + maxSeriesTextWidth + padding.right;
-        legendHeight =
-            padding.top +
-            totalSeriesTextHeight +
-            (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0) +
-            padding.bottom;
+        legendWidth = padding.left + markerItemWidth + maxSeriesTextWidth + padding.right;
+        legendHeight = padding.top + totalSeriesTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0) + padding.bottom;
       } else {
         // Two-column layout: series left, "Trends" header + items right
         final seriesColWidth = markerItemWidth + maxSeriesTextWidth;
-        final trendColWidth = math.max(
-          trendHeaderWidth,
-          markerItemWidth + maxTrendTextWidth,
-        );
+        final trendColWidth = math.max(trendHeaderWidth, markerItemWidth + maxTrendTextWidth);
         final columnGap = style.itemSpacing * 2;
 
-        final seriesColHeight =
-            totalSeriesTextHeight +
-            (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
+        final seriesColHeight = totalSeriesTextHeight + (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
         double trendItemsHeight = 0;
         for (final tp in _trendTextPainters) {
           trendItemsHeight += tp.height;
         }
         if (_trendTextPainters.length > 1) {
-          trendItemsHeight +=
-              (_trendTextPainters.length - 1) * style.itemSpacing;
+          trendItemsHeight += (_trendTextPainters.length - 1) * style.itemSpacing;
         }
 
-        legendWidth =
-            padding.left +
-            seriesColWidth +
-            columnGap +
-            trendColWidth +
-            padding.right;
-        legendHeight =
-            padding.top +
-            trendHeaderHeight +
-            halfSpacing +
-            math.max(seriesColHeight, trendItemsHeight) +
-            padding.bottom;
+        legendWidth = padding.left + seriesColWidth + columnGap + trendColWidth + padding.right;
+        legendHeight = padding.top + trendHeaderHeight + halfSpacing + math.max(seriesColHeight, trendItemsHeight) + padding.bottom;
       }
     } else {
       // Horizontal: series items side by side on row 1
@@ -3381,13 +2775,9 @@ class LegendAnnotationElement extends ChartElement {
       for (final painter in _textPainters) {
         seriesRowWidth += markerItemWidth + painter.width;
       }
-      seriesRowWidth += (itemCount > 1
-          ? (itemCount - 1) * style.itemSpacing
-          : 0);
+      seriesRowWidth += (itemCount > 1 ? (itemCount - 1) * style.itemSpacing : 0);
 
-      final maxSeriesItemHeight = _textPainters.isEmpty
-          ? style.textStyle.fontSize ?? 11
-          : _textPainters.map((p) => p.height).reduce(math.max);
+      final maxSeriesItemHeight = _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max);
       final seriesRowHeight = math.max(style.markerSize, maxSeriesItemHeight);
 
       if (!hasTrends) {
@@ -3413,13 +2803,9 @@ class LegendAnnotationElement extends ChartElement {
           }
         }
 
-        final maxRowWidth = math.max(
-          seriesRowWidth,
-          math.max(trendHeaderWidth, trendRowWidth),
-        );
+        final maxRowWidth = math.max(seriesRowWidth, math.max(trendHeaderWidth, trendRowWidth));
         legendWidth = padding.left + maxRowWidth + padding.right;
-        legendHeight =
-            padding.top + seriesRowHeight + trendHeight + padding.bottom;
+        legendHeight = padding.top + seriesRowHeight + trendHeight + padding.bottom;
       }
     }
 
@@ -3430,22 +2816,14 @@ class LegendAnnotationElement extends ChartElement {
     } else if (annotation.hasCustomPosition) {
       topLeft = annotation.customPosition!;
     } else {
-      topLeft = _calculateAnchoredPosition(
-        Size(legendWidth, legendHeight),
-        style.position,
-        style.offset,
-      );
+      topLeft = _calculateAnchoredPosition(Size(legendWidth, legendHeight), style.position, style.offset);
     }
 
     _bounds = Rect.fromLTWH(topLeft.dx, topLeft.dy, legendWidth, legendHeight);
   }
 
   /// Calculates position based on anchor point.
-  Offset _calculateAnchoredPosition(
-    Size legendSize,
-    LegendPosition position,
-    Offset offset,
-  ) {
+  Offset _calculateAnchoredPosition(Size legendSize, LegendPosition position, Offset offset) {
     const margin = 8.0;
     final double x, y;
 
@@ -3511,8 +2889,7 @@ class LegendAnnotationElement extends ChartElement {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_bounds == null ||
-        (annotation.series.isEmpty && annotation.trendAnnotations.isEmpty)) {
+    if (_bounds == null || (annotation.series.isEmpty && annotation.trendAnnotations.isEmpty)) {
       return;
     }
 
@@ -3520,17 +2897,12 @@ class LegendAnnotationElement extends ChartElement {
     final padding = style.effectivePadding;
 
     // Apply opacity
-    canvas.saveLayer(
-      _bounds,
-      Paint()..color = Colors.white.withValues(alpha: style.opacity),
-    );
+    canvas.saveLayer(_bounds, Paint()..color = Colors.white.withValues(alpha: style.opacity));
 
     // Draw background
     final bgPaint = Paint()..color = style.effectiveBackgroundColor;
     if (_isHovered) {
-      bgPaint.color = bgPaint.color.withValues(
-        alpha: (bgPaint.color.a * 1.05).clamp(0.0, 1.0),
-      );
+      bgPaint.color = bgPaint.color.withValues(alpha: (bgPaint.color.a * 1.05).clamp(0.0, 1.0));
     }
 
     final rRect = RRect.fromRectAndCorners(
@@ -3553,19 +2925,13 @@ class LegendAnnotationElement extends ChartElement {
     double currentX = _bounds!.left + padding.left;
     double currentY = _bounds!.top + padding.top;
 
-    final hasTrends =
-        annotation.trendAnnotations.isNotEmpty && _trendTextPainters.isNotEmpty;
+    final hasTrends = annotation.trendAnnotations.isNotEmpty && _trendTextPainters.isNotEmpty;
     final halfSpacing = style.itemSpacing / 2;
 
     // For horizontal layout, compute the series row height so markers/text
     // are centered within just the first row.
     final seriesRowHeight = style.orientation == LegendOrientation.horizontal
-        ? math.max(
-            style.markerSize,
-            _textPainters.isEmpty
-                ? style.textStyle.fontSize ?? 11
-                : _textPainters.map((p) => p.height).reduce(math.max),
-          )
+        ? math.max(style.markerSize, _textPainters.isEmpty ? style.textStyle.fontSize ?? 11 : _textPainters.map((p) => p.height).reduce(math.max))
         : 0.0;
 
     // For vertical layout with trends, compute header height and offset
@@ -3577,9 +2943,7 @@ class LegendAnnotationElement extends ChartElement {
           text: 'Trends',
           style: style.textStyle.copyWith(
             fontStyle: FontStyle.italic,
-            color:
-                style.textStyle.color?.withAlpha(140) ??
-                const Color(0x8C000000),
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
             fontSize: (style.textStyle.fontSize ?? 11) - 1,
           ),
         ),
@@ -3596,20 +2960,12 @@ class LegendAnnotationElement extends ChartElement {
       final isHidden = annotation.hiddenSeriesIds.contains(series.id);
 
       // Get series color
-      final seriesColor = isHidden
-          ? Colors.grey
-          : (series.color ?? _defaultColors[i % _defaultColors.length]);
+      final seriesColor = isHidden ? Colors.grey : (series.color ?? _defaultColors[i % _defaultColors.length]);
 
       // Draw marker
       final markerCenter = style.orientation == LegendOrientation.vertical
-          ? Offset(
-              currentX + style.markerSize / 2,
-              currentY + textPainter.height / 2,
-            )
-          : Offset(
-              currentX + style.markerSize / 2,
-              _bounds!.top + padding.top + seriesRowHeight / 2,
-            );
+          ? Offset(currentX + style.markerSize / 2, currentY + textPainter.height / 2)
+          : Offset(currentX + style.markerSize / 2, _bounds!.top + padding.top + seriesRowHeight / 2);
 
       _drawMarker(canvas, markerCenter, seriesColor, style);
 
@@ -3617,19 +2973,14 @@ class LegendAnnotationElement extends ChartElement {
       final textX = currentX + style.markerSize + style.markerLabelSpacing;
       final textY = style.orientation == LegendOrientation.vertical
           ? currentY
-          : _bounds!.top +
-                padding.top +
-                (seriesRowHeight - textPainter.height) / 2;
+          : _bounds!.top + padding.top + (seriesRowHeight - textPainter.height) / 2;
 
       // Apply strikethrough if hidden
       if (isHidden) {
         final hiddenPainter = TextPainter(
           text: TextSpan(
             text: series.displayName,
-            style: style.textStyle.copyWith(
-              color: Colors.grey,
-              decoration: TextDecoration.lineThrough,
-            ),
+            style: style.textStyle.copyWith(color: Colors.grey, decoration: TextDecoration.lineThrough),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
@@ -3642,11 +2993,7 @@ class LegendAnnotationElement extends ChartElement {
       if (style.orientation == LegendOrientation.vertical) {
         currentY += textPainter.height + style.itemSpacing;
       } else {
-        currentX +=
-            style.markerSize +
-            style.markerLabelSpacing +
-            textPainter.width +
-            style.itemSpacing;
+        currentX += style.markerSize + style.markerLabelSpacing + textPainter.width + style.itemSpacing;
       }
     }
 
@@ -3658,9 +3005,7 @@ class LegendAnnotationElement extends ChartElement {
           text: 'Trends',
           style: style.textStyle.copyWith(
             fontStyle: FontStyle.italic,
-            color:
-                style.textStyle.color?.withAlpha(140) ??
-                const Color(0x8C000000),
+            color: style.textStyle.color?.withAlpha(140) ?? const Color(0x8C000000),
             fontSize: (style.textStyle.fontSize ?? 11) - 1,
           ),
         ),
@@ -3674,41 +3019,21 @@ class LegendAnnotationElement extends ChartElement {
         for (final tp in _textPainters) {
           maxSeriesTextWidth = math.max(maxSeriesTextWidth, tp.width);
         }
-        final seriesColWidth =
-            style.markerSize + style.markerLabelSpacing + maxSeriesTextWidth;
+        final seriesColWidth = style.markerSize + style.markerLabelSpacing + maxSeriesTextWidth;
         final columnGap = style.itemSpacing * 2;
-        final rightColX =
-            _bounds!.left + padding.left + seriesColWidth + columnGap;
+        final rightColX = _bounds!.left + padding.left + seriesColWidth + columnGap;
 
         // Draw "Trends" header at top of right column
-        headerPainter.paint(
-          canvas,
-          Offset(rightColX, _bounds!.top + padding.top),
-        );
+        headerPainter.paint(canvas, Offset(rightColX, _bounds!.top + padding.top));
 
         // Draw trend items stacked in right column, below header
-        double trendY =
-            _bounds!.top + padding.top + trendHeaderHeight + halfSpacing;
-        for (
-          int i = 0;
-          i < annotation.trendAnnotations.length &&
-              i < _trendTextPainters.length;
-          i++
-        ) {
+        double trendY = _bounds!.top + padding.top + trendHeaderHeight + halfSpacing;
+        for (int i = 0; i < annotation.trendAnnotations.length && i < _trendTextPainters.length; i++) {
           final trend = annotation.trendAnnotations[i];
           final trendPainter = _trendTextPainters[i];
 
-          final markerCenter = Offset(
-            rightColX + style.markerSize / 2,
-            trendY + trendPainter.height / 2,
-          );
-          _drawMarker(
-            canvas,
-            markerCenter,
-            trend.lineColor,
-            style,
-            dashPattern: trend.dashPattern,
-          );
+          final markerCenter = Offset(rightColX + style.markerSize / 2, trendY + trendPainter.height / 2);
+          _drawMarker(canvas, markerCenter, trend.lineColor, style, dashPattern: trend.dashPattern);
 
           final textX = rightColX + style.markerSize + style.markerLabelSpacing;
           trendPainter.paint(canvas, Offset(textX, trendY));
@@ -3726,11 +3051,7 @@ class LegendAnnotationElement extends ChartElement {
         final dividerPaint = Paint()
           ..color = style.effectiveBorderColor.withAlpha(80)
           ..strokeWidth = 1.0;
-        canvas.drawLine(
-          Offset(_bounds!.left + padding.left, currentY),
-          Offset(_bounds!.right - padding.right, currentY),
-          dividerPaint,
-        );
+        canvas.drawLine(Offset(_bounds!.left + padding.left, currentY), Offset(_bounds!.right - padding.right, currentY), dividerPaint);
         currentY += 1.0 + halfSpacing;
 
         // Draw "Trends" header on its own line
@@ -3744,36 +3065,18 @@ class LegendAnnotationElement extends ChartElement {
         }
         trendRowHeight = math.max(trendRowHeight, style.markerSize);
 
-        for (
-          int i = 0;
-          i < annotation.trendAnnotations.length &&
-              i < _trendTextPainters.length;
-          i++
-        ) {
+        for (int i = 0; i < annotation.trendAnnotations.length && i < _trendTextPainters.length; i++) {
           final trend = annotation.trendAnnotations[i];
           final trendPainter = _trendTextPainters[i];
 
-          final markerCenter = Offset(
-            currentX + style.markerSize / 2,
-            currentY + trendRowHeight / 2,
-          );
-          _drawMarker(
-            canvas,
-            markerCenter,
-            trend.lineColor,
-            style,
-            dashPattern: trend.dashPattern,
-          );
+          final markerCenter = Offset(currentX + style.markerSize / 2, currentY + trendRowHeight / 2);
+          _drawMarker(canvas, markerCenter, trend.lineColor, style, dashPattern: trend.dashPattern);
 
           final textX = currentX + style.markerSize + style.markerLabelSpacing;
           final textY = currentY + (trendRowHeight - trendPainter.height) / 2;
           trendPainter.paint(canvas, Offset(textX, textY));
 
-          currentX +=
-              style.markerSize +
-              style.markerLabelSpacing +
-              trendPainter.width +
-              style.itemSpacing;
+          currentX += style.markerSize + style.markerLabelSpacing + trendPainter.width + style.itemSpacing;
         }
       }
     }
@@ -3782,13 +3085,7 @@ class LegendAnnotationElement extends ChartElement {
   }
 
   /// Draws a marker at the given position.
-  void _drawMarker(
-    Canvas canvas,
-    Offset center,
-    Color color,
-    LegendStyle style, {
-    List<double>? dashPattern,
-  }) {
+  void _drawMarker(Canvas canvas, Offset center, Color color, LegendStyle style, {List<double>? dashPattern}) {
     final paint = Paint()..color = color;
 
     switch (style.markerShape) {
@@ -3796,14 +3093,7 @@ class LegendAnnotationElement extends ChartElement {
         canvas.drawCircle(center, style.markerSize / 2, paint);
 
       case LegendMarkerShape.square:
-        canvas.drawRect(
-          Rect.fromCenter(
-            center: center,
-            width: style.markerSize,
-            height: style.markerSize,
-          ),
-          paint,
-        );
+        canvas.drawRect(Rect.fromCenter(center: center, width: style.markerSize, height: style.markerSize), paint);
 
       case LegendMarkerShape.line:
         paint
@@ -3823,9 +3113,7 @@ class LegendAnnotationElement extends ChartElement {
           //  - Dash-dot: 4+ segments,  e.g. [8, 4, 2, 4] — mixed long/short
           //  - Dashed:   drawn >= gap, e.g. [5, 5]     — fewer long dashes
           final dashLen = dashPattern.first;
-          final gapLen = dashPattern.length > 1
-              ? dashPattern[1]
-              : dashPattern.first;
+          final gapLen = dashPattern.length > 1 ? dashPattern[1] : dashPattern.first;
           final isDotted = dashLen < gapLen && dashPattern.length <= 2;
           final isDashDot = dashPattern.length > 2;
 
@@ -3834,12 +3122,8 @@ class LegendAnnotationElement extends ChartElement {
             paint.strokeWidth = math.min(style.markerLineWidth, 1.5);
             const targetCycles = 3.5;
             final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
-            final scale = patternTotal > 0
-                ? markerLen / (patternTotal * targetCycles)
-                : 1.0;
-            final scaled = dashPattern
-                .map((v) => (v * scale).clamp(0.8, markerLen))
-                .toList();
+            final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
+            final scaled = dashPattern.map((v) => (v * scale).clamp(0.8, markerLen)).toList();
             // Cap gaps so they never exceed 2× the dot size.
             final maxGap = scaled[0] * 2.0;
             for (int i = 1; i < scaled.length; i += 2) {
@@ -3852,11 +3136,7 @@ class LegendAnnotationElement extends ChartElement {
               final segLen = scaled[patternIdx % scaled.length];
               final segEnd = math.min(x + segLen, endX);
               if (patternIdx % 2 == 0) {
-                canvas.drawLine(
-                  Offset(x, center.dy),
-                  Offset(segEnd, center.dy),
-                  paint,
-                );
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
               }
               x = segEnd;
               patternIdx++;
@@ -3882,11 +3162,7 @@ class LegendAnnotationElement extends ChartElement {
               final segLen = scaled[patternIdx % scaled.length];
               final segEnd = math.min(x + segLen, endX);
               if (patternIdx % 2 == 0) {
-                canvas.drawLine(
-                  Offset(x, center.dy),
-                  Offset(segEnd, center.dy),
-                  paint,
-                );
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
               }
               x = segEnd;
               patternIdx++;
@@ -3896,12 +3172,8 @@ class LegendAnnotationElement extends ChartElement {
             paint.strokeWidth = math.min(style.markerLineWidth, 2.0);
             const targetCycles = 1.5;
             final patternTotal = dashPattern.fold<double>(0, (a, b) => a + b);
-            final scale = patternTotal > 0
-                ? markerLen / (patternTotal * targetCycles)
-                : 1.0;
-            final scaled = dashPattern
-                .map((v) => (v * scale).clamp(4.0, markerLen))
-                .toList();
+            final scale = patternTotal > 0 ? markerLen / (patternTotal * targetCycles) : 1.0;
+            final scaled = dashPattern.map((v) => (v * scale).clamp(4.0, markerLen)).toList();
 
             double x = startX;
             int patternIdx = 0;
@@ -3909,22 +3181,14 @@ class LegendAnnotationElement extends ChartElement {
               final segLen = scaled[patternIdx % scaled.length];
               final segEnd = math.min(x + segLen, endX);
               if (patternIdx % 2 == 0) {
-                canvas.drawLine(
-                  Offset(x, center.dy),
-                  Offset(segEnd, center.dy),
-                  paint,
-                );
+                canvas.drawLine(Offset(x, center.dy), Offset(segEnd, center.dy), paint);
               }
               x = segEnd;
               patternIdx++;
             }
           }
         } else {
-          canvas.drawLine(
-            Offset(startX, center.dy),
-            Offset(endX, center.dy),
-            paint,
-          );
+          canvas.drawLine(Offset(startX, center.dy), Offset(endX, center.dy), paint);
         }
 
       case LegendMarkerShape.diamond:
@@ -3968,10 +3232,7 @@ class LegendAnnotationElement extends ChartElement {
 
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) {
-    final copy = LegendAnnotationElement(
-      annotation: annotation,
-      chartSize: _chartSize,
-    );
+    final copy = LegendAnnotationElement(annotation: annotation, chartSize: _chartSize);
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;
     copy._bounds = _bounds;
