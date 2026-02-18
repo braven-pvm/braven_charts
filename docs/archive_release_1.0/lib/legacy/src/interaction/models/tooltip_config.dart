@@ -137,17 +137,7 @@ class TooltipStyle {
 
   @override
   int get hashCode {
-    return Object.hash(
-      backgroundColor,
-      borderColor,
-      borderWidth,
-      borderRadius,
-      shadowColor,
-      shadowBlurRadius,
-      padding,
-      textColor,
-      fontSize,
-    );
+    return Object.hash(backgroundColor, borderColor, borderWidth, borderRadius, shadowColor, shadowBlurRadius, padding, textColor, fontSize);
   }
 }
 
@@ -155,8 +145,7 @@ class TooltipStyle {
 ///
 /// Takes a [BuildContext] and a [dataPoint] map containing the data
 /// to display, and returns a [Widget] representing the custom tooltip.
-typedef TooltipBuilder =
-    Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
+typedef TooltipBuilder = Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
 
 /// Configuration for tooltip behavior and appearance.
 ///
@@ -277,16 +266,6 @@ class TooltipConfig {
 
   @override
   int get hashCode {
-    return Object.hash(
-      enabled,
-      triggerMode,
-      preferredPosition,
-      showDelay,
-      hideDelay,
-      followCursor,
-      offsetFromPoint,
-      style,
-      customBuilder,
-    );
+    return Object.hash(enabled, triggerMode, preferredPosition, showDelay, hideDelay, followCursor, offsetFromPoint, style, customBuilder);
   }
 }

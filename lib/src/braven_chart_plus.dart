@@ -38,6 +38,7 @@ import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/region_summary.dart';
 import 'models/region_summary_config.dart';
+import 'models/segment_style.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -845,6 +846,11 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   // Region analysis state — currently selected data region (FR-005: single-region)
   DataRegion? _selectedDataRegion;
 
+  // Internal: currently highlighted segment for rendering (non-public)
+  // Set when a segment-style region is selected so the renderer can draw
+  // glow + increased stroke for the matching series X-range.
+  SegmentHighlight? _activeSegmentHighlight;
+
   // Cache for computed region summaries, keyed by region ID.
   // Invalidated when selected region changes (T027 spec requirement).
   final Map<String, RegionSummary> _regionSummaryCache = {};
@@ -881,7 +887,39 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   void _selectRegion(DataRegion region) {
     _regionSummaryCache.clear();
     _selectedDataRegion = region;
+
+    // If this region came from a segment tap, set the active segment highlight
+    // so the renderer can emphasise the correct X-range for the series.
+    if (region.source == DataRegionSource.segment && region.seriesData.isNotEmpty) {
+      final seriesId = region.seriesData.keys.first;
+
+      // Compute an exclusive end-X for the highlighted range so the highlight
+      // matches the actual segment extent (segment starting at point.x spans
+      // to the next point.x). Fall back to region.endX when next point isn't found.
+      double highlightEndX = region.endX;
+      try {
+        final series = widget.series.firstWhere((s) => s.id == seriesId);
+        final lastPt = region.seriesData[seriesId]!.last;
+        final idx = series.points.indexWhere((p) => p.x == lastPt.x && p.y == lastPt.y);
+        if (idx >= 0 && idx + 1 < series.points.length) {
+          highlightEndX = series.points[idx - 1].x;
+        }
+      } catch (_) {
+        // ignore - use region.endX as fallback
+      }
+
+      _activeSegmentHighlight = SegmentHighlight(seriesId: seriesId, startX: region.startX + 1, endX: highlightEndX);
+    } else {
+      _activeSegmentHighlight = null;
+    }
+
+    // Signal selection change to consumers
     widget.onRegionSelected?.call(region);
+
+    // Ensure elements are regenerated so SeriesElement receives the highlight
+    setState(() {
+      _elementGeneratorVersion++;
+    });
 
     if (widget.showRegionSummary) {
       showRegionSummaryOverlay(region);
@@ -894,6 +932,13 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     if (_selectedDataRegion == null) return;
     _regionSummaryCache.clear();
     _selectedDataRegion = null;
+
+    // Clear active segment highlight and regenerate elements
+    _activeSegmentHighlight = null;
+    setState(() {
+      _elementGeneratorVersion++;
+    });
+
     widget.onRegionSelected?.call(null);
     hideRegionSummaryOverlay();
   }
@@ -1546,6 +1591,17 @@ class BravenChartPlusState extends State<BravenChartPlus> {
         theme: widget.theme,
         coordinator: _coordinator,
       ).cast<ChartElement>().toList();
+
+      // Attach optional segment highlight to the matching SeriesElement so the
+      // renderer can draw glow + increased stroke for the selected segment.
+      if (_activeSegmentHighlight != null) {
+        for (int i = 0; i < elements.length; i++) {
+          final el = elements[i];
+          if (el is SeriesElement && el.series.id == _activeSegmentHighlight!.seriesId) {
+            elements[i] = el.copyWith(segmentHighlight: _activeSegmentHighlight);
+          }
+        }
+      }
 
       // Convert annotations to elements
       // Removed excessive debugPrints (annotation conversion details)

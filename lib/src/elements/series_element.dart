@@ -10,6 +10,7 @@ import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/segment_style.dart';
 import '../theming/components/series_theme.dart';
 
 // =============================================================================
@@ -22,12 +23,7 @@ import '../theming/components/series_theme.dart';
 /// where each region has consistent styling (color + stroke width).
 /// This enables efficient batched rendering with minimal drawPath() calls.
 class _StyleRegion {
-  const _StyleRegion({
-    required this.startIndex,
-    required this.endIndex,
-    required this.color,
-    required this.strokeWidth,
-  });
+  const _StyleRegion({required this.startIndex, required this.endIndex, required this.color, required this.strokeWidth});
 
   /// Index of first point in region (segment starts here).
   final int startIndex;
@@ -52,11 +48,7 @@ class _StyleRegion {
 /// minimizing the number of drawPath() calls needed.
 ///
 /// **Performance**: O(n) single pass through points.
-List<_StyleRegion> _analyzeStyleRegions(
-  List<ChartDataPoint> points,
-  Color defaultColor,
-  double defaultStrokeWidth,
-) {
+List<_StyleRegion> _analyzeStyleRegions(List<ChartDataPoint> points, Color defaultColor, double defaultStrokeWidth) {
   if (points.length < 2) return [];
 
   final regions = <_StyleRegion>[];
@@ -64,8 +56,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 
   // Get effective style for first segment (from first point)
   Color currentColor = points[0].segmentStyle?.color ?? defaultColor;
-  double currentWidth =
-      points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
+  double currentWidth = points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
 
   // Iterate through points, detecting style changes
   // Note: We check points[i] for segment i→i+1's style
@@ -77,14 +68,7 @@ List<_StyleRegion> _analyzeStyleRegions(
     // Check if style changed at this point
     if (pointColor != currentColor || pointWidth != currentWidth) {
       // Close current region (ends at point i, inclusive)
-      regions.add(
-        _StyleRegion(
-          startIndex: regionStart,
-          endIndex: i,
-          color: currentColor,
-          strokeWidth: currentWidth,
-        ),
-      );
+      regions.add(_StyleRegion(startIndex: regionStart, endIndex: i, color: currentColor, strokeWidth: currentWidth));
 
       // Start new region from this point
       regionStart = i;
@@ -94,14 +78,7 @@ List<_StyleRegion> _analyzeStyleRegions(
   }
 
   // Close final region (always ends at last point)
-  regions.add(
-    _StyleRegion(
-      startIndex: regionStart,
-      endIndex: points.length - 1,
-      color: currentColor,
-      strokeWidth: currentWidth,
-    ),
-  );
+  regions.add(_StyleRegion(startIndex: regionStart, endIndex: points.length - 1, color: currentColor, strokeWidth: currentWidth));
 
   return regions;
 }
@@ -130,6 +107,7 @@ class SeriesElement implements ChartElement {
     this.seriesTheme,
     this.seriesIndex = 0,
     this.coordinator,
+    this.segmentHighlight,
     this.barGroupInfo,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
@@ -145,6 +123,9 @@ class SeriesElement implements ChartElement {
   final SeriesTheme? seriesTheme;
   final int seriesIndex;
   final ChartInteractionCoordinator? coordinator;
+
+  /// Optional in-memory highlight for a single selected segment (internal only).
+  final SegmentHighlight? segmentHighlight;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -168,9 +149,7 @@ class SeriesElement implements ChartElement {
       return (series as AreaChartSeries).strokeWidth;
     }
     // Fall back to theme for series types without explicit strokeWidth
-    return seriesTheme?.lineWidthAt(seriesIndex) ??
-        _deprecatedStrokeWidth ??
-        2.0;
+    return seriesTheme?.lineWidthAt(seriesIndex) ?? _deprecatedStrokeWidth ?? 2.0;
   }
 
   // Get effective color: series-explicit > deprecated > theme > default
@@ -181,9 +160,7 @@ class SeriesElement implements ChartElement {
       return series.color!;
     }
     // Fall back to deprecated parameter, then theme, then default
-    return _deprecatedThemeColor ??
-        seriesTheme?.colorAt(seriesIndex) ??
-        const Color(0xFF2196F3);
+    return _deprecatedThemeColor ?? seriesTheme?.colorAt(seriesIndex) ?? const Color(0xFF2196F3);
   }
 
   // Get effective marker size: series-explicit > theme > default
@@ -203,8 +180,7 @@ class SeriesElement implements ChartElement {
   }
 
   // Get effective marker shape from theme or default
-  MarkerShape get markerShape =>
-      seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
+  MarkerShape get markerShape => seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows path caching to work - transform stored at construction stays fixed,
@@ -214,9 +190,7 @@ class SeriesElement implements ChartElement {
   /// recomputed so QuadTree hit detection works correctly.
   void updateTransform(ChartTransform newTransform) {
     // Check if Y bounds changed - if so, recompute element bounds
-    final yBoundsChanged =
-        _currentTransform.dataYMin != newTransform.dataYMin ||
-        _currentTransform.dataYMax != newTransform.dataYMax;
+    final yBoundsChanged = _currentTransform.dataYMin != newTransform.dataYMin || _currentTransform.dataYMax != newTransform.dataYMax;
 
     _currentTransform = newTransform;
 
@@ -233,10 +207,7 @@ class SeriesElement implements ChartElement {
   /// [skipBoundsComputation] should be true for streaming updates where
   /// bounds are tracked externally (in StreamingBuffer). This avoids
   /// expensive O(n) iteration through all points on every frame.
-  void updateSeries(
-    ChartSeries newSeries, {
-    bool skipBoundsComputation = true,
-  }) {
+  void updateSeries(ChartSeries newSeries, {bool skipBoundsComputation = true}) {
     // Check if we need to invalidate path cache
     final pointCountChanged = newSeries.points.length != series.points.length;
 
@@ -275,8 +246,7 @@ class SeriesElement implements ChartElement {
   // Cache the rendered path to avoid recalculating on every paint
   Path? _cachedPath;
   List<Offset>? _cachedTransformedPoints;
-  List<int>?
-  _cachedOriginalIndices; // Maps visible point index → original series.points index
+  List<int>? _cachedOriginalIndices; // Maps visible point index → original series.points index
   late ChartTransform _cachedTransform;
 
   // Segment color caching - fast-path check result
@@ -308,12 +278,7 @@ class SeriesElement implements ChartElement {
 
     // Add padding for stroke width
     final padding = strokeWidth / 2;
-    _bounds = Rect.fromLTRB(
-      minX - padding,
-      minY - padding,
-      maxX + padding,
-      maxY + padding,
-    );
+    _bounds = Rect.fromLTRB(minX - padding, minY - padding, maxX + padding, maxY + padding);
   }
 
   @override
@@ -380,16 +345,11 @@ class SeriesElement implements ChartElement {
     }
 
     // Project point onto line segment (clamped to [0, 1])
-    final t =
-        ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) /
-        lengthSquared;
+    final t = ((point.dx - segStart.dx) * dx + (point.dy - segStart.dy) * dy) / lengthSquared;
     final clampedT = t.clamp(0.0, 1.0);
 
     // Find closest point on segment
-    final closest = Offset(
-      segStart.dx + clampedT * dx,
-      segStart.dy + clampedT * dy,
-    );
+    final closest = Offset(segStart.dx + clampedT * dx, segStart.dy + clampedT * dy);
 
     return (point - closest).distance;
   }
@@ -418,11 +378,7 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  void _paintLineSeries(
-    Canvas canvas,
-    LineChartSeries series,
-    Color baseColor,
-  ) {
+  void _paintLineSeries(Canvas canvas, LineChartSeries series, Color baseColor) {
     // FAST PATH CHECK: If any segment has style overrides, use multi-style rendering
     // This check is cached to avoid O(n) scan on every paint
     if (_hasSegmentOverrides(series)) {
@@ -442,18 +398,12 @@ class SeriesElement implements ChartElement {
     }
 
     // O(n) scan, but only done once and cached
-    _cachedHasSegmentOverrides = series.points.any(
-      (p) => p.segmentStyle != null,
-    );
+    _cachedHasSegmentOverrides = series.points.any((p) => p.segmentStyle != null);
     return _cachedHasSegmentOverrides!;
   }
 
   /// Original single-color line rendering (fast path).
-  void _paintLineSeriesSingleColor(
-    Canvas canvas,
-    LineChartSeries series,
-    Color baseColor,
-  ) {
+  void _paintLineSeriesSingleColor(Canvas canvas, LineChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
     final opacity = isSelected
         ? 1.0
@@ -471,15 +421,13 @@ class SeriesElement implements ChartElement {
       ..strokeJoin = StrokeJoin.round;
 
     // Check if we need to regenerate the path (transform changed or no cache)
-    final needsRegeneration =
-        _cachedPath == null || _cachedTransform != _currentTransform;
+    final needsRegeneration = _cachedPath == null || _cachedTransform != _currentTransform;
 
     if (needsRegeneration) {
       // PERFORMANCE OPTIMIZATION: Only process points within visible viewport
       // During streaming with 500+ points but only 100 visible, this saves 80% of work
       final visiblePoints = <ChartDataPoint>[];
-      final visibleIndices =
-          <int>[]; // Track original indices for hover matching
+      final visibleIndices = <int>[]; // Track original indices for hover matching
       final xMin = _currentTransform.dataXMin;
       final xMax = _currentTransform.dataXMax;
 
@@ -535,9 +483,7 @@ class SeriesElement implements ChartElement {
       }
 
       // PRE-TRANSFORM visible points ONCE to avoid redundant calculations
-      final transformedPoints = visiblePoints
-          .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-          .toList();
+      final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
       final path = Path();
       path.moveTo(transformedPoints[0].dx, transformedPoints[0].dy);
@@ -574,13 +520,7 @@ class SeriesElement implements ChartElement {
     if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
       // Series-specific dataPointMarkerRadius takes precedence over theme
       final effectiveMarkerSize = series.dataPointMarkerRadius;
-      _paintDataPointMarkers(
-        canvas,
-        _cachedTransformedPoints!,
-        _cachedOriginalIndices,
-        effectiveMarkerSize,
-        baseColor,
-      );
+      _paintDataPointMarkers(canvas, _cachedTransformedPoints!, _cachedOriginalIndices, effectiveMarkerSize, baseColor);
     }
   }
 
@@ -593,11 +533,7 @@ class SeriesElement implements ChartElement {
   ///
   /// **Performance**: Regions are cached. Bezier tangents use full point context
   /// for smooth curves at color boundaries.
-  void _paintLineSeriesMultiStyle(
-    Canvas canvas,
-    LineChartSeries series,
-    Color baseColor,
-  ) {
+  void _paintLineSeriesMultiStyle(Canvas canvas, LineChartSeries series, Color baseColor) {
     final opacity = _getOpacity();
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
 
@@ -652,31 +588,48 @@ class SeriesElement implements ChartElement {
     if (visiblePoints.length < 2) return;
 
     // Pre-transform ALL visible points once
-    final transformedPoints = visiblePoints
-        .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-        .toList();
+    final transformedPoints = visiblePoints.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
     // Analyze style regions (uses visible points, not full series)
-    final regions = _analyzeStyleRegions(
-      visiblePoints,
-      baseColor,
-      effectiveStrokeWidth,
-    );
+    final regions = _analyzeStyleRegions(visiblePoints, baseColor, effectiveStrokeWidth);
 
     // Paint each region
     for (final region in regions) {
-      final regionPath = _buildRegionPath(
-        transformedPoints,
-        region.startIndex,
-        region.endIndex,
-        series.interpolation,
-        series.tension,
-      );
+      final regionPath = _buildRegionPath(transformedPoints, region.startIndex, region.endIndex, series.interpolation, series.tension);
+
+      // Determine if this region overlaps the active segment highlight for
+      // this series. SegmentHighlight uses data-space X values from the
+      // visiblePoints list (region.startIndex/endIndex refer to that list).
+      final segmentHighlight = this.segmentHighlight;
+      // Compute region X extents in data-space. Use the next point's X for
+      // the exclusive end when available so boundary-touching regions are
+      // not considered overlapping.
+      final regionStartX = visiblePoints[region.startIndex].x;
+      final regionEndXExclusive = (region.endIndex + 1 < visiblePoints.length)
+          ? visiblePoints[region.endIndex + 1].x
+          : visiblePoints[region.endIndex].x;
+
+      final bool isRegionHighlighted = (segmentHighlight != null && segmentHighlight.seriesId == series.id)
+          ? (segmentHighlight.startX < regionEndXExclusive && segmentHighlight.endX > regionStartX)
+          : false;
+
+      // If highlighted, draw a soft glow behind the main stroke and increase
+      // the stroke width for emphasis.
+      if (isRegionHighlighted) {
+        final glowPaint = Paint()
+          ..color = region.color.withOpacity(0.22)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = region.strokeWidth + 6.0
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+        canvas.drawPath(regionPath, glowPaint);
+      }
 
       final paint = Paint()
         ..color = region.color.withValues(alpha: opacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = region.strokeWidth
+        ..strokeWidth = isRegionHighlighted ? region.strokeWidth * 1.5 : region.strokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 
@@ -687,13 +640,7 @@ class SeriesElement implements ChartElement {
     if (series.showDataPointMarkers) {
       // Series-specific dataPointMarkerRadius takes precedence over theme
       final effectiveMarkerSize = series.dataPointMarkerRadius;
-      _paintDataPointMarkers(
-        canvas,
-        transformedPoints,
-        visibleIndices,
-        effectiveMarkerSize,
-        baseColor,
-      );
+      _paintDataPointMarkers(canvas, transformedPoints, visibleIndices, effectiveMarkerSize, baseColor);
     }
   }
 
@@ -701,13 +648,7 @@ class SeriesElement implements ChartElement {
   ///
   /// Uses full [allPoints] array for bezier tangent context, but only adds
   /// segments within [startIndex] to [endIndex] range.
-  Path _buildRegionPath(
-    List<Offset> allPoints,
-    int startIndex,
-    int endIndex,
-    LineInterpolation interpolation,
-    double tension,
-  ) {
+  Path _buildRegionPath(List<Offset> allPoints, int startIndex, int endIndex, LineInterpolation interpolation, double tension) {
     final path = Path();
 
     // Move to first point in region
@@ -722,19 +663,8 @@ class SeriesElement implements ChartElement {
 
         case LineInterpolation.bezier:
           // Calculate control points using FULL context for smooth tangents
-          final (cp1, cp2) = _calculateBezierControlPoints(
-            allPoints,
-            i,
-            tension,
-          );
-          path.cubicTo(
-            cp1.dx,
-            cp1.dy,
-            cp2.dx,
-            cp2.dy,
-            allPoints[i + 1].dx,
-            allPoints[i + 1].dy,
-          );
+          final (cp1, cp2) = _calculateBezierControlPoints(allPoints, i, tension);
+          path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, allPoints[i + 1].dx, allPoints[i + 1].dy);
           break;
 
         case LineInterpolation.stepped:
@@ -757,11 +687,7 @@ class SeriesElement implements ChartElement {
   ///
   /// Uses Catmull-Rom to Bezier conversion with full point context
   /// for proper tangent calculation at region boundaries.
-  (Offset cp1, Offset cp2) _calculateBezierControlPoints(
-    List<Offset> points,
-    int i,
-    double tension,
-  ) {
+  (Offset cp1, Offset cp2) _calculateBezierControlPoints(List<Offset> points, int i, double tension) {
     // Get 4 points for Catmull-Rom: p0, p1 (start), p2 (end), p3
     // Clamp to array bounds for edge cases
     final p0 = points[i > 0 ? i - 1 : 0];
@@ -773,15 +699,9 @@ class SeriesElement implements ChartElement {
     final alpha = tension * 2.0;
 
     // Catmull-Rom to cubic bezier control points
-    final cp1 = Offset(
-      p1.dx + (p2.dx - p0.dx) * alpha / 3,
-      p1.dy + (p2.dy - p0.dy) * alpha / 3,
-    );
+    final cp1 = Offset(p1.dx + (p2.dx - p0.dx) * alpha / 3, p1.dy + (p2.dy - p0.dy) * alpha / 3);
 
-    final cp2 = Offset(
-      p2.dx - (p3.dx - p1.dx) * alpha / 3,
-      p2.dy - (p3.dy - p1.dy) * alpha / 3,
-    );
+    final cp2 = Offset(p2.dx - (p3.dx - p1.dx) * alpha / 3, p2.dy - (p3.dy - p1.dy) * alpha / 3);
 
     return (cp1, cp2);
   }
@@ -795,11 +715,7 @@ class SeriesElement implements ChartElement {
         : 0.7;
   }
 
-  void _paintScatterSeries(
-    Canvas canvas,
-    ScatterChartSeries series,
-    Color baseColor,
-  ) {
+  void _paintScatterSeries(Canvas canvas, ScatterChartSeries series, Color baseColor) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
     final opacity = isSelected
         ? 1.0
@@ -807,8 +723,7 @@ class SeriesElement implements ChartElement {
         ? 0.8
         : 0.7;
     // Use theme marker size if available, otherwise series-specific size
-    final defaultMarkerSize =
-        seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
+    final defaultMarkerSize = seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
 
     // Check if any point has style overrides
     final hasOverrides = series.points.any((p) => p.pointStyle != null);
@@ -839,17 +754,11 @@ class SeriesElement implements ChartElement {
     }
   }
 
-  void _paintAreaSeries(
-    Canvas canvas,
-    AreaChartSeries series,
-    Color baseColor,
-  ) {
+  void _paintAreaSeries(Canvas canvas, AreaChartSeries series, Color baseColor) {
     if (series.points.isEmpty) return;
 
     // PRE-TRANSFORM all points ONCE
-    final transformedPoints = series.points
-        .map((p) => _currentTransform.dataToPlot(p.x, p.y))
-        .toList();
+    final transformedPoints = series.points.map((p) => _currentTransform.dataToPlot(p.x, p.y)).toList();
 
     // Check if any segment has style overrides
     final hasOverrides = series.points.any((p) => p.segmentStyle != null);
@@ -865,24 +774,10 @@ class SeriesElement implements ChartElement {
 
     if (!hasOverrides) {
       // FAST PATH: Single color for both fill and stroke
-      _paintAreaSeriesSingleColor(
-        canvas,
-        series,
-        transformedPoints,
-        baseColor,
-        opacity,
-        effectiveStrokeWidth,
-      );
+      _paintAreaSeriesSingleColor(canvas, series, transformedPoints, baseColor, opacity, effectiveStrokeWidth);
     } else {
       // STYLED PATH: Multi-color fill and stroke
-      _paintAreaSeriesMultiColor(
-        canvas,
-        series,
-        transformedPoints,
-        baseColor,
-        opacity,
-        effectiveStrokeWidth,
-      );
+      _paintAreaSeriesMultiColor(canvas, series, transformedPoints, baseColor, opacity, effectiveStrokeWidth);
     }
 
     // Draw data point markers if enabled (reuse cached transforms!)
@@ -924,12 +819,7 @@ class SeriesElement implements ChartElement {
         }
         break;
       case LineInterpolation.bezier:
-        _addBezierToPath(
-          path,
-          transformedPoints,
-          series.tension,
-          startIndex: 1,
-        );
+        _addBezierToPath(path, transformedPoints, series.tension, startIndex: 1);
         break;
       case LineInterpolation.stepped:
         _addSteppedToPath(path, transformedPoints, startIndex: 1);
@@ -996,13 +886,7 @@ class SeriesElement implements ChartElement {
     // Draw each region's fill and stroke
     for (final region in regions) {
       // Build the fill path for this region (closed polygon to x-axis)
-      final fillPath = _buildAreaRegionFillPath(
-        transformedPoints,
-        region.startIndex,
-        region.endIndex,
-        series.interpolation,
-        series.tension,
-      );
+      final fillPath = _buildAreaRegionFillPath(transformedPoints, region.startIndex, region.endIndex, series.interpolation, series.tension);
 
       // Draw fill with region color
       final fillPaint = Paint()
@@ -1011,19 +895,36 @@ class SeriesElement implements ChartElement {
       canvas.drawPath(fillPath, fillPaint);
 
       // Build stroke path for this region
-      final strokePath = _buildRegionPath(
-        transformedPoints,
-        region.startIndex,
-        region.endIndex,
-        series.interpolation,
-        series.tension,
-      );
+      final strokePath = _buildRegionPath(transformedPoints, region.startIndex, region.endIndex, series.interpolation, series.tension);
 
       // Draw stroke with region color
+      // Highlight handling: if the stroke overlaps the active segment highlight,
+      // draw a glow behind it and increase the stroke width.
+      final segmentHighlight = this.segmentHighlight;
+      final regionStartX = series.points[region.startIndex].x;
+      final regionEndXExclusive = (region.endIndex + 1 < series.points.length)
+          ? series.points[region.endIndex + 1].x
+          : series.points[region.endIndex].x;
+
+      final bool isRegionHighlighted = (segmentHighlight != null && segmentHighlight.seriesId == series.id)
+          ? (segmentHighlight.startX < regionEndXExclusive && segmentHighlight.endX > regionStartX)
+          : false;
+
+      if (isRegionHighlighted) {
+        final glowPaint = Paint()
+          ..color = region.color.withOpacity(0.22)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = region.strokeWidth + 6.0
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+        canvas.drawPath(strokePath, glowPaint);
+      }
+
       final strokePaint = Paint()
         ..color = region.color.withValues(alpha: opacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = region.strokeWidth
+        ..strokeWidth = isRegionHighlighted ? region.strokeWidth * 1.5 : region.strokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(strokePath, strokePaint);
@@ -1031,13 +932,7 @@ class SeriesElement implements ChartElement {
   }
 
   /// Builds a closed fill path for an area region (line segment + down to x-axis).
-  Path _buildAreaRegionFillPath(
-    List<Offset> transformedPoints,
-    int startIndex,
-    int endIndex,
-    LineInterpolation interpolation,
-    double tension,
-  ) {
+  Path _buildAreaRegionFillPath(List<Offset> transformedPoints, int startIndex, int endIndex, LineInterpolation interpolation, double tension) {
     final path = Path();
     final startPoint = transformedPoints[startIndex];
     final endPoint = transformedPoints[endIndex];
@@ -1060,19 +955,8 @@ class SeriesElement implements ChartElement {
       case LineInterpolation.bezier:
         // For bezier, calculate control points for each segment
         for (int i = startIndex; i < endIndex; i++) {
-          final (cp1, cp2) = _calculateBezierControlPoints(
-            transformedPoints,
-            i,
-            tension,
-          );
-          path.cubicTo(
-            cp1.dx,
-            cp1.dy,
-            cp2.dx,
-            cp2.dy,
-            transformedPoints[i + 1].dx,
-            transformedPoints[i + 1].dy,
-          );
+          final (cp1, cp2) = _calculateBezierControlPoints(transformedPoints, i, tension);
+          path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, transformedPoints[i + 1].dx, transformedPoints[i + 1].dy);
         }
         break;
 
@@ -1116,8 +1000,7 @@ class SeriesElement implements ChartElement {
     // Pre-calculate default bar width (in pixels)
     double defaultBarWidth;
     if (series.barWidthPixels != null) {
-      defaultBarWidth =
-          series.barWidthPixels! / _currentTransform.dataPerPixelX;
+      defaultBarWidth = series.barWidthPixels! / _currentTransform.dataPerPixelX;
       defaultBarWidth = defaultBarWidth.clamp(series.minWidth, series.maxWidth);
     } else {
       final spacingInPixels = _calculateXAxisSpacing(series.points);
@@ -1176,12 +1059,7 @@ class SeriesElement implements ChartElement {
         final plotPos = _currentTransform.dataToPlot(point.x, point.y);
         final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
 
-        final rect = Rect.fromLTRB(
-          plotPos.dx + xOffset - defaultBarWidth / 2,
-          plotPos.dy,
-          plotPos.dx + xOffset + defaultBarWidth / 2,
-          zeroY,
-        );
+        final rect = Rect.fromLTRB(plotPos.dx + xOffset - defaultBarWidth / 2, plotPos.dy, plotPos.dx + xOffset + defaultBarWidth / 2, zeroY);
         canvas.drawRect(rect, barPaint);
       }
     } else {
@@ -1199,12 +1077,7 @@ class SeriesElement implements ChartElement {
           ..color = barColor.withValues(alpha: opacity)
           ..style = PaintingStyle.fill;
 
-        final rect = Rect.fromLTRB(
-          plotPos.dx + xOffset - barWidth / 2,
-          plotPos.dy,
-          plotPos.dx + xOffset + barWidth / 2,
-          zeroY,
-        );
+        final rect = Rect.fromLTRB(plotPos.dx + xOffset - barWidth / 2, plotPos.dy, plotPos.dx + xOffset + barWidth / 2, zeroY);
         canvas.drawRect(rect, barPaint);
       }
     }
@@ -1231,14 +1104,8 @@ class SeriesElement implements ChartElement {
 
   /// Add bezier curves using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   /// Uses Catmull-Rom spline converted to cubic bezier, ensuring curve passes through all data points.
-  void _addBezierToPath(
-    Path path,
-    List<Offset> transformedPoints,
-    double tension, {
-    int startIndex = 1,
-  }) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addBezierToPath(Path path, List<Offset> transformedPoints, double tension, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 
@@ -1256,10 +1123,7 @@ class SeriesElement implements ChartElement {
       final p0 = transformedPoints[i > 1 ? i - 2 : 0];
       final p1 = transformedPoints[i - 1];
       final p2 = transformedPoints[i];
-      final p3 =
-          transformedPoints[i < transformedPoints.length - 1
-              ? i + 1
-              : transformedPoints.length - 1];
+      final p3 = transformedPoints[i < transformedPoints.length - 1 ? i + 1 : transformedPoints.length - 1];
 
       // Catmull-Rom to cubic bezier control points
       // Control point 1: 1/3 of the way from p1 toward the tangent direction
@@ -1275,13 +1139,8 @@ class SeriesElement implements ChartElement {
   }
 
   /// Add stepped lines using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
-  void _addSteppedToPath(
-    Path path,
-    List<Offset> transformedPoints, {
-    int startIndex = 1,
-  }) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addSteppedToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 
@@ -1295,13 +1154,8 @@ class SeriesElement implements ChartElement {
   }
 
   /// Add monotone curves using PRE-TRANSFORMED points (currently uses linear)
-  void _addMonotoneToPath(
-    Path path,
-    List<Offset> transformedPoints, {
-    int startIndex = 1,
-  }) {
-    if (transformedPoints.length < 2 ||
-        startIndex >= transformedPoints.length) {
+  void _addMonotoneToPath(Path path, List<Offset> transformedPoints, {int startIndex = 1}) {
+    if (transformedPoints.length < 2 || startIndex >= transformedPoints.length) {
       return;
     }
 
@@ -1315,13 +1169,7 @@ class SeriesElement implements ChartElement {
   /// [originalIndices] maps each position in [transformedPoints] to its original
   /// index in [series.points]. This is required for correct hover matching when
   /// zoomed/panned (viewport culling changes visible point indices).
-  void _paintDataPointMarkers(
-    Canvas canvas,
-    List<Offset> transformedPoints,
-    List<int>? originalIndices,
-    double radius,
-    Color baseColor,
-  ) {
+  void _paintDataPointMarkers(Canvas canvas, List<Offset> transformedPoints, List<int>? originalIndices, double radius, Color baseColor) {
     // Check if any marker in this series is hovered
     final hoveredMarker = coordinator?.hoveredMarker;
     final isThisSeriesHovered = hoveredMarker?.seriesId == series.id;
@@ -1377,7 +1225,7 @@ class SeriesElement implements ChartElement {
   }
 
   @override
-  SeriesElement copyWith({bool? isHovered, bool? isSelected}) {
+  SeriesElement copyWith({bool? isHovered, bool? isSelected, SegmentHighlight? segmentHighlight}) {
     return SeriesElement(
       series: series,
       transform: transform,
@@ -1386,6 +1234,7 @@ class SeriesElement implements ChartElement {
       seriesTheme: seriesTheme,
       seriesIndex: seriesIndex,
       coordinator: coordinator,
+      segmentHighlight: segmentHighlight ?? this.segmentHighlight,
       barGroupInfo: barGroupInfo, // Preserve bar group info for grouped bars
     );
   }

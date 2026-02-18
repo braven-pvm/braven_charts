@@ -4,7 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 /// Demonstrates all three region-selection sources available in BravenChartPlus:
 ///
@@ -81,7 +81,9 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         ChartDataPoint(
           x: x,
           y: y,
-          segmentStyle: inHighZone ? const SegmentStyle(color: Colors.orange, strokeWidth: 3.5) : null,
+          segmentStyle: inHighZone
+              ? const SegmentStyle(color: Colors.deepPurpleAccent, strokeWidth: 3.5)
+              : const SegmentStyle(color: Colors.orange, strokeWidth: 2.5),
         ),
       );
     }
@@ -121,13 +123,13 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
       body: Column(
         children: [
           // ── Instructions ──────────────────────────────────────────────────
-          _buildInstructionBanner(theme),
+          // _buildInstructionBanner(theme),
 
           // ── Chart ─────────────────────────────────────────────────────────
           Expanded(child: _buildChart()),
 
           // ── Info panel ────────────────────────────────────────────────────
-          _buildInfoPanel(theme),
+          // _buildInfoPanel(theme),
         ],
       ),
     );
@@ -192,17 +194,18 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
             color: Colors.blue,
             interpolation: LineInterpolation.bezier,
             strokeWidth: 2.0,
-            showDataPointMarkers: false,
+            // showDataPointMarkers: true,
           ),
           // Cosine with styled segments – supports segment tap
           LineChartSeries(
             id: 'cosine_styled',
             name: 'Cosine (styled peaks)',
             points: _styledSineData,
-            color: Colors.deepOrange.withValues(alpha: 0.7),
+            color: Colors.orange.withValues(alpha: 0.7),
             interpolation: LineInterpolation.bezier,
             strokeWidth: 2.0,
-            showDataPointMarkers: false,
+            // showDataPointMarkers: true,
+            dataPointMarkerRadius: 5,
           ),
         ],
 
@@ -212,8 +215,8 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
         // ── Region summary overlay ────────────────────────────────────────
         showRegionSummary: true,
         regionSummaryConfig: RegionSummaryConfig(
-          metrics: {RegionMetric.min, RegionMetric.max, RegionMetric.average, RegionMetric.count},
-          position: RegionSummaryPosition.insideBottom,
+          metrics: {RegionMetric.min, RegionMetric.max, RegionMetric.average, RegionMetric.count, RegionMetric.range},
+          position: RegionSummaryPosition.aboveRegion,
         ),
 
         // ── Box-select & interaction ──────────────────────────────────────
@@ -222,7 +225,7 @@ class _RegionAnalysisDemoState extends State<RegionAnalysisDemo> {
           enablePan: true,
           enableSelection: true,
           enableFocusOnHover: true,
-          tooltip: TooltipConfig(enabled: false),
+          tooltip: TooltipConfig(enabled: false, triggerMode: TooltipTriggerMode.both),
         ),
         // ── Axis config ───────────────────────────────────────────────────
         xAxisConfig: const XAxisConfig(label: 'X'),

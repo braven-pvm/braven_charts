@@ -79,31 +79,41 @@ class SegmentStyle {
   bool get hasOverrides => color != null || strokeWidth != null;
 
   /// Creates a copy of this style with the given overrides.
-  SegmentStyle copyWith({
-    Color? color,
-    double? strokeWidth,
-    bool clearColor = false,
-    bool clearStrokeWidth = false,
-  }) {
-    return SegmentStyle(
-      color: clearColor ? null : (color ?? this.color),
-      strokeWidth: clearStrokeWidth ? null : (strokeWidth ?? this.strokeWidth),
-    );
+  SegmentStyle copyWith({Color? color, double? strokeWidth, bool clearColor = false, bool clearStrokeWidth = false}) {
+    return SegmentStyle(color: clearColor ? null : (color ?? this.color), strokeWidth: clearStrokeWidth ? null : (strokeWidth ?? this.strokeWidth));
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SegmentStyle &&
-          runtimeType == other.runtimeType &&
-          color == other.color &&
-          strokeWidth == other.strokeWidth;
+      identical(this, other) || other is SegmentStyle && runtimeType == other.runtimeType && color == other.color && strokeWidth == other.strokeWidth;
 
   @override
   int get hashCode => Object.hash(color, strokeWidth);
 
   @override
   String toString() => 'SegmentStyle(color: $color, strokeWidth: $strokeWidth)';
+}
+
+// -----------------------------------------------------------------------------
+// SegmentHighlight (internal) - used by renderer to highlight selected segment
+// -----------------------------------------------------------------------------
+
+/// Lightweight internal model that represents a selected/highlighted segment
+/// in data-space. This is not part of the public API and is used only by the
+/// rendering layer to add glow/linewidth emphasis to the matching style region.
+class SegmentHighlight {
+  const SegmentHighlight({required this.seriesId, required this.startX, required this.endX});
+
+  final String seriesId;
+  final double startX;
+  final double endX;
+
+  bool overlaps(double regionStartX, double regionEndX) {
+    return !(regionEndX < startX || regionStartX > endX);
+  }
+
+  @override
+  String toString() => 'SegmentHighlight(seriesId: $seriesId, startX: $startX, endX: $endX)';
 }
 
 // =============================================================================
@@ -179,25 +189,13 @@ class PointStyle {
   bool get hasOverrides => color != null || size != null;
 
   /// Creates a copy of this style with the given overrides.
-  PointStyle copyWith({
-    Color? color,
-    double? size,
-    bool clearColor = false,
-    bool clearSize = false,
-  }) {
-    return PointStyle(
-      color: clearColor ? null : (color ?? this.color),
-      size: clearSize ? null : (size ?? this.size),
-    );
+  PointStyle copyWith({Color? color, double? size, bool clearColor = false, bool clearSize = false}) {
+    return PointStyle(color: clearColor ? null : (color ?? this.color), size: clearSize ? null : (size ?? this.size));
   }
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PointStyle &&
-          runtimeType == other.runtimeType &&
-          color == other.color &&
-          size == other.size;
+      identical(this, other) || other is PointStyle && runtimeType == other.runtimeType && color == other.color && size == other.size;
 
   @override
   int get hashCode => Object.hash(color, size);
@@ -278,9 +276,7 @@ extension SegmentColorExtensions on LineChartSeries {
   /// });
   /// ```
   LineChartSeries withSegmentColors(Map<int, Color> colors) {
-    return withSegmentStyles(
-      colors.map((index, color) => MapEntry(index, SegmentStyle.color(color))),
-    );
+    return withSegmentStyles(colors.map((index, color) => MapEntry(index, SegmentStyle.color(color))));
   }
 
   /// Creates a copy with all segments in X-range styled.
@@ -293,11 +289,7 @@ extension SegmentColorExtensions on LineChartSeries {
   /// // Highlight X=10 to X=20 in red
   /// series.withStyleInRange(10.0, 20.0, SegmentStyle.color(Colors.red));
   /// ```
-  LineChartSeries withStyleInRange(
-    double xStart,
-    double xEnd,
-    SegmentStyle style,
-  ) {
+  LineChartSeries withStyleInRange(double xStart, double xEnd, SegmentStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -328,10 +320,7 @@ extension SegmentColorExtensions on LineChartSeries {
   ///   Colors.orange,
   /// );
   /// ```
-  LineChartSeries withColorWhere(
-    bool Function(ChartDataPoint point) condition,
-    Color color,
-  ) {
+  LineChartSeries withColorWhere(bool Function(ChartDataPoint point) condition, Color color) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -356,10 +345,7 @@ extension SegmentColorExtensions on LineChartSeries {
   ///   SegmentStyle(color: Colors.red, strokeWidth: 4.0),
   /// );
   /// ```
-  LineChartSeries withStyleWhere(
-    bool Function(ChartDataPoint point) condition,
-    SegmentStyle style,
-  ) {
+  LineChartSeries withStyleWhere(bool Function(ChartDataPoint point) condition, SegmentStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -376,9 +362,7 @@ extension SegmentColorExtensions on LineChartSeries {
   ///
   /// Returns a copy with all points having null segmentStyle.
   LineChartSeries clearSegmentStyles() {
-    final newPoints = points
-        .map((p) => p.copyWith(clearSegmentStyle: true))
-        .toList();
+    final newPoints = points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -411,17 +395,11 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
 
   /// Creates a copy with segment colors at specified indices.
   AreaChartSeries withSegmentColors(Map<int, Color> colors) {
-    return withSegmentStyles(
-      colors.map((index, color) => MapEntry(index, SegmentStyle.color(color))),
-    );
+    return withSegmentStyles(colors.map((index, color) => MapEntry(index, SegmentStyle.color(color))));
   }
 
   /// Creates a copy with all segments in X-range styled.
-  AreaChartSeries withStyleInRange(
-    double xStart,
-    double xEnd,
-    SegmentStyle style,
-  ) {
+  AreaChartSeries withStyleInRange(double xStart, double xEnd, SegmentStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -436,10 +414,7 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
   }
 
   /// Creates a copy with color applied where condition is true.
-  AreaChartSeries withColorWhere(
-    bool Function(ChartDataPoint point) condition,
-    Color color,
-  ) {
+  AreaChartSeries withColorWhere(bool Function(ChartDataPoint point) condition, Color color) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -454,9 +429,7 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
 
   /// Clears all segment style overrides from the series.
   AreaChartSeries clearSegmentStyles() {
-    final newPoints = points
-        .map((p) => p.copyWith(clearSegmentStyle: true))
-        .toList();
+    final newPoints = points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -497,17 +470,11 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
 
   /// Creates a copy with point colors at specified indices.
   ScatterChartSeries withPointColors(Map<int, Color> colors) {
-    return withPointStyles(
-      colors.map((index, color) => MapEntry(index, PointStyle.color(color))),
-    );
+    return withPointStyles(colors.map((index, color) => MapEntry(index, PointStyle.color(color))));
   }
 
   /// Creates a copy with all points in X-range styled.
-  ScatterChartSeries withStyleInRange(
-    double xStart,
-    double xEnd,
-    PointStyle style,
-  ) {
+  ScatterChartSeries withStyleInRange(double xStart, double xEnd, PointStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -521,10 +488,7 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
   }
 
   /// Creates a copy with color applied where condition is true.
-  ScatterChartSeries withColorWhere(
-    bool Function(ChartDataPoint point) condition,
-    Color color,
-  ) {
+  ScatterChartSeries withColorWhere(bool Function(ChartDataPoint point) condition, Color color) {
     final newPoints = points.map((point) {
       if (condition(point)) {
         return point.copyWith(pointStyle: PointStyle.color(color));
@@ -536,9 +500,7 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
 
   /// Clears all point style overrides from the series.
   ScatterChartSeries clearPointStyles() {
-    final newPoints = points
-        .map((p) => p.copyWith(clearPointStyle: true))
-        .toList();
+    final newPoints = points.map((p) => p.copyWith(clearPointStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }
@@ -579,17 +541,11 @@ extension BarPointStyleExtensions on BarChartSeries {
 
   /// Creates a copy with point colors at specified indices.
   BarChartSeries withPointColors(Map<int, Color> colors) {
-    return withPointStyles(
-      colors.map((index, color) => MapEntry(index, PointStyle.color(color))),
-    );
+    return withPointStyles(colors.map((index, color) => MapEntry(index, PointStyle.color(color))));
   }
 
   /// Creates a copy with all bars in X-range styled.
-  BarChartSeries withStyleInRange(
-    double xStart,
-    double xEnd,
-    PointStyle style,
-  ) {
+  BarChartSeries withStyleInRange(double xStart, double xEnd, PointStyle style) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -609,10 +565,7 @@ extension BarPointStyleExtensions on BarChartSeries {
   /// // Highlight bars above threshold
   /// series.withColorWhere((point) => point.y > 100, Colors.red);
   /// ```
-  BarChartSeries withColorWhere(
-    bool Function(ChartDataPoint point) condition,
-    Color color,
-  ) {
+  BarChartSeries withColorWhere(bool Function(ChartDataPoint point) condition, Color color) {
     final newPoints = points.map((point) {
       if (condition(point)) {
         return point.copyWith(pointStyle: PointStyle.color(color));
@@ -624,9 +577,7 @@ extension BarPointStyleExtensions on BarChartSeries {
 
   /// Clears all point style overrides from the series.
   BarChartSeries clearPointStyles() {
-    final newPoints = points
-        .map((p) => p.copyWith(clearPointStyle: true))
-        .toList();
+    final newPoints = points.map((p) => p.copyWith(clearPointStyle: true)).toList();
     return copyWith(points: newPoints);
   }
 }

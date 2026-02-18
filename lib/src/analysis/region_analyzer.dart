@@ -68,12 +68,7 @@ class RegionAnalyzer {
   /// );
   /// // Returns: [ChartDataPoint(x: 2, y: 20)]
   /// ```
-  List<ChartDataPoint> filterPointsInRange(
-    List<ChartDataPoint> points, {
-    required double startX,
-    required double endX,
-    bool isSorted = true,
-  }) {
+  List<ChartDataPoint> filterPointsInRange(List<ChartDataPoint> points, {required double startX, required double endX, bool isSorted = true}) {
     if (points.isEmpty) {
       return [];
     }
@@ -89,11 +84,7 @@ class RegionAnalyzer {
   ///
   /// Finds the first point with x >= startX using binary search,
   /// then scans forward collecting all points until x > endX.
-  List<ChartDataPoint> _binarySearchFilter(
-    List<ChartDataPoint> points,
-    double startX,
-    double endX,
-  ) {
+  List<ChartDataPoint> _binarySearchFilter(List<ChartDataPoint> points, double startX, double endX) {
     // Binary search for the first index where point.x >= startX
     int low = 0;
     int high = points.length;
@@ -123,11 +114,7 @@ class RegionAnalyzer {
   /// Linear scan filter for unsorted data — O(n).
   ///
   /// Iterates all points and includes those where startX <= x <= endX.
-  List<ChartDataPoint> _linearScanFilter(
-    List<ChartDataPoint> points,
-    double startX,
-    double endX,
-  ) {
+  List<ChartDataPoint> _linearScanFilter(List<ChartDataPoint> points, double startX, double endX) {
     return points.where((p) => p.x >= startX && p.x <= endX).toList();
   }
 
@@ -158,21 +145,14 @@ class RegionAnalyzer {
   ///   {'power': powerPoints, 'heartrate': hrPoints},
   /// );
   /// ```
-  DataRegion regionFromAnnotation(
-    RangeAnnotation annotation,
-    Map<String, List<ChartDataPoint>> allSeriesData,
-  ) {
+  DataRegion regionFromAnnotation(RangeAnnotation annotation, Map<String, List<ChartDataPoint>> allSeriesData) {
     final startX = annotation.startX!;
     final endX = annotation.endX!;
 
     final seriesData = <String, List<ChartDataPoint>>{};
 
     for (final entry in allSeriesData.entries) {
-      final filtered = filterPointsInRange(
-        entry.value,
-        startX: startX,
-        endX: endX,
-      );
+      final filtered = filterPointsInRange(entry.value, startX: startX, endX: endX);
 
       // Exclude series with zero matching points
       if (filtered.isNotEmpty) {
@@ -319,11 +299,7 @@ class RegionAnalyzer {
   ///   seriesUnits: {'power': 'W'},
   /// );
   /// ```
-  RegionSummary computeRegionSummary(
-    DataRegion region, {
-    Map<String, String>? seriesNames,
-    Map<String, String>? seriesUnits,
-  }) {
+  RegionSummary computeRegionSummary(DataRegion region, {Map<String, String>? seriesNames, Map<String, String>? seriesUnits}) {
     final seriesSummaries = <String, SeriesRegionSummary>{};
 
     for (final entry in region.seriesData.entries) {
@@ -369,62 +345,44 @@ class RegionAnalyzer {
   /// final groups = analyzer.detectSegmentGroups('power', styledPoints);
   /// // Returns List<DataRegion> for each contiguous styled group
   /// ```
-  List<DataRegion> detectSegmentGroups(
-    String seriesId,
-    List<ChartDataPoint> points,
-  ) {
-    if (points.isEmpty) {
-      return [];
-    }
+  List<DataRegion> detectSegmentGroups(String seriesId, List<ChartDataPoint> points) {
+    if (points.isEmpty) return [];
 
     final groups = <DataRegion>[];
 
-    int? groupStartIndex;
-    SegmentStyle? currentStyle;
-
-    for (int i = 0; i < points.length; i++) {
-      final point = points[i];
-      final style = point.segmentStyle;
-
-      if (style != null && style == currentStyle) {
-        // Continue the current group — same non-null style
+    int i = 0;
+    while (i < points.length) {
+      // Skip unstyled points until we find a styled run
+      if (points[i].segmentStyle == null) {
+        i++;
         continue;
       }
 
-      // Flush the previous group (if any) before starting a new one
-      if (groupStartIndex != null) {
-        final groupPoints = points.sublist(groupStartIndex, i);
-        groups.add(
-          DataRegion(
-            id: 'segment_${seriesId}_$groupStartIndex',
-            startX: groupPoints.first.x,
-            endX: groupPoints.last.x,
-            source: DataRegionSource.segment,
-            seriesData: {seriesId: groupPoints},
-          ),
-        );
+      final startIdx = i;
+      final style = points[i].segmentStyle!;
+
+      // Advance while contiguous points have the same non-null style
+      i++;
+      while (i < points.length && points[i].segmentStyle != null && points[i].segmentStyle == style) {
+        i++;
       }
 
-      // Start a new group or reset
-      if (style != null) {
-        groupStartIndex = i;
-        currentStyle = style;
-      } else {
-        groupStartIndex = null;
-        currentStyle = null;
-      }
-    }
+      // [startIdx .. i-1] is the contiguous styled group
+      final groupPoints = points.sublist(startIdx, i);
 
-    // Flush the last group if it extends to the end of the list
-    if (groupStartIndex != null) {
-      final groupPoints = points.sublist(groupStartIndex);
+      // Build seriesData and append trailing endpoint when available
+      final seriesPoints = <ChartDataPoint>[...groupPoints];
+      if (i < points.length) {
+        seriesPoints.add(points[i]);
+      }
+
       groups.add(
         DataRegion(
-          id: 'segment_${seriesId}_$groupStartIndex',
+          id: 'segment_${seriesId}_$startIdx',
           startX: groupPoints.first.x,
           endX: groupPoints.last.x,
           source: DataRegionSource.segment,
-          seriesData: {seriesId: groupPoints},
+          seriesData: {seriesId: seriesPoints},
         ),
       );
     }
@@ -448,11 +406,7 @@ class RegionAnalyzer {
   /// final region = analyzer.segmentGroupForPoint('power', points, 5);
   /// // Returns DataRegion if point 5 is in a styled group, else null
   /// ```
-  DataRegion? segmentGroupForPoint(
-    String seriesId,
-    List<ChartDataPoint> points,
-    int pointIndex,
-  ) {
+  DataRegion? segmentGroupForPoint(String seriesId, List<ChartDataPoint> points, int pointIndex) {
     if (pointIndex < 0 || pointIndex >= points.length) {
       return null;
     }
@@ -467,14 +421,29 @@ class RegionAnalyzer {
 
     for (final group in groups) {
       // Check if pointIndex falls within this group's index range.
-      // The group's seriesData contains the actual points; we need
-      // to check by X-value range and point identity.
-      final groupPoints = group.seriesData[seriesId]!;
-      // The group contains consecutive points starting from the
-      // start index embedded in the ID.
+      // Use the group's embedded start index (from ID) and compute the
+      // end index based on the number of *styled* points in the group.
+      // Note: seriesData may include a trailing endpoint (for region display),
+      // so don't rely on seriesData.length for index arithmetic.
       final idParts = group.id.split('_');
       final startIdx = int.parse(idParts.last);
-      final endIdx = startIdx + groupPoints.length - 1;
+
+      // Compute the number of *styled* points for this group by scanning the
+      // original points list starting at startIdx. Do NOT rely on
+      // `group.seriesData` because it may include a trailing endpoint which
+      // can itself be styled (belongs to the *next* group) and would corrupt
+      // the styled-count calculation.
+      // Count contiguous points that share the same non-null SegmentStyle
+      final startStyle = points[startIdx].segmentStyle;
+      int styledCount = 0;
+      for (int j = startIdx; j < points.length; j++) {
+        final s = points[j].segmentStyle;
+        if (s == null || s != startStyle) break;
+        styledCount++;
+      }
+
+      if (styledCount == 0) continue; // defensive
+      final endIdx = startIdx + styledCount - 1;
 
       if (pointIndex >= startIdx && pointIndex <= endIdx) {
         return group;
