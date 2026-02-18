@@ -21,18 +21,19 @@ import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
+import '../models/region_summary.dart';
+import '../models/region_summary_config.dart';
 import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
-import '../models/y_axis_config.dart';
-import '../streaming/streaming_buffer.dart';
+import '../models/y_axis_config.dart';import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
 import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
 import 'modules/event_handler_manager.dart';
 import 'modules/multi_axis_manager.dart';
-import 'modules/scrollbar_manager.dart';
-import 'modules/series_cache_manager.dart';
+import 'modules/region_summary_renderer.dart';
+import 'modules/scrollbar_manager.dart';import 'modules/series_cache_manager.dart';
 import 'modules/streaming_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/tooltip_renderer.dart';
@@ -397,6 +398,59 @@ class ChartRenderBox extends RenderBox {
   /// - Styling with background, border, shadow, and opacity animation
   static const TooltipRenderer _tooltipRenderer = TooltipRenderer();
 
+  // ==========================================================================
+  // Region Summary Overlay
+  // ==========================================================================
+
+  /// Stateless renderer for the region summary card overlay.
+  ///
+  /// Follows the same `const` singleton-like pattern as [_tooltipRenderer].
+  static const RegionSummaryRenderer _regionSummaryRenderer =
+      RegionSummaryRenderer();
+
+  /// Active region summary to display, or null when hidden.
+  RegionSummary? _overlaySummary;
+
+  /// Config for the active summary card, or null when no overlay is active.
+  RegionSummaryConfig? _overlayConfig;
+
+  /// Region bounds (in canvas/widget space) for positioning the summary card.
+  Rect _overlayRegionBounds = Rect.zero;
+
+  /// Shows the region summary overlay card.
+  ///
+  /// Called from [BravenChartPlusState.showRegionSummaryOverlay] after the
+  /// [RegionSummary] has been computed. Stores the data and triggers a
+  /// repaint so the card is rendered on the next frame.
+  ///
+  /// Example:
+  /// ```dart
+  /// renderBox.setRegionSummaryOverlay(
+  ///   summary: regionSummary,
+  ///   config: RegionSummaryConfig(),
+  ///   regionBounds: Rect.fromLTRB(100, 50, 400, 250),
+  /// );
+  /// ```
+  void setRegionSummaryOverlay({
+    required RegionSummary summary,
+    required RegionSummaryConfig config,
+    required Rect regionBounds,
+  }) {
+    _overlaySummary = summary;
+    _overlayConfig = config;
+    _overlayRegionBounds = regionBounds;
+    markNeedsPaint();
+  }
+
+  /// Hides the region summary overlay card.
+  ///
+  /// Clears the stored overlay data and triggers a repaint.
+  void clearRegionSummaryOverlay() {
+    _overlaySummary = null;
+    _overlayConfig = null;
+    _overlayRegionBounds = Rect.zero;
+    markNeedsPaint();
+  }
   // ==========================================================================
   // Crosshair Label Caching (Sprint 3 Optimization)
   // ==========================================================================
@@ -2114,9 +2168,19 @@ class ChartRenderBox extends RenderBox {
       }
     }
 
+    // Paint region summary overlay card (if active)
+    if (_overlaySummary != null && _overlayConfig != null) {
+      _regionSummaryRenderer.paint(
+        canvas,
+        size,
+        _overlaySummary!,
+        _overlayConfig!,
+        _overlayRegionBounds,
+      );
+    }
+
     // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
   }
-
   @override
   void paint(PaintingContext context, Offset offset) {
     final canvas = context.canvas;

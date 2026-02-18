@@ -37,10 +37,10 @@ import 'models/interaction_callbacks.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/region_summary.dart';
+import 'models/region_summary_config.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
-import 'rendering/chart_render_box.dart';
-import 'rendering/spatial_index.dart';
+import 'rendering/chart_render_box.dart';import 'rendering/spatial_index.dart';
 import 'streaming/buffer_manager.dart';
 import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
@@ -123,8 +123,10 @@ class BravenChartPlus extends StatefulWidget {
     this.onRegionSelected,
     // ==================== MULTI-AXIS PARAMETERS ====================
     this.normalizationMode,
-  });
-  // ==================== FACTORY CONSTRUCTORS ====================
+    // ==================== REGION SUMMARY OVERLAY ====================
+    this.showRegionSummary = false,
+    this.regionSummaryConfig,
+  });  // ==================== FACTORY CONSTRUCTORS ====================
 
   /// Creates a chart from a simple list of y-values.
   factory BravenChartPlus.fromValues({
@@ -713,6 +715,39 @@ class BravenChartPlus extends StatefulWidget {
   /// Defaults to [NormalizationMode.auto] when multiple axes are detected.
   final NormalizationMode? normalizationMode;
 
+  // ==================== REGION SUMMARY OVERLAY ====================
+
+  /// Whether to show the region summary overlay when a region is selected.
+  ///
+  /// When true, a card showing per-series statistical metrics is rendered
+  /// above (or inside) the selected region. [RegionSummaryConfig] controls
+  /// which metrics are shown, their formatting, and the card position.
+  ///
+  /// Defaults to false.
+  final bool showRegionSummary;
+
+  /// Configuration for the region summary overlay.
+  ///
+  /// Controls which [RegionMetric]s are displayed, how values are formatted,
+  /// and where the card is positioned ([RegionSummaryPosition]).
+  ///
+  /// When null, a default [RegionSummaryConfig] is used
+  /// (min, max, average — aboveRegion position).
+  ///
+  /// Only used when [showRegionSummary] is true.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   showRegionSummary: true,
+  ///   regionSummaryConfig: RegionSummaryConfig(
+  ///     metrics: {RegionMetric.min, RegionMetric.max, RegionMetric.average},
+  ///     position: RegionSummaryPosition.aboveRegion,
+  ///   ),
+  ///   series: [...],
+  /// )
+  /// ```
+  final RegionSummaryConfig? regionSummaryConfig;
   @override
   State<BravenChartPlus> createState() => BravenChartPlusState();
 }
@@ -802,6 +837,13 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   // Invalidated when selected region changes (T027 spec requirement).
   final Map<String, RegionSummary> _regionSummaryCache = {};
 
+  // Region summary overlay state — track active overlay data for ChartRenderBox.
+  // _overlayRegion is the region currently shown in the overlay (may differ
+  // from _selectedDataRegion when showRegionSummary transitions false→true).
+  DataRegion? _overlayRegion;
+
+  // Pre-computed summary for the active overlay region.
+  RegionSummary? _overlayRegionSummary;
   /// Shared [RegionAnalyzer] instance for stateless analysis operations.
   static const _regionAnalyzer = RegionAnalyzer();
 
@@ -848,8 +890,101 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     }).toList();
   }
 
-  /// Whether multi-axis normalization is currently needed.  ///
-  /// This is automatically determined by [NormalizationDetector] based on
+  /// Shows the region summary overlay for the given [region].
+  ///
+  /// Computes (or retrieves from cache) the [RegionSummary] for [region],
+  /// stores it as the active overlay data, and triggers a repaint so the
+  /// [ChartRenderBox] can paint the summary card on the next frame.
+  ///
+  /// Has no effect when [widget.showRegionSummary] is false.
+  ///
+  /// Example:
+  /// ```dart
+  /// final chartKey = GlobalKey<BravenChartPlusState>();
+  ///
+  /// // Show the overlay for a programmatically-created region:
+  /// chartKey.currentState?.showRegionSummaryOverlay(myRegion);
+  /// ```
+  void showRegionSummaryOverlay(DataRegion region) {
+    if (!mounted) return;
+
+    // Compute or retrieve cached summary.
+    final summary = _regionSummaryCache[region.id] ??
+        _regionAnalyzer.computeRegionSummary(region);
+    _regionSummaryCache[region.id] = summary;
+
+    setState(() {
+      _overlayRegion = region;
+      _overlayRegionSummary = summary;
+    });
+
+    // Push the overlay data to the render box so it can paint without rebuild.
+    _updateRenderBoxOverlay();
+  }
+
+  /// Hides the region summary overlay without clearing the selected region.
+  ///
+  /// After calling this method, no summary card is painted on the chart even
+  /// if a region is still selected. The selected region data is preserved.
+  ///
+  /// Example:
+  /// ```dart
+  /// chartKey.currentState?.hideRegionSummaryOverlay();
+  /// ```
+  void hideRegionSummaryOverlay() {
+    if (!mounted) return;
+    setState(() {
+      _overlayRegion = null;
+      _overlayRegionSummary = null;
+    });
+    _updateRenderBoxOverlay();
+  }
+
+  /// Pushes current overlay state to the [ChartRenderBox] and requests a
+  /// repaint without invalidating the series cache (FR-013).
+  void _updateRenderBoxOverlay() {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return;
+
+    // Only show overlay when widget.showRegionSummary is enabled.
+    final active = widget.showRegionSummary &&
+        _overlayRegionSummary != null &&
+        _overlayRegion != null;
+
+    if (active) {
+      renderBox.setRegionSummaryOverlay(
+        summary: _overlayRegionSummary!,
+        config: widget.regionSummaryConfig ?? RegionSummaryConfig(),
+        regionBounds: _computeRegionBoundsForRenderBox(_overlayRegion!),
+      );
+    } else {
+      renderBox.clearRegionSummaryOverlay();
+    }
+  }
+
+  /// Computes a [Rect] for the active overlay region in widget (plot) space.
+  ///
+  /// The region bounds are expressed as a plot-aligned rectangle. The render
+  /// box uses this to position the summary card horizontally and vertically.
+  ///
+  /// When the coordinate transform is unavailable (before first layout) a
+  /// zero-sized rect is returned; the renderer handles this gracefully.
+  Rect _computeRegionBoundsForRenderBox(DataRegion region) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return Rect.zero;
+
+    // Use render box size as fallback bounds spanning the full plot height.
+    return Rect.fromLTRB(
+      region.startX, // will be overridden by the RenderBox using transform
+      0,
+      region.endX,
+      renderBox.size.height,
+    );
+  }
+
+  /// Whether multi-axis normalization is currently needed.  ///  /// This is automatically determined by [NormalizationDetector] based on
   /// the Y-range ratios between series. When series have ranges that differ
   /// by 10x or more, normalization is recommended.
   ///
