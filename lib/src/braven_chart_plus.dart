@@ -1922,7 +1922,12 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   void _onBoxSelectCleared() {
     if (!mounted) return;
 
-    if (_selectedDataRegion != null) {
+    // Only clear box-select regions. Segment and annotation regions are
+    // independent of the box-select gesture and must not be cleared when
+    // the user taps on an empty area that triggers the box-select cleared
+    // event (e.g. tapping after a segment-styled series with no annotation).
+    if (_selectedDataRegion != null &&
+        _selectedDataRegion!.source == DataRegionSource.boxSelect) {
       _regionSummaryCache.clear();
       _selectedDataRegion = null;
       widget.onRegionSelected?.call(null);
@@ -2280,7 +2285,10 @@ class BravenChartPlusState extends State<BravenChartPlus> {
               }
             }
           } else {
+            // Transform unavailable — fall through to the segment-tap
+            // fallback below so styled-segment callbacks can still fire.
             widget.onSeriesSelected?.call(tappedElement.series.id);
+            _trySegmentTapFallback(details.localPosition);
           }
         }
       }
@@ -2459,33 +2467,50 @@ class BravenChartPlusState extends State<BravenChartPlus> {
 
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-    if (renderBox == null) return;
+    final transform = renderBox?.transform;
 
-    final transform = renderBox.transform;
-    if (transform == null) return;
-
-    // Convert widget position to data coordinates
-    final plotPos = renderBox.widgetToPlot(widgetPosition);
-    final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
-
-    // Find the nearest styled point across all series
+    // When coordinate transform is available, use it to find the nearest
+    // styled point in data-space. Otherwise fall back to the first styled
+    // point found (mirrors the annotation fallback in
+    // _fireRegionSelectedForAnnotation).
     String? bestSeriesId;
     int? bestIndex;
-    double bestDist = double.infinity;
     List<ChartDataPoint>? bestSeriesPoints;
 
-    for (final series in widget.series) {
-      for (int i = 0; i < series.points.length; i++) {
-        final point = series.points[i];
-        if (point.segmentStyle == null) continue;
+    if (renderBox != null && transform != null) {
+      // Convert widget position to data coordinates
+      final plotPos = renderBox.widgetToPlot(widgetPosition);
+      final dataPos = transform.plotToData(plotPos.dx, plotPos.dy);
 
-        // Distance in data space (X only for nearest point on a line chart)
-        final dx = (point.x - dataPos.dx).abs();
-        if (dx < bestDist) {
-          bestDist = dx;
-          bestSeriesId = series.id;
-          bestIndex = i;
-          bestSeriesPoints = series.points;
+      double bestDist = double.infinity;
+      for (final series in widget.series) {
+        for (int i = 0; i < series.points.length; i++) {
+          final point = series.points[i];
+          if (point.segmentStyle == null) continue;
+
+          // Distance in data space (X only for nearest point on a line chart)
+          final dx = (point.x - dataPos.dx).abs();
+          if (dx < bestDist) {
+            bestDist = dx;
+            bestSeriesId = series.id;
+            bestIndex = i;
+            bestSeriesPoints = series.points;
+          }
+        }
+      }
+    } else {
+      // Fallback path: no transform available yet (e.g. early in layout cycle
+      // or in widget-test environment). Pick the first series that has any
+      // styled points and use the first styled point as the representative.
+      outer:
+      for (final series in widget.series) {
+        for (int i = 0; i < series.points.length; i++) {
+          if (series.points[i].segmentStyle != null) {
+            bestSeriesId = series.id;
+            bestIndex = i;
+            bestSeriesPoints = series.points;
+            break outer;
+          }
         }
       }
     }
@@ -2494,7 +2519,7 @@ class BravenChartPlusState extends State<BravenChartPlus> {
       return;
     }
 
-    // Fire onPointTap for the nearest styled point
+    // Fire onPointTap for the nearest (or first) styled point
     final point = bestSeriesPoints[bestIndex];
     widget.onPointTap?.call(point, bestSeriesId);
 
