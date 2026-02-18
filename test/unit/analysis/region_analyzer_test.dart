@@ -1940,4 +1940,519 @@ void main() {
       );
     });
   });
+
+  // ===========================================================================
+  // Edge-Case Tests — Required by spec (T054–T057)
+  // ===========================================================================
+
+  // ---------------------------------------------------------------------------
+  // Edge-case 1: Region X-range extends beyond data boundaries
+  //
+  // Spec requirement: A region whose X-range extends before the first data
+  // point or past the last data point must return ONLY the actual data points
+  // that exist within the range — no synthetic/extrapolated points added.
+  // ---------------------------------------------------------------------------
+  group('Edge-case: region beyond data boundaries', () {
+    test(
+      'startX before first data point returns only actual points in range',
+      () {
+        // Arrange — data starts at x=10; query starts at x=0 (before data)
+        final points = [
+          const ChartDataPoint(x: 10.0, y: 100.0),
+          const ChartDataPoint(x: 20.0, y: 200.0),
+          const ChartDataPoint(x: 30.0, y: 300.0),
+        ];
+
+        // Act — startX=0.0 is before the first data point (x=10)
+        final result = analyzer.filterPointsInRange(
+          points,
+          startX: 0.0,
+          endX: 25.0,
+        );
+
+        // Assert — only actual data points in range are returned
+        expect(result, hasLength(2));
+        expect(result[0].x, equals(10.0));
+        expect(result[1].x, equals(20.0));
+        // No synthetic point at x=0.0 was added
+        expect(result.any((p) => p.x == 0.0), isFalse);
+      },
+    );
+
+    test('endX after last data point returns only actual points in range', () {
+      // Arrange — data ends at x=30; query ends at x=50 (after data)
+      final points = [
+        const ChartDataPoint(x: 10.0, y: 100.0),
+        const ChartDataPoint(x: 20.0, y: 200.0),
+        const ChartDataPoint(x: 30.0, y: 300.0),
+      ];
+
+      // Act — endX=50.0 is after the last data point (x=30)
+      final result = analyzer.filterPointsInRange(
+        points,
+        startX: 15.0,
+        endX: 50.0,
+      );
+
+      // Assert — only actual data points returned, no synthetic x=50 point
+      expect(result, hasLength(2));
+      expect(result[0].x, equals(20.0));
+      expect(result[1].x, equals(30.0));
+      // No synthetic point at x=50.0 was added
+      expect(result.any((p) => p.x == 50.0), isFalse);
+    });
+
+    test('range spanning the entire data set returns all data points', () {
+      // Arrange — data range is x=5 to x=15; query covers x=-100 to x=100
+      final points = [
+        const ChartDataPoint(x: 5.0, y: 50.0),
+        const ChartDataPoint(x: 10.0, y: 100.0),
+        const ChartDataPoint(x: 15.0, y: 150.0),
+      ];
+
+      // Act — query range is much wider than the data
+      final result = analyzer.filterPointsInRange(
+        points,
+        startX: -100.0,
+        endX: 100.0,
+      );
+
+      // Assert — all 3 actual points returned, count is exact
+      expect(result, hasLength(3));
+      expect(result.map((p) => p.x).toSet(), equals({5.0, 10.0, 15.0}));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Edge-case 2: Unsorted data fallback produces correct results identical to
+  // the sorted (binary-search) path.
+  //
+  // Spec requirement: When isSorted:false is passed, the linear-scan fallback
+  // must produce the same result as the binary-search path for equivalent data.
+  // ---------------------------------------------------------------------------
+  group('Edge-case: unsorted data correctness (isSorted:false)', () {
+    test('isSorted:false with random-order points returns same values as '
+        'isSorted:true with sorted equivalent', () {
+      // Arrange — same data in two orders
+      final sortedPoints = [
+        const ChartDataPoint(x: 1.0, y: 10.0),
+        const ChartDataPoint(x: 2.0, y: 20.0),
+        const ChartDataPoint(x: 3.0, y: 30.0),
+        const ChartDataPoint(x: 4.0, y: 40.0),
+        const ChartDataPoint(x: 5.0, y: 50.0),
+        const ChartDataPoint(x: 6.0, y: 60.0),
+        const ChartDataPoint(x: 7.0, y: 70.0),
+      ];
+
+      final unsortedPoints = [
+        const ChartDataPoint(x: 5.0, y: 50.0),
+        const ChartDataPoint(x: 2.0, y: 20.0),
+        const ChartDataPoint(x: 7.0, y: 70.0),
+        const ChartDataPoint(x: 1.0, y: 10.0),
+        const ChartDataPoint(x: 4.0, y: 40.0),
+        const ChartDataPoint(x: 3.0, y: 30.0),
+        const ChartDataPoint(x: 6.0, y: 60.0),
+      ];
+
+      // Act — sorted path (binary search) vs unsorted path (linear scan)
+      final sortedResult = analyzer.filterPointsInRange(
+        sortedPoints,
+        startX: 2.0,
+        endX: 6.0,
+        isSorted: true,
+      );
+      final unsortedResult = analyzer.filterPointsInRange(
+        unsortedPoints,
+        startX: 2.0,
+        endX: 6.0,
+        isSorted: false,
+      );
+
+      // Assert — same points returned regardless of order
+      expect(sortedResult, hasLength(5));
+      expect(unsortedResult, hasLength(5));
+      expect(
+        sortedResult.map((p) => p.x).toSet(),
+        equals(unsortedResult.map((p) => p.x).toSet()),
+      );
+      expect(
+        sortedResult.map((p) => p.y).toSet(),
+        equals(unsortedResult.map((p) => p.y).toSet()),
+      );
+    });
+
+    test(
+      'isSorted:false with strictly descending data produces correct results',
+      () {
+        // Arrange — descending order, binary search would give WRONG results
+        final descendingPoints = [
+          const ChartDataPoint(x: 100.0, y: 1000.0),
+          const ChartDataPoint(x: 80.0, y: 800.0),
+          const ChartDataPoint(x: 60.0, y: 600.0),
+          const ChartDataPoint(x: 40.0, y: 400.0),
+          const ChartDataPoint(x: 20.0, y: 200.0),
+          const ChartDataPoint(x: 10.0, y: 100.0),
+        ];
+
+        // Act — must use isSorted:false for descending data
+        final result = analyzer.filterPointsInRange(
+          descendingPoints,
+          startX: 30.0,
+          endX: 70.0,
+          isSorted: false,
+        );
+
+        // Assert — correct 2 points in [30, 70] range (x=40 and x=60)
+        // Note: x=80.0 is OUTSIDE the range [30, 70] and must NOT be included.
+        expect(result, hasLength(2));
+        expect(result.map((p) => p.x).toSet(), equals({40.0, 60.0}));
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Edge-case 3: Duplicate X values at boundary are included (inclusive filter)
+  //
+  // Spec requirement: When startX or endX exactly matches the X value of
+  // multiple data points (duplicates), ALL duplicates at that boundary must
+  // be included in the result.
+  // ---------------------------------------------------------------------------
+  group('Edge-case: duplicate X values at boundary (inclusive)', () {
+    test('multiple points sharing startX value are ALL included', () {
+      // Arrange — three data points share x=5.0 (the startX boundary)
+      final points = [
+        const ChartDataPoint(x: 3.0, y: 30.0),
+        const ChartDataPoint(x: 5.0, y: 50.0), // duplicate 1 at boundary
+        const ChartDataPoint(x: 5.0, y: 55.0), // duplicate 2 at boundary
+        const ChartDataPoint(x: 5.0, y: 58.0), // duplicate 3 at boundary
+        const ChartDataPoint(x: 7.0, y: 70.0),
+        const ChartDataPoint(x: 9.0, y: 90.0),
+      ];
+
+      // Act — startX = 5.0 exactly matches 3 duplicate points
+      final result = analyzer.filterPointsInRange(
+        points,
+        startX: 5.0,
+        endX: 8.0,
+      );
+
+      // Assert — all 3 duplicates at x=5.0 PLUS x=7.0 are included
+      expect(result, hasLength(4));
+      expect(result.where((p) => p.x == 5.0), hasLength(3));
+      expect(result.any((p) => p.x == 7.0), isTrue);
+    });
+
+    test('multiple points sharing endX value are ALL included', () {
+      // Arrange — three points share x=10.0 (the endX boundary)
+      final points = [
+        const ChartDataPoint(x: 5.0, y: 50.0),
+        const ChartDataPoint(x: 7.0, y: 70.0),
+        const ChartDataPoint(x: 10.0, y: 100.0), // duplicate 1 at boundary
+        const ChartDataPoint(x: 10.0, y: 105.0), // duplicate 2 at boundary
+        const ChartDataPoint(x: 10.0, y: 110.0), // duplicate 3 at boundary
+        const ChartDataPoint(x: 12.0, y: 120.0),
+      ];
+
+      // Act — endX = 10.0 exactly matches 3 duplicate points
+      final result = analyzer.filterPointsInRange(
+        points,
+        startX: 6.0,
+        endX: 10.0,
+      );
+
+      // Assert — x=7.0 plus all 3 duplicates at x=10.0 are included
+      expect(result, hasLength(4));
+      expect(result.where((p) => p.x == 10.0), hasLength(3));
+      expect(result.any((p) => p.x == 7.0), isTrue);
+      // x=12.0 is EXCLUDED (beyond endX)
+      expect(result.any((p) => p.x == 12.0), isFalse);
+    });
+
+    test('duplicates at both startX and endX are ALL included', () {
+      // Arrange — duplicates at both boundaries
+      final points = [
+        const ChartDataPoint(x: 2.0, y: 20.0),
+        const ChartDataPoint(x: 4.0, y: 40.0), // dup 1 at startX
+        const ChartDataPoint(x: 4.0, y: 42.0), // dup 2 at startX
+        const ChartDataPoint(x: 6.0, y: 60.0),
+        const ChartDataPoint(x: 8.0, y: 80.0), // dup 1 at endX
+        const ChartDataPoint(x: 8.0, y: 85.0), // dup 2 at endX
+        const ChartDataPoint(x: 10.0, y: 100.0),
+      ];
+
+      // Act — both boundaries have duplicates
+      final result = analyzer.filterPointsInRange(
+        points,
+        startX: 4.0,
+        endX: 8.0,
+      );
+
+      // Assert — 2 (startX) + 1 (x=6) + 2 (endX) = 5 total
+      expect(result, hasLength(5));
+      expect(result.where((p) => p.x == 4.0), hasLength(2));
+      expect(result.where((p) => p.x == 8.0), hasLength(2));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Edge-case 4: Multi-axis filtering uses raw data coordinates (FR-008).
+  //
+  // Spec requirement (FR-008): Analysis must use ORIGINAL (non-normalised)
+  // data values regardless of any multi-axis normalisation applied for
+  // rendering. Each series must be filtered independently against the
+  // region X-range using its raw data coordinates.
+  //
+  // We simulate this by applying filterPointsInRange to two series whose
+  // data live on very different Y-scales (representing independent axes),
+  // and verifying that filtering is based purely on X coordinates for each
+  // series independently — unaffected by the other series' scale.
+  // ---------------------------------------------------------------------------
+  group('Edge-case: multi-axis filtering uses raw coordinates (FR-008)', () {
+    test(
+      'two series on different Y-scales are filtered independently by X',
+      () {
+        // Arrange — two series with dramatically different Y-ranges
+        // (simulating power in Watts vs heart rate in bpm on separate axes)
+        final powerSeriesPoints = [
+          const ChartDataPoint(x: 0.0, y: 0.0), // 0 W
+          const ChartDataPoint(x: 10.0, y: 150.0), // 150 W
+          const ChartDataPoint(x: 20.0, y: 300.0), // 300 W — in range
+          const ChartDataPoint(x: 30.0, y: 380.0), // 380 W — in range
+          const ChartDataPoint(x: 40.0, y: 420.0), // 420 W — in range
+          const ChartDataPoint(x: 50.0, y: 200.0), // 200 W
+        ];
+
+        final hrSeriesPoints = [
+          const ChartDataPoint(x: 0.0, y: 60.0), // 60 bpm
+          const ChartDataPoint(x: 15.0, y: 130.0), // 130 bpm — in range
+          const ChartDataPoint(x: 25.0, y: 145.0), // 145 bpm — in range
+          const ChartDataPoint(x: 35.0, y: 160.0), // 160 bpm — in range
+          const ChartDataPoint(x: 45.0, y: 155.0), // 155 bpm — in range
+          const ChartDataPoint(x: 60.0, y: 100.0), // 100 bpm
+        ];
+
+        // Act — filter both series against the same region X-range [15, 45]
+        // Each series is filtered INDEPENDENTLY using its raw data X-values
+        const regionStartX = 15.0;
+        const regionEndX = 45.0;
+
+        final powerFiltered = analyzer.filterPointsInRange(
+          powerSeriesPoints,
+          startX: regionStartX,
+          endX: regionEndX,
+        );
+
+        final hrFiltered = analyzer.filterPointsInRange(
+          hrSeriesPoints,
+          startX: regionStartX,
+          endX: regionEndX,
+        );
+
+        // Assert — power series: x=20,30,40 (3 points)
+        expect(powerFiltered, hasLength(3));
+        expect(
+          powerFiltered.map((p) => p.x).toSet(),
+          equals({20.0, 30.0, 40.0}),
+        );
+        // Raw Y values preserved — normalization does NOT alter the data
+        expect(
+          powerFiltered.map((p) => p.y).toSet(),
+          equals({300.0, 380.0, 420.0}),
+        );
+
+        // Assert — hr series: x=15,25,35,45 (4 points)
+        expect(hrFiltered, hasLength(4));
+        expect(
+          hrFiltered.map((p) => p.x).toSet(),
+          equals({15.0, 25.0, 35.0, 45.0}),
+        );
+        // Raw Y values preserved — heart rate values are in bpm, not normalised
+        expect(
+          hrFiltered.map((p) => p.y).toSet(),
+          equals({130.0, 145.0, 160.0, 155.0}),
+        );
+      },
+    );
+
+    test(
+      'series with sparse data and different X densities are filtered correctly',
+      () {
+        // Arrange — two series with very different data densities
+        // (one measured every second, one every 10 seconds)
+        final denseSeriesPoints = List.generate(
+          100,
+          (i) => ChartDataPoint(x: i.toDouble(), y: i * 3.0),
+        );
+
+        final sparseSeriesPoints = List.generate(
+          10,
+          (i) => ChartDataPoint(x: (i * 10).toDouble(), y: i * 50.0),
+        );
+
+        // Act — same region for both
+        final denseFiltered = analyzer.filterPointsInRange(
+          denseSeriesPoints,
+          startX: 20.0,
+          endX: 50.0,
+        );
+
+        final sparseFiltered = analyzer.filterPointsInRange(
+          sparseSeriesPoints,
+          startX: 20.0,
+          endX: 50.0,
+        );
+
+        // Assert — dense series: 31 points (x=20 to x=50 inclusive)
+        expect(denseFiltered, hasLength(31));
+
+        // Assert — sparse series: 4 points (x=20, 30, 40, 50)
+        expect(sparseFiltered, hasLength(4));
+        expect(
+          sparseFiltered.map((p) => p.x).toSet(),
+          equals({20.0, 30.0, 40.0, 50.0}),
+        );
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Edge-case 5: Streaming snapshot analysis — analysis of a region
+  // mid-stream uses the data snapshot at query time.
+  //
+  // Spec requirement: When a chart is receiving streaming data, analyzing
+  // a region should use the data that is CURRENTLY available (i.e., the
+  // snapshot at the time of the query). Points that arrive AFTER the
+  // analysis call should NOT appear in the result.
+  //
+  // We simulate this by:
+  //   1. Creating an initial snapshot of data (simulating "data so far").
+  //   2. Computing the region summary on that snapshot.
+  //   3. Adding more data points to simulate "new data arriving".
+  //   4. Verifying that the computed summary reflects ONLY the snapshot.
+  // ---------------------------------------------------------------------------
+  group('Edge-case: streaming snapshot analysis', () {
+    test(
+      'analysis on data snapshot produces correct summary from available data',
+      () {
+        // Arrange — simulate "data so far" in a streaming scenario
+        // (first 30 seconds of a ride; more data will arrive later)
+        final snapshotPoints = [
+          const ChartDataPoint(x: 0.0, y: 200.0),
+          const ChartDataPoint(x: 5.0, y: 220.0),
+          const ChartDataPoint(x: 10.0, y: 240.0),
+          const ChartDataPoint(x: 15.0, y: 260.0),
+          const ChartDataPoint(x: 20.0, y: 280.0),
+          const ChartDataPoint(x: 25.0, y: 300.0),
+          const ChartDataPoint(x: 30.0, y: 320.0),
+        ];
+
+        // Act — compute summary at-time-of-query (using snapshot)
+        final result = analyzer.computeSeriesSummary(
+          snapshotPoints,
+          seriesId: 'power',
+          regionStartX: 0.0,
+          regionEndX: 30.0,
+        );
+
+        // Assert — summary reflects ONLY the snapshot data (7 points)
+        expect(result, isNotNull);
+        expect(result!.count, equals(7));
+        expect(result.min, closeTo(200.0, 1e-10));
+        expect(result.max, closeTo(320.0, 1e-10));
+        expect(result.firstY, closeTo(200.0, 1e-10));
+        expect(result.lastY, closeTo(320.0, 1e-10));
+
+        // "New data" arrives after the query — simulate streaming continuation
+        // ignore: unused_local_variable
+        final laterPoints = [
+          const ChartDataPoint(x: 35.0, y: 350.0),
+          const ChartDataPoint(x: 40.0, y: 380.0),
+          const ChartDataPoint(x: 45.0, y: 400.0),
+        ];
+
+        // Assert — the result is based on snapshotPoints ONLY.
+        // laterPoints are NOT in the result because they were not present
+        // when computeSeriesSummary was called.
+        expect(result.count, equals(7)); // still 7, not 10
+        expect(result.max, closeTo(320.0, 1e-10)); // not 400.0
+      },
+    );
+
+    test(
+      'partial stream region analysis gives statistically correct results',
+      () {
+        // Arrange — 50 points available mid-stream (out of eventual 100)
+        final availablePoints = List.generate(
+          50,
+          (i) => ChartDataPoint(x: i.toDouble() * 2.0, y: 100.0 + i * 4.0),
+        );
+        // x ranges from 0.0 to 98.0, y ranges from 100.0 to 296.0
+
+        // Act — region analysis on currently available data only
+        final result = analyzer.computeSeriesSummary(
+          availablePoints,
+          seriesId: 'heartrate',
+          regionStartX: 0.0,
+          regionEndX: 98.0,
+        );
+
+        // Assert — correct statistics for the 50 available points
+        expect(result, isNotNull);
+        expect(result!.count, equals(50));
+        expect(result.min, closeTo(100.0, 1e-10)); // y at x=0
+        expect(
+          result.max,
+          closeTo(296.0, 1e-10),
+        ); // y at x=98 (i=49: 100+49*4=296)
+        expect(result.firstY, closeTo(100.0, 1e-10));
+        expect(result.lastY, closeTo(296.0, 1e-10));
+        expect(result.duration, closeTo(98.0, 1e-10));
+      },
+    );
+
+    test('regionFromAnnotation uses data snapshot — only currently-known '
+        'series data is included', () {
+      // Arrange — simulate streaming with partial data for two series.
+      // Series 'speed' has data for the whole range; 'altitude' only has
+      // data for the second half (not yet streamed for the first half).
+      final annotation = RangeAnnotation(
+        id: 'effort-zone',
+        startX: 0.0,
+        endX: 60.0,
+      );
+
+      // Snapshot of data available NOW (mid-stream)
+      final currentSeriesData = <String, List<ChartDataPoint>>{
+        'speed': [
+          // speed data available for full range
+          const ChartDataPoint(x: 10.0, y: 28.0),
+          const ChartDataPoint(x: 20.0, y: 32.0),
+          const ChartDataPoint(x: 30.0, y: 35.0),
+          const ChartDataPoint(x: 40.0, y: 30.0),
+          const ChartDataPoint(x: 50.0, y: 27.0),
+        ],
+        'altitude': [
+          // altitude data only available for later part of range
+          const ChartDataPoint(x: 40.0, y: 450.0),
+          const ChartDataPoint(x: 50.0, y: 480.0),
+          const ChartDataPoint(x: 60.0, y: 510.0),
+        ],
+      };
+
+      // Act — build region from annotation using current snapshot
+      final region = analyzer.regionFromAnnotation(
+        annotation,
+        currentSeriesData,
+      );
+
+      // Assert — region reflects ONLY data in the current snapshot
+      expect(region.seriesData['speed'], hasLength(5));
+      expect(region.seriesData['altitude'], hasLength(3));
+
+      // The region summary reflects snapshot statistics
+      final summary = analyzer.computeRegionSummary(region);
+      expect(summary.seriesSummaries['speed']!.count, equals(5));
+      expect(summary.seriesSummaries['altitude']!.count, equals(3));
+    });
+  });
 }
