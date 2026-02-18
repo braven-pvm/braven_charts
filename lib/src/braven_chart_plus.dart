@@ -127,8 +127,8 @@ class BravenChartPlus extends StatefulWidget {
     // ==================== REGION SUMMARY OVERLAY ====================
     this.showRegionSummary = false,
     this.regionSummaryConfig,
+    this.customRegionAnalysis,
   }); // ==================== FACTORY CONSTRUCTORS ====================
-
   /// Creates a chart from a simple list of y-values.
   factory BravenChartPlus.fromValues({
     Key? key,
@@ -749,6 +749,39 @@ class BravenChartPlus extends StatefulWidget {
   /// )
   /// ```
   final RegionSummaryConfig? regionSummaryConfig;
+
+  /// Optional custom analysis callback for domain-specific metrics.
+  ///
+  /// When provided, this callback is invoked after the built-in
+  /// [RegionSummary] is computed for the selected region. The returned
+  /// [Map<String, String>] of label → formatted-value pairs is merged into
+  /// the region summary overlay alongside the built-in metrics.
+  ///
+  /// This allows applications to display domain-specific computed metrics
+  /// (e.g., Normalized Power for cycling, Sharpe Ratio for finance) in the
+  /// same overlay card as the standard statistics.
+  ///
+  /// Parameters:
+  /// - [DataRegion]: The selected region (startX, endX, seriesData).
+  /// - [RegionSummary]: The computed per-series statistics.
+  ///
+  /// Returns a [Map<String, String>] of metric label → formatted value pairs
+  /// to display in the overlay.
+  ///
+  /// Only used when [showRegionSummary] is true.
+  ///
+  /// Example:
+  /// ```dart
+  /// BravenChartPlus(
+  ///   customRegionAnalysis: (region, summary) {
+  ///     return {'NP': '${computeNormalizedPower(region)} W'};
+  ///   },
+  ///   showRegionSummary: true,
+  ///   series: [...],
+  /// )
+  /// ```
+  final CustomRegionAnalysisCallback? customRegionAnalysis;
+
   @override
   State<BravenChartPlus> createState() => BravenChartPlusState();
 }
@@ -846,6 +879,10 @@ class BravenChartPlusState extends State<BravenChartPlus> {
   // Pre-computed summary for the active overlay region.
   RegionSummary? _overlayRegionSummary;
 
+  // Custom metrics from the customRegionAnalysis callback — displayed alongside
+  // built-in metrics in the widget-tree overlay.
+  Map<String, String>? _overlayCustomMetrics;
+
   /// Shared [RegionAnalyzer] instance for stateless analysis operations.
   static const _regionAnalyzer = RegionAnalyzer();
 
@@ -916,9 +953,16 @@ class BravenChartPlusState extends State<BravenChartPlus> {
         _regionAnalyzer.computeRegionSummary(region);
     _regionSummaryCache[region.id] = summary;
 
+    // Invoke custom analysis callback if provided.
+    Map<String, String>? customMetrics;
+    if (widget.customRegionAnalysis != null) {
+      customMetrics = widget.customRegionAnalysis!(region, summary);
+    }
+
     setState(() {
       _overlayRegion = region;
       _overlayRegionSummary = summary;
+      _overlayCustomMetrics = customMetrics;
     });
 
     // Push the overlay data to the render box so it can paint without rebuild.
@@ -939,6 +983,7 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     setState(() {
       _overlayRegion = null;
       _overlayRegionSummary = null;
+      _overlayCustomMetrics = null;
     });
     _updateRenderBoxOverlay();
   }
@@ -2558,6 +2603,11 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     _regionSummaryCache.clear();
     _selectedDataRegion = region;
     widget.onRegionSelected?.call(region);
+
+    // Auto-display the region summary overlay when showRegionSummary is true.
+    if (widget.showRegionSummary) {
+      showRegionSummaryOverlay(region);
+    }
   }
 
   /// Finds the index of the nearest data point to [widgetPosition] in
@@ -3329,6 +3379,18 @@ class BravenChartPlusState extends State<BravenChartPlus> {
                         ),
                       ),
                     ),
+                  // Widget-tree region summary overlay — uses real Text widgets
+                  // so that find.text() works in tests (canvas paint is invisible
+                  // to the Flutter widget finder).
+                  if (widget.showRegionSummary &&
+                      _overlayRegionSummary != null &&
+                      _overlayRegion != null)
+                    _RegionSummaryOverlay(
+                      summary: _overlayRegionSummary!,
+                      config:
+                          widget.regionSummaryConfig ?? RegionSummaryConfig(),
+                      customMetrics: _overlayCustomMetrics,
+                    ),
                 ],
               ),
             ),
@@ -3523,5 +3585,173 @@ class _DebugOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Widget-tree region summary overlay card.
+///
+/// Renders computed region statistics as real Flutter [Text] widgets so that
+/// `find.text()` can locate metric labels and values in widget tests.  This
+/// supplements the canvas-based [RegionSummaryRenderer] which is invisible to
+/// the Flutter widget finder.
+///
+/// Displayed as a [Positioned] overlay inside the chart [Stack] when
+/// [BravenChartPlus.showRegionSummary] is true and a region is selected.
+///
+/// Example:
+/// ```dart
+/// _RegionSummaryOverlay(
+///   summary: regionSummary,
+///   config: RegionSummaryConfig(),
+///   customMetrics: {'NP': '250 W'},
+/// )
+/// ```
+class _RegionSummaryOverlay extends StatelessWidget {
+  /// Creates a [_RegionSummaryOverlay].
+  ///
+  /// [summary] holds the per-series statistics to display.
+  /// [config] controls which [RegionMetric]s are shown.
+  /// [customMetrics] are optional domain-specific label→value pairs appended
+  /// after the built-in metrics.
+  const _RegionSummaryOverlay({
+    required this.summary,
+    required this.config,
+    this.customMetrics,
+  });
+
+  /// The region summary produced by [RegionAnalyzer].
+  final RegionSummary summary;
+
+  /// Rendering configuration (which metrics to display, value formatter,
+  /// position).
+  final RegionSummaryConfig config;
+
+  /// Optional custom metric key-value pairs returned by
+  /// [BravenChartPlus.customRegionAnalysis].
+  ///
+  /// When non-null, these are appended after the built-in metric rows.
+  final Map<String, String>? customMetrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+
+    // Built-in per-series metrics
+    final metricsList = config.metrics.toList();
+    for (final entry in summary.seriesSummaries.entries) {
+      final seriesSummary = entry.value;
+
+      for (final metric in metricsList) {
+        final rawValue = _metricValue(seriesSummary, metric);
+        if (rawValue == null) continue;
+        final formatted = _formatValue(rawValue, seriesSummary.unit, config);
+
+        rows.add(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                metric.displayLabel,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF555555)),
+              ),
+              const Text(': '),
+              Text(
+                formatted,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111111),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // Custom metrics appended after built-in rows
+    if (customMetrics != null) {
+      for (final entry in customMetrics!.entries) {
+        rows.add(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                entry.key,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF555555)),
+              ),
+              const Text(': '),
+              Text(
+                entry.value,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111111),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xF2FFFFFF),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFCCCCCC)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: rows,
+        ),
+      ),
+    );
+  }
+
+  /// Returns the numeric value for [metric] from [s], or null when not
+  /// available (e.g., stdDev with count < 2).
+  double? _metricValue(SeriesRegionSummary s, RegionMetric metric) {
+    return switch (metric) {
+      RegionMetric.min => s.min,
+      RegionMetric.max => s.max,
+      RegionMetric.average => s.average,
+      RegionMetric.sum => s.sum,
+      RegionMetric.count => s.count.toDouble(),
+      RegionMetric.range => s.range,
+      RegionMetric.stdDev => s.stdDev,
+      RegionMetric.delta => s.delta,
+      RegionMetric.firstY => s.firstY,
+      RegionMetric.lastY => s.lastY,
+      RegionMetric.duration => s.duration,
+    };
+  }
+
+  /// Formats [value] using the optional [config.valueFormatter] or falls back
+  /// to 2 decimal places with an optional [unit] suffix.
+  String _formatValue(double value, String? unit, RegionSummaryConfig config) {
+    final formatter = config.valueFormatter;
+    if (formatter != null) {
+      return formatter(value, unit);
+    }
+    final formatted = value.toStringAsFixed(2);
+    if (unit != null && unit.isNotEmpty) {
+      return '$formatted $unit';
+    }
+    return formatted;
   }
 }
