@@ -52,12 +52,14 @@ class RegionSummaryRenderer {
   static const double _cardBorderRadius = 5.0;
   static const double _cardGapAbove = 6.0; // gap between card and regionBounds
 
-  // Glassy white card with a very faint tint
-  static const ui.Color _cardBackground = ui.Color(0xEEF9FAFB);
-  static const ui.Color _cardBorder = ui.Color(0xFFDDE1E6);
+  // Glassy white card with a slightly increased transparency and a
+  // subtly accentuated tint so it reads above chart content but feels
+  // slightly more prominent than before.
+  static const ui.Color _cardBackground = ui.Color(0xCCF9FAFB); // reduced alpha (slightly transparent)
+  static const ui.Color _cardBorder = ui.Color(0xFFCCD6DF); // slightly stronger border tint
   static const ui.Color _cardShadow = ui.Color(0x18000000);
-  // Series header — medium-weight, muted blue-grey
-  static const ui.Color _headerColor = ui.Color(0xFF6B7A8D);
+  // Series header — bold and slightly darker for better legibility
+  static const ui.Color _headerColor = ui.Color(0xFF4E5F77);
   // Metric label — light grey
   static const ui.Color _labelColor = ui.Color(0xFF8C96A3);
   // Metric value — dark but not black
@@ -281,7 +283,12 @@ class RegionSummaryRenderer {
     return TextPainter(
       text: TextSpan(
         text: label,
-        style: const TextStyle(fontSize: _headerFontSize, fontWeight: FontWeight.w600, color: _headerColor, letterSpacing: 0.2),
+        style: const TextStyle(
+          fontSize: _headerFontSize,
+          fontWeight: FontWeight.w700,
+          color: _headerColor,
+          letterSpacing: 0.2,
+        ), // make series name bold
       ),
       textDirection: TextDirection.ltr,
     )..layout();

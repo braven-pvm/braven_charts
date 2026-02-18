@@ -72,12 +72,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
       // Scientific data - Temperature, Pressure
       _temperatureData = DataGenerator.generateTemperatureData(count: 100);
-      _pressureData = DataGenerator.generateLinear(
-        count: 100,
-        slope: 0.5,
-        intercept: 1013,
-        noise: 5,
-      );
+      _pressureData = DataGenerator.generateLinear(count: 100, slope: 0.5, intercept: 1013, noise: 5);
 
       // Test data - specific ranges for multi-axis testing with randomness
       _testSmallRangeData = _generateSmallRangeData();
@@ -277,13 +272,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       // Actions
       OptionSection(
         title: 'Actions',
-        children: [
-          ActionButton(
-            label: 'Regenerate Data',
-            icon: Icons.refresh,
-            onPressed: _regenerateData,
-          ),
-        ],
+        children: [ActionButton(label: 'Regenerate Data', icon: Icons.refresh, onPressed: _regenerateData)],
       ),
 
       // Annotation behavior settings
@@ -360,9 +349,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Athletic Performance',
       subtitle: 'Power (W), Heart Rate (bpm), Cadence (rpm)',
       child: BravenChartPlus(
-        key: const ValueKey(
-          'athletic',
-        ), // Prevent RenderBox reuse across charts
+        key: const ValueKey('athletic'), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'power',
@@ -418,13 +405,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxisConfig: XAxisConfig(
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
+        xAxisConfig: XAxisConfig(showAxisLine: _optionsController.showAxisLines),
+        yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: _optionsController.showAxisLines),
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,
           enablePan: _optionsController.enablePan,
@@ -442,9 +424,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       title: 'Environmental Monitoring',
       subtitle: 'Temperature (°C) and Pressure (hPa)',
       child: BravenChartPlus(
-        key: const ValueKey(
-          'scientific',
-        ), // Prevent RenderBox reuse across charts
+        key: const ValueKey('scientific'), // Prevent RenderBox reuse across charts
         series: [
           LineChartSeries(
             id: 'temperature',
@@ -454,12 +434,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.bezier,
             strokeWidth: 2.0,
             unit: '°C',
-            yAxisConfig: YAxisConfig(
-              position: YAxisPosition.left,
-              label: 'Temperature',
-              unit: '°C',
-              showAxisLine: true,
-            ),
+            yAxisConfig: YAxisConfig(position: YAxisPosition.left, label: 'Temperature', unit: '°C', showAxisLine: true),
           ),
           LineChartSeries(
             id: 'pressure',
@@ -469,12 +444,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             interpolation: LineInterpolation.linear,
             strokeWidth: 2.0,
             unit: 'hPa',
-            yAxisConfig: YAxisConfig(
-              position: YAxisPosition.right,
-              label: 'Pressure',
-              unit: 'hPa',
-              showAxisLine: true,
-            ),
+            yAxisConfig: YAxisConfig(position: YAxisPosition.right, label: 'Pressure', unit: 'hPa', showAxisLine: true),
           ),
         ],
         normalizationMode: NormalizationMode.perSeries,
@@ -483,20 +453,12 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxisConfig: XAxisConfig(
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
+        xAxisConfig: XAxisConfig(showAxisLine: _optionsController.showAxisLines),
+        yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: _optionsController.showAxisLines),
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,
           enablePan: _optionsController.enablePan,
-          crosshair: const CrosshairConfig(
-            enabled: true,
-            displayMode: CrosshairDisplayMode.tracking,
-          ),
+          crosshair: const CrosshairConfig(enabled: true, displayMode: CrosshairDisplayMode.tracking),
           tooltip: const TooltipConfig(enabled: true),
         ),
         annotationController: _annotationController,
@@ -576,15 +538,8 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxisConfig: XAxisConfig(
-          showAxisLine: _optionsController.showAxisLines,
-          label: "Time(M)",
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          showAxisLine: _optionsController.showAxisLines,
-          label: "Y-axis",
-        ),
+        xAxisConfig: XAxisConfig(showAxisLine: _optionsController.showAxisLines, label: "Time(M)"),
+        yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: _optionsController.showAxisLines, label: "Y-axis"),
         // No yAxes or axisBindings needed - all defined inline on series!
         normalizationMode: NormalizationMode.perSeries,
         interactionConfig: InteractionConfig(
@@ -592,8 +547,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           enablePan: _optionsController.enablePan,
           crosshair: const CrosshairConfig(
             enabled: true,
-            displayMode: CrosshairDisplayMode
-                .tracking, // Force tracking mode for unified tooltip
+            displayMode: CrosshairDisplayMode.tracking, // Force tracking mode for unified tooltip
           ),
           tooltip: const TooltipConfig(enabled: true),
         ),
@@ -680,27 +634,20 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
             ),
           ),
         ],
+        showRegionSummary: true,
+
         theme: _optionsController.theme,
         showLegend: _optionsController.showLegend,
         showXScrollbar: _optionsController.showXScrollbar,
         showYScrollbar: _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        xAxisConfig: XAxisConfig(
-          showAxisLine: _optionsController.showAxisLines,
-          label: '',
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
+        xAxisConfig: XAxisConfig(showAxisLine: _optionsController.showAxisLines, label: ''),
+        yAxis: YAxisConfig(position: YAxisPosition.left, showAxisLine: _optionsController.showAxisLines),
         normalizationMode: NormalizationMode.perSeries,
         interactionConfig: InteractionConfig(
           enableZoom: _optionsController.enableZoom,
           enablePan: _optionsController.enablePan,
-          crosshair: const CrosshairConfig(
-            enabled: true,
-            displayMode: CrosshairDisplayMode.tracking,
-          ),
+          crosshair: const CrosshairConfig(enabled: true, displayMode: CrosshairDisplayMode.tracking),
           tooltip: const TooltipConfig(enabled: true),
         ),
       ),
@@ -709,9 +656,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
 
   Widget _buildStatusPanel() {
     final annotationCount = _annotationController.annotations.length;
-    final annotationStatus = _showAnnotations
-        ? '$annotationCount visible'
-        : '$annotationCount hidden';
+    final annotationStatus = _showAnnotations ? '$annotationCount visible' : '$annotationCount hidden';
 
     if (_selectedDemo == 0) {
       return StatusPanel(
@@ -720,11 +665,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'HR Pts', value: '${_heartRateData.length}'),
           StatusItem(label: 'Cadence Pts', value: '${_cadenceData.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.blue),
-          StatusItem(
-            label: 'Annotations',
-            value: annotationStatus,
-            color: _interactiveAnnotations ? Colors.green : Colors.grey,
-          ),
+          StatusItem(label: 'Annotations', value: annotationStatus, color: _interactiveAnnotations ? Colors.green : Colors.grey),
         ],
       );
     } else if (_selectedDemo == 1) {
@@ -733,11 +674,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'Temp Pts', value: '${_temperatureData.length}'),
           StatusItem(label: 'Pressure Pts', value: '${_pressureData.length}'),
           const StatusItem(label: 'Axes', value: '2', color: Colors.blue),
-          StatusItem(
-            label: 'Annotations',
-            value: annotationStatus,
-            color: _interactiveAnnotations ? Colors.green : Colors.grey,
-          ),
+          StatusItem(label: 'Annotations', value: annotationStatus, color: _interactiveAnnotations ? Colors.green : Colors.grey),
         ],
       );
     } else if (_selectedDemo == 2) {
@@ -748,11 +685,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           const StatusItem(label: 'Medium Range', value: '500-800'),
           StatusItem(label: 'Points', value: '${_testSmallRangeData.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.orange),
-          StatusItem(
-            label: 'Annotations',
-            value: annotationStatus,
-            color: _interactiveAnnotations ? Colors.green : Colors.grey,
-          ),
+          StatusItem(label: 'Annotations', value: annotationStatus, color: _interactiveAnnotations ? Colors.green : Colors.grey),
         ],
       );
     } else {
@@ -762,11 +695,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
           StatusItem(label: 'FeO2 Pts', value: '${_feO2Data.length}'),
           StatusItem(label: 'EqO2 Pts', value: '${_eqO2Data.length}'),
           const StatusItem(label: 'Axes', value: '3', color: Colors.purple),
-          StatusItem(
-            label: 'Annotations',
-            value: annotationStatus,
-            color: _interactiveAnnotations ? Colors.green : Colors.grey,
-          ),
+          StatusItem(label: 'Annotations', value: annotationStatus, color: _interactiveAnnotations ? Colors.green : Colors.grey),
         ],
       );
     }
@@ -887,10 +816,7 @@ class _MultiAxisPageState extends State<MultiAxisPage> {
       ChartDataPoint(x: 11.25, y: 300), // Jump to VT2 phase 2 at minute 11.25
       ChartDataPoint(x: 12.5, y: 300), // Jump to VO2 max phase 1 at minute 12.5
       ChartDataPoint(x: 12.5, y: 325), // Jump to VO2 max phase 1 at minute 12.5
-      ChartDataPoint(
-        x: 13.75,
-        y: 325,
-      ), // Jump to VO2 max phase 2 at minute 13.75
+      ChartDataPoint(x: 13.75, y: 325), // Jump to VO2 max phase 2 at minute 13.75
 
       ChartDataPoint(x: 15.0, y: 325), // End point (maintains last level)
     ];
