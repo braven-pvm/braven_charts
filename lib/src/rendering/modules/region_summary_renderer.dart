@@ -127,7 +127,14 @@ class RegionSummaryRenderer {
 
       // Add spacing row between series (not after last series)
       if (i < seriesEntries.length - 1) {
-        rows.add(const _RowData(label: '', value: null, isHeader: false, isSpacer: true));
+        rows.add(
+          const _RowData(
+            label: '',
+            value: null,
+            isHeader: false,
+            isSpacer: true,
+          ),
+        );
       }
     }
 
@@ -167,8 +174,10 @@ class RegionSummaryRenderer {
     // -------------------------------------------------------------------
     // 3. Compute card position
     // -------------------------------------------------------------------
-    final cardLeft = (regionBounds.center.dx - cardWidth / 2)
-        .clamp(0.0, (size.width - cardWidth).clamp(0.0, double.infinity));
+    final cardLeft = (regionBounds.center.dx - cardWidth / 2).clamp(
+      0.0,
+      (size.width - cardWidth).clamp(0.0, double.infinity),
+    );
     final effectivePosition = _effectivePosition(
       config.position,
       regionBounds,
@@ -204,8 +213,7 @@ class RegionSummaryRenderer {
       shadowPath,
       Paint()
         ..color = _cardShadow
-        ..maskFilter =
-            const MaskFilter.blur(BlurStyle.normal, _cardShadowBlur),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _cardShadowBlur),
     );
 
     // -------------------------------------------------------------------

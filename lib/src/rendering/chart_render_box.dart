@@ -25,7 +25,8 @@ import '../models/region_summary.dart';
 import '../models/region_summary_config.dart';
 import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
-import '../models/y_axis_config.dart';import '../streaming/streaming_buffer.dart';
+import '../models/y_axis_config.dart';
+import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
 import 'modules/annotation_drag_handler.dart';
@@ -33,7 +34,8 @@ import 'modules/crosshair_renderer.dart';
 import 'modules/event_handler_manager.dart';
 import 'modules/multi_axis_manager.dart';
 import 'modules/region_summary_renderer.dart';
-import 'modules/scrollbar_manager.dart';import 'modules/series_cache_manager.dart';
+import 'modules/scrollbar_manager.dart';
+import 'modules/series_cache_manager.dart';
 import 'modules/streaming_manager.dart';
 import 'modules/tooltip_animator.dart';
 import 'modules/tooltip_renderer.dart';
@@ -1937,7 +1939,8 @@ class ChartRenderBox extends RenderBox {
     return false;
   }
 
-  void _paintOverlayLayer(Canvas canvas, Size size) {    // Paint preview selection indicators (during box drag)
+  void _paintOverlayLayer(Canvas canvas, Size size) {
+    // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
       final previewElements = coordinator.previewSelectedElements;
@@ -2183,6 +2186,7 @@ class ChartRenderBox extends RenderBox {
 
     // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
   }
+
   @override
   void paint(PaintingContext context, Offset offset) {
     final canvas = context.canvas;

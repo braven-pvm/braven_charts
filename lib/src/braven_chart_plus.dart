@@ -40,7 +40,8 @@ import 'models/region_summary.dart';
 import 'models/region_summary_config.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
-import 'rendering/chart_render_box.dart';import 'rendering/spatial_index.dart';
+import 'rendering/chart_render_box.dart';
+import 'rendering/spatial_index.dart';
 import 'streaming/buffer_manager.dart';
 import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
@@ -126,7 +127,7 @@ class BravenChartPlus extends StatefulWidget {
     // ==================== REGION SUMMARY OVERLAY ====================
     this.showRegionSummary = false,
     this.regionSummaryConfig,
-  });  // ==================== FACTORY CONSTRUCTORS ====================
+  }); // ==================== FACTORY CONSTRUCTORS ====================
 
   /// Creates a chart from a simple list of y-values.
   factory BravenChartPlus.fromValues({
@@ -844,6 +845,7 @@ class BravenChartPlusState extends State<BravenChartPlus> {
 
   // Pre-computed summary for the active overlay region.
   RegionSummary? _overlayRegionSummary;
+
   /// Shared [RegionAnalyzer] instance for stateless analysis operations.
   static const _regionAnalyzer = RegionAnalyzer();
 
@@ -909,7 +911,8 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     if (!mounted) return;
 
     // Compute or retrieve cached summary.
-    final summary = _regionSummaryCache[region.id] ??
+    final summary =
+        _regionSummaryCache[region.id] ??
         _regionAnalyzer.computeRegionSummary(region);
     _regionSummaryCache[region.id] = summary;
 
@@ -948,7 +951,8 @@ class BravenChartPlusState extends State<BravenChartPlus> {
     if (renderBox == null) return;
 
     // Only show overlay when widget.showRegionSummary is enabled.
-    final active = widget.showRegionSummary &&
+    final active =
+        widget.showRegionSummary &&
         _overlayRegionSummary != null &&
         _overlayRegion != null;
 

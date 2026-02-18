@@ -1,7 +1,6 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-
 import 'dart:ui';
 
 import 'package:braven_charts/src/models/chart_data_point.dart';
@@ -327,7 +326,7 @@ void main() {
         const expectedUnit = 'W';
         final summary = RegionSummary(
           region: _makeRegion(),
-          seriesSummaries: {
+          seriesSummaries: const {
             'series-a': SeriesRegionSummary(
               seriesId: 'series-a',
               seriesName: 'Power',
@@ -623,7 +622,7 @@ void main() {
         final region = _makeRegion();
         final summary = RegionSummary(
           region: region,
-          seriesSummaries: {
+          seriesSummaries: const {
             'series-a': SeriesRegionSummary(
               seriesId: 'series-a',
               seriesName: null, // no name
