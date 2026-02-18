@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../screens/region_analysis_demo.dart';
 import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
@@ -158,8 +159,14 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.science,
       page: ScientificPage(),
     ),
+    const NavDestination(
+      label: 'Region Analysis',
+      icon: Icons.analytics_outlined,
+      selectedIcon: Icons.analytics,
+      page: RegionAnalysisDemo(),
+      badge: '★', // Region analysis showcase
+    ),
   ];
-
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
