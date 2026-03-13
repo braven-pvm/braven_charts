@@ -85,6 +85,11 @@ Use `list_test_suites({ detail: "files", tier: "unit" })` to see all available t
 
 **5. NEVER use scope: "all" in agent workflow** — full suite is for CI only
 
+### Test Structure Reference
+
+For guidance on test tier setup, classification (smoke vs unit vs integration), and migration, see:
+`.orchestra/templates/prompts/_docs/test-tier-migration-guide.md`
+
 ### Response to Test Results
 
 ```
@@ -343,23 +348,7 @@ If you encounter a mismatch (e.g., CREATE but file exists), escalate — don't g
 
 ---
 
-## Environment Context
-
-- **Operating System**: {{osName}} ({{platform}})
-- **Shell**: {{shell}}
-- **Path Separator**: {{pathSeparator}}
-- **Workspace Root**: {{workspaceRoot}}
-
-{{#if_eq platform "win32"}}
-**Windows-specific guidance:**
-- Use `type` instead of `cat`
-- Use `dir` instead of `ls`
-- Use backslashes in paths (though forward slashes often work)
-- Use `findstr` instead of `grep` (or use `grep_search` tool)
-- Use `where` instead of `which`
-
-**TIP:** Prefer `read_file`, `list_directory`, `search_files`, `grep_search` over shell commands — they're cross-platform.
-{{/if_eq}}
+{{> environment-context}}
 
 ---
 

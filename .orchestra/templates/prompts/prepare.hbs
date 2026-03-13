@@ -32,3 +32,23 @@ Use your tools to prepare this task for implementation:
 - Be specific about expected file changes
 - Include test requirements
 - Reference relevant context files from the codebase
+
+{{#if task.tdd_red_phase}}
+
+---
+
+## 🔴 TDD RED-PHASE TASK — Preparation Requirements
+
+This task has `tdd_red_phase: true`. Your handover MUST include:
+
+1. **File placement instructions**: Test files MUST go in `test/red/{tier}/` (e.g., `test/red/smoke/`, `test/red/unit/`)
+2. **Task annotation requirement**: Each test file needs `// @orchestra-task: {{task.task_id}}` as the first line
+3. **Explicit prohibitions**: Instruct the implementor NOT to place test files in `test/{tier}/` directly
+4. **Verification with run_tests**: Include `run_tests({ scope: "red" })` in acceptance criteria
+5. **Companion stubs**: If tests import non-existent modules, include companion stub file creation in file_operations
+
+Your verification criteria should check:
+- Test file exists at `test/red/{tier}/` path (structural check)
+- `@orchestra-task: {{task.task_id}}` annotation present (structural check)
+- Tests compile and fail with assertion errors, NOT import errors
+{{/if}}

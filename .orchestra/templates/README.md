@@ -37,6 +37,8 @@ templates/
     │   └── stub-hunter-mode.hbs      # Hostile review / stub detection protocol
     ├── _schema/
     │   └── context.schema.json       # JSON Schema for all template context variables
+    ├── _docs/                        # Reference documentation for agents/users
+    │   └── test-tier-migration-guide.md  # Test tier setup & migration guide
     └── README.md                     # This file (also copied to workspace)
 ```
 

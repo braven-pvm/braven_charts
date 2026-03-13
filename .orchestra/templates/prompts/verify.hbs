@@ -17,6 +17,8 @@ As Orchestrator, verify Task {{task.task_id}}: "{{task.title}}".
 ### 2. Run Automated Checks
 `run_verification_checks` - Execute automated verification checks
 
+After checks complete, use `get_test_results({ format: "failures" })` to inspect any test failures in detail.
+
 ### 3. 🔍 Mandatory: Stub Hunt Protocol
 
 {{>stub-hunter-mode}}
@@ -65,7 +67,7 @@ For TDD red-phase, **"tests fail" is CORRECT** - but there are TWO types of fail
 
 ```
 COMPILATION CHECK:
-1. Command: [test_command] --tags tdd-red
+1. Run: run_tests({ scope: "red" })
 2. Result: [COMPILES | COMPILE_ERROR]
 3. If COMPILE_ERROR:
    - Missing imports → Companion stub file required
@@ -93,7 +95,7 @@ COMPANION STUB CHECK:
 
 ```
 FAILURE TYPE CHECK:
-1. Run: [test_command] --tags tdd-red
+1. Run: run_tests({ scope: "red" })
 2. Exit Code: [should be non-zero]
 3. Failure Type:
    - ASSERTION_FAILURE (correct): "Expected X, got Y"
