@@ -67,6 +67,8 @@ void main() {
                 maxVisiblePoints: 100,
                 pauseOnUserInteraction: true,
                 resumeAfterInteractionDelay: Duration(seconds: 2),
+                animateIncomingData: true,
+                incomingDataAnimationDuration: Duration(milliseconds: 180),
               ),
             ),
           ),

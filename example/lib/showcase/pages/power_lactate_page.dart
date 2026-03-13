@@ -423,7 +423,11 @@ class _PowerLactatePageState extends State<PowerLactatePage> {
               maxVisiblePoints: _visibleWindowSeconds,
               resumeOnNewData: false,
               pauseOnUserInteraction: true,
-              resumeAfterInteractionDelay: const Duration(seconds: 8),
+              resumeAfterInteractionDelay: const Duration(seconds: 5),
+              animateIncomingData: true,
+              incomingDataAnimationDuration: const Duration(milliseconds: 280),
+              animateScroll: true,
+              scrollAnimationDuration: const Duration(milliseconds: 200),
             ),
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,

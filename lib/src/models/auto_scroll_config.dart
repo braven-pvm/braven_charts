@@ -39,6 +39,8 @@ class AutoScrollConfig {
     this.resumeOnNewData = true,
     this.pauseOnUserInteraction = false,
     this.resumeAfterInteractionDelay,
+    this.animateIncomingData = true,
+    this.incomingDataAnimationDuration = const Duration(milliseconds: 180),
     this.animateScroll = true,
     this.scrollAnimationDuration = const Duration(milliseconds: 300),
   }) : assert(maxVisiblePoints > 0, 'maxVisiblePoints must be positive');
@@ -69,6 +71,15 @@ class AutoScrollConfig {
 
   /// Optional inactivity delay after which live follow mode resumes.
   final Duration? resumeAfterInteractionDelay;
+
+  /// Whether newly appended streaming points should animate into view.
+  ///
+  /// This is most noticeable for low-frequency updates such as 1 Hz streams,
+  /// where the final segment would otherwise appear abruptly.
+  final bool animateIncomingData;
+
+  /// Duration used when animating newly appended streaming points.
+  final Duration incomingDataAnimationDuration;
 
   /// Whether to animate the scroll transition.
   ///
@@ -119,6 +130,8 @@ class AutoScrollConfig {
     bool? resumeOnNewData,
     bool? pauseOnUserInteraction,
     Duration? resumeAfterInteractionDelay,
+    bool? animateIncomingData,
+    Duration? incomingDataAnimationDuration,
     bool? animateScroll,
     Duration? scrollAnimationDuration,
   }) {
@@ -130,6 +143,9 @@ class AutoScrollConfig {
           pauseOnUserInteraction ?? this.pauseOnUserInteraction,
       resumeAfterInteractionDelay:
           resumeAfterInteractionDelay ?? this.resumeAfterInteractionDelay,
+      animateIncomingData: animateIncomingData ?? this.animateIncomingData,
+      incomingDataAnimationDuration:
+          incomingDataAnimationDuration ?? this.incomingDataAnimationDuration,
       animateScroll: animateScroll ?? this.animateScroll,
       scrollAnimationDuration:
           scrollAnimationDuration ?? this.scrollAnimationDuration,
@@ -146,6 +162,8 @@ class AutoScrollConfig {
         other.resumeOnNewData == resumeOnNewData &&
         other.pauseOnUserInteraction == pauseOnUserInteraction &&
         other.resumeAfterInteractionDelay == resumeAfterInteractionDelay &&
+        other.animateIncomingData == animateIncomingData &&
+        other.incomingDataAnimationDuration == incomingDataAnimationDuration &&
         other.animateScroll == animateScroll &&
         other.scrollAnimationDuration == scrollAnimationDuration;
   }
@@ -158,6 +176,8 @@ class AutoScrollConfig {
       resumeOnNewData,
       pauseOnUserInteraction,
       resumeAfterInteractionDelay,
+      animateIncomingData,
+      incomingDataAnimationDuration,
       animateScroll,
       scrollAnimationDuration,
     );
@@ -172,6 +192,8 @@ class AutoScrollConfig {
         'resumeOnNewData: $resumeOnNewData, '
         'pauseOnUserInteraction: $pauseOnUserInteraction, '
         'resumeAfterInteractionDelay: $resumeAfterInteractionDelay, '
+        'animateIncomingData: $animateIncomingData, '
+        'incomingDataAnimationDuration: $incomingDataAnimationDuration, '
         'animateScroll: $animateScroll, '
         'scrollAnimationDuration: $scrollAnimationDuration'
         ')';

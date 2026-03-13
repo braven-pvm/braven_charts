@@ -706,7 +706,8 @@ class BravenChartPlus extends StatefulWidget {
   State<BravenChartPlus> createState() => _BravenChartPlusState();
 }
 
-class _BravenChartPlusState extends State<BravenChartPlus> {
+class _BravenChartPlusState extends State<BravenChartPlus>
+    with SingleTickerProviderStateMixin {
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
   late PriorityPanGestureRecognizer _panRecognizer;
@@ -761,7 +762,11 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
   // Tracks whether auto-normalization is needed based on series Y-range ratios
   bool _normalizationNeeded = false;
   Map<String, DataRange> _seriesYRanges = {};
+  List<ChartSeries> _effectiveDataSeries = const <ChartSeries>[];
   List<ChartSeries> _effectiveRenderSeries = const <ChartSeries>[];
+  final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
+      <String, _IncomingPointAnimation>{};
+  late final AnimationController _incomingDataAnimationController;
 
   // Internal annotation controller - created automatically when user doesn't provide one
   // This allows static annotations to be editable/draggable without explicit controller
@@ -838,6 +843,14 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,
     );
+
+    _incomingDataAnimationController =
+        AnimationController(
+            vsync: this,
+            duration: _incomingDataAnimationDuration,
+          )
+          ..addListener(_handleIncomingDataAnimationTick)
+          ..addStatusListener(_handleIncomingDataAnimationStatus);
 
     // Listen to controller updates (matches BravenChart pattern)
     widget.controller?.addListener(_onControllerUpdate);
@@ -957,6 +970,10 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
   @override
   void dispose() {
+    _incomingDataAnimationController
+      ..removeListener(_handleIncomingDataAnimationTick)
+      ..removeStatusListener(_handleIncomingDataAnimationStatus)
+      ..dispose();
     _streamingResumeTimer?.cancel();
     _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
@@ -1009,7 +1026,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     // Controller data changed - rebuild with merged data
     // This ensures controller.addPoint() updates appear immediately
     setState(() {
-      _rebuildElements();
+      _rebuildElements(detectIncomingAnimations: true);
     });
   }
 
@@ -1026,6 +1043,28 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     return _managesStreamingViewport &&
         (widget.autoScrollConfig?.pauseOnUserInteraction ?? false);
   }
+
+  bool get _shouldAnimateIncomingData {
+    if (!(widget.autoScrollConfig?.animateIncomingData ?? true)) {
+      return false;
+    }
+
+    if (_incomingDataAnimationDuration <= Duration.zero) {
+      return false;
+    }
+
+    if (!_autoScrollEnabled || !_isStreaming || widget.controller == null) {
+      return false;
+    }
+
+    final controller = widget.streamingController;
+    return controller == null ||
+        controller.viewportMode == ViewportMode.followLatest;
+  }
+
+  Duration get _incomingDataAnimationDuration =>
+      widget.autoScrollConfig?.incomingDataAnimationDuration ??
+      const Duration(milliseconds: 180);
 
   bool get _usesPerSeriesNormalizedMultiAxis {
     if (widget.normalizationMode != NormalizationMode.perSeries) {
@@ -1146,8 +1185,12 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
     }
   }
 
-  void _rebuildElements() {
+  void _rebuildElements({bool detectIncomingAnimations = false}) {
     _spatialIndex.clear();
+
+    final previousSeriesById = <String, ChartSeries>{
+      for (final series in _effectiveDataSeries) series.id: series,
+    };
 
     // Start with widget.series as base
     List<ChartSeries> effectiveSeries = widget.series;
@@ -1261,7 +1304,14 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
     }
 
-    _effectiveRenderSeries = effectiveSeries;
+    _effectiveDataSeries = effectiveSeries;
+    if (detectIncomingAnimations) {
+      _updateIncomingPointAnimations(
+        previousSeriesById: previousSeriesById,
+        nextSeries: effectiveSeries,
+      );
+    }
+    _refreshAnimatedRenderSeries();
 
     // Series-level interpolation is now respected directly from ChartSeries.interpolation
     // The deprecated widget-level lineStyle override has been removed.
@@ -1425,7 +1475,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
       // Generate series elements from effective series (with streaming data)
       final elements = DataConverter.seriesToElements(
-        series: effectiveSeries,
+        series: _effectiveRenderSeries,
         transform: transform,
         theme: widget.theme,
         coordinator: _coordinator,
@@ -1493,7 +1543,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
       }
 
       // Auto-generate legend overlay if showLegend is true
-      if (widget.showLegend && effectiveSeries.isNotEmpty) {
+      if (widget.showLegend && _effectiveRenderSeries.isNotEmpty) {
         // Use widget legendStyle if provided, otherwise fall back to theme's legendStyle
         final effectiveLegendStyle =
             widget.legendStyle ??
@@ -1508,7 +1558,7 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
         final legendAnnotation = LegendAnnotation(
           id: '__internal_legend__', // Special ID for internal legend
-          series: effectiveSeries,
+          series: _effectiveRenderSeries,
           trendAnnotations: trendAnnotations,
           legendStyle: effectiveLegendStyle,
           customPosition: _legendCustomPosition,
@@ -1526,6 +1576,127 @@ class _BravenChartPlusState extends State<BravenChartPlus> {
 
     // Increment version to signal that regeneration is needed
     _elementGeneratorVersion++;
+  }
+
+  void _handleIncomingDataAnimationTick() {
+    if (!mounted || _incomingPointAnimations.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _handleIncomingDataAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _incomingPointAnimations.clear();
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _updateIncomingPointAnimations({
+    required Map<String, ChartSeries> previousSeriesById,
+    required List<ChartSeries> nextSeries,
+  }) {
+    _incomingPointAnimations.clear();
+
+    if (!_shouldAnimateIncomingData) {
+      _incomingDataAnimationController.stop();
+      return;
+    }
+
+    for (final nextSeriesEntry in nextSeries) {
+      final previousSeries = previousSeriesById[nextSeriesEntry.id];
+      if (previousSeries == null) {
+        continue;
+      }
+
+      final previousPoints = previousSeries.points;
+      final nextPoints = nextSeriesEntry.points;
+      if (nextPoints.length != previousPoints.length + 1 ||
+          nextPoints.length < 2) {
+        continue;
+      }
+
+      final previousTailPoint = previousPoints.last;
+      final anchorPoint = nextPoints[nextPoints.length - 2];
+      final nextTailPoint = nextPoints.last;
+      if (previousTailPoint != anchorPoint) {
+        continue;
+      }
+
+      _incomingPointAnimations[nextSeriesEntry.id] = _IncomingPointAnimation(
+        anchorPoint: anchorPoint,
+        targetPoint: nextTailPoint,
+      );
+    }
+
+    if (_incomingPointAnimations.isEmpty) {
+      _incomingDataAnimationController.stop();
+      return;
+    }
+
+    final duration = _incomingDataAnimationDuration;
+    if (_incomingDataAnimationController.duration != duration) {
+      _incomingDataAnimationController.duration = duration;
+    }
+
+    _incomingDataAnimationController
+      ..stop()
+      ..value = 0
+      ..forward();
+  }
+
+  void _refreshAnimatedRenderSeries() {
+    if (_effectiveDataSeries.isEmpty || _incomingPointAnimations.isEmpty) {
+      _effectiveRenderSeries = _effectiveDataSeries;
+      return;
+    }
+
+    final progress = _incomingDataAnimationController.value;
+    _effectiveRenderSeries = _effectiveDataSeries
+        .map((series) {
+          final animation = _incomingPointAnimations[series.id];
+          if (animation == null || series.points.length < 2) {
+            return series;
+          }
+
+          final animatedPoints = List<ChartDataPoint>.from(series.points);
+          animatedPoints[animatedPoints.length - 1] = _interpolatePoint(
+            animation.anchorPoint,
+            animation.targetPoint,
+            progress,
+          );
+
+          return switch (series) {
+            LineChartSeries() => series.copyWith(points: animatedPoints),
+            AreaChartSeries() => series.copyWith(points: animatedPoints),
+            _ => series.copyWith(points: animatedPoints),
+          };
+        })
+        .toList(growable: false);
+  }
+
+  ChartDataPoint _interpolatePoint(
+    ChartDataPoint from,
+    ChartDataPoint to,
+    double t,
+  ) {
+    final clampedT = t.clamp(0.0, 1.0);
+    return ChartDataPoint(
+      x: from.x + ((to.x - from.x) * clampedT),
+      y: from.y + ((to.y - from.y) * clampedT),
+      timestamp: to.timestamp,
+      label: to.label,
+      metadata: to.metadata,
+    );
   }
 
   void _onCoordinatorChanged() {
@@ -3040,4 +3211,14 @@ class _DebugOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+class _IncomingPointAnimation {
+  const _IncomingPointAnimation({
+    required this.anchorPoint,
+    required this.targetPoint,
+  });
+
+  final ChartDataPoint anchorPoint;
+  final ChartDataPoint targetPoint;
 }
