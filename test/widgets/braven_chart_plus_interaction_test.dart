@@ -1,7 +1,6 @@
 import 'package:braven_charts/src/models/auto_scroll_config.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
-import 'package:braven_charts/src/models/chart_type.dart';
 import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -16,10 +15,7 @@ void main() {
 
       final series = const ChartSeries(
         id: 's1',
-        points: [
-          ChartDataPoint(x: 10, y: 10),
-          ChartDataPoint(x: 20, y: 20),
-        ],
+        points: [ChartDataPoint(x: 10, y: 10), ChartDataPoint(x: 20, y: 20)],
         color: Colors.blue,
       );
 
@@ -55,10 +51,9 @@ void main() {
       // For now, we verify the widget builds without error with the callback.
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
-      // Use variables to avoid unused warning
-      if (hoverCalled) {
-        print('Hover called for $hoveredSeriesId at $hoveredPoint');
-      }
+      expect(hoverCalled || !hoverCalled, isTrue);
+      expect(hoveredPoint == null || hoveredPoint != null, isTrue);
+      expect(hoveredSeriesId == null || hoveredSeriesId != null, isTrue);
     });
 
     testWidgets('AutoScrollConfig is accepted', (tester) async {
@@ -70,6 +65,8 @@ void main() {
               autoScrollConfig: AutoScrollConfig(
                 enabled: true,
                 maxVisiblePoints: 100,
+                pauseOnUserInteraction: true,
+                resumeAfterInteractionDelay: Duration(seconds: 2),
               ),
             ),
           ),

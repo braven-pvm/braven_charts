@@ -10,6 +10,7 @@ import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
+import 'pages/power_lactate_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/segment_styling_page.dart';
 import 'pages/streaming_page.dart';
@@ -114,6 +115,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.track_changes,
       page: TrackingPage(),
       badge: '★',
+    ),
+    const NavDestination(
+      label: 'Power + Lactate',
+      icon: Icons.directions_bike_outlined,
+      selectedIcon: Icons.directions_bike,
+      page: PowerLactatePage(),
+      badge: 'NEW',
     ),
     const NavDestination(
       label: 'Annotations',

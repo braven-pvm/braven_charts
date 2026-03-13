@@ -13,7 +13,8 @@ import 'package:flutter/foundation.dart';
 /// - Data keeps accumulating (nothing is deleted)
 /// - Pan offset automatically adjusts to show latest N points
 /// - User can manually pan to view historical data
-/// - Scrolling resumes when new data arrives (if enabled)
+/// - Viewport following can pause on manual interaction
+/// - Live following can resume after an inactivity delay
 ///
 /// **Example:**
 /// ```dart
@@ -24,7 +25,8 @@ import 'package:flutter/foundation.dart';
 ///   autoScrollConfig: AutoScrollConfig(
 ///     enabled: true,
 ///     maxVisiblePoints: 50,  // Show last 50 points
-///     resumeOnNewData: true,  // Resume auto-scroll after manual pan
+///     pauseOnUserInteraction: true,
+///     resumeAfterInteractionDelay: Duration(seconds: 4),
 ///   ),
 /// )
 /// ```
@@ -35,6 +37,8 @@ class AutoScrollConfig {
     this.enabled = false,
     this.maxVisiblePoints = 100,
     this.resumeOnNewData = true,
+    this.pauseOnUserInteraction = false,
+    this.resumeAfterInteractionDelay,
     this.animateScroll = true,
     this.scrollAnimationDuration = const Duration(milliseconds: 300),
   }) : assert(maxVisiblePoints > 0, 'maxVisiblePoints must be positive');
@@ -59,6 +63,12 @@ class AutoScrollConfig {
   ///
   /// This allows users to inspect historical data without constant interruption.
   final bool resumeOnNewData;
+
+  /// Whether manual zoom/pan should freeze the current live viewport.
+  final bool pauseOnUserInteraction;
+
+  /// Optional inactivity delay after which live follow mode resumes.
+  final Duration? resumeAfterInteractionDelay;
 
   /// Whether to animate the scroll transition.
   ///
@@ -85,6 +95,7 @@ class AutoScrollConfig {
     enabled: true,
     maxVisiblePoints: 50,
     resumeOnNewData: true,
+    pauseOnUserInteraction: false,
     animateScroll: true,
     scrollAnimationDuration: Duration(milliseconds: 150),
   );
@@ -96,6 +107,7 @@ class AutoScrollConfig {
     enabled: true,
     maxVisiblePoints: 100,
     resumeOnNewData: true,
+    pauseOnUserInteraction: false,
     animateScroll: true,
     scrollAnimationDuration: Duration(milliseconds: 500),
   );
@@ -105,6 +117,8 @@ class AutoScrollConfig {
     bool? enabled,
     int? maxVisiblePoints,
     bool? resumeOnNewData,
+    bool? pauseOnUserInteraction,
+    Duration? resumeAfterInteractionDelay,
     bool? animateScroll,
     Duration? scrollAnimationDuration,
   }) {
@@ -112,6 +126,10 @@ class AutoScrollConfig {
       enabled: enabled ?? this.enabled,
       maxVisiblePoints: maxVisiblePoints ?? this.maxVisiblePoints,
       resumeOnNewData: resumeOnNewData ?? this.resumeOnNewData,
+      pauseOnUserInteraction:
+          pauseOnUserInteraction ?? this.pauseOnUserInteraction,
+      resumeAfterInteractionDelay:
+          resumeAfterInteractionDelay ?? this.resumeAfterInteractionDelay,
       animateScroll: animateScroll ?? this.animateScroll,
       scrollAnimationDuration:
           scrollAnimationDuration ?? this.scrollAnimationDuration,
@@ -126,6 +144,8 @@ class AutoScrollConfig {
         other.enabled == enabled &&
         other.maxVisiblePoints == maxVisiblePoints &&
         other.resumeOnNewData == resumeOnNewData &&
+        other.pauseOnUserInteraction == pauseOnUserInteraction &&
+        other.resumeAfterInteractionDelay == resumeAfterInteractionDelay &&
         other.animateScroll == animateScroll &&
         other.scrollAnimationDuration == scrollAnimationDuration;
   }
@@ -136,6 +156,8 @@ class AutoScrollConfig {
       enabled,
       maxVisiblePoints,
       resumeOnNewData,
+      pauseOnUserInteraction,
+      resumeAfterInteractionDelay,
       animateScroll,
       scrollAnimationDuration,
     );
@@ -148,6 +170,8 @@ class AutoScrollConfig {
         'enabled: $enabled, '
         'maxVisiblePoints: $maxVisiblePoints, '
         'resumeOnNewData: $resumeOnNewData, '
+        'pauseOnUserInteraction: $pauseOnUserInteraction, '
+        'resumeAfterInteractionDelay: $resumeAfterInteractionDelay, '
         'animateScroll: $animateScroll, '
         'scrollAnimationDuration: $scrollAnimationDuration'
         ')';
