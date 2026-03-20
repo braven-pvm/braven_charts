@@ -74,5 +74,12 @@ export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
 // Theming
+export 'src/theming/components/animation_theme.dart';
+export 'src/theming/components/annotation_theme.dart';
+export 'src/theming/components/axis_style.dart';
 export 'src/theming/components/grid_style.dart';
+export 'src/theming/components/interaction_theme.dart';
 export 'src/theming/components/scrollbar_config.dart';
+export 'src/theming/components/series_theme.dart' show SeriesTheme;
+export 'src/theming/components/typography_theme.dart';
+export 'src/theming/styles/label_style.dart';
