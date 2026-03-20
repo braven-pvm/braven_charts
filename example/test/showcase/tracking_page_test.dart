@@ -14,8 +14,8 @@ void main() {
 
     expect(find.text('Tracking Lab'), findsOneWidget);
     expect(find.text('Auto Normalization Repro'), findsOneWidget);
-    expect(find.text('Interpolation Comparison'), findsOneWidget);
-    expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(2));
+    expect(find.text('Split Column 280px Repro'), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(1));
     expect(find.text('Forced'), findsOneWidget);
   });
 }
