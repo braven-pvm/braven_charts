@@ -1,11 +1,13 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Auto-Detection Widget Tests', () {
-    testWidgets('detects normalization need for >10x range difference',
-        (tester) async {
+    testWidgets('detects normalization need for >10x range difference', (
+      tester,
+    ) async {
       // Power: 0-4000W range = 4000
       // Heart rate: 60-180bpm range = 120
       // Ratio: 4000/120 = 33x (>10x threshold for auto-detection)
@@ -51,6 +53,15 @@ void main() {
       // Verify chart renders - auto-detection logic will detect need for normalization
       // Range ratio: 4000 / 120 = 33x > 10x threshold
       expect(find.byType(BravenChartPlus), findsOneWidget);
+
+      final renderBox = tester.firstRenderObject<ChartRenderBox>(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+        ),
+      );
+      expect(renderBox.transform, isNotNull);
+      expect(renderBox.transform!.dataYMin, closeTo(-0.05, 1e-9));
+      expect(renderBox.transform!.dataYMax, closeTo(1.05, 1e-9));
     });
 
     testWidgets('does not trigger for <10x range difference', (tester) async {
@@ -148,8 +159,9 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('respects NormalizationMode.perSeries override',
-        (tester) async {
+    testWidgets('respects NormalizationMode.perSeries override', (
+      tester,
+    ) async {
       // Force normalization even with similar ranges
 
       await tester.pumpWidget(

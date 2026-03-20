@@ -787,6 +787,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   /// - [seriesYRanges] for the individual series Y bounds
   bool get normalizationNeeded => _normalizationNeeded;
 
+  bool get _hasMultiAxisConfig => widget.series.any(
+    (series) =>
+        series.yAxisConfig != null ||
+        (series.yAxisId != null && series.yAxisId!.isNotEmpty),
+  );
+
+  NormalizationMode? get _effectiveNormalizationMode {
+    final mode = widget.normalizationMode;
+
+    if (!_hasMultiAxisConfig) {
+      return mode == NormalizationMode.perSeries
+          ? NormalizationMode.none
+          : mode;
+    }
+
+    return switch (mode) {
+      NormalizationMode.auto =>
+        _normalizationNeeded
+            ? NormalizationMode.perSeries
+            : NormalizationMode.none,
+      _ => mode,
+    };
+  }
+
   /// The Y-range bounds for each series.
   ///
   /// This map contains [DataRange] objects keyed by series ID, representing
@@ -1067,15 +1091,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       const Duration(milliseconds: 180);
 
   bool get _usesPerSeriesNormalizedMultiAxis {
-    if (widget.normalizationMode != NormalizationMode.perSeries) {
+    if (_effectiveNormalizationMode != NormalizationMode.perSeries) {
       return false;
     }
 
-    return widget.series.any(
-      (series) =>
-          series.yAxisConfig != null ||
-          (series.yAxisId != null && series.yAxisId!.isNotEmpty),
-    );
+    return _hasMultiAxisConfig;
   }
 
   void _cancelStreamingResumeTimer() {
@@ -1436,12 +1456,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // Add 5% padding buffer to prevent data points from being cut off at edges.
     //
     // Multi-axis is active when any series has inline yAxisConfig or yAxisId
-    final hasMultiAxisConfig = widget.series.any(
-      (s) =>
-          s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty),
-    );
-    if (widget.normalizationMode == NormalizationMode.perSeries &&
-        hasMultiAxisConfig) {
+    if (_effectiveNormalizationMode == NormalizationMode.perSeries &&
+        _hasMultiAxisConfig) {
       dataBounds = DataBounds(
         xMin: dataBounds.xMin,
         xMax: dataBounds.xMax,
@@ -2004,7 +2020,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         initialXValue: initialXValue,
         initialYValue: initialYValue,
         availableSeries: widget.series,
-        normalizationMode: widget.normalizationMode,
+        normalizationMode: _effectiveNormalizationMode,
       ),
     );
 
@@ -2058,7 +2074,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         initialStartY: startY,
         initialEndY: endY,
         availableSeries: widget.series,
-        normalizationMode: widget.normalizationMode,
+        normalizationMode: _effectiveNormalizationMode,
       ),
     );
 
@@ -2165,7 +2181,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         builder: (context) => ThresholdAnnotationDialog(
           annotation: annotation,
           availableSeries: widget.series,
-          normalizationMode: widget.normalizationMode,
+          normalizationMode: _effectiveNormalizationMode,
         ),
       );
 
@@ -2193,7 +2209,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         builder: (context) => RangeAnnotationDialog(
           annotation: annotation,
           availableSeries: widget.series,
-          normalizationMode: widget.normalizationMode,
+          normalizationMode: _effectiveNormalizationMode,
         ),
       );
 
@@ -2972,7 +2988,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
                         // Multi-axis parameters
-                        normalizationMode: widget.normalizationMode,
+                        normalizationMode: _effectiveNormalizationMode,
                         series: _effectiveRenderSeries,
                       ),
                     ),
