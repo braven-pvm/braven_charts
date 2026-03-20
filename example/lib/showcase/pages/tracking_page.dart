@@ -22,6 +22,7 @@ class _TrackingPageState extends State<TrackingPage> {
   bool _showTrackingTooltip = true;
   bool _showIntersectionMarkers = true;
 
+  late List<ChartSeries> _autoNormalizationSeries;
   late List<ChartSeries> _interpolationSeries;
   late List<ChartSeries> _tensionSeries;
   late List<ChartSeries> _stressSeries;
@@ -44,6 +45,62 @@ class _TrackingPageState extends State<TrackingPage> {
   }
 
   void _buildDemoSeries() {
+    _autoNormalizationSeries = [
+      AreaChartSeries(
+        id: 'fat_oxidation',
+        name: 'Fat Oxidation (g/min)',
+        points: const [
+          ChartDataPoint(x: 155, y: 0.42),
+          ChartDataPoint(x: 180, y: 0.43),
+          ChartDataPoint(x: 205, y: 0.43),
+          ChartDataPoint(x: 230, y: 0.45),
+          ChartDataPoint(x: 255, y: 0.46),
+          ChartDataPoint(x: 280, y: 0.44),
+          ChartDataPoint(x: 305, y: 0.62),
+        ],
+        color: const Color(0xFF10B981),
+        interpolation: LineInterpolation.bezier,
+        tension: 0.22,
+        strokeWidth: 2.2,
+        fillOpacity: 0.28,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 3.5,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'Oxidation',
+          unit: 'g/min',
+          color: const Color(0xFF10B981),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'fat-axis'),
+      ),
+      LineChartSeries(
+        id: 'cho_oxidation',
+        name: 'CHO Oxidation (g/min)',
+        points: const [
+          ChartDataPoint(x: 155, y: 24.8),
+          ChartDataPoint(x: 180, y: 24.9),
+          ChartDataPoint(x: 205, y: 24.8),
+          ChartDataPoint(x: 230, y: 25.2),
+          ChartDataPoint(x: 255, y: 25.1),
+          ChartDataPoint(x: 280, y: 25.0),
+          ChartDataPoint(x: 305, y: 0.1),
+        ],
+        color: const Color(0xFFF59E0B),
+        interpolation: LineInterpolation.bezier,
+        tension: 0.28,
+        strokeWidth: 2.2,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 3.5,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.right,
+          label: 'Oxidation',
+          unit: 'g/min',
+          color: const Color(0xFFF59E0B),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'cho-axis'),
+      ),
+    ];
+
     _interpolationSeries = [
       _lineSeries(
         id: 'linear_reference',
@@ -171,7 +228,7 @@ class _TrackingPageState extends State<TrackingPage> {
         children: [
           InfoBox(
             message:
-                'Move horizontally across each chart and watch whether the tracking dots stay centered on the visible stroke. The first chart compares interpolation families, the second isolates bezier tension, and the third stresses sharp reversals.',
+                'Move horizontally across each chart and watch whether the tracking dots stay centered on the visible stroke. The first chart reproduces the mixed area-line auto-normalization case, the second compares interpolation families, the third isolates bezier tension, and the fourth stresses sharp reversals.',
           ),
         ],
       ),
@@ -194,6 +251,46 @@ class _TrackingPageState extends State<TrackingPage> {
       builder: (context, _) {
         return ListView(
           children: [
+            SizedBox(
+              height: 320,
+              child: ChartCard(
+                title: 'Auto Normalization Repro',
+                subtitle:
+                    'Mixed area and line series with dual axes, forced tracking, and NormalizationMode.auto',
+                child: _buildChart(
+                  series: _autoNormalizationSeries,
+                  yAxisLabel: 'Substrate Oxidation',
+                  normalizationMode: NormalizationMode.auto,
+                  xAxisConfig: const XAxisConfig(
+                    label: 'Power',
+                    unit: 'W',
+                    min: 155,
+                    max: 325,
+                  ),
+                  annotations: [
+                    ThresholdAnnotation(
+                      id: 'lt2',
+                      axis: AnnotationAxis.x,
+                      value: 205,
+                      label: 'LT2',
+                      lineColor: const Color(0xFFF59E0B),
+                      lineWidth: 1.4,
+                      dashPattern: [3, 3],
+                    ),
+                    ThresholdAnnotation(
+                      id: 'fatmax',
+                      axis: AnnotationAxis.x,
+                      value: 280,
+                      label: 'FatMax',
+                      lineColor: const Color(0xFF10B981),
+                      lineWidth: 1.4,
+                      dashPattern: [3, 3],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 320,
               child: ChartCard(
@@ -241,23 +338,30 @@ class _TrackingPageState extends State<TrackingPage> {
   Widget _buildChart({
     required List<ChartSeries> series,
     required String yAxisLabel,
+    NormalizationMode normalizationMode = NormalizationMode.none,
+    XAxisConfig? xAxisConfig,
+    List<ChartAnnotation> annotations = const [],
   }) {
     return BravenChartPlus(
       series: series,
+      annotations: annotations,
       theme: _optionsController.theme,
       showLegend: _optionsController.showLegend,
       showXScrollbar: _optionsController.showXScrollbar,
       showYScrollbar: _optionsController.showYScrollbar,
       scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-      xAxisConfig: XAxisConfig(
-        label: 'Sample Index',
-        showAxisLine: _optionsController.showAxisLines,
-      ),
+      xAxisConfig: (xAxisConfig ?? const XAxisConfig(label: 'Sample Index'))
+          .copyWith(showAxisLine: _optionsController.showAxisLines),
       yAxis: YAxisConfig(
         position: YAxisPosition.left,
         label: yAxisLabel,
         showAxisLine: _optionsController.showAxisLines,
       ),
+      grid: GridConfig(
+        horizontal: _optionsController.showGrid,
+        vertical: _optionsController.showGrid,
+      ),
+      normalizationMode: normalizationMode,
       interactionConfig: InteractionConfig(
         enableZoom: _optionsController.enableZoom,
         enablePan: _optionsController.enablePan,
@@ -274,8 +378,8 @@ class _TrackingPageState extends State<TrackingPage> {
   Widget _buildStatusPanel() {
     return StatusPanel(
       items: [
-        const StatusItem(label: 'Charts', value: '3'),
-        const StatusItem(label: 'Series', value: '10'),
+        const StatusItem(label: 'Charts', value: '4'),
+        const StatusItem(label: 'Series', value: '12'),
         StatusItem(
           label: 'Tracking',
           value: 'Forced',

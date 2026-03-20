@@ -2229,7 +2229,8 @@ class ChartRenderBox extends RenderBox {
     // This ensures range annotations are positioned correctly when each series
     // has its own Y-axis range. Must be computed BEFORE painting background elements.
     Map<String, DataRange>? backgroundSeriesBounds;
-    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries &&
+    if (_multiAxisManager.effectiveNormalizationMode ==
+            NormalizationMode.perSeries &&
         _multiAxisManager.series.isNotEmpty) {
       backgroundSeriesBounds = _computeSeriesBounds(forPainting: true);
     }
@@ -2309,7 +2310,8 @@ class ChartRenderBox extends RenderBox {
     // multiple Y-axes exist. Otherwise range annotations with Y values will render
     // off-screen because the transform uses normalized Y range (-0.05 to 1.05).
     Map<String, DataRange>? thresholdSeriesBounds;
-    if (_multiAxisManager.normalizationMode == NormalizationMode.perSeries &&
+    if (_multiAxisManager.effectiveNormalizationMode ==
+            NormalizationMode.perSeries &&
         _multiAxisManager.series.isNotEmpty) {
       thresholdSeriesBounds = _computeSeriesBounds(forPainting: true);
     }
@@ -2884,7 +2886,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
 
   @override
   bool get isPerSeriesMode =>
-      _renderBox._multiAxisManager.normalizationMode ==
+      _renderBox._multiAxisManager.effectiveNormalizationMode ==
       NormalizationMode.perSeries;
 
   @override

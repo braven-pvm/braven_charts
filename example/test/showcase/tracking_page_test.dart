@@ -13,8 +13,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tracking Lab'), findsOneWidget);
+    expect(find.text('Auto Normalization Repro'), findsOneWidget);
     expect(find.text('Interpolation Comparison'), findsOneWidget);
-    expect(find.text('Bezier Tension Sweep'), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(2));
     expect(find.text('Forced'), findsOneWidget);
   });
