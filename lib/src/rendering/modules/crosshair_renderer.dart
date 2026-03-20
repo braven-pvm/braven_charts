@@ -136,6 +136,7 @@ class CrosshairRenderer {
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
     required bool isRangeCreationMode,
+    InteractionConfig? interactionConfig,
     List<TrendAnnotationElement> trendElements = const [],
     XAxisConfig? xAxisConfig,
   }) {
@@ -154,6 +155,7 @@ class CrosshairRenderer {
         plotArea: plotArea,
         transform: transform,
         theme: theme,
+        interactionConfig: interactionConfig,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: seriesElements,
@@ -288,6 +290,7 @@ class CrosshairRenderer {
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
     required List<SeriesElement> seriesElements,
+    InteractionConfig? interactionConfig,
     List<TrendAnnotationElement> trendElements = const [],
     XAxisConfig? xAxisConfig,
   }) {
@@ -416,6 +419,7 @@ class CrosshairRenderer {
         cursorPosition: cursorPosition,
         plotArea: plotArea,
         theme: theme,
+        interactionConfig: interactionConfig,
         trackingState: trackingState,
         multiAxisInfo: multiAxisInfo,
       );
@@ -817,18 +821,30 @@ class CrosshairRenderer {
     required ChartTheme? theme,
     required CrosshairTrackingState trackingState,
     required MultiAxisInfo multiAxisInfo,
+    InteractionConfig? interactionConfig,
   }) {
-    final interactionTheme = theme?.interactionTheme;
-    final tooltipTheme = interactionTheme?.tooltipStyle;
+    final configStyle = interactionConfig?.tooltip.style;
+    final tooltipTheme = theme?.interactionTheme.tooltipStyle;
 
     final backgroundColor =
-        tooltipTheme?.backgroundColor ?? const Color(0xF0FFFFFF);
-    final textColor = tooltipTheme?.textStyle.color ?? const Color(0xFF333333);
-    final fontSize = tooltipTheme?.textStyle.fontSize ?? 12.0;
-    final borderColor = tooltipTheme?.borderColor ?? const Color(0xFFBDBDBD);
-    final borderWidth = tooltipTheme?.borderWidth ?? 1.0;
-    final borderRadius = tooltipTheme?.borderRadius ?? 4.0;
-    final padding = tooltipTheme?.padding.left ?? 8.0;
+        configStyle?.backgroundColor ??
+        tooltipTheme?.backgroundColor ??
+        const Color(0xF0FFFFFF);
+    final textColor =
+        configStyle?.textColor ??
+        tooltipTheme?.textStyle.color ??
+        const Color(0xFF333333);
+    final fontSize =
+        configStyle?.fontSize ?? tooltipTheme?.textStyle.fontSize ?? 12.0;
+    final borderColor =
+        configStyle?.borderColor ??
+        tooltipTheme?.borderColor ??
+        const Color(0xFFBDBDBD);
+    final borderWidth =
+        configStyle?.borderWidth ?? tooltipTheme?.borderWidth ?? 1.0;
+    final borderRadius =
+        configStyle?.borderRadius ?? tooltipTheme?.borderRadius ?? 4.0;
+    final padding = configStyle?.padding ?? tooltipTheme?.padding.left ?? 8.0;
 
     // Build tooltip content — separate series values from trend values
     final seriesEntries = <(TextPainter, Color)>[];

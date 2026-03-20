@@ -2071,6 +2071,7 @@ class ChartRenderBox extends RenderBox {
         plotArea: _plotArea,
         transform: _transform!,
         theme: _theme,
+        interactionConfig: _interactionConfig,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
         seriesElements: _elements.whereType<SeriesElement>().toList(),
