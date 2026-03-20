@@ -389,12 +389,19 @@ class MultiAxisManager {
     final transformHasRealDataValues =
         isNonNormalizedMode ||
         (effectiveMode == NormalizationMode.perSeries && !hasMultiAxisConfig);
+    // In non-normalized (real-data) mode, the transform Y range IS the correct
+    // viewport. Always using it for axis bounds ensures axis tick labels stay
+    // consistent with where data is actually rendered.
+    //
+    // Previously this was only applied when zoomed (t != ot), which "accidentally"
+    // fixed the inconsistency during zoom but left the initial/reset state broken:
+    // per-series data bounds (e.g. fat: 24.31..35.09) were used for axis labels
+    // while data rendered in the combined global range (-1.31..36.31).
+    //
+    // Requires t != null; when _transform is null (before initial layout) the axis
+    // width calculation falls back to per-series data bounds, which is fine for sizing.
     final useTransformYBounds =
-        !forceFullBounds &&
-        transformHasRealDataValues &&
-        t != null &&
-        ot != null &&
-        (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
+        !forceFullBounds && transformHasRealDataValues && t != null;
 
     // When forPainting=true AND viewport is zoomed, use viewport-aware bounds.
     // This is the ONLY case where we apply viewport transformation.

@@ -1467,6 +1467,8 @@ class ChartRenderBox extends RenderBox {
     if (_xAxis != null && _yAxis != null) {
       final currentBaseXMin = _widgetProvidedXMin ?? _xAxis!.dataMin;
       final currentBaseXMax = _widgetProvidedXMax ?? _xAxis!.dataMax;
+      final currentBaseYMin = _widgetProvidedYMin ?? _yAxis!.dataMin;
+      final currentBaseYMax = _widgetProvidedYMax ?? _yAxis!.dataMax;
 
       // Detect if data range has fundamentally changed (different chart/dataset)
       // This handles the case where Flutter reuses the same RenderBox instance
@@ -1479,12 +1481,15 @@ class ChartRenderBox extends RenderBox {
 
       // Create initial transform if none exists OR if data range has significantly changed
       if (_transform == null || rangeChanged) {
-        // First time OR range changed: create transform from axis data ranges
+        // First time OR range changed: create transform from the widget-provided
+        // baseline viewport when available. Axis instances may already have been
+        // synchronized to a transient viewport, but reset/original state must stay
+        // anchored to the resolved chart bounds from the widget layer.
         _transform = ChartTransform(
-          dataXMin: _xAxis!.dataMin,
-          dataXMax: _xAxis!.dataMax,
-          dataYMin: _yAxis!.dataMin,
-          dataYMax: _yAxis!.dataMax,
+          dataXMin: currentBaseXMin,
+          dataXMax: currentBaseXMax,
+          dataYMin: currentBaseYMin,
+          dataYMax: currentBaseYMax,
           plotWidth: _plotArea.width,
           plotHeight: _plotArea.height,
           invertY: true, // Standard chart convention (Y=0 at bottom)

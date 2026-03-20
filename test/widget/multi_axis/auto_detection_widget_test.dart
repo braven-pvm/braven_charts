@@ -62,6 +62,18 @@ void main() {
       expect(renderBox.transform, isNotNull);
       expect(renderBox.transform!.dataYMin, closeTo(-0.05, 1e-9));
       expect(renderBox.transform!.dataYMax, closeTo(1.05, 1e-9));
+
+      renderBox.zoomChart(2.0, animate: false);
+      await tester.pump();
+
+      expect(renderBox.transform!.dataYMin, isNot(closeTo(-0.05, 1e-9)));
+      expect(renderBox.transform!.dataYMax, isNot(closeTo(1.05, 1e-9)));
+
+      renderBox.resetView();
+      await tester.pump();
+
+      expect(renderBox.transform!.dataYMin, closeTo(-0.05, 1e-9));
+      expect(renderBox.transform!.dataYMax, closeTo(1.05, 1e-9));
     });
 
     testWidgets('does not trigger for <10x range difference', (tester) async {
