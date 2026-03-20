@@ -2265,6 +2265,7 @@ class _GalleryPageState extends State<GalleryPage> {
                   position: YAxisPosition.left,
                   label: 'Value',
                 ),
+                normalizationMode: NormalizationMode.perSeries,
                 interactionConfig: const InteractionConfig(
                   crosshair: CrosshairConfig(
                     enabled: true,

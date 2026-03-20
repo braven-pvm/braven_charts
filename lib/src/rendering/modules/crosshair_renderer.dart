@@ -813,6 +813,41 @@ class CrosshairRenderer {
     canvas.restore();
   }
 
+  /// Resolves the effective tooltip style for the tracking tooltip, following
+  /// the same priority as [tooltip_renderer.dart]:
+  ///   1. [interactionConfig.tooltip.style] when [interactionConfig] is set
+  ///   2. Theme [LabelStyle] translated to [TooltipStyle]
+  ///   3. Hardcoded defaults via [const TooltipStyle()]
+  TooltipStyle _getEffectiveTrackingTooltipStyle(
+    InteractionConfig? interactionConfig,
+    ChartTheme? theme,
+  ) {
+    // Priority 1 — explicit interactionConfig style
+    final configStyle = interactionConfig?.tooltip.style;
+    if (configStyle != null) {
+      return configStyle;
+    }
+
+    // Priority 2 — theme LabelStyle translated to TooltipStyle
+    final themeStyle = theme?.interactionTheme.tooltipStyle;
+    if (themeStyle != null) {
+      return TooltipStyle(
+        backgroundColor: themeStyle.backgroundColor,
+        textColor: themeStyle.textStyle.color ?? const Color(0xFF333333),
+        fontSize: themeStyle.textStyle.fontSize ?? 12.0,
+        borderColor: themeStyle.borderColor,
+        borderWidth: themeStyle.borderWidth,
+        borderRadius: themeStyle.borderRadius,
+        padding: themeStyle.padding.left,
+        shadowColor: themeStyle.shadowColor ?? const Color(0x00000000),
+        shadowBlurRadius: themeStyle.shadowBlurRadius ?? 0.0,
+      );
+    }
+
+    // Priority 3 — library defaults
+    return const TooltipStyle();
+  }
+
   /// Paints the tracking tooltip that follows the cursor.
   void _paintTrackingTooltip({
     required Canvas canvas,
@@ -823,28 +858,15 @@ class CrosshairRenderer {
     required MultiAxisInfo multiAxisInfo,
     InteractionConfig? interactionConfig,
   }) {
-    final configStyle = interactionConfig?.tooltip.style;
-    final tooltipTheme = theme?.interactionTheme.tooltipStyle;
+    final style = _getEffectiveTrackingTooltipStyle(interactionConfig, theme);
 
-    final backgroundColor =
-        configStyle?.backgroundColor ??
-        tooltipTheme?.backgroundColor ??
-        const Color(0xF0FFFFFF);
-    final textColor =
-        configStyle?.textColor ??
-        tooltipTheme?.textStyle.color ??
-        const Color(0xFF333333);
-    final fontSize =
-        configStyle?.fontSize ?? tooltipTheme?.textStyle.fontSize ?? 12.0;
-    final borderColor =
-        configStyle?.borderColor ??
-        tooltipTheme?.borderColor ??
-        const Color(0xFFBDBDBD);
-    final borderWidth =
-        configStyle?.borderWidth ?? tooltipTheme?.borderWidth ?? 1.0;
-    final borderRadius =
-        configStyle?.borderRadius ?? tooltipTheme?.borderRadius ?? 4.0;
-    final padding = configStyle?.padding ?? tooltipTheme?.padding.left ?? 8.0;
+    final backgroundColor = style.backgroundColor;
+    final textColor = style.textColor;
+    final fontSize = style.fontSize;
+    final borderColor = style.borderColor;
+    final borderWidth = style.borderWidth;
+    final borderRadius = style.borderRadius;
+    final padding = style.padding;
 
     // Build tooltip content — separate series values from trend values
     final seriesEntries = <(TextPainter, Color)>[];
