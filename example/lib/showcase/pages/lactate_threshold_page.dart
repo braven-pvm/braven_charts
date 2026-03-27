@@ -12,9 +12,11 @@ import '../widgets/standard_options.dart';
 ///
 /// Reproduces the classic LT1 detection pattern:
 /// - Lactate curve (exponential rise over time)
-/// - Chord annotation (secant line between two points on the curve)
-/// - Threshold marker (vertical line at the deflection point)
-/// - Point annotation at the deflection point
+/// - "Section" chord (solid line from baseline to LT1 point)
+/// - "Ramp" chord (thick dashed line from LT1 to peak)
+/// - Linear trend line across the full dataset
+/// - Horizontal threshold at the LT1 lactate value
+/// - Vertical LT1 marker with deflection point
 class LactateThresholdPage extends StatefulWidget {
   const LactateThresholdPage({super.key});
 
@@ -26,23 +28,17 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
   final AnnotationController _annotationController = AnnotationController();
 
-  // Chord endpoints (user-adjustable)
-  int _chordStartIndex = 1;
-  int _chordEndIndex = 14;
-
   // LT1 detection point
   int _lt1Index = 8;
 
   // Annotation visibility
-  bool _showChord = true;
-  bool _showLT1Marker = true;
+  bool _showSectionChord = true;
+  bool _showRampChord = true;
+  bool _showTrendLine = true;
+  bool _showHorizontalThreshold = true;
+  bool _showBaselineMarker = true;
   bool _showLT1Line = true;
   bool _showDeflectionPoint = true;
-
-  // Styling
-  double _chordLineWidth = 2.0;
-  double _chordElevation = 0.0;
-  bool _chordDashed = true;
 
   late List<ChartDataPoint> _lactateData;
 
@@ -63,30 +59,25 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
     super.dispose();
   }
 
-  /// Generates a realistic lactate curve.
-  ///
-  /// Lactate stays relatively flat at low intensities then rises
-  /// exponentially as exercise intensity increases — the classic
-  /// "hockey stick" shape used in threshold testing.
+  /// Generates a realistic lactate curve (hockey stick shape).
   void _generateLactateData() {
     _lactateData = [];
-    // 16 sample points representing increasing exercise intensity stages
-    // Each stage is ~3 min, x-axis represents stage number (time)
-    final baseLactate = 0.8; // resting lactate mmol/L
+    final baseLactate = 0.8;
     for (int i = 0; i < 16; i++) {
       final t = i.toDouble();
-      // Piecewise model: slow linear rise then exponential
       double lactate;
       if (i <= 6) {
-        // Aerobic zone: slow, nearly flat rise
         lactate = baseLactate + 0.08 * t + 0.005 * t * t;
       } else if (i <= 10) {
-        // Transition zone: moderate rise (LT1 region)
         final offset = t - 6;
-        lactate = baseLactate + 0.08 * 6 + 0.005 * 36 + 0.25 * offset + 0.06 * offset * offset;
+        lactate = baseLactate +
+            0.08 * 6 +
+            0.005 * 36 +
+            0.25 * offset +
+            0.06 * offset * offset;
       } else {
-        // Above threshold: steep exponential rise
-        final transEnd = baseLactate + 0.08 * 6 + 0.005 * 36 + 0.25 * 4 + 0.06 * 16;
+        final transEnd =
+            baseLactate + 0.08 * 6 + 0.005 * 36 + 0.25 * 4 + 0.06 * 16;
         final offset = t - 10;
         lactate = transEnd + 0.6 * offset + 0.15 * offset * offset;
       }
@@ -97,25 +88,98 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
   void _rebuildAnnotations() {
     _annotationController.clearAnnotations();
 
-    if (_showChord) {
+    final lt1Value = _lactateData[_lt1Index].y;
+    final lt1X = _lactateData[_lt1Index].x;
+
+    // --- "Section" chord: baseline to LT1 (solid red/orange) ---
+    if (_showSectionChord) {
       _annotationController.addAnnotation(ChordAnnotation(
-        id: 'chord',
+        id: 'section_chord',
         seriesId: 'lactate',
-        startIndex: _chordStartIndex,
-        endIndex: _chordEndIndex,
-        lineColor: const Color(0xFF9E9E9E),
-        lineWidth: _chordLineWidth,
-        dashPattern: _chordDashed ? [6, 4] : null,
-        elevation: _chordElevation,
+        startIndex: 1,
+        endIndex: _lt1Index,
+        label: 'Section',
+        style: const AnnotationStyle(
+          textStyle: TextStyle(
+            color: Color(0xFFE64A19),
+            fontSize: 11,
+          ),
+        ),
+        lineColor: const Color(0xFFE64A19),
+        lineWidth: 2.5,
         perpendicularIndex: _showDeflectionPoint ? _lt1Index : null,
-        perpendicularLabel: 'chord',
-        perpendicularDashPattern: _chordDashed ? [4, 3] : null,
-        perpendicularLineColor: const Color(0xFF9E9E9E),
+        perpendicularLabel: 'D',
+        perpendicularLabelStyle: const AnnotationStyle(
+          textStyle: TextStyle(
+            color: Color(0xFF333333),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        perpendicularLineColor: const Color(0xFFE64A19),
+        perpendicularDashPattern: [4, 3],
       ));
     }
 
+    // --- "Ramp" chord: LT1 to peak (thick teal dashed) ---
+    if (_showRampChord) {
+      _annotationController.addAnnotation(ChordAnnotation(
+        id: 'ramp_chord',
+        seriesId: 'lactate',
+        startIndex: _lt1Index,
+        endIndex: 14,
+        label: 'Ramp',
+        style: const AnnotationStyle(
+          textStyle: TextStyle(
+            color: Color(0xFF00897B),
+            fontSize: 11,
+          ),
+        ),
+        lineColor: const Color(0xFF00897B),
+        lineWidth: 4.0,
+        dashPattern: [8, 6],
+      ));
+    }
+
+    // --- Linear trend line across full dataset (cyan dashed) ---
+    if (_showTrendLine) {
+      _annotationController.addAnnotation(TrendAnnotation(
+        id: 'linear_trend',
+        seriesId: 'lactate',
+        trendType: TrendType.linear,
+        label: '',
+        lineColor: const Color(0xFF00BCD4),
+        lineWidth: 1.5,
+        dashPattern: [6, 4],
+      ));
+    }
+
+    // --- Horizontal threshold at LT1 lactate value ---
+    if (_showHorizontalThreshold) {
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'lt1_horizontal',
+        axis: AnnotationAxis.y,
+        value: lt1Value,
+        label: lt1Value.toStringAsFixed(2),
+        labelPosition: AnnotationLabelPosition.topLeft,
+        lineColor: Colors.grey.shade500,
+        lineWidth: 1.0,
+      ));
+    }
+
+    // --- Baseline vertical marker (dark line at x≈1.4) ---
+    if (_showBaselineMarker) {
+      _annotationController.addAnnotation(ThresholdAnnotation(
+        id: 'baseline_marker',
+        axis: AnnotationAxis.x,
+        value: 1.4,
+        lineColor: const Color(0xFF333333),
+        lineWidth: 1.5,
+      ));
+    }
+
+    // --- LT1 vertical line (green dashed) ---
     if (_showLT1Line) {
-      final lt1X = _lactateData[_lt1Index].x;
       _annotationController.addAnnotation(ThresholdAnnotation(
         id: 'lt1_line',
         axis: AnnotationAxis.x,
@@ -136,6 +200,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       ));
     }
 
+    // --- Deflection point "D" marker (green circle) ---
     if (_showDeflectionPoint) {
       _annotationController.addAnnotation(PointAnnotation(
         id: 'deflection_point',
@@ -155,11 +220,8 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         ),
       ));
-    }
 
-    if (_showLT1Marker) {
-      // Pin at the bottom of the chart at the LT1 x-position
-      final lt1X = _lactateData[_lt1Index].x;
+      // Green pin at the bottom
       _annotationController.addAnnotation(PinAnnotation(
         id: 'lt1_pin',
         x: lt1X,
@@ -188,76 +250,18 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       StandardChartOptions(controller: _optionsController),
 
       OptionSection(
-        title: 'Chord Annotation',
-        icon: Icons.trending_up,
+        title: 'LT1 Detection',
+        icon: Icons.flag,
         children: [
-          BoolOption(
-            label: 'Show Chord',
-            value: _showChord,
-            onChanged: (v) {
-              setState(() => _showChord = v);
-              _rebuildAnnotations();
-            },
-            subtitle: 'Secant line between two points',
-          ),
           SliderOption(
-            label: 'Start Index',
-            value: _chordStartIndex.toDouble(),
-            min: 0,
-            max: maxIndex.toDouble(),
-            divisions: maxIndex,
+            label: 'LT1 Point',
+            value: _lt1Index.toDouble(),
+            min: 2,
+            max: (maxIndex - 1).toDouble(),
+            divisions: maxIndex - 3,
             decimalPlaces: 0,
             onChanged: (v) {
-              final idx = v.round();
-              if (idx != _chordEndIndex) {
-                setState(() => _chordStartIndex = idx);
-                _rebuildAnnotations();
-              }
-            },
-          ),
-          SliderOption(
-            label: 'End Index',
-            value: _chordEndIndex.toDouble(),
-            min: 0,
-            max: maxIndex.toDouble(),
-            divisions: maxIndex,
-            decimalPlaces: 0,
-            onChanged: (v) {
-              final idx = v.round();
-              if (idx != _chordStartIndex) {
-                setState(() => _chordEndIndex = idx);
-                _rebuildAnnotations();
-              }
-            },
-          ),
-          BoolOption(
-            label: 'Dashed',
-            value: _chordDashed,
-            onChanged: (v) {
-              setState(() => _chordDashed = v);
-              _rebuildAnnotations();
-            },
-          ),
-          SliderOption(
-            label: 'Line Width',
-            value: _chordLineWidth,
-            min: 0.5,
-            max: 6.0,
-            divisions: 11,
-            suffix: 'px',
-            onChanged: (v) {
-              setState(() => _chordLineWidth = v);
-              _rebuildAnnotations();
-            },
-          ),
-          SliderOption(
-            label: 'Glow',
-            value: _chordElevation,
-            min: 0,
-            max: 8.0,
-            divisions: 16,
-            onChanged: (v) {
-              setState(() => _chordElevation = v);
+              setState(() => _lt1Index = v.round());
               _rebuildAnnotations();
             },
           ),
@@ -265,29 +269,53 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       ),
 
       OptionSection(
-        title: 'LT1 Detection',
-        icon: Icons.flag,
+        title: 'Annotations',
+        icon: Icons.layers,
         children: [
-          SliderOption(
-            label: 'LT1 Point',
-            value: _lt1Index.toDouble(),
-            min: 1,
-            max: (maxIndex - 1).toDouble(),
-            divisions: maxIndex - 2,
-            decimalPlaces: 0,
+          BoolOption(
+            label: 'Section Chord',
+            value: _showSectionChord,
             onChanged: (v) {
-              setState(() => _lt1Index = v.round());
+              setState(() => _showSectionChord = v);
               _rebuildAnnotations();
             },
+            subtitle: 'Baseline to LT1 (solid)',
           ),
           BoolOption(
-            label: 'Deflection Point (D)',
-            value: _showDeflectionPoint,
+            label: 'Ramp Chord',
+            value: _showRampChord,
             onChanged: (v) {
-              setState(() => _showDeflectionPoint = v);
+              setState(() => _showRampChord = v);
               _rebuildAnnotations();
             },
-            subtitle: 'Green marker at threshold',
+            subtitle: 'LT1 to peak (dashed)',
+          ),
+          BoolOption(
+            label: 'Linear Trend',
+            value: _showTrendLine,
+            onChanged: (v) {
+              setState(() => _showTrendLine = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Full dataset regression',
+          ),
+          BoolOption(
+            label: 'LT1 Threshold',
+            value: _showHorizontalThreshold,
+            onChanged: (v) {
+              setState(() => _showHorizontalThreshold = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Horizontal line at LT1 value',
+          ),
+          BoolOption(
+            label: 'Baseline Marker',
+            value: _showBaselineMarker,
+            onChanged: (v) {
+              setState(() => _showBaselineMarker = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Vertical line at resting sample',
           ),
           BoolOption(
             label: 'LT1 Vertical Line',
@@ -298,10 +326,34 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
             },
           ),
           BoolOption(
-            label: 'LT1 Pin Marker',
-            value: _showLT1Marker,
+            label: 'Deflection Point (D)',
+            value: _showDeflectionPoint,
             onChanged: (v) {
-              setState(() => _showLT1Marker = v);
+              setState(() => _showDeflectionPoint = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Green marker + perpendicular line',
+          ),
+        ],
+      ),
+
+      OptionSection(
+        title: 'Actions',
+        children: [
+          ActionButton(
+            label: 'Reset All',
+            icon: Icons.restore,
+            onPressed: () {
+              setState(() {
+                _lt1Index = 8;
+                _showSectionChord = true;
+                _showRampChord = true;
+                _showTrendLine = true;
+                _showHorizontalThreshold = true;
+                _showBaselineMarker = true;
+                _showLT1Line = true;
+                _showDeflectionPoint = true;
+              });
               _rebuildAnnotations();
             },
           ),
@@ -309,11 +361,12 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       ),
 
       const InfoBox(
-        message: 'The chord annotation draws a straight line between two '
-            'data points on the lactate curve. The deflection point (D) '
-            'marks where the curve departs from the chord — indicating '
-            'the first lactate threshold (LT1). '
-            'Adjust the sliders to explore different chord placements.',
+        message: 'Classic lactate threshold detection chart. '
+            'The "Section" chord spans the aerobic baseline. '
+            'The "Ramp" chord spans the exponential rise. '
+            'Point D marks the maximum deflection from the section '
+            'chord — the first lactate threshold (LT1). '
+            'The linear trend line shows the overall trajectory.',
       ),
     ];
   }
@@ -391,11 +444,6 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           label: 'LT1 Lactate',
           value: '${lt1Point.y.toStringAsFixed(2)} mmol/L',
           color: const Color(0xFF4CAF50),
-        ),
-        StatusItem(
-          label: 'Chord',
-          value: '$_chordStartIndex → $_chordEndIndex',
-          color: _showChord ? const Color(0xFF9E9E9E) : Colors.grey,
         ),
         StatusItem(
           label: 'Annotations',
