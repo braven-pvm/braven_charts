@@ -15,6 +15,7 @@ import '../widgets/standard_options.dart';
 /// - Point annotations (markers on specific points)
 /// - Text annotations (custom text overlays)
 /// - Trend annotations (trend lines)
+/// - Chord annotations (straight lines between two data points)
 class AnnotationsPage extends StatefulWidget {
   const AnnotationsPage({super.key});
 
@@ -32,6 +33,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
   bool _showThresholds = true;
   bool _showRanges = true;
   bool _showTextAnnotations = true;
+  bool _showChords = true;
 
   // Annotation interaction settings
   bool _interactiveAnnotations = true;
@@ -209,6 +211,45 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
         allowEditing: _allowEditing,
       ));
     }
+
+    if (_showChords) {
+      // Chord from rising portion of sine wave — solid line
+      _annotationController.addAnnotation(ChordAnnotation(
+        id: 'chord_rise',
+        seriesId: 'sine',
+        startIndex: 5,
+        endIndex: 15,
+        label: 'Rising Chord',
+        lineColor: Colors.deepPurple,
+        lineWidth: 2.5,
+        elevation: 3.0,
+      ));
+
+      // Chord across a full cycle — dashed line
+      _annotationController.addAnnotation(ChordAnnotation(
+        id: 'chord_cycle',
+        seriesId: 'sine',
+        startIndex: 0,
+        endIndex: 62,
+        label: 'Full Cycle Chord',
+        lineColor: Colors.teal,
+        lineWidth: 2.0,
+        dashPattern: [8, 4],
+      ));
+
+      // Short chord on descending portion
+      _annotationController.addAnnotation(ChordAnnotation(
+        id: 'chord_descent',
+        seriesId: 'sine',
+        startIndex: 15,
+        endIndex: 25,
+        label: 'Descent',
+        lineColor: Colors.red.shade400,
+        lineWidth: 2.0,
+        dashPattern: [4, 4],
+        elevation: 2.0,
+      ));
+    }
   }
 
   @override
@@ -258,6 +299,15 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
               _rebuildAnnotations();
             },
             subtitle: 'Custom text overlays',
+          ),
+          BoolOption(
+            label: 'Show Chords',
+            value: _showChords,
+            onChanged: (v) {
+              setState(() => _showChords = v);
+              _rebuildAnnotations();
+            },
+            subtitle: 'Lines between data points',
           ),
         ],
       ),
@@ -321,6 +371,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                 _showThresholds = false;
                 _showRanges = false;
                 _showTextAnnotations = false;
+                _showChords = false;
               });
             },
           ),
@@ -332,6 +383,7 @@ class _AnnotationsPageState extends State<AnnotationsPage> {
                 _showThresholds = true;
                 _showRanges = true;
                 _showTextAnnotations = true;
+                _showChords = true;
               });
               _rebuildAnnotations();
             },

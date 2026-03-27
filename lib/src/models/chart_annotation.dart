@@ -14,7 +14,8 @@ int _annotationIdCounter = 0;
 
 /// Base sealed class for all chart annotations using Dart 3.0+ pattern matching.
 ///
-/// All annotation types (Point, Range, Text, Threshold, Trend) extend this class.
+/// All annotation types (Point, Range, Text, Threshold, Trend, Chord, Pin,
+/// Legend) extend this class.
 /// Use pattern matching with `switch` or `if/is` to handle different types.
 ///
 /// Example:
@@ -26,6 +27,9 @@ int _annotationIdCounter = 0;
 ///     TextAnnotation() => 'Text',
 ///     ThresholdAnnotation() => 'Threshold',
 ///     TrendAnnotation() => 'Trend',
+///     ChordAnnotation() => 'Chord',
+///     PinAnnotation() => 'Pin',
+///     LegendAnnotation() => 'Legend',
 ///   };
 /// }
 /// ```
@@ -1277,6 +1281,225 @@ class TrendAnnotation extends ChartAnnotation {
       lineWidth: lineWidth ?? this.lineWidth,
       dashPattern: dashPattern ?? this.dashPattern,
       elevation: elevation ?? this.elevation,
+    );
+  }
+}
+
+// =============================================================================
+// Chord Annotation
+// =============================================================================
+
+/// A chord annotation that draws a straight line between two data points
+/// on a chart series, with an optional perpendicular drop-line to a third
+/// data point.
+///
+/// A chord (or secant line) connects two specific points on a curve,
+/// commonly used in analysis to visualize rate of change between two
+/// measurements (e.g., lactate threshold detection).
+///
+/// The optional [perpendicularIndex] draws a line from the chord to a data
+/// point, projected perpendicularly onto the chord. This visualizes the
+/// deflection distance — the maximum vertical deviation between the chord
+/// and the curve — which is the classic method for detecting the first
+/// lactate threshold (LT1).
+///
+/// Both the chord line and perpendicular line support independent styling
+/// (color, width, dash pattern, elevation/glow). The perpendicular styling
+/// defaults to the chord's styling when not explicitly set.
+///
+/// Example:
+/// ```dart
+/// ChordAnnotation(
+///   id: 'chord1',
+///   seriesId: 'lactate',
+///   startIndex: 1,
+///   endIndex: 14,
+///   lineColor: Colors.grey,
+///   dashPattern: [6, 4],
+///   perpendicularIndex: 8,
+///   perpendicularLabel: 'D',
+/// )
+/// ```
+class ChordAnnotation extends ChartAnnotation {
+  /// Creates a chord annotation.
+  ChordAnnotation({
+    String? id,
+    super.label,
+    super.style,
+    super.allowDragging,
+    super.allowEditing,
+    super.zIndex,
+    required this.seriesId,
+    required this.startIndex,
+    required this.endIndex,
+    this.lineColor = Colors.blue,
+    this.lineWidth = 2.0,
+    this.dashPattern,
+    this.elevation = 0.0,
+    this.perpendicularIndex,
+    this.perpendicularLabel,
+    this.perpendicularLabelStyle,
+    this.perpendicularLineColor,
+    this.perpendicularLineWidth,
+    this.perpendicularDashPattern,
+    this.perpendicularElevation,
+  })  : assert(startIndex >= 0, 'startIndex must be non-negative'),
+        assert(endIndex >= 0, 'endIndex must be non-negative'),
+        assert(startIndex != endIndex, 'startIndex and endIndex must differ'),
+        assert(elevation >= 0, 'Elevation must be non-negative'),
+        assert(perpendicularIndex == null || perpendicularIndex >= 0,
+            'perpendicularIndex must be non-negative'),
+        super(id: id ?? ChartAnnotation.generateId());
+
+  /// The ID of the series containing the data points.
+  final String seriesId;
+
+  /// Index of the first data point in the series.
+  final int startIndex;
+
+  /// Index of the second data point in the series.
+  final int endIndex;
+
+  /// The color of the chord line.
+  final Color lineColor;
+
+  /// The width of the chord line in logical pixels.
+  final double lineWidth;
+
+  /// Optional dash pattern for the chord line.
+  final List<double>? dashPattern;
+
+  /// The elevation/glow spread for the chord line in the default state.
+  ///
+  /// When greater than 0, a glow effect is drawn behind the line using the
+  /// same color as [lineColor]. The value controls the blur radius of the glow.
+  /// Defaults to 0.0 (no glow).
+  final double elevation;
+
+  /// Index of a data point on the same series to draw a perpendicular line to.
+  ///
+  /// When set, a line is drawn from this data point to its perpendicular
+  /// projection on the chord line. Used to visualize deflection distance
+  /// (e.g., lactate threshold detection).
+  final int? perpendicularIndex;
+
+  /// Label text displayed near the perpendicular line.
+  final String? perpendicularLabel;
+
+  /// Style for the perpendicular label. If null, uses the annotation's [style].
+  final AnnotationStyle? perpendicularLabelStyle;
+
+  /// Color of the perpendicular line. If null, uses [lineColor].
+  final Color? perpendicularLineColor;
+
+  /// Width of the perpendicular line. If null, uses [lineWidth].
+  final double? perpendicularLineWidth;
+
+  /// Dash pattern for the perpendicular line. If null, uses [dashPattern].
+  final List<double>? perpendicularDashPattern;
+
+  /// Elevation/glow for the perpendicular line. If null, uses [elevation].
+  final double? perpendicularElevation;
+
+  /// Effective perpendicular color (falls back to chord line color).
+  Color get effectivePerpendicularColor => perpendicularLineColor ?? lineColor;
+
+  /// Effective perpendicular width (falls back to chord line width).
+  double get effectivePerpendicularWidth => perpendicularLineWidth ?? lineWidth;
+
+  /// Effective perpendicular dash pattern.
+  ///
+  /// Unlike other perpendicular style getters, this does NOT fall back to
+  /// [dashPattern] because `null` means "solid line" and is indistinguishable
+  /// from "not set". Use [perpendicularDashPattern] directly.
+  List<double>? get effectivePerpendicularDash => perpendicularDashPattern;
+
+  /// Effective perpendicular elevation (falls back to chord elevation).
+  double get effectivePerpendicularElevation =>
+      perpendicularElevation ?? elevation;
+
+  /// Effective perpendicular label style (falls back to annotation style).
+  AnnotationStyle get effectivePerpendicularLabelStyle =>
+      perpendicularLabelStyle ?? style;
+
+  /// Serializes this annotation to JSON.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': 'ChordAnnotation',
+      if (label != null) 'label': label,
+      'seriesId': seriesId,
+      'startIndex': startIndex,
+      'endIndex': endIndex,
+      'lineColor': lineColor.toARGB32(),
+      'lineWidth': lineWidth,
+      if (dashPattern != null) 'dashPattern': dashPattern,
+      'elevation': elevation,
+      if (perpendicularIndex != null) 'perpendicularIndex': perpendicularIndex,
+      if (perpendicularLabel != null) 'perpendicularLabel': perpendicularLabel,
+      if (perpendicularLineColor != null)
+        'perpendicularLineColor': perpendicularLineColor!.toARGB32(),
+      if (perpendicularLineWidth != null)
+        'perpendicularLineWidth': perpendicularLineWidth,
+      if (perpendicularDashPattern != null)
+        'perpendicularDashPattern': perpendicularDashPattern,
+      if (perpendicularElevation != null)
+        'perpendicularElevation': perpendicularElevation,
+      'allowDragging': allowDragging,
+      'allowEditing': allowEditing,
+      'zIndex': zIndex,
+    };
+  }
+
+  /// Creates a copy with modified properties.
+  ChordAnnotation copyWith({
+    String? id,
+    String? label,
+    AnnotationStyle? style,
+    bool? allowDragging,
+    bool? allowEditing,
+    int? zIndex,
+    String? seriesId,
+    int? startIndex,
+    int? endIndex,
+    Color? lineColor,
+    double? lineWidth,
+    List<double>? dashPattern,
+    double? elevation,
+    int? perpendicularIndex,
+    String? perpendicularLabel,
+    AnnotationStyle? perpendicularLabelStyle,
+    Color? perpendicularLineColor,
+    double? perpendicularLineWidth,
+    List<double>? perpendicularDashPattern,
+    double? perpendicularElevation,
+  }) {
+    return ChordAnnotation(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      style: style ?? this.style,
+      allowDragging: allowDragging ?? this.allowDragging,
+      allowEditing: allowEditing ?? this.allowEditing,
+      zIndex: zIndex ?? this.zIndex,
+      seriesId: seriesId ?? this.seriesId,
+      startIndex: startIndex ?? this.startIndex,
+      endIndex: endIndex ?? this.endIndex,
+      lineColor: lineColor ?? this.lineColor,
+      lineWidth: lineWidth ?? this.lineWidth,
+      dashPattern: dashPattern ?? this.dashPattern,
+      elevation: elevation ?? this.elevation,
+      perpendicularIndex: perpendicularIndex ?? this.perpendicularIndex,
+      perpendicularLabel: perpendicularLabel ?? this.perpendicularLabel,
+      perpendicularLabelStyle:
+          perpendicularLabelStyle ?? this.perpendicularLabelStyle,
+      perpendicularLineColor:
+          perpendicularLineColor ?? this.perpendicularLineColor,
+      perpendicularLineWidth:
+          perpendicularLineWidth ?? this.perpendicularLineWidth,
+      perpendicularDashPattern:
+          perpendicularDashPattern ?? this.perpendicularDashPattern,
+      perpendicularElevation:
+          perpendicularElevation ?? this.perpendicularElevation,
     );
   }
 }

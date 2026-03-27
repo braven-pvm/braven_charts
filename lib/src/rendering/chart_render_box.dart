@@ -2375,6 +2375,16 @@ class ChartRenderBox extends RenderBox {
           } else {
             element.updateAxisBounds(null);
           }
+        } else if (element is ChordAnnotationElement) {
+          element.updateTransform(_transform!);
+          if (thresholdSeriesBounds != null &&
+              thresholdSeriesBounds.isNotEmpty) {
+            final seriesId = element.annotation.seriesId;
+            final axisBoundsToUse = thresholdSeriesBounds[seriesId];
+            element.updateAxisBounds(axisBoundsToUse);
+          } else {
+            element.updateAxisBounds(null);
+          }
         } else if (element is PinAnnotationElement) {
           element.updateTransform(_transform!);
         }

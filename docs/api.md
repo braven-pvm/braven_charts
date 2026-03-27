@@ -57,7 +57,20 @@ Represents a single data point.
 
 ### `ChartAnnotation`
 
-Annotation model for points, ranges, text, thresholds, and trends.
+Annotation model for points, ranges, text, thresholds, trends, and chords.
+
+Sealed class with subtypes: `PointAnnotation`, `RangeAnnotation`, `TextAnnotation`,
+`ThresholdAnnotation`, `TrendAnnotation`, `ChordAnnotation`, `PinAnnotation`, `LegendAnnotation`.
+
+### `ChordAnnotation`
+
+Draws a straight line (chord/secant) between two data points on a series, with an optional perpendicular drop-line to a third data point.
+
+- `seriesId`, `startIndex`, `endIndex` (required)
+- `lineColor`, `lineWidth`, `dashPattern`, `elevation`
+- `perpendicularIndex` — optional data point index for perpendicular drop-line
+- `perpendicularLabel`, `perpendicularLabelStyle` — label on the perpendicular line
+- `perpendicularLineColor`, `perpendicularLineWidth`, `perpendicularDashPattern`, `perpendicularElevation` — optional overrides (default: inherit chord styling)
 
 ## Axis Configuration
 

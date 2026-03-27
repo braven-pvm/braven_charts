@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'pages/annotations_page.dart';
 import 'pages/chart_types_page.dart';
+import 'pages/lactate_threshold_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
@@ -121,6 +122,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.directions_bike_outlined,
       selectedIcon: Icons.directions_bike,
       page: PowerLactatePage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Lactate Threshold',
+      icon: Icons.science_outlined,
+      selectedIcon: Icons.science,
+      page: LactateThresholdPage(),
       badge: 'NEW',
     ),
     const NavDestination(

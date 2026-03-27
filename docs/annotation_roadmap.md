@@ -24,6 +24,9 @@ The annotation system has **excellent architectural foundation** but requires **
 - ✅ `RangeAnnotation` - Rectangular highlighting
 - ✅ `ThresholdAnnotation` - Reference lines
 - ✅ `TrendAnnotation` - Statistical overlays
+- ✅ `ChordAnnotation` - Straight line between two data points with optional perpendicular drop-line
+- ✅ `PinAnnotation` - Coordinate-based markers
+- ✅ `LegendAnnotation` - Draggable chart legend
 - ✅ `AnnotationStyle` - Consistent styling system
 - ✅ Supporting enums: `AnnotationAnchor`, `AnnotationAxis`, `MarkerShape`, `TrendType`
 

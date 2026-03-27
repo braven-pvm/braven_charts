@@ -173,6 +173,9 @@ class RenderOrder {
   /// Trend lines.
   static const int trendAnnotation = 3;
 
+  /// Chord lines (secant between two data points).
+  static const int chordAnnotation = 3;
+
   // ============================================================================
   // FOREGROUND (4-5) - Annotations that should be visible over data
   // ============================================================================

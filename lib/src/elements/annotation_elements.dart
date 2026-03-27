@@ -2637,6 +2637,567 @@ class TrendAnnotationElement extends ChartElement {
 }
 
 // =============================================================================
+// Chord Annotation Element
+// =============================================================================
+
+/// A chart element that renders a straight line (chord) between two data points
+/// on a series.
+///
+/// Used for secant lines, rate-of-change visualization, and analytical overlays
+/// like lactate threshold detection.
+class ChordAnnotationElement extends ChartElement {
+  ChordAnnotationElement({
+    required this.annotation,
+    required this.series,
+    required this.transform,
+    this.axisBounds,
+  })  : _isSelected = false,
+        _isHovered = false,
+        _currentTransform = transform,
+        _axisBounds = axisBounds {
+    _computeEndpoints();
+    _cacheChordLabelPainter();
+    _cachePerpLabelPainter();
+  }
+
+  final ChordAnnotation annotation;
+  final ChartSeries series;
+  final ChartTransform transform;
+  ChartTransform _currentTransform;
+  final DataRange? axisBounds;
+  DataRange? _axisBounds;
+  bool _isSelected;
+  bool _isHovered;
+
+  /// The two chord endpoints in data space.
+  late Offset _startData;
+  late Offset _endData;
+
+  /// Perpendicular data point in data space (null if no perpendicular).
+  Offset? _perpData;
+
+  /// Cached chord label painter.
+  TextPainter? _chordLabelPainter;
+  Size? _chordLabelSize;
+
+  /// Cached perpendicular label painter.
+  TextPainter? _perpLabelPainter;
+  Size? _perpLabelSize;
+
+  // Cached plot-space points and bounds to avoid recomputation.
+  List<Offset>? _cachedPlotPoints;
+  Offset? _cachedPerpPlotPoint;
+  Offset? _cachedPerpFootPlotPoint;
+  Rect? _cachedBounds;
+  ChartTransform? _plotPointsCachedTransform;
+  DataRange? _plotPointsCachedAxisBounds;
+
+  /// Returns chord endpoints converted to plot-space coordinates.
+  ///
+  /// Cached and invalidated only when the transform or axis bounds change.
+  List<Offset> get _plotPoints {
+    if (_cachedPlotPoints != null &&
+        identical(_plotPointsCachedTransform, _currentTransform) &&
+        _plotPointsCachedAxisBounds == _axisBounds) {
+      return _cachedPlotPoints!;
+    }
+    _cachedPlotPoints = [
+      _dataToPlot(_startData.dx, _startData.dy),
+      _dataToPlot(_endData.dx, _endData.dy),
+    ];
+
+    // Compute perpendicular plot points
+    if (_perpData != null) {
+      _cachedPerpPlotPoint =
+          _dataToPlot(_perpData!.dx, _perpData!.dy);
+      final cp1 = _cachedPlotPoints![0];
+      final cp2 = _cachedPlotPoints![1];
+      _cachedPerpFootPlotPoint =
+          _projectPointOntoSegment(_cachedPerpPlotPoint!, cp1, cp2);
+    } else {
+      _cachedPerpPlotPoint = null;
+      _cachedPerpFootPlotPoint = null;
+    }
+
+    _plotPointsCachedTransform = _currentTransform;
+    _plotPointsCachedAxisBounds = _axisBounds;
+    _cachedBounds = null;
+    return _cachedPlotPoints!;
+  }
+
+  /// Projects a point onto a line segment, returning the closest point on the segment.
+  Offset _projectPointOntoSegment(Offset point, Offset segStart, Offset segEnd) {
+    final d = segEnd - segStart;
+    final lengthSq = d.distanceSquared;
+    if (lengthSq == 0) return segStart;
+    final t = ((point - segStart).dx * d.dx + (point - segStart).dy * d.dy) / lengthSq;
+    final tClamped = t.clamp(0.0, 1.0);
+    return segStart + d * tClamped;
+  }
+
+  void _invalidatePlotCache() {
+    _cachedPlotPoints = null;
+    _cachedPerpPlotPoint = null;
+    _cachedPerpFootPlotPoint = null;
+    _cachedBounds = null;
+  }
+
+  /// Caches the perpendicular label TextPainter if label exists.
+  /// Caches the chord label TextPainter if label exists.
+  void _cacheChordLabelPainter() {
+    final label = annotation.label;
+    if (label == null || label.isEmpty) return;
+
+    final textSpan = TextSpan(text: label, style: annotation.style.textStyle);
+    _chordLabelPainter = TextPainter(
+        text: textSpan, textDirection: TextDirection.ltr)
+      ..layout();
+    _chordLabelSize = _chordLabelPainter!.size;
+  }
+
+  /// Caches the perpendicular label TextPainter if label exists.
+  void _cachePerpLabelPainter() {
+    final label = annotation.perpendicularLabel;
+    if (label == null || label.isEmpty) return;
+
+    final labelStyle = annotation.effectivePerpendicularLabelStyle;
+    final textSpan = TextSpan(text: label, style: labelStyle.textStyle);
+    _perpLabelPainter = TextPainter(
+        text: textSpan, textDirection: TextDirection.ltr)
+      ..layout();
+    _perpLabelSize = _perpLabelPainter!.size;
+  }
+
+  /// Update the current transform before painting.
+  void updateTransform(ChartTransform newTransform) {
+    if (!identical(_currentTransform, newTransform)) {
+      _currentTransform = newTransform;
+      _invalidatePlotCache();
+    }
+  }
+
+  /// Update axis bounds for perSeries normalization.
+  void updateAxisBounds(DataRange? newBounds) {
+    if (_axisBounds != newBounds) {
+      _axisBounds = newBounds;
+      _invalidatePlotCache();
+    }
+  }
+
+  /// Converts a data point to plot coordinates.
+  ///
+  /// When [_axisBounds] is set (perSeries normalization mode), the Y value
+  /// is first normalized to 0-1 range using axis bounds, then mapped to
+  /// the plot height.
+  Offset _dataToPlot(double x, double y) {
+    final bounds = _axisBounds;
+    if (bounds != null && bounds.span > 0) {
+      final plotX = _currentTransform.dataToPlot(x, 0).dx;
+      final normalizedY = (y - bounds.min) / bounds.span;
+      final plotY = _currentTransform.plotHeight * (1.0 - normalizedY);
+      return Offset(plotX, plotY);
+    } else {
+      return _currentTransform.dataToPlot(x, y);
+    }
+  }
+
+  /// Extracts the chord endpoints and optional perpendicular point from the series.
+  void _computeEndpoints() {
+    final points = series.points;
+    if (annotation.startIndex >= points.length ||
+        annotation.endIndex >= points.length) {
+      _startData = Offset.zero;
+      _endData = Offset.zero;
+      _perpData = null;
+      return;
+    }
+    final p1 = points[annotation.startIndex];
+    final p2 = points[annotation.endIndex];
+    _startData = Offset(p1.x, p1.y);
+    _endData = Offset(p2.x, p2.y);
+
+    // Perpendicular point
+    final perpIdx = annotation.perpendicularIndex;
+    if (perpIdx != null && perpIdx < points.length) {
+      final pp = points[perpIdx];
+      _perpData = Offset(pp.x, pp.y);
+    } else {
+      _perpData = null;
+    }
+  }
+
+  @override
+  String get id => annotation.id;
+
+  @override
+  Rect get bounds {
+    if (_startData == Offset.zero && _endData == Offset.zero) {
+      return Rect.zero;
+    }
+
+    if (_cachedBounds != null) return _cachedBounds!;
+
+    final plotPoints = _plotPoints;
+    final p1 = plotPoints[0];
+    final p2 = plotPoints[1];
+
+    double minX = math.min(p1.dx, p2.dx);
+    double maxX = math.max(p1.dx, p2.dx);
+    double minY = math.min(p1.dy, p2.dy);
+    double maxY = math.max(p1.dy, p2.dy);
+
+    // Expand bounds to include perpendicular line + label
+    if (_cachedPerpPlotPoint != null) {
+      minX = math.min(minX, _cachedPerpPlotPoint!.dx);
+      maxX = math.max(maxX, _cachedPerpPlotPoint!.dx);
+      minY = math.min(minY, _cachedPerpPlotPoint!.dy);
+      maxY = math.max(maxY, _cachedPerpPlotPoint!.dy);
+    }
+    if (_cachedPerpFootPlotPoint != null) {
+      minX = math.min(minX, _cachedPerpFootPlotPoint!.dx);
+      maxX = math.max(maxX, _cachedPerpFootPlotPoint!.dx);
+      minY = math.min(minY, _cachedPerpFootPlotPoint!.dy);
+      maxY = math.max(maxY, _cachedPerpFootPlotPoint!.dy);
+    }
+
+    final margin = annotation.lineWidth + 12;
+    _cachedBounds = Rect.fromLTRB(
+      minX - margin, minY - margin,
+      maxX + margin, maxY + margin,
+    );
+    return _cachedBounds!;
+  }
+
+  @override
+  ChartElementType get elementType => ChartElementType.annotation;
+
+  @override
+  int get renderOrder => RenderOrder.chordAnnotation;
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  bool get isHovered => _isHovered;
+
+  @override
+  bool get isSelectable => true;
+
+  @override
+  bool get isDraggable => annotation.allowDragging;
+
+  @override
+  bool hitTest(Offset position) {
+    if (_startData == Offset.zero && _endData == Offset.zero) return false;
+
+    final plotPoints = _plotPoints;
+    final hitRadius = annotation.lineWidth + 12;
+
+    // Test chord line
+    if (_distanceToLineSegment(position, plotPoints[0], plotPoints[1]) <=
+        hitRadius) {
+      return true;
+    }
+
+    // Test perpendicular line
+    if (_cachedPerpPlotPoint != null && _cachedPerpFootPlotPoint != null) {
+      final perpHitRadius = annotation.effectivePerpendicularWidth + 12;
+      if (_distanceToLineSegment(
+              position, _cachedPerpFootPlotPoint!, _cachedPerpPlotPoint!) <=
+          perpHitRadius) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Calculate distance from point to line segment.
+  double _distanceToLineSegment(
+      Offset point, Offset lineStart, Offset lineEnd) {
+    final lengthSquared = (lineEnd - lineStart).distanceSquared;
+    if (lengthSquared == 0) return (point - lineStart).distance;
+
+    final t = math.max(
+      0.0,
+      math.min(
+          1.0,
+          ((point - lineStart).dx * (lineEnd - lineStart).dx +
+                  (point - lineStart).dy * (lineEnd - lineStart).dy) /
+              lengthSquared),
+    );
+    final projection = lineStart + (lineEnd - lineStart) * t;
+    return (point - projection).distance;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (_startData == Offset.zero && _endData == Offset.zero) return;
+
+    final plotPoints = _plotPoints;
+    final p1 = plotPoints[0];
+    final p2 = plotPoints[1];
+
+    // --- CHORD LINE ---
+
+    // Draw elevation glow in DEFAULT state only (not selected)
+    if (!_isSelected && annotation.elevation > 0) {
+      final elevationPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(60)
+        ..strokeWidth = annotation.lineWidth + annotation.elevation * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter =
+            MaskFilter.blur(BlurStyle.normal, annotation.elevation);
+
+      canvas.drawLine(p1, p2, elevationPaint);
+    }
+
+    // Draw selection glow (behind the line)
+    if (_isSelected) {
+      final glowPaint = Paint()
+        ..color = annotation.lineColor.withAlpha(130)
+        ..strokeWidth =
+            annotation.lineWidth * 4.0 + annotation.elevation * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter =
+            MaskFilter.blur(BlurStyle.normal, 5.0 + annotation.elevation);
+
+      canvas.drawLine(p1, p2, glowPaint);
+    }
+
+    // Draw main chord line
+    final paint = Paint()
+      ..color = annotation.lineColor
+      ..strokeWidth =
+          _isSelected ? annotation.lineWidth * 2.5 : annotation.lineWidth
+      ..style = PaintingStyle.stroke;
+
+    if (annotation.dashPattern != null &&
+        annotation.dashPattern!.isNotEmpty) {
+      _drawDashedLine(canvas, p1, p2, paint, annotation.dashPattern!);
+    } else {
+      canvas.drawLine(p1, p2, paint);
+    }
+
+    // --- CHORD LABEL ---
+    _paintChordLabel(canvas, p1, p2);
+
+    // --- PERPENDICULAR LINE ---
+    _paintPerpendicular(canvas);
+  }
+
+  /// Paints the perpendicular line from the chord to the data point, plus label.
+  /// Paints the chord label centered on the chord line.
+  void _paintChordLabel(Canvas canvas, Offset p1, Offset p2) {
+    if (_chordLabelPainter == null || _chordLabelSize == null) return;
+
+    final labelStyle = annotation.style;
+    final padding = labelStyle.padding ??
+        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
+    final containerWidth =
+        _chordLabelSize!.width + padding.left + padding.right;
+    final containerHeight =
+        _chordLabelSize!.height + padding.top + padding.bottom;
+
+    // Center on the chord midpoint, offset slightly above the line
+    final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
+    final bgRect = Rect.fromLTWH(
+      mid.dx - containerWidth / 2,
+      mid.dy - containerHeight - 6,
+      containerWidth,
+      containerHeight,
+    );
+
+    // Background
+    if (labelStyle.backgroundColor != null) {
+      final bgPaint = Paint()
+        ..color = labelStyle.backgroundColor!
+        ..style = PaintingStyle.fill;
+      final borderRadius =
+          labelStyle.borderRadius ?? BorderRadius.circular(4);
+      canvas.drawRRect(borderRadius.toRRect(bgRect), bgPaint);
+    }
+
+    // Border
+    if (labelStyle.borderColor != null && labelStyle.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = labelStyle.borderColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = labelStyle.borderWidth;
+      final borderRadius =
+          labelStyle.borderRadius ?? BorderRadius.circular(4);
+      canvas.drawRRect(borderRadius.toRRect(bgRect), borderPaint);
+    }
+
+    // Text
+    _chordLabelPainter!.paint(
+      canvas,
+      Offset(bgRect.left + padding.left, bgRect.top + padding.top),
+    );
+  }
+
+  /// Paints the perpendicular line from the chord to the data point, plus label.
+  void _paintPerpendicular(Canvas canvas) {
+    final perpPt = _cachedPerpPlotPoint;
+    final footPt = _cachedPerpFootPlotPoint;
+    if (perpPt == null || footPt == null) return;
+
+    final perpColor = annotation.effectivePerpendicularColor;
+    final perpWidth = annotation.effectivePerpendicularWidth;
+    final perpDash = annotation.effectivePerpendicularDash;
+    final perpElev = annotation.effectivePerpendicularElevation;
+
+    // Elevation glow
+    if (!_isSelected && perpElev > 0) {
+      final elevPaint = Paint()
+        ..color = perpColor.withAlpha(60)
+        ..strokeWidth = perpWidth + perpElev * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, perpElev);
+      canvas.drawLine(footPt, perpPt, elevPaint);
+    }
+
+    // Selection glow
+    if (_isSelected) {
+      final glowPaint = Paint()
+        ..color = perpColor.withAlpha(130)
+        ..strokeWidth = perpWidth * 4.0 + perpElev * 2
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5.0 + perpElev);
+      canvas.drawLine(footPt, perpPt, glowPaint);
+    }
+
+    // Main perpendicular line
+    final perpPaint = Paint()
+      ..color = perpColor
+      ..strokeWidth = _isSelected ? perpWidth * 2.5 : perpWidth
+      ..style = PaintingStyle.stroke;
+
+    if (perpDash != null && perpDash.isNotEmpty) {
+      _drawDashedLine(canvas, footPt, perpPt, perpPaint, perpDash);
+    } else {
+      canvas.drawLine(footPt, perpPt, perpPaint);
+    }
+
+    // Perpendicular label
+    _paintPerpLabel(canvas, footPt, perpPt);
+  }
+
+  /// Paints the perpendicular label at the midpoint of the perpendicular line.
+  void _paintPerpLabel(Canvas canvas, Offset foot, Offset dataPoint) {
+    if (_perpLabelPainter == null || _perpLabelSize == null) return;
+
+    final labelStyle = annotation.effectivePerpendicularLabelStyle;
+    final padding = labelStyle.padding ??
+        const EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+
+    final containerWidth =
+        _perpLabelSize!.width + padding.left + padding.right;
+    final containerHeight =
+        _perpLabelSize!.height + padding.top + padding.bottom;
+
+    // Position at midpoint of perpendicular, offset to the right
+    final mid = Offset(
+      (foot.dx + dataPoint.dx) / 2,
+      (foot.dy + dataPoint.dy) / 2,
+    );
+    final bgRect = Rect.fromLTWH(
+      mid.dx + 6,
+      mid.dy - containerHeight / 2,
+      containerWidth,
+      containerHeight,
+    );
+
+    // Background
+    if (labelStyle.backgroundColor != null) {
+      final bgPaint = Paint()
+        ..color = labelStyle.backgroundColor!
+        ..style = PaintingStyle.fill;
+      final borderRadius =
+          labelStyle.borderRadius ?? BorderRadius.circular(4);
+      canvas.drawRRect(borderRadius.toRRect(bgRect), bgPaint);
+    }
+
+    // Border
+    if (labelStyle.borderColor != null && labelStyle.borderWidth > 0) {
+      final borderPaint = Paint()
+        ..color = labelStyle.borderColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = labelStyle.borderWidth;
+      final borderRadius =
+          labelStyle.borderRadius ?? BorderRadius.circular(4);
+      canvas.drawRRect(borderRadius.toRRect(bgRect), borderPaint);
+    }
+
+    // Text
+    _perpLabelPainter!.paint(
+      canvas,
+      Offset(bgRect.left + padding.left, bgRect.top + padding.top),
+    );
+  }
+
+  /// Draws a dashed line between two points.
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint,
+      List<double> dashPattern) {
+    final totalLength = (end - start).distance;
+    if (totalLength == 0) return;
+
+    var patternIndex = 0;
+    var isDash = true;
+    var remaining = dashPattern[0];
+    var consumed = 0.0;
+
+    while (consumed < totalLength) {
+      final available = totalLength - consumed;
+      final step = math.min(remaining, available);
+
+      if (isDash) {
+        final t1 = consumed / totalLength;
+        final t2 = (consumed + step) / totalLength;
+        final p1 = Offset.lerp(start, end, t1)!;
+        final p2 = Offset.lerp(start, end, t2)!;
+        canvas.drawLine(p1, p2, paint);
+      }
+
+      consumed += step;
+      remaining -= step;
+
+      if (remaining <= 0) {
+        patternIndex = (patternIndex + 1) % dashPattern.length;
+        remaining = dashPattern[patternIndex];
+        isDash = !isDash;
+      }
+    }
+  }
+
+  @override
+  void onSelect() => _isSelected = true;
+
+  @override
+  void onDeselect() => _isSelected = false;
+
+  @override
+  void onHoverEnter() => _isHovered = true;
+
+  @override
+  void onHoverExit() => _isHovered = false;
+
+  @override
+  ChartElement copyWith({bool? isHovered, bool? isSelected}) {
+    final copy = ChordAnnotationElement(
+      annotation: annotation,
+      series: series,
+      transform: _currentTransform,
+      axisBounds: _axisBounds,
+    );
+    copy._isSelected = isSelected ?? _isSelected;
+    copy._isHovered = isHovered ?? _isHovered;
+    return copy;
+  }
+}
+
+// =============================================================================
 // Legend Annotation Element
 // =============================================================================
 

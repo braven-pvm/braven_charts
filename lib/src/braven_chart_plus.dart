@@ -43,6 +43,7 @@ import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
+import 'widgets/dialogs/chord_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
 import 'widgets/dialogs/range_annotation_dialog.dart';
 import 'widgets/dialogs/text_annotation_dialog.dart';
@@ -1537,6 +1538,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ),
               transform: transform,
             ),
+            ChordAnnotation() => ChordAnnotationElement(
+              annotation: annotation,
+              series: widget.series.firstWhere(
+                (s) => s.id == annotation.seriesId,
+                orElse: () =>
+                    throw StateError('Series ${annotation.seriesId} not found'),
+              ),
+              transform: transform,
+            ),
             LegendAnnotation() => LegendAnnotationElement(
               annotation: annotation,
               chartSize: Size(transform.plotWidth, transform.plotHeight),
@@ -1819,6 +1829,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             label: 'Add Trend Annotation',
           ),
 
+        // ChordAnnotation - ONLY when clicking on series line (not marker)
+        if (isSeriesLineClick)
+          const WebContextMenuAction(
+            value: 'add_chord',
+            icon: Icons.commit,
+            label: 'Add Chord Annotation',
+          ),
+
         // RangeAnnotation - ALWAYS available (interactive drag mode)
         const WebContextMenuAction(
           value: 'add_range',
@@ -1892,6 +1910,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         break;
       case 'add_trend':
         await _showAddTrendAnnotationDialog(element);
+        break;
+      case 'add_chord':
+        await _showAddChordAnnotationDialog(element);
         break;
       case 'add_range':
         await _showAddRangeAnnotationDialog();
@@ -2116,6 +2137,24 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     } else {}
   }
 
+  /// Shows the ChordAnnotation creation dialog.
+  Future<void> _showAddChordAnnotationDialog(ChartElement? element) async {
+    if (!mounted) return;
+
+    if (widget.series.isEmpty) return;
+
+    final result = await showDialog<ChordAnnotation>(
+      context: context,
+      builder: (context) => ChordAnnotationDialog(
+        availableSeries: widget.series,
+      ),
+    );
+
+    if (result != null && mounted) {
+      _effectiveAnnotationController?.addAnnotation(result);
+    }
+  }
+
   /// Shows the appropriate edit dialog based on annotation type.
   Future<void> _showEditAnnotationDialog(ChartElement? element) async {
     if (!mounted) return;
@@ -2127,6 +2166,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             element is! PinAnnotationElement &&
             element is! ThresholdAnnotationElement &&
             element is! TrendAnnotationElement &&
+            element is! ChordAnnotationElement &&
             element is! RangeAnnotationElement)) {
       return;
     }
@@ -2202,6 +2242,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (result != null && mounted) {
         _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
       } else {}
+    } else if (element is ChordAnnotationElement) {
+      final annotation = element.annotation;
+      final result = await showDialog<ChordAnnotation>(
+        context: context,
+        builder: (context) => ChordAnnotationDialog(
+          annotation: annotation,
+          availableSeries: widget.series,
+        ),
+      );
+
+      if (result != null && mounted) {
+        _effectiveAnnotationController?.updateAnnotation(annotation.id, result);
+      }
     } else if (element is RangeAnnotationElement) {
       final annotation = element.annotation;
       final result = await showDialog<RangeAnnotation>(
@@ -2229,7 +2282,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             element is! PointAnnotationElement &&
             element is! RangeAnnotationElement &&
             element is! ThresholdAnnotationElement &&
-            element is! TrendAnnotationElement)) {
+            element is! TrendAnnotationElement &&
+            element is! ChordAnnotationElement)) {
       return;
     }
 
@@ -2252,6 +2306,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     } else if (element is TrendAnnotationElement) {
       annotationId = element.annotation.id;
       annotationType = 'Trend Annotation';
+    } else if (element is ChordAnnotationElement) {
+      annotationId = element.annotation.id;
+      annotationType = 'Chord Annotation';
     } else {
       return;
     }
@@ -2327,6 +2384,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             tappedElement is PinAnnotationElement ||
             tappedElement is ThresholdAnnotationElement ||
             tappedElement is TrendAnnotationElement ||
+            tappedElement is ChordAnnotationElement ||
             tappedElement is RangeAnnotationElement) {
           _showEditAnnotationDialog(tappedElement);
           // Reset to prevent triple-click
@@ -2354,6 +2412,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       } else if (tappedElement is ThresholdAnnotationElement) {
         widget.onAnnotationTap?.call(tappedElement.annotation);
       } else if (tappedElement is TrendAnnotationElement) {
+        widget.onAnnotationTap?.call(tappedElement.annotation);
+      } else if (tappedElement is ChordAnnotationElement) {
         widget.onAnnotationTap?.call(tappedElement.annotation);
       } else if (tappedElement is SeriesElement) {
         // Check if a specific marker was tapped

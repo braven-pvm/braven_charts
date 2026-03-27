@@ -16,12 +16,15 @@ The annotation system in BravenChartPlus is **fully functional** with complete p
   - ChangeNotifier pattern for reactive updates
   - Comprehensive validation and error handling
 
-- **Annotation Models** (`lib/src_plus/models/chart_annotation.dart`)
+- **Annotation Models** (`lib/src/models/chart_annotation.dart`)
   - PointAnnotation
   - RangeAnnotation
   - TextAnnotation
   - ThresholdAnnotation
   - TrendAnnotation
+  - ChordAnnotation (straight line between two data points with optional perpendicular drop-line)
+  - PinAnnotation
+  - LegendAnnotation
   - All with drag/edit permissions and styling
 
 - **Annotation Elements** (`lib/src_plus/elements/annotation_elements.dart`)
