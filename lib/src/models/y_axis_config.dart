@@ -167,6 +167,7 @@ class YAxisConfig {
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
+    this.showTickLabels = true,
     this.showCrosshairLabel = true,
     this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
@@ -204,6 +205,7 @@ class YAxisConfig {
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
+    this.showTickLabels = true,
     this.showCrosshairLabel = true,
     this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
@@ -233,6 +235,7 @@ class YAxisConfig {
     bool visible = true,
     bool showAxisLine = true,
     bool showTicks = true,
+    bool showTickLabels = true,
     bool showCrosshairLabel = true,
     CrosshairLabelPosition crosshairLabelPosition =
         CrosshairLabelPosition.overAxis,
@@ -268,6 +271,7 @@ class YAxisConfig {
       visible: visible,
       showAxisLine: showAxisLine,
       showTicks: showTicks,
+      showTickLabels: showTickLabels,
       showCrosshairLabel: showCrosshairLabel,
       crosshairLabelPosition: crosshairLabelPosition,
       labelDisplay: labelDisplay,
@@ -351,8 +355,14 @@ class YAxisConfig {
   /// Whether to show tick marks (small lines on axis).
   ///
   /// Defaults to true. Set to false to hide tick marks while
-  /// potentially still showing tick labels (controlled by [labelDisplay]).
+  /// potentially still showing tick labels (controlled by [showTickLabels]).
   final bool showTicks;
+
+  /// Whether to show numeric tick labels (e.g., 0, 2, 4, 6) on the axis.
+  ///
+  /// Defaults to true. Set to false to hide tick value labels while
+  /// keeping the axis label and tick marks visible.
+  final bool showTickLabels;
 
   /// Whether to show a crosshair Y-value label positioned over this axis.
   ///
@@ -460,6 +470,7 @@ class YAxisConfig {
     bool? visible,
     bool? showAxisLine,
     bool? showTicks,
+    bool? showTickLabels,
     bool? showCrosshairLabel,
     CrosshairLabelPosition? crosshairLabelPosition,
     AxisLabelDisplay? labelDisplay,
@@ -482,6 +493,7 @@ class YAxisConfig {
       visible: visible ?? this.visible,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
+      showTickLabels: showTickLabels ?? this.showTickLabels,
       showCrosshairLabel: showCrosshairLabel ?? this.showCrosshairLabel,
       crosshairLabelPosition:
           crosshairLabelPosition ?? this.crosshairLabelPosition,
@@ -510,6 +522,7 @@ class YAxisConfig {
         other.visible == visible &&
         other.showAxisLine == showAxisLine &&
         other.showTicks == showTicks &&
+        other.showTickLabels == showTickLabels &&
         other.showCrosshairLabel == showCrosshairLabel &&
         other.crosshairLabelPosition == crosshairLabelPosition &&
         other.labelDisplay == labelDisplay &&
@@ -523,7 +536,7 @@ class YAxisConfig {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         id,
         position,
         color,
@@ -534,6 +547,7 @@ class YAxisConfig {
         visible,
         showAxisLine,
         showTicks,
+        showTickLabels,
         showCrosshairLabel,
         crosshairLabelPosition,
         labelDisplay,
@@ -544,7 +558,7 @@ class YAxisConfig {
         axisMargin,
         tickCount,
         labelFormatter,
-      );
+      ]);
 
   @override
   String toString() {
@@ -610,6 +624,6 @@ class YAxisConfig {
   /// Tick labels are shown for all modes except none.
   /// Note: This is independent of whether units are shown on ticks.
   bool get shouldShowTickLabels {
-    return labelDisplay != AxisLabelDisplay.none;
+    return showTickLabels && labelDisplay != AxisLabelDisplay.none;
   }
 }

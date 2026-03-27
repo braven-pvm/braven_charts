@@ -114,24 +114,26 @@ class XAxisPainter {
         );
       }
 
-      // Draw tick label
-      final label = formatTickLabel(tickValue);
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: labelStyle.copyWith(color: axisColor),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      // Draw tick label (only if labelDisplay is not none)
+      if (config.shouldShowTickLabels) {
+        final label = formatTickLabel(tickValue);
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: labelStyle.copyWith(color: axisColor),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
 
-      const tickLength = 6.0;
-      textPainter.paint(
-        canvas,
-        Offset(
-          x - textPainter.width / 2,
-          plotArea.bottom + tickLength + config.tickLabelPadding,
-        ),
-      );
+        const tickLength = 6.0;
+        textPainter.paint(
+          canvas,
+          Offset(
+            x - textPainter.width / 2,
+            plotArea.bottom + tickLength + config.tickLabelPadding,
+          ),
+        );
+      }
     }
 
     // Restore canvas state after drawing ticks/labels

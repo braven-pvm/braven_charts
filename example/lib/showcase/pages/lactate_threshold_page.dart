@@ -70,7 +70,8 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
         lactate = baseLactate + 0.08 * t + 0.005 * t * t;
       } else if (i <= 10) {
         final offset = t - 6;
-        lactate = baseLactate +
+        lactate =
+            baseLactate +
             0.08 * 6 +
             0.005 * 36 +
             0.25 * offset +
@@ -93,143 +94,162 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
 
     // --- "Section" chord: baseline to LT1 (solid red/orange) ---
     if (_showSectionChord) {
-      _annotationController.addAnnotation(ChordAnnotation(
-        id: 'section_chord',
-        seriesId: 'lactate',
-        startIndex: 1,
-        endIndex: _lt1Index,
-        label: 'Section',
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Color(0xFFE64A19),
-            fontSize: 11,
+      _annotationController.addAnnotation(
+        ChordAnnotation(
+          id: 'section_chord',
+          seriesId: 'lactate',
+          startIndex: 1,
+          endIndex: _lt1Index,
+          label: 'Section',
+          style: const AnnotationStyle(
+            textStyle: TextStyle(color: Color(0xFFE64A19), fontSize: 11),
           ),
-        ),
-        lineColor: const Color(0xFFE64A19),
-        lineWidth: 2.5,
-        perpendicularIndex: _showDeflectionPoint ? _lt1Index : null,
-        perpendicularLabel: 'D',
-        perpendicularLabelStyle: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Color(0xFF333333),
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          lineColor: const Color(0xFFE64A19),
+          lineWidth: 2.5,
+          perpendicularIndex: _lt1Index,
+          perpendicularLabelStyle: const AnnotationStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          perpendicularLineColor: const Color(0xFFE64A19),
+          perpendicularDashPattern: [4, 3],
         ),
-        perpendicularLineColor: const Color(0xFFE64A19),
-        perpendicularDashPattern: [4, 3],
-      ));
+      );
     }
 
     // --- "Ramp" chord: LT1 to peak (thick teal dashed) ---
     if (_showRampChord) {
-      _annotationController.addAnnotation(ChordAnnotation(
-        id: 'ramp_chord',
-        seriesId: 'lactate',
-        startIndex: _lt1Index,
-        endIndex: 14,
-        label: 'Ramp',
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Color(0xFF00897B),
-            fontSize: 11,
+      _annotationController.addAnnotation(
+        ChordAnnotation(
+          id: 'ramp_chord',
+          seriesId: 'lactate',
+          startIndex: _lt1Index,
+          endIndex: 14,
+          label: 'Ramp',
+          style: const AnnotationStyle(
+            textStyle: TextStyle(color: Color(0xFF00897B), fontSize: 11),
           ),
+          lineColor: const Color(0xFF00897B),
+          lineWidth: 4.0,
+          dashPattern: [8, 6],
         ),
-        lineColor: const Color(0xFF00897B),
-        lineWidth: 4.0,
-        dashPattern: [8, 6],
-      ));
+      );
     }
 
     // --- Full-span chord across dataset (cyan dashed) ---
     if (_showTrendLine) {
-      _annotationController.addAnnotation(ChordAnnotation(
-        id: 'full_chord',
-        seriesId: 'lactate',
-        startIndex: 0,
-        endIndex: _lactateData.length - 1,
-        lineColor: const Color(0xFF00BCD4),
-        lineWidth: 2.5,
-        dashPattern: [6, 4],
-      ));
+      _annotationController.addAnnotation(
+        ChordAnnotation(
+          id: 'full_chord',
+          seriesId: 'lactate',
+          startIndex: 0,
+          endIndex: _lactateData.length - 1,
+          lineColor: const Color(0xFF00BCD4),
+          lineWidth: 2.5,
+          dashPattern: [6, 4],
+          perpendicularIndex: _lt1Index,
+          perpendicularLabel: 'D',
+          perpendicularLabelStyle: const AnnotationStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF333333),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          perpendicularLineColor: const Color(0xFFE64A19),
+          perpendicularDashPattern: [4, 3],
+        ),
+      );
     }
 
     // --- Horizontal threshold at LT1 lactate value ---
     if (_showHorizontalThreshold) {
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'lt1_horizontal',
-        axis: AnnotationAxis.y,
-        value: lt1Value,
-        label: lt1Value.toStringAsFixed(2),
-        labelPosition: AnnotationLabelPosition.topLeft,
-        lineColor: Colors.grey.shade500,
-        lineWidth: 1.0,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'lt1_horizontal',
+          axis: AnnotationAxis.y,
+          value: lt1Value,
+          label: lt1Value.toStringAsFixed(2),
+          labelPosition: AnnotationLabelPosition.topLeft,
+          lineColor: Colors.grey.shade500,
+          lineWidth: 1.0,
+        ),
+      );
     }
 
     // --- Baseline vertical marker (dark line at x≈1.4) ---
     if (_showBaselineMarker) {
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'baseline_marker',
-        axis: AnnotationAxis.x,
-        value: 1.4,
-        lineColor: const Color(0xFF333333),
-        lineWidth: 1.5,
-      ));
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'baseline_marker',
+          axis: AnnotationAxis.x,
+          value: 1.4,
+          lineColor: const Color(0xFF333333),
+          lineWidth: 1.5,
+        ),
+      );
     }
 
     // --- LT1 vertical line (green dashed) ---
     if (_showLT1Line) {
-      _annotationController.addAnnotation(ThresholdAnnotation(
-        id: 'lt1_line',
-        axis: AnnotationAxis.x,
-        value: lt1X,
-        label: 'LT1',
-        labelPosition: AnnotationLabelPosition.bottomRight,
-        lineColor: const Color(0xFF4CAF50),
-        lineWidth: 2.0,
-        dashPattern: [4, 4],
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Color(0xFF4CAF50),
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
+      _annotationController.addAnnotation(
+        ThresholdAnnotation(
+          id: 'lt1_line',
+          axis: AnnotationAxis.x,
+          value: lt1X,
+          label: 'LT1',
+          labelPosition: AnnotationLabelPosition.bottomRight,
+          lineColor: const Color(0xFF4CAF50),
+          lineWidth: 2.0,
+          dashPattern: [4, 4],
+          style: const AnnotationStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF4CAF50),
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         ),
-      ));
+      );
     }
 
     // --- Deflection point "D" marker (green circle) ---
     if (_showDeflectionPoint) {
-      _annotationController.addAnnotation(PointAnnotation(
-        id: 'deflection_point',
-        seriesId: 'lactate',
-        dataPointIndex: _lt1Index,
-        label: 'D',
-        markerShape: MarkerShape.circle,
-        markerSize: 10.0,
-        markerColor: const Color(0xFF4CAF50),
-        labelMargin: 8.0,
-        style: const AnnotationStyle(
-          textStyle: TextStyle(
-            color: Color(0xFF4CAF50),
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
+      _annotationController.addAnnotation(
+        PointAnnotation(
+          id: 'deflection_point',
+          seriesId: 'lactate',
+          dataPointIndex: _lt1Index,
+          markerShape: MarkerShape.circle,
+          markerSize: 10.0,
+          markerColor: const Color(0xFF4CAF50),
+          labelMargin: 8.0,
+          style: const AnnotationStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF4CAF50),
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         ),
-      ));
+      );
 
       // Green pin at the bottom
-      _annotationController.addAnnotation(PinAnnotation(
-        id: 'lt1_pin',
-        x: lt1X,
-        y: _lactateData.first.y - 0.1,
-        markerShape: MarkerShape.triangle,
-        markerSize: 8.0,
-        markerColor: const Color(0xFF4CAF50),
-      ));
+      _annotationController.addAnnotation(
+        PinAnnotation(
+          id: 'lt1_pin',
+          x: lt1X,
+          y: _lactateData.first.y - 0.1,
+          markerShape: MarkerShape.triangle,
+          markerSize: 8.0,
+          markerColor: const Color(0xFF4CAF50),
+        ),
+      );
     }
   }
 
@@ -361,7 +381,8 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       ),
 
       const InfoBox(
-        message: 'Classic lactate threshold detection chart. '
+        message:
+            'Classic lactate threshold detection chart. '
             'The "Section" chord spans the aerobic baseline. '
             'The "Ramp" chord spans the exponential rise. '
             'Point D marks the maximum deflection from the section '
@@ -379,6 +400,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           title: 'Lactate Threshold Detection',
           subtitle: 'Chord method for LT1 identification',
           child: BravenChartPlus(
+            grid: GridConfig(horizontal: false, vertical: false),
             series: [
               LineChartSeries(
                 id: 'lactate',
@@ -396,9 +418,13 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
+
             xAxisConfig: XAxisConfig(
               label: 'Time',
               showAxisLine: _optionsController.showAxisLines,
+              labelDisplay: AxisLabelDisplay.labelWithUnit,
+              showTickLabels: false,
+              showTicks: false,
             ),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,
@@ -406,6 +432,8 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
               unit: 'mmol/L',
               showAxisLine: _optionsController.showAxisLines,
               labelDisplay: AxisLabelDisplay.labelWithUnit,
+              showTicks: false,
+              showTickLabels: false,
             ),
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
@@ -415,8 +443,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
             onAnnotationTap: (annotation) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content:
-                      Text('Tapped: ${annotation.label ?? annotation.id}'),
+                  content: Text('Tapped: ${annotation.label ?? annotation.id}'),
                   duration: const Duration(seconds: 1),
                 ),
               );
@@ -431,10 +458,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
     final lt1Point = _lactateData[_lt1Index];
     return StatusPanel(
       items: [
-        StatusItem(
-          label: 'Data Points',
-          value: '${_lactateData.length}',
-        ),
+        StatusItem(label: 'Data Points', value: '${_lactateData.length}'),
         StatusItem(
           label: 'LT1 Index',
           value: '$_lt1Index',

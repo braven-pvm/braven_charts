@@ -44,6 +44,7 @@ class XAxisConfig {
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
+    this.showTickLabels = true,
     this.showCrosshairLabel = true,
     this.crosshairLabelPosition = CrosshairLabelPosition.overAxis,
     this.labelDisplay = AxisLabelDisplay.labelWithUnit,
@@ -112,8 +113,14 @@ class XAxisConfig {
   /// Whether to show tick marks (small lines on axis).
   ///
   /// Defaults to true. Set to false to hide tick marks while
-  /// potentially still showing tick labels (controlled by [labelDisplay]).
+  /// potentially still showing tick labels (controlled by [showTickLabels]).
   final bool showTicks;
+
+  /// Whether to show numeric tick labels (e.g., 0, 2, 4, 6) on the axis.
+  ///
+  /// Defaults to true. Set to false to hide tick value labels while
+  /// keeping the axis label and tick marks visible.
+  final bool showTickLabels;
 
   /// Whether to show a crosshair X-value label positioned over this axis.
   ///
@@ -205,8 +212,9 @@ class XAxisConfig {
 
   /// Whether to show tick labels at all.
   ///
-  /// Returns false only for none mode.
-  bool get shouldShowTickLabels => labelDisplay != AxisLabelDisplay.none;
+  /// Returns false when [showTickLabels] is false or [labelDisplay] is none.
+  bool get shouldShowTickLabels =>
+      showTickLabels && labelDisplay != AxisLabelDisplay.none;
 
   // ========== Methods ==========
 
@@ -223,6 +231,7 @@ class XAxisConfig {
     bool? visible,
     bool? showAxisLine,
     bool? showTicks,
+    bool? showTickLabels,
     bool? showCrosshairLabel,
     CrosshairLabelPosition? crosshairLabelPosition,
     AxisLabelDisplay? labelDisplay,
@@ -243,6 +252,7 @@ class XAxisConfig {
       visible: visible ?? this.visible,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
+      showTickLabels: showTickLabels ?? this.showTickLabels,
       showCrosshairLabel: showCrosshairLabel ?? this.showCrosshairLabel,
       crosshairLabelPosition:
           crosshairLabelPosition ?? this.crosshairLabelPosition,
@@ -270,6 +280,7 @@ class XAxisConfig {
           visible == other.visible &&
           showAxisLine == other.showAxisLine &&
           showTicks == other.showTicks &&
+          showTickLabels == other.showTickLabels &&
           showCrosshairLabel == other.showCrosshairLabel &&
           crosshairLabelPosition == other.crosshairLabelPosition &&
           labelDisplay == other.labelDisplay &&
@@ -291,6 +302,7 @@ class XAxisConfig {
         visible,
         showAxisLine,
         showTicks,
+        showTickLabels,
         showCrosshairLabel,
         crosshairLabelPosition,
         labelDisplay,

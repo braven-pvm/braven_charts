@@ -19,6 +19,7 @@ import '../interaction/core/interaction_mode.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/normalization_mode.dart';
 import '../models/series_axis_binding.dart';
@@ -190,6 +191,9 @@ class ChartRenderBox extends RenderBox {
 
   /// Current theme for the chart (colors, styles, etc.)
   ChartTheme? _theme;
+
+  /// Grid configuration for controlling grid line visibility.
+  GridConfig? _gridConfig;
 
   // ==================== MULTI-AXIS MODULE ====================
 
@@ -701,6 +705,13 @@ class ChartRenderBox extends RenderBox {
     if (_theme == theme) return;
     _theme = theme;
     _seriesCacheManager.invalidate(); // Invalidate cache - theme changed
+    markNeedsPaint();
+  }
+
+  /// Updates grid configuration.
+  void setGridConfig(GridConfig? config) {
+    if (_gridConfig == config) return;
+    _gridConfig = config;
     markNeedsPaint();
   }
 
@@ -2162,8 +2173,7 @@ class ChartRenderBox extends RenderBox {
     if (_xAxis != null && _yAxis != null) {
       final gridRenderer = GridRenderer(
         theme: _theme,
-        config:
-            null, // TODO: Get from widget.grid once chart_render_box receives it
+        config: _gridConfig,
       );
 
       // Get tick positions for grid lines

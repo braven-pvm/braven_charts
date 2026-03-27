@@ -3047,6 +3047,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         onElementHover: _handleElementHover,
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
+                        gridConfig: widget.grid,
                         // Multi-axis parameters
                         normalizationMode: _effectiveNormalizationMode,
                         series: _effectiveRenderSeries,
@@ -3174,6 +3175,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     // Multi-axis parameters
     this.normalizationMode,
     this.series,
+    this.gridConfig,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -3193,6 +3195,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   /// The NEW [YAxisConfig] type from the widget for multi-axis system integration.
   final YAxisConfig? primaryYAxisConfig;
   final ChartTheme? theme;
+
+  /// Grid configuration for controlling grid line visibility and styling.
+  final GridConfig? gridConfig;
   final bool tooltipsEnabled;
   final bool showXScrollbar;
   final bool showYScrollbar;
@@ -3231,7 +3236,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setXAxis(xAxis)
       ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
-      ..setPrimaryYAxisConfig(primaryYAxisConfig);
+      ..setPrimaryYAxisConfig(primaryYAxisConfig)
+      ..setGridConfig(gridConfig);
   }
 
   @override
@@ -3250,6 +3256,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setInteractionConfig(interactionConfig)
       ..setNormalizationMode(normalizationMode)
       ..setSeries(series)
+      ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
       ..onElementHover = onElementHover;
   }
