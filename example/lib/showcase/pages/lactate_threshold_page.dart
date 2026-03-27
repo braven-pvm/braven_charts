@@ -141,15 +141,15 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
       ));
     }
 
-    // --- Linear trend line across full dataset (cyan dashed) ---
+    // --- Full-span chord across dataset (cyan dashed) ---
     if (_showTrendLine) {
-      _annotationController.addAnnotation(TrendAnnotation(
-        id: 'linear_trend',
+      _annotationController.addAnnotation(ChordAnnotation(
+        id: 'full_chord',
         seriesId: 'lactate',
-        trendType: TrendType.linear,
-        label: '',
+        startIndex: 0,
+        endIndex: _lactateData.length - 1,
         lineColor: const Color(0xFF00BCD4),
-        lineWidth: 1.5,
+        lineWidth: 2.5,
         dashPattern: [6, 4],
       ));
     }
@@ -291,13 +291,13 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
             subtitle: 'LT1 to peak (dashed)',
           ),
           BoolOption(
-            label: 'Linear Trend',
+            label: 'Full-Span Chord',
             value: _showTrendLine,
             onChanged: (v) {
               setState(() => _showTrendLine = v);
               _rebuildAnnotations();
             },
-            subtitle: 'Full dataset regression',
+            subtitle: 'Chord from first to last point',
           ),
           BoolOption(
             label: 'LT1 Threshold',
