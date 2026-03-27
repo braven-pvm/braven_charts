@@ -1338,6 +1338,7 @@ class ChordAnnotation extends ChartAnnotation {
     this.elevation = 0.0,
     this.perpendicularIndex,
     this.perpendicularLabel,
+    this.perpendicularLabelOffset = Offset.zero,
     this.perpendicularLabelStyle,
     this.perpendicularLineColor,
     this.perpendicularLineWidth,
@@ -1385,6 +1386,13 @@ class ChordAnnotation extends ChartAnnotation {
 
   /// Label text displayed near the perpendicular line.
   final String? perpendicularLabel;
+
+  /// Offset to nudge the perpendicular label from its default centered position.
+  ///
+  /// The label is centered on the perpendicular line midpoint by default.
+  /// Use this to adjust its position (e.g., `Offset(10, -5)` moves it
+  /// 10px right and 5px up).
+  final Offset perpendicularLabelOffset;
 
   /// Style for the perpendicular label. If null, uses the annotation's [style].
   final AnnotationStyle? perpendicularLabelStyle;
@@ -1437,6 +1445,11 @@ class ChordAnnotation extends ChartAnnotation {
       'elevation': elevation,
       if (perpendicularIndex != null) 'perpendicularIndex': perpendicularIndex,
       if (perpendicularLabel != null) 'perpendicularLabel': perpendicularLabel,
+      if (perpendicularLabelOffset != Offset.zero)
+        'perpendicularLabelOffset': [
+          perpendicularLabelOffset.dx,
+          perpendicularLabelOffset.dy,
+        ],
       if (perpendicularLineColor != null)
         'perpendicularLineColor': perpendicularLineColor!.toARGB32(),
       if (perpendicularLineWidth != null)
@@ -1468,6 +1481,7 @@ class ChordAnnotation extends ChartAnnotation {
     double? elevation,
     int? perpendicularIndex,
     String? perpendicularLabel,
+    Offset? perpendicularLabelOffset,
     AnnotationStyle? perpendicularLabelStyle,
     Color? perpendicularLineColor,
     double? perpendicularLineWidth,
@@ -1490,6 +1504,8 @@ class ChordAnnotation extends ChartAnnotation {
       elevation: elevation ?? this.elevation,
       perpendicularIndex: perpendicularIndex ?? this.perpendicularIndex,
       perpendicularLabel: perpendicularLabel ?? this.perpendicularLabel,
+      perpendicularLabelOffset:
+          perpendicularLabelOffset ?? this.perpendicularLabelOffset,
       perpendicularLabelStyle:
           perpendicularLabelStyle ?? this.perpendicularLabelStyle,
       perpendicularLineColor:

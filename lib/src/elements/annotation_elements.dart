@@ -3097,14 +3097,15 @@ class ChordAnnotationElement extends ChartElement {
     final containerHeight =
         _perpLabelSize!.height + padding.top + padding.bottom;
 
-    // Position at midpoint of perpendicular, offset to the right
+    // Center on the midpoint of the perpendicular line, then apply user offset
+    final offset = annotation.perpendicularLabelOffset;
     final mid = Offset(
       (foot.dx + dataPoint.dx) / 2,
       (foot.dy + dataPoint.dy) / 2,
     );
     final bgRect = Rect.fromLTWH(
-      mid.dx + 6,
-      mid.dy - containerHeight / 2,
+      mid.dx - containerWidth / 2 + offset.dx,
+      mid.dy - containerHeight / 2 + offset.dy,
       containerWidth,
       containerHeight,
     );
