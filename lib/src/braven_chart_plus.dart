@@ -1481,8 +1481,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     _yAxis = chart_axis.Axis.fromYAxisConfig(
       config: yAxisConfigRaw,
-      dataMin: dataBounds.yMin,
-      dataMax: dataBounds.yMax,
+      dataMin: yAxisConfigRaw.min ?? dataBounds.yMin,
+      dataMax: yAxisConfigRaw.max ?? dataBounds.yMax,
     );
 
     // Create element generator that renders series
