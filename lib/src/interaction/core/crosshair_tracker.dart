@@ -123,7 +123,7 @@ abstract final class CrosshairTracker {
     if (points.isEmpty) return null;
 
     // Handle edge cases: target is outside data range
-    if (targetX <= points.first.x) {
+    if (targetX == points.first.x) {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
@@ -135,7 +135,7 @@ abstract final class CrosshairTracker {
       );
     }
 
-    if (targetX >= points.last.x) {
+    if (targetX == points.last.x) {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,

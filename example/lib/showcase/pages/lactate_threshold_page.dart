@@ -161,6 +161,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           ),
           perpendicularLineColor: const Color(0xFFE64A19),
           perpendicularDashPattern: [4, 3],
+          perpendicularLabelOffset: Offset(5, -10),
         ),
       );
     }

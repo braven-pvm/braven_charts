@@ -200,14 +200,16 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             showLegend: _optionsController.showLegend,
             showXScrollbar: _optionsController.showXScrollbar,
             showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+              autoHide: false,
+            ),
             xAxisConfig: XAxisConfig(
               showAxisLine: _optionsController.showAxisLines,
             ),
             yAxis: YAxisConfig(
               position: YAxisPosition.left,
               showAxisLine: _optionsController.showAxisLines,
+              min: -20,
             ),
             interactionConfig: InteractionConfig(
               enableZoom: _optionsController.enableZoom,
@@ -224,83 +226,99 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
 
     switch (_chartType) {
       case ChartType.line:
-        series.add(LineChartSeries(
-          id: 'series1',
-          name: 'Series 1',
-          points: _data1,
-          color: Colors.blue,
-          interpolation: _interpolation,
-          strokeWidth: _strokeWidth,
-          showDataPointMarkers: _optionsController.showDataMarkers,
-        ));
-        if (_showSecondSeries) {
-          series.add(LineChartSeries(
-            id: 'series2',
-            name: 'Series 2',
-            points: _data2,
-            color: Colors.red,
+        series.add(
+          LineChartSeries(
+            id: 'series1',
+            name: 'Series 1',
+            points: _data1,
+            color: Colors.blue,
             interpolation: _interpolation,
             strokeWidth: _strokeWidth,
             showDataPointMarkers: _optionsController.showDataMarkers,
-          ));
+          ),
+        );
+        if (_showSecondSeries) {
+          series.add(
+            LineChartSeries(
+              id: 'series2',
+              name: 'Series 2',
+              points: _data2,
+              color: Colors.red,
+              interpolation: _interpolation,
+              strokeWidth: _strokeWidth,
+              showDataPointMarkers: _optionsController.showDataMarkers,
+            ),
+          );
         }
 
       case ChartType.area:
-        series.add(AreaChartSeries(
-          id: 'series1',
-          name: 'Series 1',
-          points: _data1,
-          color: Colors.green,
-          interpolation: _interpolation,
-          strokeWidth: _strokeWidth,
-          fillOpacity: _fillOpacity,
-        ));
-        if (_showSecondSeries) {
-          series.add(AreaChartSeries(
-            id: 'series2',
-            name: 'Series 2',
-            points: _data2,
-            color: Colors.teal,
+        series.add(
+          AreaChartSeries(
+            id: 'series1',
+            name: 'Series 1',
+            points: _data1,
+            color: Colors.green,
             interpolation: _interpolation,
             strokeWidth: _strokeWidth,
             fillOpacity: _fillOpacity,
-          ));
+          ),
+        );
+        if (_showSecondSeries) {
+          series.add(
+            AreaChartSeries(
+              id: 'series2',
+              name: 'Series 2',
+              points: _data2,
+              color: Colors.teal,
+              interpolation: _interpolation,
+              strokeWidth: _strokeWidth,
+              fillOpacity: _fillOpacity,
+            ),
+          );
         }
 
       case ChartType.bar:
-        series.add(BarChartSeries(
-          id: 'series1',
-          name: 'Series 1',
-          points: _data1,
-          color: Colors.orange,
-          barWidthPercent: _barWidthPercent,
-        ));
-        if (_showSecondSeries) {
-          series.add(BarChartSeries(
-            id: 'series2',
-            name: 'Series 2',
-            points: _data2,
-            color: Colors.deepOrange,
+        series.add(
+          BarChartSeries(
+            id: 'series1',
+            name: 'Series 1',
+            points: _data1,
+            color: Colors.orange,
             barWidthPercent: _barWidthPercent,
-          ));
+          ),
+        );
+        if (_showSecondSeries) {
+          series.add(
+            BarChartSeries(
+              id: 'series2',
+              name: 'Series 2',
+              points: _data2,
+              color: Colors.deepOrange,
+              barWidthPercent: _barWidthPercent,
+            ),
+          );
         }
 
       case ChartType.scatter:
-        series.add(ScatterChartSeries(
-          id: 'series1',
-          name: 'Series 1',
-          points: _data1,
-          color: Colors.purple,
-          markerRadius: _markerRadius,
-        ));
-        if (_showSecondSeries) {
-          series.add(ScatterChartSeries(
-            id: 'series2',
-            name: 'Series 2',
-            points: _data2,
-            color: Colors.deepPurple,
+        series.add(
+          ScatterChartSeries(
+            id: 'series1',
+            name: 'Series 1',
+            points: _data1,
+            color: Colors.purple,
             markerRadius: _markerRadius,
-          ));
+          ),
+        );
+        if (_showSecondSeries) {
+          series.add(
+            ScatterChartSeries(
+              id: 'series2',
+              name: 'Series 2',
+              points: _data2,
+              color: Colors.deepPurple,
+              markerRadius: _markerRadius,
+            ),
+          );
         }
     }
 
@@ -327,10 +345,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
           label: 'Data Points',
           value: '${_data1.length}${_showSecondSeries ? ' × 2' : ''}',
         ),
-        StatusItem(
-          label: 'Chart Type',
-          value: _chartType.name,
-        ),
+        StatusItem(label: 'Chart Type', value: _chartType.name),
         StatusItem(
           label: 'Theme',
           value:

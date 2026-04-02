@@ -26,6 +26,7 @@ class _TrackingPageState extends State<TrackingPage> {
   late List<ChartSeries> _interpolationSeries;
   late List<ChartSeries> _tensionSeries;
   late List<ChartSeries> _stressSeries;
+  late List<ChartSeries> _partialRangeSeries;
 
   @override
   void initState() {
@@ -171,6 +172,120 @@ class _TrackingPageState extends State<TrackingPage> {
       ),
     ];
 
+    // Partial-range series: each series ends at a different x to test that the
+    // crosshair stops tracking a series once the cursor moves past its last point.
+    // Series end order: La_acc (x=18) → Lactate (x=22) → HR/VO₂ (x=30)
+    _partialRangeSeries = [
+      LineChartSeries(
+        id: 'pr_vo2',
+        name: 'VO₂ (mL/kg/min)',
+        points: const [
+          ChartDataPoint(x: 0, y: 20),
+          ChartDataPoint(x: 3, y: 21),
+          ChartDataPoint(x: 6, y: 23),
+          ChartDataPoint(x: 9, y: 27),
+          ChartDataPoint(x: 12, y: 32),
+          ChartDataPoint(x: 15, y: 38),
+          ChartDataPoint(x: 18, y: 44),
+          ChartDataPoint(x: 21, y: 50),
+          ChartDataPoint(x: 24, y: 55),
+          ChartDataPoint(x: 27, y: 58),
+          ChartDataPoint(x: 30, y: 60),
+        ],
+        color: const Color(0xFF1565C0),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 2.2,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'VO₂',
+          unit: 'mL/kg/min',
+          color: const Color(0xFF1565C0),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'pr-vo2-axis'),
+      ),
+      LineChartSeries(
+        id: 'pr_hr',
+        name: 'HR (bpm)',
+        points: const [
+          ChartDataPoint(x: 0, y: 65),
+          ChartDataPoint(x: 3, y: 72),
+          ChartDataPoint(x: 6, y: 80),
+          ChartDataPoint(x: 9, y: 90),
+          ChartDataPoint(x: 12, y: 105),
+          ChartDataPoint(x: 15, y: 120),
+          ChartDataPoint(x: 18, y: 138),
+          ChartDataPoint(x: 21, y: 152),
+          ChartDataPoint(x: 24, y: 164),
+          ChartDataPoint(x: 27, y: 172),
+          ChartDataPoint(x: 30, y: 178),
+        ],
+        color: const Color(0xFFE53935),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 2.2,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.right,
+          label: 'HR',
+          unit: 'bpm',
+          color: const Color(0xFFE53935),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'pr-hr-axis'),
+      ),
+      // Lactate: ends at x=22 — crosshair should stop tracking it after that
+      LineChartSeries(
+        id: 'pr_lactate',
+        name: 'Lactate (mmol/L)',
+        points: const [
+          ChartDataPoint(x: 0, y: 0.8),
+          ChartDataPoint(x: 3, y: 0.9),
+          ChartDataPoint(x: 6, y: 1.1),
+          ChartDataPoint(x: 9, y: 1.4),
+          ChartDataPoint(x: 12, y: 2.0),
+          ChartDataPoint(x: 15, y: 3.2),
+          ChartDataPoint(x: 18, y: 5.8),
+          ChartDataPoint(x: 22, y: 9.4),
+        ],
+        color: const Color(0xFF2E7D32),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 2.4,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 5.0,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'Lactate',
+          unit: 'mmol/L',
+          color: const Color(0xFF2E7D32),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'pr-lac-axis'),
+      ),
+      // La_acc: ends at x=18 — the first series to disappear from the crosshair
+      AreaChartSeries(
+        id: 'pr_la_acc',
+        name: 'La_acc (mmol/L/min)',
+        points: const [
+          ChartDataPoint(x: 0, y: 0.0),
+          ChartDataPoint(x: 3, y: 0.1),
+          ChartDataPoint(x: 6, y: 0.2),
+          ChartDataPoint(x: 9, y: 0.4),
+          ChartDataPoint(x: 12, y: 1.0),
+          ChartDataPoint(x: 15, y: 2.8),
+          ChartDataPoint(x: 18, y: 7.2),
+        ],
+        color: const Color(0xFF66BB6A),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 2.0,
+        fillOpacity: 0.25,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: 5.0,
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'La_acc',
+          unit: 'mmol/L/min',
+          color: const Color(0xFF66BB6A),
+          showCrosshairLabel: true,
+        ).copyWith(id: 'pr-laacc-axis'),
+      ),
+    ];
+
     _stressSeries = [
       _lineSeries(
         id: 'stress_bezier',
@@ -231,7 +346,9 @@ class _TrackingPageState extends State<TrackingPage> {
         children: [
           InfoBox(
             message:
-                'Move horizontally across each chart and watch whether the tracking dots stay centered on the visible stroke. The first chart reproduces the mixed area-line auto-normalization case, the second mirrors a split-column layout with the chart constrained to roughly 280px tall, the third compares interpolation families, the fourth isolates bezier tension, and the fifth stresses sharp reversals.',
+                'Move horizontally across each chart and watch whether the tracking dots stay centered on the visible stroke. '
+                'The first chart verifies the series end-boundary fix: La_acc (ends x=18) and Lactate (ends x=22) must vanish from the tooltip and lose their dot exactly at the marked boundary. '
+                'The remaining charts cover auto-normalization, split-column layout, interpolation families, bezier tension, and sharp-reversal stress tests.',
           ),
         ],
       ),
@@ -254,6 +371,63 @@ class _TrackingPageState extends State<TrackingPage> {
       builder: (context, _) {
         return ListView(
           children: [
+            SizedBox(
+              height: 360,
+              child: ChartCard(
+                title: 'Partial-Range Series — Crosshair End Boundary',
+                subtitle:
+                    'La_acc ends at x=18, Lactate ends at x=22, HR/VO₂ run to x=30. '
+                    'Sweep right: each series must vanish from the tooltip and lose its dot exactly at its last point.',
+                child: _buildChart(
+                  series: _partialRangeSeries,
+                  yAxisLabel: 'Value',
+                  normalizationMode: NormalizationMode.perSeries,
+                  xAxisConfig: const XAxisConfig(
+                    label: 'Time',
+                    unit: 'min',
+                    min: 0,
+                    max: 30,
+                  ),
+                  annotations: [
+                    ThresholdAnnotation(
+                      id: 'la_acc_end',
+                      axis: AnnotationAxis.x,
+                      value: 18,
+                      label: 'La_acc ends',
+                      labelPosition: AnnotationLabelPosition.topLeft,
+                      lineColor: const Color(0xFF66BB6A),
+                      lineWidth: 1.5,
+                      dashPattern: [4, 4],
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ThresholdAnnotation(
+                      id: 'lactate_end',
+                      axis: AnnotationAxis.x,
+                      value: 22,
+                      label: 'Lactate ends',
+                      labelPosition: AnnotationLabelPosition.topLeft,
+                      lineColor: const Color(0xFF2E7D32),
+                      lineWidth: 1.5,
+                      dashPattern: [4, 4],
+                      style: const AnnotationStyle(
+                        textStyle: TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 320,
               child: ChartCard(
@@ -505,8 +679,8 @@ class _TrackingPageState extends State<TrackingPage> {
   Widget _buildStatusPanel() {
     return StatusPanel(
       items: [
-        const StatusItem(label: 'Charts', value: '5'),
-        const StatusItem(label: 'Series', value: '14'),
+        const StatusItem(label: 'Charts', value: '6'),
+        const StatusItem(label: 'Series', value: '18'),
         StatusItem(
           label: 'Tracking',
           value: 'Forced',
