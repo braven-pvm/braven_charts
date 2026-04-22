@@ -136,6 +136,28 @@ class XAxisPainter {
       }
     }
 
+    // Minor ticks — shorter unlabelled marks between major ticks
+    if (config.showMinorTicks && config.minorTickCount > 0 && ticks.length >= 2) {
+      for (int i = 0; i < ticks.length - 1; i++) {
+        final a = ticks[i];
+        final b = ticks[i + 1];
+        for (int j = 1; j <= config.minorTickCount; j++) {
+          final v = a + (b - a) * j / (config.minorTickCount + 1);
+          final ratio = axisBounds.span == 0
+              ? 0.0
+              : (v - axisBounds.min) / axisBounds.span;
+          final x = plotArea.left + ratio * plotArea.width;
+          if (x >= plotArea.left && x <= plotArea.right) {
+            canvas.drawLine(
+              Offset(x, plotArea.bottom),
+              Offset(x, plotArea.bottom + config.minorTickLength),
+              paint,
+            );
+          }
+        }
+      }
+    }
+
     // Restore canvas state after drawing ticks/labels
     canvas.restore();
 

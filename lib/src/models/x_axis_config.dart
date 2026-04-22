@@ -55,6 +55,9 @@ class XAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
+    this.showMinorTicks = false,
+    this.minorTickCount = 4,
+    this.minorTickLength = 3.0,
   })  : assert(minHeight >= 0, 'minHeight must be non-negative'),
         assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight'),
         assert(
@@ -184,6 +187,24 @@ class XAxisConfig {
   /// If provided, overrides default number formatting.
   final XAxisLabelFormatter? labelFormatter;
 
+  // ========== Minor Ticks ==========
+
+  /// Whether to show minor (unlabelled) tick marks between major ticks.
+  ///
+  /// Defaults to false.
+  final bool showMinorTicks;
+
+  /// Number of minor ticks to draw between each adjacent pair of major ticks.
+  ///
+  /// For example, 4 minor ticks between major ticks at 0 and 10 produces
+  /// unlabelled marks at 2, 4, 6, 8. Defaults to 4.
+  final int minorTickCount;
+
+  /// Length of minor tick marks in pixels.
+  ///
+  /// Should be shorter than the major tick length (6px). Defaults to 3.0.
+  final double minorTickLength;
+
   // ========== Computed Properties ==========
 
   /// Whether to show the axis label (e.g., "Time").
@@ -242,6 +263,9 @@ class XAxisConfig {
     double? axisMargin,
     int? tickCount,
     XAxisLabelFormatter? labelFormatter,
+    bool? showMinorTicks,
+    int? minorTickCount,
+    double? minorTickLength,
   }) {
     return XAxisConfig(
       color: color ?? this.color,
@@ -264,6 +288,9 @@ class XAxisConfig {
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: tickCount ?? this.tickCount,
       labelFormatter: labelFormatter ?? this.labelFormatter,
+      showMinorTicks: showMinorTicks ?? this.showMinorTicks,
+      minorTickCount: minorTickCount ?? this.minorTickCount,
+      minorTickLength: minorTickLength ?? this.minorTickLength,
     );
   }
 
@@ -290,10 +317,13 @@ class XAxisConfig {
           axisLabelPadding == other.axisLabelPadding &&
           axisMargin == other.axisMargin &&
           tickCount == other.tickCount &&
-          labelFormatter == other.labelFormatter;
+          labelFormatter == other.labelFormatter &&
+          showMinorTicks == other.showMinorTicks &&
+          minorTickCount == other.minorTickCount &&
+          minorTickLength == other.minorTickLength;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         color,
         label,
         unit,
@@ -313,7 +343,10 @@ class XAxisConfig {
         axisMargin,
         tickCount,
         labelFormatter,
-      );
+        showMinorTicks,
+        minorTickCount,
+        minorTickLength,
+      ]);
 
   @override
   String toString() {
@@ -335,7 +368,10 @@ class XAxisConfig {
         'axisLabelPadding: $axisLabelPadding, '
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount, '
-        'labelFormatter: $labelFormatter'
+        'labelFormatter: $labelFormatter, '
+        'showMinorTicks: $showMinorTicks, '
+        'minorTickCount: $minorTickCount, '
+        'minorTickLength: $minorTickLength'
         ')';
   }
 }

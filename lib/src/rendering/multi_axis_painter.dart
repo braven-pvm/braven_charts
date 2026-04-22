@@ -252,6 +252,24 @@ class MultiAxisPainter {
           }
         }
       }
+
+      // Minor ticks — shorter unlabelled marks between major ticks
+      if (axis.showMinorTicks && axis.minorTickCount > 0 && ticks.length >= 2) {
+        for (int i = 0; i < ticks.length - 1; i++) {
+          final a = ticks[i];
+          final b = ticks[i + 1];
+          for (int j = 1; j <= axis.minorTickCount; j++) {
+            final v = a + (b - a) * j / (axis.minorTickCount + 1);
+            final normalizedY =
+                MultiAxisNormalizer.normalize(v, bounds.min, bounds.max);
+            final screenY = plotArea.bottom - (normalizedY * plotArea.height);
+            if (screenY >= plotArea.top && screenY <= plotArea.bottom) {
+              _paintMinorTickMark(
+                  canvas, axis, axisRect, screenY, isLeftSide, paint);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -353,6 +371,21 @@ class MultiAxisPainter {
       Offset(tickEnd, screenY),
       paint,
     );
+  }
+
+  /// Paints a minor (unlabelled, shorter) tick mark at the specified Y position.
+  void _paintMinorTickMark(
+    Canvas canvas,
+    YAxisConfig axis,
+    Rect axisRect,
+    double screenY,
+    bool isLeftSide,
+    Paint paint,
+  ) {
+    final len = axis.minorTickLength;
+    final tickStart = isLeftSide ? axisRect.right : axisRect.left;
+    final tickEnd = isLeftSide ? axisRect.right - len : axisRect.left + len;
+    canvas.drawLine(Offset(tickStart, screenY), Offset(tickEnd, screenY), paint);
   }
 
   /// Paints a tick label at the specified Y position.

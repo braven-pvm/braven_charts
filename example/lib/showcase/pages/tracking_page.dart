@@ -201,6 +201,8 @@ class _TrackingPageState extends State<TrackingPage> {
           unit: 'mL/kg/min',
           color: const Color(0xFF1565C0),
           showCrosshairLabel: true,
+          showMinorTicks: true,
+          minorTickCount: 4,
         ).copyWith(id: 'pr-vo2-axis'),
       ),
       LineChartSeries(

@@ -178,6 +178,9 @@ class YAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
+    this.showMinorTicks = false,
+    this.minorTickCount = 4,
+    this.minorTickLength = 3.0,
   })  : id = '',
         assert(minWidth >= 0, 'minWidth must be non-negative'),
         assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
@@ -216,6 +219,9 @@ class YAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
+    this.showMinorTicks = false,
+    this.minorTickCount = 4,
+    this.minorTickLength = 3.0,
   });
 
   /// Creates a Y-axis configuration with an explicit ID for testing.
@@ -247,6 +253,9 @@ class YAxisConfig {
     double axisMargin = 8.0,
     int? tickCount,
     YAxisLabelFormatter? labelFormatter,
+    bool showMinorTicks = false,
+    int minorTickCount = 4,
+    double minorTickLength = 3.0,
   }) {
     // Same validations as public constructor
     assert(id.isNotEmpty, 'id must not be empty when using withId');
@@ -282,6 +291,9 @@ class YAxisConfig {
       axisMargin: axisMargin,
       tickCount: tickCount,
       labelFormatter: labelFormatter,
+      showMinorTicks: showMinorTicks,
+      minorTickCount: minorTickCount,
+      minorTickLength: minorTickLength,
     );
   }
 
@@ -453,6 +465,24 @@ class YAxisConfig {
   /// If null, uses default number formatting with [unit] suffix if provided.
   final YAxisLabelFormatter? labelFormatter;
 
+  // ========== Minor Ticks ==========
+
+  /// Whether to show minor (unlabelled) tick marks between major ticks.
+  ///
+  /// Defaults to false.
+  final bool showMinorTicks;
+
+  /// Number of minor ticks to draw between each adjacent pair of major ticks.
+  ///
+  /// For example, 4 minor ticks between major ticks at 0 and 10 produces
+  /// unlabelled marks at 2, 4, 6, 8. Defaults to 4.
+  final int minorTickCount;
+
+  /// Length of minor tick marks in pixels.
+  ///
+  /// Should be shorter than the major tick length (6px). Defaults to 3.0.
+  final double minorTickLength;
+
   // ========== Methods ==========
 
   /// Creates a copy of this configuration with specified properties overridden.
@@ -481,6 +511,9 @@ class YAxisConfig {
     double? axisMargin,
     int? tickCount,
     YAxisLabelFormatter? labelFormatter,
+    bool? showMinorTicks,
+    int? minorTickCount,
+    double? minorTickLength,
   }) {
     return YAxisConfig._internal(
       id: id ?? this.id,
@@ -505,6 +538,9 @@ class YAxisConfig {
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: tickCount ?? this.tickCount,
       labelFormatter: labelFormatter ?? this.labelFormatter,
+      showMinorTicks: showMinorTicks ?? this.showMinorTicks,
+      minorTickCount: minorTickCount ?? this.minorTickCount,
+      minorTickLength: minorTickLength ?? this.minorTickLength,
     );
   }
 
@@ -532,7 +568,10 @@ class YAxisConfig {
         other.axisLabelPadding == axisLabelPadding &&
         other.axisMargin == axisMargin &&
         other.tickCount == tickCount &&
-        other.labelFormatter == labelFormatter;
+        other.labelFormatter == labelFormatter &&
+        other.showMinorTicks == showMinorTicks &&
+        other.minorTickCount == minorTickCount &&
+        other.minorTickLength == minorTickLength;
   }
 
   @override
@@ -558,6 +597,9 @@ class YAxisConfig {
         axisMargin,
         tickCount,
         labelFormatter,
+        showMinorTicks,
+        minorTickCount,
+        minorTickLength,
       ]);
 
   @override
@@ -581,7 +623,10 @@ class YAxisConfig {
         'tickLabelPadding: $tickLabelPadding, '
         'axisLabelPadding: $axisLabelPadding, '
         'axisMargin: $axisMargin, '
-        'tickCount: $tickCount'
+        'tickCount: $tickCount, '
+        'showMinorTicks: $showMinorTicks, '
+        'minorTickCount: $minorTickCount, '
+        'minorTickLength: $minorTickLength'
         ')';
   }
 

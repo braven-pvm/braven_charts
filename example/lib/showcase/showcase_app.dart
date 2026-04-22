@@ -16,6 +16,7 @@ import 'pages/scientific_page.dart';
 import 'pages/segment_styling_page.dart';
 import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
+import 'pages/minor_ticks_page.dart';
 import 'pages/tracking_page.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
@@ -181,6 +182,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.science_outlined,
       selectedIcon: Icons.science,
       page: ScientificPage(),
+    ),
+    const NavDestination(
+      label: 'Minor Ticks',
+      icon: Icons.linear_scale_outlined,
+      selectedIcon: Icons.linear_scale,
+      page: MinorTicksPage(),
+      badge: 'NEW',
     ),
   ];
 
