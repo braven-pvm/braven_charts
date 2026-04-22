@@ -164,6 +164,8 @@ class YAxisConfig {
     this.unit,
     this.min,
     this.max,
+    this.renderMin,
+    this.renderMax,
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
@@ -205,6 +207,8 @@ class YAxisConfig {
     this.unit,
     this.min,
     this.max,
+    this.renderMin,
+    this.renderMax,
     this.visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
@@ -238,6 +242,8 @@ class YAxisConfig {
     String? unit,
     double? min,
     double? max,
+    double? renderMin,
+    double? renderMax,
     bool visible = true,
     bool showAxisLine = true,
     bool showTicks = true,
@@ -277,6 +283,8 @@ class YAxisConfig {
       unit: unit,
       min: min,
       max: max,
+      renderMin: renderMin,
+      renderMax: renderMax,
       visible: visible,
       showAxisLine: showAxisLine,
       showTicks: showTicks,
@@ -338,6 +346,18 @@ class YAxisConfig {
   ///
   /// If null, maximum is computed from the data of bound series.
   final double? max;
+
+  /// Lowest tick value to render. Ticks below this value are skipped.
+  ///
+  /// Does not affect data scaling — only controls which tick marks and labels
+  /// are drawn. If null, defaults to [min] (all ticks rendered).
+  final double? renderMin;
+
+  /// Highest tick value to render. Ticks above this value are skipped.
+  ///
+  /// Does not affect data scaling — only controls which tick marks and labels
+  /// are drawn. If null, defaults to [max] (all ticks rendered).
+  final double? renderMax;
 
   // ========== Visibility ==========
 
@@ -497,6 +517,8 @@ class YAxisConfig {
     String? unit,
     double? min,
     double? max,
+    double? renderMin,
+    double? renderMax,
     bool? visible,
     bool? showAxisLine,
     bool? showTicks,
@@ -523,6 +545,8 @@ class YAxisConfig {
       unit: unit ?? this.unit,
       min: min ?? this.min,
       max: max ?? this.max,
+      renderMin: renderMin ?? this.renderMin,
+      renderMax: renderMax ?? this.renderMax,
       visible: visible ?? this.visible,
       showAxisLine: showAxisLine ?? this.showAxisLine,
       showTicks: showTicks ?? this.showTicks,
@@ -555,6 +579,8 @@ class YAxisConfig {
         other.unit == unit &&
         other.min == min &&
         other.max == max &&
+        other.renderMin == renderMin &&
+        other.renderMax == renderMax &&
         other.visible == visible &&
         other.showAxisLine == showAxisLine &&
         other.showTicks == showTicks &&
@@ -583,6 +609,8 @@ class YAxisConfig {
         unit,
         min,
         max,
+        renderMin,
+        renderMax,
         visible,
         showAxisLine,
         showTicks,
@@ -612,6 +640,8 @@ class YAxisConfig {
         'unit: $unit, '
         'min: $min, '
         'max: $max, '
+        'renderMin: $renderMin, '
+        'renderMax: $renderMax, '
         'visible: $visible, '
         'showAxisLine: $showAxisLine, '
         'showTicks: $showTicks, '

@@ -233,7 +233,14 @@ class MultiAxisPainter {
       final maxTicks = axis.tickCount ?? _computeMaxTicks(plotArea.height);
       final ticks = generateTicks(bounds, maxTicks: maxTicks);
 
+      final effectiveRenderMin = axis.renderMin ?? bounds.min;
+      final effectiveRenderMax = axis.renderMax ?? bounds.max;
+
       for (final tickValue in ticks) {
+        if (tickValue < effectiveRenderMin || tickValue > effectiveRenderMax) {
+          continue;
+        }
+
         // Convert tick value to Y position using shared normalizer
         final normalizedY =
             MultiAxisNormalizer.normalize(tickValue, bounds.min, bounds.max);
@@ -260,6 +267,7 @@ class MultiAxisPainter {
           final b = ticks[i + 1];
           for (int j = 1; j <= axis.minorTickCount; j++) {
             final v = a + (b - a) * j / (axis.minorTickCount + 1);
+            if (v < effectiveRenderMin || v > effectiveRenderMax) continue;
             final normalizedY =
                 MultiAxisNormalizer.normalize(v, bounds.min, bounds.max);
             final screenY = plotArea.bottom - (normalizedY * plotArea.height);

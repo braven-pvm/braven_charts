@@ -16,6 +16,7 @@ import 'pages/scientific_page.dart';
 import 'pages/segment_styling_page.dart';
 import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
+import 'pages/axis_render_range_page.dart';
 import 'pages/minor_ticks_page.dart';
 import 'pages/tracking_page.dart';
 
@@ -188,6 +189,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.linear_scale_outlined,
       selectedIcon: Icons.linear_scale,
       page: MinorTicksPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Render Range',
+      icon: Icons.tune_outlined,
+      selectedIcon: Icons.tune,
+      page: AxisRenderRangePage(),
       badge: 'NEW',
     ),
   ];

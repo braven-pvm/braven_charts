@@ -97,7 +97,13 @@ class XAxisPainter {
       chartArea.bottom,
     ));
 
+    final effectiveRenderMin = config.renderMin ?? axisBounds.min;
+    final effectiveRenderMax = config.renderMax ?? axisBounds.max;
+
     for (final tickValue in ticks) {
+      if (tickValue < effectiveRenderMin || tickValue > effectiveRenderMax) {
+        continue;
+      }
       // Calculate X position for this tick
       final ratio = axisBounds.span == 0
           ? 0.0
@@ -147,7 +153,8 @@ class XAxisPainter {
               ? 0.0
               : (v - axisBounds.min) / axisBounds.span;
           final x = plotArea.left + ratio * plotArea.width;
-          if (x >= plotArea.left && x <= plotArea.right) {
+          if (x >= plotArea.left && x <= plotArea.right &&
+              v >= effectiveRenderMin && v <= effectiveRenderMax) {
             canvas.drawLine(
               Offset(x, plotArea.bottom),
               Offset(x, plotArea.bottom + config.minorTickLength),
