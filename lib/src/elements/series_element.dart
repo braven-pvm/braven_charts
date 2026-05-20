@@ -3,6 +3,14 @@
 
 import 'dart:ui';
 
+import 'package:flutter/painting.dart'
+    show
+        TextAlign,
+        TextDirection,
+        TextPainter,
+        TextSpan,
+        TextStyle;
+
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
@@ -10,6 +18,7 @@ import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/data_point_label_config.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
 
@@ -254,6 +263,8 @@ class SeriesElement implements ChartElement {
     if (pointCountChanged) {
       _invalidateAllCaches();
     }
+    // Always clear label cache — label config may have changed
+    _labelPainterCache.clear();
   }
 
   /// Invalidates all cached rendering data.
@@ -263,6 +274,7 @@ class SeriesElement implements ChartElement {
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
+    _labelPainterCache.clear();
   }
 
   @override
@@ -282,6 +294,9 @@ class SeriesElement implements ChartElement {
 
   // Segment color caching - fast-path check result
   bool? _cachedHasSegmentOverrides;
+
+  // TextPainter cache for data-point labels — keyed by formatted text string
+  final Map<String, TextPainter> _labelPainterCache = {};
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   ///
@@ -1105,6 +1120,95 @@ class SeriesElement implements ChartElement {
     return 40.0;
   }
 
+  /// Renders a single data-point label near its marker.
+  ///
+  /// Anchor positions (spec table):
+  /// - above: centre-bottom anchor at (cx+offsetX, cy-r-gap+offsetY)
+  /// - below: centre-top anchor at (cx+offsetX, cy+r+gap+offsetY)
+  /// - left:  right-centre anchor at (cx-r-gap+offsetX, cy+offsetY)
+  /// - right: left-centre anchor at (cx+r+gap+offsetX, cy+offsetY)
+  void _paintDataPointLabel(
+    Canvas canvas,
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    final text = config.formatter != null
+        ? config.formatter!(point)
+        : DataPointLabelConfig.autoFormatLabelValue(
+            point.y,
+            config.showUnit ? unit : null,
+          );
+
+    final tp = _labelPainterCache.putIfAbsent(text, () {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: config.labelColor ?? seriesColor,
+            fontSize: config.fontSize,
+            fontWeight: config.fontWeight,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+      );
+      painter.layout();
+      return painter;
+    });
+
+    const gap = 2.0;
+    final double paintX;
+    final double paintY;
+    switch (config.position) {
+      case DataPointLabelPosition.above:
+        paintX = markerCenter.dx + config.offsetX - tp.width / 2;
+        paintY =
+            markerCenter.dy - markerRadius - gap + config.offsetY - tp.height;
+        break;
+      case DataPointLabelPosition.below:
+        paintX = markerCenter.dx + config.offsetX - tp.width / 2;
+        paintY = markerCenter.dy + markerRadius + gap + config.offsetY;
+        break;
+      case DataPointLabelPosition.left:
+        paintX =
+            markerCenter.dx - markerRadius - gap + config.offsetX - tp.width;
+        paintY = markerCenter.dy + config.offsetY - tp.height / 2;
+        break;
+      case DataPointLabelPosition.right:
+        paintX = markerCenter.dx + markerRadius + gap + config.offsetX;
+        paintY = markerCenter.dy + config.offsetY - tp.height / 2;
+        break;
+    }
+    final paintOrigin = Offset(paintX, paintY);
+
+    if (config.background != null) {
+      const hPad = 4.0;
+      const vPad = 2.0;
+      final bgRect = Rect.fromLTWH(
+        paintX - hPad,
+        paintY - vPad,
+        tp.width + hPad * 2,
+        tp.height + vPad * 2,
+      );
+      final rrect = RRect.fromRectAndRadius(
+        bgRect,
+        Radius.circular((tp.height + vPad * 2) / 2),
+      );
+      canvas.drawRRect(
+        rrect,
+        Paint()
+          ..color =
+              config.background!.withValues(alpha: config.backgroundOpacity),
+      );
+    }
+
+    tp.paint(canvas, paintOrigin);
+  }
+
   /// Paint markers using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   ///
   /// [originalIndices] maps each position in [transformedPoints] to its original
@@ -1117,11 +1221,17 @@ class SeriesElement implements ChartElement {
     double radius,
     Color baseColor,
   ) {
-    // Check if any marker in this series is hovered
     final hoveredMarker = coordinator?.hoveredMarker;
     final isThisSeriesHovered = hoveredMarker?.seriesId == series.id;
 
-    // Paint setup
+    // Resolve label config once — null or show==false means zero-cost skip
+    final DataPointLabelConfig? labelConfig = switch (series) {
+      final LineChartSeries s => s.dataPointLabels,
+      final AreaChartSeries s => s.dataPointLabels,
+      _ => null,
+    };
+    final bool paintLabels = labelConfig != null && labelConfig.show;
+
     final normalPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
@@ -1137,16 +1247,27 @@ class SeriesElement implements ChartElement {
 
     for (int i = 0; i < transformedPoints.length; i++) {
       final plotPos = transformedPoints[i];
-      // Use original index for hover comparison (handles viewport culling)
       final originalIndex = originalIndices?[i] ?? i;
 
       if (isThisSeriesHovered && originalIndex == hoveredMarker!.markerIndex) {
-        // Paint highlighted marker (larger with border)
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
         canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
       } else {
-        // Paint normal marker
         canvas.drawCircle(plotPos, radius, normalPaint);
+      }
+
+      // Draw label after marker so it renders on top
+      if (paintLabels) {
+        final point = series.points[originalIndex];
+        _paintDataPointLabel(
+          canvas,
+          plotPos,
+          radius,
+          point,
+          baseColor,
+          labelConfig,
+          series.unit,
+        );
       }
     }
   }
