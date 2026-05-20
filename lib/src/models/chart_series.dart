@@ -343,6 +343,30 @@ class LineChartSeries extends ChartSeries {
   @override
   String toString() =>
       'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LineChartSeries) return false;
+    return super == other &&
+        other.interpolation == interpolation &&
+        other.strokeWidth == strokeWidth &&
+        other.tension == tension &&
+        other.showDataPointMarkers == showDataPointMarkers &&
+        other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointLabels == dataPointLabels;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        super.hashCode,
+        interpolation,
+        strokeWidth,
+        tension,
+        showDataPointMarkers,
+        dataPointMarkerRadius,
+        dataPointLabels,
+      ]);
 }
 
 /// Scatter plot series with configurable marker size.
@@ -470,6 +494,32 @@ class AreaChartSeries extends ChartSeries {
   @override
   String toString() =>
       'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AreaChartSeries) return false;
+    return super == other &&
+        other.interpolation == interpolation &&
+        other.strokeWidth == strokeWidth &&
+        other.tension == tension &&
+        other.fillOpacity == fillOpacity &&
+        other.showDataPointMarkers == showDataPointMarkers &&
+        other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointLabels == dataPointLabels;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        super.hashCode,
+        interpolation,
+        strokeWidth,
+        tension,
+        fillOpacity,
+        showDataPointMarkers,
+        dataPointMarkerRadius,
+        dataPointLabels,
+      ]);
 }
 
 /// Bar chart series with configurable width.

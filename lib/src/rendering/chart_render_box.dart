@@ -452,6 +452,9 @@ class ChartRenderBox extends RenderBox {
   /// Critical to prevent memory leaks in long-running applications.
   @override
   void dispose() {
+    for (final element in _elements.whereType<SeriesElement>()) {
+      element.dispose();
+    }
     _seriesCacheManager.dispose();
     _tooltipAnimator.dispose();
     _zoomAnimator.dispose();
