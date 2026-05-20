@@ -277,6 +277,14 @@ class SeriesElement implements ChartElement {
     _labelPainterCache.clear();
   }
 
+  /// Disposes cached resources. Call when this element is no longer needed.
+  void dispose() {
+    for (final tp in _labelPainterCache.values) {
+      tp.dispose();
+    }
+    _labelPainterCache.clear();
+  }
+
   @override
   final bool isSelected;
 
@@ -1257,7 +1265,7 @@ class SeriesElement implements ChartElement {
       }
 
       // Draw label after marker so it renders on top
-      if (paintLabels) {
+      if (paintLabels && originalIndex < series.points.length) {
         final point = series.points[originalIndex];
         _paintDataPointLabel(
           canvas,
