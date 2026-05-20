@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /f/Repositories/braven_charts -maxdepth 1 -type f -name *.md -o -name CLAUDE.md)",
+      "Bash(ls -la /f/Repositories/braven_charts/*.md /f/Repositories/braven_charts/*.yaml /f/Repositories/braven_charts/*.json)",
+      "Bash(find /f/Repositories/braven_charts/lib -name \"*.dart\" -type f -exec wc -l {} +)",
+      "Bash(grep -n 'switch \\(annotation\\)' /f/Repositories/braven_charts/lib/src/**/*.dart)",
+      "Bash(find /f/Repositories/braven_charts/lib -type f -name *.dart)",
+      "Bash(grep -rn \"annotation.*runtimeType\\\\|runtimeType.*annotation\\\\|as.*Annotation\\\\|PointAnnotation.*\\(\\\\|RangeAnnotation.*\\(\\\\|TextAnnotation.*\\(\\\\|ThresholdAnnotation.*\\(\\\\|TrendAnnotation.*\\(\\\\|PinAnnotation.*\\(\\\\|LegendAnnotation.*\\(\" /f/Repositories/braven_charts/lib --include=*.dart)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(grep -A 5 \"class.*Page extends StatefulWidget\" /f/Repositories/braven_charts/example/lib/showcase/pages/*.dart)",
+      "Bash(grep -n \"enum AxisLabelDisplay\" /f/Repositories/braven_charts/lib/src/models/*.dart)"
+    ]
+  }
+}

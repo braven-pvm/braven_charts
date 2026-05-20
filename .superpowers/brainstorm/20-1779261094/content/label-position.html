@@ -1,0 +1,102 @@
+<h2>Data Point Label Position</h2>
+<p class="subtitle">Where should the value label sit relative to the data point marker?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="above" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:20px 24px 8px;border-radius:8px 8px 0 0;">
+      <svg width="100%" height="110" viewBox="0 0 280 110">
+        <!-- grid lines -->
+        <line x1="0" y1="30" x2="280" y2="30" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="65" x2="280" y2="65" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="100" x2="280" y2="100" stroke="#e0e0e0" stroke-width="1"/>
+        <!-- line -->
+        <polyline points="20,85 80,55 140,40 200,70 260,30" fill="none" stroke="#1565C0" stroke-width="2.5"/>
+        <!-- markers + labels above -->
+        <circle cx="20" cy="85" r="5" fill="#1565C0"/>
+        <text x="20" y="72" text-anchor="middle" font-size="10" fill="#1565C0" font-family="sans-serif" font-weight="500">137</text>
+
+        <circle cx="80" cy="55" r="5" fill="#1565C0"/>
+        <text x="80" y="42" text-anchor="middle" font-size="10" fill="#1565C0" font-family="sans-serif" font-weight="500">165</text>
+
+        <circle cx="140" cy="40" r="5" fill="#1565C0"/>
+        <text x="140" y="27" text-anchor="middle" font-size="10" fill="#1565C0" font-family="sans-serif" font-weight="500">178</text>
+
+        <circle cx="200" cy="70" r="5" fill="#1565C0"/>
+        <text x="200" y="57" text-anchor="middle" font-size="10" fill="#1565C0" font-family="sans-serif" font-weight="500">152</text>
+
+        <circle cx="260" cy="30" r="5" fill="#1565C0"/>
+        <text x="260" y="17" text-anchor="middle" font-size="10" fill="#1565C0" font-family="sans-serif" font-weight="500">196</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Above (default)</h3>
+      <p>Label sits above the marker. Works well on most charts. Simple and predictable. Most common convention in sports/science charting.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="below" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:20px 24px 8px;border-radius:8px 8px 0 0;">
+      <svg width="100%" height="110" viewBox="0 0 280 110">
+        <line x1="0" y1="20" x2="280" y2="20" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="55" x2="280" y2="55" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="90" x2="280" y2="90" stroke="#e0e0e0" stroke-width="1"/>
+        <polyline points="20,75 80,45 140,30 200,60 260,20" fill="none" stroke="#2E7D32" stroke-width="2.5"/>
+        <circle cx="20" cy="75" r="5" fill="#2E7D32"/>
+        <text x="20" y="90" text-anchor="middle" font-size="10" fill="#2E7D32" font-family="sans-serif" font-weight="500">137</text>
+
+        <circle cx="80" cy="45" r="5" fill="#2E7D32"/>
+        <text x="80" y="60" text-anchor="middle" font-size="10" fill="#2E7D32" font-family="sans-serif" font-weight="500">165</text>
+
+        <circle cx="140" cy="30" r="5" fill="#2E7D32"/>
+        <text x="140" y="45" text-anchor="middle" font-size="10" fill="#2E7D32" font-family="sans-serif" font-weight="500">178</text>
+
+        <circle cx="200" cy="60" r="5" fill="#2E7D32"/>
+        <text x="200" y="75" text-anchor="middle" font-size="10" fill="#2E7D32" font-family="sans-serif" font-weight="500">152</text>
+
+        <circle cx="260" cy="20" r="5" fill="#2E7D32"/>
+        <text x="260" y="35" text-anchor="middle" font-size="10" fill="#2E7D32" font-family="sans-serif" font-weight="500">196</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Below</h3>
+      <p>Label sits below the marker. Useful when the top of the chart is tight or when labels would overlap a legend above.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="configurable" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:20px 24px 8px;border-radius:8px 8px 0 0;">
+      <svg width="100%" height="110" viewBox="0 0 280 110">
+        <line x1="0" y1="30" x2="280" y2="30" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="65" x2="280" y2="65" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="100" x2="280" y2="100" stroke="#e0e0e0" stroke-width="1"/>
+        <polyline points="20,85 80,55 140,40 200,70 260,30" fill="none" stroke="#6A1B9A" stroke-width="2.5"/>
+
+        <!-- above -->
+        <circle cx="20" cy="85" r="5" fill="#6A1B9A"/>
+        <text x="20" y="72" text-anchor="middle" font-size="10" fill="#6A1B9A" font-family="sans-serif" font-weight="500">137</text>
+
+        <!-- right -->
+        <circle cx="80" cy="55" r="5" fill="#6A1B9A"/>
+        <text x="93" y="58" text-anchor="start" font-size="10" fill="#6A1B9A" font-family="sans-serif" font-weight="500">165</text>
+
+        <!-- below -->
+        <circle cx="140" cy="40" r="5" fill="#6A1B9A"/>
+        <text x="140" y="55" text-anchor="middle" font-size="10" fill="#6A1B9A" font-family="sans-serif" font-weight="500">178</text>
+
+        <!-- left -->
+        <circle cx="200" cy="70" r="5" fill="#6A1B9A"/>
+        <text x="187" y="73" text-anchor="end" font-size="10" fill="#6A1B9A" font-family="sans-serif" font-weight="500">152</text>
+
+        <!-- above -->
+        <circle cx="260" cy="30" r="5" fill="#6A1B9A"/>
+        <text x="260" y="17" text-anchor="middle" font-size="10" fill="#6A1B9A" font-family="sans-serif" font-weight="500">196</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>Configurable — above / below / left / right</h3>
+      <p>Enum with four positions + a pixel offset to fine-tune. Default: above. All four positions available for edge cases or dense charts.</p>
+    </div>
+  </div>
+
+</div>

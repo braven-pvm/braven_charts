@@ -1,0 +1,90 @@
+<h2>Label Background</h2>
+<p class="subtitle">Should labels have a background to improve readability over crossing lines?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="none" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:20px 24px 8px;border-radius:8px 8px 0 0;">
+      <svg width="100%" height="110" viewBox="0 0 280 110">
+        <line x1="0" y1="28" x2="280" y2="28" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="65" x2="280" y2="65" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="100" x2="280" y2="100" stroke="#e0e0e0" stroke-width="1"/>
+        <!-- second series crossing behind labels -->
+        <polyline points="20,30 80,75 140,55 200,35 260,80" fill="none" stroke="#E53935" stroke-width="2" stroke-dasharray="4,3" opacity="0.6"/>
+        <!-- main series -->
+        <polyline points="20,85 80,50 140,35 200,68 260,28" fill="none" stroke="#1565C0" stroke-width="2.5"/>
+        <circle cx="20" cy="85" r="5" fill="#1565C0"/>
+        <text x="20" y="72" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">137</text>
+        <circle cx="80" cy="50" r="5" fill="#1565C0"/>
+        <text x="80" y="37" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">165</text>
+        <circle cx="140" cy="35" r="5" fill="#1565C0"/>
+        <text x="140" y="22" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">178</text>
+        <circle cx="200" cy="68" r="5" fill="#1565C0"/>
+        <text x="200" y="55" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">152</text>
+        <circle cx="260" cy="28" r="5" fill="#1565C0"/>
+        <text x="260" y="15" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">196</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>No background (plain text)</h3>
+      <p>Simplest. Matches the reference screenshot style. Can get hard to read when labels overlap crossing series lines, but works well on clean single-series charts.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="pill" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:20px 24px 8px;border-radius:8px 8px 0 0;">
+      <svg width="100%" height="110" viewBox="0 0 280 110">
+        <line x1="0" y1="28" x2="280" y2="28" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="65" x2="280" y2="65" stroke="#e0e0e0" stroke-width="1"/>
+        <line x1="0" y1="100" x2="280" y2="100" stroke="#e0e0e0" stroke-width="1"/>
+        <polyline points="20,30 80,75 140,55 200,35 260,80" fill="none" stroke="#E53935" stroke-width="2" stroke-dasharray="4,3" opacity="0.6"/>
+        <polyline points="20,85 80,50 140,35 200,68 260,28" fill="none" stroke="#1565C0" stroke-width="2.5"/>
+        <!-- pill backgrounds then text -->
+        <circle cx="20" cy="85" r="5" fill="#1565C0"/>
+        <rect x="6" y="61" width="28" height="14" rx="7" fill="white" opacity="0.85"/>
+        <text x="20" y="72" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">137</text>
+
+        <circle cx="80" cy="50" r="5" fill="#1565C0"/>
+        <rect x="66" y="28" width="28" height="14" rx="7" fill="white" opacity="0.85"/>
+        <text x="80" y="39" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">165</text>
+
+        <circle cx="140" cy="35" r="5" fill="#1565C0"/>
+        <rect x="126" y="13" width="28" height="14" rx="7" fill="white" opacity="0.85"/>
+        <text x="140" y="24" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">178</text>
+
+        <circle cx="200" cy="68" r="5" fill="#1565C0"/>
+        <rect x="186" y="46" width="28" height="14" rx="7" fill="white" opacity="0.85"/>
+        <text x="200" y="57" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">152</text>
+
+        <circle cx="260" cy="28" r="5" fill="#1565C0"/>
+        <rect x="246" y="6" width="28" height="14" rx="7" fill="white" opacity="0.85"/>
+        <text x="260" y="17" text-anchor="middle" font-size="10.5" fill="#1565C0" font-family="sans-serif" font-weight="600">196</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>White pill background</h3>
+      <p>Rounded white capsule behind each label. Cuts through crossing lines cleanly. Slightly more visual weight — good for dense multi-series charts.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="optional" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fa;padding:16px 24px 8px;border-radius:8px 8px 0 0;">
+      <div style="font-size:11px;font-family:monospace;color:#555;line-height:1.8;background:#fff;border-radius:6px;padding:10px 14px;border:1px solid #ddd;">
+        <span style="color:#888">// No background (default)</span><br>
+        <span style="color:#6A1B9A">DataPointLabelConfig</span>(<br>
+        &nbsp;&nbsp;background: <span style="color:#1565C0">null</span>,<br>
+        )<br><br>
+        <span style="color:#888">// White pill</span><br>
+        <span style="color:#6A1B9A">DataPointLabelConfig</span>(<br>
+        &nbsp;&nbsp;background: <span style="color:#2E7D32">Colors.white</span>,<br>
+        &nbsp;&nbsp;backgroundOpacity: <span style="color:#2E7D32">0.85</span>,<br>
+        )
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Optional — <code>background</code> color field</h3>
+      <p>Null by default (no background). Set any color + opacity for a pill. Gives full control — white, chart background color, or a tinted match to the series.</p>
+    </div>
+  </div>
+
+</div>
