@@ -3,6 +3,14 @@
 
 import 'dart:ui';
 
+import 'package:flutter/painting.dart'
+    show
+        TextAlign,
+        TextDirection,
+        TextPainter,
+        TextSpan,
+        TextStyle;
+
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
@@ -10,6 +18,7 @@ import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/data_point_label_config.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
 
@@ -254,6 +263,8 @@ class SeriesElement implements ChartElement {
     if (pointCountChanged) {
       _invalidateAllCaches();
     }
+    // Always clear label cache — label config may have changed
+    _labelPainterCache.clear();
   }
 
   /// Invalidates all cached rendering data.
@@ -263,6 +274,15 @@ class SeriesElement implements ChartElement {
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
+    _labelPainterCache.clear();
+  }
+
+  /// Disposes cached resources. Call when this element is no longer needed.
+  void dispose() {
+    for (final tp in _labelPainterCache.values) {
+      tp.dispose();
+    }
+    _labelPainterCache.clear();
   }
 
   @override
@@ -282,6 +302,9 @@ class SeriesElement implements ChartElement {
 
   // Segment color caching - fast-path check result
   bool? _cachedHasSegmentOverrides;
+
+  // TextPainter cache for data-point labels — keyed by formatted text string
+  final Map<String, TextPainter> _labelPainterCache = {};
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   ///
@@ -1105,6 +1128,116 @@ class SeriesElement implements ChartElement {
     return 40.0;
   }
 
+  /// Renders a single data-point label near its marker.
+  ///
+  /// Anchor positions (spec table):
+  /// - above: centre-bottom anchor at (cx+offsetX, cy-r-gap+offsetY)
+  /// - below: centre-top anchor at (cx+offsetX, cy+r+gap+offsetY)
+  /// - left:  right-centre anchor at (cx-r-gap+offsetX, cy+offsetY)
+  /// - right: left-centre anchor at (cx+r+gap+offsetX, cy+offsetY)
+  // Returns the resolved TextPainter and top-left paint origin for a label.
+  // Called from both the background pass and the text pass — cache ensures
+  // layout() runs only once per unique string.
+  (TextPainter, Offset) _resolveLabelLayout(
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    final text = config.formatter != null
+        ? config.formatter!(point)
+        : DataPointLabelConfig.autoFormatLabelValue(
+            point.y,
+            config.showUnit ? unit : null,
+          );
+
+    final tp = _labelPainterCache.putIfAbsent(text, () {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: config.labelColor ?? seriesColor,
+            fontSize: config.fontSize,
+            fontWeight: config.fontWeight,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+      );
+      painter.layout();
+      return painter;
+    });
+
+    const gap = 2.0;
+    final double paintX;
+    final double paintY;
+    switch (config.position) {
+      case DataPointLabelPosition.above:
+        paintX = markerCenter.dx + config.offsetX - tp.width / 2;
+        paintY =
+            markerCenter.dy - markerRadius - gap + config.offsetY - tp.height;
+        break;
+      case DataPointLabelPosition.below:
+        paintX = markerCenter.dx + config.offsetX - tp.width / 2;
+        paintY = markerCenter.dy + markerRadius + gap + config.offsetY;
+        break;
+      case DataPointLabelPosition.left:
+        paintX =
+            markerCenter.dx - markerRadius - gap + config.offsetX - tp.width;
+        paintY = markerCenter.dy + config.offsetY - tp.height / 2;
+        break;
+      case DataPointLabelPosition.right:
+        paintX = markerCenter.dx + markerRadius + gap + config.offsetX;
+        paintY = markerCenter.dy + config.offsetY - tp.height / 2;
+        break;
+    }
+    return (tp, Offset(paintX, paintY));
+  }
+
+  void _paintDataPointLabelBackground(
+    Canvas canvas,
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    if (config.background == null) return;
+    final (tp, paintOrigin) = _resolveLabelLayout(
+        markerCenter, markerRadius, point, seriesColor, config, unit);
+    const hPad = 4.0;
+    const vPad = 2.0;
+    final bgRect = Rect.fromLTWH(
+      paintOrigin.dx - hPad,
+      paintOrigin.dy - vPad,
+      tp.width + hPad * 2,
+      tp.height + vPad * 2,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          bgRect, Radius.circular((tp.height + vPad * 2) / 2)),
+      Paint()
+        ..color = config.background!.withValues(alpha: config.backgroundOpacity),
+    );
+  }
+
+  void _paintDataPointLabelText(
+    Canvas canvas,
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    final (tp, paintOrigin) = _resolveLabelLayout(
+        markerCenter, markerRadius, point, seriesColor, config, unit);
+    tp.paint(canvas, paintOrigin);
+  }
+
   /// Paint markers using PRE-TRANSFORMED points (no redundant dataToPlot calls!)
   ///
   /// [originalIndices] maps each position in [transformedPoints] to its original
@@ -1117,11 +1250,17 @@ class SeriesElement implements ChartElement {
     double radius,
     Color baseColor,
   ) {
-    // Check if any marker in this series is hovered
     final hoveredMarker = coordinator?.hoveredMarker;
     final isThisSeriesHovered = hoveredMarker?.seriesId == series.id;
 
-    // Paint setup
+    // Resolve label config once — null or show==false means zero-cost skip
+    final DataPointLabelConfig? labelConfig = switch (series) {
+      final LineChartSeries s => s.dataPointLabels,
+      final AreaChartSeries s => s.dataPointLabels,
+      _ => null,
+    };
+    final bool paintLabels = labelConfig != null && labelConfig.show;
+
     final normalPaint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
@@ -1135,18 +1274,37 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
+    // Pass 1: background pills — drawn first so markers appear on top of them.
+    if (paintLabels && labelConfig.background != null) {
+      for (int i = 0; i < transformedPoints.length; i++) {
+        final originalIndex = originalIndices?[i] ?? i;
+        if (originalIndex < series.points.length) {
+          _paintDataPointLabelBackground(canvas, transformedPoints[i], radius,
+              series.points[originalIndex], baseColor, labelConfig, series.unit);
+        }
+      }
+    }
+
+    // Pass 2: marker circles — always on top of background pills.
     for (int i = 0; i < transformedPoints.length; i++) {
       final plotPos = transformedPoints[i];
-      // Use original index for hover comparison (handles viewport culling)
       final originalIndex = originalIndices?[i] ?? i;
-
       if (isThisSeriesHovered && originalIndex == hoveredMarker!.markerIndex) {
-        // Paint highlighted marker (larger with border)
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
         canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
       } else {
-        // Paint normal marker
         canvas.drawCircle(plotPos, radius, normalPaint);
+      }
+    }
+
+    // Pass 3: label text — floats above markers.
+    if (paintLabels) {
+      for (int i = 0; i < transformedPoints.length; i++) {
+        final originalIndex = originalIndices?[i] ?? i;
+        if (originalIndex < series.points.length) {
+          _paintDataPointLabelText(canvas, transformedPoints[i], radius,
+              series.points[originalIndex], baseColor, labelConfig, series.unit);
+        }
       }
     }
   }

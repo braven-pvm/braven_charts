@@ -48,6 +48,7 @@ export 'src/models/bar_group_info.dart';
 // X-axis configuration uses XAxisConfig; Y-axis uses YAxisConfig.
 export 'src/models/chart_annotation.dart';
 export 'src/models/chart_data_point.dart';
+export 'src/models/data_point_label_config.dart';
 export 'src/models/chart_series.dart';
 export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';

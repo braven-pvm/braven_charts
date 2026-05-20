@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
+import 'data_point_label_config.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 
@@ -288,6 +289,7 @@ class LineChartSeries extends ChartSeries {
     this.tension = 0.25,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
+    this.dataPointLabels,
   });
 
   final LineInterpolation interpolation;
@@ -296,6 +298,7 @@ class LineChartSeries extends ChartSeries {
       tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
+  final DataPointLabelConfig? dataPointLabels;
 
   @override
   LineChartSeries copyWith({
@@ -315,6 +318,7 @@ class LineChartSeries extends ChartSeries {
     double? tension,
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
+    DataPointLabelConfig? dataPointLabels,
   }) {
     return LineChartSeries(
       id: id ?? this.id,
@@ -332,12 +336,37 @@ class LineChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
 
   @override
   String toString() =>
       'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LineChartSeries) return false;
+    return super == other &&
+        other.interpolation == interpolation &&
+        other.strokeWidth == strokeWidth &&
+        other.tension == tension &&
+        other.showDataPointMarkers == showDataPointMarkers &&
+        other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointLabels == dataPointLabels;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        super.hashCode,
+        interpolation,
+        strokeWidth,
+        tension,
+        showDataPointMarkers,
+        dataPointMarkerRadius,
+        dataPointLabels,
+      ]);
 }
 
 /// Scatter plot series with configurable marker size.
@@ -409,6 +438,7 @@ class AreaChartSeries extends ChartSeries {
     this.fillOpacity = 0.3,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
+    this.dataPointLabels,
   });
 
   final LineInterpolation interpolation;
@@ -417,6 +447,7 @@ class AreaChartSeries extends ChartSeries {
   final double fillOpacity;
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
+  final DataPointLabelConfig? dataPointLabels;
 
   @override
   AreaChartSeries copyWith({
@@ -437,6 +468,7 @@ class AreaChartSeries extends ChartSeries {
     double? fillOpacity,
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
+    DataPointLabelConfig? dataPointLabels,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
@@ -455,12 +487,39 @@ class AreaChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
 
   @override
   String toString() =>
       'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AreaChartSeries) return false;
+    return super == other &&
+        other.interpolation == interpolation &&
+        other.strokeWidth == strokeWidth &&
+        other.tension == tension &&
+        other.fillOpacity == fillOpacity &&
+        other.showDataPointMarkers == showDataPointMarkers &&
+        other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointLabels == dataPointLabels;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        super.hashCode,
+        interpolation,
+        strokeWidth,
+        tension,
+        fillOpacity,
+        showDataPointMarkers,
+        dataPointMarkerRadius,
+        dataPointLabels,
+      ]);
 }
 
 /// Bar chart series with configurable width.
