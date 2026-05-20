@@ -97,6 +97,9 @@ class AxisLayoutManager {
           axisWidth,
           chartArea.height,
         );
+
+      case YAxisPosition.hidden:
+        return Rect.zero;
     }
   }
 

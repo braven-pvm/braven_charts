@@ -34,4 +34,19 @@ enum YAxisPosition {
   /// Use for a tertiary or quaternary axis when both [left] and [right]
   /// positions are already occupied.
   rightOuter,
+
+  /// Hidden axis — participates in data normalization but takes no visual space.
+  ///
+  /// Equivalent to setting [YAxisConfig.visible] to `false`. Use when a series
+  /// needs its own Y-axis for normalization purposes but the axis itself
+  /// should not be rendered (no ticks, labels, or line).
+  ///
+  /// Example:
+  /// ```dart
+  /// LineChartSeries(
+  ///   id: 'reference',
+  ///   yAxisConfig: YAxisConfig(position: YAxisPosition.hidden, min: 0, max: 100),
+  /// )
+  /// ```
+  hidden,
 }

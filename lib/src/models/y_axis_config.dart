@@ -166,7 +166,7 @@ class YAxisConfig {
     this.max,
     this.renderMin,
     this.renderMax,
-    this.visible = true,
+    bool visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
     this.showTickLabels = true,
@@ -184,6 +184,7 @@ class YAxisConfig {
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
   })  : id = '',
+        visible = position == YAxisPosition.hidden ? false : visible,
         assert(minWidth >= 0, 'minWidth must be non-negative'),
         assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
         assert(
@@ -209,7 +210,7 @@ class YAxisConfig {
     this.max,
     this.renderMin,
     this.renderMax,
-    this.visible = true,
+    bool visible = true,
     this.showAxisLine = true,
     this.showTicks = true,
     this.showTickLabels = true,
@@ -226,7 +227,7 @@ class YAxisConfig {
     this.showMinorTicks = false,
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
-  });
+  }) : visible = position == YAxisPosition.hidden ? false : visible;
 
   /// Creates a Y-axis configuration with an explicit ID for testing.
   ///

@@ -86,6 +86,7 @@ class InternalAxisConfig {
         return AxisPosition.right;
       case YAxisPosition.left:
       case YAxisPosition.leftOuter:
+      case YAxisPosition.hidden:
         return AxisPosition.left;
     }
   }

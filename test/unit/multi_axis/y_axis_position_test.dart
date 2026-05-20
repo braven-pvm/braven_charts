@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('YAxisPosition', () {
-    test('has exactly 4 values', () {
-      expect(YAxisPosition.values.length, equals(4));
+    test('has exactly 5 values', () {
+      expect(YAxisPosition.values.length, equals(5));
     });
 
     test('contains leftOuter value', () {
@@ -35,6 +35,13 @@ void main() {
       );
     });
 
+    test('contains hidden value', () {
+      expect(
+        YAxisPosition.values.contains(YAxisPosition.hidden),
+        isTrue,
+      );
+    });
+
     group('layout order (left to right)', () {
       test('leftOuter is first (index 0)', () {
         expect(YAxisPosition.leftOuter.index, equals(0));
@@ -60,6 +67,7 @@ void main() {
               YAxisPosition.left,
               YAxisPosition.right,
               YAxisPosition.rightOuter,
+              YAxisPosition.hidden,
             ]));
       });
     });
@@ -79,6 +87,10 @@ void main() {
 
       test('rightOuter has correct name', () {
         expect(YAxisPosition.rightOuter.name, equals('rightOuter'));
+      });
+
+      test('hidden has correct name', () {
+        expect(YAxisPosition.hidden.name, equals('hidden'));
       });
     });
   });

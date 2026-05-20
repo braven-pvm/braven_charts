@@ -442,6 +442,24 @@ void main() {
         );
         expect(config.position, equals(YAxisPosition.rightOuter));
       });
+
+      test('hidden position forces visible to false', () {
+        final config = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.hidden,
+        );
+        expect(config.position, equals(YAxisPosition.hidden));
+        expect(config.visible, isFalse);
+      });
+
+      test('hidden position overrides explicit visible:true', () {
+        final config = YAxisConfig.withId(
+          id: 'test',
+          position: YAxisPosition.hidden,
+          visible: true,
+        );
+        expect(config.visible, isFalse);
+      });
     });
   });
 }
