@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'data_point_label_config.dart';
+import 'series_inline_label_config.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 
@@ -302,6 +303,7 @@ class LineChartSeries extends ChartSeries {
     this.dataPointMarkerBackground = Colors.white,
     this.lineGlow = 0.0,
     this.dataPointLabels,
+    this.inlineLabel,
   });
 
   final LineInterpolation interpolation;
@@ -316,6 +318,7 @@ class LineChartSeries extends ChartSeries {
   final Color dataPointMarkerBackground;
   final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
+  final SeriesInlineLabelConfig? inlineLabel;
 
   @override
   LineChartSeries copyWith({
@@ -339,6 +342,7 @@ class LineChartSeries extends ChartSeries {
     Color? dataPointMarkerBackground,
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
+    SeriesInlineLabelConfig? inlineLabel,
   }) {
     return LineChartSeries(
       id: id ?? this.id,
@@ -362,6 +366,7 @@ class LineChartSeries extends ChartSeries {
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
+      inlineLabel: inlineLabel ?? this.inlineLabel,
     );
   }
 
@@ -382,7 +387,8 @@ class LineChartSeries extends ChartSeries {
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.lineGlow == lineGlow &&
-        other.dataPointLabels == dataPointLabels;
+        other.dataPointLabels == dataPointLabels &&
+        other.inlineLabel == inlineLabel;
   }
 
   @override
@@ -397,6 +403,7 @@ class LineChartSeries extends ChartSeries {
         dataPointMarkerBackground,
         lineGlow,
         dataPointLabels,
+        inlineLabel,
       ]);
 }
 
@@ -473,6 +480,7 @@ class AreaChartSeries extends ChartSeries {
     this.dataPointMarkerBackground = Colors.white,
     this.lineGlow = 0.0,
     this.dataPointLabels,
+    this.inlineLabel,
   });
 
   final LineInterpolation interpolation;
@@ -487,6 +495,7 @@ class AreaChartSeries extends ChartSeries {
   final Color dataPointMarkerBackground;
   final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
+  final SeriesInlineLabelConfig? inlineLabel;
 
   @override
   AreaChartSeries copyWith({
@@ -511,6 +520,7 @@ class AreaChartSeries extends ChartSeries {
     Color? dataPointMarkerBackground,
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
+    SeriesInlineLabelConfig? inlineLabel,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
@@ -535,6 +545,7 @@ class AreaChartSeries extends ChartSeries {
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
+      inlineLabel: inlineLabel ?? this.inlineLabel,
     );
   }
 
@@ -556,7 +567,8 @@ class AreaChartSeries extends ChartSeries {
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.lineGlow == lineGlow &&
-        other.dataPointLabels == dataPointLabels;
+        other.dataPointLabels == dataPointLabels &&
+        other.inlineLabel == inlineLabel;
   }
 
   @override
@@ -572,6 +584,7 @@ class AreaChartSeries extends ChartSeries {
         dataPointMarkerBackground,
         lineGlow,
         dataPointLabels,
+        inlineLabel,
       ]);
 }
 

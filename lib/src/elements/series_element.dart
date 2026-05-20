@@ -19,6 +19,7 @@ import '../models/bar_group_info.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
+import '../models/series_inline_label_config.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
 
@@ -607,6 +608,8 @@ class SeriesElement implements ChartElement {
         baseColor,
       );
     }
+
+    _paintSeriesInlineLabel(canvas, series, _cachedTransformedPoints ?? [], baseColor);
   }
 
   /// Multi-style line rendering with per-segment color/width overrides.
@@ -730,6 +733,8 @@ class SeriesElement implements ChartElement {
         baseColor,
       );
     }
+
+    _paintSeriesInlineLabel(canvas, series, transformedPoints, baseColor);
   }
 
   /// Builds a path for a single style region.
@@ -874,6 +879,8 @@ class SeriesElement implements ChartElement {
         baseColor,
       );
     }
+
+    _paintSeriesInlineLabel(canvas, series, transformedPoints, baseColor);
   }
 
   /// Paints an area series with a single uniform color.
@@ -1368,6 +1375,86 @@ class SeriesElement implements ChartElement {
         }
       }
     }
+  }
+
+  void _paintSeriesInlineLabel(
+    Canvas canvas,
+    ChartSeries series,
+    List<Offset> transformedPoints,
+    Color baseColor,
+  ) {
+    final SeriesInlineLabelConfig? config = switch (series) {
+      final LineChartSeries s => s.inlineLabel,
+      final AreaChartSeries s => s.inlineLabel,
+      _ => null,
+    };
+    if (config == null || transformedPoints.length < 2) return;
+
+    final double anchorX = switch (config.position) {
+      SeriesLabelPosition.left => transformedPoints.first.dx,
+      SeriesLabelPosition.center =>
+        (transformedPoints.first.dx + transformedPoints.last.dx) / 2,
+      SeriesLabelPosition.right => transformedPoints.last.dx,
+    };
+
+    double? interpolatedY;
+    for (int i = 0; i < transformedPoints.length - 1; i++) {
+      final a = transformedPoints[i];
+      final b = transformedPoints[i + 1];
+      if (anchorX >= a.dx && anchorX <= b.dx) {
+        final t = (b.dx == a.dx) ? 0.0 : (anchorX - a.dx) / (b.dx - a.dx);
+        interpolatedY = a.dy + t * (b.dy - a.dy);
+        break;
+      }
+    }
+    if (interpolatedY == null &&
+        (anchorX - transformedPoints.last.dx).abs() < 1.0) {
+      interpolatedY = transformedPoints.last.dy;
+    }
+    if (interpolatedY == null) return;
+
+    final effectiveColor = config.color ?? baseColor;
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: config.text,
+        style: TextStyle(
+          color: effectiveColor,
+          fontSize: config.fontSize,
+          fontWeight: config.fontWeight,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.left,
+    )..layout();
+
+    final double paintX = switch (config.position) {
+      SeriesLabelPosition.left => anchorX,
+      SeriesLabelPosition.center => anchorX - tp.width / 2,
+      SeriesLabelPosition.right => anchorX - tp.width,
+    };
+    final double paintY = interpolatedY + config.offsetY - tp.height / 2;
+
+    if (config.background != null) {
+      const hPad = 4.0;
+      const vPad = 2.0;
+      final bgRect = Rect.fromLTWH(
+        paintX - hPad,
+        paintY - vPad,
+        tp.width + hPad * 2,
+        tp.height + vPad * 2,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            bgRect, Radius.circular((tp.height + vPad * 2) / 2)),
+        Paint()
+          ..color = config.background!.color
+              .withValues(alpha: config.background!.opacity),
+      );
+    }
+
+    tp.paint(canvas, Offset(paintX, paintY));
+    tp.dispose();
   }
 
   @override
