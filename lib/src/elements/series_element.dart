@@ -1135,8 +1135,10 @@ class SeriesElement implements ChartElement {
   /// - below: centre-top anchor at (cx+offsetX, cy+r+gap+offsetY)
   /// - left:  right-centre anchor at (cx-r-gap+offsetX, cy+offsetY)
   /// - right: left-centre anchor at (cx+r+gap+offsetX, cy+offsetY)
-  void _paintDataPointLabel(
-    Canvas canvas,
+  // Returns the resolved TextPainter and top-left paint origin for a label.
+  // Called from both the background pass and the text pass — cache ensures
+  // layout() runs only once per unique string.
+  (TextPainter, Offset) _resolveLabelLayout(
     Offset markerCenter,
     double markerRadius,
     ChartDataPoint point,
@@ -1191,29 +1193,48 @@ class SeriesElement implements ChartElement {
         paintY = markerCenter.dy + config.offsetY - tp.height / 2;
         break;
     }
-    final paintOrigin = Offset(paintX, paintY);
+    return (tp, Offset(paintX, paintY));
+  }
 
-    if (config.background != null) {
-      const hPad = 4.0;
-      const vPad = 2.0;
-      final bgRect = Rect.fromLTWH(
-        paintX - hPad,
-        paintY - vPad,
-        tp.width + hPad * 2,
-        tp.height + vPad * 2,
-      );
-      final rrect = RRect.fromRectAndRadius(
-        bgRect,
-        Radius.circular((tp.height + vPad * 2) / 2),
-      );
-      canvas.drawRRect(
-        rrect,
-        Paint()
-          ..color =
-              config.background!.withValues(alpha: config.backgroundOpacity),
-      );
-    }
+  void _paintDataPointLabelBackground(
+    Canvas canvas,
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    if (config.background == null) return;
+    final (tp, paintOrigin) = _resolveLabelLayout(
+        markerCenter, markerRadius, point, seriesColor, config, unit);
+    const hPad = 4.0;
+    const vPad = 2.0;
+    final bgRect = Rect.fromLTWH(
+      paintOrigin.dx - hPad,
+      paintOrigin.dy - vPad,
+      tp.width + hPad * 2,
+      tp.height + vPad * 2,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          bgRect, Radius.circular((tp.height + vPad * 2) / 2)),
+      Paint()
+        ..color = config.background!.withValues(alpha: config.backgroundOpacity),
+    );
+  }
 
+  void _paintDataPointLabelText(
+    Canvas canvas,
+    Offset markerCenter,
+    double markerRadius,
+    ChartDataPoint point,
+    Color seriesColor,
+    DataPointLabelConfig config,
+    String? unit,
+  ) {
+    final (tp, paintOrigin) = _resolveLabelLayout(
+        markerCenter, markerRadius, point, seriesColor, config, unit);
     tp.paint(canvas, paintOrigin);
   }
 
@@ -1253,29 +1274,37 @@ class SeriesElement implements ChartElement {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
+    // Pass 1: background pills — drawn first so markers appear on top of them.
+    if (paintLabels && labelConfig.background != null) {
+      for (int i = 0; i < transformedPoints.length; i++) {
+        final originalIndex = originalIndices?[i] ?? i;
+        if (originalIndex < series.points.length) {
+          _paintDataPointLabelBackground(canvas, transformedPoints[i], radius,
+              series.points[originalIndex], baseColor, labelConfig, series.unit);
+        }
+      }
+    }
+
+    // Pass 2: marker circles — always on top of background pills.
     for (int i = 0; i < transformedPoints.length; i++) {
       final plotPos = transformedPoints[i];
       final originalIndex = originalIndices?[i] ?? i;
-
       if (isThisSeriesHovered && originalIndex == hoveredMarker!.markerIndex) {
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
         canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
       } else {
         canvas.drawCircle(plotPos, radius, normalPaint);
       }
+    }
 
-      // Draw label after marker so it renders on top
-      if (paintLabels && originalIndex < series.points.length) {
-        final point = series.points[originalIndex];
-        _paintDataPointLabel(
-          canvas,
-          plotPos,
-          radius,
-          point,
-          baseColor,
-          labelConfig,
-          series.unit,
-        );
+    // Pass 3: label text — floats above markers.
+    if (paintLabels) {
+      for (int i = 0; i < transformedPoints.length; i++) {
+        final originalIndex = originalIndices?[i] ?? i;
+        if (originalIndex < series.points.length) {
+          _paintDataPointLabelText(canvas, transformedPoints[i], radius,
+              series.points[originalIndex], baseColor, labelConfig, series.unit);
+        }
       }
     }
   }
