@@ -1,5 +1,7 @@
 library;
 
+import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/data_point_label_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,6 +138,69 @@ void main() {
       test('no unit when unit is empty string', () {
         expect(DataPointLabelConfig.autoFormatLabelValue(5.0, ''), '5');
       });
+    });
+  });
+
+  group('LineChartSeries.dataPointLabels', () {
+    test('defaults to null', () {
+      final s = LineChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+      );
+      expect(s.dataPointLabels, isNull);
+    });
+
+    test('can be set', () {
+      final s = LineChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+        dataPointLabels: const DataPointLabelConfig(show: true),
+      );
+      expect(s.dataPointLabels, isNotNull);
+      expect(s.dataPointLabels!.show, isTrue);
+    });
+
+    test('copyWith preserves dataPointLabels when not overridden', () {
+      final s = LineChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+        dataPointLabels: const DataPointLabelConfig(show: true),
+      );
+      final copy = s.copyWith(id: 'test2');
+      expect(copy.dataPointLabels, isNotNull);
+      expect(copy.dataPointLabels!.show, isTrue);
+    });
+
+    test('copyWith can override dataPointLabels', () {
+      final s = LineChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+        dataPointLabels: const DataPointLabelConfig(show: false),
+      );
+      final copy = s.copyWith(
+        dataPointLabels: const DataPointLabelConfig(show: true),
+      );
+      expect(copy.dataPointLabels!.show, isTrue);
+    });
+  });
+
+  group('AreaChartSeries.dataPointLabels', () {
+    test('defaults to null', () {
+      final s = AreaChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+      );
+      expect(s.dataPointLabels, isNull);
+    });
+
+    test('can be set and copyWith preserves it', () {
+      final s = AreaChartSeries(
+        id: 'test',
+        points: const [ChartDataPoint(x: 1, y: 1)],
+        dataPointLabels: const DataPointLabelConfig(show: true, fontSize: 12),
+      );
+      final copy = s.copyWith();
+      expect(copy.dataPointLabels!.fontSize, 12.0);
     });
   });
 }
