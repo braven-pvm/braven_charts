@@ -17,6 +17,7 @@ class DataPointLabelsPage extends StatefulWidget {
 class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
   DataPointLabelPosition _position = DataPointLabelPosition.above;
   double _fontSize = 10.0;
+  FontWeight _fontWeight = FontWeight.w600;
   bool _showUnit = false;
   bool _showBackground = false;
   Color _backgroundColor = Colors.white;
@@ -48,6 +49,7 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
         show: true,
         position: _position,
         fontSize: _fontSize,
+        fontWeight: _fontWeight,
         showUnit: _showUnit,
         labelColor: _customLabelColor ? _labelColor : null,
         formatter: _customFormatter ? (p) => '${p.y.toStringAsFixed(1)}!' : null,
@@ -171,6 +173,24 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
                       suffix: 'px',
                       decimalPlaces: 0,
                       onChanged: (v) => setState(() => _fontSize = v),
+                    ),
+                    EnumOption<FontWeight>(
+                      label: 'Font Weight',
+                      value: _fontWeight,
+                      values: const [
+                        FontWeight.w400,
+                        FontWeight.w500,
+                        FontWeight.w600,
+                        FontWeight.w700,
+                      ],
+                      labelBuilder: (w) => switch (w) {
+                        FontWeight.w400 => '400',
+                        FontWeight.w500 => '500',
+                        FontWeight.w600 => '600',
+                        FontWeight.w700 => '700',
+                        _ => w.toString(),
+                      },
+                      onChanged: (v) => setState(() => _fontWeight = v),
                     ),
                     BoolOption(
                       label: 'Show Unit',
