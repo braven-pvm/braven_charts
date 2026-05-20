@@ -299,6 +299,7 @@ class LineChartSeries extends ChartSeries {
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
     this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
+    this.dataPointMarkerBackground = Colors.white,
     this.dataPointLabels,
   });
 
@@ -309,6 +310,9 @@ class LineChartSeries extends ChartSeries {
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
   final DataPointMarkerStyle dataPointMarkerStyle;
+  /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
+  /// Set this to match your chart background so the circle masks the line.
+  final Color dataPointMarkerBackground;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -330,6 +334,7 @@ class LineChartSeries extends ChartSeries {
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
     DataPointMarkerStyle? dataPointMarkerStyle,
+    Color? dataPointMarkerBackground,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return LineChartSeries(
@@ -350,6 +355,8 @@ class LineChartSeries extends ChartSeries {
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
       dataPointMarkerStyle:
           dataPointMarkerStyle ?? this.dataPointMarkerStyle,
+      dataPointMarkerBackground:
+          dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -369,6 +376,7 @@ class LineChartSeries extends ChartSeries {
         other.showDataPointMarkers == showDataPointMarkers &&
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
+        other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -381,6 +389,7 @@ class LineChartSeries extends ChartSeries {
         showDataPointMarkers,
         dataPointMarkerRadius,
         dataPointMarkerStyle,
+        dataPointMarkerBackground,
         dataPointLabels,
       ]);
 }
@@ -455,6 +464,7 @@ class AreaChartSeries extends ChartSeries {
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
     this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
+    this.dataPointMarkerBackground = Colors.white,
     this.dataPointLabels,
   });
 
@@ -465,6 +475,9 @@ class AreaChartSeries extends ChartSeries {
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
   final DataPointMarkerStyle dataPointMarkerStyle;
+  /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
+  /// Set this to match your chart background so the circle masks the line.
+  final Color dataPointMarkerBackground;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -487,6 +500,7 @@ class AreaChartSeries extends ChartSeries {
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
     DataPointMarkerStyle? dataPointMarkerStyle,
+    Color? dataPointMarkerBackground,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return AreaChartSeries(
@@ -508,6 +522,8 @@ class AreaChartSeries extends ChartSeries {
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
       dataPointMarkerStyle:
           dataPointMarkerStyle ?? this.dataPointMarkerStyle,
+      dataPointMarkerBackground:
+          dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -528,6 +544,7 @@ class AreaChartSeries extends ChartSeries {
         other.showDataPointMarkers == showDataPointMarkers &&
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
+        other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -541,6 +558,7 @@ class AreaChartSeries extends ChartSeries {
         showDataPointMarkers,
         dataPointMarkerRadius,
         dataPointMarkerStyle,
+        dataPointMarkerBackground,
         dataPointLabels,
       ]);
 }
