@@ -1261,13 +1261,22 @@ class SeriesElement implements ChartElement {
     };
     final bool paintLabels = labelConfig != null && labelConfig.show;
 
+    final markerStyle = switch (series) {
+      final LineChartSeries s => s.dataPointMarkerStyle,
+      final AreaChartSeries s => s.dataPointMarkerStyle,
+      _ => DataPointMarkerStyle.filled,
+    };
+    final isHollow = markerStyle == DataPointMarkerStyle.hollow;
+
     final normalPaint = Paint()
       ..color = baseColor
-      ..style = PaintingStyle.fill;
+      ..style = isHollow ? PaintingStyle.stroke : PaintingStyle.fill
+      ..strokeWidth = 2.0;
 
     final hoverPaint = Paint()
       ..color = baseColor
-      ..style = PaintingStyle.fill;
+      ..style = isHollow ? PaintingStyle.stroke : PaintingStyle.fill
+      ..strokeWidth = 2.0;
 
     final borderPaint = Paint()
       ..color = baseColor
@@ -1291,7 +1300,8 @@ class SeriesElement implements ChartElement {
       final originalIndex = originalIndices?[i] ?? i;
       if (isThisSeriesHovered && originalIndex == hoveredMarker!.markerIndex) {
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
-        canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
+        // Filled hover gets a contrasting border; hollow is already a stroke.
+        if (!isHollow) canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
       } else {
         canvas.drawCircle(plotPos, radius, normalPaint);
       }

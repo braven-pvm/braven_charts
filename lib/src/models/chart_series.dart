@@ -9,6 +9,15 @@ import 'data_point_label_config.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 
+/// Fill style for data point markers.
+enum DataPointMarkerStyle {
+  /// Solid filled circle (default).
+  filled,
+
+  /// Outline-only circle (stroke, no fill).
+  hollow,
+}
+
 /// Interpolation methods for line and area charts.
 enum LineInterpolation {
   linear,
@@ -289,6 +298,7 @@ class LineChartSeries extends ChartSeries {
     this.tension = 0.25,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
+    this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
     this.dataPointLabels,
   });
 
@@ -298,6 +308,7 @@ class LineChartSeries extends ChartSeries {
       tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
+  final DataPointMarkerStyle dataPointMarkerStyle;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -318,6 +329,7 @@ class LineChartSeries extends ChartSeries {
     double? tension,
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
+    DataPointMarkerStyle? dataPointMarkerStyle,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return LineChartSeries(
@@ -336,6 +348,8 @@ class LineChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointMarkerStyle:
+          dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -354,6 +368,7 @@ class LineChartSeries extends ChartSeries {
         other.tension == tension &&
         other.showDataPointMarkers == showDataPointMarkers &&
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -365,6 +380,7 @@ class LineChartSeries extends ChartSeries {
         tension,
         showDataPointMarkers,
         dataPointMarkerRadius,
+        dataPointMarkerStyle,
         dataPointLabels,
       ]);
 }
@@ -438,6 +454,7 @@ class AreaChartSeries extends ChartSeries {
     this.fillOpacity = 0.3,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
+    this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
     this.dataPointLabels,
   });
 
@@ -447,6 +464,7 @@ class AreaChartSeries extends ChartSeries {
   final double fillOpacity;
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
+  final DataPointMarkerStyle dataPointMarkerStyle;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -468,6 +486,7 @@ class AreaChartSeries extends ChartSeries {
     double? fillOpacity,
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
+    DataPointMarkerStyle? dataPointMarkerStyle,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return AreaChartSeries(
@@ -487,6 +506,8 @@ class AreaChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
+      dataPointMarkerStyle:
+          dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -506,6 +527,7 @@ class AreaChartSeries extends ChartSeries {
         other.fillOpacity == fillOpacity &&
         other.showDataPointMarkers == showDataPointMarkers &&
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
+        other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -518,6 +540,7 @@ class AreaChartSeries extends ChartSeries {
         fillOpacity,
         showDataPointMarkers,
         dataPointMarkerRadius,
+        dataPointMarkerStyle,
         dataPointLabels,
       ]);
 }

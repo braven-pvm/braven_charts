@@ -19,6 +19,7 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
   double _fontSize = 10.0;
   FontWeight _fontWeight = FontWeight.w600;
   bool _showUnit = false;
+  DataPointMarkerStyle _markerStyle = DataPointMarkerStyle.filled;
   bool _showBackground = false;
   Color _backgroundColor = Colors.white;
   bool _customLabelColor = false;
@@ -80,6 +81,7 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
                         strokeWidth: 2.0,
                         showDataPointMarkers: true,
                         dataPointMarkerRadius: 4.0,
+                        dataPointMarkerStyle: _markerStyle,
                         unit: 'mmol/L',
                         dataPointLabels: _buildConfig(),
                       ),
@@ -191,6 +193,13 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
                         _ => w.toString(),
                       },
                       onChanged: (v) => setState(() => _fontWeight = v),
+                    ),
+                    EnumOption<DataPointMarkerStyle>(
+                      label: 'Marker Style',
+                      value: _markerStyle,
+                      values: DataPointMarkerStyle.values,
+                      labelBuilder: (s) => s.name,
+                      onChanged: (v) => setState(() => _markerStyle = v),
                     ),
                     BoolOption(
                       label: 'Show Unit',
