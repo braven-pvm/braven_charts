@@ -107,7 +107,7 @@ class DataPointLabelConfig {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         show,
         position,
         offsetX,
@@ -119,7 +119,7 @@ class DataPointLabelConfig {
         formatter,
         background,
         backgroundOpacity,
-      );
+      ]);
 
   @override
   String toString() =>

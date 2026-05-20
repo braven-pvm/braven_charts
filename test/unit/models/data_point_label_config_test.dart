@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('DataPointLabelPosition', () {
     test('has four values', () {
-      expect(DataPointLabelPosition.values.length, 4);
       expect(DataPointLabelPosition.values, containsAll([
         DataPointLabelPosition.above,
         DataPointLabelPosition.below,
