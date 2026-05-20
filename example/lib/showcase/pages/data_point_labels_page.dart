@@ -19,6 +19,9 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
   double _fontSize = 10.0;
   bool _showUnit = false;
   bool _showBackground = false;
+  Color _backgroundColor = Colors.white;
+  bool _customLabelColor = false;
+  Color _labelColor = Colors.black87;
   bool _customFormatter = false;
 
   static const _points = [
@@ -46,8 +49,9 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
         position: _position,
         fontSize: _fontSize,
         showUnit: _showUnit,
+        labelColor: _customLabelColor ? _labelColor : null,
         formatter: _customFormatter ? (p) => '${p.y.toStringAsFixed(1)}!' : null,
-        background: _showBackground ? Colors.white : null,
+        background: _showBackground ? _backgroundColor : null,
         backgroundOpacity: 0.88,
       );
 
@@ -178,6 +182,41 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
                       value: _showBackground,
                       onChanged: (v) => setState(() => _showBackground = v),
                     ),
+                    if (_showBackground)
+                      ColorOption(
+                        label: 'Background Color',
+                        value: _backgroundColor,
+                        colors: const [
+                          Colors.white,
+                          Color(0xFFF3F4F6),
+                          Color(0xFFFEF9C3),
+                          Color(0xFFDCFCE7),
+                          Color(0xFFDBEAFE),
+                          Color(0xFFFFE4E6),
+                          Colors.black,
+                        ],
+                        onChanged: (c) => setState(() => _backgroundColor = c),
+                      ),
+                    BoolOption(
+                      label: 'Custom Text Color',
+                      value: _customLabelColor,
+                      onChanged: (v) => setState(() => _customLabelColor = v),
+                    ),
+                    if (_customLabelColor)
+                      ColorOption(
+                        label: 'Text Color',
+                        value: _labelColor,
+                        colors: const [
+                          Colors.black87,
+                          Colors.white,
+                          Color(0xFF6366F1),
+                          Color(0xFFEF4444),
+                          Color(0xFF10B981),
+                          Color(0xFFF59E0B),
+                          Color(0xFF0EA5E9),
+                        ],
+                        onChanged: (c) => setState(() => _labelColor = c),
+                      ),
                     BoolOption(
                       label: 'Custom Formatter',
                       subtitle: 'y.toStringAsFixed(1) + "!"',
