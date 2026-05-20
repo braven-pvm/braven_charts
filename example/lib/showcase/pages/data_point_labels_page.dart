@@ -156,7 +156,7 @@ class _DataPointLabelsPageState extends State<DataPointLabelsPage> {
               title: 'Label Options',
               children: [
                 OptionSection(
-                  title: 'Chart 1 Controls',
+                  title: 'Configurable Labels',
                   icon: Icons.tune,
                   children: [
                     EnumOption<DataPointLabelPosition>(
