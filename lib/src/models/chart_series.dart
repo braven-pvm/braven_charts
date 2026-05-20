@@ -300,6 +300,7 @@ class LineChartSeries extends ChartSeries {
     this.dataPointMarkerRadius = 3.0,
     this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
     this.dataPointMarkerBackground = Colors.white,
+    this.lineGlow = 0.0,
     this.dataPointLabels,
   });
 
@@ -313,6 +314,7 @@ class LineChartSeries extends ChartSeries {
   /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
   /// Set this to match your chart background so the circle masks the line.
   final Color dataPointMarkerBackground;
+  final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -335,6 +337,7 @@ class LineChartSeries extends ChartSeries {
     double? dataPointMarkerRadius,
     DataPointMarkerStyle? dataPointMarkerStyle,
     Color? dataPointMarkerBackground,
+    double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return LineChartSeries(
@@ -357,6 +360,7 @@ class LineChartSeries extends ChartSeries {
           dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
+      lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -377,6 +381,7 @@ class LineChartSeries extends ChartSeries {
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
+        other.lineGlow == lineGlow &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -390,6 +395,7 @@ class LineChartSeries extends ChartSeries {
         dataPointMarkerRadius,
         dataPointMarkerStyle,
         dataPointMarkerBackground,
+        lineGlow,
         dataPointLabels,
       ]);
 }
@@ -465,6 +471,7 @@ class AreaChartSeries extends ChartSeries {
     this.dataPointMarkerRadius = 3.0,
     this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
     this.dataPointMarkerBackground = Colors.white,
+    this.lineGlow = 0.0,
     this.dataPointLabels,
   });
 
@@ -478,6 +485,7 @@ class AreaChartSeries extends ChartSeries {
   /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
   /// Set this to match your chart background so the circle masks the line.
   final Color dataPointMarkerBackground;
+  final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
 
   @override
@@ -501,6 +509,7 @@ class AreaChartSeries extends ChartSeries {
     double? dataPointMarkerRadius,
     DataPointMarkerStyle? dataPointMarkerStyle,
     Color? dataPointMarkerBackground,
+    double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
   }) {
     return AreaChartSeries(
@@ -524,6 +533,7 @@ class AreaChartSeries extends ChartSeries {
           dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
+      lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
     );
   }
@@ -545,6 +555,7 @@ class AreaChartSeries extends ChartSeries {
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
+        other.lineGlow == lineGlow &&
         other.dataPointLabels == dataPointLabels;
   }
 
@@ -559,6 +570,7 @@ class AreaChartSeries extends ChartSeries {
         dataPointMarkerRadius,
         dataPointMarkerStyle,
         dataPointMarkerBackground,
+        lineGlow,
         dataPointLabels,
       ]);
 }

@@ -19,6 +19,7 @@ import 'pages/theming_page.dart';
 import 'pages/axis_render_range_page.dart';
 import 'pages/data_point_labels_page.dart';
 import 'pages/minor_ticks_page.dart';
+import 'pages/series_styling_page.dart';
 import 'pages/tracking_page.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
@@ -204,6 +205,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.label_outline,
       selectedIcon: Icons.label,
       page: DataPointLabelsPage(),
+      badge: 'NEW',
+    ),
+    NavDestination(
+      label: 'Series Styling',
+      icon: Icons.auto_awesome_outlined,
+      selectedIcon: Icons.auto_awesome,
+      page: const SeriesStylingPage(),
       badge: 'NEW',
     ),
   ];

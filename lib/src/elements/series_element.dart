@@ -583,6 +583,16 @@ class SeriesElement implements ChartElement {
     }
 
     // Paint using the cached path (no regeneration on hover!)
+    if (series.lineGlow > 0) {
+      final glowPaint = Paint()
+        ..color = baseColor.withAlpha(60)
+        ..strokeWidth = effectiveStrokeWidth + series.lineGlow * 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
+      canvas.drawPath(_cachedPath!, glowPaint);
+    }
     canvas.drawPath(_cachedPath!, paint);
 
     // Draw data point markers if enabled (use cached transforms!)
@@ -695,6 +705,16 @@ class SeriesElement implements ChartElement {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 
+      if (series.lineGlow > 0) {
+        final glowPaint = Paint()
+          ..color = region.color.withAlpha(60)
+          ..strokeWidth = region.strokeWidth + series.lineGlow * 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
+        canvas.drawPath(regionPath, glowPaint);
+      }
       canvas.drawPath(regionPath, paint);
     }
 
@@ -912,6 +932,16 @@ class SeriesElement implements ChartElement {
       tension: series.tension,
     );
 
+    if (series.lineGlow > 0) {
+      final glowPaint = Paint()
+        ..color = baseColor.withAlpha(60)
+        ..strokeWidth = strokeWidth + series.lineGlow * 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
+      canvas.drawPath(linePath, glowPaint);
+    }
     canvas.drawPath(linePath, linePaint);
   }
 
@@ -960,6 +990,16 @@ class SeriesElement implements ChartElement {
         ..strokeWidth = region.strokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
+      if (series.lineGlow > 0) {
+        final glowPaint = Paint()
+          ..color = region.color.withAlpha(60)
+          ..strokeWidth = region.strokeWidth + series.lineGlow * 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
+        canvas.drawPath(strokePath, glowPaint);
+      }
       canvas.drawPath(strokePath, strokePaint);
     }
   }
