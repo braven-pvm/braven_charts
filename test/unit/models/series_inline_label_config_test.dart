@@ -11,14 +11,34 @@ void main() {
   });
 
   group('SeriesLabelBackground', () {
-    test('default opacity is 0.85', () {
+    test('default cornerRadius is null (auto-pill)', () {
       const bg = SeriesLabelBackground(color: Colors.white);
-      expect(bg.opacity, 0.85);
+      expect(bg.cornerRadius, isNull);
+    });
+
+    test('default padding is symmetric(horizontal: 4, vertical: 2)', () {
+      const bg = SeriesLabelBackground(color: Colors.white);
+      expect(bg.padding,
+          const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0));
+    });
+
+    test('default borderColor is null', () {
+      const bg = SeriesLabelBackground(color: Colors.white);
+      expect(bg.borderColor, isNull);
+    });
+
+    test('default borderWidth is 1.0', () {
+      const bg = SeriesLabelBackground(color: Colors.white);
+      expect(bg.borderWidth, 1.0);
     });
 
     test('equality', () {
-      const a = SeriesLabelBackground(color: Colors.white, opacity: 0.9);
-      const b = SeriesLabelBackground(color: Colors.white, opacity: 0.9);
+      const a = SeriesLabelBackground(
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0));
+      const b = SeriesLabelBackground(
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0));
       expect(a, equals(b));
     });
 
@@ -28,11 +48,39 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
-    test('copyWith changes color', () {
-      const bg = SeriesLabelBackground(color: Colors.white, opacity: 0.9);
+    test('inequality when cornerRadius differs', () {
+      const a = SeriesLabelBackground(color: Colors.white, cornerRadius: 4.0);
+      const b = SeriesLabelBackground(color: Colors.white, cornerRadius: 8.0);
+      expect(a, isNot(equals(b)));
+    });
+
+    test('inequality when borderColor differs', () {
+      const a = SeriesLabelBackground(color: Colors.white, borderColor: Colors.black);
+      const b = SeriesLabelBackground(color: Colors.white);
+      expect(a, isNot(equals(b)));
+    });
+
+    test('copyWith changes color, preserves other fields', () {
+      const bg = SeriesLabelBackground(
+          color: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0));
       final copy = bg.copyWith(color: Colors.black);
       expect(copy.color, Colors.black);
-      expect(copy.opacity, 0.9);
+      expect(copy.padding,
+          const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0));
+    });
+
+    test('copyWith can set cornerRadius to null', () {
+      const bg = SeriesLabelBackground(color: Colors.white, cornerRadius: 4.0);
+      final copy = bg.copyWith(cornerRadius: null);
+      expect(copy.cornerRadius, isNull);
+    });
+
+    test('copyWith can set borderColor to null', () {
+      const bg = SeriesLabelBackground(
+          color: Colors.white, borderColor: Colors.black);
+      final copy = bg.copyWith(borderColor: null);
+      expect(copy.borderColor, isNull);
     });
   });
 

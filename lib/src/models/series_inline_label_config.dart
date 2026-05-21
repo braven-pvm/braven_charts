@@ -8,32 +8,61 @@ enum SeriesLabelPosition { left, center, right }
 class SeriesLabelBackground {
   const SeriesLabelBackground({
     required this.color,
-    this.opacity = 0.85,
+    this.cornerRadius,
+    this.padding = const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+    this.borderColor,
+    this.borderWidth = 1.0,
   });
 
   final Color color;
-  final double opacity;
+  /// Null = auto-pill (half the pill height). Set to 0 for a rectangle.
+  final double? cornerRadius;
+  final EdgeInsets padding;
+  final Color? borderColor;
+  final double borderWidth;
 
-  SeriesLabelBackground copyWith({Color? color, double? opacity}) =>
+  SeriesLabelBackground copyWith({
+    Color? color,
+    Object? cornerRadius = _sentinel,
+    EdgeInsets? padding,
+    Object? borderColor = _sentinel,
+    double? borderWidth,
+  }) =>
       SeriesLabelBackground(
         color: color ?? this.color,
-        opacity: opacity ?? this.opacity,
+        cornerRadius: cornerRadius == _sentinel
+            ? this.cornerRadius
+            : cornerRadius as double?,
+        padding: padding ?? this.padding,
+        borderColor: borderColor == _sentinel
+            ? this.borderColor
+            : borderColor as Color?,
+        borderWidth: borderWidth ?? this.borderWidth,
       );
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! SeriesLabelBackground) return false;
-    return other.color == color && other.opacity == opacity;
+    return other.color == color &&
+        other.cornerRadius == cornerRadius &&
+        other.padding == padding &&
+        other.borderColor == borderColor &&
+        other.borderWidth == borderWidth;
   }
 
   @override
-  int get hashCode => Object.hash(color, opacity);
+  int get hashCode =>
+      Object.hashAll([color, cornerRadius, padding, borderColor, borderWidth]);
 
   @override
   String toString() =>
-      'SeriesLabelBackground(color: $color, opacity: $opacity)';
+      'SeriesLabelBackground(color: $color, cornerRadius: $cornerRadius, '
+      'padding: $padding, borderColor: $borderColor, borderWidth: $borderWidth)';
 }
+
+// Sentinel for nullable copyWith params so callers can explicitly pass null.
+const Object _sentinel = Object();
 
 class SeriesInlineLabelConfig {
   const SeriesInlineLabelConfig({

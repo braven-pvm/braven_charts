@@ -1436,21 +1436,27 @@ class SeriesElement implements ChartElement {
     final double paintY = interpolatedY + config.offsetY - tp.height / 2;
 
     if (config.background != null) {
-      const hPad = 4.0;
-      const vPad = 2.0;
+      final bg = config.background!;
+      final pad = bg.padding;
       final bgRect = Rect.fromLTWH(
-        paintX - hPad,
-        paintY - vPad,
-        tp.width + hPad * 2,
-        tp.height + vPad * 2,
+        paintX - pad.left,
+        paintY - pad.top,
+        tp.width + pad.horizontal,
+        tp.height + pad.vertical,
       );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            bgRect, Radius.circular((tp.height + vPad * 2) / 2)),
-        Paint()
-          ..color = config.background!.color
-              .withValues(alpha: config.background!.opacity),
-      );
+      final radius = Radius.circular(
+          bg.cornerRadius ?? (tp.height + pad.vertical) / 2);
+      final rrect = RRect.fromRectAndRadius(bgRect, radius);
+      canvas.drawRRect(rrect, Paint()..color = bg.color);
+      if (bg.borderColor != null) {
+        canvas.drawRRect(
+          rrect,
+          Paint()
+            ..color = bg.borderColor!
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = bg.borderWidth,
+        );
+      }
     }
 
     tp.paint(canvas, Offset(paintX, paintY));

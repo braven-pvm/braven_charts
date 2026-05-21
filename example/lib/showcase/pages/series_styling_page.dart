@@ -24,6 +24,12 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
   bool _labelBackground = false;
   Color _labelBackgroundColor = Colors.white;
   double _labelBackgroundOpacity = 0.85;
+  double? _labelCornerRadius;
+  double _labelPadH = 4.0;
+  double _labelPadV = 2.0;
+  bool _labelBorder = false;
+  Color _labelBorderColor = Colors.black87;
+  double _labelBorderWidth = 1.0;
 
   static const _points = [
     ChartDataPoint(x: 0, y: 120),
@@ -55,8 +61,13 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
         fontWeight: _labelFontWeight,
         background: _labelBackground
             ? SeriesLabelBackground(
-                color: _labelBackgroundColor,
-                opacity: _labelBackgroundOpacity,
+                color: _labelBackgroundColor
+                    .withValues(alpha: _labelBackgroundOpacity),
+                cornerRadius: _labelCornerRadius,
+                padding: EdgeInsets.symmetric(
+                    horizontal: _labelPadH, vertical: _labelPadV),
+                borderColor: _labelBorder ? _labelBorderColor : null,
+                borderWidth: _labelBorderWidth,
               )
             : null,
       );
@@ -241,16 +252,79 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
                             setState(() => _labelBackgroundColor = c),
                       ),
                       SliderOption(
-                        label: 'Background Opacity',
+                        label: 'Opacity',
                         value: _labelBackgroundOpacity,
-                        min: 0.1,
+                        min: 0.0,
                         max: 1.0,
-                        divisions: 9,
+                        divisions: 10,
                         suffix: '',
                         decimalPlaces: 1,
                         onChanged: (v) =>
                             setState(() => _labelBackgroundOpacity = v),
                       ),
+                      SliderOption(
+                        label: 'Corner Radius',
+                        value: _labelCornerRadius ?? -1.0,
+                        min: -1.0,
+                        max: 20.0,
+                        divisions: 21,
+                        suffix: 'px',
+                        decimalPlaces: 0,
+                        onChanged: (v) => setState(() =>
+                            _labelCornerRadius = v < 0 ? null : v),
+                      ),
+                      SliderOption(
+                        label: 'Pad Horizontal',
+                        value: _labelPadH,
+                        min: 0.0,
+                        max: 16.0,
+                        divisions: 16,
+                        suffix: 'px',
+                        decimalPlaces: 0,
+                        onChanged: (v) => setState(() => _labelPadH = v),
+                      ),
+                      SliderOption(
+                        label: 'Pad Vertical',
+                        value: _labelPadV,
+                        min: 0.0,
+                        max: 12.0,
+                        divisions: 12,
+                        suffix: 'px',
+                        decimalPlaces: 0,
+                        onChanged: (v) => setState(() => _labelPadV = v),
+                      ),
+                      BoolOption(
+                        label: 'Border',
+                        value: _labelBorder,
+                        onChanged: (v) => setState(() => _labelBorder = v),
+                      ),
+                      if (_labelBorder) ...[
+                        ColorOption(
+                          label: 'Border Color',
+                          value: _labelBorderColor,
+                          colors: const [
+                            Colors.black87,
+                            Colors.white,
+                            Color(0xFF6366F1),
+                            Color(0xFFEF4444),
+                            Color(0xFF10B981),
+                            Color(0xFFF59E0B),
+                          ],
+                          onChanged: (c) =>
+                              setState(() => _labelBorderColor = c),
+                        ),
+                        SliderOption(
+                          label: 'Border Width',
+                          value: _labelBorderWidth,
+                          min: 0.5,
+                          max: 4.0,
+                          divisions: 7,
+                          suffix: 'px',
+                          decimalPlaces: 1,
+                          onChanged: (v) =>
+                              setState(() => _labelBorderWidth = v),
+                        ),
+                      ],
                     ],
                   ],
                 ),
