@@ -1658,6 +1658,7 @@ class EventHandlerManager {
     for (final element in _delegate.elements.whereType<SeriesElement>()) {
       final series = element.series;
       if (series is LineChartSeries && !series.showDataPointMarkers) continue;
+      if (series is AreaChartSeries && !series.showDataPointMarkers) continue;
 
       for (int i = 0; i < element.series.points.length; i++) {
         final point = element.series.points[i];
