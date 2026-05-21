@@ -354,6 +354,13 @@ class EventHandlerManager {
   /// Gets the current cursor position for crosshair rendering.
   Offset? get cursorPosition => _cursorPosition;
 
+  /// Clears the cursor position and repaints. Call when the pointer leaves the chart.
+  void clearCursorPosition() {
+    if (_cursorPosition == null) return;
+    _cursorPosition = null;
+    _delegate.markNeedsPaint();
+  }
+
   /// Tracks the tapped marker for tap-triggered tooltips.
   HoveredMarkerInfo? _tappedMarker;
 

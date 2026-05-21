@@ -1741,6 +1741,9 @@ class ChartRenderBox extends RenderBox {
     _eventHandlerManager.handleEvent(event);
   }
 
+  /// Clears crosshair state when the pointer leaves the chart widget.
+  void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
+
   // ============================================================================
   // Cache Management (Sprint 1)
   // ============================================================================

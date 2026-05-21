@@ -2980,6 +2980,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               if (enableFocusOnHover && _focusNode.hasFocus) {
                 _focusNode.unfocus();
               }
+              (_renderBoxKey.currentContext?.findRenderObject()
+                      as ChartRenderBox?)
+                  ?.clearCursorPosition();
             },
             child: Container(
               width: widget.width,
