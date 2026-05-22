@@ -16,10 +16,11 @@ dependencies:
   #   git:
   #     url: https://github.com/forcegage-pvm/braven_data.git
   flex_color_picker: ^3.7.1
-  fleather: ^1.26.0
+  fleather:
+    path: packages/fleather
   parchment: ^1.25.1
   flutter_colorpicker: ^1.1.0
-  file_picker: ^8.0.0
+  file_picker: ^11.0.0
   shared_preferences: ^2.2.2
   path_provider: ^2.1.5
   equatable: ^2.0.8
@@ -28,8 +29,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  test: ^1.26.3
-  mockito: ^5.4.1
+  test: ^1.31.0
+  mockito: ^5.6.4
   build_runner: ^2.4.5
 
 flutter:
