@@ -1538,6 +1538,11 @@ class ChartRenderBox extends RenderBox {
             plotWidth: _plotArea.width,
             plotHeight: _plotArea.height,
           );
+          // Rebuild series paths and spatial index when the canvas resizes
+          if (_elementGenerator != null) {
+            _rebuildElementsWithTransform();
+            _seriesCacheManager.invalidate();
+          }
         }
       }
     }
