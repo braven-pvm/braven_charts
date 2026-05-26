@@ -191,6 +191,8 @@ class YAxisConfig {
             : (position == YAxisPosition.rightOuter)
                 ? YAxisPosition.right
                 : position,
+        // Raw `position` parameter intentionally used: leftOuter/rightOuter never equal hidden,
+        // so the result is identical to checking the normalised this.position.
         visible = position == YAxisPosition.hidden ? false : visible,
         assert(minWidth >= 0, 'minWidth must be non-negative'),
         assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
