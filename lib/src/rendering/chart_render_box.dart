@@ -1791,7 +1791,7 @@ class ChartRenderBox extends RenderBox {
 
   /// Sets the swap mode for deselection behaviour.
   void setAxisSwapMode(AxisSwapMode mode) {
-    _multiAxisManager.setAxisSwapMode(mode);
+    if (_multiAxisManager.setAxisSwapMode(mode)) markNeedsLayout();
   }
 
   // ============================================================================
