@@ -76,7 +76,7 @@ void main() {
           .firstWhere((s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''))
           .id;
 
-      final result = manager.applySeriesSelection(overflowSeriesId, series);
+      final result = manager.applySeriesSelection(overflowSeriesId);
       expect(result, isNotNull);
       expect(result!.promotedAxisId, equals(overflowId));
       expect(manager.getVisibleAxes().any((a) => a.id == overflowId), isTrue);
@@ -97,10 +97,10 @@ void main() {
           .firstWhere((s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''))
           .id;
 
-      manager.applySeriesSelection(overflowSeriesId, series);
+      manager.applySeriesSelection(overflowSeriesId);
       expect(manager.getVisibleAxes().any((a) => a.id == overflowId), isTrue);
 
-      manager.clearSelectionFor(overflowSeriesId, series);
+      manager.clearSelectionFor(overflowSeriesId);
       // After revert, overflow axis should be back in overflow
       expect(manager.overflowAxisIds, contains(overflowId));
       expect(manager.getVisibleAxes().any((a) => a.id == overflowId), isFalse);

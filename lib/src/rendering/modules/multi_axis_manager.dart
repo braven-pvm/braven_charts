@@ -304,8 +304,16 @@ class MultiAxisManager {
   /// with any swap overrides applied. Hidden axes are always included.
   List<YAxisConfig> getVisibleAxes() {
     final all = getEffectiveYAxes();
-    final leftAxes = all.where((a) => a.position == YAxisPosition.left).toList();
-    final rightAxes = all.where((a) => a.position == YAxisPosition.right).toList();
+    // ignore: deprecated_member_use_from_same_package
+    final leftAxes = all.where((a) =>
+        a.position == YAxisPosition.left ||
+        // ignore: deprecated_member_use_from_same_package
+        a.position == YAxisPosition.leftOuter).toList();
+    // ignore: deprecated_member_use_from_same_package
+    final rightAxes = all.where((a) =>
+        a.position == YAxisPosition.right ||
+        // ignore: deprecated_member_use_from_same_package
+        a.position == YAxisPosition.rightOuter).toList();
     final hiddenAxes = all.where((a) => a.position == YAxisPosition.hidden).toList();
 
     return [
@@ -355,7 +363,6 @@ class MultiAxisManager {
   /// selected series' axis is already visible.
   ({String promotedAxisId, String demotedAxisId})? applySeriesSelection(
     String seriesId,
-    List<dynamic> allSeries,
   ) {
     _selectedSeriesId = seriesId;
     final axisId = _resolveAxisIdForSeries(seriesId);
@@ -371,9 +378,11 @@ class MultiAxisManager {
     if (axis.position == YAxisPosition.left ||
         // ignore: deprecated_member_use_from_same_package
         axis.position == YAxisPosition.leftOuter) {
-      final leftAxes = all
-          .where((a) => a.position == YAxisPosition.left)
-          .toList();
+      // ignore: deprecated_member_use_from_same_package
+      final leftAxes = all.where((a) =>
+          a.position == YAxisPosition.left ||
+          // ignore: deprecated_member_use_from_same_package
+          a.position == YAxisPosition.leftOuter).toList();
       final currentVisible = _applySlotCap(leftAxes, _overriddenLeftIds);
       final demoted = currentVisible.last;
       final newVisible = [
@@ -383,9 +392,11 @@ class MultiAxisManager {
       _overriddenLeftIds = newVisible.map((a) => a.id).toList();
       return (promotedAxisId: axisId, demotedAxisId: demoted.id);
     } else {
-      final rightAxes = all
-          .where((a) => a.position == YAxisPosition.right)
-          .toList();
+      // ignore: deprecated_member_use_from_same_package
+      final rightAxes = all.where((a) =>
+          a.position == YAxisPosition.right ||
+          // ignore: deprecated_member_use_from_same_package
+          a.position == YAxisPosition.rightOuter).toList();
       final currentVisible = _applySlotCap(rightAxes, _overriddenRightIds);
       final demoted = currentVisible.last;
       final newVisible = [
@@ -401,7 +412,7 @@ class MultiAxisManager {
   ///
   /// In [AxisSwapMode.revert] mode, slot overrides are cleared so declaration
   /// order is restored. Returns true if overrides were cleared, false otherwise.
-  bool clearSelectionFor(String seriesId, List<dynamic> allSeries) {
+  bool clearSelectionFor(String seriesId) {
     if (_selectedSeriesId != seriesId) return false;
     _selectedSeriesId = null;
     if (_axisSwapMode == AxisSwapMode.sticky) return false;
