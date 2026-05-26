@@ -16,6 +16,7 @@ import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../models/axis_swap_mode.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
@@ -1748,6 +1749,50 @@ class ChartRenderBox extends RenderBox {
 
   /// Clears crosshair state when the pointer leaves the chart widget.
   void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
+
+  // ============================================================================
+  // Y-Axis Slot Selection Delegation
+  // ============================================================================
+
+  /// Applies series selection to the slot system.
+  ///
+  /// Returns a swap record if an axis was promoted/demoted, or null.
+  ({String promotedAxisId, String demotedAxisId})? applySeriesSelection(
+    String seriesId,
+  ) {
+    final result = _multiAxisManager.applySeriesSelection(seriesId);
+    if (result != null) markNeedsLayout();
+    return result;
+  }
+
+  /// Deselects a series, reverting slot if mode is revert.
+  void clearSeriesSelection(String seriesId) {
+    final reverted = _multiAxisManager.clearSelectionFor(seriesId);
+    if (reverted) markNeedsLayout();
+  }
+
+  /// Clears all selection state.
+  void clearAllSeriesSelection() {
+    _multiAxisManager.clearAllSelection();
+    markNeedsLayout();
+  }
+
+  /// Currently visible axis IDs.
+  List<String> get visibleAxisIds =>
+      _multiAxisManager.getVisibleAxes().map((a) => a.id).toList();
+
+  /// Currently overflow axis IDs.
+  List<String> get overflowAxisIds => _multiAxisManager.overflowAxisIds;
+
+  /// Sets the maximum number of visible Y-axes per side.
+  void setMaxAxesPerSide(int max) {
+    if (_multiAxisManager.setMaxAxesPerSide(max)) markNeedsLayout();
+  }
+
+  /// Sets the swap mode for deselection behaviour.
+  void setAxisSwapMode(AxisSwapMode mode) {
+    _multiAxisManager.setAxisSwapMode(mode);
+  }
 
   // ============================================================================
   // Cache Management (Sprint 1)

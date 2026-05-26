@@ -64,6 +64,7 @@ class ChartLegend extends StatelessWidget {
     required this.series,
     required this.hiddenSeriesIds,
     required this.onSeriesToggle,
+    this.onSeriesTap,
     this.orientation = Axis.horizontal,
     this.spacing = 16.0,
     this.runSpacing = 8.0,
@@ -82,6 +83,13 @@ class ChartLegend extends StatelessWidget {
 
   /// Callback when a legend item is tapped to toggle series visibility.
   final ValueChanged<String> onSeriesToggle;
+
+  /// Called when a legend item is tapped (drives Y-axis slot selection).
+  ///
+  /// Unlike [onSeriesToggle] which controls line visibility, this callback
+  /// signals series *selection* and is used to drive Y-axis slot swaps.
+  /// Both callbacks fire on the same tap.
+  final ValueChanged<String>? onSeriesTap;
 
   /// Orientation of the legend items (horizontal or vertical).
   final Axis orientation;
@@ -144,7 +152,10 @@ class ChartLegend extends StatelessWidget {
     final seriesColor = _getSeriesColor(series);
 
     return InkWell(
-      onTap: () => onSeriesToggle(series.id),
+      onTap: () {
+        onSeriesToggle(series.id);
+        onSeriesTap?.call(series.id);
+      },
       borderRadius: BorderRadius.circular(4.0),
       child: Opacity(
         opacity: isHidden ? 0.4 : 1.0,

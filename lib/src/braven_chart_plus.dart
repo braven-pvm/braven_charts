@@ -23,6 +23,8 @@ import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'models/auto_scroll_config.dart';
+import 'models/axis_swap_mode.dart';
+import 'models/braven_chart_controller.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
@@ -117,6 +119,12 @@ class BravenChartPlus extends StatefulWidget {
     this.onSeriesSelected,
     this.onAnnotationTap,
     this.onAnnotationDragged,
+    // ==================== Y-AXIS SLOT SYSTEM PARAMETERS ====================
+    this.maxAxesPerSide = 3,
+    this.axisSwapMode = AxisSwapMode.sticky,
+    this.bravenChartController,
+    this.onSeriesDeselected,
+    this.onAxisSwapped,
     // ==================== MULTI-AXIS PARAMETERS ====================
     this.normalizationMode,
   });
@@ -156,6 +164,11 @@ class BravenChartPlus extends StatefulWidget {
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
+    int maxAxesPerSide = 3,
+    AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
+    BravenChartController? bravenChartController,
+    void Function(String seriesId)? onSeriesDeselected,
+    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
   }) {
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
@@ -206,6 +219,11 @@ class BravenChartPlus extends StatefulWidget {
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
+      maxAxesPerSide: maxAxesPerSide,
+      axisSwapMode: axisSwapMode,
+      bravenChartController: bravenChartController,
+      onSeriesDeselected: onSeriesDeselected,
+      onAxisSwapped: onAxisSwapped,
     );
   }
 
@@ -241,6 +259,11 @@ class BravenChartPlus extends StatefulWidget {
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
+    int maxAxesPerSide = 3,
+    AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
+    BravenChartController? bravenChartController,
+    void Function(String seriesId)? onSeriesDeselected,
+    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
   }) {
     // Convert map to data points
     final points = data.entries.map((entry) {
@@ -288,6 +311,11 @@ class BravenChartPlus extends StatefulWidget {
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
+      maxAxesPerSide: maxAxesPerSide,
+      axisSwapMode: axisSwapMode,
+      bravenChartController: bravenChartController,
+      onSeriesDeselected: onSeriesDeselected,
+      onAxisSwapped: onAxisSwapped,
     );
   }
 
@@ -331,6 +359,11 @@ class BravenChartPlus extends StatefulWidget {
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
     AnnotationController? annotationController,
+    int maxAxesPerSide = 3,
+    AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
+    BravenChartController? bravenChartController,
+    void Function(String seriesId)? onSeriesDeselected,
+    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
   }) {
     // Parse JSON
     final dynamic decoded = jsonDecode(json);
@@ -424,6 +457,11 @@ class BravenChartPlus extends StatefulWidget {
       showYScrollbar: showYScrollbar,
       scrollbarTheme: scrollbarTheme,
       annotationController: annotationController,
+      maxAxesPerSide: maxAxesPerSide,
+      axisSwapMode: axisSwapMode,
+      bravenChartController: bravenChartController,
+      onSeriesDeselected: onSeriesDeselected,
+      onAxisSwapped: onAxisSwapped,
     );
   }
 
@@ -660,6 +698,45 @@ class BravenChartPlus extends StatefulWidget {
   final void Function(ChartAnnotation annotation, Offset newPosition)?
   onAnnotationDragged;
 
+  // ==================== Y-AXIS SLOT SYSTEM PARAMETERS ====================
+
+  /// Maximum number of Y-axes visible simultaneously on each side.
+  ///
+  /// When more series configure a Y-axis at the same position than this limit
+  /// allows, the first [maxAxesPerSide] declared win visible slots. The rest
+  /// are in overflow — not rendered but still used for normalization.
+  /// Defaults to 3. Must be >= 1.
+  ///
+  /// Overflow axes can be swapped in by selecting their series (via legend tap,
+  /// data-point tap, or [BravenChartController.selectSeries]).
+  final int maxAxesPerSide;
+
+  /// Controls whether a swap triggered by series selection persists after
+  /// deselection. Defaults to [AxisSwapMode.sticky].
+  ///
+  /// - [AxisSwapMode.sticky]: The swapped-in axis stays visible.
+  /// - [AxisSwapMode.revert]: Original declaration-order slot assignment
+  ///   is restored when the selected series is deselected.
+  final AxisSwapMode axisSwapMode;
+
+  /// Optional controller for programmatic series selection and slot inspection.
+  ///
+  /// Attach to read [BravenChartController.visibleAxisIds] or call
+  /// [BravenChartController.selectSeries] from outside the chart.
+  /// The controller is optional — charts without one respond to taps internally.
+  final BravenChartController? bravenChartController;
+
+  /// Called when a series is deselected (tap again or tap empty space).
+  final void Function(String seriesId)? onSeriesDeselected;
+
+  /// Called immediately after an axis swap completes.
+  ///
+  /// [promotedAxisId] entered a visible slot; [demotedAxisId] moved to overflow.
+  final void Function({
+    required String promotedAxisId,
+    required String demotedAxisId,
+  })? onAxisSwapped;
+
   // ==================== MULTI-AXIS PARAMETERS ====================
 
   /// Y-axis configurations for multi-axis mode.
@@ -717,6 +794,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   MouseCursor _currentCursor = SystemMouseCursors.basic;
   final GlobalKey _renderBoxKey = GlobalKey();
+
+  /// Currently selected series ID for Y-axis slot selection.
+  String? _selectedSeriesId;
 
   // Element generator function for pan/zoom regeneration
   List<ChartElement> Function(ChartTransform)? _elementGenerator;
@@ -908,6 +988,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _attachLiveStreamController();
       });
     }
+
+    widget.bravenChartController?.attach(
+      onSelect: _handleSeriesSelected,
+      onDeselect: _handleSeriesDeselected,
+      onClear: () {
+        _selectedSeriesId = null;
+        final renderBox =
+            _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        renderBox?.clearAllSeriesSelection();
+        _syncControllerState(renderBox);
+      },
+    );
   }
 
   @override
@@ -972,6 +1064,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
 
+    if (widget.bravenChartController != oldWidget.bravenChartController) {
+      oldWidget.bravenChartController?.detach();
+      widget.bravenChartController?.attach(
+        onSelect: _handleSeriesSelected,
+        onDeselect: _handleSeriesDeselected,
+        onClear: () {
+          _selectedSeriesId = null;
+          final renderBox =
+              _renderBoxKey.currentContext?.findRenderObject()
+                  as ChartRenderBox?;
+          renderBox?.clearAllSeriesSelection();
+          _syncControllerState(renderBox);
+        },
+      );
+    }
+
     if (widget.series != oldWidget.series ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations) {
@@ -1009,6 +1117,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     _internalAnnotationController?.dispose();
     widget.liveStreamController?.detachRenderBox();
+    widget.bravenChartController?.detach();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();
@@ -2422,7 +2531,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           final point = tappedElement.series.points[marker.markerIndex];
           widget.onPointTap?.call(point, tappedElement.series.id);
         } else {
-          widget.onSeriesSelected?.call(tappedElement.series.id);
+          _handleSeriesSelected(tappedElement.series.id);
         }
       }
     } else {
@@ -2465,6 +2574,45 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Not hovering a series (empty space or other element)
       widget.onPointHover!(null, null);
     }
+  }
+
+  void _handleSeriesSelected(String seriesId) {
+    if (_selectedSeriesId == seriesId) {
+      _handleSeriesDeselected(seriesId);
+      return;
+    }
+    _selectedSeriesId = seriesId;
+
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final swapResult = renderBox?.applySeriesSelection(seriesId);
+
+    if (swapResult != null) {
+      widget.onAxisSwapped?.call(
+        promotedAxisId: swapResult.promotedAxisId,
+        demotedAxisId: swapResult.demotedAxisId,
+      );
+    }
+
+    _syncControllerState(renderBox);
+    widget.onSeriesSelected?.call(seriesId);
+  }
+
+  void _handleSeriesDeselected(String seriesId) {
+    _selectedSeriesId = null;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    renderBox?.clearSeriesSelection(seriesId);
+    _syncControllerState(renderBox);
+    widget.onSeriesDeselected?.call(seriesId);
+  }
+
+  void _syncControllerState(ChartRenderBox? renderBox) {
+    widget.bravenChartController?.updateSlotState(
+      selectedSeriesId: _selectedSeriesId,
+      visibleAxisIds: renderBox?.visibleAxisIds ?? const [],
+      overflowAxisIds: renderBox?.overflowAxisIds ?? const [],
+    );
   }
 
   void _handleCursorChange(MouseCursor cursor) {
@@ -3054,6 +3202,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         // Multi-axis parameters
                         normalizationMode: _effectiveNormalizationMode,
                         series: _effectiveRenderSeries,
+                        maxAxesPerSide: widget.maxAxesPerSide,
+                        axisSwapMode: widget.axisSwapMode,
                       ),
                     ),
                   ),
@@ -3179,6 +3329,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.normalizationMode,
     this.series,
     this.gridConfig,
+    required this.maxAxesPerSide,
+    required this.axisSwapMode,
   });
 
   final ChartInteractionCoordinator coordinator;
@@ -3216,6 +3368,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   // Multi-axis fields
   final NormalizationMode? normalizationMode;
   final List<ChartSeries>? series;
+  final int maxAxesPerSide;
+  final AxisSwapMode axisSwapMode;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -3240,7 +3394,9 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setXAxisConfig(xAxisConfig)
       ..setYAxis(yAxis)
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
-      ..setGridConfig(gridConfig);
+      ..setGridConfig(gridConfig)
+      ..setMaxAxesPerSide(maxAxesPerSide)
+      ..setAxisSwapMode(axisSwapMode);
   }
 
   @override
@@ -3259,6 +3415,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setInteractionConfig(interactionConfig)
       ..setNormalizationMode(normalizationMode)
       ..setSeries(series)
+      ..setMaxAxesPerSide(maxAxesPerSide)
+      ..setAxisSwapMode(axisSwapMode)
       ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
       ..onElementHover = onElementHover;
