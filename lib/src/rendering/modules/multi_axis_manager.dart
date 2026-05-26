@@ -361,7 +361,7 @@ class MultiAxisManager {
 
   /// Promotes an overflow axis into a visible slot when a series is selected.
   ///
-  /// The last visible axis on the same side is demoted to overflow to make room.
+  /// The first (longest-visible) axis on the same side is demoted to overflow (FIFO).
   /// Returns a record with [promotedAxisId] and [demotedAxisId], or null if the
   /// selected series' axis is already visible.
   ({String promotedAxisId, String demotedAxisId})? applySeriesSelection(
@@ -387,11 +387,8 @@ class MultiAxisManager {
           // ignore: deprecated_member_use_from_same_package
           a.position == YAxisPosition.leftOuter).toList();
       final currentVisible = _applySlotCap(leftAxes, _overriddenLeftIds);
-      final demoted = currentVisible.last;
-      final newVisible = [
-        ...currentVisible.take(currentVisible.length - 1),
-        axis,
-      ];
+      final demoted = currentVisible.first;
+      final newVisible = [...currentVisible.skip(1), axis];
       _overriddenLeftIds = newVisible.map((a) => a.id).toList();
       return (promotedAxisId: axisId, demotedAxisId: demoted.id);
     } else {
@@ -401,11 +398,8 @@ class MultiAxisManager {
           // ignore: deprecated_member_use_from_same_package
           a.position == YAxisPosition.rightOuter).toList();
       final currentVisible = _applySlotCap(rightAxes, _overriddenRightIds);
-      final demoted = currentVisible.last;
-      final newVisible = [
-        ...currentVisible.take(currentVisible.length - 1),
-        axis,
-      ];
+      final demoted = currentVisible.first;
+      final newVisible = [...currentVisible.skip(1), axis];
       _overriddenRightIds = newVisible.map((a) => a.id).toList();
       return (promotedAxisId: axisId, demotedAxisId: demoted.id);
     }

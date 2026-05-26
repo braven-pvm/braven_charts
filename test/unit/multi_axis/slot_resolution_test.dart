@@ -83,6 +83,48 @@ void main() {
       expect(manager.overflowAxisIds, isNot(contains(overflowId)));
     });
 
+    test('applySeriesSelection FIFO: demotes first visible, not last', () {
+      // Declaration order: a, b, c visible; d overflow
+      final series = [
+        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
+      ];
+      manager.setSeries(series);
+      manager.setMaxAxesPerSide(3);
+
+      final result = manager.applySeriesSelection('d');
+      expect(result, isNotNull);
+      // FIFO: 'a' (first) is demoted, not 'c' (last)
+      expect(result!.demotedAxisId, equals('a_axis'));
+      expect(result.promotedAxisId, equals('d_axis'));
+
+      final visibleIds = manager.getVisibleAxes()
+          .where((a) => a.position == YAxisPosition.right)
+          .map((a) => a.id)
+          .toList();
+      expect(visibleIds, equals(['b_axis', 'c_axis', 'd_axis']));
+      expect(manager.overflowAxisIds, contains('a_axis'));
+    });
+
+    test('successive swaps rotate through all axes like a queue', () {
+      // a, b, c visible; d, e overflow
+      final series = [
+        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'),
+        _rightSeries('d'), _rightSeries('e'),
+      ];
+      manager.setSeries(series);
+      manager.setMaxAxesPerSide(3);
+
+      manager.applySeriesSelection('d'); // a demoted → [b, c, d]
+      manager.applySeriesSelection('e'); // b demoted → [c, d, e]
+
+      final visibleIds = manager.getVisibleAxes()
+          .where((a) => a.position == YAxisPosition.right)
+          .map((a) => a.id)
+          .toList();
+      expect(visibleIds, equals(['c_axis', 'd_axis', 'e_axis']));
+      expect(manager.overflowAxisIds, containsAll(['a_axis', 'b_axis']));
+    });
+
     test('clearSelectionFor in revert mode restores declaration order', () {
       final series = [
         _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
