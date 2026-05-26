@@ -158,7 +158,7 @@ class YAxisConfig {
   /// - If both [min] and [max] are provided, [min] < [max]
   /// - If [tickCount] is provided, it must be >= 2
   YAxisConfig({
-    required this.position,
+    required YAxisPosition position,
     this.color,
     this.label,
     this.unit,
@@ -184,6 +184,13 @@ class YAxisConfig {
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
   })  : id = '',
+        // ignore: deprecated_member_use_from_same_package
+        position = (position == YAxisPosition.leftOuter)
+            ? YAxisPosition.left
+            // ignore: deprecated_member_use_from_same_package
+            : (position == YAxisPosition.rightOuter)
+                ? YAxisPosition.right
+                : position,
         visible = position == YAxisPosition.hidden ? false : visible,
         assert(minWidth >= 0, 'minWidth must be non-negative'),
         assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),

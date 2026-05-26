@@ -1,39 +1,25 @@
 /// Defines the positions where Y-axes can appear in a multi-axis chart.
 ///
-/// Multi-axis charts support up to 4 Y-axes simultaneously, positioned
-/// in a specific layout order from left to right:
+/// Multi-axis charts support up to [BravenChartPlus.maxAxesPerSide] Y-axes
+/// visible per side simultaneously. Axes on each side are stacked from the
+/// plot area outward in declaration order.
 ///
 /// ```
-/// [leftOuter] [left] | Chart Area | [right] [rightOuter]
+/// [left...] | Chart Area | [...right]
 /// ```
 ///
-/// The [left] position is typically the primary/default position for
-/// single-axis charts. When additional axes are needed, they can be
-/// placed at [right], [leftOuter], or [rightOuter] positions.
+/// The [left] position is the standard position for the primary Y-axis.
+/// Add more axes with [right] (or additional [left] configs on separate series).
 enum YAxisPosition {
-  /// Leftmost axis (far left of plot area).
-  ///
-  /// Use for a secondary axis on the left side when [left] is already
-  /// occupied by the primary axis.
-  leftOuter,
-
-  /// Primary left axis (adjacent to plot area left edge).
+  /// Left side — adjacent to plot area, stacked outward in declaration order.
   ///
   /// This is the standard position for the main Y-axis in most charts.
-  /// Use this for the primary data series axis.
   left,
 
-  /// Primary right axis (adjacent to plot area right edge).
+  /// Right side — adjacent to plot area, stacked outward in declaration order.
   ///
-  /// Use for a secondary axis when displaying two data series with
-  /// different scales or units.
+  /// Use for secondary or tertiary axes with different scales or units.
   right,
-
-  /// Rightmost axis (far right of plot area).
-  ///
-  /// Use for a tertiary or quaternary axis when both [left] and [right]
-  /// positions are already occupied.
-  rightOuter,
 
   /// Hidden axis — participates in data normalization but takes no visual space.
   ///
@@ -49,4 +35,18 @@ enum YAxisPosition {
   /// )
   /// ```
   hidden,
+
+  /// Deprecated. Use [left] instead.
+  ///
+  /// Previously: leftmost axis (far left of plot area).
+  /// Now: treated identically to [left] at runtime.
+  @Deprecated('Use YAxisPosition.left instead. leftOuter is treated as left.')
+  leftOuter,
+
+  /// Deprecated. Use [right] instead.
+  ///
+  /// Previously: rightmost axis (far right of plot area).
+  /// Now: treated identically to [right] at runtime.
+  @Deprecated('Use YAxisPosition.right instead. rightOuter is treated as right.')
+  rightOuter,
 }
