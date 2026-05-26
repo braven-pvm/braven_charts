@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import '../../axis/normalization_detector.dart';
 import '../../coordinates/chart_transform.dart';
 import '../../layout/multi_axis_layout.dart';
+import '../../models/axis_swap_mode.dart';
 import '../../models/chart_series.dart';
 import '../../models/normalization_mode.dart';
 import '../../models/series_axis_binding.dart';
@@ -63,6 +64,13 @@ class MultiAxisManager {
   /// Cached effective bindings (invalidated by setSeries).
   List<SeriesAxisBinding>? _cachedEffectiveBindings;
 
+  // Slot resolution state
+  int _maxAxesPerSide = 3;
+  AxisSwapMode _axisSwapMode = AxisSwapMode.sticky;
+  List<String>? _overriddenLeftIds;
+  List<String>? _overriddenRightIds;
+  String? _selectedSeriesId;
+
   // ============================================================================
   // Public Getters
   // ============================================================================
@@ -115,12 +123,36 @@ class MultiAxisManager {
     return true;
   }
 
-  /// Invalidates cached effective bindings.
+  /// Invalidates cached effective bindings and slot override state.
   ///
   /// Called automatically by [setSeries], but can be called manually
   /// if series properties change without replacing the list.
   void invalidateCache() {
     _cachedEffectiveBindings = null;
+    _overriddenLeftIds = null;
+    _overriddenRightIds = null;
+    _selectedSeriesId = null;
+  }
+
+  /// Sets the maximum number of visible axes per side.
+  ///
+  /// Returns true if the value changed, false otherwise.
+  bool setMaxAxesPerSide(int max) {
+    assert(max >= 1, 'maxAxesPerSide must be >= 1');
+    if (_maxAxesPerSide == max) return false;
+    _maxAxesPerSide = max;
+    _overriddenLeftIds = null;
+    _overriddenRightIds = null;
+    return true;
+  }
+
+  /// Sets the swap persistence mode for axis promotion/demotion.
+  ///
+  /// Returns true if the mode changed, false otherwise.
+  bool setAxisSwapMode(AxisSwapMode mode) {
+    if (_axisSwapMode == mode) return false;
+    _axisSwapMode = mode;
+    return true;
   }
 
   // ============================================================================
@@ -264,6 +296,137 @@ class MultiAxisManager {
     }
 
     return effectiveAxes;
+  }
+
+  /// Gets the Y-axes that are currently visible in their assigned slots.
+  ///
+  /// Same as [getEffectiveYAxes] but capped to [_maxAxesPerSide] per side,
+  /// with any swap overrides applied. Hidden axes are always included.
+  List<YAxisConfig> getVisibleAxes() {
+    final all = getEffectiveYAxes();
+    final leftAxes = all.where((a) => a.position == YAxisPosition.left).toList();
+    final rightAxes = all.where((a) => a.position == YAxisPosition.right).toList();
+    final hiddenAxes = all.where((a) => a.position == YAxisPosition.hidden).toList();
+
+    return [
+      ..._applySlotCap(leftAxes, _overriddenLeftIds),
+      ..._applySlotCap(rightAxes, _overriddenRightIds),
+      ...hiddenAxes,
+    ];
+  }
+
+  /// Returns the axis IDs that are not currently in any visible slot.
+  ///
+  /// These are axes beyond [_maxAxesPerSide] on their respective side,
+  /// excluding hidden axes (which are never in slots).
+  List<String> get overflowAxisIds {
+    final all = getEffectiveYAxes();
+    final visible = getVisibleAxes();
+    final visibleIds = visible.map((a) => a.id).toSet();
+    return all
+        .where((a) => a.position != YAxisPosition.hidden)
+        .where((a) => !visibleIds.contains(a.id))
+        .map((a) => a.id)
+        .toList();
+  }
+
+  List<YAxisConfig> _applySlotCap(
+    List<YAxisConfig> axes,
+    List<String>? overrideIds,
+  ) {
+    if (overrideIds != null) {
+      final byId = {for (final a in axes) a.id: a};
+      return overrideIds
+          .where(byId.containsKey)
+          .map((id) => byId[id]!)
+          .toList();
+    }
+    return axes.take(_maxAxesPerSide).toList();
+  }
+
+  // ============================================================================
+  // Axis Swap and Selection
+  // ============================================================================
+
+  /// Promotes an overflow axis into a visible slot when a series is selected.
+  ///
+  /// The last visible axis on the same side is demoted to overflow to make room.
+  /// Returns a record with [promotedAxisId] and [demotedAxisId], or null if the
+  /// selected series' axis is already visible.
+  ({String promotedAxisId, String demotedAxisId})? applySeriesSelection(
+    String seriesId,
+    List<dynamic> allSeries,
+  ) {
+    _selectedSeriesId = seriesId;
+    final axisId = _resolveAxisIdForSeries(seriesId);
+    if (axisId == null) return null;
+
+    final overflow = overflowAxisIds;
+    if (!overflow.contains(axisId)) return null;
+
+    final all = getEffectiveYAxes();
+    final axis = all.firstWhere((a) => a.id == axisId);
+
+    // ignore: deprecated_member_use_from_same_package
+    if (axis.position == YAxisPosition.left ||
+        // ignore: deprecated_member_use_from_same_package
+        axis.position == YAxisPosition.leftOuter) {
+      final leftAxes = all
+          .where((a) => a.position == YAxisPosition.left)
+          .toList();
+      final currentVisible = _applySlotCap(leftAxes, _overriddenLeftIds);
+      final demoted = currentVisible.last;
+      final newVisible = [
+        ...currentVisible.take(currentVisible.length - 1),
+        axis,
+      ];
+      _overriddenLeftIds = newVisible.map((a) => a.id).toList();
+      return (promotedAxisId: axisId, demotedAxisId: demoted.id);
+    } else {
+      final rightAxes = all
+          .where((a) => a.position == YAxisPosition.right)
+          .toList();
+      final currentVisible = _applySlotCap(rightAxes, _overriddenRightIds);
+      final demoted = currentVisible.last;
+      final newVisible = [
+        ...currentVisible.take(currentVisible.length - 1),
+        axis,
+      ];
+      _overriddenRightIds = newVisible.map((a) => a.id).toList();
+      return (promotedAxisId: axisId, demotedAxisId: demoted.id);
+    }
+  }
+
+  /// Clears the selection for [seriesId].
+  ///
+  /// In [AxisSwapMode.revert] mode, slot overrides are cleared so declaration
+  /// order is restored. Returns true if overrides were cleared, false otherwise.
+  bool clearSelectionFor(String seriesId, List<dynamic> allSeries) {
+    if (_selectedSeriesId != seriesId) return false;
+    _selectedSeriesId = null;
+    if (_axisSwapMode == AxisSwapMode.sticky) return false;
+    _overriddenLeftIds = null;
+    _overriddenRightIds = null;
+    return true;
+  }
+
+  /// Clears all selection state.
+  ///
+  /// In [AxisSwapMode.revert] mode, slot overrides are also cleared.
+  void clearAllSelection() {
+    _selectedSeriesId = null;
+    if (_axisSwapMode == AxisSwapMode.revert) {
+      _overriddenLeftIds = null;
+      _overriddenRightIds = null;
+    }
+  }
+
+  String? _resolveAxisIdForSeries(String seriesId) {
+    final bindings = getEffectiveBindings();
+    for (final binding in bindings) {
+      if (binding.seriesId == seriesId) return binding.yAxisId;
+    }
+    return null;
   }
 
   // ============================================================================
@@ -611,13 +774,13 @@ class MultiAxisManager {
       color: Color(0xFF666666),
     ),
   }) {
-    final effectiveAxes = getEffectiveYAxes();
-    if (effectiveAxes.isEmpty) return {};
+    final visibleAxes = getVisibleAxes();
+    if (visibleAxes.isEmpty) return {};
 
     // Use MultiAxisLayoutDelegate for consistent width calculation
     const layoutDelegate = MultiAxisLayoutDelegate();
     return layoutDelegate.computeAxisWidths(
-      axes: effectiveAxes,
+      axes: visibleAxes,
       axisBounds: axisBounds,
       labelStyle: labelStyle,
     );
@@ -645,8 +808,8 @@ class MultiAxisManager {
     ChartTransform? transform,
     ChartTransform? originalTransform,
   }) {
-    final effectiveAxes = getEffectiveYAxes();
-    if (effectiveAxes.isEmpty) return;
+    final visibleAxes = getVisibleAxes();
+    if (visibleAxes.isEmpty) return;
 
     // Compute axis bounds from series data
     final axisBounds = computeAxisBounds(
@@ -660,7 +823,7 @@ class MultiAxisManager {
 
     // Create and invoke painter
     final painter = MultiAxisPainter(
-      axes: effectiveAxes,
+      axes: visibleAxes,
       axisBounds: axisBounds,
       bindings: effectiveBindings,
       series: _series,
@@ -686,7 +849,7 @@ class MultiAxisManager {
     ChartTransform? transform,
     ChartTransform? originalTransform,
   }) {
-    final effectiveAxes = getEffectiveYAxes();
+    final visibleAxes = getVisibleAxes();
     final axisBounds = computeAxisBounds(
       transform: transform,
       originalTransform: originalTransform,
@@ -696,7 +859,7 @@ class MultiAxisManager {
     final effectiveBindings = getEffectiveBindings();
 
     return MultiAxisInfo(
-      effectiveAxes: effectiveAxes,
+      effectiveAxes: visibleAxes,
       axisBounds: axisBounds,
       axisWidths: axisWidths,
       effectiveBindings: effectiveBindings,
@@ -795,7 +958,7 @@ class MultiAxisManager {
   /// - [axisWidths]: Map of axis ID to width (from [computeAxisWidths])
   double getTotalLeftAxisWidth(Map<String, double> axisWidths) {
     const layoutDelegate = MultiAxisLayoutDelegate();
-    return layoutDelegate.getTotalLeftWidth(getEffectiveYAxes(), axisWidths);
+    return layoutDelegate.getTotalLeftWidth(getVisibleAxes(), axisWidths);
   }
 
   /// Gets total width needed for right-side axes.
@@ -806,6 +969,6 @@ class MultiAxisManager {
   /// - [axisWidths]: Map of axis ID to width (from [computeAxisWidths])
   double getTotalRightAxisWidth(Map<String, double> axisWidths) {
     const layoutDelegate = MultiAxisLayoutDelegate();
-    return layoutDelegate.getTotalRightWidth(getEffectiveYAxes(), axisWidths);
+    return layoutDelegate.getTotalRightWidth(getVisibleAxes(), axisWidths);
   }
 }

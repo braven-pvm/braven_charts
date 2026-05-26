@@ -52,47 +52,87 @@ class AxisLayoutManager {
     final axisWidth = axisWidths[axis.id] ?? axis.minWidth;
 
     switch (axis.position) {
+      // ignore: deprecated_member_use_from_same_package
       case YAxisPosition.leftOuter:
-        // Leftmost position - starts at chartArea.left
+        // leftOuter axes stack from chartArea.left outward, amongst themselves.
+        var precedingWidth = 0.0;
+        for (final a in allAxes) {
+          if (a.id == axis.id) break;
+          // ignore: deprecated_member_use_from_same_package
+          if (a.position == YAxisPosition.leftOuter && a.visible) {
+            precedingWidth += axisWidths[a.id] ?? 0.0;
+          }
+        }
         return Rect.fromLTWH(
-          chartArea.left,
+          chartArea.left + precedingWidth,
           chartArea.top,
           axisWidth,
           chartArea.height,
         );
 
       case YAxisPosition.left:
-        // After leftOuter (if present)
-        final leftOuterWidth = _getWidthAtPosition(
-          YAxisPosition.leftOuter,
-          allAxes,
-          axisWidths,
-        );
+        // left axes stack after all leftOuter axes, outward from plot area.
+        // Compute total leftOuter width to find the starting offset.
+        var leftOuterTotal = 0.0;
+        for (final a in allAxes) {
+          // ignore: deprecated_member_use_from_same_package
+          if (a.position == YAxisPosition.leftOuter && a.visible) {
+            leftOuterTotal += axisWidths[a.id] ?? 0.0;
+          }
+        }
+        // Count preceding left axes to stack this one after them.
+        var precedingLeftWidth = 0.0;
+        for (final a in allAxes) {
+          if (a.id == axis.id) break;
+          if (a.position == YAxisPosition.left && a.visible) {
+            precedingLeftWidth += axisWidths[a.id] ?? 0.0;
+          }
+        }
         return Rect.fromLTWH(
-          chartArea.left + leftOuterWidth,
+          chartArea.left + leftOuterTotal + precedingLeftWidth,
           chartArea.top,
           axisWidth,
           chartArea.height,
         );
 
       case YAxisPosition.right:
-        // Before rightOuter (if present)
-        final rightOuterWidth = _getWidthAtPosition(
-          YAxisPosition.rightOuter,
-          allAxes,
-          axisWidths,
-        );
+        // right axes stack from the plot area edge outward (to the right).
+        // Compute total rightOuter width so right axes don't overlap with them.
+        var rightOuterTotal = 0.0;
+        for (final a in allAxes) {
+          // ignore: deprecated_member_use_from_same_package
+          if (a.position == YAxisPosition.rightOuter && a.visible) {
+            rightOuterTotal += axisWidths[a.id] ?? 0.0;
+          }
+        }
+        // Count preceding right axes to stack this one outward from them.
+        var precedingRightWidth = 0.0;
+        for (final a in allAxes) {
+          if (a.id == axis.id) break;
+          if (a.position == YAxisPosition.right && a.visible) {
+            precedingRightWidth += axisWidths[a.id] ?? 0.0;
+          }
+        }
         return Rect.fromLTWH(
-          chartArea.right - rightOuterWidth - axisWidth,
+          chartArea.right - rightOuterTotal - precedingRightWidth - axisWidth,
           chartArea.top,
           axisWidth,
           chartArea.height,
         );
 
+      // ignore: deprecated_member_use_from_same_package
       case YAxisPosition.rightOuter:
-        // Rightmost position - ends at chartArea.right
+        // rightOuter axes stack from chartArea.right inward, amongst themselves.
+        var precedingWidth = 0.0;
+        for (final a in allAxes) {
+          if (a.id == axis.id) break;
+          // ignore: deprecated_member_use_from_same_package
+          if (a.position == YAxisPosition.rightOuter && a.visible) {
+            precedingWidth += axisWidths[a.id] ?? 0.0;
+          }
+        }
         return Rect.fromLTWH(
-          chartArea.right - axisWidth,
+          chartArea.right - precedingWidth - axisWidth,
           chartArea.top,
           axisWidth,
           chartArea.height,
@@ -135,23 +175,5 @@ class AxisLayoutManager {
     );
   }
 
-  /// Gets the total width of axes at a specific position.
-  ///
-  /// Only counts visible axes - invisible axes don't contribute to positioning.
-  double _getWidthAtPosition(
-    YAxisPosition position,
-    List<YAxisConfig> allAxes,
-    Map<String, double> axisWidths,
-  ) {
-    var total = 0.0;
-    for (final axis in allAxes) {
-      // Skip invisible axes - they don't take up space
-      if (!axis.visible) continue;
 
-      if (axis.position == position) {
-        total += axisWidths[axis.id] ?? 0.0;
-      }
-    }
-    return total;
-  }
 }
