@@ -19,6 +19,7 @@ import 'pages/theming_page.dart';
 import 'pages/axis_render_range_page.dart';
 import 'pages/data_point_labels_page.dart';
 import 'pages/minor_ticks_page.dart';
+import 'pages/axis_slot_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'pages/tracking_page.dart';
 
@@ -207,11 +208,18 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: DataPointLabelsPage(),
       badge: 'NEW',
     ),
-    NavDestination(
+    const NavDestination(
       label: 'Series Styling',
       icon: Icons.auto_awesome_outlined,
       selectedIcon: Icons.auto_awesome,
-      page: const SeriesStylingPage(),
+      page: SeriesStylingPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Axis Slots',
+      icon: Icons.swap_vert_outlined,
+      selectedIcon: Icons.swap_vert,
+      page: AxisSlotDemoPage(),
       badge: 'NEW',
     ),
   ];

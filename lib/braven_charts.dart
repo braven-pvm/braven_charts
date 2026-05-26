@@ -77,6 +77,8 @@ export 'src/rendering/multi_axis_painter.dart';
 export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
+// Widgets
+export 'src/widgets/chart_legend.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
 export 'src/theming/components/annotation_theme.dart';
