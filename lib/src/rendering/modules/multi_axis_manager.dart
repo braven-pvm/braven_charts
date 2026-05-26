@@ -128,10 +128,13 @@ class MultiAxisManager {
   /// Called automatically by [setSeries], but can be called manually
   /// if series properties change without replacing the list.
   void invalidateCache() {
+    // Only the effective-bindings cache is invalidated here.
+    // Slot override state (_overriddenLeftIds, _overriddenRightIds) persists
+    // across series updates so that active swaps survive widget rebuilds
+    // triggered by controller state notifications. Overrides are reset
+    // explicitly by setMaxAxesPerSide(), clearSelectionFor(), and
+    // clearAllSelection().
     _cachedEffectiveBindings = null;
-    _overriddenLeftIds = null;
-    _overriddenRightIds = null;
-    _selectedSeriesId = null;
   }
 
   /// Sets the maximum number of visible axes per side.
