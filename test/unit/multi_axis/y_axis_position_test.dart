@@ -43,31 +43,43 @@ void main() {
     });
 
     group('layout order (left to right)', () {
-      test('leftOuter is first (index 0)', () {
-        expect(YAxisPosition.leftOuter.index, equals(0));
+      // leftOuter/rightOuter are deprecated and moved to the end of the enum.
+      // Indices reflect the new declaration order: left, right, hidden, leftOuter, rightOuter.
+      test('left is first (index 0)', () {
+        expect(YAxisPosition.left.index, equals(0));
       });
 
-      test('left is second (index 1)', () {
-        expect(YAxisPosition.left.index, equals(1));
+      test('right is second (index 1)', () {
+        expect(YAxisPosition.right.index, equals(1));
       });
 
-      test('right is third (index 2)', () {
-        expect(YAxisPosition.right.index, equals(2));
+      test('hidden is third (index 2)', () {
+        expect(YAxisPosition.hidden.index, equals(2));
       });
 
-      test('rightOuter is fourth (index 3)', () {
-        expect(YAxisPosition.rightOuter.index, equals(3));
+      // ignore: deprecated_member_use
+      test('leftOuter is fourth (index 3)', () {
+        // ignore: deprecated_member_use
+        expect(YAxisPosition.leftOuter.index, equals(3));
       });
 
-      test('values are in correct layout order', () {
+      // ignore: deprecated_member_use
+      test('rightOuter is fifth (index 4)', () {
+        // ignore: deprecated_member_use
+        expect(YAxisPosition.rightOuter.index, equals(4));
+      });
+
+      test('values are in correct declaration order', () {
         expect(
             YAxisPosition.values,
             equals([
-              YAxisPosition.leftOuter,
               YAxisPosition.left,
               YAxisPosition.right,
-              YAxisPosition.rightOuter,
               YAxisPosition.hidden,
+              // ignore: deprecated_member_use
+              YAxisPosition.leftOuter,
+              // ignore: deprecated_member_use
+              YAxisPosition.rightOuter,
             ]));
       });
     });
