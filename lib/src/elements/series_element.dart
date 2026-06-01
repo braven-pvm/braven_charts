@@ -844,7 +844,16 @@ class SeriesElement implements ChartElement {
     // Use theme-based stroke width with selection multiplier
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
 
-    if (!hasOverrides) {
+    if (series.baselineValue != null) {
+      _paintAreaSeriesBaseline(
+        canvas,
+        series,
+        transformedPoints,
+        baseColor,
+        opacity,
+        effectiveStrokeWidth,
+      );
+    } else if (!hasOverrides) {
       // FAST PATH: Single color for both fill and stroke
       _paintAreaSeriesSingleColor(
         canvas,
@@ -1009,6 +1018,130 @@ class SeriesElement implements ChartElement {
       }
       canvas.drawPath(strokePath, strokePaint);
     }
+  }
+
+  /// Paints an area series filled relative to a fixed [AreaChartSeries.baselineValue].
+  ///
+  /// Walks consecutive point pairs in plot space. When a pair crosses the
+  /// baseline, the exact intersection is computed via linear interpolation and
+  /// the segment is closed at that point. Each resulting polygon is painted with
+  /// [AreaChartSeries.aboveBaselineFillColor] (region above the baseline) or
+  /// [AreaChartSeries.belowBaselineFillColor] (region below), falling back to
+  /// the series colour at [AreaChartSeries.fillOpacity] when the colour is null.
+  ///
+  /// The series stroke is drawn on top, identical to the single-colour path.
+  /// Crossing detection uses linear interpolation between consecutive data
+  /// points regardless of the chosen [LineInterpolation] mode.
+  void _paintAreaSeriesBaseline(
+    Canvas canvas,
+    AreaChartSeries series,
+    List<Offset> transformedPoints,
+    Color baseColor,
+    double opacity,
+    double strokeWidth,
+  ) {
+    final baselineY =
+        _currentTransform.dataToPlot(0, series.baselineValue!).dy;
+
+    final aboveColor = series.aboveBaselineFillColor ??
+        baseColor.withValues(alpha: series.fillOpacity);
+    final belowColor = series.belowBaselineFillColor ??
+        baseColor.withValues(alpha: series.fillOpacity);
+
+    // Split points into contiguous above/below segments.
+    // A "segment" is a list of Offsets whose first and last points lie on
+    // the baseline (either as crossing intersections or original endpoints).
+    final segments = <({List<Offset> points, bool isAbove})>[];
+    var currentPoints = <Offset>[transformedPoints.first];
+    // dy < baselineY means above (smaller Y = higher on screen).
+    var currentAbove = transformedPoints.first.dy < baselineY;
+
+    for (var i = 1; i < transformedPoints.length; i++) {
+      final p1 = transformedPoints[i - 1];
+      final p2 = transformedPoints[i];
+      final p2Above = p2.dy < baselineY;
+
+      if (currentAbove != p2Above) {
+        // Linear interpolation to find the crossing X.
+        final t = (baselineY - p1.dy) / (p2.dy - p1.dy);
+        final crossing = Offset(p1.dx + t * (p2.dx - p1.dx), baselineY);
+        currentPoints.add(crossing);
+        segments.add((points: List.of(currentPoints), isAbove: currentAbove));
+        currentPoints = [crossing, p2];
+        currentAbove = p2Above;
+      } else {
+        currentPoints.add(p2);
+      }
+    }
+    // Flush final segment.
+    segments.add((points: List.of(currentPoints), isAbove: currentAbove));
+
+    // Paint each segment as a closed fill polygon.
+    for (final seg in segments) {
+      if (seg.points.length < 2) continue;
+      final first = seg.points.first;
+      final last = seg.points.last;
+
+      final path = Path();
+      // Start at baseline directly below/above the first point.
+      path.moveTo(first.dx, baselineY);
+      // Move to the first series point (zero-length line when first is a crossing).
+      path.lineTo(first.dx, first.dy);
+      // Draw the interpolated curve through the segment.
+      InterpolationGeometry.addPathSegments<Offset>(
+        path: path,
+        points: seg.points,
+        interpolation: series.interpolation,
+        getX: (p) => p.dx,
+        getY: (p) => p.dy,
+        startIndex: 1,
+        endIndex: seg.points.length - 1,
+        tension: series.tension,
+      );
+      // Close back to baseline.
+      path.lineTo(last.dx, baselineY);
+      path.close();
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = seg.isAbove ? aboveColor : belowColor
+          ..style = PaintingStyle.fill,
+      );
+    }
+
+    // Draw the series stroke on top (identical to single-colour path).
+    final linePaint = Paint()
+      ..color = baseColor.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final linePath = Path()
+      ..moveTo(transformedPoints.first.dx, transformedPoints.first.dy);
+    InterpolationGeometry.addPathSegments<Offset>(
+      path: linePath,
+      points: transformedPoints,
+      interpolation: series.interpolation,
+      getX: (p) => p.dx,
+      getY: (p) => p.dy,
+      tension: series.tension,
+    );
+
+    if (series.lineGlow > 0) {
+      canvas.drawPath(
+        linePath,
+        Paint()
+          ..color = baseColor.withAlpha(60)
+          ..strokeWidth = strokeWidth + series.lineGlow * 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow),
+      );
+    }
+    canvas.drawPath(linePath, linePaint);
   }
 
   /// Builds a closed fill path for an area region (line segment + down to x-axis).
