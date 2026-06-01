@@ -271,47 +271,130 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     );
   }
 
-  /// Tablet/desktop layout with navigation rail.
+  /// Tablet/desktop layout with scrollable navigation sidebar.
   Widget _buildTabletLayout({required bool extended}) {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
+          _ScrollableNav(
             extended: extended,
+            destinations: _destinations,
             selectedIndex: _selectedIndex,
             onDestinationSelected: (index) {
               setState(() => _selectedIndex = index);
             },
-            labelType: extended
-                ? NavigationRailLabelType.none
-                : NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: extended
-                  ? const Text(
-                      'Braven Charts',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : const Icon(Icons.bar_chart, size: 32),
-            ),
-            destinations: _destinations.map((dest) {
-              return NavigationRailDestination(
-                icon: Icon(dest.icon),
-                selectedIcon: dest.badge != null
-                    ? Badge(
-                        label: Text(dest.badge!),
-                        child: Icon(dest.selectedIcon),
-                      )
-                    : Icon(dest.selectedIcon),
-                label: Text(dest.label),
-              );
-            }).toList(),
           ),
           const VerticalDivider(width: 1, thickness: 1),
           Expanded(child: _destinations[_selectedIndex].page),
+        ],
+      ),
+    );
+  }
+}
+
+/// Scrollable navigation sidebar — replaces [NavigationRail] which has no
+/// built-in scroll support and overflows when the destination list is long.
+class _ScrollableNav extends StatelessWidget {
+  const _ScrollableNav({
+    required this.extended,
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final bool extended;
+  final List<NavDestination> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final width = extended ? 256.0 : 88.0;
+
+    return SizedBox(
+      width: width,
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+            child: extended
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Braven Charts',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : const Icon(Icons.bar_chart, size: 32),
+          ),
+          // Scrollable destinations
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(destinations.length, (i) {
+                  final dest = destinations[i];
+                  final isSelected = i == selectedIndex;
+                  final icon = Icon(
+                    isSelected ? dest.selectedIcon : dest.icon,
+                    color: isSelected
+                        ? colorScheme.onSecondaryContainer
+                        : colorScheme.onSurfaceVariant,
+                    size: 22,
+                  );
+                  final badgedIcon = dest.badge != null
+                      ? Badge(label: Text(dest.badge!), child: icon)
+                      : icon;
+
+                  return InkWell(
+                    onTap: () => onDestinationSelected(i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: extended ? 12 : 0,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? colorScheme.secondaryContainer
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: extended
+                          ? Row(
+                              children: [
+                                const SizedBox(width: 4),
+                                badgedIcon,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    dest.label,
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: isSelected
+                                          ? colorScheme.onSecondaryContainer
+                                          : colorScheme.onSurfaceVariant,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Center(child: badgedIcon),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
         ],
       ),
     );
