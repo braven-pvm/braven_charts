@@ -20,6 +20,7 @@ import 'pages/axis_render_range_page.dart';
 import 'pages/data_point_labels_page.dart';
 import 'pages/minor_ticks_page.dart';
 import 'pages/axis_slot_demo_page.dart';
+import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'pages/tracking_page.dart';
 
@@ -220,6 +221,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.swap_vert_outlined,
       selectedIcon: Icons.swap_vert,
       page: AxisSlotDemoPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Baseline Fill',
+      icon: Icons.area_chart_outlined,
+      selectedIcon: Icons.area_chart,
+      page: BaselineAreaDemoPage(),
       badge: 'NEW',
     ),
   ];
