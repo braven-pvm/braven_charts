@@ -527,6 +527,8 @@ class AreaChartSeries extends ChartSeries {
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
     SeriesInlineLabelConfig? inlineLabel,
+    // NOTE: passing null for the three baseline fields preserves the current
+    // value (null ?? this.field). To clear them, construct a new instance.
     double? baselineValue,
     Color? aboveBaselineFillColor,
     Color? belowBaselineFillColor,
@@ -565,7 +567,7 @@ class AreaChartSeries extends ChartSeries {
 
   @override
   String toString() =>
-      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, baselineValue: $baselineValue)';
+      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, baselineValue: $baselineValue, aboveBaselineFillColor: $aboveBaselineFillColor, belowBaselineFillColor: $belowBaselineFillColor)';
 
   @override
   bool operator ==(Object other) {

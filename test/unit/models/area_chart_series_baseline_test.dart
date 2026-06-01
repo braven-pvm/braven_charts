@@ -94,5 +94,10 @@ void main() {
       );
       expect(a, isNot(equals(b)));
     });
+
+    test('copyWith(baselineValue: null) preserves existing value', () {
+      const s = AreaChartSeries(id: 'a', points: [], baselineValue: 133.0);
+      expect(s.copyWith(baselineValue: null).baselineValue, 133.0);
+    });
   });
 }
