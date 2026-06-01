@@ -481,6 +481,9 @@ class AreaChartSeries extends ChartSeries {
     this.lineGlow = 0.0,
     this.dataPointLabels,
     this.inlineLabel,
+    this.baselineValue,
+    this.aboveBaselineFillColor,
+    this.belowBaselineFillColor,
   });
 
   final LineInterpolation interpolation;
@@ -496,6 +499,9 @@ class AreaChartSeries extends ChartSeries {
   final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
   final SeriesInlineLabelConfig? inlineLabel;
+  final double? baselineValue;
+  final Color? aboveBaselineFillColor;
+  final Color? belowBaselineFillColor;
 
   @override
   AreaChartSeries copyWith({
@@ -521,6 +527,9 @@ class AreaChartSeries extends ChartSeries {
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
     SeriesInlineLabelConfig? inlineLabel,
+    double? baselineValue,
+    Color? aboveBaselineFillColor,
+    Color? belowBaselineFillColor,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
@@ -546,12 +555,17 @@ class AreaChartSeries extends ChartSeries {
       lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
       inlineLabel: inlineLabel ?? this.inlineLabel,
+      baselineValue: baselineValue ?? this.baselineValue,
+      aboveBaselineFillColor:
+          aboveBaselineFillColor ?? this.aboveBaselineFillColor,
+      belowBaselineFillColor:
+          belowBaselineFillColor ?? this.belowBaselineFillColor,
     );
   }
 
   @override
   String toString() =>
-      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, baselineValue: $baselineValue)';
 
   @override
   bool operator ==(Object other) {
@@ -568,7 +582,10 @@ class AreaChartSeries extends ChartSeries {
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.lineGlow == lineGlow &&
         other.dataPointLabels == dataPointLabels &&
-        other.inlineLabel == inlineLabel;
+        other.inlineLabel == inlineLabel &&
+        other.baselineValue == baselineValue &&
+        other.aboveBaselineFillColor == aboveBaselineFillColor &&
+        other.belowBaselineFillColor == belowBaselineFillColor;
   }
 
   @override
@@ -585,6 +602,9 @@ class AreaChartSeries extends ChartSeries {
         lineGlow,
         dataPointLabels,
         inlineLabel,
+        baselineValue,
+        aboveBaselineFillColor,
+        belowBaselineFillColor,
       ]);
 }
 
