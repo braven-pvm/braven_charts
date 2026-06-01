@@ -844,6 +844,8 @@ class SeriesElement implements ChartElement {
     // Use theme-based stroke width with selection multiplier
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
 
+    // NOTE: When baselineValue is set, segmentStyle per-point colour overrides
+    // are not applied — the baseline fill path handles all fill and stroke.
     if (series.baselineValue != null) {
       _paintAreaSeriesBaseline(
         canvas,
@@ -1041,7 +1043,7 @@ class SeriesElement implements ChartElement {
     double strokeWidth,
   ) {
     final baselineY =
-        _currentTransform.dataToPlot(0, series.baselineValue!).dy;
+        _currentTransform.dataToPlot(0, series.baselineValue!).dy; // X is arbitrary; only .dy is used
 
     final aboveColor = series.aboveBaselineFillColor ??
         baseColor.withValues(alpha: series.fillOpacity);
@@ -1062,9 +1064,14 @@ class SeriesElement implements ChartElement {
       final p2Above = p2.dy < baselineY;
 
       if (currentAbove != p2Above) {
-        // Linear interpolation to find the crossing X.
-        final t = (baselineY - p1.dy) / (p2.dy - p1.dy);
-        final crossing = Offset(p1.dx + t * (p2.dx - p1.dx), baselineY);
+        // For stepped interpolation the vertical edge is always at p2.dx.
+        // For all other modes, find the crossing via linear interpolation.
+        final crossing = series.interpolation == LineInterpolation.stepped
+            ? Offset(p2.dx, baselineY)
+            : Offset(
+                p1.dx + (baselineY - p1.dy) / (p2.dy - p1.dy) * (p2.dx - p1.dx),
+                baselineY,
+              );
         currentPoints.add(crossing);
         segments.add((points: List.of(currentPoints), isAbove: currentAbove));
         currentPoints = [crossing, p2];
