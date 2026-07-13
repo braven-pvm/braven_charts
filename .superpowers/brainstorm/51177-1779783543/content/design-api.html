@@ -1,0 +1,103 @@
+<h2>Design — Section 1: API Changes</h2>
+<p class="subtitle">What changes at the call site. Does this look right?</p>
+
+<style>
+.code-block {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #e6edf3;
+  margin: 10px 0;
+  white-space: pre;
+  overflow-x: auto;
+}
+.kw { color: #ff7b72; }
+.type { color: #79c0ff; }
+.str { color: #a5d6ff; }
+.cmt { color: #8b949e; font-style: italic; }
+.deprecated { color: #f0883e; }
+.new { color: #56d364; }
+.section { margin-bottom: 20px; }
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.badge-new { background: #1a4a1a; color: #56d364; border: 1px solid #56d364; }
+.badge-dep { background: #4a2a00; color: #f0883e; border: 1px solid #f0883e; }
+.badge-unchanged { background: #1a1a2e; color: #8b8b9e; border: 1px solid #333; }
+</style>
+
+<div class="section">
+  <h3>1. <code>YAxisPosition</code> enum <span class="badge badge-dep">Breaking (deprecation)</span></h3>
+  <div class="code-block"><span class="kw">enum</span> <span class="type">YAxisPosition</span> {
+  left,
+  right,
+  hidden,
+
+  <span class="deprecated">@Deprecated(<span class="str">'Use YAxisPosition.left instead'</span>)</span>
+  <span class="deprecated">leftOuter,  <span class="cmt">// silently maps to left at runtime</span></span>
+
+  <span class="deprecated">@Deprecated(<span class="str">'Use YAxisPosition.right instead'</span>)</span>
+  <span class="deprecated">rightOuter, <span class="cmt">// silently maps to right at runtime</span></span>
+}</div>
+  <p style="font-size:12px;color:#8b949e">Existing code still compiles. The deprecated values resolve to <code>left</code>/<code>right</code> in <code>YAxisConfig</code>'s constructor via <code>_normalizePosition()</code>.</p>
+</div>
+
+<div class="section">
+  <h3>2. New <code>AxisSwapMode</code> enum <span class="badge badge-new">New</span></h3>
+  <div class="code-block"><span class="kw">enum</span> <span class="type">AxisSwapMode</span> {
+  <span class="cmt">/// Swapped axis persists after deselection (default)</span>
+  sticky,
+
+  <span class="cmt">/// Swapped axis reverts to original slot order on deselection</span>
+  revert,
+}</div>
+</div>
+
+<div class="section">
+  <h3>3. <code>BravenChartPlus</code> widget parameters <span class="badge badge-new">New</span></h3>
+  <div class="code-block"><span class="type">BravenChartPlus</span>(
+  <span class="cmt">// --- existing ---</span>
+  series: [...],
+  xAxisConfig: ...,
+
+  <span class="cmt">// --- new ---</span>
+  <span class="new">maxAxesPerSide: <span class="type">3</span>,         <span class="cmt">// max visible axes per left/right side</span></span>
+  <span class="new">axisSwapMode: <span class="type">AxisSwapMode</span>.sticky,  <span class="cmt">// sticky | revert</span></span>
+  <span class="new">onSeriesSelected: (String seriesId) { ... },   <span class="cmt">// legend or data-point tap</span></span>
+  <span class="new">onSeriesDeselected: (String seriesId) { ... }, <span class="cmt">// tap again or tap elsewhere</span></span>
+  <span class="new">onAxisSwapped: ({                               <span class="cmt">// fires when slot changes</span></span>
+  <span class="new">  required String promotedAxisId,</span>
+  <span class="new">  required String demotedAxisId,</span>
+  <span class="new">}) { ... },</span>
+)</div>
+</div>
+
+<div class="section">
+  <h3>4. Programmatic API via <code>BravenChartController</code> <span class="badge badge-new">New</span></h3>
+  <div class="code-block"><span class="kw">final</span> controller = <span class="type">BravenChartController</span>();
+
+<span class="cmt">// select a series by ID — triggers axis swap if needed</span>
+controller.selectSeries(<span class="str">'heat_strain'</span>);
+
+<span class="cmt">// deselect — triggers revert if axisSwapMode == revert</span>
+controller.deselectSeries(<span class="str">'heat_strain'</span>);
+controller.clearSelection();
+
+<span class="cmt">// read current slot state</span>
+controller.visibleAxisIds;   <span class="cmt">// List&lt;String&gt; — currently in slots</span>
+controller.overflowAxisIds;  <span class="cmt">// List&lt;String&gt; — voted out, available for swap</span>
+controller.selectedSeriesId; <span class="cmt">// String? — currently selected</span></div>
+  <p style="font-size:12px;color:#8b949e">Controller is optional — charts without one still respond to legend/data-point taps internally.</p>
+</div>
+
+<p class="subtitle">Does this API surface look right? Any names or fields to change?</p>

@@ -1,0 +1,176 @@
+<h2>Y-Axis Slot System — 3 Approaches</h2>
+<p class="subtitle">How should the chart decide which axes are visible when more series compete for a side than the max allows?</p>
+
+<style>
+.chart-mockup {
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 12px 8px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  font-size: 11px;
+  min-height: 120px;
+  margin: 10px 0;
+}
+.axis-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+  min-width: 36px;
+}
+.axis-col.right { text-align: right; }
+.axis-pill {
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+}
+.axis-pill.hidden-pill {
+  background: #333;
+  color: #666;
+  border: 1px dashed #444;
+}
+.plot-area {
+  flex: 1;
+  background: #0d0d1a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 10px;
+  margin: 0 4px;
+  min-height: 100px;
+  padding: 4px;
+}
+.slot-label {
+  font-size: 9px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.overflow-badge {
+  background: #2a1a1a;
+  border: 1px solid #5a2a2a;
+  color: #cc6666;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 9px;
+  text-align: center;
+  margin-top: 3px;
+}
+.swap-indicator {
+  font-size: 9px;
+  color: #ffaa00;
+  text-align: center;
+  padding: 1px 4px;
+  background: #2a2000;
+  border: 1px solid #554400;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+</style>
+
+<div class="options">
+
+  <!-- OPTION A -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Declaration Order (First-come, first-served)</h3>
+      <p>Keep <code>left</code> / <code>right</code>. First N series declared on that side get visible slots; overflow goes to <code>hidden</code>. No new API fields.</p>
+
+      <div class="chart-mockup">
+        <div class="axis-col left">
+          <div class="slot-label">LEFT</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#4a9eff">Power</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#88ccff">HR</div>
+        </div>
+        <div class="plot-area">chart area</div>
+        <div class="axis-col right">
+          <div class="slot-label">RIGHT (max 3)</div>
+          <div class="axis-pill" style="background:#3a1a1a;color:#ff6666">Lactate</div>
+          <div class="axis-pill" style="background:#2a1a3a;color:#cc88ff">VO₂</div>
+          <div class="axis-pill" style="background:#1a3a2a;color:#66cc88">RF</div>
+          <div class="axis-pill hidden-pill">Heat Strain ✕</div>
+          <div class="axis-pill hidden-pill">Tidal Vol ✕</div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero new API surface</li><li>Deterministic</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Order-sensitive — feels arbitrary</li><li>No user control over which 3 win</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Explicit Priority Field</h3>
+      <p>Add <code>axisPriority: int</code> to <code>YAxisConfig</code>. Higher priority wins a visible slot. Ties broken by declaration order.</p>
+
+      <div class="chart-mockup">
+        <div class="axis-col left">
+          <div class="slot-label">LEFT</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#4a9eff">Power (p:10)</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#88ccff">HR (p:9)</div>
+        </div>
+        <div class="plot-area">chart area</div>
+        <div class="axis-col right">
+          <div class="slot-label">RIGHT (max 3)</div>
+          <div class="axis-pill" style="background:#3a1a1a;color:#ff6666">Lactate (p:10)</div>
+          <div class="axis-pill" style="background:#1a3a2a;color:#66cc88">RF (p:8)</div>
+          <div class="axis-pill" style="background:#2a1a3a;color:#cc88ff">VO₂ (p:5)</div>
+          <div class="axis-pill hidden-pill">Heat Strain (p:2) ✕</div>
+          <div class="axis-pill hidden-pill">Tidal Vol (p:1) ✕</div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Full user control</li><li>Stable across reordering</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Extra field to set on every axis</li><li>Burden on caller to manage priorities</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C — RECOMMENDED -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Slot System with Selection Swap ⭐ Recommended</h3>
+      <p>Remove <code>leftOuter</code>/<code>rightOuter</code>. Each side has <code>maxAxesPerSide</code> (default 3). Declaration order fills slots. <strong>Selecting a "voted-out" series swaps its axis in, bumping the lowest-priority visible one to hidden.</strong></p>
+
+      <div class="chart-mockup">
+        <div class="axis-col left">
+          <div class="slot-label">LEFT (2/3 slots)</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#4a9eff">Power</div>
+          <div class="axis-pill" style="background:#1a3a5c;color:#88ccff">HR</div>
+        </div>
+        <div class="plot-area">chart area<br><br><span style="color:#ffaa00;font-size:9px">▶ tap Heat Strain series →<br>Tidal Vol swaps out</span></div>
+        <div class="axis-col right">
+          <div class="slot-label">RIGHT (3/3 slots)</div>
+          <div class="axis-pill" style="background:#3a1a1a;color:#ff6666">Lactate</div>
+          <div class="axis-pill" style="background:#2a1a3a;color:#cc88ff">VO₂</div>
+          <div class="axis-pill" style="background:#1a3a2a;color:#66cc88">RF</div>
+          <div class="axis-pill hidden-pill">Heat Strain ✕</div>
+          <div class="swap-indicator">tap → swaps in ↑</div>
+          <div class="axis-pill hidden-pill">Tidal Vol ✕</div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Clean API (just left/right)</li><li>Discoverable — touching a hidden series reveals its axis</li><li>Configurable cap per chart</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Breaking: removes leftOuter/rightOuter</li><li>Swap state adds complexity</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Click your preferred approach — or let me know in the terminal.</p>
