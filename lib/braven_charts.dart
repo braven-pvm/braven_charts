@@ -31,6 +31,15 @@ export 'src/ai/chart_tool_schema.dart';
 export 'src/axis/normalization_detector.dart';
 export 'src/axis/range_ratio_calculator.dart';
 export 'src/axis/series_axis_resolver.dart';
+// Portable chart artifacts
+export 'src/artifacts/chart_artifact_diagnostics.dart';
+export 'src/artifacts/chart_artifact_json_codec.dart';
+export 'src/artifacts/chart_artifact.dart';
+export 'src/artifacts/chart_data_payload.dart';
+export 'src/artifacts/chart_document.dart';
+export 'src/artifacts/chart_preview.dart';
+export 'src/artifacts/chart_view_state.dart';
+export 'src/artifacts/json_value.dart';
 // Core chart widget
 export 'src/braven_chart_plus.dart';
 // Controllers

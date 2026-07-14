@@ -1,0 +1,387 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
+import 'chart_artifact_diagnostics.dart';
+import 'chart_artifact.dart';
+import 'json_value.dart';
+
+@immutable
+class ChartArtifactDecodeResult {
+  ChartArtifactDecodeResult({
+    required this.artifact,
+    required this.sourceSchemaVersion,
+    required this.migratedSchemaVersion,
+    Iterable<String> migrationsApplied = const [],
+  }) : migrationsApplied = List.unmodifiable(migrationsApplied);
+
+  final ChartArtifact artifact;
+  final int sourceSchemaVersion;
+  final int migratedSchemaVersion;
+  final List<String> migrationsApplied;
+}
+
+/// Deterministic JSON transport codec for the chart artifact envelope.
+abstract final class ChartArtifactJsonCodec {
+  static ChartArtifactResult<String> encode(
+    ChartArtifact artifact, {
+    ChartArtifactValidationLimits limits =
+        const ChartArtifactValidationLimits(),
+  }) {
+    if (artifact.schemaVersion != ChartArtifact.currentSchemaVersion) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.unsupportedSchemaVersion,
+          message:
+              'Cannot encode schema ${artifact.schemaVersion}; '
+              'this renderer writes schema '
+              '${ChartArtifact.currentSchemaVersion}.',
+          path: r'$.schemaVersion',
+        ),
+      );
+    }
+    final semanticFailure = _validateArtifactSemantics(artifact, limits);
+    if (semanticFailure != null) {
+      return ChartArtifactFailure(error: semanticFailure);
+    }
+
+    try {
+      final encoded = canonicalJsonEncode(artifact.toJson());
+      final encodedBytes = utf8.encode(encoded).length;
+      if (encodedBytes > limits.maxEncodedBytes) {
+        return ChartArtifactFailure(
+          error: ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+            message:
+                'Encoded artifact is $encodedBytes bytes; maximum is '
+                '${limits.maxEncodedBytes}.',
+            path: r'$',
+          ),
+        );
+      }
+      return ChartArtifactSuccess(value: encoded);
+    } on FormatException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: error.message,
+        ),
+      );
+    }
+  }
+
+  static ChartArtifactResult<ChartArtifactDecodeResult> decode(
+    String encoded, {
+    ChartArtifactValidationLimits limits =
+        const ChartArtifactValidationLimits(),
+    Set<String> supportedCapabilities = const {},
+  }) {
+    if (encoded.length > limits.maxEncodedBytes) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          message: 'Artifact exceeds the ${limits.maxEncodedBytes}-byte limit.',
+          path: r'$',
+        ),
+      );
+    }
+    final encodedBytes = utf8.encode(encoded).length;
+    if (encodedBytes > limits.maxEncodedBytes) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          message:
+              'Artifact is $encodedBytes bytes; maximum is '
+              '${limits.maxEncodedBytes}.',
+          path: r'$',
+        ),
+      );
+    }
+
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(encoded);
+    } on FormatException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidJson,
+          message: error.message,
+          path: r'$',
+        ),
+      );
+    }
+
+    try {
+      _validateStructure(decoded, limits);
+      final root = _stringMap(decoded);
+      final version = root['schemaVersion'];
+      if (version is! int) {
+        throw const FormatException('schemaVersion must be an integer');
+      }
+      if (version != ChartArtifact.currentSchemaVersion) {
+        return ChartArtifactFailure(
+          error: ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.unsupportedSchemaVersion,
+            message:
+                'Schema $version is unsupported; this renderer supports '
+                'schema ${ChartArtifact.currentSchemaVersion}.',
+            path: r'$.schemaVersion',
+          ),
+        );
+      }
+
+      _validateRawDocumentCounts(root, limits);
+      final artifact = ChartArtifact.fromJson(root);
+      final semanticFailure = _validateArtifactSemantics(artifact, limits);
+      if (semanticFailure != null) {
+        return ChartArtifactFailure(error: semanticFailure);
+      }
+
+      final requiredCapabilities = <String>{
+        ...artifact.document.requiredCapabilities,
+        for (final series in artifact.document.series)
+          ...series.requiredCapabilities,
+      };
+      final unsupported = requiredCapabilities.difference(
+        supportedCapabilities,
+      );
+      if (unsupported.isNotEmpty) {
+        final sorted = unsupported.toList()..sort();
+        return ChartArtifactFailure(
+          error: ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+            message: 'Missing required capabilities: ${sorted.join(', ')}.',
+            path: r'$.document.requiredCapabilities',
+          ),
+        );
+      }
+
+      return ChartArtifactSuccess(
+        value: ChartArtifactDecodeResult(
+          artifact: artifact,
+          sourceSchemaVersion: version,
+          migratedSchemaVersion: version,
+        ),
+      );
+    } on _LimitException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          message: error.message,
+          path: error.path,
+        ),
+      );
+    } on FormatException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: error.message,
+        ),
+      );
+    } on ArgumentError catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: error.message?.toString() ?? 'Invalid artifact value.',
+        ),
+      );
+    }
+  }
+
+  static ChartArtifactError? _validateArtifactSemantics(
+    ChartArtifact artifact,
+    ChartArtifactValidationLimits limits,
+  ) {
+    final document = artifact.document;
+    if (artifact.artifactId.isEmpty) {
+      return const ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.invalidArtifact,
+        message: 'artifactId must be a non-empty string.',
+        path: r'$.artifactId',
+      );
+    }
+    if (document.documentId.isEmpty) {
+      return const ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.invalidArtifact,
+        message: 'documentId must be a non-empty string.',
+        path: r'$.document.documentId',
+      );
+    }
+    if (document.revision < 0) {
+      return const ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.invalidArtifact,
+        message: 'Document revision cannot be negative.',
+        path: r'$.document.revision',
+      );
+    }
+    if (document.series.length > limits.maxSeries) {
+      return ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+        message:
+            'Document has ${document.series.length} series; maximum is '
+            '${limits.maxSeries}.',
+        path: r'$.document.series',
+      );
+    }
+    if (document.pointCount > limits.maxPoints) {
+      return ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+        message:
+            'Document has ${document.pointCount} points; maximum is '
+            '${limits.maxPoints}.',
+        path: r'$.document.series',
+      );
+    }
+    final seriesIds = <String>{};
+    for (var index = 0; index < document.series.length; index++) {
+      final series = document.series[index];
+      final id = series.id;
+      if (id.isEmpty || series.type.isEmpty) {
+        return ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Series id and type must be non-empty.',
+          path: '\$.document.series[$index]',
+        );
+      }
+      if (!seriesIds.add(id)) {
+        return ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Duplicate series id: $id.',
+          path: '\$.document.series[$index].id',
+        );
+      }
+    }
+    return null;
+  }
+
+  static void _validateRawDocumentCounts(
+    Map<String, Object?> root,
+    ChartArtifactValidationLimits limits,
+  ) {
+    final document = _requiredRawMap(root, 'document');
+    final series = _requiredRawList(document, 'series');
+    if (series.length > limits.maxSeries) {
+      throw _LimitException(
+        'Document has ${series.length} series; maximum is ${limits.maxSeries}.',
+        r'$.document.series',
+      );
+    }
+
+    var pointCount = 0;
+    for (var index = 0; index < series.length; index++) {
+      final seriesMap = _rawStringMap(series[index], 'series');
+      final data = _requiredRawMap(seriesMap, 'data');
+      if (data['storage'] == 'inlinePoints') {
+        pointCount += _requiredRawList(data, 'points').length;
+        if (pointCount > limits.maxPoints) {
+          throw _LimitException(
+            'Document has more than ${limits.maxPoints} points.',
+            '\$.document.series[$index].data.points',
+          );
+        }
+      }
+    }
+  }
+
+  static void _validateStructure(
+    Object? root,
+    ChartArtifactValidationLimits limits,
+  ) {
+    var entries = 0;
+
+    void visit(Object? value, int depth, String path) {
+      if (depth > limits.maxDepth) {
+        throw _LimitException(
+          'Artifact nesting exceeds maximum depth ${limits.maxDepth}.',
+          path,
+        );
+      }
+      if (value is String && value.length > limits.maxStringLength) {
+        throw _LimitException(
+          'String length exceeds maximum ${limits.maxStringLength}.',
+          path,
+        );
+      }
+      if (value is List) {
+        entries += value.length;
+        if (entries > limits.maxCollectionEntries) {
+          throw _LimitException(
+            'Artifact collection entries exceed maximum '
+            '${limits.maxCollectionEntries}.',
+            path,
+          );
+        }
+        for (var index = 0; index < value.length; index++) {
+          visit(value[index], depth + 1, '$path[$index]');
+        }
+      } else if (value is Map) {
+        entries += value.length;
+        if (entries > limits.maxCollectionEntries) {
+          throw _LimitException(
+            'Artifact collection entries exceed maximum '
+            '${limits.maxCollectionEntries}.',
+            path,
+          );
+        }
+        for (final entry in value.entries) {
+          final key = entry.key;
+          if (key is! String) {
+            throw FormatException('Non-string object key at $path');
+          }
+          if (key.length > limits.maxStringLength) {
+            throw _LimitException(
+              'Object key length exceeds maximum ${limits.maxStringLength}.',
+              path,
+            );
+          }
+          visit(entry.value, depth + 1, '$path.$key');
+        }
+      }
+    }
+
+    visit(root, 0, r'$');
+  }
+
+  static Map<String, Object?> _stringMap(Object? value) {
+    if (value is! Map) {
+      throw const FormatException('Artifact root must be an object');
+    }
+    return {
+      for (final entry in value.entries)
+        if (entry.key is String) entry.key as String: entry.value,
+    };
+  }
+
+  static Map<String, Object?> _requiredRawMap(
+    Map<String, Object?> source,
+    String key,
+  ) => _rawStringMap(source[key], key);
+
+  static Map<String, Object?> _rawStringMap(Object? value, String label) {
+    if (value is! Map) throw FormatException('$label must be an object');
+    final result = <String, Object?>{};
+    for (final entry in value.entries) {
+      if (entry.key is! String) {
+        throw FormatException('$label contains a non-string key');
+      }
+      result[entry.key as String] = entry.value;
+    }
+    return result;
+  }
+
+  static List<Object?> _requiredRawList(
+    Map<String, Object?> source,
+    String key,
+  ) {
+    final value = source[key];
+    if (value is! List) throw FormatException('$key must be an array');
+    return List<Object?>.from(value);
+  }
+}
+
+final class _LimitException implements Exception {
+  const _LimitException(this.message, this.path);
+
+  final String message;
+  final String path;
+}
