@@ -28,6 +28,9 @@ The primary chart widget. It renders a chart with optional annotations, interact
 - `streamingConfig`: `StreamingConfig?`
 - `streamingController`: `StreamingController?`
 - `liveStreamController`: `LiveStreamController?`
+- `isLoading`: `bool`
+- `loadingConfig`: `ChartLoadingConfig`
+- `emptyStateConfig`: `ChartEmptyStateConfig`
 
 **Factories**:
 
@@ -116,6 +119,31 @@ Controls auto-scroll and buffering behavior for live data.
 ### `StreamingController` / `LiveStreamController`
 
 Programmatic control over streaming mode transitions.
+
+## Loading and Empty States
+
+### `ChartLoadingConfig`
+
+Controls the viewport presentation while `BravenChartPlus.isLoading` is true.
+Use `ChartLoadingConfig.skeleton()`, `.circular()`, or `.linear()`. Circular and
+linear configurations accept optional determinate `progress` from 0 to 1.
+
+The animated skeleton is responsive and inherits its series and grid colors
+from `BravenChartPlus.theme`, then the Material theme. Its
+`ChartLoadingSkeletonStyle` can override primary and secondary trace colors,
+grid color, animation duration, maximum width, viewport width factor, aspect
+ratio, motion intensity, optional grid visibility, secondary-trace visibility,
+and horizontal edge fade. The polished default omits grid lines.
+
+`loadingWidget` takes precedence over the configured built-in indicator. For a
+context-aware replacement, use `ChartLoadingConfig.customBuilder`.
+
+### `ChartEmptyStateConfig`
+
+Controls the title, guidance, icon, semantics, or custom builder displayed when
+loading has finished and all effective chart series are empty. A chart using a
+`LiveStreamController` keeps its render box mounted while waiting for its first
+direct streaming point.
 
 ## Theming
 

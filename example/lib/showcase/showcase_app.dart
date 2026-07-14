@@ -9,6 +9,7 @@ import 'pages/lactate_threshold_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
+import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/power_lactate_page.dart';
@@ -228,6 +229,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.area_chart_outlined,
       selectedIcon: Icons.area_chart,
       page: BaselineAreaDemoPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Loading States',
+      icon: Icons.hourglass_empty_outlined,
+      selectedIcon: Icons.hourglass_top,
+      page: LoadingStatesPage(),
       badge: 'NEW',
     ),
   ];
