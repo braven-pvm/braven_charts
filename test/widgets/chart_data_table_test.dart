@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -137,6 +138,161 @@ void main() {
     },
   );
 
+  testWidgets('copies wide rows and exports raw values in displayed order', (
+    tester,
+  ) async {
+    ChartTableRowExport? copied;
+    ChartTableCsvExport? exported;
+    final semantics = tester.ensureSemantics();
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(2, 220), _point(1, 110)]),
+        _series('heart-rate', [_point(2, 142), _point(1, 131)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          onCopyRow: (row) => copied = row,
+          onExportCsv: (value) => exported = value,
+        ),
+      ),
+    );
+    await tester.tap(find.text('X value'));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Copy row 1'));
+    await tester.tap(find.text('Export CSV'));
+
+    expect(copied?.headers, ['#', 'X value', 'Power', 'Heart rate']);
+    expect(find.bySemanticsLabel('Row actions'), findsOneWidget);
+    expect(copied?.rawValues, [1, 1.0, 110.0, 131.0]);
+    expect(copied?.displayValues, ['1', '1', '110', '131']);
+    expect(copied?.references.map((item) => item.pointIndex), [1, 1]);
+    expect(exported?.rows, hasLength(2));
+    expect(exported?.rows.first.rawValues, [1, 1.0, 110.0, 131.0]);
+    expect(exported?.rows.last.rawValues, [2, 2.0, 220.0, 142.0]);
+    expect(exported?.csv, contains('\r\n1,1.0,110.0,131.0\r\n'));
+    semantics.dispose();
+  });
+
+  testWidgets('arrow keys traverse rows and Enter activates the focused row', (
+    tester,
+  ) async {
+    ChartTablePointReference? focused;
+    ChartTablePointReference? activated;
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 100), _point(2, 200), _point(3, 300)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          onRowFocused: (value) => focused = value,
+          onRowActivated: (value) => activated = value,
+        ),
+        width: 260,
+      ),
+    );
+
+    final firstDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: find.byKey(ValueKey(model.wideRows[0].rowId)),
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    firstDetector.focusNode!.requestFocus();
+    await tester.pump();
+    expect(focused?.pointIndex, 0);
+    final focusedContainer = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byKey(ValueKey(model.wideRows[0].rowId)),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final focusedBorder =
+        (focusedContainer.foregroundDecoration! as BoxDecoration).border!
+            as Border;
+    expect(focusedBorder.top.width, 2);
+
+    final horizontalScroll = tester.widget<SingleChildScrollView>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SingleChildScrollView &&
+            widget.scrollDirection == Axis.horizontal,
+      ),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(horizontalScroll.controller?.offset, greaterThan(0));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+
+    final secondDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: find.byKey(ValueKey(model.wideRows[1].rowId)),
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    expect(secondDetector.focusNode?.hasFocus, isTrue);
+    expect(focused?.pointIndex, 1);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(activated?.pointIndex, 1);
+  });
+
+  testWidgets('large text and high contrast expand density without overflow', (
+    tester,
+  ) async {
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 100)]),
+      ]),
+    );
+    final rowKey = ValueKey(model.wideRows.single.rowId);
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(model: model),
+        theme: ThemeData.dark(),
+        textScaler: const TextScaler.linear(2),
+        highContrast: true,
+      ),
+    );
+
+    expect(tester.getSize(find.byKey(rowKey)).height, greaterThan(36));
+    expect(find.text('Power'), findsOneWidget);
+    tester
+        .widget<FocusableActionDetector>(
+          find.descendant(
+            of: find.byKey(rowKey),
+            matching: find.byType(FocusableActionDetector),
+          ),
+        )
+        .focusNode!
+        .requestFocus();
+    await tester.pump();
+    final focusedContainer = tester.widget<Container>(
+      find
+          .descendant(of: find.byKey(rowKey), matching: find.byType(Container))
+          .first,
+    );
+    final focusedBorder =
+        (focusedContainer.foregroundDecoration! as BoxDecoration).border!
+            as Border;
+    expect(focusedBorder.top.width, 3);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('provides loading, error, empty, and warning states', (
     tester,
   ) async {
@@ -172,15 +328,27 @@ void main() {
   });
 }
 
-Widget _host(Widget child, {double height = 420, ThemeData? theme}) =>
-    MaterialApp(
-      theme: theme,
-      home: Scaffold(
-        body: Center(
-          child: SizedBox(width: 900, height: height, child: child),
+Widget _host(
+  Widget child, {
+  double height = 420,
+  double width = 900,
+  ThemeData? theme,
+  TextScaler textScaler = TextScaler.noScaling,
+  bool highContrast = false,
+}) => MaterialApp(
+  theme: theme,
+  home: Scaffold(
+    body: Center(
+      child: MediaQuery(
+        data: MediaQueryData(
+          textScaler: textScaler,
+          highContrast: highContrast,
         ),
+        child: SizedBox(width: width, height: height, child: child),
       ),
-    );
+    ),
+  ),
+);
 
 ChartTableModel _model({
   required List<ChartPointDocument> points,

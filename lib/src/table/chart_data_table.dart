@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'chart_table_controller.dart';
 import 'chart_data_table_theme.dart';
+import 'chart_table_export.dart';
 import 'chart_table_model.dart';
 import 'chart_table_options.dart';
 
@@ -34,8 +36,12 @@ class ChartDataTable extends StatefulWidget {
   final String? errorMessage;
   final ChartTableRowCallback? onRowFocused;
   final ChartTableRowCallback? onRowActivated;
-  final ValueChanged<ChartTableLongRow>? onCopyRow;
-  final VoidCallback? onExportCsv;
+
+  /// Receives the displayed and raw values for the requested visible row.
+  final ValueChanged<ChartTableRowExport>? onCopyRow;
+
+  /// Receives raw-value CSV in the current scope and sort order.
+  final ValueChanged<ChartTableCsvExport>? onExportCsv;
   final String emptyMessage;
 
   /// Per-table visual overrides.
@@ -53,6 +59,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
   late bool _ownsController;
   final _horizontalController = ScrollController();
   final _verticalController = ScrollController();
+  final _rowFocusNodes = <String, FocusNode>{};
 
   @override
   void initState() {
@@ -84,6 +91,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
     if (_ownsController) _controller.dispose();
     _horizontalController.dispose();
     _verticalController.dispose();
+    for (final node in _rowFocusNodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -141,7 +151,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
                 viewportWidth,
                 tableTheme.rowNumberWidth +
                     tableTheme.xColumnWidth +
-                    model.series.length * tableTheme.seriesColumnWidth,
+                    model.series.length * tableTheme.seriesColumnWidth +
+                    (widget.onCopyRow == null ? 0 : 44),
               );
         return SizedBox(
           height: height,
@@ -150,7 +161,15 @@ class _ChartDataTableState extends State<ChartDataTable> {
             children: [
               _TableSummary(
                 model: model,
-                onExportCsv: widget.onExportCsv,
+                onExportCsv: widget.onExportCsv == null
+                    ? null
+                    : () => widget.onExportCsv!(
+                        ChartTableExporter.csvForDisplayedRows(
+                          model,
+                          longRows: longRows,
+                          wideRows: wideRows,
+                        ),
+                      ),
                 theme: tableTheme,
               ),
               if (model.warnings.isNotEmpty)
@@ -237,6 +256,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? null
                   : Color(column.colorValue!),
             ),
+          if (widget.onCopyRow != null)
+            _StaticHeader(
+              label: '',
+              semanticsLabel: 'Row actions',
+              width: 44,
+              theme: tableTheme,
+            ),
         ],
       );
     }
@@ -276,7 +302,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
         _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
         _StaticHeader(label: 'Status', width: 96, theme: tableTheme),
         if (widget.onCopyRow != null)
-          _StaticHeader(label: '', width: 44, theme: tableTheme),
+          _StaticHeader(
+            label: '',
+            semanticsLabel: 'Row actions',
+            width: 44,
+            theme: tableTheme,
+          ),
       ],
     );
   }
@@ -293,10 +324,20 @@ class _ChartDataTableState extends State<ChartDataTable> {
       final firstReference = row.cells.values.first.reference;
       return _FocusableTableRow(
         key: ValueKey(row.rowId),
-        semanticsLabel: _wideSemantics(row, model),
+        semanticsLabel: 'Row ${index + 1}, ${_wideSemantics(row, model)}',
         reference: firstReference,
         rowIndex: index,
         theme: theme,
+        focusNode: _focusNodeFor(row.rowId),
+        onMoveVertical: (delta) => _moveRowFocus(
+          wideRows.length,
+          (targetIndex) => wideRows[targetIndex].rowId,
+          index,
+          delta,
+          theme.rowHeight,
+        ),
+        onMoveHorizontal: (delta) =>
+            _moveHorizontal(delta, theme.seriesColumnWidth),
         onFocused: widget.onRowFocused,
         onActivated: widget.onRowActivated,
         children: [
@@ -317,6 +358,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
           ),
           for (final column in model.series)
             _buildWideValueCell(row, column, theme),
+          if (widget.onCopyRow != null)
+            _CopyRowButton(
+              tooltip: 'Copy row ${index + 1}',
+              onPressed: () => widget.onCopyRow!(
+                ChartTableExporter.wideRow(model, row, index),
+              ),
+            ),
         ],
       );
     }
@@ -324,10 +372,20 @@ class _ChartDataTableState extends State<ChartDataTable> {
     return _FocusableTableRow(
       key: ValueKey(row.rowId),
       semanticsLabel:
-          '${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}${row.unit == null ? '' : ' ${row.unit}'}, ${row.isValid ? 'valid point' : 'invalid point'}',
+          'Row ${index + 1}, ${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}${row.unit == null ? '' : ' ${row.unit}'}, ${row.isValid ? 'valid point' : 'invalid point'}',
       reference: row.reference,
       rowIndex: index,
       theme: theme,
+      focusNode: _focusNodeFor(row.rowId),
+      onMoveVertical: (delta) => _moveRowFocus(
+        longRows.length,
+        (targetIndex) => longRows[targetIndex].rowId,
+        index,
+        delta,
+        theme.rowHeight,
+      ),
+      onMoveHorizontal: (delta) =>
+          _moveHorizontal(delta, theme.seriesColumnWidth),
       onFocused: widget.onRowFocused,
       onActivated: widget.onRowActivated,
       children: [
@@ -367,13 +425,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
           theme: theme,
         ),
         if (widget.onCopyRow != null)
-          SizedBox(
-            width: 44,
-            child: IconButton(
-              tooltip: 'Copy ${row.seriesName} row',
-              onPressed: () => widget.onCopyRow!(row),
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.copy_outlined, size: 16),
+          _CopyRowButton(
+            tooltip: 'Copy ${row.seriesName} row',
+            onPressed: () => widget.onCopyRow!(
+              ChartTableExporter.longRow(model, row, index),
             ),
           ),
       ],
@@ -395,6 +450,54 @@ class _ChartDataTableState extends State<ChartDataTable> {
           ? null
           : Color(column.colorValue!),
       theme: theme,
+    );
+  }
+
+  FocusNode _focusNodeFor(String rowId) =>
+      _rowFocusNodes.putIfAbsent(rowId, () => FocusNode(debugLabel: rowId));
+
+  void _moveRowFocus(
+    int rowCount,
+    String Function(int index) rowIdAt,
+    int currentIndex,
+    int delta,
+    double rowHeight,
+  ) {
+    if (rowCount == 0) return;
+    final targetIndex = (currentIndex + delta).clamp(0, rowCount - 1);
+    if (targetIndex == currentIndex) return;
+    final targetNode = _focusNodeFor(rowIdAt(targetIndex));
+    if (_verticalController.hasClients) {
+      final position = _verticalController.position;
+      final rowTop = targetIndex * rowHeight;
+      final rowBottom = rowTop + rowHeight;
+      final viewportTop = position.pixels;
+      final viewportBottom = viewportTop + position.viewportDimension;
+      final targetOffset = rowTop < viewportTop
+          ? rowTop
+          : rowBottom > viewportBottom
+          ? rowBottom - position.viewportDimension
+          : viewportTop;
+      _verticalController.jumpTo(
+        targetOffset.clamp(0, position.maxScrollExtent),
+      );
+    }
+    targetNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !targetNode.hasFocus) targetNode.requestFocus();
+    });
+  }
+
+  void _moveHorizontal(int delta, double columnWidth) {
+    if (!_horizontalController.hasClients) return;
+    final position = _horizontalController.position;
+    _horizontalController.animateTo(
+      (position.pixels + delta * columnWidth).clamp(
+        0,
+        position.maxScrollExtent,
+      ),
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
     );
   }
 
@@ -635,25 +738,57 @@ class _StaticHeader extends StatelessWidget {
     required this.width,
     required this.theme,
     this.numeric = false,
+    this.semanticsLabel,
   });
 
   final String label;
   final double width;
   final _ResolvedTableTheme theme;
   final bool numeric;
+  final String? semanticsLabel;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: theme.cellHorizontalPadding),
-      child: Text(
-        label,
-        textAlign: numeric ? TextAlign.right : TextAlign.left,
-        style: theme.headerTextStyle,
+  Widget build(BuildContext context) => Semantics(
+    container: semanticsLabel != null,
+    label: semanticsLabel,
+    excludeSemantics: semanticsLabel != null,
+    child: SizedBox(
+      width: width,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: theme.cellHorizontalPadding),
+        child: Text(
+          label,
+          textAlign: numeric ? TextAlign.right : TextAlign.left,
+          style: theme.headerTextStyle,
+        ),
       ),
     ),
   );
+}
+
+class _CopyRowButton extends StatelessWidget {
+  const _CopyRowButton({required this.tooltip, required this.onPressed});
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 44,
+    child: IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      icon: const Icon(Icons.copy_outlined, size: 16),
+    ),
+  );
+}
+
+class _MoveTableFocusIntent extends Intent {
+  const _MoveTableFocusIntent({this.vertical = 0, this.horizontal = 0});
+
+  final int vertical;
+  final int horizontal;
 }
 
 class _FocusableTableRow extends StatefulWidget {
@@ -664,6 +799,9 @@ class _FocusableTableRow extends StatefulWidget {
     required this.children,
     required this.rowIndex,
     required this.theme,
+    required this.focusNode,
+    required this.onMoveVertical,
+    required this.onMoveHorizontal,
     this.onFocused,
     this.onActivated,
   });
@@ -673,6 +811,9 @@ class _FocusableTableRow extends StatefulWidget {
   final List<Widget> children;
   final int rowIndex;
   final _ResolvedTableTheme theme;
+  final FocusNode focusNode;
+  final ValueChanged<int> onMoveVertical;
+  final ValueChanged<int> onMoveHorizontal;
   final ChartTableRowCallback? onFocused;
   final ChartTableRowCallback? onActivated;
 
@@ -685,19 +826,55 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Semantics(
       label: widget.semanticsLabel,
       button: widget.onActivated != null,
+      focused: _focused,
       child: FocusableActionDetector(
-        onShowFocusHighlight: (value) => setState(() => _focused = value),
+        focusNode: widget.focusNode,
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.arrowUp): _MoveTableFocusIntent(
+            vertical: -1,
+          ),
+          SingleActivator(LogicalKeyboardKey.arrowDown): _MoveTableFocusIntent(
+            vertical: 1,
+          ),
+          SingleActivator(LogicalKeyboardKey.arrowLeft): _MoveTableFocusIntent(
+            horizontal: -1,
+          ),
+          SingleActivator(LogicalKeyboardKey.arrowRight): _MoveTableFocusIntent(
+            horizontal: 1,
+          ),
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        },
+        actions: {
+          _MoveTableFocusIntent: CallbackAction<_MoveTableFocusIntent>(
+            onInvoke: (intent) {
+              if (intent.vertical != 0) {
+                widget.onMoveVertical(intent.vertical);
+              }
+              if (intent.horizontal != 0) {
+                widget.onMoveHorizontal(intent.horizontal);
+              }
+              return null;
+            },
+          ),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onActivated?.call(widget.reference);
+              return null;
+            },
+          ),
+        },
         onFocusChange: (focused) {
+          if (_focused != focused) setState(() => _focused = focused);
           if (focused) widget.onFocused?.call(widget.reference);
         },
         mouseCursor: widget.onActivated == null
             ? MouseCursor.defer
             : SystemMouseCursors.click,
         child: InkWell(
+          canRequestFocus: false,
           onTap: widget.onActivated == null
               ? null
               : () => widget.onActivated!(widget.reference),
@@ -714,11 +891,16 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
                   : widget.theme.oddRowColor,
               border: Border(
                 bottom: BorderSide(color: widget.theme.dividerColor),
-                left: _focused
-                    ? BorderSide(color: colors.primary, width: 3)
-                    : BorderSide.none,
               ),
             ),
+            foregroundDecoration: _focused
+                ? BoxDecoration(
+                    border: Border.all(
+                      color: widget.theme.focusBorderColor,
+                      width: widget.theme.focusBorderWidth,
+                    ),
+                  )
+                : null,
             child: Row(children: widget.children),
           ),
         ),
@@ -863,6 +1045,8 @@ class _ResolvedTableTheme {
     required this.oddRowColor,
     required this.dividerColor,
     required this.focusedRowColor,
+    required this.focusBorderColor,
+    required this.focusBorderWidth,
     required this.headerTextStyle,
     required this.cellTextStyle,
     required this.rowNumberTextStyle,
@@ -877,9 +1061,32 @@ class _ResolvedTableTheme {
     final source = override ?? const ChartDataTableTheme();
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final highContrast = MediaQuery.highContrastOf(context);
+    final headerTextStyle =
+        source.headerTextStyle ??
+        theme.textTheme.labelSmall?.copyWith(
+          color: colors.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+        ) ??
+        TextStyle(
+          color: colors.onSurfaceVariant,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        );
+    final cellTextStyle =
+        source.cellTextStyle ??
+        theme.textTheme.bodySmall?.copyWith(color: colors.onSurface) ??
+        TextStyle(color: colors.onSurface, fontSize: 12);
     return _ResolvedTableTheme(
-      rowHeight: source.rowHeight,
-      headerHeight: source.headerHeight,
+      rowHeight: math.max(
+        source.rowHeight,
+        _scaledLineHeight(cellTextStyle, textScaler) + 12,
+      ),
+      headerHeight: math.max(
+        source.headerHeight,
+        _scaledLineHeight(headerTextStyle, textScaler) + 16,
+      ),
       rowNumberWidth: source.rowNumberWidth,
       xColumnWidth: source.xColumnWidth,
       seriesColumnWidth: source.seriesColumnWidth,
@@ -889,23 +1096,15 @@ class _ResolvedTableTheme {
       evenRowColor: source.evenRowColor ?? colors.surface,
       oddRowColor: source.oddRowColor ?? colors.surfaceContainerLowest,
       dividerColor:
-          source.dividerColor ?? colors.outlineVariant.withValues(alpha: 0.65),
+          source.dividerColor ??
+          (highContrast
+              ? colors.outline
+              : colors.outlineVariant.withValues(alpha: 0.65)),
       focusedRowColor: source.focusedRowColor ?? colors.primaryContainer,
-      headerTextStyle:
-          source.headerTextStyle ??
-          theme.textTheme.labelSmall?.copyWith(
-            color: colors.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ) ??
-          TextStyle(
-            color: colors.onSurfaceVariant,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-          ),
-      cellTextStyle:
-          source.cellTextStyle ??
-          theme.textTheme.bodySmall?.copyWith(color: colors.onSurface) ??
-          TextStyle(color: colors.onSurface, fontSize: 12),
+      focusBorderColor: colors.primary,
+      focusBorderWidth: highContrast ? 3 : 2,
+      headerTextStyle: headerTextStyle,
+      cellTextStyle: cellTextStyle,
       rowNumberTextStyle:
           source.rowNumberTextStyle ??
           theme.textTheme.labelSmall?.copyWith(
@@ -938,11 +1137,18 @@ class _ResolvedTableTheme {
   final Color oddRowColor;
   final Color dividerColor;
   final Color focusedRowColor;
+  final Color focusBorderColor;
+  final double focusBorderWidth;
   final TextStyle headerTextStyle;
   final TextStyle cellTextStyle;
   final TextStyle rowNumberTextStyle;
   final TextStyle secondaryTextStyle;
   final TextStyle summaryTextStyle;
+}
+
+double _scaledLineHeight(TextStyle style, TextScaler scaler) {
+  final fontSize = style.fontSize ?? 12;
+  return scaler.scale(fontSize) * (style.height ?? 1.2);
 }
 
 int _compareNumbers(double left, double right) {
