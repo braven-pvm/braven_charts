@@ -28,6 +28,7 @@ import 'models/braven_chart_controller.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
+import 'models/chart_state_config.dart';
 import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
 import 'models/data_range.dart';
@@ -51,6 +52,7 @@ import 'widgets/dialogs/range_annotation_dialog.dart';
 import 'widgets/dialogs/text_annotation_dialog.dart';
 import 'widgets/dialogs/threshold_annotation_dialog.dart';
 import 'widgets/dialogs/trend_annotation_dialog.dart';
+import 'widgets/chart_state_view.dart';
 import 'widgets/web_context_menu.dart';
 
 /// BravenChartPlus renders interactive, multi-series charts with annotations.
@@ -110,6 +112,9 @@ class BravenChartPlus extends StatefulWidget {
     this.legendStyle,
     this.showToolbar = false,
     this.interactiveAnnotations = true,
+    this.isLoading = false,
+    this.loadingConfig = const ChartLoadingConfig.skeleton(),
+    this.emptyStateConfig = const ChartEmptyStateConfig(),
     this.loadingWidget,
     this.errorWidget,
     this.autoScrollConfig,
@@ -154,6 +159,9 @@ class BravenChartPlus extends StatefulWidget {
     bool showLegend = true,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool isLoading = false,
+    ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
+    ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -210,6 +218,9 @@ class BravenChartPlus extends StatefulWidget {
       showLegend: showLegend,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      isLoading: isLoading,
+      loadingConfig: loadingConfig,
+      emptyStateConfig: emptyStateConfig,
       loadingWidget: loadingWidget,
       errorWidget: errorWidget,
       onPointTap: onPointTap,
@@ -249,6 +260,9 @@ class BravenChartPlus extends StatefulWidget {
     bool showLegend = true,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool isLoading = false,
+    ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
+    ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -302,6 +316,9 @@ class BravenChartPlus extends StatefulWidget {
       showLegend: showLegend,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      isLoading: isLoading,
+      loadingConfig: loadingConfig,
+      emptyStateConfig: emptyStateConfig,
       loadingWidget: loadingWidget,
       errorWidget: errorWidget,
       onPointTap: onPointTap,
@@ -341,6 +358,9 @@ class BravenChartPlus extends StatefulWidget {
     bool showLegend = true,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool isLoading = false,
+    ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
+    ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
     Widget? loadingWidget,
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
@@ -440,6 +460,9 @@ class BravenChartPlus extends StatefulWidget {
       showLegend: showLegend,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      isLoading: isLoading,
+      loadingConfig: loadingConfig,
+      emptyStateConfig: emptyStateConfig,
       loadingWidget: loadingWidget,
       errorWidget: errorWidget,
       onPointTap: onPointTap,
@@ -663,9 +686,21 @@ class BravenChartPlus extends StatefulWidget {
   /// Requires annotations to have `allowDragging = true`.
   final bool interactiveAnnotations;
 
+  /// Whether the chart data is currently loading.
+  ///
+  /// Loading takes precedence over both chart content and the empty state while
+  /// preserving the chart's configured viewport size.
+  final bool isLoading;
+
+  /// Configures the built-in loading presentation.
+  final ChartLoadingConfig loadingConfig;
+
+  /// Configures the state shown when loading has finished without data.
+  final ChartEmptyStateConfig emptyStateConfig;
+
   /// Widget to display while loading data.
   ///
-  /// Defaults to CircularProgressIndicator.
+  /// When provided, this replaces the indicator selected by [loadingConfig].
   final Widget? loadingWidget;
 
   /// Widget to display when an error occurs.
@@ -3099,6 +3134,44 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  Widget _buildViewportContent(Widget chartContent) {
+    final Widget content;
+    if (widget.isLoading) {
+      content = ChartLoadingStateView(
+        key: const ValueKey<String>('braven_chart_loading_state'),
+        config: widget.loadingConfig,
+        loadingWidget: widget.loadingWidget,
+        chartTheme: widget.theme,
+      );
+    } else {
+      final hasData = _effectiveDataSeries.any(
+        (series) => series.points.any((point) => point.isValid),
+      );
+      final mustKeepRenderBoxMounted = widget.liveStreamController != null;
+      if (!hasData && !mustKeepRenderBoxMounted) {
+        content = ChartEmptyStateView(
+          key: const ValueKey<String>('braven_chart_empty_state'),
+          config: widget.emptyStateConfig,
+        );
+      } else {
+        content = chartContent;
+      }
+    }
+
+    if (identical(content, chartContent)) {
+      return chartContent;
+    }
+
+    return SizedBox(
+      width: widget.width,
+      height: widget.height,
+      child: ColoredBox(
+        color: widget.theme?.backgroundColor ?? widget.backgroundColor,
+        child: content,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Disable browser context menu on web platform
@@ -3106,7 +3179,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BrowserContextMenu.disableContextMenu();
     }
 
-    final Widget chartContent = Focus(
+    final Widget renderedChart = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
@@ -3255,6 +3328,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         },
       ),
     );
+
+    final chartContent = _buildViewportContent(renderedChart);
 
     // Add title, subtitle, and legend
     if (widget.title != null || widget.subtitle != null || widget.showLegend) {

@@ -51,6 +51,7 @@ export 'src/models/chart_data_point.dart';
 export 'src/models/data_point_label_config.dart';
 export 'src/models/series_inline_label_config.dart';
 export 'src/models/chart_series.dart';
+export 'src/models/chart_state_config.dart';
 export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/data_range.dart';

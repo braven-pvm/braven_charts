@@ -85,6 +85,46 @@ flutter run -d chrome
 
 See [example/readme.md](example/readme.md) for demo details.
 
+## Loading and Empty States
+
+Use `isLoading` to replace the chart viewport with a stable, accessible loading
+presentation while data is being fetched. When loading finishes and every
+series is empty, the chart shows a configurable empty state automatically.
+
+```dart
+BravenChartPlus(
+  series: series,
+  isLoading: isLoading,
+  loadingConfig: const ChartLoadingConfig.skeleton(),
+  emptyStateConfig: const ChartEmptyStateConfig(
+    title: 'No workout samples',
+    message: 'Import a workout or change the selected date range.',
+  ),
+)
+```
+
+Built-in loading presentations include an animated chart `skeleton`, `circular`,
+and `linear`. The skeleton becomes static when reduced motion is requested.
+Circular and linear indicators accept optional determinate progress from 0 to
+1. Use `loadingWidget` or the configuration builders for fully custom content.
+
+The skeleton scales with the chart viewport and inherits colors from
+`BravenChartPlus.theme`, falling back to the Material theme. Override only what
+you need with `ChartLoadingSkeletonStyle`. The default is grid-free; set
+`showGrid: true` when a chart scaffold is preferred.
+
+```dart
+loadingConfig: const ChartLoadingConfig.skeleton(
+  skeletonStyle: ChartLoadingSkeletonStyle(
+    seriesColor: Color(0xFF6D28D9),
+    secondarySeriesColor: Color(0xFFEC4899),
+    animationDuration: Duration(milliseconds: 1800),
+    motionIntensity: 0.8,
+    edgeFadeFraction: 0.16,
+  ),
+),
+```
+
 ## Documentation
 
 ### Guides
