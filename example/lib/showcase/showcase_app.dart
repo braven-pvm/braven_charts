@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_schema_lab_page.dart';
+import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
 import 'pages/artifact_hydration_lab_page.dart';
 import 'pages/chart_types_page.dart';
@@ -214,6 +215,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.layers_outlined,
       selectedIcon: Icons.layers,
       page: ArtifactHydrationLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Data Table Lab',
+      icon: Icons.table_chart_outlined,
+      selectedIcon: Icons.table_chart,
+      page: ArtifactDataTableLabPage(),
       badge: 'NEW',
     ),
   ];

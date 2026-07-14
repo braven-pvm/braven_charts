@@ -145,6 +145,22 @@ void main() {
         missing.warnings.single.code,
         ChartArtifactDiagnosticCodes.unregisteredFormatter,
       );
+
+      final broken = ChartTableModel.fromDocument(
+        document,
+        options: ChartTableOptions(
+          formatters: ChartFormatterRegistry(
+            customFormatters: {
+              'com.example.elapsed': (_, _) => throw StateError('broken'),
+            },
+          ),
+        ),
+      );
+      expect(broken.longRows.single.xDisplay, '1.25');
+      expect(
+        broken.warnings.single.code,
+        ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+      );
     });
 
     test('pivots sparse and duplicate X values only by exact occurrence', () {

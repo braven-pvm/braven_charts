@@ -14,6 +14,8 @@ enum ChartTableRowLayout { long, wide }
 /// Explicit alignment strategies supported by a wide table projection.
 enum ChartTableAlignmentPolicy { exactX }
 
+enum ChartDisplayMode { chart, data, split }
+
 /// Immutable rules for deriving a table from a chart document.
 @immutable
 class ChartTableOptions {

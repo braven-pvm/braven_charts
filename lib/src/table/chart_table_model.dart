@@ -309,7 +309,25 @@ String Function(double)? _resolveFormatter(
         ),
       );
     }
-    return resolution.formatter;
+    var emittedRuntimeWarning = false;
+    return (value) {
+      try {
+        return resolution.formatter(value);
+      } on Object catch (error) {
+        if (!emittedRuntimeWarning) {
+          emittedRuntimeWarning = true;
+          warnings.add(
+            ChartArtifactWarning(
+              code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+              message:
+                  'Formatter execution failed ($error); raw values are shown.',
+              path: path,
+            ),
+          );
+        }
+        return _plainNumber(value);
+      }
+    };
   } on FormatException catch (error) {
     warnings.add(
       ChartArtifactWarning(
