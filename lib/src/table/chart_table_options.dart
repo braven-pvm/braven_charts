@@ -21,7 +21,7 @@ enum ChartDisplayMode { chart, data, split }
 class ChartTableOptions {
   const ChartTableOptions({
     this.dataScope = ChartTableDataScope.allSeries,
-    this.rowLayout = ChartTableRowLayout.long,
+    this.rowLayout = ChartTableRowLayout.wide,
     this.alignmentPolicy = ChartTableAlignmentPolicy.exactX,
     this.seriesIds = const {},
     this.viewportOnly = false,

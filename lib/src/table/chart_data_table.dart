@@ -174,7 +174,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       return _TableHeader(
         children: [
           _SortHeader(
-            label: 'X value',
+            label: model.xColumnLabel,
             columnId: 'x',
             width: 176,
             controller: _controller,
@@ -201,7 +201,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
           controller: _controller,
         ),
         _SortHeader(
-          label: 'X value',
+          label: model.xColumnLabel,
           columnId: 'x',
           width: 144,
           controller: _controller,

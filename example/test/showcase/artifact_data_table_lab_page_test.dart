@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Widget subject() => const MaterialApp(home: ArtifactDataTableLabPage());
 
-  testWidgets('captures one document for chart, long rows, and exact-X data', (
+  testWidgets('captures one document into a transposed exact-X table', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1500, 1000);
@@ -19,7 +19,10 @@ void main() {
 
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(find.byType(ChartDataTable), findsOneWidget);
-    expect(find.text('320 table rows'), findsOneWidget);
+    expect(find.text('160 table rows'), findsOneWidget);
+    expect(find.text('Sample'), findsOneWidget);
+    expect(find.text('Power (W)'), findsOneWidget);
+    expect(find.text('Heart rate (bpm)'), findsOneWidget);
 
     await tester.tap(find.text('Hide heart rate'));
     await tester.pump();
@@ -27,10 +30,7 @@ void main() {
     await tester.tap(find.text('Visible only'));
     await tester.pump();
     expect(find.text('160 table rows'), findsOneWidget);
-
-    await tester.tap(find.text('Exact-X wide'));
-    await tester.pump();
-    expect(find.text('160 table rows'), findsOneWidget);
+    expect(find.text('Heart rate (bpm)'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -51,7 +51,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(ChartDataTable), findsOneWidget);
-    expect(find.textContaining('All series · 320 rows'), findsOneWidget);
+    expect(find.textContaining('All series · 160 rows'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

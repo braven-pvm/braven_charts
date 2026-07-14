@@ -3,6 +3,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartTableModel', () {
+    test('defaults to a transposed exact-X presentation', () {
+      final yFormatter = ChartFormatterDescriptor(
+        id: 'braven.number.fixed',
+        arguments: {'decimals': JsonNumberValue(2)},
+      ).toDocument();
+      final model = ChartTableModel.fromDocument(
+        _document(
+          [
+            _series(id: 'power', name: 'Power', points: [_point(7, 241.44)]),
+            _series(
+              id: 'heart-rate',
+              name: 'Heart rate',
+              points: [_point(7, 133.75)],
+            ),
+          ],
+          xLabel: 'Sample',
+          yFormatter: yFormatter,
+        ),
+      );
+
+      expect(model.options.rowLayout, ChartTableRowLayout.wide);
+      expect(model.xColumnLabel, 'Sample');
+      expect(model.wideRows, hasLength(1));
+      expect(model.wideRows.single.xDisplay, '7');
+      expect(model.wideRows.single.cells['power']?.yDisplay, '241.44');
+      expect(model.wideRows.single.cells['heart-rate']?.yDisplay, '133.75');
+    });
+
     test('builds a lossless long form with stable point references', () {
       final document = _document([
         _series(
@@ -218,12 +246,26 @@ ChartPointDocument _point(double x, double y) => ChartPointDocument(
 ChartDocument _document(
   List<ChartSeriesDocument> series, {
   JsonObjectValue? xFormatter,
+  JsonObjectValue? yFormatter,
+  String? xLabel,
 }) => ChartDocument(
   documentId: 'table-test',
   revision: 3,
   series: series,
-  xAxis: ChartAxisDocument(id: 'x', position: 'bottom', formatter: xFormatter),
-  axes: [ChartAxisDocument(id: 'y', position: 'left', unit: 'units')],
+  xAxis: ChartAxisDocument(
+    id: 'x',
+    position: 'bottom',
+    label: xLabel,
+    formatter: xFormatter,
+  ),
+  axes: [
+    ChartAxisDocument(
+      id: 'y',
+      position: 'left',
+      unit: 'units',
+      formatter: yFormatter,
+    ),
+  ],
   theme: _success(ChartThemeDocumentCodec.encode(ChartTheme.light)).value,
   interaction: _success(
     ChartInteractionDocumentCodec.encode(const InteractionConfig()),

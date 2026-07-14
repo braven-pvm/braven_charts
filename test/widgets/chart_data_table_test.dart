@@ -128,6 +128,7 @@ ChartTableModel _model({
   JsonObjectValue? xFormatter,
 }) => ChartTableModel.fromDocument(
   _document([_series('series', points)], xFormatter: xFormatter),
+  options: const ChartTableOptions(rowLayout: ChartTableRowLayout.long),
 );
 
 ChartSeriesDocument _series(String id, List<ChartPointDocument> points) =>

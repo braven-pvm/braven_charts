@@ -117,6 +117,7 @@ class ChartTableModel {
   ChartTableModel._({
     required this.documentId,
     required this.documentRevision,
+    required this.xColumnLabel,
     required this.options,
     required Iterable<ChartTableSeriesColumn> series,
     required Iterable<ChartTableLongRow> longRows,
@@ -148,7 +149,12 @@ class ChartTableModel {
     for (final series in selected) {
       final inlineAxis = series.inlineAxis?.values;
       final inlineAxisId = inlineAxis?['id']?.toJson();
-      final axis = axesById[series.axisId ?? inlineAxisId];
+      final resolvedAxisId = series.axisId ?? inlineAxisId;
+      final axis = resolvedAxisId is String
+          ? axesById[resolvedAxisId]
+          : document.axes.isEmpty
+          ? null
+          : document.axes.first;
       final inlineUnit = inlineAxis?['unit']?.toJson();
       final unit =
           series.unit ??
@@ -216,6 +222,7 @@ class ChartTableModel {
     return ChartTableModel._(
       documentId: document.documentId,
       documentRevision: document.revision,
+      xColumnLabel: _xColumnLabel(document.xAxis),
       options: options,
       series: seriesColumns,
       longRows: longRows,
@@ -228,6 +235,7 @@ class ChartTableModel {
 
   final String documentId;
   final int documentRevision;
+  final String xColumnLabel;
   final ChartTableOptions options;
   final List<ChartTableSeriesColumn> series;
   final List<ChartTableLongRow> longRows;
@@ -350,6 +358,15 @@ String _displayNumber(double value, String Function(double)? formatter) {
 String _plainNumber(double value) => value == value.truncateToDouble()
     ? value.toInt().toString()
     : value.toString();
+
+String _xColumnLabel(ChartAxisDocument axis) {
+  final label = axis.label?.trim();
+  final unit = axis.unit?.trim();
+  if (label != null && label.isNotEmpty) {
+    return unit == null || unit.isEmpty ? label : '$label ($unit)';
+  }
+  return unit == null || unit.isEmpty ? 'X value' : unit;
+}
 
 List<ChartTableWideRow> _pivotExactX(
   List<ChartTableLongRow> longRows,

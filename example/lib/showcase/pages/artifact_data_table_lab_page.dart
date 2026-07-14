@@ -19,7 +19,6 @@ class _ArtifactDataTableLabPageState extends State<ArtifactDataTableLabPage> {
   ChartTableModel? _model;
   ChartArtifactError? _error;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
-  ChartTableRowLayout _rowLayout = ChartTableRowLayout.long;
   ChartTableDataScope _scope = ChartTableDataScope.allSeries;
   bool _viewportOnly = false;
   bool _heartRateVisible = true;
@@ -46,6 +45,12 @@ class _ArtifactDataTableLabPageState extends State<ArtifactDataTableLabPage> {
           id: 'braven.number.fixed',
           arguments: {'decimals': JsonNumberValue(0)},
         ).toDocument(),
+        yAxisFormatterDescriptors: {
+          'y': ChartFormatterDescriptor(
+            id: 'braven.number.fixed',
+            arguments: {'decimals': JsonNumberValue(2)},
+          ).toDocument(),
+        },
       ),
     );
     switch (result) {
@@ -73,7 +78,6 @@ class _ArtifactDataTableLabPageState extends State<ArtifactDataTableLabPage> {
       viewState: snapshot.viewState,
       options: ChartTableOptions(
         dataScope: _scope,
-        rowLayout: _rowLayout,
         viewportOnly: _viewportOnly,
       ),
     );
@@ -210,21 +214,6 @@ class _ArtifactDataTableLabPageState extends State<ArtifactDataTableLabPage> {
     runSpacing: 12,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      SegmentedButton<ChartTableRowLayout>(
-        segments: const [
-          ButtonSegment(
-            value: ChartTableRowLayout.long,
-            label: Text('Long rows'),
-          ),
-          ButtonSegment(
-            value: ChartTableRowLayout.wide,
-            label: Text('Exact-X wide'),
-          ),
-        ],
-        selected: {_rowLayout},
-        onSelectionChanged: (selection) =>
-            _updateTable(() => _rowLayout = selection.single),
-      ),
       SegmentedButton<ChartTableDataScope>(
         segments: const [
           ButtonSegment(
