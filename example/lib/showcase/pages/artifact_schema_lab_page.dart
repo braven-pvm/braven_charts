@@ -51,7 +51,8 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
       _status = _CodecStatus.ready;
       _statusTitle = 'Sample ready';
       _statusMessage =
-          'Schema 1 sample restored. No live chart extraction is used yet.';
+          'A built-in line model was encoded into a schema 1 document. '
+          'No live chart extraction is used yet.';
     });
   }
 
@@ -76,6 +77,13 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
     switch (decoded) {
       case ChartArtifactSuccess<ChartArtifactDecodeResult>():
         final artifact = decoded.value.artifact;
+        for (final document in artifact.document.series) {
+          final model = ChartSeriesDocumentCodec.decode(document);
+          if (model case ChartArtifactFailure<ChartSeries>()) {
+            _showFailure(model.error);
+            return;
+          }
+        }
         final encoded = ChartArtifactJsonCodec.encode(artifact);
         switch (encoded) {
           case ChartArtifactSuccess<String>():
@@ -86,7 +94,8 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               _statusTitle = 'Round trip passed';
               _statusMessage =
                   'Decoded schema ${decoded.value.sourceSchemaVersion}, '
-                  'validated capabilities, and produced canonical JSON.';
+                  'rehydrated the built-in series model, validated '
+                  'capabilities, and produced canonical JSON.';
             });
           case ChartArtifactFailure<String>():
             _showFailure(encoded.error);
@@ -136,9 +145,10 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Test the schema-v1 JSON envelope, deterministic encoding, '
-                'capability validation, and structured failures. Live chart '
-                'capture and rehydration are not implemented on this surface yet.',
+                'Test the built-in series model codec, schema-v1 JSON '
+                'envelope, deterministic encoding, capability validation, '
+                'and structured failures. Live chart capture and widget '
+                'rehydration are not implemented on this surface yet.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.5,
@@ -367,6 +377,33 @@ class _ArtifactSummary extends StatelessWidget {
 }
 
 ChartArtifact _buildSampleArtifact() {
+  final seriesResult = ChartSeriesDocumentCodec.encode(
+    LineChartSeries(
+      id: 'power',
+      name: 'Power',
+      unit: 'W',
+      yAxisId: 'power-axis',
+      color: const Color(0xFF2F6EA5),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 3,
+      showDataPointMarkers: true,
+      points: [
+        for (final (index, y) in const [
+          (0.0, 186.0),
+          (1.0, 224.0),
+          (2.0, 208.0),
+          (3.0, 252.0),
+        ])
+          ChartDataPoint(x: index, y: y, label: '${y.toInt()} W'),
+      ],
+    ),
+  );
+  final seriesDocument = switch (seriesResult) {
+    ChartArtifactSuccess<ChartSeriesDocument>() => seriesResult.value,
+    ChartArtifactFailure<ChartSeriesDocument>() => throw StateError(
+      seriesResult.error.message,
+    ),
+  };
   return ChartArtifact(
     artifactId: 'showcase-artifact-v1',
     renderer: const ChartRendererInfo(
@@ -378,28 +415,7 @@ ChartArtifact _buildSampleArtifact() {
       documentId: 'showcase-power-series',
       revision: 1,
       title: 'Power profile',
-      series: [
-        ChartSeriesDocument(
-          type: 'line',
-          id: 'power',
-          name: 'Power',
-          unit: 'W',
-          axisId: 'power-axis',
-          requiredCapabilities: const {'series.line'},
-          data: InlinePointPayload([
-            for (final (x, y) in const [
-              (0.0, 186.0),
-              (1.0, 224.0),
-              (2.0, 208.0),
-              (3.0, 252.0),
-            ])
-              ChartPointDocument(
-                x: ChartNumberDocument.fromDouble(x),
-                y: ChartNumberDocument.fromDouble(y),
-              ),
-          ]),
-        ),
-      ],
+      series: [seriesDocument],
       xAxis: ChartAxisDocument(
         id: 'elapsed',
         position: 'bottom',

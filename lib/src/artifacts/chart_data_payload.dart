@@ -58,6 +58,8 @@ class ChartPointDocument {
     this.timestamp,
     this.label,
     this.metadata,
+    this.segmentStyle,
+    this.pointStyle,
     Map<String, JsonValue> extensions = const {},
   }) : extensions = Map.unmodifiable(extensions);
 
@@ -66,6 +68,8 @@ class ChartPointDocument {
   final DateTime? timestamp;
   final String? label;
   final JsonObjectValue? metadata;
+  final JsonObjectValue? segmentStyle;
+  final JsonObjectValue? pointStyle;
   final Map<String, JsonValue> extensions;
 
   Map<String, Object?> toJson() => {
@@ -74,6 +78,8 @@ class ChartPointDocument {
     if (timestamp != null) 'timestamp': timestamp!.toUtc().toIso8601String(),
     if (label != null) 'label': label,
     if (metadata != null) 'metadata': metadata!.toJson(),
+    if (segmentStyle != null) 'segmentStyle': segmentStyle!.toJson(),
+    if (pointStyle != null) 'pointStyle': pointStyle!.toJson(),
     if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
   };
 
@@ -84,6 +90,8 @@ class ChartPointDocument {
         timestamp: readOptionalDateTime(json, 'timestamp'),
         label: readOptionalString(json, 'label'),
         metadata: readOptionalJsonObject(json, 'metadata'),
+        segmentStyle: readOptionalJsonObject(json, 'segmentStyle'),
+        pointStyle: readOptionalJsonObject(json, 'pointStyle'),
         extensions: readOptionalJsonValueMap(json, 'extensions'),
       );
 }
@@ -145,6 +153,7 @@ class ChartSeriesDocument {
     this.name,
     this.unit,
     this.axisId,
+    this.inlineAxis,
     this.style,
     this.metadata,
     Set<String> requiredCapabilities = const {},
@@ -157,6 +166,7 @@ class ChartSeriesDocument {
   final String? name;
   final String? unit;
   final String? axisId;
+  final JsonObjectValue? inlineAxis;
   final JsonObjectValue? style;
   final JsonObjectValue? metadata;
   final ChartDataPayload data;
@@ -169,6 +179,7 @@ class ChartSeriesDocument {
     if (name != null) 'name': name,
     if (unit != null) 'unit': unit,
     if (axisId != null) 'axisId': axisId,
+    if (inlineAxis != null) 'inlineAxis': inlineAxis!.toJson(),
     if (style != null) 'style': style!.toJson(),
     if (metadata != null) 'metadata': metadata!.toJson(),
     'data': data.toJson(),
@@ -184,6 +195,7 @@ class ChartSeriesDocument {
         name: readOptionalString(json, 'name'),
         unit: readOptionalString(json, 'unit'),
         axisId: readOptionalString(json, 'axisId'),
+        inlineAxis: readOptionalJsonObject(json, 'inlineAxis'),
         style: readOptionalJsonObject(json, 'style'),
         metadata: readOptionalJsonObject(json, 'metadata'),
         data: ChartDataPayload.fromJson(readRequiredMap(json, 'data')),

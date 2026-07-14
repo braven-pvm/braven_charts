@@ -20,20 +20,10 @@ enum DataPointMarkerStyle {
 }
 
 /// Interpolation methods for line and area charts.
-enum LineInterpolation {
-  linear,
-  bezier,
-  stepped,
-  monotone,
-}
+enum LineInterpolation { linear, bezier, stepped, monotone }
 
 /// Rendering style hints for series visualization.
-enum SeriesStyle {
-  line,
-  bar,
-  scatter,
-  area,
-}
+enum SeriesStyle { line, bar, scatter, area }
 
 /// Base class for chart series.
 ///
@@ -178,18 +168,18 @@ class ChartSeries {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        name,
-        Object.hashAll(points),
-        color,
-        style,
-        isXOrdered,
-        metadata != null ? Object.hashAll(metadata!.entries) : null,
-        Object.hashAll(annotations),
-        yAxisId,
-        yAxisConfig,
-        unit,
-      );
+    id,
+    name,
+    Object.hashAll(points),
+    color,
+    style,
+    isXOrdered,
+    metadata != null ? Object.hashAll(metadata!.entries) : null,
+    Object.hashAll(annotations),
+    yAxisId,
+    yAxisConfig,
+    unit,
+  );
 
   /// Helper for list equality comparison.
   static bool _listEquals<T>(List<T>? a, List<T>? b) {
@@ -267,11 +257,14 @@ class ChartSeries {
     return ChartSeries(
       id: json['id'] as String,
       name: json['name'] as String?,
-      points: (json['points'] as List<dynamic>?)
-              ?.map((p) => ChartDataPoint(
-                    x: (p['x'] as num).toDouble(),
-                    y: (p['y'] as num).toDouble(),
-                  ))
+      points:
+          (json['points'] as List<dynamic>?)
+              ?.map(
+                (p) => ChartDataPoint(
+                  x: (p['x'] as num).toDouble(),
+                  y: (p['y'] as num).toDouble(),
+                ),
+              )
               .toList() ??
           const [],
       yAxisId: json['yAxisId'] as String?,
@@ -291,6 +284,8 @@ class LineChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.style,
+    super.annotations,
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
@@ -309,10 +304,11 @@ class LineChartSeries extends ChartSeries {
   final LineInterpolation interpolation;
   final double strokeWidth;
   final double
-      tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
+  tension; // Used for bezier curves (0.0 = straight, 1.0 = very smooth)
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
   final DataPointMarkerStyle dataPointMarkerStyle;
+
   /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
   /// Set this to match your chart background so the circle masks the line.
   final Color dataPointMarkerBackground;
@@ -351,6 +347,8 @@ class LineChartSeries extends ChartSeries {
       color: color ?? this.color,
       isXOrdered: isXOrdered ?? this.isXOrdered,
       metadata: metadata ?? this.metadata,
+      style: style ?? this.style,
+      annotations: annotations ?? this.annotations,
       yAxisId: yAxisId ?? this.yAxisId,
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
@@ -360,8 +358,7 @@ class LineChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
-      dataPointMarkerStyle:
-          dataPointMarkerStyle ?? this.dataPointMarkerStyle,
+      dataPointMarkerStyle: dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
@@ -393,18 +390,18 @@ class LineChartSeries extends ChartSeries {
 
   @override
   int get hashCode => Object.hashAll([
-        super.hashCode,
-        interpolation,
-        strokeWidth,
-        tension,
-        showDataPointMarkers,
-        dataPointMarkerRadius,
-        dataPointMarkerStyle,
-        dataPointMarkerBackground,
-        lineGlow,
-        dataPointLabels,
-        inlineLabel,
-      ]);
+    super.hashCode,
+    interpolation,
+    strokeWidth,
+    tension,
+    showDataPointMarkers,
+    dataPointMarkerRadius,
+    dataPointMarkerStyle,
+    dataPointMarkerBackground,
+    lineGlow,
+    dataPointLabels,
+    inlineLabel,
+  ]);
 }
 
 /// Scatter plot series with configurable marker size.
@@ -416,6 +413,8 @@ class ScatterChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.style,
+    super.annotations,
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
@@ -446,6 +445,8 @@ class ScatterChartSeries extends ChartSeries {
       color: color ?? this.color,
       isXOrdered: isXOrdered ?? this.isXOrdered,
       metadata: metadata ?? this.metadata,
+      style: style ?? this.style,
+      annotations: annotations ?? this.annotations,
       yAxisId: yAxisId ?? this.yAxisId,
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
@@ -467,6 +468,8 @@ class AreaChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.style,
+    super.annotations,
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
@@ -493,6 +496,7 @@ class AreaChartSeries extends ChartSeries {
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
   final DataPointMarkerStyle dataPointMarkerStyle;
+
   /// Interior fill color for [DataPointMarkerStyle.hollow] markers.
   /// Set this to match your chart background so the circle masks the line.
   final Color dataPointMarkerBackground;
@@ -540,6 +544,8 @@ class AreaChartSeries extends ChartSeries {
       color: color ?? this.color,
       isXOrdered: isXOrdered ?? this.isXOrdered,
       metadata: metadata ?? this.metadata,
+      style: style ?? this.style,
+      annotations: annotations ?? this.annotations,
       yAxisId: yAxisId ?? this.yAxisId,
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
@@ -550,8 +556,7 @@ class AreaChartSeries extends ChartSeries {
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
-      dataPointMarkerStyle:
-          dataPointMarkerStyle ?? this.dataPointMarkerStyle,
+      dataPointMarkerStyle: dataPointMarkerStyle ?? this.dataPointMarkerStyle,
       dataPointMarkerBackground:
           dataPointMarkerBackground ?? this.dataPointMarkerBackground,
       lineGlow: lineGlow ?? this.lineGlow,
@@ -592,22 +597,22 @@ class AreaChartSeries extends ChartSeries {
 
   @override
   int get hashCode => Object.hashAll([
-        super.hashCode,
-        interpolation,
-        strokeWidth,
-        tension,
-        fillOpacity,
-        showDataPointMarkers,
-        dataPointMarkerRadius,
-        dataPointMarkerStyle,
-        dataPointMarkerBackground,
-        lineGlow,
-        dataPointLabels,
-        inlineLabel,
-        baselineValue,
-        aboveBaselineFillColor,
-        belowBaselineFillColor,
-      ]);
+    super.hashCode,
+    interpolation,
+    strokeWidth,
+    tension,
+    fillOpacity,
+    showDataPointMarkers,
+    dataPointMarkerRadius,
+    dataPointMarkerStyle,
+    dataPointMarkerBackground,
+    lineGlow,
+    dataPointLabels,
+    inlineLabel,
+    baselineValue,
+    aboveBaselineFillColor,
+    belowBaselineFillColor,
+  ]);
 }
 
 /// Bar chart series with configurable width.
@@ -619,6 +624,8 @@ class BarChartSeries extends ChartSeries {
     super.color,
     super.isXOrdered = false,
     super.metadata,
+    super.style,
+    super.annotations,
     super.yAxisId,
     super.yAxisConfig,
     super.unit,
@@ -626,15 +633,18 @@ class BarChartSeries extends ChartSeries {
     this.barWidthPixels,
     this.minWidth = 4.0,
     this.maxWidth = 100.0,
-  })  : assert(barWidthPercent != null || barWidthPixels != null,
-            'Must specify either barWidthPercent or barWidthPixels'),
-        assert(
-            barWidthPercent == null ||
-                (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
-            'barWidthPercent must be between 0.0 and 1.0');
+  }) : assert(
+         barWidthPercent != null || barWidthPixels != null,
+         'Must specify either barWidthPercent or barWidthPixels',
+       ),
+       assert(
+         barWidthPercent == null ||
+             (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
+         'barWidthPercent must be between 0.0 and 1.0',
+       );
 
   final double?
-      barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
+  barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
   final double? barWidthPixels; // Fixed width in data units
   final double minWidth; // Minimum bar width in data units
   final double maxWidth; // Maximum bar width in data units
@@ -664,6 +674,8 @@ class BarChartSeries extends ChartSeries {
       color: color ?? this.color,
       isXOrdered: isXOrdered ?? this.isXOrdered,
       metadata: metadata ?? this.metadata,
+      style: style ?? this.style,
+      annotations: annotations ?? this.annotations,
       yAxisId: yAxisId ?? this.yAxisId,
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
