@@ -35,6 +35,8 @@ export 'src/axis/series_axis_resolver.dart';
 export 'src/artifacts/chart_artifact_diagnostics.dart';
 export 'src/artifacts/chart_artifact_json_codec.dart';
 export 'src/artifacts/chart_artifact.dart';
+export 'src/artifacts/chart_annotation_document.dart';
+export 'src/artifacts/chart_annotation_document_codec.dart';
 export 'src/artifacts/chart_data_payload.dart';
 export 'src/artifacts/chart_document.dart';
 export 'src/artifacts/chart_preview.dart';

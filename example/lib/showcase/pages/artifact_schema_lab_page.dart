@@ -51,7 +51,8 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
       _status = _CodecStatus.ready;
       _statusTitle = 'Sample ready';
       _statusMessage =
-          'A built-in line model was encoded into a schema 1 document. '
+          'Built-in line, pin, and threshold models were encoded into a '
+          'schema 1 document. '
           'No live chart extraction is used yet.';
     });
   }
@@ -72,7 +73,11 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
   void _roundTrip() {
     final decoded = ChartArtifactJsonCodec.decode(
       _jsonController.text,
-      supportedCapabilities: const {'series.line'},
+      supportedCapabilities: const {
+        'series.line',
+        'annotation.pin',
+        'annotation.threshold',
+      },
     );
     switch (decoded) {
       case ChartArtifactSuccess<ChartArtifactDecodeResult>():
@@ -80,6 +85,13 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
         for (final document in artifact.document.series) {
           final model = ChartSeriesDocumentCodec.decode(document);
           if (model case ChartArtifactFailure<ChartSeries>()) {
+            _showFailure(model.error);
+            return;
+          }
+        }
+        for (final document in artifact.document.annotations) {
+          final model = ChartAnnotationDocumentCodec.decode(document);
+          if (model case ChartArtifactFailure<ChartAnnotation>()) {
             _showFailure(model.error);
             return;
           }
@@ -94,7 +106,7 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               _statusTitle = 'Round trip passed';
               _statusMessage =
                   'Decoded schema ${decoded.value.sourceSchemaVersion}, '
-                  'rehydrated the built-in series model, validated '
+                  'rehydrated built-in series and annotation models, validated '
                   'capabilities, and produced canonical JSON.';
             });
           case ChartArtifactFailure<String>():
@@ -145,7 +157,7 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Test the built-in series model codec, schema-v1 JSON '
+                'Test built-in series and annotation codecs, schema-v1 JSON '
                 'envelope, deterministic encoding, capability validation, '
                 'and structured failures. Live chart capture and widget '
                 'rehydration are not implemented on this surface yet.',
@@ -337,6 +349,17 @@ class _ArtifactSummary extends StatelessWidget {
       ('Schema', artifact?.schemaVersion.toString() ?? '—'),
       ('Series', document?.series.length.toString() ?? '—'),
       ('Points', document?.pointCount.toString() ?? '—'),
+      (
+        'Annotations',
+        document == null
+            ? '—'
+            : (document.annotations.length +
+                      document.series.fold<int>(
+                        0,
+                        (count, series) => count + series.annotations.length,
+                      ))
+                  .toString(),
+      ),
       ('Revision', document?.revision.toString() ?? '—'),
     ];
 
@@ -387,6 +410,15 @@ ChartArtifact _buildSampleArtifact() {
       interpolation: LineInterpolation.monotone,
       strokeWidth: 3,
       showDataPointMarkers: true,
+      annotations: [
+        PinAnnotation(
+          id: 'peak-pin',
+          label: 'Peak',
+          x: 3,
+          y: 252,
+          markerColor: const Color(0xFFE65100),
+        ),
+      ],
       points: [
         for (final (index, y) in const [
           (0.0, 186.0),
@@ -404,6 +436,23 @@ ChartArtifact _buildSampleArtifact() {
       seriesResult.error.message,
     ),
   };
+  final annotationResult = ChartAnnotationDocumentCodec.encode(
+    ThresholdAnnotation(
+      id: 'tempo-threshold',
+      label: 'Tempo floor',
+      axis: AnnotationAxis.y,
+      value: 210,
+      seriesId: 'power',
+      lineColor: const Color(0xFF7B1FA2),
+      dashPattern: const [6, 4],
+    ),
+  );
+  final annotationDocument = switch (annotationResult) {
+    ChartArtifactSuccess<ChartAnnotationDocument>() => annotationResult.value,
+    ChartArtifactFailure<ChartAnnotationDocument>() => throw StateError(
+      annotationResult.error.message,
+    ),
+  };
   return ChartArtifact(
     artifactId: 'showcase-artifact-v1',
     renderer: const ChartRendererInfo(
@@ -416,6 +465,7 @@ ChartArtifact _buildSampleArtifact() {
       revision: 1,
       title: 'Power profile',
       series: [seriesDocument],
+      annotations: [annotationDocument],
       xAxis: ChartAxisDocument(
         id: 'elapsed',
         position: 'bottom',

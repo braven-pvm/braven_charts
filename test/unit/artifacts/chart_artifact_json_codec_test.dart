@@ -15,7 +15,11 @@ void main() {
 
       final decodedResult = ChartArtifactJsonCodec.decode(
         encoded,
-        supportedCapabilities: const {'series.line'},
+        supportedCapabilities: const {
+          'series.line',
+          'annotation.pin',
+          'annotation.threshold',
+        },
       );
       expect(
         decodedResult,
@@ -119,6 +123,8 @@ void main() {
         ChartArtifactDiagnosticCodes.missingRequiredCapability,
       );
       expect(result.error.message, contains('series.line'));
+      expect(result.error.message, contains('annotation.pin'));
+      expect(result.error.message, contains('annotation.threshold'));
     });
 
     test('enforces point and encoded-byte limits', () {
@@ -162,6 +168,44 @@ void main() {
       );
     });
 
+    test('counts series and points nested inside legend annotations', () {
+      final legendResult = ChartAnnotationDocumentCodec.encode(
+        LegendAnnotation(
+          series: const [
+            LineChartSeries(id: 'nested', points: [ChartDataPoint(x: 0, y: 1)]),
+          ],
+        ),
+      );
+      final legend =
+          (legendResult as ChartArtifactSuccess<ChartAnnotationDocument>).value;
+      final artifact = _buildArtifact(additionalAnnotations: [legend]);
+
+      final encodedSeriesLimited = ChartArtifactJsonCodec.encode(
+        artifact,
+        limits: const ChartArtifactValidationLimits(maxSeries: 1),
+      );
+      expect(encodedSeriesLimited, isA<ChartArtifactFailure<String>>());
+      expect(
+        (encodedSeriesLimited as ChartArtifactFailure<String>).error.code,
+        ChartArtifactDiagnosticCodes.validationLimitExceeded,
+      );
+
+      final encoded =
+          (ChartArtifactJsonCodec.encode(artifact)
+                  as ChartArtifactSuccess<String>)
+              .value;
+      final decodedPointLimited = ChartArtifactJsonCodec.decode(
+        encoded,
+        limits: const ChartArtifactValidationLimits(maxPoints: 3),
+      );
+      expect(
+        (decodedPointLimited as ChartArtifactFailure<ChartArtifactDecodeResult>)
+            .error
+            .code,
+        ChartArtifactDiagnosticCodes.validationLimitExceeded,
+      );
+    });
+
     test('rejects duplicate series ids and unsupported payload storage', () {
       final root =
           jsonDecode(
@@ -199,7 +243,9 @@ void main() {
   });
 }
 
-ChartArtifact _buildArtifact() {
+ChartArtifact _buildArtifact({
+  List<ChartAnnotationDocument> additionalAnnotations = const [],
+}) {
   return ChartArtifact(
     artifactId: 'artifact-round-trip',
     renderer: const ChartRendererInfo(
@@ -221,6 +267,13 @@ ChartArtifact _buildArtifact() {
           requiredCapabilities: const {'series.line'},
           metadata:
               JsonValue.fromJson({'source': 'unit-test'}) as JsonObjectValue,
+          annotations: [
+            ChartAnnotationDocument(
+              type: 'pin',
+              id: 'series-pin',
+              requiredCapabilities: const {'annotation.pin'},
+            ),
+          ],
           data: InlinePointPayload([
             ChartPointDocument(
               x: ChartNumberDocument.fromDouble(0),
@@ -272,6 +325,14 @@ ChartArtifact _buildArtifact() {
         configuration:
             JsonValue.fromJson({'zoom': true, 'pan': true}) as JsonObjectValue,
       ),
+      annotations: [
+        ChartAnnotationDocument(
+          type: 'threshold',
+          id: 'document-threshold',
+          requiredCapabilities: const {'annotation.threshold'},
+        ),
+        ...additionalAnnotations,
+      ],
     ),
     viewState: ChartViewState(
       visibleBounds: const ChartBoundsDocument(

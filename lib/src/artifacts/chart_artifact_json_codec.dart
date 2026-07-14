@@ -46,6 +46,7 @@ abstract final class ChartArtifactJsonCodec {
     }
 
     try {
+      _validateRawDocumentCounts(artifact.toJson(), limits);
       final encoded = canonicalJsonEncode(artifact.toJson());
       final encodedBytes = utf8.encode(encoded).length;
       if (encodedBytes > limits.maxEncodedBytes) {
@@ -60,6 +61,14 @@ abstract final class ChartArtifactJsonCodec {
         );
       }
       return ChartArtifactSuccess(value: encoded);
+    } on _LimitException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          message: error.message,
+          path: error.path,
+        ),
+      );
     } on FormatException catch (error) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
@@ -139,8 +148,13 @@ abstract final class ChartArtifactJsonCodec {
 
       final requiredCapabilities = <String>{
         ...artifact.document.requiredCapabilities,
+        for (final annotation in artifact.document.annotations)
+          ...annotation.requiredCapabilities,
         for (final series in artifact.document.series)
           ...series.requiredCapabilities,
+        for (final series in artifact.document.series)
+          for (final annotation in series.annotations)
+            ...annotation.requiredCapabilities,
       };
       final unsupported = requiredCapabilities.difference(
         supportedCapabilities,
@@ -259,27 +273,57 @@ abstract final class ChartArtifactJsonCodec {
     ChartArtifactValidationLimits limits,
   ) {
     final document = _requiredRawMap(root, 'document');
-    final series = _requiredRawList(document, 'series');
-    if (series.length > limits.maxSeries) {
-      throw _LimitException(
-        'Document has ${series.length} series; maximum is ${limits.maxSeries}.',
-        r'$.document.series',
-      );
+    var seriesCount = 0;
+    var pointCount = 0;
+
+    late void Function(List<Object?> annotations, String path) countAnnotations;
+
+    void countSeries(List<Object?> series, String path) {
+      seriesCount += series.length;
+      if (seriesCount > limits.maxSeries) {
+        throw _LimitException(
+          'Artifact has more than ${limits.maxSeries} series.',
+          path,
+        );
+      }
+      for (var index = 0; index < series.length; index++) {
+        final seriesPath = '$path[$index]';
+        final seriesMap = _rawStringMap(series[index], 'series');
+        final data = _requiredRawMap(seriesMap, 'data');
+        if (data['storage'] == 'inlinePoints') {
+          pointCount += _requiredRawList(data, 'points').length;
+          if (pointCount > limits.maxPoints) {
+            throw _LimitException(
+              'Artifact has more than ${limits.maxPoints} points.',
+              '$seriesPath.data.points',
+            );
+          }
+        }
+        final annotations = _optionalRawList(seriesMap, 'annotations');
+        if (annotations != null) {
+          countAnnotations(annotations, '$seriesPath.annotations');
+        }
+      }
     }
 
-    var pointCount = 0;
-    for (var index = 0; index < series.length; index++) {
-      final seriesMap = _rawStringMap(series[index], 'series');
-      final data = _requiredRawMap(seriesMap, 'data');
-      if (data['storage'] == 'inlinePoints') {
-        pointCount += _requiredRawList(data, 'points').length;
-        if (pointCount > limits.maxPoints) {
-          throw _LimitException(
-            'Document has more than ${limits.maxPoints} points.',
-            '\$.document.series[$index].data.points',
+    countAnnotations = (List<Object?> annotations, String path) {
+      for (var index = 0; index < annotations.length; index++) {
+        final annotationPath = '$path[$index]';
+        final annotation = _rawStringMap(annotations[index], 'annotation');
+        if (annotation['type'] == 'legend') {
+          final payload = _requiredRawMap(annotation, 'payload');
+          countSeries(
+            _requiredRawList(payload, 'series'),
+            '$annotationPath.payload.series',
           );
         }
       }
+    };
+
+    countSeries(_requiredRawList(document, 'series'), r'$.document.series');
+    final annotations = _optionalRawList(document, 'annotations');
+    if (annotations != null) {
+      countAnnotations(annotations, r'$.document.annotations');
     }
   }
 
@@ -356,6 +400,11 @@ abstract final class ChartArtifactJsonCodec {
     Map<String, Object?> source,
     String key,
   ) => _rawStringMap(source[key], key);
+
+  static List<Object?>? _optionalRawList(
+    Map<String, Object?> source,
+    String key,
+  ) => source[key] == null ? null : _requiredRawList(source, key);
 
   static Map<String, Object?> _rawStringMap(Object? value, String label) {
     if (value is! Map) throw FormatException('$label must be an object');

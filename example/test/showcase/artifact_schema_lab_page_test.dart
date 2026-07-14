@@ -19,7 +19,9 @@ void main() {
 
     expect(find.text('Round trip passed'), findsOneWidget);
     expect(find.text('Schema'), findsOneWidget);
+    expect(find.text('Annotations'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('shows a structured error for a future schema', (tester) async {

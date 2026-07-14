@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'artifact_json_readers.dart';
+import 'chart_annotation_document.dart';
 import 'chart_data_payload.dart';
 import 'json_value.dart';
 
@@ -101,37 +102,6 @@ class ChartInteractionDocument {
       ChartInteractionDocument(
         configuration: readOptionalJsonObject(json, 'configuration'),
         requiredBindings: readOptionalStringSet(json, 'requiredBindings'),
-      );
-}
-
-@immutable
-class ChartAnnotationDocument {
-  ChartAnnotationDocument({
-    required this.type,
-    required this.id,
-    JsonObjectValue? payload,
-    Map<String, JsonValue> extensions = const {},
-  }) : payload = payload ?? JsonObjectValue(const {}),
-       extensions = Map.unmodifiable(extensions);
-
-  final String type;
-  final String id;
-  final JsonObjectValue payload;
-  final Map<String, JsonValue> extensions;
-
-  Map<String, Object?> toJson() => {
-    'type': type,
-    'id': id,
-    'payload': payload.toJson(),
-    if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
-  };
-
-  factory ChartAnnotationDocument.fromJson(Map<String, Object?> json) =>
-      ChartAnnotationDocument(
-        type: readRequiredString(json, 'type'),
-        id: readRequiredString(json, 'id'),
-        payload: readOptionalJsonObject(json, 'payload'),
-        extensions: readOptionalJsonValueMap(json, 'extensions'),
       );
 }
 

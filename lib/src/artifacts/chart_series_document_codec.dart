@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show internal;
 import 'package:flutter/material.dart';
 
+import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
@@ -7,8 +9,11 @@ import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
+import 'chart_annotation_document.dart';
+import 'chart_annotation_document_codec.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
+import 'chart_model_codec_context.dart';
 import 'json_value.dart';
 
 /// Audited adapter between public built-in series models and schema-v1
@@ -16,17 +21,21 @@ import 'json_value.dart';
 ///
 /// This codec is intentionally separate from the legacy `ChartSeries.toJson`
 /// shape. It preserves every point and rendering-relevant property supported
-/// by the built-in series models. Executable callbacks and series annotations
-/// fail closed until their descriptor/annotation codecs are supplied.
+/// by the built-in series models. Executable callbacks fail closed until their
+/// runtime binding descriptors are supplied.
 abstract final class ChartSeriesDocumentCodec {
-  static ChartArtifactResult<ChartSeriesDocument> encode(ChartSeries series) {
+  static ChartArtifactResult<ChartSeriesDocument> encode(ChartSeries series) =>
+      encodeWithContext(series, ChartModelCodecContext());
+
+  @internal
+  static ChartArtifactResult<ChartSeriesDocument> encodeWithContext(
+    ChartSeries series,
+    ChartModelCodecContext context,
+  ) {
+    var entered = false;
     try {
-      if (series.annotations.isNotEmpty) {
-        throw const _UnsupportedModelException(
-          'Series annotations require the built-in annotation codec.',
-          r'$.annotations',
-        );
-      }
+      context.enter(series);
+      entered = true;
       if (series.yAxisConfig?.labelFormatter != null) {
         throw const _RuntimeBindingException(
           'Y-axis label formatters must be represented by a runtime binding descriptor.',
@@ -56,6 +65,10 @@ abstract final class ChartSeriesDocumentCodec {
           inlineAxis: _encodeAxis(series.yAxisConfig),
           style: _jsonObject(_encodeSeriesStyle(series), path: r'$.style'),
           metadata: _jsonObjectOrNull(series.metadata, path: r'$.metadata'),
+          annotations: [
+            for (final annotation in series.annotations)
+              _encodeAnnotationOrThrow(annotation, context),
+          ],
           data: InlinePointPayload([
             for (var index = 0; index < series.points.length; index++)
               _encodePoint(series.points[index], index),
@@ -79,6 +92,16 @@ abstract final class ChartSeriesDocumentCodec {
           path: error.path,
         ),
       );
+    } on _NestedCodecException catch (error) {
+      return ChartArtifactFailure(error: error.error);
+    } on ChartModelGraphException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          message: error.message,
+          path: r'$.annotations',
+        ),
+      );
     } on ArgumentError catch (error) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
@@ -93,6 +116,8 @@ abstract final class ChartSeriesDocumentCodec {
           message: error.message,
         ),
       );
+    } finally {
+      if (entered) context.exit(series);
     }
   }
 
@@ -110,6 +135,10 @@ abstract final class ChartSeriesDocumentCodec {
       final points = payload.points.map(_decodePoint).toList(growable: false);
       final metadata = _dynamicMap(document.metadata);
       final axis = _decodeAxis(document.inlineAxis);
+      final annotations = [
+        for (final annotation in document.annotations)
+          _decodeAnnotationOrThrow(annotation),
+      ];
       final commonStyle = _optionalEnum(
         style['seriesStyle'],
         SeriesStyle.values,
@@ -125,6 +154,7 @@ abstract final class ChartSeriesDocumentCodec {
           style: commonStyle,
           isXOrdered: _bool(style, 'isXOrdered', fallback: false),
           metadata: metadata,
+          annotations: annotations,
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
@@ -137,6 +167,7 @@ abstract final class ChartSeriesDocumentCodec {
           style: commonStyle,
           isXOrdered: _bool(style, 'isXOrdered', fallback: false),
           metadata: metadata,
+          annotations: annotations,
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
@@ -169,6 +200,7 @@ abstract final class ChartSeriesDocumentCodec {
           style: commonStyle,
           isXOrdered: _bool(style, 'isXOrdered', fallback: false),
           metadata: metadata,
+          annotations: annotations,
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
@@ -182,6 +214,7 @@ abstract final class ChartSeriesDocumentCodec {
           style: commonStyle,
           isXOrdered: _bool(style, 'isXOrdered', fallback: false),
           metadata: metadata,
+          annotations: annotations,
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
@@ -224,6 +257,7 @@ abstract final class ChartSeriesDocumentCodec {
           style: commonStyle,
           isXOrdered: _bool(style, 'isXOrdered', fallback: false),
           metadata: metadata,
+          annotations: annotations,
           yAxisId: document.axisId,
           yAxisConfig: axis,
           unit: document.unit,
@@ -247,6 +281,8 @@ abstract final class ChartSeriesDocumentCodec {
           path: error.path,
         ),
       );
+    } on _NestedCodecException catch (error) {
+      return ChartArtifactFailure(error: error.error);
     } on Object catch (error) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
@@ -697,6 +733,31 @@ EdgeInsets _decodeInsets(Map<String, Object?> value) => EdgeInsets.fromLTRB(
   _double(value, 'bottom'),
 );
 
+ChartAnnotationDocument _encodeAnnotationOrThrow(
+  ChartAnnotation annotation,
+  ChartModelCodecContext context,
+) {
+  final result = ChartAnnotationDocumentCodec.encodeWithContext(
+    annotation,
+    context,
+  );
+  return switch (result) {
+    ChartArtifactSuccess<ChartAnnotationDocument>() => result.value,
+    ChartArtifactFailure<ChartAnnotationDocument>() =>
+      throw _NestedCodecException(result.error),
+  };
+}
+
+ChartAnnotation _decodeAnnotationOrThrow(ChartAnnotationDocument document) {
+  final result = ChartAnnotationDocumentCodec.decode(document);
+  return switch (result) {
+    ChartArtifactSuccess<ChartAnnotation>() => result.value,
+    ChartArtifactFailure<ChartAnnotation>() => throw _NestedCodecException(
+      result.error,
+    ),
+  };
+}
+
 class _RuntimeBindingException implements Exception {
   const _RuntimeBindingException(this.message, this.path);
 
@@ -709,4 +770,10 @@ class _UnsupportedModelException implements Exception {
 
   final String message;
   final String path;
+}
+
+class _NestedCodecException implements Exception {
+  const _NestedCodecException(this.error);
+
+  final ChartArtifactError error;
 }

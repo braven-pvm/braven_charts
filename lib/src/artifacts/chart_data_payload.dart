@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'artifact_json_readers.dart';
+import 'chart_annotation_document.dart';
 import 'json_value.dart';
 
 /// Reversible chart-number representation for JSON-incompatible doubles.
@@ -156,9 +157,11 @@ class ChartSeriesDocument {
     this.inlineAxis,
     this.style,
     this.metadata,
+    Iterable<ChartAnnotationDocument> annotations = const [],
     Set<String> requiredCapabilities = const {},
     Map<String, JsonValue> extensions = const {},
-  }) : requiredCapabilities = Set.unmodifiable(requiredCapabilities),
+  }) : annotations = List.unmodifiable(annotations),
+       requiredCapabilities = Set.unmodifiable(requiredCapabilities),
        extensions = Map.unmodifiable(extensions);
 
   final String type;
@@ -169,6 +172,7 @@ class ChartSeriesDocument {
   final JsonObjectValue? inlineAxis;
   final JsonObjectValue? style;
   final JsonObjectValue? metadata;
+  final List<ChartAnnotationDocument> annotations;
   final ChartDataPayload data;
   final Set<String> requiredCapabilities;
   final Map<String, JsonValue> extensions;
@@ -182,27 +186,31 @@ class ChartSeriesDocument {
     if (inlineAxis != null) 'inlineAxis': inlineAxis!.toJson(),
     if (style != null) 'style': style!.toJson(),
     if (metadata != null) 'metadata': metadata!.toJson(),
+    if (annotations.isNotEmpty)
+      'annotations': annotations.map((item) => item.toJson()).toList(),
     'data': data.toJson(),
     if (requiredCapabilities.isNotEmpty)
       'requiredCapabilities': requiredCapabilities.toList()..sort(),
     if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
   };
 
-  factory ChartSeriesDocument.fromJson(Map<String, Object?> json) =>
-      ChartSeriesDocument(
-        type: readRequiredString(json, 'type'),
-        id: readRequiredString(json, 'id'),
-        name: readOptionalString(json, 'name'),
-        unit: readOptionalString(json, 'unit'),
-        axisId: readOptionalString(json, 'axisId'),
-        inlineAxis: readOptionalJsonObject(json, 'inlineAxis'),
-        style: readOptionalJsonObject(json, 'style'),
-        metadata: readOptionalJsonObject(json, 'metadata'),
-        data: ChartDataPayload.fromJson(readRequiredMap(json, 'data')),
-        requiredCapabilities: readOptionalStringSet(
-          json,
-          'requiredCapabilities',
-        ),
-        extensions: readOptionalJsonValueMap(json, 'extensions'),
-      );
+  factory ChartSeriesDocument.fromJson(
+    Map<String, Object?> json,
+  ) => ChartSeriesDocument(
+    type: readRequiredString(json, 'type'),
+    id: readRequiredString(json, 'id'),
+    name: readOptionalString(json, 'name'),
+    unit: readOptionalString(json, 'unit'),
+    axisId: readOptionalString(json, 'axisId'),
+    inlineAxis: readOptionalJsonObject(json, 'inlineAxis'),
+    style: readOptionalJsonObject(json, 'style'),
+    metadata: readOptionalJsonObject(json, 'metadata'),
+    annotations: readOptionalList(json, 'annotations').map(
+      (item) =>
+          ChartAnnotationDocument.fromJson(readStringMap(item, 'annotation')),
+    ),
+    data: ChartDataPayload.fromJson(readRequiredMap(json, 'data')),
+    requiredCapabilities: readOptionalStringSet(json, 'requiredCapabilities'),
+    extensions: readOptionalJsonValueMap(json, 'extensions'),
+  );
 }

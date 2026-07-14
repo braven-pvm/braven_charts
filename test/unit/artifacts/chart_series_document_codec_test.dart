@@ -242,7 +242,7 @@ void main() {
       }
     });
 
-    test('fails closed for runtime callbacks and pending annotations', () {
+    test('fails closed for runtime callbacks', () {
       final labelFormatter =
           ChartSeriesDocumentCodec.encode(
                 LineChartSeries(
@@ -276,21 +276,20 @@ void main() {
         axisFormatter.error.code,
         ChartArtifactDiagnosticCodes.runtimeBindingRequired,
       );
+    });
 
-      final annotation =
-          ChartSeriesDocumentCodec.encode(
-                LineChartSeries(
-                  id: 'annotated',
-                  points: const [],
-                  annotations: [PinAnnotation(x: 1, y: 2)],
-                ),
-              )
-              as ChartArtifactFailure<ChartSeriesDocument>;
-      expect(
-        annotation.error.code,
-        ChartArtifactDiagnosticCodes.unsupportedModelType,
+    test('round-trips series-level annotations', () {
+      final source = LineChartSeries(
+        id: 'annotated',
+        points: const [],
+        annotations: [PinAnnotation(id: 'pin', x: 1, y: 2)],
       );
-      expect(annotation.error.path, r'$.annotations');
+
+      final decoded = _roundTrip(source) as LineChartSeries;
+
+      expect(decoded.annotations, hasLength(1));
+      expect(decoded.annotations.single, isA<PinAnnotation>());
+      expect(decoded.annotations.single.id, 'pin');
     });
 
     test('rejects metadata that is not recursively JSON-safe', () {
@@ -322,6 +321,26 @@ void main() {
 
       expect(copy.style, SeriesStyle.line);
       expect(copy.annotations, [annotation]);
+    });
+
+    test('rejects cyclic series and annotation model graphs', () {
+      final annotations = <ChartAnnotation>[];
+      final series = LineChartSeries(
+        id: 'cycle',
+        points: const [],
+        annotations: annotations,
+      );
+      annotations.add(LegendAnnotation(id: 'legend', series: [series]));
+
+      final result = ChartSeriesDocumentCodec.encode(series);
+
+      expect(result, isA<ChartArtifactFailure<ChartSeriesDocument>>());
+      final failure = result as ChartArtifactFailure<ChartSeriesDocument>;
+      expect(
+        failure.error.code,
+        ChartArtifactDiagnosticCodes.validationLimitExceeded,
+      );
+      expect(failure.error.message, contains('Cyclic'));
     });
 
     test('returns a structured failure for unknown series types', () {
