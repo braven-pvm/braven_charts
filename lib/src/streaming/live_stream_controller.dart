@@ -95,19 +95,19 @@ class LiveStreamController extends ChangeNotifier {
     this.viewportDataPoints,
     this.maxVisiblePoints = 10000,
     this.pauseBufferSize = 10000,
-  })  : assert(maxPoints > 0, 'maxPoints must be positive'),
-        assert(
-          autoScrollMarginPercent >= 0 && autoScrollMarginPercent <= 50,
-          'autoScrollMarginPercent must be between 0 and 50',
-        ),
-        assert(
-          viewportDataPoints == null || viewportDataPoints > 0,
-          'viewportDataPoints must be positive if specified',
-        ),
-        assert(maxVisiblePoints > 0, 'maxVisiblePoints must be positive'),
-        assert(pauseBufferSize > 0, 'pauseBufferSize must be positive'),
-        _streamingBuffer = StreamingBuffer(maxSize: maxPoints),
-        _pauseBuffer = BufferManager<ChartDataPoint>(maxSize: pauseBufferSize);
+  }) : assert(maxPoints > 0, 'maxPoints must be positive'),
+       assert(
+         autoScrollMarginPercent >= 0 && autoScrollMarginPercent <= 50,
+         'autoScrollMarginPercent must be between 0 and 50',
+       ),
+       assert(
+         viewportDataPoints == null || viewportDataPoints > 0,
+         'viewportDataPoints must be positive if specified',
+       ),
+       assert(maxVisiblePoints > 0, 'maxVisiblePoints must be positive'),
+       assert(pauseBufferSize > 0, 'pauseBufferSize must be positive'),
+       _streamingBuffer = StreamingBuffer(maxSize: maxPoints),
+       _pauseBuffer = BufferManager<ChartDataPoint>(maxSize: pauseBufferSize);
 
   // ============================================================================
   // Configuration (Immutable)
@@ -218,8 +218,9 @@ class LiveStreamController extends ChangeNotifier {
   /// Returns 0 if no frames have been rendered yet.
   double get measuredFrameRate {
     if (_frameCountStartTime == null || _frameCount == 0) return 0;
-    final elapsed =
-        DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    final elapsed = DateTime.now()
+        .difference(_frameCountStartTime!)
+        .inMilliseconds;
     if (elapsed < 100) return 0; // Need at least 100ms of data
     return _frameCount / (elapsed / 1000);
   }
@@ -246,6 +247,12 @@ class LiveStreamController extends ChangeNotifier {
   /// Returns points in chronological order (oldest to newest).
   /// Use this for debugging or export, not for high-frequency access.
   List<ChartDataPoint> get points => _streamingBuffer.toList();
+
+  /// Points waiting in the pause buffer, in logical FIFO order.
+  ///
+  /// Snapshot consumers use this alongside [points] to preserve every point
+  /// currently owned by the live controller without mutating pause state.
+  List<ChartDataPoint> get pendingPoints => _pauseBuffer.toList();
 
   /// Revision of points committed to the chart's streaming buffer.
   int get committedDataRevision => _streamingBuffer.version;
@@ -466,8 +473,9 @@ class LiveStreamController extends ChangeNotifier {
     _frameCount++;
     _frameCountStartTime ??= DateTime.now();
     // Reset counter every second for rolling average
-    final elapsed =
-        DateTime.now().difference(_frameCountStartTime!).inMilliseconds;
+    final elapsed = DateTime.now()
+        .difference(_frameCountStartTime!)
+        .inMilliseconds;
     if (elapsed > 1000) {
       _frameCount = 1;
       _frameCountStartTime = DateTime.now();

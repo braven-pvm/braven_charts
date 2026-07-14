@@ -24,6 +24,7 @@ class ResolvedLiveSeriesData {
     required this.committedRevision,
     required this.pendingRevision,
     required this.pendingPointCount,
+    this.pendingPoints = const [],
   });
 
   final String seriesId;
@@ -31,6 +32,7 @@ class ResolvedLiveSeriesData {
   final int committedRevision;
   final int pendingRevision;
   final int pendingPointCount;
+  final List<ChartDataPoint> pendingPoints;
 }
 
 /// The chart's resolved data projections at one synchronous point in time.
@@ -180,7 +182,12 @@ class ResolvedChartData {
     required ResolvedLiveSeriesData? liveSeries,
     required ResolvedSeriesFactory? seriesFactory,
   }) {
-    if (liveSeries == null || liveSeries.points.isEmpty) return series;
+    if (liveSeries == null ||
+        (liveSeries.points.isEmpty && liveSeries.pendingPoints.isEmpty)) {
+      return series;
+    }
+
+    final livePoints = [...liveSeries.points, ...liveSeries.pendingPoints];
 
     final result = <ChartSeries>[];
     var matched = false;
@@ -193,7 +200,7 @@ class ResolvedChartData {
       matched = true;
       result.add(
         item.copyWith(
-          points: List.unmodifiable([...item.points, ...liveSeries.points]),
+          points: List.unmodifiable([...item.points, ...livePoints]),
         ),
       );
     }
@@ -202,7 +209,7 @@ class ResolvedChartData {
       result.add(
         _createSeries(
           seriesId: liveSeries.seriesId,
-          points: liveSeries.points,
+          points: livePoints,
           seriesIndex: result.length,
           seriesFactory: seriesFactory,
         ),

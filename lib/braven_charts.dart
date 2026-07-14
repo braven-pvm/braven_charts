@@ -42,6 +42,12 @@ export 'src/artifacts/chart_data_payload.dart';
 export 'src/artifacts/chart_configuration_document_codec.dart';
 export 'src/artifacts/chart_configuration_documents.dart';
 export 'src/artifacts/chart_document.dart';
+export 'src/artifacts/chart_document_extractor.dart'
+    show
+        ChartDataScope,
+        ChartDocumentExtractOptions,
+        ChartDocumentExtractionHandler,
+        ChartDocumentSnapshot;
 export 'src/artifacts/chart_interaction_document_codec.dart';
 export 'src/artifacts/chart_preview.dart';
 export 'src/artifacts/chart_series_document_codec.dart';
