@@ -51,8 +51,8 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
       _status = _CodecStatus.ready;
       _statusTitle = 'Sample ready';
       _statusMessage =
-          'Built-in line, pin, and threshold models were encoded into a '
-          'schema 1 document. '
+          'Built-in chart models and resolved configuration were encoded into '
+          'a schema 1 document. '
           'No live chart extraction is used yet.';
     });
   }
@@ -96,6 +96,25 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
             return;
           }
         }
+        final configurationResults = <ChartArtifactResult<Object>>[
+          ChartAxisDocumentCodec.decodeXAxis(artifact.document.xAxis),
+          for (final axis in artifact.document.axes)
+            ChartAxisDocumentCodec.decodeYAxis(axis),
+          ChartThemeDocumentCodec.decode(artifact.document.theme),
+          ChartInteractionDocumentCodec.decode(artifact.document.interaction),
+          ChartConfigurationDocumentCodec.decodeGrid(artifact.document.grid),
+          ChartConfigurationDocumentCodec.decodeLegend(
+            artifact.document.legend,
+          ),
+          if (artifact.document.normalization case final normalization?)
+            ChartConfigurationDocumentCodec.decodeNormalization(normalization),
+        ];
+        for (final result in configurationResults) {
+          if (result case ChartArtifactFailure<Object>()) {
+            _showFailure(result.error);
+            return;
+          }
+        }
         final encoded = ChartArtifactJsonCodec.encode(artifact);
         switch (encoded) {
           case ChartArtifactSuccess<String>():
@@ -106,8 +125,8 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               _statusTitle = 'Round trip passed';
               _statusMessage =
                   'Decoded schema ${decoded.value.sourceSchemaVersion}, '
-                  'rehydrated built-in series and annotation models, validated '
-                  'capabilities, and produced canonical JSON.';
+                  'rehydrated built-in series, annotations, axes, theme, and '
+                  'interaction models, then produced canonical JSON.';
             });
           case ChartArtifactFailure<String>():
             _showFailure(encoded.error);
@@ -157,10 +176,10 @@ class _ArtifactSchemaLabPageState extends State<ArtifactSchemaLabPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Test built-in series and annotation codecs, schema-v1 JSON '
-                'envelope, deterministic encoding, capability validation, '
-                'and structured failures. Live chart capture and widget '
-                'rehydration are not implemented on this surface yet.',
+                'Test built-in series, annotation, axis, theme, interaction, '
+                'grid, legend, and normalization codecs with deterministic '
+                'schema-v1 JSON and structured failures. Live chart capture '
+                'and widget rehydration are not implemented here yet.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.5,
@@ -360,6 +379,7 @@ class _ArtifactSummary extends StatelessWidget {
                       ))
                   .toString(),
       ),
+      ('Config codecs', document == null ? '—' : '6'),
       ('Revision', document?.revision.toString() ?? '—'),
     ];
 
@@ -453,6 +473,54 @@ ChartArtifact _buildSampleArtifact() {
       annotationResult.error.message,
     ),
   };
+  final xAxisDocument = _artifactValue(
+    ChartAxisDocumentCodec.encodeXAxis(
+      const XAxisConfig(
+        label: 'Elapsed time',
+        unit: 'min',
+        min: 0,
+        max: 3,
+        tickCount: 4,
+        showMinorTicks: true,
+      ),
+      id: 'elapsed',
+    ),
+  );
+  final yAxisDocument = _artifactValue(
+    ChartAxisDocumentCodec.encodeYAxis(
+      YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Power',
+        unit: 'W',
+        min: 160,
+        max: 280,
+        renderMin: 180,
+        renderMax: 260,
+      ).copyWith(id: 'power-axis'),
+    ),
+  );
+  final themeDocument = _artifactValue(
+    ChartThemeDocumentCodec.encode(ChartTheme.light, reference: 'braven.light'),
+  );
+  final interactionDocument = _artifactValue(
+    ChartInteractionDocumentCodec.encode(
+      const InteractionConfig(
+        enableZoom: true,
+        enablePan: true,
+        showFocusBorder: true,
+        keyboardZoomPercent: 20,
+      ),
+    ),
+  );
+  final legendDocument = _artifactValue(
+    ChartConfigurationDocumentCodec.encodeLegend(
+      visible: true,
+      style: const LegendStyle(
+        position: LegendPosition.topRight,
+        orientation: LegendOrientation.vertical,
+      ),
+    ),
+  );
   return ChartArtifact(
     artifactId: 'showcase-artifact-v1',
     renderer: const ChartRendererInfo(
@@ -466,27 +534,35 @@ ChartArtifact _buildSampleArtifact() {
       title: 'Power profile',
       series: [seriesDocument],
       annotations: [annotationDocument],
-      xAxis: ChartAxisDocument(
-        id: 'elapsed',
-        position: 'bottom',
-        label: 'Elapsed time',
-        unit: 'min',
-      ),
-      axes: [
-        ChartAxisDocument(
-          id: 'power-axis',
-          position: 'left',
-          label: 'Power',
-          unit: 'W',
+      xAxis: xAxisDocument,
+      axes: [yAxisDocument],
+      theme: themeDocument,
+      interaction: interactionDocument,
+      grid: ChartConfigurationDocumentCodec.encodeGrid(
+        const GridConfig(
+          horizontal: true,
+          vertical: false,
+          horizontalStrokeWidth: 0.75,
         ),
-      ],
-      theme: ChartThemeDocument(reference: 'braven.light'),
-      interaction: ChartInteractionDocument(
-        configuration:
-            JsonValue.fromJson({'zoom': true, 'pan': true}) as JsonObjectValue,
+      ),
+      legend: legendDocument,
+      layout: ChartLayoutDocument(
+        backgroundColor: const Color(0xFFFFFFFF).toARGB32(),
+        showToolbar: false,
+        interactiveAnnotations: true,
+        maxAxesPerSide: 3,
+        axisSwapMode: AxisSwapMode.sticky.name,
+      ),
+      normalization: ChartConfigurationDocumentCodec.encodeNormalization(
+        NormalizationMode.auto,
       ),
     ),
     viewState: ChartViewState(visibleAxisIds: const ['power-axis']),
     extensions: const {'showcase.stage': JsonStringValue('schema-foundation')},
   );
 }
+
+T _artifactValue<T>(ChartArtifactResult<T> result) => switch (result) {
+  ChartArtifactSuccess<T>() => result.value,
+  ChartArtifactFailure<T>() => throw StateError(result.error.message),
+};

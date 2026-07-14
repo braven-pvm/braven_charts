@@ -20,6 +20,8 @@ void main() {
     expect(find.text('Round trip passed'), findsOneWidget);
     expect(find.text('Schema'), findsOneWidget);
     expect(find.text('Annotations'), findsOneWidget);
+    expect(find.text('Config codecs'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
   });

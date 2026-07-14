@@ -1,0 +1,210 @@
+import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('ChartInteractionDocumentCodec', () {
+    test('round-trips every portable interaction field', () {
+      const source = InteractionConfig(
+        enabled: false,
+        crosshair: CrosshairConfig(
+          enabled: false,
+          mode: CrosshairMode.horizontal,
+          snapToDataPoint: false,
+          snapRadius: 17.5,
+          showCoordinateLabels: false,
+          coordinateLabelStyle: TextStyle(
+            color: Color(0xFF112233),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+          style: CrosshairStyle(
+            lineColor: Color(0xFF223344),
+            lineWidth: 2.5,
+            dashPattern: [7, 2],
+            strokeCap: StrokeCap.square,
+            labelBackgroundColor: Color(0xFF334455),
+            labelTextColor: Color(0xFFCCDDEE),
+            labelPadding: 6,
+          ),
+          displayMode: CrosshairDisplayMode.tracking,
+          trackingModeThreshold: 777,
+          interpolateValues: false,
+          showTrackingTooltip: false,
+          showIntersectionMarkers: false,
+          intersectionMarkerRadius: 6.5,
+        ),
+        tooltip: TooltipConfig(
+          enabled: false,
+          triggerMode: TooltipTriggerMode.both,
+          preferredPosition: TooltipPosition.left,
+          showDelay: Duration(microseconds: 123456),
+          hideDelay: Duration(microseconds: 654321),
+          followCursor: true,
+          offsetFromPoint: 12.5,
+          style: TooltipStyle(
+            backgroundColor: Color(0xEEFFFFFF),
+            borderColor: Color(0xFF445566),
+            borderWidth: 2,
+            borderRadius: 9,
+            shadowColor: Color(0x66000000),
+            shadowBlurRadius: 7,
+            padding: 11,
+            textColor: Color(0xFF102030),
+            fontSize: 14,
+          ),
+        ),
+        gesture: GestureConfig(
+          tapTimeout: Duration(microseconds: 222222),
+          longPressTimeout: Duration(microseconds: 888888),
+          panThreshold: 13.5,
+          pinchThreshold: 0.25,
+        ),
+        keyboard: KeyboardConfig(
+          enabled: false,
+          panStep: 15,
+          zoomStep: 0.2,
+          enableArrowKeys: false,
+          enablePlusMinusKeys: false,
+          enableHomeEndKeys: false,
+        ),
+        enableZoom: false,
+        enablePan: false,
+        enableSelection: false,
+        showFocusBorder: true,
+        enableFocusOnHover: false,
+        showXScrollbar: true,
+        showYScrollbar: true,
+        keyboardZoomPercent: 35,
+      );
+
+      final document = _success(ChartInteractionDocumentCodec.encode(source));
+      final decoded = _success(
+        ChartInteractionDocumentCodec.decode(
+          ChartInteractionDocument.fromJson(document.toJson()),
+        ),
+      );
+
+      expect(decoded, source);
+      expect(document.requiredBindings, isEmpty);
+    });
+
+    test('requires explicit descriptors for executable callbacks', () {
+      final result = ChartInteractionDocumentCodec.encode(
+        InteractionConfig(onDataPointTap: (point, position) {}),
+      );
+
+      expect(result, isA<ChartArtifactFailure<ChartInteractionDocument>>());
+      final failure = result as ChartArtifactFailure<ChartInteractionDocument>;
+      expect(
+        failure.error.code,
+        ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+      );
+      expect(failure.error.path, contains('onDataPointTap'));
+    });
+
+    test('records callback descriptors and required binding ids', () {
+      final descriptor =
+          JsonValue.fromJson({
+                'id': 'app.chart.pointTap.v1',
+                'arguments': {'surface': 'comparison'},
+              })
+              as JsonObjectValue;
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          InteractionConfig(onDataPointTap: (point, position) {}),
+          runtimeBindingDescriptors: {
+            ChartInteractionDocumentCodec.dataPointTapBinding: descriptor,
+          },
+        ),
+      );
+
+      expect(document.requiredBindings, {'app.chart.pointTap.v1'});
+      final callbacks =
+          (document.configuration.toJson() as Map<String, Object?>)['callbacks']
+              as Map<String, Object?>;
+      expect(
+        callbacks[ChartInteractionDocumentCodec.dataPointTapBinding],
+        descriptor.toJson(),
+      );
+
+      final hydrationResult = ChartInteractionDocumentCodec.decode(document);
+      expect(hydrationResult, isA<ChartArtifactFailure<InteractionConfig>>());
+      expect(
+        (hydrationResult as ChartArtifactFailure<InteractionConfig>).error.code,
+        ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+      );
+    });
+
+    test('covers every callback field with a stable binding key', () {
+      final descriptors = <String, JsonObjectValue>{};
+      for (final key in [
+        ChartInteractionDocumentCodec.tooltipBuilderBinding,
+        ChartInteractionDocumentCodec.dataPointTapBinding,
+        ChartInteractionDocumentCodec.dataPointHoverBinding,
+        ChartInteractionDocumentCodec.dataPointLongPressBinding,
+        ChartInteractionDocumentCodec.selectionChangedBinding,
+        ChartInteractionDocumentCodec.zoomChangedBinding,
+        ChartInteractionDocumentCodec.panChangedBinding,
+        ChartInteractionDocumentCodec.viewportChangedBinding,
+        ChartInteractionDocumentCodec.crosshairChangedBinding,
+        ChartInteractionDocumentCodec.tooltipChangedBinding,
+        ChartInteractionDocumentCodec.keyboardActionBinding,
+      ]) {
+        descriptors[key] =
+            JsonValue.fromJson({'id': 'app.$key.v1'}) as JsonObjectValue;
+      }
+
+      final document = _success(
+        ChartInteractionDocumentCodec.encode(
+          InteractionConfig(
+            tooltip: TooltipConfig(
+              customBuilder: (context, dataPoint) => const SizedBox(),
+            ),
+            onDataPointTap: (point, position) {},
+            onDataPointHover: (point, position) {},
+            onDataPointLongPress: (point, position) {},
+            onSelectionChanged: (points) {},
+            onZoomChanged: (x, y) {},
+            onPanChanged: (offset) {},
+            onViewportChanged: (bounds) {},
+            onCrosshairChanged: (position, points) {},
+            onTooltipChanged: (visible, point) {},
+            onKeyboardAction: (action, point) {},
+          ),
+          runtimeBindingDescriptors: descriptors,
+        ),
+      );
+
+      expect(document.requiredBindings, hasLength(descriptors.length));
+    });
+
+    test('rejects malformed or unknown configuration values', () {
+      final valid = _success(
+        ChartInteractionDocumentCodec.encode(const InteractionConfig()),
+      );
+      final json = valid.configuration.toJson() as Map<String, Object?>;
+      final crosshair = Map<String, Object?>.from(json['crosshair']! as Map)
+        ..['mode'] = 'futureMode';
+      json['crosshair'] = crosshair;
+
+      final result = ChartInteractionDocumentCodec.decode(
+        ChartInteractionDocument(
+          configuration: JsonValue.fromJson(json) as JsonObjectValue,
+        ),
+      );
+
+      expect(result, isA<ChartArtifactFailure<InteractionConfig>>());
+      expect(
+        (result as ChartArtifactFailure<InteractionConfig>).error.code,
+        ChartArtifactDiagnosticCodes.invalidArtifact,
+      );
+    });
+  });
+}
+
+T _success<T>(ChartArtifactResult<T> result) {
+  expect(result, isA<ChartArtifactSuccess<T>>());
+  return (result as ChartArtifactSuccess<T>).value;
+}
