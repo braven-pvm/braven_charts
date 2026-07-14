@@ -2,11 +2,44 @@ import 'package:flutter/material.dart';
 
 import '../models/annotation_style.dart';
 import '../models/legend_style.dart';
+import '../theming/styles/label_style.dart';
 import 'chart_data_payload.dart';
 import 'json_value.dart';
 
 /// JSON-safe codecs shared by built-in annotation and legend models.
 abstract final class ChartStyleDocumentCodec {
+  static JsonObjectValue encodeTextStyle(TextStyle style) =>
+      _object(_encodeTextStyle(style));
+
+  static TextStyle decodeTextStyle(JsonObjectValue value) =>
+      _decodeTextStyle(_map(value.toJson()));
+
+  static JsonObjectValue encodeLabelStyle(LabelStyle style) => _object({
+    'textStyle': _encodeTextStyle(style.textStyle),
+    'backgroundColor': style.backgroundColor.toARGB32(),
+    'borderColor': style.borderColor.toARGB32(),
+    'borderWidth': _number(style.borderWidth),
+    'borderRadius': _number(style.borderRadius),
+    'padding': _encodeInsets(style.padding),
+    if (style.shadowColor != null) 'shadowColor': style.shadowColor!.toARGB32(),
+    if (style.shadowBlurRadius != null)
+      'shadowBlurRadius': _number(style.shadowBlurRadius!),
+  });
+
+  static LabelStyle decodeLabelStyle(JsonObjectValue value) {
+    final map = _map(value.toJson());
+    return LabelStyle(
+      textStyle: _decodeTextStyle(_requiredMap(map, 'textStyle')),
+      backgroundColor: _requiredColor(map, 'backgroundColor'),
+      borderColor: _requiredColor(map, 'borderColor'),
+      borderWidth: _requiredDouble(map, 'borderWidth'),
+      borderRadius: _requiredDouble(map, 'borderRadius'),
+      padding: _decodeInsets(_requiredMap(map, 'padding')),
+      shadowColor: _optionalColor(map['shadowColor']),
+      shadowBlurRadius: _optionalDouble(map['shadowBlurRadius']),
+    );
+  }
+
   static JsonObjectValue encodeAnnotationStyle(AnnotationStyle style) =>
       _object({
         'textStyle': _encodeTextStyle(style.textStyle),

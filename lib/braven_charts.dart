@@ -44,6 +44,7 @@ export 'src/artifacts/chart_configuration_documents.dart';
 export 'src/artifacts/chart_document.dart';
 export 'src/artifacts/chart_preview.dart';
 export 'src/artifacts/chart_series_document_codec.dart';
+export 'src/artifacts/chart_theme_document_codec.dart';
 export 'src/artifacts/chart_view_state.dart';
 export 'src/artifacts/json_value.dart';
 // Core chart widget
