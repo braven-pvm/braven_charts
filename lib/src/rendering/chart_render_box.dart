@@ -1778,6 +1778,10 @@ class ChartRenderBox extends RenderBox {
   /// Clears crosshair state when the pointer leaves the chart widget.
   void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
 
+  /// Removes crosshair and tooltip state that is not part of the artifact.
+  void clearTransientPreviewState() =>
+      _eventHandlerManager.clearTransientPreviewState();
+
   // ============================================================================
   // Y-Axis Slot Selection Delegation
   // ============================================================================

@@ -4,16 +4,21 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 // All dependencies are in src - the main source folder
 import 'axis/axis.dart' as chart_axis;
 import 'axis/normalization_detector.dart';
 import 'artifacts/chart_artifact_diagnostics.dart';
+import 'artifacts/chart_artifact_canonicalizer.dart';
 import 'artifacts/chart_document_extractor.dart';
+import 'artifacts/chart_preview.dart';
+import 'artifacts/chart_preview_capture.dart';
 import 'artifacts/chart_view_state.dart';
 import 'artifacts/resolved_chart_data.dart';
 import 'controllers/annotation_controller.dart';
@@ -901,6 +906,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   int _captureStateRevision = 0;
   int _documentRevision = 0;
   _ChartCaptureRevisionToken? _lastDocumentRevisionToken;
+  final GlobalKey _previewBoundaryKey = GlobalKey();
+  bool _previewCaptureInProgress = false;
   final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
       <String, _IncomingPointAnimation>{};
   late final AnimationController _incomingDataAnimationController;
@@ -1051,6 +1058,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onSetSeriesVisibility: _setSeriesVisibility,
       onExtractDocument: _extractDocument,
       onRestoreViewState: _restoreViewState,
+      onCapturePreview: _capturePreview,
       onClear: () {
         _captureStateRevision++;
         _selectedSeriesId = null;
@@ -1133,6 +1141,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onSetSeriesVisibility: _setSeriesVisibility,
         onExtractDocument: _extractDocument,
         onRestoreViewState: _restoreViewState,
+        onCapturePreview: _capturePreview,
         onClear: () {
           _captureStateRevision++;
           _selectedSeriesId = null;
@@ -1509,6 +1518,133 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             'The chart changed during all ${options.maxSnapshotAttempts} snapshot attempts.',
       ),
     );
+  }
+
+  Future<ChartArtifactResult<ChartPreview>> _capturePreview(
+    ChartPreviewOptions options,
+  ) async {
+    if (_previewCaptureInProgress) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.captureInProgress,
+          message: 'A chart preview capture is already in progress.',
+        ),
+      );
+    }
+    if (!options.pixelRatio.isFinite ||
+        options.pixelRatio <= 0 ||
+        options.maxPixelCount <= 0 ||
+        options.maxCaptureAttempts <= 0) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+          message: 'Preview capture options are invalid.',
+        ),
+      );
+    }
+
+    _previewCaptureInProgress = true;
+    try {
+      if (!options.includeTransientInteractions) {
+        _coordinator.setHoveredMarker(null);
+        _coordinator.setHoveredElement(null);
+        final renderBox =
+            _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        renderBox?.clearTransientPreviewState();
+      }
+      await WidgetsBinding.instance.endOfFrame;
+
+      for (var attempt = 0; attempt < options.maxCaptureAttempts; attempt++) {
+        final documentResult = _extractDocument(options.documentOptions);
+        if (documentResult is ChartArtifactFailure<ChartDocumentSnapshot>) {
+          return ChartArtifactFailure(
+            error: documentResult.error,
+            warnings: documentResult.warnings,
+          );
+        }
+        final documentSuccess =
+            documentResult as ChartArtifactSuccess<ChartDocumentSnapshot>;
+        final revision = _captureRevisionToken(options.documentOptions);
+        await WidgetsBinding.instance.endOfFrame;
+        if (revision != _captureRevisionToken(options.documentOptions)) {
+          continue;
+        }
+
+        final boundary = _previewBoundaryKey.currentContext?.findRenderObject();
+        if (boundary is! RenderRepaintBoundary || !boundary.hasSize) {
+          return ChartArtifactFailure(
+            error: const ChartArtifactError(
+              code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+              message: 'The chart preview boundary is not ready for capture.',
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        }
+        final widthPixels = (boundary.size.width * options.pixelRatio).ceil();
+        final heightPixels = (boundary.size.height * options.pixelRatio).ceil();
+        if (widthPixels <= 0 ||
+            heightPixels <= 0 ||
+            widthPixels * heightPixels > options.maxPixelCount) {
+          return ChartArtifactFailure(
+            error: ChartArtifactError(
+              code: ChartArtifactDiagnosticCodes.previewTooLarge,
+              message:
+                  'Preview dimensions ${widthPixels}x$heightPixels exceed the configured pixel limit.',
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        }
+
+        final image = await boundary.toImage(pixelRatio: options.pixelRatio);
+        try {
+          final byteData = await image.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (byteData == null) {
+            throw StateError('The Flutter engine returned no PNG bytes.');
+          }
+          if (revision != _captureRevisionToken(options.documentOptions)) {
+            continue;
+          }
+          final bytes = byteData.buffer.asUint8List(
+            byteData.offsetInBytes,
+            byteData.lengthInBytes,
+          );
+          return ChartArtifactSuccess(
+            value: ChartPreview(
+              mimeType: 'image/png',
+              widthPixels: image.width,
+              heightPixels: image.height,
+              pixelRatio: options.pixelRatio,
+              documentHash: ChartArtifactCanonicalizer.documentHash(
+                documentSuccess.value.document,
+              ),
+              bytes: bytes,
+              byteLength: bytes.length,
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        } finally {
+          image.dispose();
+        }
+      }
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.unstableStreamRevision,
+          message:
+              'The chart changed during all ${options.maxCaptureAttempts} preview attempts.',
+        ),
+      );
+    } on Object catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+          message: 'Chart preview capture failed: $error',
+        ),
+      );
+    } finally {
+      _previewCaptureInProgress = false;
+    }
   }
 
   ChartArtifactResult<ChartDocumentSnapshot> _assembleDocumentSnapshot(
@@ -3562,14 +3698,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Legacy ChartLegend widget removed - overlay legend (LegendAnnotation)
       // is now used exclusively for legend rendering within the chart area.
 
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      return RepaintBoundary(
+        key: _previewBoundaryKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       );
     }
 
-    return chartContent;
+    return RepaintBoundary(key: _previewBoundaryKey, child: chartContent);
   }
 }
 

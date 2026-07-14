@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_artifact_diagnostics.dart';
 import '../artifacts/chart_document_extractor.dart';
+import '../artifacts/chart_preview.dart';
+import '../artifacts/chart_preview_capture.dart';
 import '../artifacts/chart_view_state.dart';
 
 /// Programmatic control over series selection and Y-axis slot state.
@@ -35,6 +37,7 @@ class BravenChartController extends ChangeNotifier {
   void Function(String seriesId, bool visible)? _setVisibilityHandler;
   ChartDocumentExtractionHandler? _extractDocumentHandler;
   void Function(ChartViewState viewState)? _restoreViewStateHandler;
+  ChartPreviewCaptureHandler? _capturePreviewHandler;
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
   String? _selectedSeriesId;
@@ -107,6 +110,25 @@ class BravenChartController extends ChangeNotifier {
   void restoreViewState(ChartViewState viewState) =>
       _restoreViewStateHandler?.call(viewState);
 
+  /// Captures a revision-bound PNG preview of the mounted chart.
+  Future<ChartArtifactResult<ChartPreview>> capturePreview([
+    ChartPreviewOptions options = const ChartPreviewOptions(),
+  ]) {
+    final handler = _capturePreviewHandler;
+    if (handler == null) {
+      return Future.value(
+        ChartArtifactFailure(
+          error: const ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.chartNotAttached,
+            message:
+                'The BravenChartController is not attached to a mounted chart.',
+          ),
+        ),
+      );
+    }
+    return handler(options);
+  }
+
   // ---- Internal state sync (called by _BravenChartPlusState) ----
 
   /// Attaches this controller to a chart state. Called by the state.
@@ -117,6 +139,7 @@ class BravenChartController extends ChangeNotifier {
     void Function(String, bool)? onSetSeriesVisibility,
     ChartDocumentExtractionHandler? onExtractDocument,
     void Function(ChartViewState)? onRestoreViewState,
+    ChartPreviewCaptureHandler? onCapturePreview,
   }) {
     _selectHandler = onSelect;
     _deselectHandler = onDeselect;
@@ -124,6 +147,7 @@ class BravenChartController extends ChangeNotifier {
     _setVisibilityHandler = onSetSeriesVisibility;
     _extractDocumentHandler = onExtractDocument;
     _restoreViewStateHandler = onRestoreViewState;
+    _capturePreviewHandler = onCapturePreview;
   }
 
   /// Detaches from the chart state. Called in dispose.
@@ -134,6 +158,7 @@ class BravenChartController extends ChangeNotifier {
     _setVisibilityHandler = null;
     _extractDocumentHandler = null;
     _restoreViewStateHandler = null;
+    _capturePreviewHandler = null;
   }
 
   /// Updates mirrored slot state (called after every swap or selection change).

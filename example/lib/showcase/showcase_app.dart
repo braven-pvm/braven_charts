@@ -10,6 +10,7 @@ import 'pages/artifact_schema_lab_page.dart';
 import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
 import 'pages/artifact_hydration_lab_page.dart';
+import 'pages/artifact_preview_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -222,6 +223,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.table_chart_outlined,
       selectedIcon: Icons.table_chart,
       page: ArtifactDataTableLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Preview Lab',
+      icon: Icons.image_outlined,
+      selectedIcon: Icons.image,
+      page: ArtifactPreviewLabPage(),
       badge: 'NEW',
     ),
   ];

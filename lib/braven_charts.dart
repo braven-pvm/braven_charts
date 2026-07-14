@@ -33,6 +33,7 @@ export 'src/axis/range_ratio_calculator.dart';
 export 'src/axis/series_axis_resolver.dart';
 // Portable chart artifacts
 export 'src/artifacts/chart_artifact_diagnostics.dart';
+export 'src/artifacts/chart_artifact_canonicalizer.dart';
 export 'src/artifacts/chart_artifact_json_codec.dart';
 export 'src/artifacts/chart_artifact.dart';
 export 'src/artifacts/chart_annotation_document.dart';
@@ -52,6 +53,7 @@ export 'src/artifacts/chart_document_extractor.dart'
 export 'src/artifacts/chart_interaction_document_codec.dart';
 export 'src/artifacts/chart_runtime_bindings.dart';
 export 'src/artifacts/chart_preview.dart';
+export 'src/artifacts/chart_preview_capture.dart';
 export 'src/artifacts/chart_series_document_codec.dart';
 export 'src/artifacts/chart_theme_document_codec.dart';
 export 'src/artifacts/chart_view_state.dart';

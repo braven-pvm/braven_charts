@@ -15,6 +15,7 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const captureInProgress = 'capture_in_progress';
   static const unstableStreamRevision = 'unstable_stream_revision';
   static const previewCaptureFailed = 'preview_capture_failed';
+  static const previewTooLarge = 'preview_too_large';
 }
 
 @immutable
