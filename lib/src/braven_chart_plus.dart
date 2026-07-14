@@ -1050,6 +1050,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onDeselect: _handleSeriesDeselected,
       onSetSeriesVisibility: _setSeriesVisibility,
       onExtractDocument: _extractDocument,
+      onRestoreViewState: _restoreViewState,
       onClear: () {
         _captureStateRevision++;
         _selectedSeriesId = null;
@@ -1131,6 +1132,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onDeselect: _handleSeriesDeselected,
         onSetSeriesVisibility: _setSeriesVisibility,
         onExtractDocument: _extractDocument,
+        onRestoreViewState: _restoreViewState,
         onClear: () {
           _captureStateRevision++;
           _selectedSeriesId = null;
@@ -2787,6 +2789,48 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     _syncControllerState(renderBox);
+  }
+
+  void _restoreViewState(ChartViewState viewState) {
+    _captureStateRevision++;
+    setState(() {
+      _hiddenSeriesIds
+        ..clear()
+        ..addAll(viewState.hiddenSeriesIds);
+      _selectedSeriesId = viewState.selectedSeriesId;
+      if (viewState.selectedAnnotationId != null &&
+          _effectiveAnnotationController?.containsId(
+                viewState.selectedAnnotationId!,
+              ) ==
+              true) {
+        _effectiveAnnotationController?.selectAnnotation(
+          viewState.selectedAnnotationId,
+        );
+      }
+      _legendCustomPosition = viewState.legendPosition == null
+          ? null
+          : Offset(viewState.legendPosition!.x, viewState.legendPosition!.y);
+      _rebuildElements();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      final bounds = viewState.visibleBounds;
+      if (bounds != null) {
+        renderBox?.restoreVisibleDataBounds(
+          xMin: bounds.xMin,
+          xMax: bounds.xMax,
+          yMin: bounds.yMin,
+          yMax: bounds.yMax,
+        );
+      }
+      renderBox?.restoreVisibleAxisIds(viewState.visibleAxisIds);
+      if (viewState.selectedSeriesId != null) {
+        renderBox?.applySeriesSelection(viewState.selectedSeriesId!);
+      }
+      _syncControllerState(renderBox);
+    });
   }
 
   void _syncControllerState(ChartRenderBox? renderBox) {

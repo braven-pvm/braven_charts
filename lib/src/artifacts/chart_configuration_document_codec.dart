@@ -72,13 +72,12 @@ abstract final class ChartConfigurationDocumentCodec {
     ChartLegendDocument document,
   ) {
     try {
-      if (document.style.values.isEmpty) {
-        throw const FormatException('Legend style is required.');
-      }
       return ChartArtifactSuccess(
         value: (
           visible: document.visible,
-          style: ChartStyleDocumentCodec.decodeLegendStyle(document.style),
+          style: document.style.values.isEmpty
+              ? const LegendStyle()
+              : ChartStyleDocumentCodec.decodeLegendStyle(document.style),
         ),
       );
     } on Object catch (error) {

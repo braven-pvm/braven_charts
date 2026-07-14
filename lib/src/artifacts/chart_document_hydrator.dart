@@ -1,0 +1,653 @@
+import 'package:flutter/material.dart';
+
+import '../braven_chart_plus.dart';
+import '../controllers/annotation_controller.dart';
+import '../models/axis_swap_mode.dart';
+import '../models/braven_chart_controller.dart';
+import '../models/chart_annotation.dart';
+import '../models/chart_series.dart';
+import '../models/chart_theme.dart';
+import '../models/grid_config.dart';
+import '../models/interaction_config.dart';
+import '../models/legend_style.dart';
+import '../models/normalization_mode.dart';
+import '../models/x_axis_config.dart';
+import '../models/y_axis_config.dart';
+import 'chart_annotation_document_codec.dart';
+import 'chart_annotation_document.dart';
+import 'chart_artifact.dart';
+import 'chart_artifact_diagnostics.dart';
+import 'chart_artifact_json_codec.dart';
+import 'chart_axis_document_codec.dart';
+import 'chart_configuration_document_codec.dart';
+import 'chart_data_payload.dart';
+import 'chart_document.dart';
+import 'chart_interaction_document_codec.dart';
+import 'chart_runtime_bindings.dart';
+import 'chart_series_document_codec.dart';
+import 'chart_theme_document_codec.dart';
+import 'chart_view_state.dart';
+import 'json_value.dart';
+
+@immutable
+class ChartHydrationOptions {
+  const ChartHydrationOptions({
+    this.themeMode = ChartThemeHydrationMode.asCaptured,
+    this.restoreViewState = true,
+    this.hostTheme,
+  });
+
+  final ChartThemeHydrationMode themeMode;
+  final bool restoreViewState;
+  final ChartTheme? hostTheme;
+}
+
+/// Fully decoded public model configuration for one chart artifact.
+@immutable
+class HydratedChartConfiguration {
+  HydratedChartConfiguration({
+    required Iterable<ChartSeries> series,
+    required Iterable<ChartAnnotation> annotations,
+    required this.xAxis,
+    required Iterable<YAxisConfig> axes,
+    required this.theme,
+    required this.interaction,
+    required this.grid,
+    required this.legendStyle,
+    required this.showLegend,
+    required this.showToolbar,
+    required this.interactiveAnnotations,
+    required this.maxAxesPerSide,
+    required this.axisSwapMode,
+    required this.normalizationMode,
+    required this.backgroundColor,
+    required this.runtimeBindings,
+    this.viewState,
+    this.title,
+    this.subtitle,
+    this.width,
+    this.height,
+  }) : series = List.unmodifiable(series),
+       annotations = List.unmodifiable(annotations),
+       axes = List.unmodifiable(axes);
+
+  final List<ChartSeries> series;
+  final List<ChartAnnotation> annotations;
+  final XAxisConfig xAxis;
+  final List<YAxisConfig> axes;
+  final ChartTheme theme;
+  final InteractionConfig interaction;
+  final GridConfig grid;
+  final LegendStyle legendStyle;
+  final bool showLegend;
+  final bool showToolbar;
+  final bool interactiveAnnotations;
+  final int maxAxesPerSide;
+  final AxisSwapMode axisSwapMode;
+  final NormalizationMode normalizationMode;
+  final Color backgroundColor;
+  final ChartRuntimeBindings runtimeBindings;
+  final ChartViewState? viewState;
+  final String? title;
+  final String? subtitle;
+  final double? width;
+  final double? height;
+
+  YAxisConfig? get primaryYAxis {
+    for (final axis in axes) {
+      if (axis.id == 'y' || axis.id == 'primary_axis') return axis;
+    }
+    return axes.isEmpty ? null : axes.first;
+  }
+
+  /// Builds a fresh interactive runtime instance.
+  HydratedBravenChart build({
+    Key? key,
+    BravenChartController? bravenChartController,
+  }) => HydratedBravenChart(
+    key: key,
+    configuration: this,
+    bravenChartController: bravenChartController,
+  );
+}
+
+/// Stateful adapter that owns fresh annotation/controller identity per tile.
+class HydratedBravenChart extends StatefulWidget {
+  const HydratedBravenChart({
+    super.key,
+    required this.configuration,
+    this.bravenChartController,
+  });
+
+  final HydratedChartConfiguration configuration;
+  final BravenChartController? bravenChartController;
+
+  @override
+  State<HydratedBravenChart> createState() => _HydratedBravenChartState();
+}
+
+class _HydratedBravenChartState extends State<HydratedBravenChart> {
+  final Object _runtimeIdentity = Object();
+  late AnnotationController _annotationController;
+  late BravenChartController _bravenController;
+  late bool _ownsBravenController;
+
+  @override
+  void initState() {
+    super.initState();
+    _annotationController = AnnotationController(
+      initialAnnotations: widget.configuration.annotations,
+    );
+    _ownsBravenController = widget.bravenChartController == null;
+    _bravenController = widget.bravenChartController ?? BravenChartController();
+    _scheduleViewStateRestore();
+  }
+
+  @override
+  void didUpdateWidget(HydratedBravenChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    var restoreState = false;
+    if (widget.bravenChartController != oldWidget.bravenChartController) {
+      if (_ownsBravenController) _bravenController.dispose();
+      _ownsBravenController = widget.bravenChartController == null;
+      _bravenController =
+          widget.bravenChartController ?? BravenChartController();
+      restoreState = true;
+    }
+    if (widget.configuration != oldWidget.configuration) {
+      _annotationController.dispose();
+      _annotationController = AnnotationController(
+        initialAnnotations: widget.configuration.annotations,
+      );
+      restoreState = true;
+    }
+    if (restoreState) _scheduleViewStateRestore();
+  }
+
+  void _scheduleViewStateRestore() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.configuration.viewState == null) return;
+      _bravenController.restoreViewState(widget.configuration.viewState!);
+    });
+  }
+
+  @override
+  void dispose() {
+    _annotationController.dispose();
+    if (_ownsBravenController) _bravenController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = widget.configuration;
+    final bindings = config.runtimeBindings;
+    return BravenChartPlus(
+      key: ObjectKey(_runtimeIdentity),
+      series: config.series,
+      annotationController: _annotationController,
+      bravenChartController: _bravenController,
+      xAxisConfig: config.xAxis,
+      yAxis: config.primaryYAxis,
+      theme: config.theme,
+      interactionConfig: config.interaction,
+      grid: config.grid,
+      legendStyle: config.legendStyle,
+      showLegend: config.showLegend,
+      showToolbar: config.showToolbar,
+      interactiveAnnotations: config.interactiveAnnotations,
+      maxAxesPerSide: config.maxAxesPerSide,
+      axisSwapMode: config.axisSwapMode,
+      normalizationMode: config.normalizationMode,
+      backgroundColor: config.backgroundColor,
+      width: config.width,
+      height: config.height,
+      title: config.title,
+      subtitle: config.subtitle,
+      showXScrollbar: config.interaction.showXScrollbar,
+      showYScrollbar: config.interaction.showYScrollbar,
+      onPointTap: bindings.onPointTap,
+      onPointHover: bindings.onPointHover,
+      onBackgroundTap: bindings.onBackgroundTap,
+      onSeriesSelected: bindings.onSeriesSelected,
+      onAnnotationTap: bindings.onAnnotationTap,
+      onAnnotationDragged: bindings.onAnnotationDragged,
+      onSeriesDeselected: bindings.onSeriesDeselected,
+    );
+  }
+}
+
+/// Pure artifact/document hydration into supported public chart models.
+abstract final class ChartDocumentHydrator {
+  static const _builtInCapabilities = <String>{
+    'series.base',
+    'series.line',
+    'series.scatter',
+    'series.area',
+    'series.bar',
+    'annotation.point',
+    'annotation.range',
+    'annotation.text',
+    'annotation.threshold',
+    'annotation.pin',
+    'annotation.trend',
+    'annotation.chord',
+    'annotation.legend',
+  };
+  static const _builtInSeriesTypes = <String>{
+    'base',
+    'line',
+    'scatter',
+    'area',
+    'bar',
+  };
+  static const _builtInAnnotationTypes = <String>{
+    'point',
+    'range',
+    'text',
+    'threshold',
+    'pin',
+    'trend',
+    'chord',
+    'legend',
+  };
+
+  /// Validates, decodes, migrates, and hydrates an artifact JSON envelope.
+  static ChartArtifactResult<HydratedChartConfiguration> hydrateJson(
+    String encoded, {
+    ChartArtifactValidationLimits limits =
+        const ChartArtifactValidationLimits(),
+    ChartHydrationOptions options = const ChartHydrationOptions(),
+    ChartRuntimeBindings runtimeBindings = const ChartRuntimeBindings(),
+  }) {
+    final decoded = ChartArtifactJsonCodec.decode(
+      encoded,
+      limits: limits,
+      supportedCapabilities: {
+        ..._builtInCapabilities,
+        ...runtimeBindings.extensions.supportedCapabilities,
+      },
+    );
+    return switch (decoded) {
+      ChartArtifactFailure<ChartArtifactDecodeResult>() => ChartArtifactFailure(
+        error: decoded.error,
+        warnings: decoded.warnings,
+      ),
+      ChartArtifactSuccess<ChartArtifactDecodeResult>() =>
+        _hydrateDecodedArtifact(
+          decoded,
+          options: options,
+          runtimeBindings: runtimeBindings,
+        ),
+    };
+  }
+
+  static ChartArtifactResult<HydratedChartConfiguration>
+  _hydrateDecodedArtifact(
+    ChartArtifactSuccess<ChartArtifactDecodeResult> decoded, {
+    required ChartHydrationOptions options,
+    required ChartRuntimeBindings runtimeBindings,
+  }) {
+    final hydrated = hydrateArtifact(
+      decoded.value.artifact,
+      options: options,
+      runtimeBindings: runtimeBindings,
+    );
+    return switch (hydrated) {
+      ChartArtifactFailure<HydratedChartConfiguration>() =>
+        ChartArtifactFailure(
+          error: hydrated.error,
+          warnings: [...decoded.warnings, ...hydrated.warnings],
+        ),
+      ChartArtifactSuccess<HydratedChartConfiguration>() =>
+        ChartArtifactSuccess(
+          value: hydrated.value,
+          warnings: [...decoded.warnings, ...hydrated.warnings],
+        ),
+    };
+  }
+
+  static ChartArtifactResult<HydratedChartConfiguration> hydrateArtifact(
+    ChartArtifact artifact, {
+    ChartHydrationOptions options = const ChartHydrationOptions(),
+    ChartRuntimeBindings runtimeBindings = const ChartRuntimeBindings(),
+  }) {
+    if (artifact.schemaVersion != ChartArtifact.currentSchemaVersion) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.unsupportedSchemaVersion,
+          message:
+              'Cannot hydrate schema ${artifact.schemaVersion}; supported schema is ${ChartArtifact.currentSchemaVersion}.',
+          path: r'$.schemaVersion',
+        ),
+      );
+    }
+    return hydrateDocument(
+      artifact.document,
+      viewState: artifact.viewState,
+      options: options,
+      runtimeBindings: runtimeBindings,
+    );
+  }
+
+  static ChartArtifactResult<HydratedChartConfiguration> hydrateDocument(
+    ChartDocument document, {
+    ChartViewState? viewState,
+    ChartHydrationOptions options = const ChartHydrationOptions(),
+    ChartRuntimeBindings runtimeBindings = const ChartRuntimeBindings(),
+  }) {
+    final warnings = <ChartArtifactWarning>[];
+    try {
+      final requiredCapabilities = <String>{
+        ...document.requiredCapabilities,
+        for (final series in document.series) ...series.requiredCapabilities,
+        for (final annotation in document.annotations)
+          ...annotation.requiredCapabilities,
+      };
+      final supportedCapabilities = {
+        ..._builtInCapabilities,
+        ...runtimeBindings.extensions.supportedCapabilities,
+      };
+      final unsupported = requiredCapabilities.difference(
+        supportedCapabilities,
+      );
+      if (unsupported.isNotEmpty) {
+        final sorted = unsupported.toList()..sort();
+        return ChartArtifactFailure(
+          error: ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.missingRequiredCapability,
+            message: 'Missing required capabilities: ${sorted.join(', ')}.',
+            path: r'$.document.requiredCapabilities',
+          ),
+        );
+      }
+
+      final series = [
+        for (var index = 0; index < document.series.length; index++)
+          _decodeSeries(
+            document.series[index],
+            runtimeBindings.formatters,
+            runtimeBindings.extensions,
+            warnings,
+            index,
+          ),
+      ];
+      final annotations = [
+        for (final item in document.annotations)
+          _decodeAnnotation(item, runtimeBindings.extensions, warnings),
+      ];
+      final xAxisFormatter = _resolveFormatter(
+        document.xAxis.formatter,
+        runtimeBindings.formatters,
+        warnings,
+        r'$.document.xAxis.formatter',
+      );
+      final xAxis = _requireValue(
+        ChartAxisDocumentCodec.decodeXAxis(
+          document.xAxis,
+          formatter: xAxisFormatter,
+        ),
+        warnings,
+      );
+      final axes = [
+        for (var index = 0; index < document.axes.length; index++)
+          _decodeAxis(
+            document.axes[index],
+            runtimeBindings.formatters,
+            warnings,
+            index,
+          ),
+      ];
+      final ChartTheme theme;
+      if (options.themeMode == ChartThemeHydrationMode.hostOverride) {
+        theme = _requireHostTheme(options.hostTheme);
+      } else if (options.themeMode == ChartThemeHydrationMode.adaptToHost &&
+          options.hostTheme != null) {
+        theme = options.hostTheme!;
+      } else {
+        theme = _requireValue(
+          ChartThemeDocumentCodec.decode(document.theme),
+          warnings,
+        );
+      }
+      final interaction = _requireValue(
+        ChartInteractionDocumentCodec.decode(
+          document.interaction,
+          bindings: runtimeBindings,
+        ),
+        warnings,
+      );
+      final legend = _requireValue(
+        ChartConfigurationDocumentCodec.decodeLegend(document.legend),
+        warnings,
+      );
+      final grid = _requireValue(
+        ChartConfigurationDocumentCodec.decodeGrid(document.grid),
+        warnings,
+      );
+      final normalization = document.normalization == null
+          ? NormalizationMode.none
+          : _requireValue(
+              ChartConfigurationDocumentCodec.decodeNormalization(
+                document.normalization!,
+              ),
+              warnings,
+            );
+      final layout = document.layout;
+
+      return ChartArtifactSuccess(
+        value: HydratedChartConfiguration(
+          series: series,
+          annotations: annotations,
+          xAxis: xAxis,
+          axes: axes,
+          theme: theme,
+          interaction: interaction,
+          grid: grid,
+          legendStyle: legend.style,
+          showLegend: legend.visible,
+          showToolbar: layout.showToolbar ?? false,
+          interactiveAnnotations: layout.interactiveAnnotations ?? true,
+          maxAxesPerSide: layout.maxAxesPerSide ?? 3,
+          axisSwapMode: _axisSwapMode(layout.axisSwapMode),
+          normalizationMode: normalization,
+          backgroundColor: layout.backgroundColor == null
+              ? theme.backgroundColor
+              : Color(layout.backgroundColor!),
+          runtimeBindings: runtimeBindings,
+          viewState: options.restoreViewState ? viewState : null,
+          title: document.title,
+          subtitle: document.subtitle,
+          width: layout.width?.asDouble,
+          height: layout.height?.asDouble,
+        ),
+        warnings: warnings,
+      );
+    } on _HydrationFailure catch (failure) {
+      return ChartArtifactFailure(
+        error: failure.error,
+        warnings: [...warnings, ...failure.warnings],
+      );
+    } on FormatException catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: error.message,
+        ),
+        warnings: warnings,
+      );
+    }
+  }
+
+  static YAxisConfig _decodeAxis(
+    ChartAxisDocument document,
+    ChartFormatterRegistry registry,
+    List<ChartArtifactWarning> warnings,
+    int index,
+  ) {
+    final formatter = _resolveFormatter(
+      document.formatter,
+      registry,
+      warnings,
+      '\$.document.axes[$index].formatter',
+    );
+    return _requireValue(
+      ChartAxisDocumentCodec.decodeYAxis(document, formatter: formatter),
+      warnings,
+    );
+  }
+
+  static ChartSeries _decodeSeries(
+    ChartSeriesDocument document,
+    ChartFormatterRegistry registry,
+    ChartExtensionRegistry extensions,
+    List<ChartArtifactWarning> warnings,
+    int index,
+  ) {
+    if (!_builtInSeriesTypes.contains(document.type)) {
+      final codec = extensions.seriesCodecs[document.type];
+      if (codec == null) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.unsupportedModelType,
+            message: 'No series extension codec for "${document.type}".',
+            path: '\$.document.series[$index].type',
+          ),
+          const [],
+        );
+      }
+      try {
+        return codec.decode(document);
+      } on Object catch (error) {
+        throw _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message: 'Series extension codec "${codec.typeId}" failed: $error',
+            path: '\$.document.series[$index]',
+          ),
+          const [],
+        );
+      }
+    }
+    final rawFormatter = document.inlineAxis?.values['formatter'];
+    if (rawFormatter != null && rawFormatter is! JsonObjectValue) {
+      throw FormatException(
+        'Series inline-axis formatter at index $index must be an object.',
+      );
+    }
+    final formatter = _resolveFormatter(
+      rawFormatter as JsonObjectValue?,
+      registry,
+      warnings,
+      '\$.document.series[$index].inlineAxis.formatter',
+    );
+    return _requireValue(
+      ChartSeriesDocumentCodec.decode(document, inlineAxisFormatter: formatter),
+      warnings,
+    );
+  }
+
+  static ChartAnnotation _decodeAnnotation(
+    ChartAnnotationDocument document,
+    ChartExtensionRegistry extensions,
+    List<ChartArtifactWarning> warnings,
+  ) {
+    if (_builtInAnnotationTypes.contains(document.type)) {
+      return _requireValue(
+        ChartAnnotationDocumentCodec.decode(document),
+        warnings,
+      );
+    }
+    final codec = extensions.annotationCodecs[document.type];
+    if (codec == null) {
+      throw _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.unsupportedModelType,
+          message: 'No annotation extension codec for "${document.type}".',
+          path: r'$.document.annotations',
+        ),
+        const [],
+      );
+    }
+    try {
+      return codec.decode(document);
+    } on Object catch (error) {
+      throw _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Annotation extension codec "${codec.typeId}" failed: $error',
+          path: r'$.document.annotations',
+        ),
+        const [],
+      );
+    }
+  }
+
+  static String Function(double)? _resolveFormatter(
+    JsonObjectValue? document,
+    ChartFormatterRegistry registry,
+    List<ChartArtifactWarning> warnings,
+    String path,
+  ) {
+    if (document == null) return null;
+    final descriptor = ChartFormatterDescriptor.fromDocument(document);
+    final resolution = registry.resolve(descriptor);
+    if (resolution.warning != null) {
+      warnings.add(
+        ChartArtifactWarning(
+          code: resolution.warning!.code,
+          message: resolution.warning!.message,
+          path: path,
+        ),
+      );
+    }
+    return resolution.formatter;
+  }
+
+  static AxisSwapMode _axisSwapMode(String? name) {
+    if (name == null) return AxisSwapMode.sticky;
+    for (final value in AxisSwapMode.values) {
+      if (value.name == name) return value;
+    }
+    throw FormatException('Unknown axis swap mode "$name".');
+  }
+
+  static ChartTheme _requireHostTheme(ChartTheme? theme) {
+    if (theme != null) return theme;
+    throw const _HydrationFailure(
+      ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+        message: 'hostOverride hydration requires a host theme.',
+        path: r'$.options.hostTheme',
+      ),
+      [],
+    );
+  }
+}
+
+class _HydrationFailure implements Exception {
+  const _HydrationFailure(this.error, this.warnings);
+
+  final ChartArtifactError error;
+  final List<ChartArtifactWarning> warnings;
+}
+
+T _requireValue<T>(
+  ChartArtifactResult<T> result,
+  List<ChartArtifactWarning> warnings,
+) => switch (result) {
+  ChartArtifactSuccess<T>() => _recordSuccess(result, warnings),
+  ChartArtifactFailure<T>() => throw _HydrationFailure(
+    result.error,
+    result.warnings,
+  ),
+};
+
+T _recordSuccess<T>(
+  ChartArtifactSuccess<T> result,
+  List<ChartArtifactWarning> warnings,
+) {
+  warnings.addAll(result.warnings);
+  return result.value;
+}

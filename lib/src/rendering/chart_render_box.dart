@@ -443,6 +443,34 @@ class ChartRenderBox extends RenderBox {
   /// Returns null if chart hasn't been laid out yet.
   ChartTransform? get transform => _transform;
 
+  /// Restores durable data-space viewport bounds after hydration.
+  bool restoreVisibleDataBounds({
+    required double xMin,
+    required double xMax,
+    required double yMin,
+    required double yMax,
+  }) {
+    if (_transform == null ||
+        !xMin.isFinite ||
+        !xMax.isFinite ||
+        !yMin.isFinite ||
+        !yMax.isFinite ||
+        xMin >= xMax ||
+        yMin >= yMax) {
+      return false;
+    }
+    _transform = _transform!.copyWith(
+      dataXMin: xMin,
+      dataXMax: xMax,
+      dataYMin: yMin,
+      dataYMax: yMax,
+    );
+    _updateAxesFromTransform();
+    _rebuildElementsWithTransform();
+    markNeedsPaint();
+    return true;
+  }
+
   // ==========================================================================
   // Lifecycle
   // ==========================================================================
@@ -1784,6 +1812,12 @@ class ChartRenderBox extends RenderBox {
   /// Currently overflow axis IDs.
   List<String> get overflowAxisIds => _multiAxisManager.overflowAxisIds;
 
+  /// Restores captured visible-axis slot order and schedules layout.
+  void restoreVisibleAxisIds(Iterable<String> axisIds) {
+    _multiAxisManager.restoreVisibleAxisIds(axisIds);
+    markNeedsLayout();
+  }
+
   /// Sets the maximum number of visible Y-axes per side.
   void setMaxAxesPerSide(int max) {
     if (_multiAxisManager.setMaxAxesPerSide(max)) markNeedsLayout();
@@ -2227,10 +2261,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint grid lines (behind everything)
     if (_xAxis != null && _yAxis != null) {
-      final gridRenderer = GridRenderer(
-        theme: _theme,
-        config: _gridConfig,
-      );
+      final gridRenderer = GridRenderer(theme: _theme, config: _gridConfig);
 
       // Get tick positions for grid lines
       final xTicks = _xAxis!.ticks

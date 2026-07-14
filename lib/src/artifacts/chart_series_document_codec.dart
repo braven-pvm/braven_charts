@@ -24,19 +24,27 @@ import 'json_value.dart';
 /// by the built-in series models. Executable callbacks fail closed until their
 /// runtime binding descriptors are supplied.
 abstract final class ChartSeriesDocumentCodec {
-  static ChartArtifactResult<ChartSeriesDocument> encode(ChartSeries series) =>
-      encodeWithContext(series, ChartModelCodecContext());
+  static ChartArtifactResult<ChartSeriesDocument> encode(
+    ChartSeries series, {
+    JsonObjectValue? inlineAxisFormatter,
+  }) => encodeWithContext(
+    series,
+    ChartModelCodecContext(),
+    inlineAxisFormatter: inlineAxisFormatter,
+  );
 
   @internal
   static ChartArtifactResult<ChartSeriesDocument> encodeWithContext(
     ChartSeries series,
-    ChartModelCodecContext context,
-  ) {
+    ChartModelCodecContext context, {
+    JsonObjectValue? inlineAxisFormatter,
+  }) {
     var entered = false;
     try {
       context.enter(series);
       entered = true;
-      if (series.yAxisConfig?.labelFormatter != null) {
+      if (series.yAxisConfig?.labelFormatter != null &&
+          inlineAxisFormatter == null) {
         throw const _RuntimeBindingException(
           'Y-axis label formatters must be represented by a runtime binding descriptor.',
           r'$.inlineAxis.labelFormatter',
@@ -62,7 +70,10 @@ abstract final class ChartSeriesDocumentCodec {
           name: series.name,
           unit: series.unit,
           axisId: series.yAxisId,
-          inlineAxis: _encodeAxis(series.yAxisConfig),
+          inlineAxis: _encodeAxis(
+            series.yAxisConfig,
+            formatter: inlineAxisFormatter,
+          ),
           style: _jsonObject(_encodeSeriesStyle(series), path: r'$.style'),
           metadata: _jsonObjectOrNull(series.metadata, path: r'$.metadata'),
           annotations: [
@@ -121,7 +132,10 @@ abstract final class ChartSeriesDocumentCodec {
     }
   }
 
-  static ChartArtifactResult<ChartSeries> decode(ChartSeriesDocument document) {
+  static ChartArtifactResult<ChartSeries> decode(
+    ChartSeriesDocument document, {
+    YAxisLabelFormatter? inlineAxisFormatter,
+  }) {
     try {
       final payload = document.data;
       if (payload is! InlinePointPayload) {
@@ -134,7 +148,10 @@ abstract final class ChartSeriesDocumentCodec {
       final style = _objectMap(document.style);
       final points = payload.points.map(_decodePoint).toList(growable: false);
       final metadata = _dynamicMap(document.metadata);
-      final axis = _decodeAxis(document.inlineAxis);
+      final axis = _decodeAxis(
+        document.inlineAxis,
+        formatter: inlineAxisFormatter,
+      );
       final annotations = [
         for (final annotation in document.annotations)
           _decodeAnnotationOrThrow(annotation),
@@ -529,7 +546,7 @@ SeriesInlineLabelConfig? _decodeInlineLabel(Map<String, Object?>? value) {
   );
 }
 
-JsonObjectValue? _encodeAxis(YAxisConfig? axis) {
+JsonObjectValue? _encodeAxis(YAxisConfig? axis, {JsonObjectValue? formatter}) {
   if (axis == null) return null;
   return _jsonObject({
     'id': axis.id,
@@ -557,10 +574,14 @@ JsonObjectValue? _encodeAxis(YAxisConfig? axis) {
     'showMinorTicks': axis.showMinorTicks,
     'minorTickCount': axis.minorTickCount,
     'minorTickLength': _number(axis.minorTickLength),
+    if (formatter != null) 'formatter': formatter.toJson(),
   }, path: r'$.inlineAxis');
 }
 
-YAxisConfig? _decodeAxis(JsonObjectValue? value) {
+YAxisConfig? _decodeAxis(
+  JsonObjectValue? value, {
+  YAxisLabelFormatter? formatter,
+}) {
   if (value == null) return null;
   final map = _objectMap(value);
   final id = _string(map, 'id');
@@ -619,6 +640,7 @@ YAxisConfig? _decodeAxis(JsonObjectValue? value) {
     showMinorTicks: arguments.showMinorTicks,
     minorTickCount: arguments.minorTickCount,
     minorTickLength: arguments.minorTickLength,
+    labelFormatter: formatter,
   );
   return id.isEmpty ? axis : axis.copyWith(id: id);
 }

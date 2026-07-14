@@ -130,11 +130,32 @@ void main() {
       );
 
       final hydrationResult = ChartInteractionDocumentCodec.decode(document);
-      expect(hydrationResult, isA<ChartArtifactFailure<InteractionConfig>>());
+      expect(hydrationResult, isA<ChartArtifactSuccess<InteractionConfig>>());
+      final degraded =
+          hydrationResult as ChartArtifactSuccess<InteractionConfig>;
+      expect(degraded.value.onDataPointTap, isNull);
       expect(
-        (hydrationResult as ChartArtifactFailure<InteractionConfig>).error.code,
+        degraded.warnings.single.code,
         ChartArtifactDiagnosticCodes.runtimeBindingRequired,
       );
+
+      var tapped = false;
+      void onTap(ChartDataPoint point, Offset position) => tapped = true;
+      final rebound = _success(
+        ChartInteractionDocumentCodec.decode(
+          document,
+          bindings: ChartRuntimeBindings(
+            callbacks: ChartCallbackRegistry(
+              callbacks: {'app.chart.pointTap.v1': onTap},
+            ),
+          ),
+        ),
+      );
+      rebound.onDataPointTap?.call(
+        const ChartDataPoint(x: 1, y: 2),
+        Offset.zero,
+      );
+      expect(tapped, isTrue);
     });
 
     test('covers every callback field with a stable binding key', () {

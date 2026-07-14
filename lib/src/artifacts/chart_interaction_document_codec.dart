@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../models/interaction_config.dart';
+import '../models/interaction_callbacks.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
 import 'chart_document.dart';
+import 'chart_runtime_bindings.dart';
 import 'chart_style_document_codec.dart';
 import 'json_value.dart';
 
@@ -103,30 +105,114 @@ abstract final class ChartInteractionDocumentCodec {
   }
 
   static ChartArtifactResult<InteractionConfig> decode(
-    ChartInteractionDocument document,
-  ) {
-    if (document.requiredBindings.isNotEmpty) {
-      return ChartArtifactFailure(
-        error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
-          message:
-              'Interaction hydration requires bindings: ${document.requiredBindings.toList()..sort()}.',
-          path: r'$.interaction.requiredBindings',
-        ),
-      );
-    }
+    ChartInteractionDocument document, {
+    ChartRuntimeBindings bindings = const ChartRuntimeBindings(),
+  }) {
+    final warnings = <ChartArtifactWarning>[];
     try {
       final map = _map(document.configuration);
-      if (map['callbacks'] != null) {
-        throw const FormatException(
-          'Callback descriptors must declare requiredBindings.',
+      final callbackDescriptors = map['callbacks'] == null
+          ? const <String, Object?>{}
+          : _requiredMap(map, 'callbacks');
+      final describedBindingIds = <String>{};
+      String? descriptorId(String field) {
+        final raw = callbackDescriptors[field];
+        if (raw == null) return null;
+        if (raw is! Map) {
+          throw FormatException(
+            'Callback descriptor $field must be an object.',
+          );
+        }
+        final descriptor = Map<String, Object?>.from(raw);
+        final id = _string(descriptor, 'id');
+        if (!document.requiredBindings.contains(id)) {
+          throw FormatException(
+            'Callback descriptor $field must declare $id in requiredBindings.',
+          );
+        }
+        describedBindingIds.add(id);
+        return id;
+      }
+
+      T? resolveCallback<T extends Function>(String field) {
+        final id = descriptorId(field);
+        if (id == null) return null;
+        final callback = bindings.callbacks.resolve<T>(id);
+        if (callback == null) {
+          warnings.add(
+            ChartArtifactWarning(
+              code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+              message:
+                  'Optional interaction binding "$id" is unavailable; $field is disabled.',
+              path: r'$.interaction.configuration.callbacks.' + field,
+            ),
+          );
+        }
+        return callback;
+      }
+
+      final tooltipBuilderId = descriptorId(tooltipBuilderBinding);
+      final tooltipBuilder = tooltipBuilderId == null
+          ? null
+          : bindings.tooltips.resolve(tooltipBuilderId);
+      if (tooltipBuilderId != null && tooltipBuilder == null) {
+        warnings.add(
+          ChartArtifactWarning(
+            code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+            message:
+                'Optional tooltip binding "$tooltipBuilderId" is unavailable; the standard tooltip is active.',
+            path:
+                r'$.interaction.configuration.callbacks.tooltip.customBuilder',
+          ),
         );
       }
+      final onDataPointTap = resolveCallback<DataPointCallback>(
+        dataPointTapBinding,
+      );
+      final onDataPointHover = resolveCallback<DataPointHoverCallback>(
+        dataPointHoverBinding,
+      );
+      final onDataPointLongPress = resolveCallback<DataPointLongPressCallback>(
+        dataPointLongPressBinding,
+      );
+      final onSelectionChanged = resolveCallback<SelectionCallback>(
+        selectionChangedBinding,
+      );
+      final onZoomChanged = resolveCallback<ZoomCallback>(zoomChangedBinding);
+      final onPanChanged = resolveCallback<PanCallback>(panChangedBinding);
+      final onViewportChanged = resolveCallback<ViewportCallback>(
+        viewportChangedBinding,
+      );
+      final onCrosshairChanged = resolveCallback<CrosshairChangeCallback>(
+        crosshairChangedBinding,
+      );
+      final onTooltipChanged = resolveCallback<TooltipChangeCallback>(
+        tooltipChangedBinding,
+      );
+      final onKeyboardAction = resolveCallback<KeyboardActionCallback>(
+        keyboardActionBinding,
+      );
+      for (final id in document.requiredBindings.difference(
+        describedBindingIds,
+      )) {
+        warnings.add(
+          ChartArtifactWarning(
+            code: ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+            message:
+                'Runtime binding "$id" has no recognized interaction descriptor and was ignored.',
+            path: r'$.interaction.requiredBindings',
+          ),
+        );
+      }
+
       return ChartArtifactSuccess(
         value: InteractionConfig(
           enabled: _bool(map, 'enabled'),
           crosshair: _decodeCrosshair(_requiredMap(map, 'crosshair')),
-          tooltip: _decodeTooltip(_requiredMap(map, 'tooltip')),
+          tooltip: _decodeTooltip(
+            _requiredMap(map, 'tooltip'),
+            customBuilder: tooltipBuilder,
+          ),
           gesture: _decodeGesture(_requiredMap(map, 'gesture')),
           keyboard: _decodeKeyboard(_requiredMap(map, 'keyboard')),
           enableZoom: _bool(map, 'enableZoom'),
@@ -137,7 +223,18 @@ abstract final class ChartInteractionDocumentCodec {
           showXScrollbar: _bool(map, 'showXScrollbar'),
           showYScrollbar: _bool(map, 'showYScrollbar'),
           keyboardZoomPercent: _int(map, 'keyboardZoomPercent'),
+          onDataPointTap: onDataPointTap,
+          onDataPointHover: onDataPointHover,
+          onDataPointLongPress: onDataPointLongPress,
+          onSelectionChanged: onSelectionChanged,
+          onZoomChanged: onZoomChanged,
+          onPanChanged: onPanChanged,
+          onViewportChanged: onViewportChanged,
+          onCrosshairChanged: onCrosshairChanged,
+          onTooltipChanged: onTooltipChanged,
+          onKeyboardAction: onKeyboardAction,
         ),
+        warnings: warnings,
       );
     } on Object catch (error) {
       return _invalidFailure(error);
@@ -219,7 +316,10 @@ Map<String, Object?> _encodeTooltip(TooltipConfig value) => {
   'style': _encodeTooltipStyle(value.style),
 };
 
-TooltipConfig _decodeTooltip(Map<String, Object?> map) => TooltipConfig(
+TooltipConfig _decodeTooltip(
+  Map<String, Object?> map, {
+  TooltipBuilder? customBuilder,
+}) => TooltipConfig(
   enabled: _bool(map, 'enabled'),
   triggerMode: _enum(map, 'triggerMode', TooltipTriggerMode.values),
   preferredPosition: _enum(map, 'preferredPosition', TooltipPosition.values),
@@ -228,6 +328,7 @@ TooltipConfig _decodeTooltip(Map<String, Object?> map) => TooltipConfig(
   followCursor: _bool(map, 'followCursor'),
   offsetFromPoint: _double(map, 'offsetFromPoint'),
   style: _decodeTooltipStyle(_requiredMap(map, 'style')),
+  customBuilder: customBuilder,
 );
 
 Map<String, Object?> _encodeTooltipStyle(TooltipStyle value) => {

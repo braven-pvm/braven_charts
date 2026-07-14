@@ -104,6 +104,13 @@ void main() {
         ),
       );
       expect(document.formatter?.toJson(), {'id': 'elapsed.minutes'});
+      final decoded = _success(
+        ChartAxisDocumentCodec.decodeXAxis(
+          document,
+          formatter: (value) => '$value min',
+        ),
+      );
+      expect(decoded.labelFormatter?.call(5), '5.0 min');
     });
 
     test('rejects an axis document with the wrong discriminator', () {

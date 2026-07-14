@@ -308,16 +308,26 @@ class MultiAxisManager {
   List<YAxisConfig> getVisibleAxes() {
     final all = getEffectiveYAxes();
     // ignore: deprecated_member_use_from_same_package
-    final leftAxes = all.where((a) =>
-        a.position == YAxisPosition.left ||
-        // ignore: deprecated_member_use_from_same_package
-        a.position == YAxisPosition.leftOuter).toList();
+    final leftAxes = all
+        .where(
+          (a) =>
+              a.position == YAxisPosition.left ||
+              // ignore: deprecated_member_use_from_same_package
+              a.position == YAxisPosition.leftOuter,
+        )
+        .toList();
     // ignore: deprecated_member_use_from_same_package
-    final rightAxes = all.where((a) =>
-        a.position == YAxisPosition.right ||
-        // ignore: deprecated_member_use_from_same_package
-        a.position == YAxisPosition.rightOuter).toList();
-    final hiddenAxes = all.where((a) => a.position == YAxisPosition.hidden).toList();
+    final rightAxes = all
+        .where(
+          (a) =>
+              a.position == YAxisPosition.right ||
+              // ignore: deprecated_member_use_from_same_package
+              a.position == YAxisPosition.rightOuter,
+        )
+        .toList();
+    final hiddenAxes = all
+        .where((a) => a.position == YAxisPosition.hidden)
+        .toList();
 
     return [
       ..._applySlotCap(leftAxes, _overriddenLeftIds),
@@ -339,6 +349,40 @@ class MultiAxisManager {
         .where((a) => !visibleIds.contains(a.id))
         .map((a) => a.id)
         .toList();
+  }
+
+  /// Restores a previously captured visible-axis slot order.
+  ///
+  /// Unknown and hidden axis IDs are ignored. Each side remains capped by
+  /// [maxAxesPerSide], so malformed persisted state cannot over-allocate slots.
+  void restoreVisibleAxisIds(Iterable<String> visibleAxisIds) {
+    final all = getEffectiveYAxes();
+    final byId = {for (final axis in all) axis.id: axis};
+    final left = <String>[];
+    final right = <String>[];
+    for (final id in visibleAxisIds) {
+      final axis = byId[id];
+      if (axis == null || axis.position == YAxisPosition.hidden) continue;
+      // ignore: deprecated_member_use_from_same_package
+      final isLeft =
+          axis.position == YAxisPosition.left ||
+          // ignore: deprecated_member_use_from_same_package
+          axis.position == YAxisPosition.leftOuter;
+      // ignore: deprecated_member_use_from_same_package
+      final isRight =
+          axis.position == YAxisPosition.right ||
+          // ignore: deprecated_member_use_from_same_package
+          axis.position == YAxisPosition.rightOuter;
+      if (isLeft) {
+        if (left.length < _maxAxesPerSide && !left.contains(id)) left.add(id);
+      } else if (isRight) {
+        if (right.length < _maxAxesPerSide && !right.contains(id)) {
+          right.add(id);
+        }
+      }
+    }
+    _overriddenLeftIds = left.isEmpty ? null : left;
+    _overriddenRightIds = right.isEmpty ? null : right;
   }
 
   List<YAxisConfig> _applySlotCap(
@@ -382,10 +426,14 @@ class MultiAxisManager {
         // ignore: deprecated_member_use_from_same_package
         axis.position == YAxisPosition.leftOuter) {
       // ignore: deprecated_member_use_from_same_package
-      final leftAxes = all.where((a) =>
-          a.position == YAxisPosition.left ||
-          // ignore: deprecated_member_use_from_same_package
-          a.position == YAxisPosition.leftOuter).toList();
+      final leftAxes = all
+          .where(
+            (a) =>
+                a.position == YAxisPosition.left ||
+                // ignore: deprecated_member_use_from_same_package
+                a.position == YAxisPosition.leftOuter,
+          )
+          .toList();
       final currentVisible = _applySlotCap(leftAxes, _overriddenLeftIds);
       final demoted = currentVisible.first;
       final newVisible = [...currentVisible.skip(1), axis];
@@ -393,10 +441,14 @@ class MultiAxisManager {
       return (promotedAxisId: axisId, demotedAxisId: demoted.id);
     } else {
       // ignore: deprecated_member_use_from_same_package
-      final rightAxes = all.where((a) =>
-          a.position == YAxisPosition.right ||
-          // ignore: deprecated_member_use_from_same_package
-          a.position == YAxisPosition.rightOuter).toList();
+      final rightAxes = all
+          .where(
+            (a) =>
+                a.position == YAxisPosition.right ||
+                // ignore: deprecated_member_use_from_same_package
+                a.position == YAxisPosition.rightOuter,
+          )
+          .toList();
       final currentVisible = _applySlotCap(rightAxes, _overriddenRightIds);
       final demoted = currentVisible.first;
       final newVisible = [...currentVisible.skip(1), axis];

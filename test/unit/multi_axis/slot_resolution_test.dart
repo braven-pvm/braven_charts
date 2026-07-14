@@ -3,16 +3,16 @@ import 'package:braven_charts/src/rendering/modules/multi_axis_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 LineChartSeries _rightSeries(String id) => LineChartSeries(
-      id: id,
-      points: const [],
-      yAxisConfig: YAxisConfig(position: YAxisPosition.right, label: id),
-    );
+  id: id,
+  points: const [],
+  yAxisConfig: YAxisConfig(position: YAxisPosition.right, label: id),
+);
 
 LineChartSeries _leftSeries(String id) => LineChartSeries(
-      id: id,
-      points: const [],
-      yAxisConfig: YAxisConfig(position: YAxisPosition.left, label: id),
-    );
+  id: id,
+  points: const [],
+  yAxisConfig: YAxisConfig(position: YAxisPosition.left, label: id),
+);
 
 void main() {
   group('MultiAxisManager slot resolution', () {
@@ -23,25 +23,41 @@ void main() {
     });
 
     test('all axes visible when count <= maxAxesPerSide', () {
-      manager.setSeries([_rightSeries('a'), _rightSeries('b'), _rightSeries('c')]);
+      manager.setSeries([
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+      ]);
       manager.setMaxAxesPerSide(3);
       final visible = manager.getVisibleAxes();
-      expect(visible.where((a) => a.position == YAxisPosition.right), hasLength(3));
+      expect(
+        visible.where((a) => a.position == YAxisPosition.right),
+        hasLength(3),
+      );
     });
 
     test('overflow axes are excluded from getVisibleAxes', () {
       manager.setSeries([
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'),
-        _rightSeries('d'), _rightSeries('e'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
+        _rightSeries('e'),
       ]);
       manager.setMaxAxesPerSide(3);
       final visible = manager.getVisibleAxes();
-      expect(visible.where((a) => a.position == YAxisPosition.right), hasLength(3));
+      expect(
+        visible.where((a) => a.position == YAxisPosition.right),
+        hasLength(3),
+      );
     });
 
     test('overflowAxisIds returns ids outside the slot cap', () {
       manager.setSeries([
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
       ]);
       manager.setMaxAxesPerSide(3);
       final overflow = manager.overflowAxisIds;
@@ -49,20 +65,54 @@ void main() {
       expect(overflow, hasLength(1));
     });
 
+    test('restores outer-axis slots without accepting duplicate ids', () {
+      // ignore: deprecated_member_use_from_same_package
+      final outer = LineChartSeries(
+        id: 'outer',
+        points: const [],
+        yAxisConfig: YAxisConfig(
+          // ignore: deprecated_member_use_from_same_package
+          position: YAxisPosition.leftOuter,
+        ),
+      );
+      manager.setSeries([outer, _leftSeries('inner')]);
+      manager.setMaxAxesPerSide(2);
+
+      manager.restoreVisibleAxisIds(['outer_axis', 'outer_axis', 'inner_axis']);
+
+      expect(manager.getVisibleAxes().map((axis) => axis.id), [
+        'outer_axis',
+        'inner_axis',
+      ]);
+    });
+
     test('left and right caps are independent', () {
       manager.setSeries([
-        _leftSeries('l1'), _leftSeries('l2'), _leftSeries('l3'), _leftSeries('l4'),
-        _rightSeries('r1'), _rightSeries('r2'),
+        _leftSeries('l1'),
+        _leftSeries('l2'),
+        _leftSeries('l3'),
+        _leftSeries('l4'),
+        _rightSeries('r1'),
+        _rightSeries('r2'),
       ]);
       manager.setMaxAxesPerSide(3);
       final visible = manager.getVisibleAxes();
-      expect(visible.where((a) => a.position == YAxisPosition.left), hasLength(3));
-      expect(visible.where((a) => a.position == YAxisPosition.right), hasLength(2));
+      expect(
+        visible.where((a) => a.position == YAxisPosition.left),
+        hasLength(3),
+      );
+      expect(
+        visible.where((a) => a.position == YAxisPosition.right),
+        hasLength(2),
+      );
     });
 
     test('applySeriesSelection promotes overflow axis', () {
       final series = [
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
       ];
       manager.setSeries(series);
       manager.setMaxAxesPerSide(3);
@@ -73,7 +123,9 @@ void main() {
 
       // Find a series whose axis is in overflow
       final overflowSeriesId = series
-          .firstWhere((s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''))
+          .firstWhere(
+            (s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''),
+          )
           .id;
 
       final result = manager.applySeriesSelection(overflowSeriesId);
@@ -86,7 +138,10 @@ void main() {
     test('applySeriesSelection FIFO: demotes first visible, not last', () {
       // Declaration order: a, b, c visible; d overflow
       final series = [
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
       ];
       manager.setSeries(series);
       manager.setMaxAxesPerSide(3);
@@ -97,7 +152,8 @@ void main() {
       expect(result!.demotedAxisId, equals('a_axis'));
       expect(result.promotedAxisId, equals('d_axis'));
 
-      final visibleIds = manager.getVisibleAxes()
+      final visibleIds = manager
+          .getVisibleAxes()
           .where((a) => a.position == YAxisPosition.right)
           .map((a) => a.id)
           .toList();
@@ -108,8 +164,11 @@ void main() {
     test('successive swaps rotate through all axes like a queue', () {
       // a, b, c visible; d, e overflow
       final series = [
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'),
-        _rightSeries('d'), _rightSeries('e'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
+        _rightSeries('e'),
       ];
       manager.setSeries(series);
       manager.setMaxAxesPerSide(3);
@@ -117,7 +176,8 @@ void main() {
       manager.applySeriesSelection('d'); // a demoted → [b, c, d]
       manager.applySeriesSelection('e'); // b demoted → [c, d, e]
 
-      final visibleIds = manager.getVisibleAxes()
+      final visibleIds = manager
+          .getVisibleAxes()
           .where((a) => a.position == YAxisPosition.right)
           .map((a) => a.id)
           .toList();
@@ -127,7 +187,10 @@ void main() {
 
     test('clearSelectionFor in revert mode restores declaration order', () {
       final series = [
-        _rightSeries('a'), _rightSeries('b'), _rightSeries('c'), _rightSeries('d'),
+        _rightSeries('a'),
+        _rightSeries('b'),
+        _rightSeries('c'),
+        _rightSeries('d'),
       ];
       manager.setSeries(series);
       manager.setMaxAxesPerSide(3);
@@ -136,7 +199,9 @@ void main() {
       final overflow = manager.overflowAxisIds;
       final overflowId = overflow.first;
       final overflowSeriesId = series
-          .firstWhere((s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''))
+          .firstWhere(
+            (s) => s.yAxisConfig!.label == overflowId.replaceAll('_axis', ''),
+          )
           .id;
 
       manager.applySeriesSelection(overflowSeriesId);

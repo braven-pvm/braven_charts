@@ -9,6 +9,7 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const validationLimitExceeded = 'validation_limit_exceeded';
   static const metadataValueNotJsonSafe = 'metadata_value_not_json_safe';
   static const runtimeBindingRequired = 'runtime_binding_required';
+  static const unregisteredFormatter = 'unregistered_formatter';
   static const unsupportedModelType = 'unsupported_model_type';
   static const chartNotAttached = 'chart_not_attached';
   static const captureInProgress = 'capture_in_progress';

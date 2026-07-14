@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_artifact_diagnostics.dart';
 import '../artifacts/chart_document_extractor.dart';
+import '../artifacts/chart_view_state.dart';
 
 /// Programmatic control over series selection and Y-axis slot state.
 ///
@@ -33,6 +34,7 @@ class BravenChartController extends ChangeNotifier {
   void Function()? _clearHandler;
   void Function(String seriesId, bool visible)? _setVisibilityHandler;
   ChartDocumentExtractionHandler? _extractDocumentHandler;
+  void Function(ChartViewState viewState)? _restoreViewStateHandler;
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
   String? _selectedSeriesId;
@@ -101,6 +103,10 @@ class BravenChartController extends ChangeNotifier {
     return handler(options);
   }
 
+  /// Restores durable visibility, selection, viewport, and axis-slot state.
+  void restoreViewState(ChartViewState viewState) =>
+      _restoreViewStateHandler?.call(viewState);
+
   // ---- Internal state sync (called by _BravenChartPlusState) ----
 
   /// Attaches this controller to a chart state. Called by the state.
@@ -110,12 +116,14 @@ class BravenChartController extends ChangeNotifier {
     required void Function() onClear,
     void Function(String, bool)? onSetSeriesVisibility,
     ChartDocumentExtractionHandler? onExtractDocument,
+    void Function(ChartViewState)? onRestoreViewState,
   }) {
     _selectHandler = onSelect;
     _deselectHandler = onDeselect;
     _clearHandler = onClear;
     _setVisibilityHandler = onSetSeriesVisibility;
     _extractDocumentHandler = onExtractDocument;
+    _restoreViewStateHandler = onRestoreViewState;
   }
 
   /// Detaches from the chart state. Called in dispose.
@@ -125,6 +133,7 @@ class BravenChartController extends ChangeNotifier {
     _clearHandler = null;
     _setVisibilityHandler = null;
     _extractDocumentHandler = null;
+    _restoreViewStateHandler = null;
   }
 
   /// Updates mirrored slot state (called after every swap or selection change).

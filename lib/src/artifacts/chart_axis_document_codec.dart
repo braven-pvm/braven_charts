@@ -52,8 +52,9 @@ abstract final class ChartAxisDocumentCodec {
   }
 
   static ChartArtifactResult<XAxisConfig> decodeXAxis(
-    ChartAxisDocument document,
-  ) {
+    ChartAxisDocument document, {
+    XAxisLabelFormatter? formatter,
+  }) {
     try {
       _requireAxisType(document, 'x');
       if (document.position != 'bottom') {
@@ -87,6 +88,7 @@ abstract final class ChartAxisDocumentCodec {
           showMinorTicks: document.showMinorTicks,
           minorTickCount: document.minorTickCount,
           minorTickLength: document.minorTickLength?.asDouble ?? 3,
+          labelFormatter: formatter,
         ),
       );
     } on Object catch (error) {
@@ -135,8 +137,9 @@ abstract final class ChartAxisDocumentCodec {
   }
 
   static ChartArtifactResult<YAxisConfig> decodeYAxis(
-    ChartAxisDocument document,
-  ) {
+    ChartAxisDocument document, {
+    YAxisLabelFormatter? formatter,
+  }) {
     try {
       _requireAxisType(document, 'y');
       final axis = YAxisConfig(
@@ -167,6 +170,7 @@ abstract final class ChartAxisDocumentCodec {
         showMinorTicks: document.showMinorTicks,
         minorTickCount: document.minorTickCount,
         minorTickLength: document.minorTickLength?.asDouble ?? 3,
+        labelFormatter: formatter,
       );
       return ChartArtifactSuccess(
         value: document.id.isEmpty ? axis : axis.copyWith(id: document.id),

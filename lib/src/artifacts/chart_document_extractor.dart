@@ -164,7 +164,13 @@ abstract final class ChartDocumentExtractor {
       };
       final seriesDocuments = [
         for (final series in sourceSeries)
-          _requireValue(ChartSeriesDocumentCodec.encode(series), warnings),
+          _requireValue(
+            ChartSeriesDocumentCodec.encode(
+              series,
+              inlineAxisFormatter: _seriesAxisFormatter(series, options),
+            ),
+            warnings,
+          ),
       ];
       final annotationDocuments = [
         for (final annotation in source.annotations)
@@ -289,6 +295,16 @@ abstract final class ChartDocumentExtractor {
           points: _pointsInViewport(series, bounds.xMin, bounds.xMax),
         ),
     ];
+  }
+
+  static JsonObjectValue? _seriesAxisFormatter(
+    ChartSeries series,
+    ChartDocumentExtractOptions options,
+  ) {
+    final axis = series.yAxisConfig;
+    if (axis == null) return null;
+    final axisId = axis.id.isEmpty ? '${series.id}_axis' : axis.id;
+    return options.yAxisFormatterDescriptors[axisId];
   }
 
   static List<ChartDataPoint> _pointsInViewport(

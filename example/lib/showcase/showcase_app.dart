@@ -8,6 +8,7 @@ import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_schema_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
+import 'pages/artifact_hydration_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -207,6 +208,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.camera_outlined,
       selectedIcon: Icons.camera,
       page: ArtifactExtractionLabPage(),
+    ),
+    const NavDestination(
+      label: 'Hydration Lab',
+      icon: Icons.layers_outlined,
+      selectedIcon: Icons.layers,
+      page: ArtifactHydrationLabPage(),
+      badge: 'NEW',
     ),
   ];
 
