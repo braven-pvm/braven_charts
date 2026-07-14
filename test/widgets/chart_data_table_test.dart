@@ -80,6 +80,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'uses compact themed rows, aligned numbers, indexes, and series colors',
+    (tester) async {
+      const powerColor = Color(0xFF2563EB);
+      final document = _document([
+        _series('power', [_point(7, 241.44)], color: powerColor),
+        _series('heart-rate', [
+          _point(7, 133.75),
+        ], color: const Color(0xFFDC2626)),
+      ]);
+      final model = ChartTableModel.fromDocument(document);
+      final rowKey = ValueKey(model.wideRows.single.rowId);
+      const tableTheme = ChartDataTableTheme(
+        rowHeight: 32,
+        cellTextStyle: TextStyle(fontSize: 10, color: Colors.purple),
+        evenRowColor: Color(0xFFF1F5F9),
+      );
+
+      await tester.pumpWidget(
+        _host(
+          ChartDataTable(model: model),
+          theme: ThemeData(extensions: const [tableTheme]),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('chart-table-header-index')), findsOne);
+      expect(find.byKey(const ValueKey('chart-table-row-index-0')), findsOne);
+      expect(find.text('#'), findsOne);
+      expect(tester.getSize(find.byKey(rowKey)).height, 32);
+
+      final xHeader = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('chart-table-header-x')),
+          matching: find.text('X value'),
+        ),
+      );
+      final xValue = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('chart-table-cell-x-0')),
+          matching: find.text('7'),
+        ),
+      );
+      expect(xHeader.textAlign, TextAlign.right);
+      expect(xValue.textAlign, TextAlign.right);
+      expect(xValue.style?.fontSize, 10);
+      expect(xValue.style?.color, Colors.purple);
+
+      final powerValue = tester.widget<Text>(find.text('241.44'));
+      expect(powerValue.textAlign, TextAlign.right);
+      expect(powerValue.style?.color, powerColor);
+      expect(
+        find.byKey(const ValueKey('chart-table-series-color-series:power')),
+        findsOne,
+      );
+    },
+  );
+
   testWidgets('provides loading, error, empty, and warning states', (
     tester,
   ) async {
@@ -115,13 +172,15 @@ void main() {
   });
 }
 
-Widget _host(Widget child, {double height = 420}) => MaterialApp(
-  home: Scaffold(
-    body: Center(
-      child: SizedBox(width: 900, height: height, child: child),
-    ),
-  ),
-);
+Widget _host(Widget child, {double height = 420, ThemeData? theme}) =>
+    MaterialApp(
+      theme: theme,
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(width: 900, height: height, child: child),
+        ),
+      ),
+    );
 
 ChartTableModel _model({
   required List<ChartPointDocument> points,
@@ -131,18 +190,24 @@ ChartTableModel _model({
   options: const ChartTableOptions(rowLayout: ChartTableRowLayout.long),
 );
 
-ChartSeriesDocument _series(String id, List<ChartPointDocument> points) =>
-    ChartSeriesDocument(
-      type: 'line',
-      id: id,
-      name: switch (id) {
-        'power' => 'Power',
-        'heart-rate' => 'Heart rate',
-        _ => 'Series',
-      },
-      data: InlinePointPayload(points),
-      requiredCapabilities: const {'series.line'},
-    );
+ChartSeriesDocument _series(
+  String id,
+  List<ChartPointDocument> points, {
+  Color? color,
+}) => ChartSeriesDocument(
+  type: 'line',
+  id: id,
+  name: switch (id) {
+    'power' => 'Power',
+    'heart-rate' => 'Heart rate',
+    _ => 'Series',
+  },
+  data: InlinePointPayload(points),
+  style: color == null
+      ? null
+      : JsonValue.fromJson({'color': color.toARGB32()}) as JsonObjectValue,
+  requiredCapabilities: const {'series.line'},
+);
 
 ChartPointDocument _point(double x, double y, {String? label}) =>
     ChartPointDocument(

@@ -23,6 +23,14 @@ void main() {
     expect(find.text('Sample'), findsOneWidget);
     expect(find.text('Power (W)'), findsOneWidget);
     expect(find.text('Heart rate (bpm)'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('chart-table-header-index')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('chart-table-row-index-0')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Hide heart rate'));
     await tester.pump();

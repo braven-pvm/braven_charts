@@ -61,6 +61,7 @@ export 'src/table/chart_table_model.dart';
 export 'src/table/chart_table_options.dart';
 export 'src/table/chart_table_controller.dart';
 export 'src/table/chart_data_table.dart';
+export 'src/table/chart_data_table_theme.dart';
 export 'src/artifacts/json_value.dart';
 // Core chart widget
 export 'src/braven_chart_plus.dart';

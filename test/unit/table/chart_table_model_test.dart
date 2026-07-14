@@ -219,6 +219,20 @@ void main() {
         isTrue,
       );
     });
+
+    test('carries explicit and captured-theme series colors', () {
+      final explicit =
+          JsonValue.fromJson({'color': 0xFF2563EB}) as JsonObjectValue;
+      final document = _document([
+        _series(id: 'explicit', points: [_point(1, 10)], style: explicit),
+        _series(id: 'theme', points: [_point(1, 20)]),
+      ]);
+
+      final model = ChartTableModel.fromDocument(document);
+
+      expect(model.series[0].colorValue, 0xFF2563EB);
+      expect(model.series[1].colorValue, isNotNull);
+    });
   });
 }
 
@@ -228,12 +242,14 @@ ChartSeriesDocument _series({
   String? unit,
   required List<ChartPointDocument> points,
   JsonObjectValue? inlineAxis,
+  JsonObjectValue? style,
 }) => ChartSeriesDocument(
   type: 'line',
   id: id,
   name: name,
   unit: unit,
   inlineAxis: inlineAxis,
+  style: style,
   data: InlinePointPayload(points),
   requiredCapabilities: const {'series.line'},
 );

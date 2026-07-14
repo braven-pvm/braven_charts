@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'chart_table_controller.dart';
+import 'chart_data_table_theme.dart';
 import 'chart_table_model.dart';
 import 'chart_table_options.dart';
 
@@ -21,6 +22,7 @@ class ChartDataTable extends StatefulWidget {
     this.onCopyRow,
     this.onExportCsv,
     this.emptyMessage = 'No chart data',
+    this.theme,
   }) : assert(
          model != null || isLoading || errorMessage != null,
          'Provide a model, loading state, or error message.',
@@ -35,6 +37,12 @@ class ChartDataTable extends StatefulWidget {
   final ValueChanged<ChartTableLongRow>? onCopyRow;
   final VoidCallback? onExportCsv;
   final String emptyMessage;
+
+  /// Per-table visual overrides.
+  ///
+  /// When omitted, the widget uses the nearest [ChartDataTableTheme] extension
+  /// and then derives any unspecified colors and text styles from [ThemeData].
+  final ChartDataTableTheme? theme;
 
   @override
   State<ChartDataTable> createState() => _ChartDataTableState();
@@ -104,6 +112,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
     final wideRows = model.options.rowLayout == ChartTableRowLayout.wide
         ? _sortedWideRows(model)
         : const <ChartTableWideRow>[];
+    final tableTheme = _ResolvedTableTheme.from(
+      context,
+      widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -114,14 +126,33 @@ class _ChartDataTableState extends State<ChartDataTable> {
             ? constraints.maxWidth
             : 960.0;
         final contentWidth = model.options.rowLayout == ChartTableRowLayout.long
-            ? math.max(viewportWidth, widget.onCopyRow == null ? 880.0 : 936.0)
-            : math.max(viewportWidth, 176.0 + model.series.length * 152.0);
+            ? math.max(
+                viewportWidth,
+                tableTheme.rowNumberWidth +
+                    192 +
+                    tableTheme.xColumnWidth +
+                    tableTheme.seriesColumnWidth +
+                    88 +
+                    144 +
+                    96 +
+                    (widget.onCopyRow == null ? 0 : 44),
+              )
+            : math.max(
+                viewportWidth,
+                tableTheme.rowNumberWidth +
+                    tableTheme.xColumnWidth +
+                    model.series.length * tableTheme.seriesColumnWidth,
+              );
         return SizedBox(
           height: height,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _TableSummary(model: model, onExportCsv: widget.onExportCsv),
+              _TableSummary(
+                model: model,
+                onExportCsv: widget.onExportCsv,
+                theme: tableTheme,
+              ),
               if (model.warnings.isNotEmpty)
                 _TableWarningBanner(count: model.warnings.length),
               Expanded(
@@ -136,7 +167,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                       width: contentWidth,
                       child: Column(
                         children: [
-                          _buildHeader(model),
+                          _buildHeader(model, tableTheme),
                           Expanded(
                             child: Scrollbar(
                               controller: _verticalController,
@@ -144,13 +175,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
                               child: SelectionArea(
                                 child: ListView.builder(
                                   controller: _verticalController,
-                                  itemExtent: 56,
+                                  itemExtent: tableTheme.rowHeight,
                                   itemCount: model.rowCount,
                                   itemBuilder: (context, index) => _buildRow(
                                     model,
                                     index,
                                     longRows: longRows,
                                     wideRows: wideRows,
+                                    theme: tableTheme,
                                   ),
                                 ),
                               ),
@@ -169,15 +201,26 @@ class _ChartDataTableState extends State<ChartDataTable> {
     );
   }
 
-  Widget _buildHeader(ChartTableModel model) {
+  Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
     if (model.options.rowLayout == ChartTableRowLayout.wide) {
       return _TableHeader(
+        theme: tableTheme,
         children: [
+          _StaticHeader(
+            key: const ValueKey('chart-table-header-index'),
+            label: '#',
+            width: tableTheme.rowNumberWidth,
+            theme: tableTheme,
+            numeric: true,
+          ),
           _SortHeader(
+            key: const ValueKey('chart-table-header-x'),
             label: model.xColumnLabel,
             columnId: 'x',
-            width: 176,
+            width: tableTheme.xColumnWidth,
             controller: _controller,
+            theme: tableTheme,
+            numeric: true,
           ),
           for (final column in model.series)
             _SortHeader(
@@ -185,38 +228,55 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? column.seriesName
                   : '${column.seriesName} (${column.unit})',
               columnId: 'series:${column.seriesId}',
-              width: 152,
+              width: tableTheme.seriesColumnWidth,
               controller: _controller,
+              theme: tableTheme,
               hidden: column.hidden,
+              numeric: true,
+              seriesColor: column.colorValue == null
+                  ? null
+                  : Color(column.colorValue!),
             ),
         ],
       );
     }
     return _TableHeader(
+      theme: tableTheme,
       children: [
+        _StaticHeader(
+          label: '#',
+          width: tableTheme.rowNumberWidth,
+          theme: tableTheme,
+          numeric: true,
+        ),
         _SortHeader(
           label: 'Series',
           columnId: 'series',
-          width: 208,
+          width: 192,
           controller: _controller,
+          theme: tableTheme,
         ),
         _SortHeader(
           label: model.xColumnLabel,
           columnId: 'x',
-          width: 144,
+          width: tableTheme.xColumnWidth,
           controller: _controller,
+          theme: tableTheme,
+          numeric: true,
         ),
         _SortHeader(
           label: 'Y value',
           columnId: 'y',
-          width: 144,
+          width: tableTheme.seriesColumnWidth,
           controller: _controller,
+          theme: tableTheme,
+          numeric: true,
         ),
-        const _StaticHeader(label: 'Unit', width: 104),
-        const _StaticHeader(label: 'Label', width: 168),
-        const _StaticHeader(label: 'Status', width: 112),
+        _StaticHeader(label: 'Unit', width: 88, theme: tableTheme),
+        _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
+        _StaticHeader(label: 'Status', width: 96, theme: tableTheme),
         if (widget.onCopyRow != null)
-          const _StaticHeader(label: 'Actions', width: 56),
+          _StaticHeader(label: '', width: 44, theme: tableTheme),
       ],
     );
   }
@@ -226,6 +286,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     int index, {
     required List<ChartTableLongRow> longRows,
     required List<ChartTableWideRow> wideRows,
+    required _ResolvedTableTheme theme,
   }) {
     if (model.options.rowLayout == ChartTableRowLayout.wide) {
       final row = wideRows[index];
@@ -234,17 +295,28 @@ class _ChartDataTableState extends State<ChartDataTable> {
         key: ValueKey(row.rowId),
         semanticsLabel: _wideSemantics(row, model),
         reference: firstReference,
+        rowIndex: index,
+        theme: theme,
         onFocused: widget.onRowFocused,
         onActivated: widget.onRowActivated,
         children: [
-          _TableCell(text: row.xDisplay, width: 176, numeric: true),
+          _TableCell(
+            key: ValueKey('chart-table-row-index-$index'),
+            text: '${index + 1}',
+            width: theme.rowNumberWidth,
+            numeric: true,
+            theme: theme,
+            rowNumber: true,
+          ),
+          _TableCell(
+            key: ValueKey('chart-table-cell-x-$index'),
+            text: row.xDisplay,
+            width: theme.xColumnWidth,
+            numeric: true,
+            theme: theme,
+          ),
           for (final column in model.series)
-            _TableCell(
-              text: row.cells[column.seriesId]?.yDisplay ?? 'No value',
-              width: 152,
-              numeric: true,
-              invalid: row.cells[column.seriesId]?.isValid == false,
-            ),
+            _buildWideValueCell(row, column, theme),
         ],
       );
     }
@@ -254,38 +326,75 @@ class _ChartDataTableState extends State<ChartDataTable> {
       semanticsLabel:
           '${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}${row.unit == null ? '' : ' ${row.unit}'}, ${row.isValid ? 'valid point' : 'invalid point'}',
       reference: row.reference,
+      rowIndex: index,
+      theme: theme,
       onFocused: widget.onRowFocused,
       onActivated: widget.onRowActivated,
       children: [
         _TableCell(
-          text: row.seriesName,
-          width: 208,
-          secondary: row.hiddenSeries ? 'Hidden in chart' : null,
+          text: '${index + 1}',
+          width: theme.rowNumberWidth,
+          numeric: true,
+          theme: theme,
+          rowNumber: true,
         ),
-        _TableCell(text: row.xDisplay, width: 144, numeric: true),
+        _TableCell(
+          text: row.seriesName,
+          width: 192,
+          secondary: row.hiddenSeries ? 'Hidden in chart' : null,
+          theme: theme,
+        ),
+        _TableCell(
+          text: row.xDisplay,
+          width: theme.xColumnWidth,
+          numeric: true,
+          theme: theme,
+        ),
         _TableCell(
           text: row.yDisplay,
-          width: 144,
+          width: theme.seriesColumnWidth,
           numeric: true,
           invalid: !row.isValid,
+          color: _seriesColor(model, row.reference.seriesId),
+          theme: theme,
         ),
-        _TableCell(text: row.unit ?? 'No unit', width: 104),
-        _TableCell(text: row.label ?? 'No label', width: 168),
+        _TableCell(text: row.unit ?? 'No unit', width: 88, theme: theme),
+        _TableCell(text: row.label ?? 'No label', width: 144, theme: theme),
         _TableCell(
           text: row.isValid ? 'Valid' : 'No value',
-          width: 112,
+          width: 96,
           invalid: !row.isValid,
+          theme: theme,
         ),
         if (widget.onCopyRow != null)
           SizedBox(
-            width: 56,
+            width: 44,
             child: IconButton(
               tooltip: 'Copy ${row.seriesName} row',
               onPressed: () => widget.onCopyRow!(row),
-              icon: const Icon(Icons.copy_outlined, size: 20),
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.copy_outlined, size: 16),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildWideValueCell(
+    ChartTableWideRow row,
+    ChartTableSeriesColumn column,
+    _ResolvedTableTheme theme,
+  ) {
+    final cell = row.cells[column.seriesId];
+    return _TableCell(
+      text: cell?.yDisplay ?? 'No value',
+      width: theme.seriesColumnWidth,
+      numeric: true,
+      invalid: cell?.isValid == false,
+      color: cell == null || column.colorValue == null
+          ? null
+          : Color(column.colorValue!),
+      theme: theme,
     );
   }
 
@@ -322,29 +431,47 @@ class _ChartDataTableState extends State<ChartDataTable> {
     });
     return rows;
   }
+
+  Color? _seriesColor(ChartTableModel model, String seriesId) {
+    for (final column in model.series) {
+      if (column.seriesId == seriesId) {
+        return column.colorValue == null ? null : Color(column.colorValue!);
+      }
+    }
+    return null;
+  }
 }
 
 class _TableSummary extends StatelessWidget {
-  const _TableSummary({required this.model, this.onExportCsv});
+  const _TableSummary({
+    required this.model,
+    required this.theme,
+    this.onExportCsv,
+  });
 
   final ChartTableModel model;
+  final _ResolvedTableTheme theme;
   final VoidCallback? onExportCsv;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+    padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
     child: Row(
       children: [
         Expanded(
           child: Text(
             '${model.scopeLabel} · ${model.rowCount} rows · ${model.options.viewportOnly ? 'Current viewport' : 'Full data'}',
-            style: Theme.of(context).textTheme.labelLarge,
+            style: theme.summaryTextStyle,
           ),
         ),
         if (onExportCsv != null)
           TextButton.icon(
             onPressed: onExportCsv,
-            icon: const Icon(Icons.download_outlined),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: theme.summaryTextStyle,
+            ),
+            icon: const Icon(Icons.download_outlined, size: 16),
             label: const Text('Export CSV'),
           ),
       ],
@@ -386,21 +513,20 @@ class _TableWarningBanner extends StatelessWidget {
 }
 
 class _TableHeader extends StatelessWidget {
-  const _TableHeader({required this.children});
+  const _TableHeader({required this.children, required this.theme});
 
   final List<Widget> children;
+  final _ResolvedTableTheme theme;
 
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
     label: 'Table column headers',
     child: Container(
-      height: 56,
+      height: theme.headerHeight,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.outline),
-        ),
+        color: theme.headerBackgroundColor,
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Row(children: children),
     ),
@@ -409,18 +535,25 @@ class _TableHeader extends StatelessWidget {
 
 class _SortHeader extends StatelessWidget {
   const _SortHeader({
+    super.key,
     required this.label,
     required this.columnId,
     required this.width,
     required this.controller,
+    required this.theme,
     this.hidden = false,
+    this.numeric = false,
+    this.seriesColor,
   });
 
   final String label;
   final String columnId;
   final double width;
   final ChartTableController controller;
+  final _ResolvedTableTheme theme;
   final bool hidden;
+  final bool numeric;
+  final Color? seriesColor;
 
   @override
   Widget build(BuildContext context) {
@@ -437,32 +570,54 @@ class _SortHeader extends StatelessWidget {
       onTap: () => controller.sortBy(columnId),
       child: SizedBox(
         width: width,
-        height: 56,
+        height: theme.headerHeight,
         child: InkWell(
           onTap: () => controller.sortBy(columnId),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: theme.cellHorizontalPadding,
+            ),
             child: Row(
+              mainAxisAlignment: numeric
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
               children: [
+                if (seriesColor != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Semantics(
+                      label: '$label series color',
+                      child: DecoratedBox(
+                        key: ValueKey('chart-table-series-color-$columnId'),
+                        decoration: BoxDecoration(
+                          color: seriesColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox.square(dimension: 8),
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: Text(
+                    key: ValueKey('chart-table-header-text-$columnId'),
                     label,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    textAlign: numeric ? TextAlign.right : TextAlign.left,
+                    style: theme.headerTextStyle,
                   ),
                 ),
                 if (hidden)
                   const Padding(
                     padding: EdgeInsets.only(left: 4),
-                    child: Icon(Icons.visibility_off_outlined, size: 16),
+                    child: Icon(Icons.visibility_off_outlined, size: 14),
                   ),
                 if (selected)
                   Icon(
                     controller.sortAscending
                         ? Icons.arrow_upward
                         : Icons.arrow_downward,
-                    size: 18,
+                    size: 15,
                   ),
               ],
             ),
@@ -474,17 +629,29 @@ class _SortHeader extends StatelessWidget {
 }
 
 class _StaticHeader extends StatelessWidget {
-  const _StaticHeader({required this.label, required this.width});
+  const _StaticHeader({
+    super.key,
+    required this.label,
+    required this.width,
+    required this.theme,
+    this.numeric = false,
+  });
 
   final String label;
   final double width;
+  final _ResolvedTableTheme theme;
+  final bool numeric;
 
   @override
   Widget build(BuildContext context) => SizedBox(
     width: width,
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      padding: EdgeInsets.symmetric(horizontal: theme.cellHorizontalPadding),
+      child: Text(
+        label,
+        textAlign: numeric ? TextAlign.right : TextAlign.left,
+        style: theme.headerTextStyle,
+      ),
     ),
   );
 }
@@ -495,6 +662,8 @@ class _FocusableTableRow extends StatefulWidget {
     required this.semanticsLabel,
     required this.reference,
     required this.children,
+    required this.rowIndex,
+    required this.theme,
     this.onFocused,
     this.onActivated,
   });
@@ -502,6 +671,8 @@ class _FocusableTableRow extends StatefulWidget {
   final String semanticsLabel;
   final ChartTablePointReference reference;
   final List<Widget> children;
+  final int rowIndex;
+  final _ResolvedTableTheme theme;
   final ChartTableRowCallback? onFocused;
   final ChartTableRowCallback? onActivated;
 
@@ -534,11 +705,15 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
             if (hovering) widget.onFocused?.call(widget.reference);
           },
           child: Container(
-            height: 56,
+            height: widget.theme.rowHeight,
             decoration: BoxDecoration(
-              color: _focused ? colors.primaryContainer : null,
+              color: _focused
+                  ? widget.theme.focusedRowColor
+                  : widget.rowIndex.isEven
+                  ? widget.theme.evenRowColor
+                  : widget.theme.oddRowColor,
               border: Border(
-                bottom: BorderSide(color: colors.outlineVariant),
+                bottom: BorderSide(color: widget.theme.dividerColor),
                 left: _focused
                     ? BorderSide(color: colors.primary, width: 3)
                     : BorderSide.none,
@@ -554,11 +729,15 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
 
 class _TableCell extends StatelessWidget {
   const _TableCell({
+    super.key,
     required this.text,
     required this.width,
     this.secondary,
     this.numeric = false,
     this.invalid = false,
+    this.color,
+    this.rowNumber = false,
+    required this.theme,
   });
 
   final String text;
@@ -566,17 +745,21 @@ class _TableCell extends StatelessWidget {
   final double width;
   final bool numeric;
   final bool invalid;
+  final Color? color;
+  final bool rowNumber;
+  final _ResolvedTableTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: invalid ? Theme.of(context).colorScheme.error : null,
-      fontFeatures: numeric ? const [FontFeature.tabularFigures()] : null,
-    );
+    final textStyle =
+        (rowNumber ? theme.rowNumberTextStyle : theme.cellTextStyle).copyWith(
+          color: invalid ? Theme.of(context).colorScheme.error : color,
+          fontFeatures: numeric ? const [FontFeature.tabularFigures()] : null,
+        );
     return SizedBox(
       width: width,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: theme.cellHorizontalPadding),
         child: secondary == null
             ? Text(
                 text,
@@ -593,7 +776,7 @@ class _TableCell extends StatelessWidget {
                   Text(
                     secondary!,
                     maxLines: 1,
-                    style: Theme.of(context).textTheme.labelSmall,
+                    style: theme.secondaryTextStyle,
                   ),
                 ],
               ),
@@ -665,6 +848,101 @@ class _TableMessageState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ResolvedTableTheme {
+  const _ResolvedTableTheme({
+    required this.rowHeight,
+    required this.headerHeight,
+    required this.rowNumberWidth,
+    required this.xColumnWidth,
+    required this.seriesColumnWidth,
+    required this.cellHorizontalPadding,
+    required this.headerBackgroundColor,
+    required this.evenRowColor,
+    required this.oddRowColor,
+    required this.dividerColor,
+    required this.focusedRowColor,
+    required this.headerTextStyle,
+    required this.cellTextStyle,
+    required this.rowNumberTextStyle,
+    required this.secondaryTextStyle,
+    required this.summaryTextStyle,
+  });
+
+  factory _ResolvedTableTheme.from(
+    BuildContext context,
+    ChartDataTableTheme? override,
+  ) {
+    final source = override ?? const ChartDataTableTheme();
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return _ResolvedTableTheme(
+      rowHeight: source.rowHeight,
+      headerHeight: source.headerHeight,
+      rowNumberWidth: source.rowNumberWidth,
+      xColumnWidth: source.xColumnWidth,
+      seriesColumnWidth: source.seriesColumnWidth,
+      cellHorizontalPadding: source.cellHorizontalPadding,
+      headerBackgroundColor:
+          source.headerBackgroundColor ?? colors.surfaceContainerHigh,
+      evenRowColor: source.evenRowColor ?? colors.surface,
+      oddRowColor: source.oddRowColor ?? colors.surfaceContainerLowest,
+      dividerColor:
+          source.dividerColor ?? colors.outlineVariant.withValues(alpha: 0.65),
+      focusedRowColor: source.focusedRowColor ?? colors.primaryContainer,
+      headerTextStyle:
+          source.headerTextStyle ??
+          theme.textTheme.labelSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ) ??
+          TextStyle(
+            color: colors.onSurfaceVariant,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+      cellTextStyle:
+          source.cellTextStyle ??
+          theme.textTheme.bodySmall?.copyWith(color: colors.onSurface) ??
+          TextStyle(color: colors.onSurface, fontSize: 12),
+      rowNumberTextStyle:
+          source.rowNumberTextStyle ??
+          theme.textTheme.labelSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ) ??
+          TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
+      secondaryTextStyle:
+          theme.textTheme.labelSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+            fontSize: 10,
+          ) ??
+          TextStyle(color: colors.onSurfaceVariant, fontSize: 10),
+      summaryTextStyle:
+          theme.textTheme.labelSmall?.copyWith(
+            color: colors.onSurfaceVariant,
+          ) ??
+          TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
+    );
+  }
+
+  final double rowHeight;
+  final double headerHeight;
+  final double rowNumberWidth;
+  final double xColumnWidth;
+  final double seriesColumnWidth;
+  final double cellHorizontalPadding;
+  final Color headerBackgroundColor;
+  final Color evenRowColor;
+  final Color oddRowColor;
+  final Color dividerColor;
+  final Color focusedRowColor;
+  final TextStyle headerTextStyle;
+  final TextStyle cellTextStyle;
+  final TextStyle rowNumberTextStyle;
+  final TextStyle secondaryTextStyle;
+  final TextStyle summaryTextStyle;
 }
 
 int _compareNumbers(double left, double right) {

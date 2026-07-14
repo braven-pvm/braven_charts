@@ -26,12 +26,20 @@ class ChartTableSeriesColumn {
     required this.seriesName,
     required this.hidden,
     this.unit,
+    this.colorValue,
   });
 
   final String seriesId;
   final String seriesName;
   final String? unit;
   final bool hidden;
+
+  /// Effective ARGB color used by the corresponding chart series.
+  ///
+  /// This resolves an explicit series color first, then the captured chart
+  /// theme palette. Keeping the value as an integer preserves the table model's
+  /// portable boundary while allowing widgets to render the same visual cue.
+  final int? colorValue;
 }
 
 /// Canonical, lossless long-form row for one logical chart point.
@@ -143,6 +151,7 @@ class ChartTableModel {
       r'$.document.xAxis.formatter',
     );
     final axesById = {for (final axis in document.axes) axis.id: axis};
+    final themeSeriesColors = _themeSeriesColors(document);
     final seriesColumns = <ChartTableSeriesColumn>[];
     final longRows = <ChartTableLongRow>[];
 
@@ -178,6 +187,11 @@ class ChartTableModel {
           seriesName: series.name ?? series.id,
           unit: unit,
           hidden: hidden,
+          colorValue: _effectiveSeriesColor(
+            series,
+            document.series.indexOf(series),
+            themeSeriesColors,
+          ),
         ),
       );
       final payload = series.data;
@@ -254,6 +268,33 @@ class ChartTableModel {
     ChartTableDataScope.selectedSeries => 'Selected series',
     ChartTableDataScope.specifiedSeries => 'Specified series',
   };
+}
+
+List<int> _themeSeriesColors(ChartDocument document) {
+  final seriesTheme = document.theme.resolved.values['seriesTheme'];
+  if (seriesTheme is! JsonObjectValue) return const [];
+  final colors = seriesTheme.values['colors'];
+  if (colors is! JsonArrayValue) return const [];
+  return [for (final color in colors.values) ?_validColorValue(color.toJson())];
+}
+
+int? _effectiveSeriesColor(
+  ChartSeriesDocument series,
+  int seriesIndex,
+  List<int> themeSeriesColors,
+) {
+  final explicit = _validColorValue(series.style?.values['color']?.toJson());
+  if (explicit != null) return explicit;
+  if (themeSeriesColors.isEmpty) return null;
+  return themeSeriesColors[seriesIndex % themeSeriesColors.length];
+}
+
+int? _validColorValue(Object? value) {
+  if (value is! num || !value.isFinite || value != value.roundToDouble()) {
+    return null;
+  }
+  final integer = value.toInt();
+  return integer >= 0 && integer <= 0xFFFFFFFF ? integer : null;
 }
 
 List<ChartSeriesDocument> _selectSeries(
