@@ -247,6 +247,12 @@ class LiveStreamController extends ChangeNotifier {
   /// Use this for debugging or export, not for high-frequency access.
   List<ChartDataPoint> get points => _streamingBuffer.toList();
 
+  /// Revision of points committed to the chart's streaming buffer.
+  int get committedDataRevision => _streamingBuffer.version;
+
+  /// Revision of points waiting in the pause buffer.
+  int get pendingDataRevision => _pauseBuffer.version;
+
   // ============================================================================
   // Data Input
   // ============================================================================

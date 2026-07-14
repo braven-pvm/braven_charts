@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 // All dependencies are in src - the main source folder
 import 'axis/axis.dart' as chart_axis;
 import 'axis/normalization_detector.dart';
+import 'artifacts/resolved_chart_data.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
 import 'coordinates/chart_transform.dart';
@@ -878,6 +879,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   // Tracks whether auto-normalization is needed based on series Y-range ratios
   bool _normalizationNeeded = false;
   Map<String, DataRange> _seriesYRanges = {};
+  ResolvedChartData _resolvedChartData = ResolvedChartData.empty;
   List<ChartSeries> _effectiveDataSeries = const <ChartSeries>[];
   List<ChartSeries> _effectiveRenderSeries = const <ChartSeries>[];
   final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
@@ -1350,6 +1352,37 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
+  ResolvedChartData _resolveChartData({bool includeDirectStream = false}) {
+    final liveController = includeDirectStream
+        ? widget.liveStreamController
+        : null;
+    return ResolvedChartData.resolve(
+      baseSeries: widget.series,
+      hiddenSeriesIds: _hiddenSeriesIds,
+      controllerSeries: widget.controller?.getAllSeries(),
+      controllerRevision: widget.controller?.revision ?? 0,
+      legacyStreamingPoints: _streamingDataPoints,
+      liveSeries: liveController == null
+          ? null
+          : ResolvedLiveSeriesData(
+              seriesId: liveController.seriesId,
+              points: liveController.points,
+              committedRevision: liveController.committedDataRevision,
+              pendingRevision: liveController.pendingDataRevision,
+              pendingPointCount: liveController.bufferedCount,
+            ),
+      seriesFactory: (seriesId, points, seriesIndex) => LineChartSeries(
+        id: seriesId,
+        name: seriesId,
+        points: points,
+        color: widget.theme?.seriesTheme.colors.isNotEmpty == true
+            ? widget.theme!.seriesTheme.colors[seriesIndex %
+                  widget.theme!.seriesTheme.colors.length]
+            : Colors.blue,
+      ),
+    );
+  }
+
   void _rebuildElements({bool detectIncomingAnimations = false}) {
     _spatialIndex.clear();
 
@@ -1357,123 +1390,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       for (final series in _effectiveDataSeries) series.id: series,
     };
 
-    // Start with widget.series as base
-    List<ChartSeries> effectiveSeries = widget.series;
-
-    // Filter out hidden series
-    effectiveSeries = effectiveSeries
-        .where((s) => !_hiddenSeriesIds.contains(s.id))
-        .toList();
-
-    // Merge controller data if controller is provided (matches BravenChart pattern)
-    if (widget.controller != null) {
-      final controllerData = widget.controller!.getAllSeries();
-
-      // Create map of existing series for efficient lookup
-      final seriesMap = <String, ChartSeries>{};
-      for (final series in widget.series) {
-        seriesMap[series.id] = series;
-      }
-
-      // Merge controller data into series
-      final mergedSeriesList = <ChartSeries>[];
-      final processedIds = <String>{};
-
-      // Removed excessive debugPrint
-
-      // First, update existing series with controller data
-      for (final series in widget.series) {
-        // Skip if hidden
-        if (_hiddenSeriesIds.contains(series.id)) continue;
-
-        final controllerPoints = controllerData[series.id];
-        if (controllerPoints != null && controllerPoints.isNotEmpty) {
-          // Removed excessive debugPrints - was firing on every frame
-
-          // Convert src ChartDataPoint to src_plus ChartDataPoint
-          final convertedPoints = controllerPoints
-              .map(
-                (p) => ChartDataPoint(
-                  x: p.x,
-                  y: p.y,
-                  timestamp: p.timestamp,
-                  label: p.label,
-                  metadata: p.metadata,
-                ),
-              )
-              .toList();
-
-          // Removed excessive debugPrint (last point details)
-
-          // Merge series points with controller points
-          final mergedPoints = [...series.points, ...convertedPoints];
-
-          final updatedSeries = switch (series) {
-            LineChartSeries() => series.copyWith(points: mergedPoints),
-            AreaChartSeries() => series.copyWith(points: mergedPoints),
-            _ => series.copyWith(points: mergedPoints),
-          };
-
-          mergedSeriesList.add(updatedSeries);
-        } else {
-          mergedSeriesList.add(series);
-        }
-        processedIds.add(series.id);
-      }
-
-      // Then, add any controller series that don't exist in widget.series
-      for (final entry in controllerData.entries) {
-        if (!processedIds.contains(entry.key)) {
-          // Convert src ChartDataPoint to src_plus ChartDataPoint
-          final convertedPoints = entry.value
-              .map(
-                (p) => ChartDataPoint(
-                  x: p.x,
-                  y: p.y,
-                  timestamp: p.timestamp,
-                  label: p.label,
-                  metadata: p.metadata,
-                ),
-              )
-              .toList();
-
-          // Create new series from controller data
-          mergedSeriesList.add(
-            LineChartSeries(
-              id: entry.key,
-              name: entry.key,
-              points: convertedPoints,
-              color: widget.theme?.seriesTheme.colors.isNotEmpty == true
-                  ? widget.theme!.seriesTheme.colors[mergedSeriesList.length %
-                        widget.theme!.seriesTheme.colors.length]
-                  : Colors.blue,
-            ),
-          );
-        }
-      }
-
-      effectiveSeries = mergedSeriesList;
-    }
-    // Legacy: Also merge _streamingDataPoints if present (for backward compatibility)
-    else if (_streamingDataPoints.isNotEmpty && widget.series.isNotEmpty) {
-      final firstSeries = widget.series.first;
-      final mergedPoints = [...firstSeries.points, ..._streamingDataPoints];
-
-      // Create updated series with streaming data
-      final updatedFirstSeries = switch (firstSeries) {
-        LineChartSeries() => firstSeries.copyWith(points: mergedPoints),
-        AreaChartSeries() => firstSeries.copyWith(points: mergedPoints),
-        _ => firstSeries.copyWith(points: mergedPoints),
-      };
-
-      effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
-    }
-
-    _effectiveDataSeries = effectiveSeries;
+    _resolvedChartData = _resolveChartData();
+    _effectiveDataSeries = _resolvedChartData.renderSeries;
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
         previousSeriesById: previousSeriesById,
-        nextSeries: effectiveSeries,
+        nextSeries: _effectiveDataSeries,
       );
     }
     _refreshAnimatedRenderSeries();
@@ -1502,11 +1424,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ViewportMode.followLatest ||
           widget.streamingController == null;
       final shouldUseWindowBounds =
-          autoScrollEnabled && isFollowingLatest && effectiveSeries.isNotEmpty;
+          autoScrollEnabled &&
+          isFollowingLatest &&
+          _effectiveDataSeries.isNotEmpty;
 
       if (shouldUseWindowBounds) {
         // Calculate sliding window bounds using CONFIGURABLE NUMBER of recent points
-        final allPoints = effectiveSeries.expand((s) => s.points).toList();
+        final allPoints = _effectiveDataSeries.expand((s) => s.points).toList();
         final windowSize =
             widget.autoScrollConfig?.maxVisiblePoints ??
             widget.streamingConfig?.autoScrollWindowSize ??
@@ -1552,7 +1476,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             );
           } else {
             // Removed excessive print (no points in window)
-            dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+            dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
           }
         } else {
           // Removed excessive print (no points at all)
@@ -1560,7 +1484,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         }
       } else {
         // Non-streaming, no auto-scroll, or explore mode: use all data
-        dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+        dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
       }
     }
 
@@ -1584,7 +1508,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     // Multi-axis normalization detection (FR-008, US2)
     // Check if series have vastly different Y-ranges that would benefit from normalization
-    final seriesRanges = _computeSeriesYRanges(effectiveSeries);
+    final seriesRanges = _computeSeriesYRanges(_effectiveDataSeries);
     final needsNormalization = NormalizationDetector.shouldNormalize(
       seriesRanges,
     );
