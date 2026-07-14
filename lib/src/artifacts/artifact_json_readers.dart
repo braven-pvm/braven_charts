@@ -81,6 +81,19 @@ int? readOptionalInt(Map<String, Object?> json, String key) {
   return value;
 }
 
+bool readRequiredBool(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value is! bool) throw FormatException('$key must be a boolean');
+  return value;
+}
+
+bool? readOptionalBool(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! bool) throw FormatException('$key must be a boolean');
+  return value;
+}
+
 double readRequiredDouble(Map<String, Object?> json, String key) {
   final value = json[key];
   if (value is! num || !value.isFinite) {

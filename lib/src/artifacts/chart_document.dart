@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'artifact_json_readers.dart';
 import 'chart_annotation_document.dart';
+import 'chart_configuration_documents.dart';
 import 'chart_data_payload.dart';
 import 'json_value.dart';
 
@@ -10,49 +11,150 @@ class ChartAxisDocument {
   ChartAxisDocument({
     required this.id,
     required this.position,
+    this.axisType = 'value',
     this.label,
     this.unit,
+    this.color,
     this.minimum,
     this.maximum,
+    this.renderMinimum,
+    this.renderMaximum,
+    this.visible = true,
+    this.showAxisLine = true,
+    this.showTicks = true,
+    this.showTickLabels = true,
+    this.showCrosshairLabel = true,
+    this.crosshairLabelPosition = 'overAxis',
+    this.labelDisplay = 'labelWithUnit',
+    this.layoutMinimum,
+    this.layoutMaximum,
+    this.tickLabelPadding,
+    this.axisLabelPadding,
+    this.axisMargin,
+    this.tickCount,
+    this.showMinorTicks = false,
+    this.minorTickCount = 4,
+    this.minorTickLength,
     this.formatter,
     Map<String, JsonValue> extensions = const {},
   }) : extensions = Map.unmodifiable(extensions);
 
   final String id;
   final String position;
+  final String axisType;
   final String? label;
   final String? unit;
+  final int? color;
   final ChartNumberDocument? minimum;
   final ChartNumberDocument? maximum;
+  final ChartNumberDocument? renderMinimum;
+  final ChartNumberDocument? renderMaximum;
+  final bool visible;
+  final bool showAxisLine;
+  final bool showTicks;
+  final bool showTickLabels;
+  final bool showCrosshairLabel;
+  final String crosshairLabelPosition;
+  final String labelDisplay;
+  final ChartNumberDocument? layoutMinimum;
+  final ChartNumberDocument? layoutMaximum;
+  final ChartNumberDocument? tickLabelPadding;
+  final ChartNumberDocument? axisLabelPadding;
+  final ChartNumberDocument? axisMargin;
+  final int? tickCount;
+  final bool showMinorTicks;
+  final int minorTickCount;
+  final ChartNumberDocument? minorTickLength;
   final JsonObjectValue? formatter;
   final Map<String, JsonValue> extensions;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'position': position,
+    if (axisType != 'value') 'axisType': axisType,
     if (label != null) 'label': label,
     if (unit != null) 'unit': unit,
+    if (color != null) 'color': color,
     if (minimum != null) 'minimum': minimum!.toJson(),
     if (maximum != null) 'maximum': maximum!.toJson(),
+    if (renderMinimum != null) 'renderMinimum': renderMinimum!.toJson(),
+    if (renderMaximum != null) 'renderMaximum': renderMaximum!.toJson(),
+    if (!visible) 'visible': false,
+    if (!showAxisLine) 'showAxisLine': false,
+    if (!showTicks) 'showTicks': false,
+    if (!showTickLabels) 'showTickLabels': false,
+    if (!showCrosshairLabel) 'showCrosshairLabel': false,
+    if (crosshairLabelPosition != 'overAxis')
+      'crosshairLabelPosition': crosshairLabelPosition,
+    if (labelDisplay != 'labelWithUnit') 'labelDisplay': labelDisplay,
+    if (layoutMinimum != null) 'layoutMinimum': layoutMinimum!.toJson(),
+    if (layoutMaximum != null) 'layoutMaximum': layoutMaximum!.toJson(),
+    if (tickLabelPadding != null)
+      'tickLabelPadding': tickLabelPadding!.toJson(),
+    if (axisLabelPadding != null)
+      'axisLabelPadding': axisLabelPadding!.toJson(),
+    if (axisMargin != null) 'axisMargin': axisMargin!.toJson(),
+    if (tickCount != null) 'tickCount': tickCount,
+    if (showMinorTicks) 'showMinorTicks': true,
+    if (minorTickCount != 4) 'minorTickCount': minorTickCount,
+    if (minorTickLength != null) 'minorTickLength': minorTickLength!.toJson(),
     if (formatter != null) 'formatter': formatter!.toJson(),
     if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
   };
 
-  factory ChartAxisDocument.fromJson(Map<String, Object?> json) =>
-      ChartAxisDocument(
-        id: readRequiredString(json, 'id'),
-        position: readRequiredString(json, 'position'),
-        label: readOptionalString(json, 'label'),
-        unit: readOptionalString(json, 'unit'),
-        minimum: json['minimum'] == null
-            ? null
-            : ChartNumberDocument.fromJson(json['minimum']),
-        maximum: json['maximum'] == null
-            ? null
-            : ChartNumberDocument.fromJson(json['maximum']),
-        formatter: readOptionalJsonObject(json, 'formatter'),
-        extensions: readOptionalJsonValueMap(json, 'extensions'),
-      );
+  factory ChartAxisDocument.fromJson(
+    Map<String, Object?> json,
+  ) => ChartAxisDocument(
+    id: readRequiredString(json, 'id'),
+    position: readRequiredString(json, 'position'),
+    axisType: readOptionalString(json, 'axisType') ?? 'value',
+    label: readOptionalString(json, 'label'),
+    unit: readOptionalString(json, 'unit'),
+    color: readOptionalInt(json, 'color'),
+    minimum: json['minimum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['minimum']),
+    maximum: json['maximum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['maximum']),
+    renderMinimum: json['renderMinimum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['renderMinimum']),
+    renderMaximum: json['renderMaximum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['renderMaximum']),
+    visible: readOptionalBool(json, 'visible') ?? true,
+    showAxisLine: readOptionalBool(json, 'showAxisLine') ?? true,
+    showTicks: readOptionalBool(json, 'showTicks') ?? true,
+    showTickLabels: readOptionalBool(json, 'showTickLabels') ?? true,
+    showCrosshairLabel: readOptionalBool(json, 'showCrosshairLabel') ?? true,
+    crosshairLabelPosition:
+        readOptionalString(json, 'crosshairLabelPosition') ?? 'overAxis',
+    labelDisplay: readOptionalString(json, 'labelDisplay') ?? 'labelWithUnit',
+    layoutMinimum: json['layoutMinimum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['layoutMinimum']),
+    layoutMaximum: json['layoutMaximum'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['layoutMaximum']),
+    tickLabelPadding: json['tickLabelPadding'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['tickLabelPadding']),
+    axisLabelPadding: json['axisLabelPadding'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['axisLabelPadding']),
+    axisMargin: json['axisMargin'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['axisMargin']),
+    tickCount: readOptionalInt(json, 'tickCount'),
+    showMinorTicks: readOptionalBool(json, 'showMinorTicks') ?? false,
+    minorTickCount: readOptionalInt(json, 'minorTickCount') ?? 4,
+    minorTickLength: json['minorTickLength'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['minorTickLength']),
+    formatter: readOptionalJsonObject(json, 'formatter'),
+    extensions: readOptionalJsonValueMap(json, 'extensions'),
+  );
 }
 
 @immutable
@@ -105,35 +207,6 @@ class ChartInteractionDocument {
       );
 }
 
-/// Extensible JSON-safe component used until built-in codecs provide their
-/// audited typed fields in the next implementation slice.
-@immutable
-class ChartDocumentComponent {
-  ChartDocumentComponent({
-    JsonObjectValue? properties,
-    Map<String, JsonValue> extensions = const {},
-  }) : properties = properties ?? JsonObjectValue(const {}),
-       extensions = Map.unmodifiable(extensions);
-
-  final JsonObjectValue properties;
-  final Map<String, JsonValue> extensions;
-
-  bool get isEmpty => properties.values.isEmpty && extensions.isEmpty;
-
-  Map<String, Object?> toJson() => {
-    ...properties.toJson() as Map<String, Object?>,
-    if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
-  };
-
-  factory ChartDocumentComponent.fromJson(Map<String, Object?> json) {
-    final properties = Map<String, Object?>.from(json)..remove('extensions');
-    return ChartDocumentComponent(
-      properties: JsonValue.fromJson(properties) as JsonObjectValue,
-      extensions: readOptionalJsonValueMap(json, 'extensions'),
-    );
-  }
-}
-
 @immutable
 class ChartDocument {
   ChartDocument({
@@ -147,18 +220,18 @@ class ChartDocument {
     Iterable<ChartAnnotationDocument> annotations = const [],
     this.title,
     this.subtitle,
-    ChartDocumentComponent? legend,
-    ChartDocumentComponent? grid,
-    ChartDocumentComponent? layout,
+    ChartLegendDocument? legend,
+    ChartGridDocument? grid,
+    ChartLayoutDocument? layout,
     this.normalization,
     Set<String> requiredCapabilities = const {},
     Map<String, JsonValue> extensions = const {},
   }) : series = List.unmodifiable(series),
        axes = List.unmodifiable(axes),
        annotations = List.unmodifiable(annotations),
-       legend = legend ?? ChartDocumentComponent(),
-       grid = grid ?? ChartDocumentComponent(),
-       layout = layout ?? ChartDocumentComponent(),
+       legend = legend ?? ChartLegendDocument(),
+       grid = grid ?? ChartGridDocument(),
+       layout = layout ?? ChartLayoutDocument(),
        requiredCapabilities = Set.unmodifiable(requiredCapabilities),
        extensions = Map.unmodifiable(extensions);
 
@@ -172,10 +245,10 @@ class ChartDocument {
   final List<ChartAnnotationDocument> annotations;
   final String? title;
   final String? subtitle;
-  final ChartDocumentComponent legend;
-  final ChartDocumentComponent grid;
-  final ChartDocumentComponent layout;
-  final ChartDocumentComponent? normalization;
+  final ChartLegendDocument legend;
+  final ChartGridDocument grid;
+  final ChartLayoutDocument layout;
+  final ChartNormalizationDocument? normalization;
   final Set<String> requiredCapabilities;
   final Map<String, JsonValue> extensions;
 
@@ -194,8 +267,8 @@ class ChartDocument {
     'interaction': interaction.toJson(),
     if (annotations.isNotEmpty)
       'annotations': annotations.map((item) => item.toJson()).toList(),
-    if (!legend.isEmpty) 'legend': legend.toJson(),
-    if (!grid.isEmpty) 'grid': grid.toJson(),
+    if (!legend.isDefault) 'legend': legend.toJson(),
+    if (!grid.isDefault) 'grid': grid.toJson(),
     if (!layout.isEmpty) 'layout': layout.toJson(),
     if (normalization != null) 'normalization': normalization!.toJson(),
     if (requiredCapabilities.isNotEmpty)
@@ -224,22 +297,21 @@ class ChartDocument {
       (item) =>
           ChartAnnotationDocument.fromJson(readStringMap(item, 'annotation')),
     ),
-    legend: _readOptionalComponent(json, 'legend'),
-    grid: _readOptionalComponent(json, 'grid'),
-    layout: _readOptionalComponent(json, 'layout'),
+    legend: json['legend'] == null
+        ? null
+        : ChartLegendDocument.fromJson(readRequiredMap(json, 'legend')),
+    grid: json['grid'] == null
+        ? null
+        : ChartGridDocument.fromJson(readRequiredMap(json, 'grid')),
+    layout: json['layout'] == null
+        ? null
+        : ChartLayoutDocument.fromJson(readRequiredMap(json, 'layout')),
     normalization: json['normalization'] == null
         ? null
-        : ChartDocumentComponent.fromJson(
+        : ChartNormalizationDocument.fromJson(
             readRequiredMap(json, 'normalization'),
           ),
     requiredCapabilities: readOptionalStringSet(json, 'requiredCapabilities'),
     extensions: readOptionalJsonValueMap(json, 'extensions'),
   );
 }
-
-ChartDocumentComponent? _readOptionalComponent(
-  Map<String, Object?> json,
-  String key,
-) => json[key] == null
-    ? null
-    : ChartDocumentComponent.fromJson(readRequiredMap(json, key));
