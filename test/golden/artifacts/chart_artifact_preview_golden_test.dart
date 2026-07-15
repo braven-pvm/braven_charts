@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _previewSize = Size(720, 420);
+const _crossPlatformPixelTolerance = 0.025;
 
 void main() {
   final variants = <String, ChartTheme>{
@@ -15,6 +18,16 @@ void main() {
     testWidgets('artifact preview golden stays stable for ${variant.key}', (
       tester,
     ) async {
+      final previousGoldenFileComparator = goldenFileComparator;
+      final localComparator =
+          previousGoldenFileComparator as LocalFileComparator;
+      goldenFileComparator = _TolerantGoldenFileComparator(
+        localComparator.basedir.resolve(
+          'chart_artifact_preview_golden_test.dart',
+        ),
+        precisionTolerance: _crossPlatformPixelTolerance,
+      );
+      addTearDown(() => goldenFileComparator = previousGoldenFileComparator);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = _previewSize;
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -70,6 +83,39 @@ void main() {
         ),
       );
     });
+  }
+}
+
+class _TolerantGoldenFileComparator extends LocalFileComparator {
+  _TolerantGoldenFileComparator(
+    super.testFile, {
+    required double precisionTolerance,
+  }) : assert(
+         0 <= precisionTolerance && precisionTolerance <= 1,
+         'precisionTolerance must be between 0 and 1',
+       ),
+       _precisionTolerance = precisionTolerance;
+
+  /// Allows small raster-backend and antialiasing differences while retaining
+  /// a full-image regression check. Windows and Linux differ by about 2% for
+  /// these otherwise identical pinned previews.
+  final double _precisionTolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    final passed = result.passed || result.diffPercent <= _precisionTolerance;
+    if (passed) {
+      result.dispose();
+      return true;
+    }
+
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
   }
 }
 
