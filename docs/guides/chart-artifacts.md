@@ -104,6 +104,22 @@ switch (restored) {
 Call `hydrateJson` for each independent chart tile. Each call creates a fresh
 configuration; give every built chart its own `BravenChartController`.
 
+Theme hydration is explicit through `ChartHydrationOptions`:
+
+- `asCaptured` (the default) uses the artifact's resolved theme and ignores a
+  supplied host theme;
+- `adaptToHost` uses `hostTheme` when supplied and otherwise falls back to the
+  captured resolved theme;
+- `hostOverride` requires `hostTheme` and fails with
+  `runtime_binding_required` when it is absent.
+
+A reference-only theme document also needs a host theme with either
+`adaptToHost` or `hostOverride`, because the reference is portable identity,
+not an executable theme registry lookup. Captured font-family names are
+preserved during hydration. Flutter performs its normal fallback if a family
+is unavailable, so hosts that need pixel-identical output must bundle and load
+the referenced fonts themselves.
+
 If an artifact uses external payloads, use
 `ChartDocumentHydrator.hydrateJsonWithDataResolver` instead. It validates the
 envelope, asks the host resolver for authorized bytes, verifies length and

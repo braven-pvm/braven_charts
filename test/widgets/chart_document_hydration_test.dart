@@ -145,6 +145,193 @@ void main() {
     expect(identical(first.series.single, second.series.single), isFalse);
   });
 
+  test('applies captured, adaptive, override, and reference-only themes', () {
+    final capturedTheme = ChartTheme.vibrant;
+    final hostTheme = ChartTheme.dark;
+    final capturedDocument = _portableDocument(theme: capturedTheme);
+
+    final asCaptured = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        capturedDocument,
+        options: ChartHydrationOptions(hostTheme: hostTheme),
+      ),
+    );
+    final adaptiveWithoutHost = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        capturedDocument,
+        options: const ChartHydrationOptions(
+          themeMode: ChartThemeHydrationMode.adaptToHost,
+        ),
+      ),
+    );
+    final adaptiveWithHost = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        capturedDocument,
+        options: ChartHydrationOptions(
+          themeMode: ChartThemeHydrationMode.adaptToHost,
+          hostTheme: hostTheme,
+        ),
+      ),
+    );
+    final override = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        capturedDocument,
+        options: ChartHydrationOptions(
+          themeMode: ChartThemeHydrationMode.hostOverride,
+          hostTheme: hostTheme,
+        ),
+      ),
+    );
+
+    expect(
+      _themeFingerprint(asCaptured.value.theme),
+      _themeFingerprint(capturedTheme),
+    );
+    expect(
+      _themeFingerprint(adaptiveWithoutHost.value.theme),
+      _themeFingerprint(capturedTheme),
+    );
+    expect(identical(adaptiveWithHost.value.theme, hostTheme), isTrue);
+    expect(identical(override.value.theme, hostTheme), isTrue);
+
+    final referenceOnly = _portableDocument(
+      themeDocument: _success(
+        ChartThemeDocumentCodec.encode(
+          capturedTheme,
+          captureMode: ChartThemeCaptureMode.referenceOnly,
+          reference: 'showcase.vibrant',
+        ),
+      ).value,
+    );
+    final referenceFailure = ChartDocumentHydrator.hydrateDocument(
+      referenceOnly,
+    );
+    final referenceWithHost = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        referenceOnly,
+        options: ChartHydrationOptions(
+          themeMode: ChartThemeHydrationMode.adaptToHost,
+          hostTheme: hostTheme,
+        ),
+      ),
+    );
+    final missingOverride = ChartDocumentHydrator.hydrateDocument(
+      capturedDocument,
+      options: const ChartHydrationOptions(
+        themeMode: ChartThemeHydrationMode.hostOverride,
+      ),
+    );
+
+    expect(
+      (referenceFailure as ChartArtifactFailure<HydratedChartConfiguration>)
+          .error
+          .code,
+      ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+    );
+    expect(identical(referenceWithHost.value.theme, hostTheme), isTrue);
+    expect(
+      (missingOverride as ChartArtifactFailure<HydratedChartConfiguration>)
+          .error
+          .code,
+      ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+    );
+  });
+
+  testWidgets('renders safely when a captured font family is unavailable', (
+    tester,
+  ) async {
+    final missingFontTheme = ChartTheme.light.copyWith(
+      typographyTheme: ChartTheme.light.typographyTheme.copyWith(
+        fontFamily: 'BravenDefinitelyMissingFont',
+      ),
+    );
+    final configuration = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        _portableDocument(theme: missingFontTheme),
+      ),
+    ).value;
+
+    expect(
+      configuration.theme.typographyTheme.fontFamily,
+      'BravenDefinitelyMissingFont',
+    );
+
+    await tester.pumpWidget(_host(configuration.build()));
+    await tester.pump();
+
+    expect(find.byType(HydratedBravenChart), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('forwards every host interaction binding to the restored chart', (
+    tester,
+  ) async {
+    ChartDataPoint? tappedPoint;
+    String? tappedSeries;
+    ChartDataPoint? hoveredPoint;
+    String? hoveredSeries;
+    Offset? backgroundPosition;
+    String? selectedSeries;
+    ChartAnnotation? tappedAnnotation;
+    ChartAnnotation? draggedAnnotation;
+    Offset? draggedPosition;
+    String? deselectedSeries;
+    final bindings = ChartRuntimeBindings(
+      onPointTap: (point, seriesId) {
+        tappedPoint = point;
+        tappedSeries = seriesId;
+      },
+      onPointHover: (point, seriesId) {
+        hoveredPoint = point;
+        hoveredSeries = seriesId;
+      },
+      onBackgroundTap: (position) => backgroundPosition = position,
+      onSeriesSelected: (seriesId) => selectedSeries = seriesId,
+      onAnnotationTap: (annotation) => tappedAnnotation = annotation,
+      onAnnotationDragged: (annotation, position) {
+        draggedAnnotation = annotation;
+        draggedPosition = position;
+      },
+      onSeriesDeselected: (seriesId) => deselectedSeries = seriesId,
+    );
+    final configuration = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        _portableDocument(),
+        runtimeBindings: bindings,
+      ),
+    ).value;
+
+    await tester.pumpWidget(_host(configuration.build()));
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    const point = ChartDataPoint(x: 2, y: 20);
+    final annotation = ThresholdAnnotation(
+      id: 'runtime-threshold',
+      axis: AnnotationAxis.y,
+      value: 15,
+    );
+    chart.onPointTap?.call(point, 'series');
+    chart.onPointHover?.call(point, 'series');
+    chart.onBackgroundTap?.call(const Offset(12, 24));
+    chart.onSeriesSelected?.call('series');
+    chart.onAnnotationTap?.call(annotation);
+    chart.onAnnotationDragged?.call(annotation, const Offset(36, 48));
+    chart.onSeriesDeselected?.call('series');
+
+    expect(tappedPoint, same(point));
+    expect(tappedSeries, 'series');
+    expect(hoveredPoint, same(point));
+    expect(hoveredSeries, 'series');
+    expect(backgroundPosition, const Offset(12, 24));
+    expect(selectedSeries, 'series');
+    expect(tappedAnnotation, same(annotation));
+    expect(draggedAnnotation, same(annotation));
+    expect(draggedPosition, const Offset(36, 48));
+    expect(deselectedSeries, 'series');
+  });
+
   testWidgets('two hydrated tiles keep controller state independent', (
     tester,
   ) async {
@@ -319,7 +506,11 @@ Widget _host(Widget child) => MaterialApp(
   ),
 );
 
-ChartDocument _portableDocument({JsonObjectValue? xFormatter}) {
+ChartDocument _portableDocument({
+  JsonObjectValue? xFormatter,
+  ChartTheme? theme,
+  ChartThemeDocument? themeDocument,
+}) {
   final series = _success(
     ChartSeriesDocumentCodec.encode(
       const LineChartSeries(
@@ -343,9 +534,9 @@ ChartDocument _portableDocument({JsonObjectValue? xFormatter}) {
       YAxisConfig(position: YAxisPosition.left).copyWith(id: 'y'),
     ),
   ).value;
-  final theme = _success(
-    ChartThemeDocumentCodec.encode(ChartTheme.light),
-  ).value;
+  final encodedTheme =
+      themeDocument ??
+      _success(ChartThemeDocumentCodec.encode(theme ?? ChartTheme.light)).value;
   final interaction = _success(
     ChartInteractionDocumentCodec.encode(const InteractionConfig()),
   ).value;
@@ -362,7 +553,7 @@ ChartDocument _portableDocument({JsonObjectValue? xFormatter}) {
     series: [series],
     xAxis: xAxis,
     axes: [yAxis],
-    theme: theme,
+    theme: encodedTheme,
     interaction: interaction,
     legend: legend,
     grid: ChartConfigurationDocumentCodec.encodeGrid(const GridConfig()),
@@ -376,6 +567,15 @@ ChartArtifactSuccess<T> _success<T>(ChartArtifactResult<T> result) {
   expect(result, isA<ChartArtifactSuccess<T>>());
   return result as ChartArtifactSuccess<T>;
 }
+
+String _themeFingerprint(ChartTheme theme) => canonicalJsonEncode(
+  _success(
+    ChartThemeDocumentCodec.encode(
+      theme,
+      captureMode: ChartThemeCaptureMode.resolvedOnly,
+    ),
+  ).value.resolved.toJson(),
+);
 
 class _CustomSeriesCodec implements ChartSeriesExtensionCodec {
   const _CustomSeriesCodec();
