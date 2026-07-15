@@ -21,6 +21,26 @@ void main() {
     expect(find.text('Row 0'), findsOneWidget);
     expect(find.text('Row 999'), findsNothing);
     expect(find.byType(ListView), findsOneWidget);
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('chart-table-header-row-actions')),
+          )
+          .dx,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('chart-table-header-index')))
+            .dx,
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.byTooltip('Copy Series row').first).dx,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('chart-table-row-index-0')))
+            .dx,
+      ),
+    );
     semantics.dispose();
   });
 
@@ -160,6 +180,26 @@ void main() {
           onCopyDataset: (value) => copiedDataset = value,
           onExportCsv: (value) => exported = value,
         ),
+      ),
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('chart-table-header-row-actions')),
+          )
+          .dx,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('chart-table-header-index')))
+            .dx,
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.byTooltip('Copy row 1')).dx,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('chart-table-row-index-0')))
+            .dx,
       ),
     );
     await tester.tap(find.text('X value'));

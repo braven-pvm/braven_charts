@@ -354,6 +354,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
       return _TableHeader(
         theme: tableTheme,
         children: [
+          if (widget.showCopyRowAction)
+            _StaticHeader(
+              key: const ValueKey('chart-table-header-row-actions'),
+              label: '',
+              semanticsLabel: 'Row actions',
+              width: 44,
+              theme: tableTheme,
+            ),
           _StaticHeader(
             key: const ValueKey('chart-table-header-index'),
             label: '#',
@@ -385,20 +393,22 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? null
                   : Color(column.colorValue!),
             ),
-          if (widget.showCopyRowAction)
-            _StaticHeader(
-              label: '',
-              semanticsLabel: 'Row actions',
-              width: 44,
-              theme: tableTheme,
-            ),
         ],
       );
     }
     return _TableHeader(
       theme: tableTheme,
       children: [
+        if (widget.showCopyRowAction)
+          _StaticHeader(
+            key: const ValueKey('chart-table-header-row-actions'),
+            label: '',
+            semanticsLabel: 'Row actions',
+            width: 44,
+            theme: tableTheme,
+          ),
         _StaticHeader(
+          key: const ValueKey('chart-table-header-index'),
           label: '#',
           width: tableTheme.rowNumberWidth,
           theme: tableTheme,
@@ -430,13 +440,6 @@ class _ChartDataTableState extends State<ChartDataTable> {
         _StaticHeader(label: 'Unit', width: 88, theme: tableTheme),
         _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
         _StaticHeader(label: 'Status', width: 96, theme: tableTheme),
-        if (widget.showCopyRowAction)
-          _StaticHeader(
-            label: '',
-            semanticsLabel: 'Row actions',
-            width: 44,
-            theme: tableTheme,
-          ),
       ],
     );
   }
@@ -470,6 +473,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onFocused: widget.onRowFocused,
         onActivated: widget.onRowActivated,
         children: [
+          if (widget.showCopyRowAction)
+            _CopyRowButton(
+              tooltip: 'Copy row ${index + 1}',
+              onPressed: () => _copyRow(
+                ChartTableExporter.wideRow(model, row, index),
+                index,
+              ),
+            ),
           _TableCell(
             key: ValueKey('chart-table-row-index-$index'),
             text: '${index + 1}',
@@ -487,14 +498,6 @@ class _ChartDataTableState extends State<ChartDataTable> {
           ),
           for (final column in model.series)
             _buildWideValueCell(row, column, theme),
-          if (widget.showCopyRowAction)
-            _CopyRowButton(
-              tooltip: 'Copy row ${index + 1}',
-              onPressed: () => _copyRow(
-                ChartTableExporter.wideRow(model, row, index),
-                index,
-              ),
-            ),
         ],
       );
     }
@@ -519,7 +522,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
       onFocused: widget.onRowFocused,
       onActivated: widget.onRowActivated,
       children: [
+        if (widget.showCopyRowAction)
+          _CopyRowButton(
+            tooltip: 'Copy ${row.seriesName} row',
+            onPressed: () =>
+                _copyRow(ChartTableExporter.longRow(model, row, index), index),
+          ),
         _TableCell(
+          key: ValueKey('chart-table-row-index-$index'),
           text: '${index + 1}',
           width: theme.rowNumberWidth,
           numeric: true,
@@ -554,12 +564,6 @@ class _ChartDataTableState extends State<ChartDataTable> {
           invalid: !row.isValid,
           theme: theme,
         ),
-        if (widget.showCopyRowAction)
-          _CopyRowButton(
-            tooltip: 'Copy ${row.seriesName} row',
-            onPressed: () =>
-                _copyRow(ChartTableExporter.longRow(model, row, index), index),
-          ),
       ],
     );
   }
