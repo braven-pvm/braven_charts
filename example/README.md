@@ -3,6 +3,8 @@
 This Flutter application is the runnable product tour for Braven Charts. It is
 also the source for pub.dev screenshots and the public web demo.
 
+[**Open the public Braven Charts showcase →**](https://braven-pvm.github.io/braven_charts/)
+
 ## Run locally
 
 From the repository root:
@@ -46,7 +48,7 @@ annotations.
 
 - Hover a series or marker for its tooltip.
 - Move across a tracking chart to inspect synchronized series values.
-- Drag or wheel over interactive charts to pan and zoom.
+- Drag to pan; hold Shift while using the wheel to zoom around the pointer.
 - Use scrollbars where enabled to inspect a constrained viewport.
 - Select a legend entry or series in multi-axis demos to exercise axis slots.
 - Pause live streams, allow points to buffer, then resume.

@@ -21,9 +21,15 @@ void main() {
     expect(find.text('Endurance session profile'), findsOneWidget);
     expect(find.text('4 Y axes'), findsOneWidget);
     expect(
-      find.text('Hover to track · wheel to zoom · drag to pan'),
+      find.text('Hover to track · Shift + wheel to zoom · drag to pan'),
       findsOneWidget,
     );
+    final flagship = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus).first,
+    );
+    expect(flagship.series, hasLength(4));
+    expect(flagship.annotations, hasLength(4));
+    expect(flagship.showXScrollbar, isTrue);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -1900));
     await tester.pump(const Duration(milliseconds: 600));

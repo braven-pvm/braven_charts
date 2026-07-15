@@ -18,6 +18,7 @@
 /packages/
 /specs/
 /test/
+/tool/
 
 # Example build and test artifacts; keep example/lib and example/web public
 /example/.dart_tool/

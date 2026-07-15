@@ -75,7 +75,7 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
       subtitle:
           'Four independent Y axes, normalized tracking, stage bands, thresholds, labels, and glow',
       badges: const ['4 Y axes', 'Annotations', 'Tracking', 'Glow'],
-      interactionHint: 'Hover to track · wheel to zoom · drag to pan',
+      interactionHint: 'Hover to track · Shift + wheel to zoom · drag to pan',
       child: BravenChartPlus(
         series: [
           AreaChartSeries(
@@ -219,6 +219,12 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
         ],
         theme: isDark ? ChartTheme.dark : ChartTheme.light,
         showLegend: MediaQuery.sizeOf(context).width >= 1100,
+        showXScrollbar: true,
+        scrollbarTheme:
+            (isDark
+                    ? ScrollbarConfig.defaultDark
+                    : ScrollbarConfig.defaultLight)
+                .copyWith(autoHide: false),
         normalizationMode: NormalizationMode.perSeries,
         xAxisConfig: const XAxisConfig(
           label: 'Time',
