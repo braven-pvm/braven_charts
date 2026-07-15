@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,8 @@ import 'chart_artifact_diagnostics.dart';
 import 'chart_artifact_json_codec.dart';
 import 'chart_data_payload.dart';
 import 'json_value.dart';
+
+part 'chart_data_binary_codec.dart';
 
 /// Immutable encoded data blob ready for host-controlled persistence.
 @immutable
@@ -90,39 +93,18 @@ abstract final class ChartDataBlobCodec {
         const ChartArtifactValidationLimits(),
     String path = r'$.data',
   }) {
-    final manifestFailure = _validateManifest(reference, limits, path);
+    final manifestFailure = _validateManifest(
+      reference,
+      limits,
+      path,
+      supportedContentTypes: const {contentType},
+    );
     if (manifestFailure != null) {
       return ChartArtifactFailure(error: manifestFailure);
     }
-    if (bytes.length != reference.byteLength) {
-      return ChartArtifactFailure(
-        error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.dataPayloadIntegrityMismatch,
-          message:
-              'Resolved payload has ${bytes.length} bytes; manifest declares '
-              '${reference.byteLength}.',
-          path: '$path.byteLength',
-        ),
-      );
-    }
-    if (bytes.any((byte) => byte < 0 || byte > 255)) {
-      return ChartArtifactFailure(
-        error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.invalidArtifact,
-          message: 'Resolved payload contains values outside the byte range.',
-          path: path,
-        ),
-      );
-    }
-    final checksum = _checksum(bytes);
-    if (checksum != reference.checksum) {
-      return ChartArtifactFailure(
-        error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.dataPayloadIntegrityMismatch,
-          message: 'Resolved payload checksum does not match its manifest.',
-          path: '$path.checksum',
-        ),
-      );
+    final bytesFailure = _validateResolvedBytes(reference, bytes, path);
+    if (bytesFailure != null) {
+      return ChartArtifactFailure(error: bytesFailure);
     }
 
     try {
@@ -190,9 +172,10 @@ abstract final class ChartDataBlobCodec {
   static ChartArtifactError? _validateManifest(
     ReferencedPayload reference,
     ChartArtifactValidationLimits limits,
-    String path,
-  ) {
-    if (reference.contentType != contentType) {
+    String path, {
+    required Set<String> supportedContentTypes,
+  }) {
+    if (!supportedContentTypes.contains(reference.contentType)) {
       return ChartArtifactError(
         code: ChartArtifactDiagnosticCodes.unsupportedDataPayloadContentType,
         message:
@@ -208,6 +191,37 @@ abstract final class ChartDataBlobCodec {
             'Data payload declares ${reference.byteLength} bytes; maximum is '
             '${limits.maxDataPayloadBytes}.',
         path: '$path.byteLength',
+      );
+    }
+    return null;
+  }
+
+  static ChartArtifactError? _validateResolvedBytes(
+    ReferencedPayload reference,
+    List<int> bytes,
+    String path,
+  ) {
+    if (bytes.length != reference.byteLength) {
+      return ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.dataPayloadIntegrityMismatch,
+        message:
+            'Resolved payload has ${bytes.length} bytes; manifest declares '
+            '${reference.byteLength}.',
+        path: '$path.byteLength',
+      );
+    }
+    if (bytes.any((byte) => byte < 0 || byte > 255)) {
+      return ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.invalidArtifact,
+        message: 'Resolved payload contains values outside the byte range.',
+        path: path,
+      );
+    }
+    if (_checksum(bytes) != reference.checksum) {
+      return ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.dataPayloadIntegrityMismatch,
+        message: 'Resolved payload checksum does not match its manifest.',
+        path: '$path.checksum',
       );
     }
     return null;
@@ -450,6 +464,10 @@ abstract final class ChartDataResolution {
       reference,
       limits,
       path,
+      supportedContentTypes: const {
+        ChartDataBlobCodec.contentType,
+        ChartDataBinaryCodec.contentType,
+      },
     );
     if (manifestFailure != null) throw _ResolutionFailure(manifestFailure);
 
@@ -470,12 +488,21 @@ abstract final class ChartDataResolution {
     }
     final success = resolved as ChartArtifactSuccess<List<int>>;
     warnings.addAll(success.warnings);
-    final decoded = ChartDataBlobCodec.decode(
-      reference,
-      success.value,
-      limits: limits,
-      path: path,
-    );
+    final decoded = switch (reference.contentType) {
+      ChartDataBlobCodec.contentType => ChartDataBlobCodec.decode(
+        reference,
+        success.value,
+        limits: limits,
+        path: path,
+      ),
+      ChartDataBinaryCodec.contentType => ChartDataBinaryCodec.decode(
+        reference,
+        success.value,
+        limits: limits,
+        path: path,
+      ),
+      _ => throw StateError('Unsupported data payload content type.'),
+    };
     return switch (decoded) {
       ChartArtifactSuccess<InlineChartDataPayload>() => decoded.value,
       ChartArtifactFailure<InlineChartDataPayload>() =>

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_schema_lab_page.dart';
+import 'pages/artifact_binary_payload_lab_page.dart';
 import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
 import 'pages/artifact_export_lab_page.dart';
@@ -254,6 +255,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.cloud_download_outlined,
       selectedIcon: Icons.cloud_download,
       page: ArtifactResolverLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Binary Payload Lab',
+      icon: Icons.compress_outlined,
+      selectedIcon: Icons.compress,
+      page: ArtifactBinaryPayloadLabPage(),
       badge: 'NEW',
     ),
   ];

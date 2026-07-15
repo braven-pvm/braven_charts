@@ -373,42 +373,59 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       ],
   };
 
+  /// Codec-facing constructor for decoded numeric columns plus JSON sidecars.
+  factory InlineColumnarPayload.fromDecodedColumns({
+    required Iterable<ChartNumberDocument> xValues,
+    required Iterable<ChartNumberDocument> yValues,
+    required Map<String, Object?> optionalColumns,
+  }) => InlineColumnarPayload(
+    xValues: xValues,
+    yValues: yValues,
+    timestamps: _readOptionalColumn(optionalColumns, 'timestamps', (
+      value,
+      path,
+    ) {
+      if (value == null) return null;
+      if (value is! String) {
+        throw FormatException('$path must be an ISO-8601 string or null');
+      }
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) {
+        throw FormatException('$path must be an ISO-8601 string or null');
+      }
+      return parsed.toUtc();
+    }),
+    labels: _readOptionalColumn(optionalColumns, 'labels', (value, path) {
+      if (value == null) return null;
+      if (value is! String) {
+        throw FormatException('$path must be a string or null');
+      }
+      return value;
+    }),
+    metadata: _readOptionalJsonObjectColumn(optionalColumns, 'metadata'),
+    segmentStyles: _readOptionalJsonObjectColumn(
+      optionalColumns,
+      'segmentStyles',
+    ),
+    pointStyles: _readOptionalJsonObjectColumn(optionalColumns, 'pointStyles'),
+    pointExtensions: _readOptionalColumn(optionalColumns, 'pointExtensions', (
+      value,
+      path,
+    ) {
+      if (value == null) return null;
+      final object = JsonValue.fromJson(value, path: path);
+      if (object is! JsonObjectValue) {
+        throw FormatException('$path must be an object or null');
+      }
+      return object.values;
+    }),
+  );
+
   factory InlineColumnarPayload.fromJson(Map<String, Object?> json) =>
-      InlineColumnarPayload(
+      InlineColumnarPayload.fromDecodedColumns(
         xValues: readRequiredList(json, 'x').map(ChartNumberDocument.fromJson),
         yValues: readRequiredList(json, 'y').map(ChartNumberDocument.fromJson),
-        timestamps: _readOptionalColumn(json, 'timestamps', (value, path) {
-          if (value == null) return null;
-          if (value is! String) {
-            throw FormatException('$path must be an ISO-8601 string or null');
-          }
-          final parsed = DateTime.tryParse(value);
-          if (parsed == null) {
-            throw FormatException('$path must be an ISO-8601 string or null');
-          }
-          return parsed.toUtc();
-        }),
-        labels: _readOptionalColumn(json, 'labels', (value, path) {
-          if (value == null) return null;
-          if (value is! String) {
-            throw FormatException('$path must be a string or null');
-          }
-          return value;
-        }),
-        metadata: _readOptionalJsonObjectColumn(json, 'metadata'),
-        segmentStyles: _readOptionalJsonObjectColumn(json, 'segmentStyles'),
-        pointStyles: _readOptionalJsonObjectColumn(json, 'pointStyles'),
-        pointExtensions: _readOptionalColumn(json, 'pointExtensions', (
-          value,
-          path,
-        ) {
-          if (value == null) return null;
-          final object = JsonValue.fromJson(value, path: path);
-          if (object is! JsonObjectValue) {
-            throw FormatException('$path must be an object or null');
-          }
-          return object.values;
-        }),
+        optionalColumns: json,
       );
 
   void _validateColumnLength(String name, int? length) {

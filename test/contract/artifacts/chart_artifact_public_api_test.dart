@@ -39,6 +39,9 @@ void main() {
     expect(resolver, isA<ChartDataResolver>());
     expect(reference.storage, 'referenced');
     expect(const ChartArtifactValidationLimits().maxDataPayloadBytes, 1 << 26);
+    expect(ChartDataBinaryCodec.contentType, contains('columnar-binary-v1'));
+    expect(ChartDataBinaryCodec.formatVersion, 1);
+    expect(ChartDataBinaryCodec.compression, 'xor-significant-bytes-v1');
   });
 
   test('schema-v1 artifact surface is available from the public barrel', () {

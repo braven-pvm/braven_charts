@@ -1,0 +1,8 @@
+{
+  "formatVersion": 1,
+  "contentType": "application/vnd.braven-charts.columnar-binary-v1",
+  "compression": "xor-significant-bytes-v1",
+  "pointCount": 2,
+  "checksum": "sha256:b46135f67cbdaa2d37103d68802154c739a9602d368ef45b5f614eae4104b2f0",
+  "bytesBase64": "QlJWTkRBVDEBAAAcAAAAAgAAAAQAAAAFAAAAGgACP/ACQFkhYHsibGFiZWxzIjpbbnVsbCwiZmluaXNoIl19"
+}
