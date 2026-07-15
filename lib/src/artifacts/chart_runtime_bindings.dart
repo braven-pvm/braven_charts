@@ -68,6 +68,7 @@ class ChartFormatterDescriptor {
   }
 }
 
+/// Resolved formatter plus an optional fallback warning.
 @immutable
 class ChartFormatterResolution {
   const ChartFormatterResolution({required this.formatter, this.warning});
@@ -81,6 +82,7 @@ class ChartFormatterResolution {
 class ChartFormatterRegistry {
   const ChartFormatterRegistry({this.customFormatters = const {}});
 
+  /// Host formatters keyed by stable descriptor ID.
   final Map<String, ChartValueFormatter> customFormatters;
 
   ChartFormatterResolution resolve(ChartFormatterDescriptor descriptor) {
@@ -118,6 +120,7 @@ class ChartFormatterRegistry {
 class ChartTooltipRegistry {
   const ChartTooltipRegistry({this.builders = const {}});
 
+  /// Tooltip builders keyed by stable IDs stored in interaction documents.
   final Map<String, TooltipBuilder> builders;
 
   TooltipBuilder? resolve(String id) => builders[id];
@@ -128,6 +131,7 @@ class ChartTooltipRegistry {
 class ChartCallbackRegistry {
   const ChartCallbackRegistry({this.callbacks = const {}});
 
+  /// Callback objects keyed by stable IDs stored in interaction documents.
   final Map<String, Object> callbacks;
 
   T? resolve<T extends Function>(String id) {
@@ -179,7 +183,10 @@ class ChartExtensionRegistry {
   };
 }
 
-/// Executable host behavior supplied explicitly during hydration.
+/// Explicit executable behavior supplied by the host during hydration.
+///
+/// Artifacts carry only descriptors and IDs. This object is the allowlisted
+/// bridge from those descriptors to application-owned implementations.
 @immutable
 class ChartRuntimeBindings {
   const ChartRuntimeBindings({

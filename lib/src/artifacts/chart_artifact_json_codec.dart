@@ -7,6 +7,7 @@ import 'chart_artifact.dart';
 import 'chart_artifact_migrations.dart';
 import 'json_value.dart';
 
+/// Decoded artifact plus schema-version and migration provenance.
 @immutable
 class ChartArtifactDecodeResult {
   ChartArtifactDecodeResult({
@@ -23,6 +24,10 @@ class ChartArtifactDecodeResult {
 }
 
 /// Deterministic JSON transport codec for the chart artifact envelope.
+///
+/// [encode] validates the current schema and returns canonical JSON. [decode]
+/// validates untrusted input, applies only explicitly registered adjacent
+/// migrations, and reports unsupported capabilities before hydration.
 abstract final class ChartArtifactJsonCodec {
   static ChartArtifactResult<String> encode(
     ChartArtifact artifact, {

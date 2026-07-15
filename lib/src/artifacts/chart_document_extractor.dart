@@ -64,15 +64,35 @@ class ChartDocumentExtractOptions {
   }) : assert(documentId != ''),
        assert(maxSnapshotAttempts > 0);
 
+  /// Stable document identity used by table and cache consumers.
   final String documentId;
+
+  /// Effective data projection copied into the document.
   final ChartDataScope dataScope;
+
+  /// Whether durable visibility, selection, viewport, and axis-slot state is
+  /// included in the returned snapshot.
   final bool includeViewState;
+
+  /// Self-contained point-object or columnar storage projection.
   final ChartDataStorage dataStorage;
+
+  /// Theme fields captured into the document.
   final ChartThemeCaptureMode themeMode;
+
+  /// Optional host theme reference retained as metadata.
   final String? themeReference;
+
+  /// JSON-safe descriptor for the X-axis formatter.
   final JsonObjectValue? xAxisFormatterDescriptor;
+
+  /// JSON-safe descriptors keyed by axis ID for Y-axis formatters.
   final Map<String, JsonObjectValue> yAxisFormatterDescriptors;
+
+  /// Stable IDs for interaction callbacks resolved during hydration.
   final Map<String, JsonObjectValue> interactionBindingDescriptors;
+
+  /// Maximum stable-snapshot attempts before returning an unstable revision.
   final int maxSnapshotAttempts;
 }
 

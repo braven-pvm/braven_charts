@@ -25,6 +25,10 @@ abstract final class ChartArtifactDiagnosticCodes {
       'unsupported_data_payload_content_type';
 }
 
+/// Non-fatal diagnostic attached to a successful or failed artifact operation.
+///
+/// Applications should log [code] and [path] while still using a successful
+/// value when one is available.
 @immutable
 class ChartArtifactWarning {
   const ChartArtifactWarning({
@@ -38,6 +42,7 @@ class ChartArtifactWarning {
   final String? path;
 }
 
+/// Machine-readable reason an artifact operation could not produce its value.
 @immutable
 class ChartArtifactError {
   const ChartArtifactError({
@@ -51,10 +56,15 @@ class ChartArtifactError {
   final String? path;
 }
 
+/// Result type used by all fallible artifact, payload, and table operations.
+///
+/// A success may still contain warnings. Failures are explicit so callers do
+/// not accidentally render partially decoded data.
 sealed class ChartArtifactResult<T> {
   const ChartArtifactResult();
 }
 
+/// Successful artifact operation with its value and non-fatal warnings.
 @immutable
 final class ChartArtifactSuccess<T> extends ChartArtifactResult<T> {
   ChartArtifactSuccess({
@@ -66,6 +76,7 @@ final class ChartArtifactSuccess<T> extends ChartArtifactResult<T> {
   final List<ChartArtifactWarning> warnings;
 }
 
+/// Failed artifact operation with a stable error and collected warnings.
 @immutable
 final class ChartArtifactFailure<T> extends ChartArtifactResult<T> {
   ChartArtifactFailure({
@@ -78,6 +89,9 @@ final class ChartArtifactFailure<T> extends ChartArtifactResult<T> {
 }
 
 /// Resource limits applied before and during artifact decoding.
+///
+/// Keep the defaults for untrusted JSON. Increase a limit only for a trusted
+/// transport after measuring the data size and memory budget.
 @immutable
 class ChartArtifactValidationLimits {
   const ChartArtifactValidationLimits({

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_runtime_bindings.dart';
 
+/// Which series contribute rows to a table projection.
 enum ChartTableDataScope {
   allSeries,
   visibleSeries,
@@ -9,11 +10,13 @@ enum ChartTableDataScope {
   specifiedSeries,
 }
 
+/// Physical row shape rendered or exported by [ChartTableModel].
 enum ChartTableRowLayout { long, wide }
 
-/// Explicit alignment strategies supported by a wide table projection.
+/// Alignment rule for a wide table's shared X column.
 enum ChartTableAlignmentPolicy { exactX }
 
+/// Whether a host shows the chart, its data table, or both.
 enum ChartDisplayMode { chart, data, split }
 
 /// Immutable rules for deriving a table from a chart document.

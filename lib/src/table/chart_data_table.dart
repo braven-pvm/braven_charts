@@ -12,6 +12,11 @@ import 'chart_table_options.dart';
 typedef ChartTableRowCallback = void Function(ChartTablePointReference point);
 
 /// Accessible, horizontally scrollable, row-virtualized chart data table.
+///
+/// Supply a [ChartTableModel] created from the same [ChartDocument] that feeds
+/// the chart. The widget uses the model's row layout, keeps raw values for
+/// export, and derives unspecified colors and typography from the active
+/// [ChartDataTableTheme] and the ambient Flutter theme.
 class ChartDataTable extends StatefulWidget {
   const ChartDataTable({
     super.key,

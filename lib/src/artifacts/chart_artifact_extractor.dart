@@ -31,8 +31,10 @@ class ChartArtifactExtractOptions {
   /// Stable host identity. A timestamped package identity is generated if null.
   final String? artifactId;
 
-  /// Injectable capture time for deterministic persistence and tests.
+  /// Injectable UTC capture time for deterministic persistence and tests.
   final DateTime? createdAt;
+
+  /// Whether the mounted chart should contribute a hash-matched preview.
   final bool includePreview;
 
   /// Defines the document used by both the artifact and preview hash.
@@ -41,9 +43,17 @@ class ChartArtifactExtractOptions {
   /// Defines raster capture only; its nested document options are overridden
   /// by [documentOptions] so the composed result cannot use two projections.
   final ChartPreviewOptions previewOptions;
+
+  /// Renderer package/version metadata written into the envelope.
   final ChartRendererInfo renderer;
+
+  /// Optional JSON-safe host provenance metadata.
   final ChartArtifactProvenance? provenance;
+
+  /// Optional host integrity metadata.
   final ChartArtifactIntegrity? integrity;
+
+  /// JSON-safe extension values preserved in the envelope.
   final Map<String, JsonValue> extensions;
 
   /// Maximum attempts to match the preview to the returned document hash.

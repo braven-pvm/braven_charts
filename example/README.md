@@ -36,6 +36,7 @@ flutter build web --release
 | Baseline Fill | Positive/negative and above/below-target area fills |
 | Loading States | Animated chart skeleton, circular/linear progress, empty results, and custom state content |
 | Performance | Large data sets and rendering diagnostics |
+| Chart Artifacts | Capture effective chart state, switch between chart/table/restored views, inspect canonical JSON, and restore an independent chart |
 
 Additional focused pages cover minor ticks, explicit render ranges, point
 labels, series styling, power/lactate analysis, and lactate-threshold chord
@@ -64,4 +65,5 @@ also be captured from Multi-Axis, Live Stream, Annotations, and Loading States
 to show the interaction engine and application states in more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
-sizes and the public deployment workflow.
+sizes and the public deployment workflow. For the API contract behind the
+Chart Artifacts page, see [Portable chart artifacts](../doc/chart_artifacts.md).

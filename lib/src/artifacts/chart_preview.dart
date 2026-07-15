@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 
 import 'artifact_json_readers.dart';
 
+/// Raster preview associated with one canonical chart-document revision.
+///
+/// A preview contains either in-memory [bytes] or a host-owned [uri], never
+/// both. [documentHash] must match the canonical document it depicts.
 @immutable
 class ChartPreview {
   ChartPreview({

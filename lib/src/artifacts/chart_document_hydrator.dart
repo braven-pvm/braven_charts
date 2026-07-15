@@ -30,6 +30,7 @@ import 'chart_theme_document_codec.dart';
 import 'chart_view_state.dart';
 import 'json_value.dart';
 
+/// Controls theme and durable-view-state behavior during hydration.
 @immutable
 class ChartHydrationOptions {
   const ChartHydrationOptions({
@@ -72,7 +73,10 @@ class HydratedChartConfiguration {
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes);
 
+  /// Fresh immutable series models ready for [BravenChartPlus].
   final List<ChartSeries> series;
+
+  /// Fresh immutable annotation models.
   final List<ChartAnnotation> annotations;
   final XAxisConfig xAxis;
   final List<YAxisConfig> axes;
@@ -87,7 +91,11 @@ class HydratedChartConfiguration {
   final AxisSwapMode axisSwapMode;
   final NormalizationMode normalizationMode;
   final Color backgroundColor;
+
+  /// Explicit host behavior used by the restored chart.
   final ChartRuntimeBindings runtimeBindings;
+
+  /// Captured view state, unless disabled by [ChartHydrationOptions].
   final ChartViewState? viewState;
   final String? title;
   final String? subtitle;
@@ -101,7 +109,8 @@ class HydratedChartConfiguration {
     return axes.isEmpty ? null : axes.first;
   }
 
-  /// Builds a fresh interactive runtime instance.
+  /// Builds a fresh interactive runtime instance with independent controller
+  /// and annotation identity.
   HydratedBravenChart build({
     Key? key,
     BravenChartController? bravenChartController,

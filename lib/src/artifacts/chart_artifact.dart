@@ -6,6 +6,10 @@ import 'chart_preview.dart';
 import 'chart_view_state.dart';
 import 'json_value.dart';
 
+/// Identifies the renderer that produced an artifact.
+///
+/// This metadata is recorded for observability and compatibility decisions;
+/// it never dynamically loads the named package or version.
 @immutable
 class ChartRendererInfo {
   const ChartRendererInfo({required this.package, required this.version});
@@ -22,6 +26,10 @@ class ChartRendererInfo {
       );
 }
 
+/// JSON-safe host metadata carried alongside a portable artifact.
+///
+/// Provenance is descriptive only. Hosts that need authenticity must add a
+/// separate signing and verification policy.
 @immutable
 class ChartArtifactProvenance {
   ChartArtifactProvenance({JsonObjectValue? values})
@@ -37,6 +45,10 @@ class ChartArtifactProvenance {
       );
 }
 
+/// Optional content-integrity metadata supplied by the host.
+///
+/// The codec preserves this value but does not interpret an algorithm name as
+/// a cryptographic verification instruction.
 @immutable
 class ChartArtifactIntegrity {
   const ChartArtifactIntegrity({required this.algorithm, required this.digest});
@@ -53,6 +65,11 @@ class ChartArtifactIntegrity {
       );
 }
 
+/// Portable envelope for one effective chart document.
+///
+/// The envelope contains renderer-independent configuration and data, durable
+/// view state, and optionally a preview. Use [ChartArtifactJsonCodec] for
+/// validated transport rather than relying on [toJson] alone.
 @immutable
 class ChartArtifact {
   ChartArtifact({
@@ -70,18 +87,40 @@ class ChartArtifact {
        provenance = provenance ?? ChartArtifactProvenance(),
        extensions = Map.unmodifiable(extensions);
 
+  /// Stable discriminator written at the root of every artifact JSON object.
   static const artifactType = 'braven.chartArtifact';
+
+  /// Schema version written by this package.
   static const currentSchemaVersion = 1;
 
+  /// Host-selected identity for storage, sharing, or cache keys.
   final String artifactId;
+
+  /// Schema version of this envelope.
   final int schemaVersion;
+
+  /// Renderer metadata recorded at capture time.
   final ChartRendererInfo renderer;
+
+  /// UTC capture time.
   final DateTime createdAt;
+
+  /// Effective chart configuration and data.
   final ChartDocument document;
+
+  /// Optional durable visibility, selection, viewport, and axis-slot state.
   final ChartViewState? viewState;
+
+  /// Optional raster preview bound to [document] by canonical hash.
   final ChartPreview? preview;
+
+  /// Optional JSON-safe host provenance metadata.
   final ChartArtifactProvenance provenance;
+
+  /// Optional host-supplied integrity metadata.
   final ChartArtifactIntegrity? integrity;
+
+  /// Namespaced JSON-safe extension values preserved across transport.
   final Map<String, JsonValue> extensions;
 
   Map<String, Object?> toJson() => {
