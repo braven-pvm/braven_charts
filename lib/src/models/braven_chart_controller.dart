@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_artifact_diagnostics.dart';
+import '../artifacts/chart_artifact.dart';
+import '../artifacts/chart_artifact_extractor.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_preview.dart';
 import '../artifacts/chart_preview_capture.dart';
@@ -127,6 +129,32 @@ class BravenChartController extends ChangeNotifier {
       );
     }
     return handler(options);
+  }
+
+  /// Extracts one portable artifact and optionally a hash-matched preview.
+  ///
+  /// Preview failure is reported as a warning on a document-only success so
+  /// callers never lose a usable native artifact because raster capture failed.
+  Future<ChartArtifactResult<ChartArtifact>> extractArtifact([
+    ChartArtifactExtractOptions options = const ChartArtifactExtractOptions(),
+  ]) {
+    final documentHandler = _extractDocumentHandler;
+    if (documentHandler == null) {
+      return Future.value(
+        ChartArtifactFailure(
+          error: const ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.chartNotAttached,
+            message:
+                'The BravenChartController is not attached to a mounted chart.',
+          ),
+        ),
+      );
+    }
+    return ChartArtifactExtractor.extract(
+      options: options,
+      extractDocument: documentHandler,
+      capturePreview: _capturePreviewHandler,
+    );
   }
 
   // ---- Internal state sync (called by _BravenChartPlusState) ----

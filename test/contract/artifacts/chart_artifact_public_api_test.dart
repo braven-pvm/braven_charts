@@ -2,6 +2,19 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('artifact extraction options are available from the public barrel', () {
+    const options = ChartArtifactExtractOptions(
+      artifactId: 'public-extraction',
+      includePreview: true,
+      documentOptions: ChartDocumentExtractOptions(documentId: 'public-doc'),
+      previewOptions: ChartPreviewOptions(pixelRatio: 2),
+    );
+
+    expect(options.artifactId, 'public-extraction');
+    expect(options.documentOptions.documentId, 'public-doc');
+    expect(options.previewOptions.pixelRatio, 2);
+  });
+
   test('schema-v1 artifact surface is available from the public barrel', () {
     final artifact = ChartArtifact(
       artifactId: 'public-api',

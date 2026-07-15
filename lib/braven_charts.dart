@@ -36,6 +36,8 @@ export 'src/artifacts/chart_artifact_diagnostics.dart';
 export 'src/artifacts/chart_artifact_canonicalizer.dart';
 export 'src/artifacts/chart_artifact_json_codec.dart';
 export 'src/artifacts/chart_artifact.dart';
+export 'src/artifacts/chart_artifact_extractor.dart'
+    show ChartArtifactExtractOptions;
 export 'src/artifacts/chart_annotation_document.dart';
 export 'src/artifacts/chart_annotation_document_codec.dart';
 export 'src/artifacts/chart_axis_document_codec.dart';
