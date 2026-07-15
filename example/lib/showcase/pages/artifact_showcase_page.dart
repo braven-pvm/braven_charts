@@ -211,7 +211,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLiveTable());
   }
 
-  void _refreshLiveTable() {
+  void _refreshLiveTable([int attachmentAttempt = 0]) {
     if (!mounted || _restoredConfiguration != null) return;
     final result = _sourceController.extractDocument(
       ChartDocumentExtractOptions(
@@ -225,7 +225,44 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
         viewState: result.value.viewState,
       );
       setState(() => _liveTable = table);
+      return;
     }
+    if (result case ChartArtifactFailure<ChartDocumentSnapshot>()) {
+      if (result.error.code == ChartArtifactDiagnosticCodes.chartNotAttached &&
+          attachmentAttempt < 2) {
+        WidgetsBinding.instance.scheduleFrame();
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _refreshLiveTable(attachmentAttempt + 1),
+        );
+      }
+    }
+  }
+
+  Future<ChartArtifactResult<ChartArtifact>> _extractAttachedArtifact(
+    BravenChartController controller,
+    ChartArtifactExtractOptions options,
+  ) async {
+    ChartArtifactResult<ChartArtifact>? lastResult;
+    for (
+      var attachmentAttempt = 0;
+      attachmentAttempt < 3;
+      attachmentAttempt++
+    ) {
+      final result = await controller.extractArtifact(options);
+      lastResult = result;
+      if (result is ChartArtifactSuccess<ChartArtifact>) return result;
+      if (result case ChartArtifactFailure<ChartArtifact>()) {
+        if (result.error.code !=
+                ChartArtifactDiagnosticCodes.chartNotAttached ||
+            attachmentAttempt == 2) {
+          return result;
+        }
+      }
+      WidgetsBinding.instance.scheduleFrame();
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return result;
+    }
+    return lastResult!;
   }
 
   Future<void> _captureCurrentChart() async {
@@ -246,7 +283,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     final controller = _restoredConfiguration == null
         ? _sourceController
         : _restoredController;
-    final result = await controller.extractArtifact(
+    final result = await _extractAttachedArtifact(
+      controller,
       ChartArtifactExtractOptions(
         artifactId: 'showcase-capture-$sequence',
         createdAt: DateTime.now().toUtc(),
@@ -586,7 +624,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   Widget _buildActiveSurface() {
     final chart = _restoredConfiguration == null
         ? BravenChartPlus(
-            key: ValueKey('generated-chart-${_generated.generation}'),
+            key: const ValueKey('live-generated-chart'),
             bravenChartController: _sourceController,
             title: _generated.title,
             subtitle: _generated.subtitle,
@@ -594,7 +632,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
             series: _generated.series,
           )
         : _restoredConfiguration!.build(
-            key: ValueKey('restored-chart-$_restoredCaptureId'),
+            key: const ValueKey('restored-chart'),
             bravenChartController: _restoredController,
           );
     final table = _activeTable;

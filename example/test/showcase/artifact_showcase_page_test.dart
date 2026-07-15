@@ -72,11 +72,70 @@ void main() {
 
     await tester.pumpWidget(subject());
     await tester.pump();
-    expect(find.byKey(const ValueKey('generated-chart-1')), findsOneWidget);
+    final chartFinder = find.byKey(const ValueKey('live-generated-chart'));
+    final firstChart = tester.widget<BravenChartPlus>(chartFinder);
 
     await tester.tap(find.text('Generate random chart'));
     await tester.pump();
-    expect(find.byKey(const ValueKey('generated-chart-2')), findsOneWidget);
+    final secondChart = tester.widget<BravenChartPlus>(chartFinder);
+    expect(secondChart.title, isNot(firstChart.title));
+    expect(chartFinder, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('remains ready to capture after repeated regeneration', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleCapture(tester);
+
+    for (var generation = 0; generation < 3; generation++) {
+      await tester.tap(find.text('Generate random chart'));
+      await tester.pump();
+      await tester.tap(find.text('Capture current chart'));
+      await _settleCapture(tester);
+    }
+
+    expect(find.textContaining('chart_not_attached'), findsNothing);
+    expect(find.text('3 saved in this demo session'), findsOneWidget);
+    expect(find.text('Preparing data table'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('remains ready when switching between restored captures', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleCapture(tester);
+
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+    await tester.tap(find.text('Generate random chart'));
+    await tester.pump();
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+
+    await tester.tap(find.text('Restore chart'));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('artifact-library-showcase-capture-1')),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Restore chart'));
+    await tester.pump();
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+
+    expect(find.textContaining('chart_not_attached'), findsNothing);
+    expect(find.text('3 saved in this demo session'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
