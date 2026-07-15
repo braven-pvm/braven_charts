@@ -19,6 +19,8 @@ const _capabilities = <(IconData, String)>[
   (Icons.settings_remote, 'Controller API'),
 ];
 
+enum _GalleryMode { curated, full }
+
 /// Gallery page showcasing multiple charts with different themes and complexities.
 class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
@@ -28,10 +30,49 @@ class GalleryPage extends StatefulWidget {
 }
 
 class _GalleryPageState extends State<GalleryPage> {
+  _GalleryMode _mode = _GalleryMode.curated;
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
+    final advancedCards = <Widget>[
+      const BaselineResponseGalleryCard(),
+      const Vo2StageGalleryCard(),
+      const GlowSignalGalleryCard(),
+      const LactateComparisonGalleryCard(),
+      const LiveStreamGalleryCard(),
+      _buildNormalizedCrosshairChart(isDark),
+      _buildAnnotatedChart(isDark),
+      _buildMultiLayerAnalyticsChart(isDark),
+      if (_mode == _GalleryMode.full) ...[
+        _buildNetworkTrafficChart(isDark),
+        _buildFinancialDashboardChart(isDark),
+        _buildTrackingTooltipStyleChart(isDark),
+      ],
+    ];
+    final buildingBlockCards = <Widget>[
+      _buildMonthlyRevenueChart(isDark),
+      _buildTemperatureTrendChart(isDark),
+      _buildQuarterlySalesBarChart(isDark),
+      _buildExperimentScatterChart(isDark),
+      _buildMixedSeriesTypeChart(isDark),
+      _buildMixedInterpolationChart(isDark),
+      _buildThresholdColoringChart(isDark),
+      _buildProfitLossAreaChart(isDark),
+      if (_mode == _GalleryMode.full) ...[
+        _buildStockPriceChart(isDark),
+        _buildSalesComparisonChart(isDark),
+        _buildHeartRateChart(isDark),
+        _buildEnergyConsumptionChart(isDark),
+        _buildWebTrafficChart(isDark),
+        _buildProjectTimelineChart(isDark),
+        _buildCpuUsageChart(isDark),
+        _buildGradientSegmentsChart(isDark),
+        _buildStockGainLossChart(isDark),
+        _buildTemperatureZonesAreaChart(isDark),
+      ],
+    ];
 
     return Scaffold(
       body: CustomScrollView(
@@ -48,41 +89,69 @@ class _GalleryPageState extends State<GalleryPage> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Interactive Flutter charts for live, multi-axis data.',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.7,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 900),
-                        child: Text(
-                          'Explore production-shaped examples across every chart type and the interaction features that define Braven Charts.',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            height: 1.45,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final introduction = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Interactive Flutter charts for live, multi-axis data.',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.7,
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _capabilities
-                            .map(
-                              (capability) => _CapabilityChip(
-                                icon: capability.$1,
-                                label: capability.$2,
+                          const SizedBox(height: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 900),
+                            child: Text(
+                              'Explore production-shaped examples across every chart type and the interaction features that define Braven Charts.',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                height: 1.45,
                               ),
+                            ),
+                          ),
+                        ],
+                      );
+                      final modeControl = _GalleryModeControl(
+                        mode: _mode,
+                        compact: constraints.maxWidth < 1120,
+                        onChanged: (mode) => setState(() => _mode = mode),
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (constraints.maxWidth >= 1120)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: introduction),
+                                const SizedBox(width: 24),
+                                modeControl,
+                              ],
                             )
-                            .toList(),
-                      ),
-                    ],
+                          else ...[
+                            introduction,
+                            const SizedBox(height: 16),
+                            modeControl,
+                          ],
+                          const SizedBox(height: 18),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _capabilities
+                                .map(
+                                  (capability) => _CapabilityChip(
+                                    icon: capability.$1,
+                                    label: capability.$2,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -105,85 +174,48 @@ class _GalleryPageState extends State<GalleryPage> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'ADVANCED COMPOSITIONS',
               title: 'Analysis beyond a single line',
               subtitle:
                   'Baseline fills, stage windows, glow, small multiples, live data, dense overlays, annotations, and styled tracking.',
+              count: advancedCards.length,
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             sliver: SliverGrid(
+              key: ValueKey('gallery-advanced-${_mode.name}'),
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 760,
                 mainAxisExtent: 460,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              delegate: SliverChildListDelegate([
-                const BaselineResponseGalleryCard(),
-                const Vo2StageGalleryCard(),
-                const GlowSignalGalleryCard(),
-                const LactateComparisonGalleryCard(),
-                const LiveStreamGalleryCard(),
-                _buildNormalizedCrosshairChart(isDark),
-                _buildAnnotatedChart(isDark),
-                _buildMultiLayerAnalyticsChart(isDark),
-                _buildNetworkTrafficChart(isDark),
-                _buildFinancialDashboardChart(isDark),
-                _buildTrackingTooltipStyleChart(isDark),
-              ]),
+              delegate: SliverChildListDelegate(advancedCards),
             ),
           ),
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPES AND STYLING',
               title: 'The building blocks',
               subtitle:
                   'Focused examples for chart types, interpolation, segment styling, thresholds, dashboards, and domain-specific data.',
+              count: buildingBlockCards.length,
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
             sliver: SliverGrid(
+              key: ValueKey('gallery-building-blocks-${_mode.name}'),
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 760,
                 mainAxisExtent: 420,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              delegate: SliverChildListDelegate([
-                _buildMonthlyRevenueChart(isDark),
-                _buildTemperatureTrendChart(isDark),
-                _buildQuarterlySalesBarChart(isDark),
-                _buildExperimentScatterChart(isDark),
-                _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
-                _buildMixedInterpolationChart(
-                  isDark,
-                ), // Multiple interpolation types on one chart
-                _buildStockPriceChart(isDark),
-                _buildSalesComparisonChart(isDark),
-                _buildHeartRateChart(isDark),
-                _buildEnergyConsumptionChart(isDark), // Energy usage pattern
-                _buildWebTrafficChart(isDark), // Website traffic
-                _buildProjectTimelineChart(isDark), // Project progress
-                _buildCpuUsageChart(isDark), // Real-time CPU monitoring
-                // Segment Colors Showcases - Lines
-                _buildThresholdColoringChart(isDark), // Color by Y threshold
-                _buildGradientSegmentsChart(
-                  isDark,
-                ), // Rainbow gradient segments
-                _buildStockGainLossChart(isDark), // Green/red for gain/loss
-                // Segment Colors Showcases - Areas
-                _buildTemperatureZonesAreaChart(
-                  isDark,
-                ), // Area with hot/cold zones
-                _buildProfitLossAreaChart(
-                  isDark,
-                ), // Area with profit/loss coloring
-              ]),
+              delegate: SliverChildListDelegate(buildingBlockCards),
             ),
           ),
         ],
@@ -2558,16 +2590,79 @@ class _CapabilityChip extends StatelessWidget {
   }
 }
 
+class _GalleryModeControl extends StatelessWidget {
+  const _GalleryModeControl({
+    required this.mode,
+    required this.onChanged,
+    this.compact = false,
+  });
+
+  final _GalleryMode mode;
+  final ValueChanged<_GalleryMode> onChanged;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!compact) ...[
+          Text(
+            'Gallery depth',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+        SegmentedButton<_GalleryMode>(
+          key: const ValueKey('gallery-mode-control'),
+          segments: const [
+            ButtonSegment(
+              value: _GalleryMode.curated,
+              icon: Icon(Icons.auto_awesome_outlined, size: 17),
+              label: Text('Curated highlights'),
+            ),
+            ButtonSegment(
+              value: _GalleryMode.full,
+              icon: Icon(Icons.apps_outlined, size: 17),
+              label: Text('Full catalog'),
+            ),
+          ],
+          selected: {mode},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) => onChanged(selection.first),
+        ),
+        if (!compact) ...[
+          const SizedBox(height: 6),
+          Text(
+            mode == _GalleryMode.curated
+                ? '17 representative compositions'
+                : '30 examples across the complete catalog',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _GallerySectionHeader extends StatelessWidget {
   const _GallerySectionHeader({
     required this.eyebrow,
     required this.title,
     required this.subtitle,
+    this.count,
   });
 
   final String eyebrow;
   final String title;
   final String subtitle;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -2580,13 +2675,39 @@ class _GallerySectionHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              eyebrow,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
-              ),
+            Row(
+              children: [
+                Text(
+                  eyebrow,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                if (count != null) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.55,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$count examples',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 6),
             Text(

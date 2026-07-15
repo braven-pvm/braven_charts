@@ -10,13 +10,13 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-/// Demonstrates complete series, label, segment, and point styling.
-///
-/// Features:
-/// - Line charts: segmentStyle for per-segment colors
-/// - Area charts: segmentStyle for stroke line colors
-/// - Scatter charts: pointStyle for per-point colors/sizes
-/// - Bar charts: pointStyle for per-bar colors
+enum _StylingPattern { appearance, inlineLabels, pointLabels, conditional }
+
+enum _AppearanceType { line, area }
+
+enum _ConditionalMode { threshold, range, indices, gradient }
+
+/// A focused workbench for every public series-level styling layer.
 class SeriesStylingPage extends StatefulWidget {
   const SeriesStylingPage({super.key});
 
@@ -25,96 +25,87 @@ class SeriesStylingPage extends StatefulWidget {
 }
 
 class _SeriesStylingPageState extends State<SeriesStylingPage> {
+  static const _indigo = Color(0xFF5D5FEF);
+  static const _red = Color(0xFFEF445C);
+  static const _green = Color(0xFF0EA888);
+  static const _orange = Color(0xFFF59E0B);
+
   final ChartOptionsController _optionsController = ChartOptionsController();
 
-  // Styling options
-  ChartType _chartType = ChartType.line;
-  StylingMode _stylingMode = StylingMode.threshold;
-  double _threshold = 70.0;
-  double _rangeStart = 20.0;
-  double _rangeEnd = 60.0;
-  bool _useBezier = false;
-  Color _highlightColor = Colors.red;
+  _StylingPattern _selectedPattern = _StylingPattern.appearance;
 
-  // Whole-series appearance and inline label options.
-  double _lineGlow = 0.0;
-  SeriesLabelPosition _labelPosition = SeriesLabelPosition.right;
-  double _labelOffsetY = 0.0;
-  double _labelFontSize = 11.0;
-  FontWeight _labelFontWeight = FontWeight.w500;
-  bool _customLabelColor = false;
-  Color _labelColor = Colors.white;
-  bool _labelBackground = false;
-  Color _labelBackgroundColor = Colors.white;
-  double _labelBackgroundOpacity = 0.85;
-  double? _labelCornerRadius;
-  double _labelPadH = 4.0;
-  double _labelPadV = 2.0;
-  bool _labelBorder = false;
-  Color _labelBorderColor = Colors.black87;
-  double _labelBorderWidth = 1.0;
+  _AppearanceType _appearanceType = _AppearanceType.line;
+  double _strokeWidth = 2.5;
+  double _lineGlow = 4;
+  double _fillOpacity = 0.2;
+  LineInterpolation _interpolation = LineInterpolation.monotone;
+  bool _showMarkers = false;
+  DataPointMarkerStyle _markerStyle = DataPointMarkerStyle.filled;
 
-  // Per-data-point label options.
-  bool _showDataPointLabels = true;
-  DataPointLabelPosition _dataPointLabelPosition = DataPointLabelPosition.above;
-  double _dataPointLabelFontSize = 10.0;
-  FontWeight _dataPointLabelFontWeight = FontWeight.w600;
-  bool _dataPointLabelShowUnit = false;
-  DataPointMarkerStyle _dataPointMarkerStyle = DataPointMarkerStyle.filled;
-  bool _dataPointLabelBackground = true;
-  Color _dataPointLabelBackgroundColor = Colors.white;
-  double _dataPointLabelBackgroundOpacity = 0.88;
-  bool _customDataPointLabelColor = false;
-  Color _dataPointLabelColor = Colors.black87;
-  bool _customDataPointLabelFormatter = false;
+  SeriesLabelPosition _inlinePosition = SeriesLabelPosition.right;
+  double _inlineOffsetY = 0;
+  double _inlineFontSize = 12;
+  FontWeight _inlineFontWeight = FontWeight.w600;
+  bool _inlineBackground = true;
+  double _inlineBackgroundOpacity = 0.9;
+  bool _inlineBorder = false;
 
-  // Generated data
-  late List<ChartDataPoint> _data;
+  bool _showPointLabels = true;
+  DataPointLabelPosition _pointLabelPosition = DataPointLabelPosition.above;
+  double _pointLabelFontSize = 10;
+  FontWeight _pointLabelFontWeight = FontWeight.w600;
+  bool _pointLabelShowUnit = true;
+  bool _pointLabelBackground = true;
+  double _pointLabelBackgroundOpacity = 0.88;
+  bool _customPointFormatter = false;
+  double _pointMarkerRadius = 4;
+  DataPointMarkerStyle _pointMarkerStyle = DataPointMarkerStyle.hollow;
 
-  static const _seriesPoints = [
-    ChartDataPoint(x: 0, y: 120),
-    ChartDataPoint(x: 10, y: 145),
-    ChartDataPoint(x: 20, y: 132),
-    ChartDataPoint(x: 30, y: 168),
-    ChartDataPoint(x: 40, y: 155),
-    ChartDataPoint(x: 50, y: 178),
-    ChartDataPoint(x: 60, y: 161),
-  ];
+  ChartType _conditionalType = ChartType.line;
+  _ConditionalMode _conditionalMode = _ConditionalMode.threshold;
+  double _threshold = 70;
+  double _rangeStart = 20;
+  double _rangeEnd = 60;
+  Color _highlightColor = _red;
 
-  static const _comparisonPoints = [
-    ChartDataPoint(x: 0, y: 80),
-    ChartDataPoint(x: 10, y: 95),
-    ChartDataPoint(x: 20, y: 110),
-    ChartDataPoint(x: 30, y: 98),
-    ChartDataPoint(x: 40, y: 115),
-    ChartDataPoint(x: 50, y: 102),
-    ChartDataPoint(x: 60, y: 120),
-  ];
-
-  static const _dataPointLabelPoints = [
-    ChartDataPoint(x: 0, y: 3.4),
-    ChartDataPoint(x: 10, y: 7.2),
-    ChartDataPoint(x: 20, y: 12.8),
-    ChartDataPoint(x: 30, y: 18.5),
-    ChartDataPoint(x: 40, y: 22.1),
-    ChartDataPoint(x: 50, y: 16.7),
-    ChartDataPoint(x: 60, y: 9.3),
-  ];
+  late final List<ChartDataPoint> _appearancePrimary;
+  late final List<ChartDataPoint> _appearanceComparison;
+  late final List<ChartDataPoint> _labelPoints;
+  late final List<ChartDataPoint> _conditionalData;
 
   @override
   void initState() {
     super.initState();
-    _regenerateData();
-  }
-
-  void _regenerateData() {
-    setState(() {
-      // Generate sine wave data
-      _data = List.generate(80, (i) {
-        final x = i.toDouble();
-        final y = 50 + 40 * math.sin(x * 0.1);
-        return ChartDataPoint(x: x, y: y);
-      });
+    _appearancePrimary = const [
+      ChartDataPoint(x: 0, y: 120),
+      ChartDataPoint(x: 10, y: 145),
+      ChartDataPoint(x: 20, y: 132),
+      ChartDataPoint(x: 30, y: 168),
+      ChartDataPoint(x: 40, y: 155),
+      ChartDataPoint(x: 50, y: 178),
+      ChartDataPoint(x: 60, y: 161),
+    ];
+    _appearanceComparison = const [
+      ChartDataPoint(x: 0, y: 82),
+      ChartDataPoint(x: 10, y: 96),
+      ChartDataPoint(x: 20, y: 110),
+      ChartDataPoint(x: 30, y: 98),
+      ChartDataPoint(x: 40, y: 116),
+      ChartDataPoint(x: 50, y: 103),
+      ChartDataPoint(x: 60, y: 121),
+    ];
+    _labelPoints = const [
+      ChartDataPoint(x: 0, y: 3.4),
+      ChartDataPoint(x: 10, y: 7.2),
+      ChartDataPoint(x: 20, y: 12.8),
+      ChartDataPoint(x: 30, y: 18.5),
+      ChartDataPoint(x: 40, y: 22.1),
+      ChartDataPoint(x: 50, y: 16.7),
+      ChartDataPoint(x: 60, y: 9.3),
+    ];
+    _conditionalData = List.generate(80, (index) {
+      final x = index.toDouble();
+      return ChartDataPoint(x: x, y: 50 + 40 * math.sin(x * 0.1));
     });
   }
 
@@ -129,925 +120,1059 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
     return ChartPageLayout(
       title: 'Series Styling',
       subtitle:
-          'Configure series appearance, inline and data-point labels, conditional segments, and individual points',
-      optionsChildren: _buildOptionsChildren(),
-      chart: _buildChart(),
+          'Control whole series, inline labels, data-point labels, and conditional segments or points',
+      optionsChildren: _buildOptions(),
+      chart: _buildWorkspace(),
       bottomPanel: _buildStatusPanel(),
     );
   }
 
-  List<Widget> _buildOptionsChildren() {
-    return [
-      // Standard display options
-      StandardChartOptions(controller: _optionsController),
+  Widget _buildWorkspace() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final heading = Text(
+          'Choose a styling layer',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        );
+        final guide = _StylingGuide(
+          key: const ValueKey('series-styling-guide'),
+          pattern: _selectedPattern,
+        );
 
-      OptionSection(
-        title: 'Series Appearance',
-        icon: Icons.auto_awesome_outlined,
-        children: [
-          SliderOption(
-            label: 'Glow Radius',
-            value: _lineGlow,
-            min: 0.0,
-            max: 12.0,
-            divisions: 12,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _lineGlow = value),
-          ),
-        ],
-      ),
-
-      OptionSection(
-        title: 'Inline Labels',
-        icon: Icons.label_outline,
-        children: [
-          EnumOption<SeriesLabelPosition>(
-            label: 'Position',
-            value: _labelPosition,
-            values: SeriesLabelPosition.values,
-            labelBuilder: (position) => position.name,
-            onChanged: (value) => setState(() => _labelPosition = value),
-          ),
-          SliderOption(
-            label: 'Offset Y',
-            value: _labelOffsetY,
-            min: -40.0,
-            max: 40.0,
-            divisions: 16,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _labelOffsetY = value),
-          ),
-          SliderOption(
-            label: 'Font Size',
-            value: _labelFontSize,
-            min: 8.0,
-            max: 18.0,
-            divisions: 10,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _labelFontSize = value),
-          ),
-          EnumOption<FontWeight>(
-            label: 'Font Weight',
-            value: _labelFontWeight,
-            values: const [
-              FontWeight.w400,
-              FontWeight.w500,
-              FontWeight.w600,
-              FontWeight.w700,
+        if (constraints.maxHeight < 420) {
+          return ListView(
+            children: [
+              heading,
+              const SizedBox(height: 8),
+              SizedBox(height: 172, child: _buildPatternRibbon()),
+              const SizedBox(height: 16),
+              guide,
+              const SizedBox(height: 16),
+              SizedBox(height: 430, child: _buildMainStage()),
             ],
-            labelBuilder: (weight) => switch (weight) {
-              FontWeight.w400 => '400',
-              FontWeight.w500 => '500',
-              FontWeight.w600 => '600',
-              FontWeight.w700 => '700',
-              _ => weight.toString(),
-            },
-            onChanged: (value) => setState(() => _labelFontWeight = value),
-          ),
-          BoolOption(
-            label: 'Custom Text Color',
-            value: _customLabelColor,
-            onChanged: (value) => setState(() => _customLabelColor = value),
-          ),
-          if (_customLabelColor)
-            ColorOption(
-              label: 'Text Color',
-              value: _labelColor,
-              colors: const [
-                Colors.white,
-                Colors.black87,
-                Color(0xFF6366F1),
-                Color(0xFFEF4444),
-                Color(0xFF10B981),
-                Color(0xFFF59E0B),
-              ],
-              onChanged: (color) => setState(() => _labelColor = color),
-            ),
-          BoolOption(
-            label: 'Background Pill',
-            value: _labelBackground,
-            onChanged: (value) => setState(() => _labelBackground = value),
-          ),
-          if (_labelBackground) ...[
-            ColorOption(
-              label: 'Background Color',
-              value: _labelBackgroundColor,
-              colors: const [
-                Colors.white,
-                Color(0xFFF3F4F6),
-                Color(0xFFFEF9C3),
-                Color(0xFFDCFCE7),
-                Color(0xFFDBEAFE),
-                Colors.black,
-              ],
-              onChanged: (color) =>
-                  setState(() => _labelBackgroundColor = color),
-            ),
-            SliderOption(
-              label: 'Opacity',
-              value: _labelBackgroundOpacity,
-              min: 0.0,
-              max: 1.0,
-              divisions: 10,
-              decimalPlaces: 1,
-              onChanged: (value) =>
-                  setState(() => _labelBackgroundOpacity = value),
-            ),
-            SliderOption(
-              label: 'Corner Radius',
-              value: _labelCornerRadius ?? -1.0,
-              min: -1.0,
-              max: 20.0,
-              divisions: 21,
-              suffix: 'px',
-              decimalPlaces: 0,
-              onChanged: (value) =>
-                  setState(() => _labelCornerRadius = value < 0 ? null : value),
-            ),
-            SliderOption(
-              label: 'Horizontal Padding',
-              value: _labelPadH,
-              min: 0.0,
-              max: 16.0,
-              divisions: 16,
-              suffix: 'px',
-              decimalPlaces: 0,
-              onChanged: (value) => setState(() => _labelPadH = value),
-            ),
-            SliderOption(
-              label: 'Vertical Padding',
-              value: _labelPadV,
-              min: 0.0,
-              max: 12.0,
-              divisions: 12,
-              suffix: 'px',
-              decimalPlaces: 0,
-              onChanged: (value) => setState(() => _labelPadV = value),
-            ),
-            BoolOption(
-              label: 'Border',
-              value: _labelBorder,
-              onChanged: (value) => setState(() => _labelBorder = value),
-            ),
-            if (_labelBorder) ...[
-              ColorOption(
-                label: 'Border Color',
-                value: _labelBorderColor,
-                colors: const [
-                  Colors.black87,
-                  Colors.white,
-                  Color(0xFF6366F1),
-                  Color(0xFFEF4444),
-                  Color(0xFF10B981),
-                  Color(0xFFF59E0B),
-                ],
-                onChanged: (color) => setState(() => _labelBorderColor = color),
-              ),
-              SliderOption(
-                label: 'Border Width',
-                value: _labelBorderWidth,
-                min: 0.5,
-                max: 4.0,
-                divisions: 7,
-                suffix: 'px',
-                decimalPlaces: 1,
-                onChanged: (value) => setState(() => _labelBorderWidth = value),
-              ),
-            ],
-          ],
-        ],
-      ),
+          );
+        }
 
-      OptionSection(
-        title: 'Data Point Labels',
-        icon: Icons.pin_outlined,
-        children: [
-          BoolOption(
-            label: 'Show Labels',
-            value: _showDataPointLabels,
-            onChanged: (value) => setState(() => _showDataPointLabels = value),
-          ),
-          EnumOption<DataPointLabelPosition>(
-            label: 'Position',
-            value: _dataPointLabelPosition,
-            values: DataPointLabelPosition.values,
-            labelBuilder: (position) => position.name,
-            onChanged: (value) =>
-                setState(() => _dataPointLabelPosition = value),
-          ),
-          SliderOption(
-            label: 'Font Size',
-            value: _dataPointLabelFontSize,
-            min: 7.0,
-            max: 16.0,
-            divisions: 9,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) =>
-                setState(() => _dataPointLabelFontSize = value),
-          ),
-          EnumOption<FontWeight>(
-            label: 'Font Weight',
-            value: _dataPointLabelFontWeight,
-            values: const [
-              FontWeight.w400,
-              FontWeight.w500,
-              FontWeight.w600,
-              FontWeight.w700,
-            ],
-            labelBuilder: (weight) => switch (weight) {
-              FontWeight.w400 => '400',
-              FontWeight.w500 => '500',
-              FontWeight.w600 => '600',
-              FontWeight.w700 => '700',
-              _ => weight.toString(),
-            },
-            onChanged: (value) =>
-                setState(() => _dataPointLabelFontWeight = value),
-          ),
-          EnumOption<DataPointMarkerStyle>(
-            label: 'Marker Style',
-            value: _dataPointMarkerStyle,
-            values: DataPointMarkerStyle.values,
-            labelBuilder: (style) => style.name,
-            onChanged: (value) => setState(() => _dataPointMarkerStyle = value),
-          ),
-          BoolOption(
-            label: 'Show Unit',
-            value: _dataPointLabelShowUnit,
-            onChanged: (value) =>
-                setState(() => _dataPointLabelShowUnit = value),
-          ),
-          BoolOption(
-            label: 'Background Pill',
-            value: _dataPointLabelBackground,
-            onChanged: (value) =>
-                setState(() => _dataPointLabelBackground = value),
-          ),
-          if (_dataPointLabelBackground) ...[
-            ColorOption(
-              label: 'Background Color',
-              value: _dataPointLabelBackgroundColor,
-              colors: const [
-                Colors.white,
-                Color(0xFFF3F4F6),
-                Color(0xFFFEF9C3),
-                Color(0xFFDCFCE7),
-                Color(0xFFDBEAFE),
-                Color(0xFFFFE4E6),
-                Colors.black,
-              ],
-              onChanged: (color) =>
-                  setState(() => _dataPointLabelBackgroundColor = color),
-            ),
-            SliderOption(
-              label: 'Background Opacity',
-              value: _dataPointLabelBackgroundOpacity,
-              min: 0.0,
-              max: 1.0,
-              divisions: 10,
-              decimalPlaces: 1,
-              onChanged: (value) =>
-                  setState(() => _dataPointLabelBackgroundOpacity = value),
-            ),
-          ],
-          BoolOption(
-            label: 'Custom Text Color',
-            value: _customDataPointLabelColor,
-            onChanged: (value) =>
-                setState(() => _customDataPointLabelColor = value),
-          ),
-          if (_customDataPointLabelColor)
-            ColorOption(
-              label: 'Text Color',
-              value: _dataPointLabelColor,
-              colors: const [
-                Colors.black87,
-                Colors.white,
-                Color(0xFF6366F1),
-                Color(0xFFEF4444),
-                Color(0xFF10B981),
-                Color(0xFFF59E0B),
-                Color(0xFF0EA5E9),
-              ],
-              onChanged: (color) =>
-                  setState(() => _dataPointLabelColor = color),
-            ),
-          BoolOption(
-            label: 'Custom Formatter',
-            subtitle: 'y.toStringAsFixed(1) + "!"',
-            value: _customDataPointLabelFormatter,
-            onChanged: (value) =>
-                setState(() => _customDataPointLabelFormatter = value),
-          ),
-        ],
-      ),
-
-      // Chart type selector
-      OptionSection(
-        title: 'Conditional Styling',
-        icon: Icons.format_color_fill_outlined,
-        children: [
-          EnumOption<ChartType>(
-            label: 'Type',
-            value: _chartType,
-            values: ChartType.values,
-            onChanged: (value) => setState(() => _chartType = value),
-          ),
-          if (_chartType == ChartType.line || _chartType == ChartType.area)
-            BoolOption(
-              label: 'Use Bezier curves',
-              value: _useBezier,
-              onChanged: (value) => setState(() => _useBezier = value),
-            ),
-          EnumOption<StylingMode>(
-            label: 'Mode',
-            value: _stylingMode,
-            values: StylingMode.values,
-            onChanged: (value) => setState(() => _stylingMode = value),
-          ),
-          ColorOption(
-            label: 'Highlight Color',
-            value: _highlightColor,
-            colors: const [
-              Colors.red,
-              Colors.orange,
-              Colors.amber,
-              Colors.green,
-              Colors.teal,
-              Colors.blue,
-              Colors.purple,
-              Colors.pink,
-            ],
-            onChanged: (value) => setState(() => _highlightColor = value),
-          ),
-        ],
-      ),
-
-      // Mode-specific options
-      if (_stylingMode == StylingMode.threshold)
-        OptionSection(
-          title: 'Threshold Options',
-          initiallyExpanded: false,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SliderOption(
-              label: 'Y Threshold',
-              value: _threshold,
-              min: 10.0,
-              max: 90.0,
-              divisions: 16,
-              onChanged: (value) => setState(() => _threshold = value),
-            ),
-          ],
-        ),
-
-      if (_stylingMode == StylingMode.range)
-        OptionSection(
-          title: 'Range Options',
-          initiallyExpanded: false,
-          children: [
-            SliderOption(
-              label: 'X Range Start',
-              value: _rangeStart,
-              min: 0.0,
-              max: 70.0,
-              divisions: 14,
-              onChanged: (value) => setState(() {
-                _rangeStart = value;
-                if (_rangeEnd < value) _rangeEnd = value + 10;
-              }),
-            ),
-            SliderOption(
-              label: 'X Range End',
-              value: _rangeEnd,
-              min: 10.0,
-              max: 80.0,
-              divisions: 14,
-              onChanged: (value) => setState(() {
-                _rangeEnd = value;
-                if (_rangeStart > value) _rangeStart = value - 10;
-              }),
-            ),
-          ],
-        ),
-
-      // Actions
-      OptionSection(
-        title: 'Actions',
-        children: [
-          ActionButton(
-            label: 'Regenerate Data',
-            icon: Icons.refresh,
-            onPressed: _regenerateData,
-          ),
-        ],
-      ),
-    ];
-  }
-
-  Widget _buildChart() {
-    return ListenableBuilder(
-      listenable: _optionsController,
-      builder: (context, _) {
-        return ListView(
-          key: const ValueKey('series-styling-examples'),
-          padding: const EdgeInsets.only(bottom: 8),
-          children: [
-            const _StylingOverview(),
+            heading,
+            const SizedBox(height: 8),
+            SizedBox(height: 172, child: _buildPatternRibbon()),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 360,
-              child: ChartCard(
-                title: 'Whole-series appearance',
-                subtitle:
-                    'Glow and fully configurable labels remain anchored to each series',
-                child: _buildSeriesAppearanceChart(),
-              ),
-            ),
+            guide,
             const SizedBox(height: 16),
-            SizedBox(
-              height: 360,
-              child: ChartCard(
-                title: 'Data-point labels',
-                subtitle:
-                    'Per-point values with configurable position, unit, marker, formatter, type, and background',
-                child: _buildDataPointLabelsChart(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 380,
-              child: ChartCard(
-                title: 'Conditional segment and point styling',
-                subtitle:
-                    '${_chartType.name.toUpperCase()} · ${_getChartSubtitle()}',
-                child: BravenChartPlus(
-                  series: [_buildSeries()],
-                  theme: _optionsController.theme,
-                  showLegend: _optionsController.showLegend,
-                  showXScrollbar: _optionsController.showXScrollbar,
-                  showYScrollbar: _optionsController.showYScrollbar,
-                  scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
-                    autoHide: false,
-                  ),
-                  xAxisConfig: XAxisConfig(
-                    label: 'Sample',
-                    showAxisLine: _optionsController.showAxisLines,
-                  ),
-                  yAxis: YAxisConfig(
-                    position: YAxisPosition.left,
-                    label: 'Value',
-                    showAxisLine: _optionsController.showAxisLines,
-                  ),
-                  interactionConfig: InteractionConfig(
-                    enableZoom: _optionsController.enableZoom,
-                    enablePan: _optionsController.enablePan,
-                    tooltip: const TooltipConfig(),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: _buildMainStage()),
           ],
         );
       },
     );
   }
 
-  Widget _buildSeriesAppearanceChart() {
+  Widget _buildPatternRibbon() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 12.0;
+        final width = constraints.maxWidth >= 920
+            ? (constraints.maxWidth - gap * 3) / 4
+            : 200.0;
+        return SingleChildScrollView(
+          key: const ValueKey('series-styling-ribbon'),
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (
+                var index = 0;
+                index < _StylingPattern.values.length;
+                index++
+              ) ...[
+                if (index > 0) const SizedBox(width: gap),
+                SizedBox(
+                  width: width,
+                  child: _StylingPatternCard(
+                    key: ValueKey(
+                      'series-styling-pattern-${_StylingPattern.values[index].name}',
+                    ),
+                    pattern: _StylingPattern.values[index],
+                    selected: _selectedPattern == _StylingPattern.values[index],
+                    onTap: () => _selectPattern(_StylingPattern.values[index]),
+                    chart: _buildPatternPreview(_StylingPattern.values[index]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPatternPreview(_StylingPattern pattern) {
     return BravenChartPlus(
-      series: [
-        LineChartSeries(
-          id: 'power',
-          name: 'Power',
-          points: _seriesPoints,
-          color: const Color(0xFF6366F1),
-          strokeWidth: 2.5,
-          lineGlow: _lineGlow,
-          inlineLabel: _buildLabelConfig('Power', const Color(0xFF6366F1)),
-        ),
-        LineChartSeries(
-          id: 'heart-rate',
-          name: 'Heart rate',
-          points: _comparisonPoints,
-          color: const Color(0xFFEF4444),
-          strokeWidth: 2,
-          lineGlow: _lineGlow,
-          inlineLabel: _buildLabelConfig('Heart rate', const Color(0xFFEF4444)),
-        ),
-      ],
-      theme: _optionsController.theme,
-      showLegend: _optionsController.showLegend,
-      xAxisConfig: const XAxisConfig(label: 'Time (min)', min: -5, max: 65),
+      key: ValueKey('series-styling-preview-${pattern.name}'),
+      series: _seriesForPattern(pattern, preview: true),
+      xAxisConfig: const XAxisConfig(
+        showTickLabels: false,
+        showTicks: false,
+        showAxisLine: true,
+        minHeight: 8,
+        maxHeight: 8,
+      ),
       yAxis: YAxisConfig(
         position: YAxisPosition.left,
-        label: 'Value',
-        min: 60,
-        max: 200,
+        showTickLabels: false,
+        showTicks: false,
+        maxWidth: 14,
       ),
-      interactionConfig: InteractionConfig(
-        enableZoom: _optionsController.enableZoom,
-        enablePan: _optionsController.enablePan,
-        tooltip: const TooltipConfig(),
+      grid: const GridConfig(horizontal: true, vertical: false),
+      showLegend: false,
+      interactionConfig: const InteractionConfig(
+        enableZoom: false,
+        enablePan: false,
       ),
     );
   }
 
-  Widget _buildDataPointLabelsChart() {
-    return BravenChartPlus(
-      series: [
-        LineChartSeries(
-          id: 'lactate-labels',
-          name: 'Lactate',
-          points: _dataPointLabelPoints,
-          color: const Color(0xFF6366F1),
-          strokeWidth: 2,
-          showDataPointMarkers: true,
-          dataPointMarkerRadius: 4,
-          dataPointMarkerStyle: _dataPointMarkerStyle,
-          unit: 'mmol/L',
-          dataPointLabels: DataPointLabelConfig(
-            show: _showDataPointLabels,
-            position: _dataPointLabelPosition,
-            fontSize: _dataPointLabelFontSize,
-            fontWeight: _dataPointLabelFontWeight,
-            showUnit: _dataPointLabelShowUnit,
-            labelColor: _customDataPointLabelColor
-                ? _dataPointLabelColor
+  Widget _buildMainStage() {
+    return ChartCard(
+      key: const ValueKey('series-styling-main-stage'),
+      title: _stageTitle(_selectedPattern),
+      subtitle: _stageSubtitle(_selectedPattern),
+      child: ListenableBuilder(
+        listenable: _optionsController,
+        builder: (context, _) => BravenChartPlus(
+          key: ValueKey('series-styling-main-chart-${_selectedPattern.name}'),
+          series: _seriesForPattern(_selectedPattern),
+          theme: _optionsController.theme,
+          showLegend: _optionsController.showLegend,
+          showXScrollbar: _optionsController.showXScrollbar,
+          showYScrollbar: _optionsController.showYScrollbar,
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
+          xAxisConfig: XAxisConfig(
+            label: _selectedPattern == _StylingPattern.pointLabels
+                ? 'Time'
+                : 'Sample',
+            unit: _selectedPattern == _StylingPattern.pointLabels
+                ? 'min'
                 : null,
-            formatter: _customDataPointLabelFormatter
-                ? (point) => '${point.y.toStringAsFixed(1)}!'
+            min: -5,
+            max: _selectedPattern == _StylingPattern.conditional ? 84 : 65,
+            renderMin: 0,
+            renderMax: _selectedPattern == _StylingPattern.conditional
+                ? 79
+                : 60,
+            showAxisLine: _optionsController.showAxisLines,
+          ),
+          yAxis: YAxisConfig(
+            position: YAxisPosition.left,
+            label: _selectedPattern == _StylingPattern.pointLabels
+                ? 'Lactate'
+                : 'Value',
+            unit: _selectedPattern == _StylingPattern.pointLabels
+                ? 'mmol/L'
                 : null,
-            background: _dataPointLabelBackground
-                ? _dataPointLabelBackgroundColor
-                : null,
-            backgroundOpacity: _dataPointLabelBackgroundOpacity,
+            min: _selectedPattern == _StylingPattern.pointLabels ? 0 : null,
+            max: _selectedPattern == _StylingPattern.pointLabels ? 28 : null,
+            showAxisLine: _optionsController.showAxisLines,
+          ),
+          grid: GridConfig(
+            horizontal: _optionsController.showGrid,
+            vertical: _optionsController.showGrid,
+          ),
+          interactionConfig: InteractionConfig(
+            enableZoom: _optionsController.enableZoom,
+            enablePan: _optionsController.enablePan,
+            crosshair: CrosshairConfig.tracking(interpolate: true),
+            tooltip: const TooltipConfig(enabled: true),
           ),
         ),
-      ],
-      theme: _optionsController.theme,
-      showLegend: _optionsController.showLegend,
-      xAxisConfig: const XAxisConfig(label: 'Time (min)', min: -5, max: 65),
-      yAxis: YAxisConfig(
-        position: YAxisPosition.left,
-        label: 'Lactate',
-        unit: 'mmol/L',
-        min: 0,
-        max: 28,
-      ),
-      interactionConfig: InteractionConfig(
-        enableZoom: _optionsController.enableZoom,
-        enablePan: _optionsController.enablePan,
-        tooltip: const TooltipConfig(),
       ),
     );
   }
 
-  SeriesInlineLabelConfig _buildLabelConfig(String text, Color seriesColor) {
-    return SeriesInlineLabelConfig(
-      text: text,
-      position: _labelPosition,
-      offsetY: _labelOffsetY,
-      color: _customLabelColor ? _labelColor : seriesColor,
-      fontSize: _labelFontSize,
-      fontWeight: _labelFontWeight,
-      background: _labelBackground
-          ? SeriesLabelBackground(
-              color: _labelBackgroundColor.withValues(
-                alpha: _labelBackgroundOpacity,
-              ),
-              cornerRadius: _labelCornerRadius,
-              padding: EdgeInsets.symmetric(
-                horizontal: _labelPadH,
-                vertical: _labelPadV,
-              ),
-              borderColor: _labelBorder ? _labelBorderColor : null,
-              borderWidth: _labelBorderWidth,
-            )
-          : null,
-    );
-  }
-
-  ChartSeries _buildSeries() {
-    switch (_chartType) {
-      case ChartType.line:
-        return _buildLineSeries();
-      case ChartType.area:
-        return _buildAreaSeries();
-      case ChartType.scatter:
-        return _buildScatterSeries();
-      case ChartType.bar:
-        return _buildBarSeries();
-    }
-  }
-
-  LineChartSeries _buildLineSeries() {
-    var series = LineChartSeries(
-      id: 'line-styled',
-      name: 'Styled Line',
-      points: _data,
-      color: Colors.blue,
-      interpolation: _useBezier
-          ? LineInterpolation.bezier
-          : LineInterpolation.linear,
-      strokeWidth: 2.5,
-      showDataPointMarkers: _optionsController.showDataMarkers,
-    );
-
-    switch (_stylingMode) {
-      case StylingMode.threshold:
-        series = series.withColorWhere(
-          (point) => point.y > _threshold,
-          _highlightColor,
-        );
-      case StylingMode.range:
-        series = series.withStyleInRange(
-          _rangeStart,
-          _rangeEnd,
-          SegmentStyle.color(_highlightColor),
-        );
-      case StylingMode.indices:
-        // Highlight every 10th segment
-        final indices = <int, Color>{};
-        for (int i = 0; i < _data.length - 1; i += 10) {
-          indices[i] = _highlightColor;
-          if (i + 1 < _data.length - 1) indices[i + 1] = _highlightColor;
-        }
-        series = series.withSegmentColors(indices);
-      case StylingMode.gradient:
-        // Apply gradient-like coloring based on Y position
-        series = series.withStyleWhere(
-          (point) => point.y > 70,
-          const SegmentStyle(color: Colors.red, strokeWidth: 3.5),
-        );
-        series = series.withStyleWhere(
-          (point) => point.y < 30,
-          const SegmentStyle(color: Colors.blue, strokeWidth: 3.5),
-        );
-    }
-
-    return series;
-  }
-
-  AreaChartSeries _buildAreaSeries() {
-    var series = AreaChartSeries(
-      id: 'area-styled',
-      name: 'Styled Area',
-      points: _data,
-      color: Colors.green,
-      interpolation: _useBezier
-          ? LineInterpolation.bezier
-          : LineInterpolation.linear,
-      strokeWidth: 2.5,
-      fillOpacity: 0.3,
-    );
-
-    switch (_stylingMode) {
-      case StylingMode.threshold:
-        series = series.withColorWhere(
-          (point) => point.y > _threshold,
-          _highlightColor,
-        );
-      case StylingMode.range:
-        series = series.withStyleInRange(
-          _rangeStart,
-          _rangeEnd,
-          SegmentStyle.color(_highlightColor),
-        );
-      case StylingMode.indices:
-        final indices = <int, Color>{};
-        for (int i = 0; i < _data.length - 1; i += 10) {
-          indices[i] = _highlightColor;
-        }
-        series = series.withSegmentColors(indices);
-      case StylingMode.gradient:
-        series = series.withColorWhere((point) => point.y > 70, Colors.red);
-    }
-
-    return series;
-  }
-
-  ScatterChartSeries _buildScatterSeries() {
-    // For scatter, we apply pointStyle directly
-    List<ChartDataPoint> styledPoints;
-
-    switch (_stylingMode) {
-      case StylingMode.threshold:
-        styledPoints = _data.map((point) {
-          if (point.y > _threshold) {
-            return point.copyWith(
-              pointStyle: PointStyle(color: _highlightColor, size: 8.0),
-            );
-          }
-          return point;
-        }).toList();
-      case StylingMode.range:
-        styledPoints = _data.map((point) {
-          if (point.x >= _rangeStart && point.x < _rangeEnd) {
-            return point.copyWith(
-              pointStyle: PointStyle(color: _highlightColor, size: 8.0),
-            );
-          }
-          return point;
-        }).toList();
-      case StylingMode.indices:
-        styledPoints = _data.asMap().entries.map((entry) {
-          if (entry.key % 5 == 0) {
-            return entry.value.copyWith(
-              pointStyle: PointStyle(color: _highlightColor, size: 10.0),
-            );
-          }
-          return entry.value;
-        }).toList();
-      case StylingMode.gradient:
-        styledPoints = _data.map((point) {
-          Color? color;
-          double? size;
-          if (point.y > 70) {
-            color = Colors.red;
-            size = 10.0;
-          } else if (point.y > 50) {
-            color = Colors.orange;
-            size = 6.0;
-          } else if (point.y < 30) {
-            color = Colors.blue;
-            size = 10.0;
-          }
-          if (color != null) {
-            return point.copyWith(
-              pointStyle: PointStyle(color: color, size: size),
-            );
-          }
-          return point;
-        }).toList();
-    }
-
-    return ScatterChartSeries(
-      id: 'scatter-styled',
-      name: 'Styled Scatter',
-      points: styledPoints,
-      color: Colors.purple,
-      markerRadius: 4.0,
-    );
-  }
-
-  BarChartSeries _buildBarSeries() {
-    // Use fewer points for bar chart visibility
-    final barData = _data.where((p) => p.x.toInt() % 4 == 0).toList();
-
-    List<ChartDataPoint> styledPoints;
-
-    switch (_stylingMode) {
-      case StylingMode.threshold:
-        styledPoints = barData.map((point) {
-          if (point.y > _threshold) {
-            return point.copyWith(
-              pointStyle: PointStyle.color(_highlightColor),
-            );
-          }
-          return point;
-        }).toList();
-      case StylingMode.range:
-        styledPoints = barData.map((point) {
-          if (point.x >= _rangeStart && point.x < _rangeEnd) {
-            return point.copyWith(
-              pointStyle: PointStyle.color(_highlightColor),
-            );
-          }
-          return point;
-        }).toList();
-      case StylingMode.indices:
-        styledPoints = barData.asMap().entries.map((entry) {
-          if (entry.key % 3 == 0) {
-            return entry.value.copyWith(
-              pointStyle: PointStyle.color(_highlightColor),
-            );
-          }
-          return entry.value;
-        }).toList();
-      case StylingMode.gradient:
-        styledPoints = barData.map((point) {
-          Color color;
-          if (point.y > 70) {
-            color = Colors.red;
-          } else if (point.y > 50) {
-            color = Colors.orange;
-          } else if (point.y > 30) {
-            color = Colors.yellow.shade700;
-          } else {
-            color = Colors.blue;
-          }
-          return point.copyWith(pointStyle: PointStyle.color(color));
-        }).toList();
-    }
-
-    return BarChartSeries(
-      id: 'bar-styled',
-      name: 'Styled Bars',
-      points: styledPoints,
-      color: Colors.grey,
-      barWidthPercent: 0.7,
-    );
-  }
-
-  String _getChartSubtitle() {
-    final modeDesc = switch (_stylingMode) {
-      StylingMode.threshold => 'Y > ${_threshold.toInt()}',
-      StylingMode.range => 'X ∈ [${_rangeStart.toInt()}, ${_rangeEnd.toInt()})',
-      StylingMode.indices => 'Every Nth element',
-      StylingMode.gradient => 'Value-based colors',
+  List<ChartSeries> _seriesForPattern(
+    _StylingPattern pattern, {
+    bool preview = false,
+  }) {
+    return switch (pattern) {
+      _StylingPattern.appearance => _appearanceSeries(preview: preview),
+      _StylingPattern.inlineLabels => _inlineLabelSeries(preview: preview),
+      _StylingPattern.pointLabels => _pointLabelSeries(preview: preview),
+      _StylingPattern.conditional => [_conditionalSeries(preview: preview)],
     };
+  }
 
-    final styleType =
-        (_chartType == ChartType.line || _chartType == ChartType.area)
-        ? 'segmentStyle'
-        : 'pointStyle';
+  List<ChartSeries> _appearanceSeries({required bool preview}) {
+    final glow = preview ? 3.0 : _lineGlow;
+    final width = preview ? 1.6 : _strokeWidth;
+    final markers =
+        !preview && (_showMarkers || _optionsController.showDataMarkers);
+    if (_appearanceType == _AppearanceType.area && !preview) {
+      return [
+        AreaChartSeries(
+          id: 'power-area',
+          name: 'Power profile',
+          points: _appearancePrimary,
+          color: _indigo,
+          interpolation: _interpolation,
+          strokeWidth: width,
+          fillOpacity: _fillOpacity,
+          lineGlow: glow,
+          showDataPointMarkers: markers,
+          dataPointMarkerStyle: _markerStyle,
+        ),
+        AreaChartSeries(
+          id: 'reference-area',
+          name: 'Reference',
+          points: _appearanceComparison,
+          color: _green,
+          interpolation: _interpolation,
+          strokeWidth: width,
+          fillOpacity: _fillOpacity * 0.65,
+          lineGlow: glow,
+          showDataPointMarkers: markers,
+          dataPointMarkerStyle: _markerStyle,
+        ),
+      ];
+    }
+    return [
+      LineChartSeries(
+        id: 'power-line',
+        name: 'Power profile',
+        points: _appearancePrimary,
+        color: _indigo,
+        interpolation: preview ? LineInterpolation.monotone : _interpolation,
+        strokeWidth: width,
+        lineGlow: glow,
+        showDataPointMarkers: markers,
+        dataPointMarkerStyle: _markerStyle,
+      ),
+      LineChartSeries(
+        id: 'reference-line',
+        name: 'Reference',
+        points: _appearanceComparison,
+        color: _green,
+        interpolation: preview ? LineInterpolation.monotone : _interpolation,
+        strokeWidth: width,
+        lineGlow: glow,
+        showDataPointMarkers: markers,
+        dataPointMarkerStyle: _markerStyle,
+      ),
+    ];
+  }
 
-    return '$modeDesc • Uses $styleType';
+  List<ChartSeries> _inlineLabelSeries({required bool preview}) {
+    SeriesInlineLabelConfig label(String text, Color color, double offset) {
+      return SeriesInlineLabelConfig(
+        text: text,
+        position: preview ? SeriesLabelPosition.right : _inlinePosition,
+        offsetY: preview ? offset : _inlineOffsetY + offset,
+        color: color,
+        fontSize: preview ? 8 : _inlineFontSize,
+        fontWeight: _inlineFontWeight,
+        background: _inlineBackground || preview
+            ? SeriesLabelBackground(
+                color: Colors.white.withValues(
+                  alpha: preview ? 0.82 : _inlineBackgroundOpacity,
+                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: preview ? 2 : 6,
+                  vertical: preview ? 1 : 3,
+                ),
+                borderColor: !preview && _inlineBorder ? color : null,
+                borderWidth: 1,
+              )
+            : null,
+      );
+    }
+
+    return [
+      LineChartSeries(
+        id: 'power-inline',
+        name: 'Power',
+        points: _appearancePrimary,
+        color: _indigo,
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: preview ? 1.5 : 2.5,
+        lineGlow: preview ? 2 : _lineGlow,
+        inlineLabel: label('Power', _indigo, -6),
+      ),
+      LineChartSeries(
+        id: 'heart-inline',
+        name: 'Heart rate',
+        points: _appearanceComparison,
+        color: _red,
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: preview ? 1.4 : 2,
+        lineGlow: preview ? 1 : _lineGlow * 0.7,
+        inlineLabel: label('Heart rate', _red, 6),
+      ),
+    ];
+  }
+
+  List<ChartSeries> _pointLabelSeries({required bool preview}) {
+    return [
+      LineChartSeries(
+        id: 'lactate-labels',
+        name: 'Lactate',
+        points: _labelPoints,
+        color: _indigo,
+        unit: 'mmol/L',
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: preview ? 1.5 : 2.2,
+        showDataPointMarkers: true,
+        dataPointMarkerRadius: preview ? 2.2 : _pointMarkerRadius,
+        dataPointMarkerStyle: preview
+            ? DataPointMarkerStyle.filled
+            : _pointMarkerStyle,
+        dataPointLabels: DataPointLabelConfig(
+          show: preview || _showPointLabels,
+          position: preview
+              ? DataPointLabelPosition.above
+              : _pointLabelPosition,
+          fontSize: preview ? 6.5 : _pointLabelFontSize,
+          fontWeight: _pointLabelFontWeight,
+          showUnit: !preview && _pointLabelShowUnit,
+          formatter: !preview && _customPointFormatter
+              ? (point) => '${point.y.toStringAsFixed(1)}×'
+              : null,
+          background: _pointLabelBackground || preview ? Colors.white : null,
+          backgroundOpacity: preview ? 0.78 : _pointLabelBackgroundOpacity,
+        ),
+      ),
+    ];
+  }
+
+  ChartSeries _conditionalSeries({required bool preview}) {
+    final type = preview ? ChartType.line : _conditionalType;
+    final mode = preview ? _ConditionalMode.gradient : _conditionalMode;
+    final color = preview ? _orange : _highlightColor;
+    final data = preview
+        ? _conditionalData
+              .asMap()
+              .entries
+              .where((entry) => entry.key % 4 == 0)
+              .map((entry) => entry.value)
+              .toList()
+        : _conditionalData;
+
+    if (type == ChartType.line || type == ChartType.area) {
+      final styled = _segmentStyledData(data, mode, color);
+      if (type == ChartType.area) {
+        return AreaChartSeries(
+          id: 'conditional-area',
+          name: 'Conditional area',
+          points: styled,
+          color: _green,
+          interpolation: _interpolation,
+          strokeWidth: _strokeWidth,
+          fillOpacity: _fillOpacity,
+          showDataPointMarkers: _optionsController.showDataMarkers,
+        );
+      }
+      return LineChartSeries(
+        id: 'conditional-line',
+        name: 'Conditional line',
+        points: styled,
+        color: _indigo,
+        interpolation: preview ? LineInterpolation.monotone : _interpolation,
+        strokeWidth: preview ? 1.6 : _strokeWidth,
+        showDataPointMarkers: !preview && _optionsController.showDataMarkers,
+      );
+    }
+
+    final source = type == ChartType.bar
+        ? data.where((point) => point.x.toInt() % 4 == 0).toList()
+        : data.where((point) => point.x.toInt() % 2 == 0).toList();
+    final styled = _pointStyledData(source, mode, color);
+    if (type == ChartType.bar) {
+      return BarChartSeries(
+        id: 'conditional-bars',
+        name: 'Conditional bars',
+        points: styled,
+        color: _indigo,
+        barWidthPercent: 0.7,
+      );
+    }
+    return ScatterChartSeries(
+      id: 'conditional-scatter',
+      name: 'Conditional scatter',
+      points: styled,
+      color: _indigo,
+      markerRadius: 4,
+    );
+  }
+
+  List<ChartDataPoint> _segmentStyledData(
+    List<ChartDataPoint> source,
+    _ConditionalMode mode,
+    Color color,
+  ) {
+    return source.asMap().entries.map((entry) {
+      final point = entry.value;
+      final highlighted = switch (mode) {
+        _ConditionalMode.threshold => point.y > _threshold,
+        _ConditionalMode.range => point.x >= _rangeStart && point.x < _rangeEnd,
+        _ConditionalMode.indices => entry.key % 10 <= 1,
+        _ConditionalMode.gradient => point.y > 68 || point.y < 30,
+      };
+      if (!highlighted) return point;
+      final resolvedColor = mode == _ConditionalMode.gradient && point.y < 30
+          ? _blueForLow
+          : color;
+      return point.copyWith(
+        segmentStyle: SegmentStyle(
+          color: resolvedColor,
+          strokeWidth: mode == _ConditionalMode.gradient ? 3.5 : null,
+        ),
+      );
+    }).toList();
+  }
+
+  static const _blueForLow = Color(0xFF168AF3);
+
+  List<ChartDataPoint> _pointStyledData(
+    List<ChartDataPoint> source,
+    _ConditionalMode mode,
+    Color color,
+  ) {
+    return source.asMap().entries.map((entry) {
+      final point = entry.value;
+      final highlighted = switch (mode) {
+        _ConditionalMode.threshold => point.y > _threshold,
+        _ConditionalMode.range => point.x >= _rangeStart && point.x < _rangeEnd,
+        _ConditionalMode.indices => entry.key % 5 == 0,
+        _ConditionalMode.gradient => true,
+      };
+      if (!highlighted) return point;
+      final resolvedColor = mode == _ConditionalMode.gradient
+          ? point.y > 70
+                ? _red
+                : point.y > 50
+                ? _orange
+                : point.y < 30
+                ? _blueForLow
+                : _green
+          : color;
+      return point.copyWith(
+        pointStyle: PointStyle(
+          color: resolvedColor,
+          size: _conditionalType == ChartType.scatter ? 8 : null,
+        ),
+      );
+    }).toList();
+  }
+
+  List<Widget> _buildOptions() {
+    return [
+      OptionSection(
+        title: 'Styling Layer',
+        icon: Icons.layers_outlined,
+        children: [
+          EnumOption<_StylingPattern>(
+            label: 'Example',
+            value: _selectedPattern,
+            values: _StylingPattern.values,
+            labelBuilder: _patternLabel,
+            onChanged: _selectPattern,
+          ),
+        ],
+      ),
+      ..._patternOptions(),
+      StandardChartOptions(
+        controller: _optionsController,
+        showMarkerOption: false,
+        showLineStyleOption: false,
+      ),
+      OptionSection(
+        title: 'What to Try',
+        icon: Icons.fact_check_outlined,
+        children: [InfoBox(message: _instruction(_selectedPattern))],
+      ),
+    ];
+  }
+
+  List<Widget> _patternOptions() {
+    return switch (_selectedPattern) {
+      _StylingPattern.appearance => [
+        OptionSection(
+          title: 'Series Appearance',
+          icon: Icons.auto_awesome_outlined,
+          children: [
+            EnumOption<_AppearanceType>(
+              label: 'Series Type',
+              value: _appearanceType,
+              values: _AppearanceType.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _appearanceType = value),
+            ),
+            EnumOption<LineInterpolation>(
+              label: 'Interpolation',
+              value: _interpolation,
+              values: LineInterpolation.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _interpolation = value),
+            ),
+            SliderOption(
+              label: 'Stroke Width',
+              value: _strokeWidth,
+              min: 1,
+              max: 6,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _strokeWidth = value),
+            ),
+            SliderOption(
+              label: 'Glow Radius',
+              value: _lineGlow,
+              min: 0,
+              max: 12,
+              divisions: 12,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _lineGlow = value),
+            ),
+            if (_appearanceType == _AppearanceType.area)
+              SliderOption(
+                label: 'Fill Opacity',
+                value: _fillOpacity,
+                min: 0.05,
+                max: 0.6,
+                divisions: 11,
+                decimalPlaces: 2,
+                onChanged: (value) => setState(() => _fillOpacity = value),
+              ),
+            BoolOption(
+              label: 'Show Markers',
+              value: _showMarkers,
+              onChanged: (value) => setState(() => _showMarkers = value),
+            ),
+            if (_showMarkers)
+              EnumOption<DataPointMarkerStyle>(
+                label: 'Marker Style',
+                value: _markerStyle,
+                values: DataPointMarkerStyle.values,
+                labelBuilder: (value) => value.name,
+                onChanged: (value) => setState(() => _markerStyle = value),
+              ),
+          ],
+        ),
+      ],
+      _StylingPattern.inlineLabels => [
+        OptionSection(
+          title: 'Inline Labels',
+          icon: Icons.label_outline,
+          children: [
+            EnumOption<SeriesLabelPosition>(
+              label: 'Anchor Position',
+              value: _inlinePosition,
+              values: SeriesLabelPosition.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _inlinePosition = value),
+            ),
+            SliderOption(
+              label: 'Vertical Offset',
+              value: _inlineOffsetY,
+              min: -32,
+              max: 32,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _inlineOffsetY = value),
+            ),
+            SliderOption(
+              label: 'Font Size',
+              value: _inlineFontSize,
+              min: 8,
+              max: 18,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _inlineFontSize = value),
+            ),
+            EnumOption<FontWeight>(
+              label: 'Font Weight',
+              value: _inlineFontWeight,
+              values: _fontWeights,
+              labelBuilder: _fontWeightLabel,
+              onChanged: (value) => setState(() => _inlineFontWeight = value),
+            ),
+            BoolOption(
+              label: 'Background Pill',
+              value: _inlineBackground,
+              onChanged: (value) => setState(() => _inlineBackground = value),
+            ),
+            if (_inlineBackground) ...[
+              SliderOption(
+                label: 'Background Opacity',
+                value: _inlineBackgroundOpacity,
+                min: 0.2,
+                max: 1,
+                divisions: 8,
+                decimalPlaces: 1,
+                onChanged: (value) =>
+                    setState(() => _inlineBackgroundOpacity = value),
+              ),
+              BoolOption(
+                label: 'Series-Color Border',
+                value: _inlineBorder,
+                onChanged: (value) => setState(() => _inlineBorder = value),
+              ),
+            ],
+          ],
+        ),
+      ],
+      _StylingPattern.pointLabels => [
+        OptionSection(
+          title: 'Data Point Labels',
+          icon: Icons.pin_outlined,
+          children: [
+            BoolOption(
+              label: 'Show Labels',
+              value: _showPointLabels,
+              onChanged: (value) => setState(() => _showPointLabels = value),
+            ),
+            EnumOption<DataPointLabelPosition>(
+              label: 'Label Position',
+              value: _pointLabelPosition,
+              values: DataPointLabelPosition.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _pointLabelPosition = value),
+            ),
+            SliderOption(
+              label: 'Font Size',
+              value: _pointLabelFontSize,
+              min: 7,
+              max: 16,
+              divisions: 9,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _pointLabelFontSize = value),
+            ),
+            EnumOption<FontWeight>(
+              label: 'Font Weight',
+              value: _pointLabelFontWeight,
+              values: _fontWeights,
+              labelBuilder: _fontWeightLabel,
+              onChanged: (value) =>
+                  setState(() => _pointLabelFontWeight = value),
+            ),
+            BoolOption(
+              label: 'Show Unit',
+              value: _pointLabelShowUnit,
+              onChanged: (value) => setState(() => _pointLabelShowUnit = value),
+            ),
+            BoolOption(
+              label: 'Custom Formatter',
+              subtitle: 'Formats each value as 12.8×',
+              value: _customPointFormatter,
+              onChanged: (value) =>
+                  setState(() => _customPointFormatter = value),
+            ),
+            BoolOption(
+              label: 'Background Pill',
+              value: _pointLabelBackground,
+              onChanged: (value) =>
+                  setState(() => _pointLabelBackground = value),
+            ),
+            if (_pointLabelBackground)
+              SliderOption(
+                label: 'Background Opacity',
+                value: _pointLabelBackgroundOpacity,
+                min: 0.2,
+                max: 1,
+                divisions: 8,
+                decimalPlaces: 1,
+                onChanged: (value) =>
+                    setState(() => _pointLabelBackgroundOpacity = value),
+              ),
+            EnumOption<DataPointMarkerStyle>(
+              label: 'Marker Style',
+              value: _pointMarkerStyle,
+              values: DataPointMarkerStyle.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _pointMarkerStyle = value),
+            ),
+            SliderOption(
+              label: 'Marker Radius',
+              value: _pointMarkerRadius,
+              min: 2,
+              max: 8,
+              divisions: 12,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _pointMarkerRadius = value),
+            ),
+          ],
+        ),
+      ],
+      _StylingPattern.conditional => [
+        OptionSection(
+          title: 'Conditional Styling',
+          icon: Icons.format_color_fill_outlined,
+          children: [
+            EnumOption<ChartType>(
+              label: 'Chart Type',
+              value: _conditionalType,
+              values: ChartType.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _conditionalType = value),
+            ),
+            EnumOption<_ConditionalMode>(
+              label: 'Rule',
+              value: _conditionalMode,
+              values: _ConditionalMode.values,
+              labelBuilder: (value) => value.name,
+              onChanged: (value) => setState(() => _conditionalMode = value),
+            ),
+            ColorOption(
+              label: 'Highlight Color',
+              value: _highlightColor,
+              colors: const [
+                _red,
+                _orange,
+                _green,
+                _indigo,
+                Color(0xFF8B5CF6),
+                Color(0xFFEC4899),
+              ],
+              onChanged: (value) => setState(() => _highlightColor = value),
+            ),
+            if (_conditionalMode == _ConditionalMode.threshold)
+              SliderOption(
+                label: 'Y Threshold',
+                value: _threshold,
+                min: 10,
+                max: 90,
+                divisions: 16,
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _threshold = value),
+              ),
+            if (_conditionalMode == _ConditionalMode.range) ...[
+              SliderOption(
+                label: 'X Range Start',
+                value: _rangeStart,
+                min: 0,
+                max: 60,
+                divisions: 12,
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() {
+                  _rangeStart = value;
+                  if (_rangeEnd <= value) _rangeEnd = value + 5;
+                }),
+              ),
+              SliderOption(
+                label: 'X Range End',
+                value: _rangeEnd,
+                min: 20,
+                max: 80,
+                divisions: 12,
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() {
+                  _rangeEnd = value;
+                  if (_rangeStart >= value) _rangeStart = value - 5;
+                }),
+              ),
+            ],
+          ],
+        ),
+      ],
+    };
   }
 
   Widget _buildStatusPanel() {
-    final styleType =
-        (_chartType == ChartType.line || _chartType == ChartType.area)
-        ? 'Segment'
-        : 'Point';
-
     return StatusPanel(
       items: [
-        const StatusItem(label: 'Coverage', value: 'All styling layers'),
-        const StatusItem(label: 'Labels', value: 'Inline + Data-point'),
+        StatusItem(label: 'Layer', value: _patternLabel(_selectedPattern)),
         StatusItem(
-          label: 'Data Points',
-          value: _chartType == ChartType.bar
-              ? '${(_data.length / 4).floor()}'
-              : '${_data.length}',
+          label: 'Series',
+          value: '${_seriesForPattern(_selectedPattern).length}',
         ),
-        StatusItem(label: 'Style Type', value: '${styleType}Style'),
-        StatusItem(label: 'Mode', value: _stylingMode.name),
+        StatusItem(
+          label: 'Points',
+          value: '${_seriesForPattern(_selectedPattern).first.points.length}',
+        ),
+        StatusItem(label: 'API', value: _statusApi(_selectedPattern)),
       ],
     );
   }
+
+  void _selectPattern(_StylingPattern pattern) {
+    if (_selectedPattern == pattern) return;
+    setState(() => _selectedPattern = pattern);
+  }
+
+  static const _fontWeights = [
+    FontWeight.w400,
+    FontWeight.w500,
+    FontWeight.w600,
+    FontWeight.w700,
+  ];
+
+  static String _fontWeightLabel(FontWeight weight) {
+    if (weight == FontWeight.w400) return '400 · regular';
+    if (weight == FontWeight.w500) return '500 · medium';
+    if (weight == FontWeight.w600) return '600 · semibold';
+    return '700 · bold';
+  }
+
+  static String _patternLabel(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance => 'Series appearance',
+      _StylingPattern.inlineLabels => 'Inline labels',
+      _StylingPattern.pointLabels => 'Point labels',
+      _StylingPattern.conditional => 'Conditional styling',
+    };
+  }
+
+  static String _patternDescription(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance => 'Stroke · fill · glow · markers',
+      _StylingPattern.inlineLabels => 'Anchored series identity',
+      _StylingPattern.pointLabels => 'Values · units · formatter',
+      _StylingPattern.conditional => 'Segments and individual points',
+    };
+  }
+
+  static String _stageTitle(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance => 'Whole-series appearance',
+      _StylingPattern.inlineLabels => 'Labels anchored to series geometry',
+      _StylingPattern.pointLabels => 'Lactate values at every sample',
+      _StylingPattern.conditional => 'Data-driven styling overrides',
+    };
+  }
+
+  String _stageSubtitle(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance =>
+        '${_appearanceType.name} · ${_interpolation.name} · ${_lineGlow.toStringAsFixed(0)} px glow',
+      _StylingPattern.inlineLabels =>
+        '${_inlinePosition.name} anchor · ${_inlineBackground ? 'background pill' : 'text only'}',
+      _StylingPattern.pointLabels =>
+        '${_pointLabelPosition.name} · ${_pointLabelShowUnit ? 'unit visible' : 'value only'} · ${_pointMarkerStyle.name} markers',
+      _StylingPattern.conditional =>
+        '${_conditionalType.name} · ${_conditionalMode.name} · ${_conditionalType == ChartType.line || _conditionalType == ChartType.area ? 'SegmentStyle' : 'PointStyle'}',
+    };
+  }
+
+  static String _instruction(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance =>
+        'Switch between line and area, then combine interpolation, stroke width, glow, fill opacity, and marker treatment. Theme and interaction controls remain independent.',
+      _StylingPattern.inlineLabels =>
+        'Move the label anchor from left to right, offset it vertically, and add a pill or series-colored border. Labels follow the rendered series instead of occupying a separate legend.',
+      _StylingPattern.pointLabels =>
+        'Change label position, unit display, formatter, background, and marker style. Labels are configured once on the series and formatted from each ChartDataPoint.',
+      _StylingPattern.conditional =>
+        'Change chart type to see SegmentStyle apply to line/area segments and PointStyle apply to scatter markers or bars. Try threshold, range, index, and value-gradient rules.',
+    };
+  }
+
+  static String _statusApi(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance => 'Series fields',
+      _StylingPattern.inlineLabels => 'InlineLabel',
+      _StylingPattern.pointLabels => 'PointLabels',
+      _StylingPattern.conditional => 'Segment/Point',
+    };
+  }
 }
 
-class _StylingOverview extends StatelessWidget {
-  const _StylingOverview();
+class _StylingPatternCard extends StatelessWidget {
+  const _StylingPatternCard({
+    super.key,
+    required this.pattern,
+    required this.selected,
+    required this.onTap,
+    required this.chart,
+  });
+
+  final _StylingPattern pattern;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget chart;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const features = [
-      (Icons.show_chart, 'Series', 'Color, width, glow'),
-      (Icons.label_outline, 'Series labels', 'Anchor, type, background'),
-      (Icons.pin_outlined, 'Point labels', 'Position, formatter, unit'),
-      (Icons.timeline, 'Segments', 'Threshold, range, index'),
-      (Icons.scatter_plot_outlined, 'Points', 'Color and size overrides'),
-    ];
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Series styling API at a glance',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Start with a series theme, then override only the segments or points that carry meaning.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: features
-                  .map(
-                    (feature) => Chip(
-                      avatar: Icon(feature.$1, size: 16),
-                      label: Text('${feature.$2} · ${feature.$3}'),
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label:
+          'Select ${_SeriesStylingPageState._patternLabel(pattern)} styling layer',
+      child: Material(
+        color: selected
+            ? colors.primaryContainer.withValues(alpha: 0.42)
+            : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _SeriesStylingPageState._patternLabel(pattern),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  )
-                  .toList(),
+                    if (selected)
+                      Icon(
+                        Icons.check_circle,
+                        key: ValueKey('selected-styling-${pattern.name}'),
+                        size: 16,
+                        color: colors.primary,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _SeriesStylingPageState._patternDescription(pattern),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Expanded(child: IgnorePointer(child: chart)),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Available styling modes for demonstration.
-enum StylingMode { threshold, range, indices, gradient }
+class _StylingGuide extends StatelessWidget {
+  const _StylingGuide({super.key, required this.pattern});
+
+  final _StylingPattern pattern;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final explanation = Row(
+            children: [
+              Icon(_icon(pattern), size: 18, color: colors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _explanation(pattern),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          );
+          final api = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.code, size: 16, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _api(pattern),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+          if (constraints.maxWidth >= 760) {
+            return Row(
+              children: [
+                Expanded(child: explanation),
+                const SizedBox(width: 16),
+                SizedBox(width: 470, child: api),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [explanation, const SizedBox(height: 10), api],
+          );
+        },
+      ),
+    );
+  }
+
+  static IconData _icon(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance => Icons.auto_awesome_outlined,
+      _StylingPattern.inlineLabels => Icons.label_outline,
+      _StylingPattern.pointLabels => Icons.pin_outlined,
+      _StylingPattern.conditional => Icons.format_color_fill_outlined,
+    };
+  }
+
+  static String _explanation(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance =>
+        'Define the default visual identity once on the series: type, interpolation, stroke, fill, glow, and marker treatment.',
+      _StylingPattern.inlineLabels =>
+        'Attach identity directly to series geometry with configurable anchor, typography, offset, background, and border.',
+      _StylingPattern.pointLabels =>
+        'Render formatted values from each point with independent label placement, units, typography, background, and marker style.',
+      _StylingPattern.conditional =>
+        'Override only meaningful segments or points while every unstyled element continues to inherit the series default.',
+    };
+  }
+
+  static String _api(_StylingPattern pattern) {
+    return switch (pattern) {
+      _StylingPattern.appearance =>
+        'strokeWidth · interpolation · lineGlow · fillOpacity · dataPointMarkerStyle',
+      _StylingPattern.inlineLabels =>
+        'SeriesInlineLabelConfig · SeriesLabelBackground · SeriesLabelPosition',
+      _StylingPattern.pointLabels =>
+        'DataPointLabelConfig(position, showUnit, formatter, background)',
+      _StylingPattern.conditional =>
+        'ChartDataPoint.segmentStyle · ChartDataPoint.pointStyle · inheritance fast path',
+    };
+  }
+}

@@ -82,7 +82,7 @@ void main() {
     await tester.tap(find.text('Live Stream'));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Live Streaming'), findsOneWidget);
-    expect(find.text('Live Data Stream'), findsOneWidget);
+    expect(find.text('Choose a streaming strategy'), findsOneWidget);
+    expect(find.text('Follow latest'), findsWidgets);
   });
 }
