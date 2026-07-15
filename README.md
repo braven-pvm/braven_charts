@@ -21,7 +21,7 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
-[![Four-axis analytical chart with normalized signals, annotations, tracking, glow, and a scrollbar](doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
+[![Four-axis analytical chart with normalized signals, annotations, tracking, glow, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Rendered examples
 
@@ -31,7 +31,7 @@ The example below combines four independently scaled series with per-series
 normalization, range and threshold annotations, tracking tooltips, pointer
 zoom, drag-to-pan, and a synchronized X scrollbar.
 
-[![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
+[![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 
 ### Live-stream buffering
 
@@ -39,7 +39,7 @@ zoom, drag-to-pan, and a synchronized X scrollbar.
 rendering layer. The viewport can follow the latest sample, pause while the
 bounded buffer continues receiving data, and resume with buffered catch-up.
 
-[![Live chart data buffering and catching up](doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream)
+[![Live chart data buffering and catching up](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream)
 
 ## Gallery
 
@@ -48,7 +48,7 @@ multiples, live data, independent axes, annotations, mixed series, grouped
 bars, scatter plots, interpolation modes, threshold styling, and positive or
 negative area segments.
 
-[![Fifteen varied Braven Charts examples from the current Gallery](doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
+[![Fifteen varied Braven Charts examples from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Feature coverage
 
@@ -75,7 +75,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.1.0
+  braven_charts: ^0.1.1
 ```
 
 Then fetch dependencies:
@@ -84,7 +84,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.1.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.1.1 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
