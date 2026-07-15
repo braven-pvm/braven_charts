@@ -16,14 +16,12 @@ void main() {
     await tester.pumpWidget(subject());
     await _settleCapture(tester);
 
-    expect(find.text('Save, share, and restore charts'), findsOneWidget);
-    expect(find.byType(BravenChartPlus), findsNWidgets(2));
+    expect(find.text('Chart Artifacts'), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(find.byType(ChartDataTable), findsOneWidget);
-    expect(find.text('One capture. Three useful outcomes.'), findsOneWidget);
-    expect(find.text('Capture the effective chart'), findsOneWidget);
-    expect(find.text('Show the data behind it'), findsOneWidget);
-    expect(find.text('Scale for larger data'), findsOneWidget);
-    expect(find.text('A small API surface for a durable chart'), findsOneWidget);
+    expect(find.text('Choose a chart-artifact feature'), findsOneWidget);
+    expect(find.text('Chart, data, or split view'), findsAtLeastNWidgets(1));
+    expect(find.text('Capture chart artifact'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -37,9 +35,16 @@ void main() {
     await tester.pumpWidget(subject());
     await tester.pump();
 
-    expect(find.byTooltip('Capture artifact'), findsOneWidget);
-    expect(find.text('Split'), findsNothing);
-    expect(find.text('Explore the same chart three ways'), findsOneWidget);
+    expect(find.byTooltip('Capture example'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SegmentedButton<ChartDisplayMode> &&
+            widget.segments.length == 2,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Choose a chart-artifact feature'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

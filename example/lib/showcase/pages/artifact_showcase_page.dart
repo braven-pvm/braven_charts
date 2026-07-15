@@ -1,8 +1,16 @@
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+
+import '../widgets/options_panel.dart';
+import '../widgets/standard_options.dart';
+
+// The focused showcase uses a small subset of the legacy diagnostic cards
+// below; they remain available as validation fixtures for future lab surfaces.
+// ignore_for_file: unused_element, unused_element_parameter
+
+enum _ArtifactFocus { surfaces, transport, preview }
 
 /// The single product-facing overview for the complete chart-artifact flow.
 ///
@@ -26,15 +34,14 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   ChartTableModel? _table;
   HydratedChartConfiguration? _hydrated;
   String? _canonicalJson;
+  String? _savedJson;
   String _status = 'Preparing an example chart…';
   String? _error;
+  _ArtifactFocus _focus = _ArtifactFocus.surfaces;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
+  bool _includePreview = true;
   bool _busy = false;
   bool _heartRateVisible = true;
-  bool _jsonRoundTripPassed = false;
-  int? _pointBytes;
-  int? _columnBytes;
-  int? _binaryBytes;
 
   static final _formatterDescriptor = ChartFormatterDescriptor(
     id: 'showcase.fixed',
@@ -86,7 +93,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
       ChartArtifactExtractOptions(
         artifactId: 'artifact-showcase',
         createdAt: DateTime.utc(2026, 7, 15, 12),
-        includePreview: true,
+        includePreview: _includePreview,
         documentOptions: ChartDocumentExtractOptions(
           documentId: 'artifact-showcase-document',
           dataStorage: ChartDataStorage.inlineColumns,
@@ -139,49 +146,25 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
           _busy = false;
           _artifact = artifact;
           _canonicalJson = json;
+          _savedJson = null;
           _table = table;
           _hydrated = hydration;
-          _jsonRoundTripPassed = false;
           _status = hydration == null
               ? 'Chart captured, but the restored copy needs attention.'
               : 'Chart captured. Try the chart, data table, and restored copy below.';
           _error = hydrationError;
         });
-        _comparePayloads();
     }
-  }
-
-  void _roundTripJson() {
-    final json = _canonicalJson;
-    final artifact = _artifact;
-    if (json == null || artifact == null) return;
-    final decoded = ChartArtifactJsonCodec.decode(
-      json,
-      supportedCapabilities: {
-        ...artifact.document.requiredCapabilities,
-        for (final series in artifact.document.series)
-          ...series.requiredCapabilities,
-        for (final annotation in artifact.document.annotations)
-          ...annotation.requiredCapabilities,
-      },
-    );
-    String? decodeError;
-    if (decoded case ChartArtifactFailure<ChartArtifactDecodeResult>()) {
-      decodeError = '${decoded.error.code}: ${decoded.error.message}';
-    }
-    setState(() {
-      _jsonRoundTripPassed =
-          decoded is ChartArtifactSuccess<ChartArtifactDecodeResult>;
-      _status = _jsonRoundTripPassed
-          ? 'Portable chart document validated successfully.'
-          : 'The portable chart document needs a compatibility check.';
-      _error = decodeError;
-    });
   }
 
   void _restoreCopy() {
-    final json = _canonicalJson;
-    if (json == null) return;
+    final json = _savedJson;
+    if (json == null) {
+      setState(() {
+        _status = 'Save the portable document first, then restore it here.';
+      });
+      return;
+    }
     final restored = ChartDocumentHydrator.hydrateJson(
       json,
       runtimeBindings: _runtimeBindings,
@@ -202,197 +185,338 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     });
   }
 
+  void _saveDocument() {
+    final json = _canonicalJson;
+    if (json == null) return;
+    setState(() {
+      _savedJson = json;
+      _status =
+          'Portable chart saved. This example can now restore it independently.';
+      _error = null;
+    });
+  }
+
   void _toggleHeartRate() {
     setState(() => _heartRateVisible = !_heartRateVisible);
     _sourceController.setSeriesVisible('heart-rate', _heartRateVisible);
     WidgetsBinding.instance.addPostFrameCallback((_) => _capture());
   }
 
-  void _comparePayloads() {
-    final artifact = _artifact;
-    if (artifact == null) return;
-    final pointDocument = _sourceController.extractDocument(
-      const ChartDocumentExtractOptions(
-        documentId: 'artifact-showcase-points',
-        dataStorage: ChartDataStorage.inlinePoints,
-      ),
-    );
-    final columnDocument = _sourceController.extractDocument(
-      const ChartDocumentExtractOptions(
-        documentId: 'artifact-showcase-columns',
-        dataStorage: ChartDataStorage.inlineColumns,
-      ),
-    );
-    if (pointDocument case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
-      final pointArtifact = ChartArtifact(
-        artifactId: 'artifact-showcase-points',
-        renderer: artifact.renderer,
-        createdAt: artifact.createdAt,
-        document: pointDocument.value.document,
-      );
-      final encoded = ChartArtifactJsonCodec.encode(pointArtifact);
-      if (encoded case ChartArtifactSuccess<String>()) {
-        _pointBytes = utf8.encode(encoded.value).length;
-      }
-    }
-    if (columnDocument case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
-      final columnArtifact = ChartArtifact(
-        artifactId: 'artifact-showcase-columns',
-        renderer: artifact.renderer,
-        createdAt: artifact.createdAt,
-        document: columnDocument.value.document,
-      );
-      final encoded = ChartArtifactJsonCodec.encode(columnArtifact);
-      if (encoded case ChartArtifactSuccess<String>()) {
-        _columnBytes = utf8.encode(encoded.value).length;
-      }
-      final payload = columnDocument.value.document.series.first.data;
-      if (payload is InlineChartDataPayload) {
-        final binary = ChartDataBinaryCodec.encode(payload);
-        if (binary case ChartArtifactSuccess<ChartDataBlob>()) {
-          _binaryBytes = binary.value.bytes.length;
-        }
-      }
-    }
-    if (mounted) setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final compact = MediaQuery.sizeOf(context).width < 760;
-    final artifact = _artifact;
-    final preview = artifact?.preview;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chart artifacts'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: compact
-                ? IconButton.filled(
-                    onPressed: _busy ? null : _capture,
-                    tooltip: 'Capture artifact',
-                    icon: const Icon(Icons.refresh),
+    final compactHeader = MediaQuery.sizeOf(context).width < 900;
+    return ChartPageLayout(
+      title: 'Chart Artifacts',
+      subtitle:
+          'Explore one chart as a live surface, a data table, a portable document, and an image preview',
+      actions: [
+        if (compactHeader)
+          IconButton(
+            tooltip: 'Capture example',
+            onPressed: _busy ? null : _capture,
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : FilledButton.icon(
-                    onPressed: _busy ? null : _capture,
-                    icon: _busy
-                        ? const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.camera_alt_outlined),
-                    label: const Text('Capture artifact'),
-                  ),
+                : const Icon(Icons.camera_alt_outlined),
+          )
+        else
+          FilledButton.icon(
+            onPressed: _busy ? null : _capture,
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.camera_alt_outlined),
+            label: const Text('Capture example'),
+          ),
+      ],
+      optionsChildren: _buildOptionsChildren(),
+      bottomPanel: compactHeader
+          ? null
+          : _StatusBanner(status: _status, error: _error),
+      chart: _buildWorkspace(),
+    );
+  }
+
+  List<Widget> _buildOptionsChildren() => [
+    OptionSection(
+      title: 'Showcase focus',
+      icon: Icons.hub_outlined,
+      children: [
+        EnumOption<_ArtifactFocus>(
+          label: 'Feature',
+          value: _focus,
+          values: _ArtifactFocus.values,
+          labelBuilder: _focusLabel,
+          onChanged: (value) => setState(() => _focus = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Capture and transport',
+      icon: Icons.save_outlined,
+      children: [
+        BoolOption(
+          label: 'Create image preview',
+          subtitle: 'Attach a revision-bound PNG to the artifact',
+          value: _includePreview,
+          onChanged: (value) {
+            setState(() => _includePreview = value);
+            _capture();
+          },
+        ),
+        ActionButton(
+          label: 'Capture chart artifact',
+          icon: Icons.camera_alt_outlined,
+          isPrimary: true,
+          onPressed: _capture,
+        ),
+        if (_canonicalJson != null)
+          ActionButton(
+            label: 'Save portable document',
+            icon: Icons.save_outlined,
+            onPressed: _saveDocument,
+          ),
+        if (_savedJson != null)
+          ActionButton(
+            label: 'Restore saved copy',
+            icon: Icons.restart_alt_outlined,
+            onPressed: _restoreCopy,
+          ),
+      ],
+    ),
+    OptionSection(
+      title: 'How to explore',
+      icon: Icons.info_outline,
+      children: [InfoBox(message: _focusGuide())],
+    ),
+  ];
+
+  Widget _buildWorkspace() {
+    final compact = MediaQuery.sizeOf(context).width < 760;
+    final children = <Widget>[
+      Text(
+        'Choose a chart-artifact feature',
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 8),
+      const SizedBox(height: 168),
+      const SizedBox(height: 16),
+      _ArtifactGuide(focus: _focus),
+      const SizedBox(height: 16),
+    ];
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...children,
+          SizedBox(
+            height: compact ? 520 : 620,
+            child: _buildFocusStage(compact),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Save, share, and restore charts',
-                    style: theme.textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 820),
-                    child: Text(
-                      'Capture the chart your users see, then reuse the same portable document for sharing, data tables, previews, and a fresh restored runtime.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.45,
+    );
+  }
+
+  Widget _buildFocusRibbon() => LayoutBuilder(
+    builder: (context, constraints) {
+      const spacing = 12.0;
+      final width = math.max(220.0, (constraints.maxWidth - 24) / 3);
+      return SingleChildScrollView(
+        key: const ValueKey('artifact-focus-ribbon'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final focus in _ArtifactFocus.values) ...[
+              SizedBox(
+                width: width,
+                child: _ArtifactFocusCard(
+                  key: ValueKey('artifact-focus-${focus.name}'),
+                  focus: focus,
+                  selected: _focus == focus,
+                  onTap: () => setState(() => _focus = focus),
+                ),
+              ),
+              if (focus != _ArtifactFocus.values.last)
+                const SizedBox(width: spacing),
+            ],
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _buildFocusStage(bool compact) => switch (_focus) {
+    _ArtifactFocus.surfaces => _buildWorkflowStage(compact),
+    _ArtifactFocus.transport => _buildTransportStage(compact),
+    _ArtifactFocus.preview => _buildPreviewStage(compact),
+  };
+
+  String _focusLabel(_ArtifactFocus focus) => switch (focus) {
+    _ArtifactFocus.surfaces => 'Chart, data, or split view',
+    _ArtifactFocus.transport => 'Save and restore',
+    _ArtifactFocus.preview => 'Create image preview',
+  };
+
+  String _focusGuide() => switch (_focus) {
+    _ArtifactFocus.surfaces =>
+      'Use Chart, Data, or Split to compare the same captured document across product surfaces.',
+    _ArtifactFocus.transport =>
+      'Save the canonical JSON, then restore a new chart from that saved copy. The restored chart has independent runtime state.',
+    _ArtifactFocus.preview =>
+      'Capture a PNG preview that is hash-matched to the chart document. Use it for reports, messages, or quick visual confirmation.',
+  };
+
+  Widget _buildTransportStage(bool compact) {
+    final source = _sourceChart();
+    final restored = _hydrated == null
+        ? const _PlaceholderPanel(
+            label: 'Save the portable document to unlock the restored copy.',
+          )
+        : _hydrated!.build(bravenChartController: _restoredController);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: _canonicalJson == null ? null : _saveDocument,
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Save portable document'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _savedJson == null ? null : _restoreCopy,
+              icon: const Icon(Icons.restart_alt_outlined),
+              label: const Text('Restore saved copy'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _TransportSteps(saved: _savedJson != null, restored: _hydrated != null),
+        const SizedBox(height: 12),
+        Expanded(
+          child: compact
+              ? Column(
+                  children: [
+                    Expanded(
+                      child: _SurfaceCard(label: 'SOURCE CHART', child: source),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: _savedJson == null
+                            ? 'RESTORED COPY · WAITING'
+                            : 'RESTORED COPY',
+                        child: restored,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  _StatusBanner(status: _status, error: _error),
-                  const SizedBox(height: 20),
-                  _OverviewCards(
-                    artifact: artifact,
-                    table: _table,
-                    preview: preview,
-                  ),
-                  const SizedBox(height: 24),
-                  const _SectionHeading(
-                    eyebrow: 'THE CHART ARTIFACT JOURNEY',
-                    title: 'One capture. Three useful outcomes.',
-                    description:
-                        'The artifact keeps the effective chart state together so every surface stays consistent.',
-                  ),
-                  const SizedBox(height: 12),
-                  const _JourneySteps(),
-                  const SizedBox(height: 28),
-                  const _SectionHeading(
-                    eyebrow: 'TRY IT',
-                    title: 'Explore the same chart three ways',
-                    description:
-                        'Switch between the interactive chart, its exact-X data table, and an independent restored copy.',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildWorkflowStage(compact),
-                  const SizedBox(height: 28),
-                  const _SectionHeading(
-                    eyebrow: 'FEATURE GUIDE',
-                    title: 'Built for real product workflows',
-                    description:
-                        'Use artifacts when a chart needs to move between screens, sessions, services, or people.',
-                  ),
-                  const SizedBox(height: 12),
-                  const _FeatureGuide(),
-                  const SizedBox(height: 28),
-                  const _SectionHeading(
-                    eyebrow: 'HOW TO USE IT',
-                    title: 'Capture once, hydrate anywhere',
-                    description:
-                        'The public API is intentionally small: capture the effective chart, encode it, and hydrate it where you need it.',
-                  ),
-                  const SizedBox(height: 12),
-                  const _CodeExampleCard(),
-                  const SizedBox(height: 28),
-                  ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    title: const Text('Inspect the portable document'),
-                    subtitle: const Text(
-                      'Optional diagnostics for JSON, previews, payload sizes, and compatibility',
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _SurfaceCard(label: 'SOURCE CHART', child: source),
                     ),
-                    children: [
-                      const SizedBox(height: 12),
-                      _buildDocumentGrid(theme),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: _savedJson == null
+                            ? 'RESTORED COPY · WAITING'
+                            : 'RESTORED COPY',
+                        child: restored,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewStage(bool compact) {
+    final preview = _artifact?.preview;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FilledButton.tonalIcon(
+          onPressed: _busy ? null : _capture,
+          icon: const Icon(Icons.image_outlined),
+          label: const Text('Create image preview'),
+        ),
+        const SizedBox(height: 12),
+        _PreviewSteps(hasPreview: preview != null),
+        const SizedBox(height: 12),
+        Expanded(
+          child: compact
+              ? Column(
+                  children: [
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: 'SOURCE CHART',
+                        child: _sourceChart(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: preview == null
+                            ? 'IMAGE PREVIEW · WAITING'
+                            : 'IMAGE PREVIEW',
+                        child: preview == null
+                            ? const _PlaceholderPanel(
+                                label:
+                                    'Capture the artifact to create its PNG preview.',
+                              )
+                            : _PreviewStageImage(preview: preview),
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: 'SOURCE CHART',
+                        child: _sourceChart(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _SurfaceCard(
+                        label: preview == null
+                            ? 'IMAGE PREVIEW · WAITING'
+                            : 'IMAGE PREVIEW',
+                        child: preview == null
+                            ? const _PlaceholderPanel(
+                                label:
+                                    'Capture the artifact to create its PNG preview.',
+                              )
+                            : _PreviewStageImage(preview: preview),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
     );
   }
 
   Widget _buildWorkflowStage(bool compact) {
     final table = _table;
-    final hydrated = _hydrated;
     final chart = _sourceChart();
     final data = table == null
         ? const _PlaceholderPanel(
             label: 'Capture the chart to build its table.',
           )
         : ChartDataTable(model: table, controller: _tableController);
-    final restored = hydrated == null
-        ? const _PlaceholderPanel(
-            label: 'Capture and hydrate to create a fresh runtime.',
-          )
-        : hydrated.build(bravenChartController: _restoredController);
     final mode = compact && _displayMode == ChartDisplayMode.split
         ? ChartDisplayMode.chart
         : _displayMode;
@@ -438,18 +562,15 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
                 _heartRateVisible ? 'Hide heart rate' : 'Show heart rate',
               ),
             ),
-            FilledButton.tonalIcon(
-              onPressed: hydrated == null ? null : _restoreCopy,
-              icon: const Icon(Icons.add_to_photos_outlined),
-              label: const Text('Restore independent copy'),
-            ),
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: compact ? 520 : 600,
+        Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              if (constraints.maxHeight < 160) {
+                return const SizedBox.shrink();
+              }
               final gap = mode == ChartDisplayMode.split ? 16.0 : 0.0;
               final half = math.max(0.0, (constraints.maxWidth - gap) / 2);
               return Stack(
@@ -482,51 +603,9 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
             },
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 320,
-          child: _SurfaceCard(label: 'HYDRATED RUNTIME', child: restored),
-        ),
       ],
     );
   }
-
-  Widget _buildDocumentGrid(ThemeData theme) => LayoutBuilder(
-    builder: (context, constraints) {
-      final columns = constraints.maxWidth < 900 ? 1 : 2;
-      final width = (constraints.maxWidth - (columns - 1) * 16) / columns;
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: [
-          SizedBox(
-            width: width,
-            child: _JsonCard(
-              json: _canonicalJson,
-              roundTripPassed: _jsonRoundTripPassed,
-              onRoundTrip: _roundTripJson,
-            ),
-          ),
-          SizedBox(
-            width: width,
-            child: _PreviewCard(preview: _artifact?.preview),
-          ),
-          SizedBox(
-            width: width,
-            child: _PayloadCard(
-              pointBytes: _pointBytes,
-              columnBytes: _columnBytes,
-              binaryBytes: _binaryBytes,
-            ),
-          ),
-          SizedBox(
-            width: width,
-            child: _IdentityCard(artifact: _artifact),
-          ),
-        ],
-      );
-    },
-  );
 
   Widget _sourceChart() => BravenChartPlus(
     bravenChartController: _sourceController,
@@ -1005,6 +1084,339 @@ class _ValueLine extends StatelessWidget {
   );
 }
 
+class _ArtifactGuide extends StatelessWidget {
+  const _ArtifactGuide({required this.focus});
+
+  final _ArtifactFocus focus;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final content = switch (focus) {
+      _ArtifactFocus.surfaces => (
+        Icons.view_quilt_outlined,
+        'Chart, data, or split view',
+        'The chart and the transposed data table are two views of the same captured document. Split keeps them side by side for comparison.',
+      ),
+      _ArtifactFocus.transport => (
+        Icons.swap_horiz_outlined,
+        'A chart that can travel',
+        'Save the canonical document, then restore a fresh chart from that saved copy. The restored runtime is independent of the source chart.',
+      ),
+      _ArtifactFocus.preview => (
+        Icons.image_outlined,
+        'An image you can send',
+        'Create a PNG preview at capture time. The preview is bound to the exact chart document revision it represents.',
+      ),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(content.$1, color: colors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  content.$2,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(content.$3),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: Text(switch (focus) {
+              _ArtifactFocus.surfaces => 'Compare',
+              _ArtifactFocus.transport => 'Save → restore',
+              _ArtifactFocus.preview => 'Capture PNG',
+            }, style: Theme.of(context).textTheme.labelMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtifactFocusCard extends StatelessWidget {
+  const _ArtifactFocusCard({
+    super.key,
+    required this.focus,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ArtifactFocus focus;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final content = switch (focus) {
+      _ArtifactFocus.surfaces => (
+        Icons.view_quilt_outlined,
+        'Chart · data · split',
+        'Compare the live chart and its exact-X table.',
+      ),
+      _ArtifactFocus.transport => (
+        Icons.swap_horiz_outlined,
+        'Save + restore',
+        'Move the chart through a portable document.',
+      ),
+      _ArtifactFocus.preview => (
+        Icons.image_outlined,
+        'Image preview',
+        'Create a shareable PNG of the captured chart.',
+      ),
+    };
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: selected ? colors.primaryContainer.withValues(alpha: 0.45) : null,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(content.$1, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      content.$2,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (selected) Icon(Icons.check_circle, color: colors.primary),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                content.$3,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Spacer(),
+              _FocusVisual(focus: focus),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusVisual extends StatelessWidget {
+  const _FocusVisual({required this.focus});
+
+  final _ArtifactFocus focus;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      height: 48,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: switch (focus) {
+        _ArtifactFocus.surfaces => const FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _VisualPill(label: 'Chart', active: true),
+              SizedBox(width: 6),
+              _VisualPill(label: 'Data'),
+              SizedBox(width: 6),
+              _VisualPill(label: 'Split'),
+            ],
+          ),
+        ),
+        _ArtifactFocus.transport => Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.save_outlined, size: 20, color: colors.primary),
+            const SizedBox(width: 12),
+            Icon(Icons.arrow_forward, size: 18, color: colors.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Icon(Icons.restart_alt_outlined, size: 20, color: colors.primary),
+          ],
+        ),
+        _ArtifactFocus.preview => Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.show_chart, size: 20, color: colors.primary),
+            const SizedBox(width: 12),
+            Icon(Icons.arrow_forward, size: 18, color: colors.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Icon(Icons.image_outlined, size: 20, color: colors.primary),
+          ],
+        ),
+      },
+    );
+  }
+}
+
+class _VisualPill extends StatelessWidget {
+  const _VisualPill({required this.label, this.active = false});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    decoration: BoxDecoration(
+      color: active
+          ? Theme.of(context).colorScheme.primaryContainer
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+  );
+}
+
+class _TransportSteps extends StatelessWidget {
+  const _TransportSteps({required this.saved, required this.restored});
+
+  final bool saved;
+  final bool restored;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      const _ProgressChip(label: '1 Capture', active: true),
+      _ProgressChip(label: '2 Save JSON', active: saved),
+      _ProgressChip(label: '3 Restore copy', active: restored),
+    ],
+  );
+}
+
+class _PreviewSteps extends StatelessWidget {
+  const _PreviewSteps({required this.hasPreview});
+
+  final bool hasPreview;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      const _ProgressChip(label: '1 Capture chart', active: true),
+      _ProgressChip(label: '2 Create PNG', active: hasPreview),
+      _ProgressChip(label: '3 Share or embed', active: hasPreview),
+    ],
+  );
+}
+
+class _ProgressChip extends StatelessWidget {
+  const _ProgressChip({required this.label, required this.active});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: active
+            ? colors.primaryContainer
+            : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            active ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 16,
+            color: active ? colors.primary : colors.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewStageImage extends StatelessWidget {
+  const _PreviewStageImage({required this.preview});
+
+  final ChartPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = preview.bytes;
+    if (bytes == null) {
+      return const _PlaceholderPanel(label: 'Preview bytes are not inline.');
+    }
+    return Column(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              bytes,
+              fit: BoxFit.contain,
+              width: double.infinity,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${preview.mimeType} · ${preview.widthPixels} × ${preview.heightPixels} · document hash matched',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+      ],
+    );
+  }
+}
+
 class _FeatureGuide extends StatelessWidget {
   const _FeatureGuide();
 
@@ -1206,9 +1618,9 @@ final restored = ChartDocumentHydrator.hydrateJson(
             const SizedBox(height: 6),
             Text(
               'Capture the effective state once, encode the document for storage or transport, then hydrate it where the user needs it.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
             DecoratedBox(
