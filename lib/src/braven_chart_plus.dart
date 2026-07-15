@@ -1471,6 +1471,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ),
       optionsKey: jsonEncode({
         'dataScope': options.dataScope.name,
+        'dataStorage': options.dataStorage.wireName,
         'includeViewState': options.includeViewState,
         'themeMode': options.themeMode.name,
         'themeReference': options.themeReference,

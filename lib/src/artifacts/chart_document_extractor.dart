@@ -18,6 +18,7 @@ import 'chart_axis_document_codec.dart';
 import 'chart_configuration_document_codec.dart';
 import 'chart_configuration_documents.dart';
 import 'chart_data_payload.dart';
+import 'chart_data_storage.dart';
 import 'chart_document.dart';
 import 'chart_interaction_document_codec.dart';
 import 'chart_series_document_codec.dart';
@@ -53,6 +54,7 @@ class ChartDocumentExtractOptions {
     this.documentId = 'chart-document',
     this.dataScope = ChartDataScope.effectiveFull,
     this.includeViewState = true,
+    this.dataStorage = ChartDataStorage.inlinePoints,
     this.themeMode = ChartThemeCaptureMode.referenceAndResolved,
     this.themeReference,
     this.xAxisFormatterDescriptor,
@@ -65,6 +67,7 @@ class ChartDocumentExtractOptions {
   final String documentId;
   final ChartDataScope dataScope;
   final bool includeViewState;
+  final ChartDataStorage dataStorage;
   final ChartThemeCaptureMode themeMode;
   final String? themeReference;
   final JsonObjectValue? xAxisFormatterDescriptor;
@@ -168,6 +171,7 @@ abstract final class ChartDocumentExtractor {
             ChartSeriesDocumentCodec.encode(
               series,
               inlineAxisFormatter: _seriesAxisFormatter(series, options),
+              dataStorage: options.dataStorage,
             ),
             warnings,
           ),
@@ -175,7 +179,10 @@ abstract final class ChartDocumentExtractor {
       final annotationDocuments = [
         for (final annotation in source.annotations)
           _requireValue(
-            ChartAnnotationDocumentCodec.encode(annotation),
+            ChartAnnotationDocumentCodec.encode(
+              annotation,
+              dataStorage: options.dataStorage,
+            ),
             warnings,
           ),
       ];

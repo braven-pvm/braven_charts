@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'artifact_json_readers.dart';
 import 'chart_annotation_document.dart';
+import 'chart_data_storage.dart';
 import 'json_value.dart';
 
 /// Reversible chart-number representation for JSON-incompatible doubles.
@@ -107,6 +108,7 @@ sealed class ChartDataPayload {
   factory ChartDataPayload.fromJson(Map<String, Object?> json) {
     return switch (readRequiredString(json, 'storage')) {
       'inlinePoints' => InlinePointPayload.fromJson(json),
+      'inlineColumns' => InlineColumnarPayload.fromJson(json),
       final storage => throw FormatException(
         'Unsupported chart data storage: $storage',
       ),
@@ -114,19 +116,27 @@ sealed class ChartDataPayload {
   }
 }
 
+/// A self-contained payload whose logical points are synchronously available.
+sealed class InlineChartDataPayload extends ChartDataPayload {
+  const InlineChartDataPayload();
+
+  List<ChartPointDocument> get points;
+}
+
 /// Schema-v1 inline point payload.
 ///
 /// Additional payload strategies can implement [ChartDataPayload] without
 /// changing the artifact or document envelope.
 @immutable
-final class InlinePointPayload extends ChartDataPayload {
+final class InlinePointPayload extends InlineChartDataPayload {
   InlinePointPayload(Iterable<ChartPointDocument> points)
     : points = List.unmodifiable(points);
 
+  @override
   final List<ChartPointDocument> points;
 
   @override
-  String get storage => 'inlinePoints';
+  String get storage => ChartDataStorage.inlinePoints.wireName;
 
   @override
   int get pointCount => points.length;
@@ -144,6 +154,207 @@ final class InlinePointPayload extends ChartDataPayload {
         ),
       );
 }
+
+/// Schema-v1 columnar point payload.
+///
+/// Required X/Y values and optional point properties are stored in parallel
+/// arrays. Every populated column has exactly [pointCount] entries so logical
+/// point order and sparse optional values remain lossless.
+@immutable
+final class InlineColumnarPayload extends InlineChartDataPayload {
+  InlineColumnarPayload({
+    required Iterable<ChartNumberDocument> xValues,
+    required Iterable<ChartNumberDocument> yValues,
+    Iterable<DateTime?>? timestamps,
+    Iterable<String?>? labels,
+    Iterable<JsonObjectValue?>? metadata,
+    Iterable<JsonObjectValue?>? segmentStyles,
+    Iterable<JsonObjectValue?>? pointStyles,
+    Iterable<Map<String, JsonValue>?>? pointExtensions,
+  }) : xValues = List.unmodifiable(xValues),
+       yValues = List.unmodifiable(yValues),
+       timestamps = _immutableOptionalColumn(timestamps),
+       labels = _immutableOptionalColumn(labels),
+       metadata = _immutableOptionalColumn(metadata),
+       segmentStyles = _immutableOptionalColumn(segmentStyles),
+       pointStyles = _immutableOptionalColumn(pointStyles),
+       pointExtensions = pointExtensions == null
+           ? null
+           : List.unmodifiable(
+               pointExtensions.map(
+                 (values) => values == null
+                     ? null
+                     : Map<String, JsonValue>.unmodifiable(values),
+               ),
+             ) {
+    _validateColumnLength('y', this.yValues.length);
+    _validateColumnLength('timestamps', this.timestamps?.length);
+    _validateColumnLength('labels', this.labels?.length);
+    _validateColumnLength('metadata', this.metadata?.length);
+    _validateColumnLength('segmentStyles', this.segmentStyles?.length);
+    _validateColumnLength('pointStyles', this.pointStyles?.length);
+    _validateColumnLength('pointExtensions', this.pointExtensions?.length);
+  }
+
+  factory InlineColumnarPayload.fromPoints(
+    Iterable<ChartPointDocument> source,
+  ) {
+    final points = List<ChartPointDocument>.unmodifiable(source);
+    return InlineColumnarPayload(
+      xValues: [for (final point in points) point.x],
+      yValues: [for (final point in points) point.y],
+      timestamps: _optionalPointColumn(points, (point) => point.timestamp),
+      labels: _optionalPointColumn(points, (point) => point.label),
+      metadata: _optionalPointColumn(points, (point) => point.metadata),
+      segmentStyles: _optionalPointColumn(
+        points,
+        (point) => point.segmentStyle,
+      ),
+      pointStyles: _optionalPointColumn(points, (point) => point.pointStyle),
+      pointExtensions: _optionalPointColumn(
+        points,
+        (point) => point.extensions.isEmpty ? null : point.extensions,
+      ),
+    );
+  }
+
+  final List<ChartNumberDocument> xValues;
+  final List<ChartNumberDocument> yValues;
+  final List<DateTime?>? timestamps;
+  final List<String?>? labels;
+  final List<JsonObjectValue?>? metadata;
+  final List<JsonObjectValue?>? segmentStyles;
+  final List<JsonObjectValue?>? pointStyles;
+  final List<Map<String, JsonValue>?>? pointExtensions;
+
+  @override
+  String get storage => ChartDataStorage.inlineColumns.wireName;
+
+  @override
+  int get pointCount => xValues.length;
+
+  @override
+  late final List<ChartPointDocument> points = List.unmodifiable([
+    for (var index = 0; index < pointCount; index++)
+      ChartPointDocument(
+        x: xValues[index],
+        y: yValues[index],
+        timestamp: timestamps?[index],
+        label: labels?[index],
+        metadata: metadata?[index],
+        segmentStyle: segmentStyles?[index],
+        pointStyle: pointStyles?[index],
+        extensions: pointExtensions?[index] ?? const {},
+      ),
+  ]);
+
+  @override
+  Map<String, Object?> toJson() => {
+    'storage': storage,
+    'x': [for (final value in xValues) value.toJson()],
+    'y': [for (final value in yValues) value.toJson()],
+    if (timestamps != null)
+      'timestamps': [
+        for (final value in timestamps!) value?.toUtc().toIso8601String(),
+      ],
+    if (labels != null) 'labels': labels,
+    if (metadata != null)
+      'metadata': [for (final value in metadata!) value?.toJson()],
+    if (segmentStyles != null)
+      'segmentStyles': [for (final value in segmentStyles!) value?.toJson()],
+    if (pointStyles != null)
+      'pointStyles': [for (final value in pointStyles!) value?.toJson()],
+    if (pointExtensions != null)
+      'pointExtensions': [
+        for (final value in pointExtensions!)
+          value == null ? null : jsonValueMap(value),
+      ],
+  };
+
+  factory InlineColumnarPayload.fromJson(Map<String, Object?> json) =>
+      InlineColumnarPayload(
+        xValues: readRequiredList(json, 'x').map(ChartNumberDocument.fromJson),
+        yValues: readRequiredList(json, 'y').map(ChartNumberDocument.fromJson),
+        timestamps: _readOptionalColumn(json, 'timestamps', (value, path) {
+          if (value == null) return null;
+          if (value is! String) {
+            throw FormatException('$path must be an ISO-8601 string or null');
+          }
+          final parsed = DateTime.tryParse(value);
+          if (parsed == null) {
+            throw FormatException('$path must be an ISO-8601 string or null');
+          }
+          return parsed.toUtc();
+        }),
+        labels: _readOptionalColumn(json, 'labels', (value, path) {
+          if (value == null) return null;
+          if (value is! String) {
+            throw FormatException('$path must be a string or null');
+          }
+          return value;
+        }),
+        metadata: _readOptionalJsonObjectColumn(json, 'metadata'),
+        segmentStyles: _readOptionalJsonObjectColumn(json, 'segmentStyles'),
+        pointStyles: _readOptionalJsonObjectColumn(json, 'pointStyles'),
+        pointExtensions: _readOptionalColumn(json, 'pointExtensions', (
+          value,
+          path,
+        ) {
+          if (value == null) return null;
+          final object = JsonValue.fromJson(value, path: path);
+          if (object is! JsonObjectValue) {
+            throw FormatException('$path must be an object or null');
+          }
+          return object.values;
+        }),
+      );
+
+  void _validateColumnLength(String name, int? length) {
+    if (length != null && length != pointCount) {
+      throw ArgumentError.value(
+        length,
+        name,
+        'Column length must equal the X column length $pointCount',
+      );
+    }
+  }
+}
+
+List<T>? _immutableOptionalColumn<T>(Iterable<T>? values) =>
+    values == null ? null : List.unmodifiable(values);
+
+List<T?>? _optionalPointColumn<T>(
+  List<ChartPointDocument> points,
+  T? Function(ChartPointDocument point) read,
+) {
+  final values = [for (final point in points) read(point)];
+  return values.any((value) => value != null) ? values : null;
+}
+
+List<T>? _readOptionalColumn<T>(
+  Map<String, Object?> json,
+  String key,
+  T Function(Object? value, String path) parse,
+) {
+  if (!json.containsKey(key) || json[key] == null) return null;
+  final values = readRequiredList(json, key);
+  return [
+    for (var index = 0; index < values.length; index++)
+      parse(values[index], '\$.$key[$index]'),
+  ];
+}
+
+List<JsonObjectValue?>? _readOptionalJsonObjectColumn(
+  Map<String, Object?> json,
+  String key,
+) => _readOptionalColumn(json, key, (value, path) {
+  if (value == null) return null;
+  final object = JsonValue.fromJson(value, path: path);
+  if (object is! JsonObjectValue) {
+    throw FormatException('$path must be an object or null');
+  }
+  return object;
+});
 
 @immutable
 class ChartSeriesDocument {

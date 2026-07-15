@@ -8,6 +8,7 @@ import '../models/enums.dart';
 import 'chart_annotation_document.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
+import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
 import 'chart_series_document_codec.dart';
 import 'chart_style_document_codec.dart';
@@ -16,8 +17,12 @@ import 'json_value.dart';
 /// Audited adapter for all built-in [ChartAnnotation] subtypes.
 abstract final class ChartAnnotationDocumentCodec {
   static ChartArtifactResult<ChartAnnotationDocument> encode(
-    ChartAnnotation annotation,
-  ) => encodeWithContext(annotation, ChartModelCodecContext());
+    ChartAnnotation annotation, {
+    ChartDataStorage dataStorage = ChartDataStorage.inlinePoints,
+  }) => encodeWithContext(
+    annotation,
+    ChartModelCodecContext(dataStorage: dataStorage),
+  );
 
   @internal
   static ChartArtifactResult<ChartAnnotationDocument> encodeWithContext(

@@ -161,6 +161,44 @@ void main() {
     expect(configuration.document.revision, declared.document.revision + 1);
   });
 
+  testWidgets('columnar extraction hydrates and projects to the native table', (
+    tester,
+  ) async {
+    final bravenController = BravenChartController();
+    addTearDown(bravenController.dispose);
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: bravenController,
+          series: [_series()],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final inlineSnapshot = _success(bravenController.extractDocument()).value;
+    final snapshot = _success(
+      bravenController.extractDocument(
+        const ChartDocumentExtractOptions(
+          documentId: 'columnar-live',
+          dataStorage: ChartDataStorage.inlineColumns,
+        ),
+      ),
+    ).value;
+    final payload = snapshot.document.series.single.data;
+    final hydrated =
+        ChartDocumentHydrator.hydrateDocument(snapshot.document)
+            as ChartArtifactSuccess<HydratedChartConfiguration>;
+    final table = ChartTableModel.fromDocument(snapshot.document);
+
+    expect(payload, isA<InlineColumnarPayload>());
+    expect(snapshot.document.revision, inlineSnapshot.document.revision + 1);
+    expect(payload.pointCount, 1);
+    expect(hydrated.value.series.single.points.single.y, 10);
+    expect(table.longRows.single.yRaw, 10);
+    expect(table.wideRows.single.cells['series']?.yRaw, 10);
+  });
+
   testWidgets('keeps hidden series in full scope and filters visible scope', (
     tester,
   ) async {

@@ -13,6 +13,7 @@ import 'chart_annotation_document.dart';
 import 'chart_annotation_document_codec.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
+import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
 import 'json_value.dart';
 
@@ -27,9 +28,10 @@ abstract final class ChartSeriesDocumentCodec {
   static ChartArtifactResult<ChartSeriesDocument> encode(
     ChartSeries series, {
     JsonObjectValue? inlineAxisFormatter,
+    ChartDataStorage dataStorage = ChartDataStorage.inlinePoints,
   }) => encodeWithContext(
     series,
-    ChartModelCodecContext(),
+    ChartModelCodecContext(dataStorage: dataStorage),
     inlineAxisFormatter: inlineAxisFormatter,
   );
 
@@ -63,6 +65,10 @@ abstract final class ChartSeriesDocumentCodec {
         );
       }
 
+      final points = [
+        for (var index = 0; index < series.points.length; index++)
+          _encodePoint(series.points[index], index),
+      ];
       return ChartArtifactSuccess(
         value: ChartSeriesDocument(
           type: _typeOf(series),
@@ -80,10 +86,12 @@ abstract final class ChartSeriesDocumentCodec {
             for (final annotation in series.annotations)
               _encodeAnnotationOrThrow(annotation, context),
           ],
-          data: InlinePointPayload([
-            for (var index = 0; index < series.points.length; index++)
-              _encodePoint(series.points[index], index),
-          ]),
+          data: switch (context.dataStorage) {
+            ChartDataStorage.inlinePoints => InlinePointPayload(points),
+            ChartDataStorage.inlineColumns => InlineColumnarPayload.fromPoints(
+              points,
+            ),
+          },
           requiredCapabilities: {'series.${_typeOf(series)}'},
         ),
       );
@@ -138,7 +146,7 @@ abstract final class ChartSeriesDocumentCodec {
   }) {
     try {
       final payload = document.data;
-      if (payload is! InlinePointPayload) {
+      if (payload is! InlineChartDataPayload) {
         throw _UnsupportedModelException(
           'Unsupported data payload: ${payload.storage}.',
           r'$.data.storage',

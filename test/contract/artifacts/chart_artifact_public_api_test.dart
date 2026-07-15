@@ -15,6 +15,16 @@ void main() {
     expect(options.previewOptions.pixelRatio, 2);
   });
 
+  test('columnar storage is selectable from the public extraction API', () {
+    const options = ChartDocumentExtractOptions(
+      dataStorage: ChartDataStorage.inlineColumns,
+    );
+
+    expect(options.dataStorage, ChartDataStorage.inlineColumns);
+    expect(ChartDataStorage.inlinePoints.wireName, 'inlinePoints');
+    expect(ChartDataStorage.inlineColumns.wireName, 'inlineColumns');
+  });
+
   test('schema-v1 artifact surface is available from the public barrel', () {
     final artifact = ChartArtifact(
       artifactId: 'public-api',

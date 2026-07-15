@@ -290,12 +290,18 @@ abstract final class ChartArtifactJsonCodec {
         final seriesPath = '$path[$index]';
         final seriesMap = _rawStringMap(series[index], 'series');
         final data = _requiredRawMap(seriesMap, 'data');
-        if (data['storage'] == 'inlinePoints') {
-          pointCount += _requiredRawList(data, 'points').length;
+        final storage = data['storage'];
+        if (storage == 'inlinePoints' || storage == 'inlineColumns') {
+          final count = storage == 'inlinePoints'
+              ? _requiredRawList(data, 'points').length
+              : _validateColumnarPayload(data, seriesPath);
+          pointCount += count;
           if (pointCount > limits.maxPoints) {
             throw _LimitException(
               'Artifact has more than ${limits.maxPoints} points.',
-              '$seriesPath.data.points',
+              storage == 'inlinePoints'
+                  ? '$seriesPath.data.points'
+                  : '$seriesPath.data.x',
             );
           }
         }
@@ -325,6 +331,36 @@ abstract final class ChartArtifactJsonCodec {
     if (annotations != null) {
       countAnnotations(annotations, r'$.document.annotations');
     }
+  }
+
+  static int _validateColumnarPayload(
+    Map<String, Object?> data,
+    String seriesPath,
+  ) {
+    final x = _requiredRawList(data, 'x');
+    final y = _requiredRawList(data, 'y');
+    if (y.length != x.length) {
+      throw FormatException(
+        '$seriesPath.data.y must match the X column length.',
+      );
+    }
+    for (final key in const [
+      'timestamps',
+      'labels',
+      'metadata',
+      'segmentStyles',
+      'pointStyles',
+      'pointExtensions',
+    ]) {
+      final value = data[key];
+      if (value == null) continue;
+      if (value is! List || value.length != x.length) {
+        throw FormatException(
+          '$seriesPath.data.$key must match the X column length.',
+        );
+      }
+    }
+    return x.length;
   }
 
   static void _validateStructure(

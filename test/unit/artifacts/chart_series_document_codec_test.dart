@@ -242,6 +242,39 @@ void main() {
       }
     });
 
+    test('encodes and hydrates every point field through inline columns', () {
+      final source = LineChartSeries(
+        id: 'columnar',
+        points: [
+          ChartDataPoint(
+            x: 1,
+            y: 240,
+            timestamp: DateTime.utc(2026, 7, 15, 8),
+            label: 'work',
+            metadata: const {'lap': 2},
+            segmentStyle: const SegmentStyle(strokeWidth: 3),
+            pointStyle: const PointStyle(size: 8),
+          ),
+        ],
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                source,
+                dataStorage: ChartDataStorage.inlineColumns,
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final payload = encoded.value.data as InlineColumnarPayload;
+      final roundTripped = ChartSeriesDocument.fromJson(encoded.value.toJson());
+      final decoded =
+          ChartSeriesDocumentCodec.decode(roundTripped)
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(payload.pointCount, 1);
+      expect(payload.labels, ['work']);
+      expect(decoded.value.points.single, source.points.single);
+    });
+
     test('fails closed for runtime callbacks', () {
       final labelFormatter =
           ChartSeriesDocumentCodec.encode(

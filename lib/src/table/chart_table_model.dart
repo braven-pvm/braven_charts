@@ -195,7 +195,7 @@ class ChartTableModel {
         ),
       );
       final payload = series.data;
-      if (payload is! InlinePointPayload) {
+      if (payload is! InlineChartDataPayload) {
         throw UnsupportedError(
           'Table generation does not support ${payload.storage} payloads.',
         );

@@ -265,6 +265,33 @@ void main() {
       expect(identical(decoded.trendAnnotations.single, trend), isFalse);
     });
 
+    test('projects nested legend series with the selected data storage', () {
+      final result = ChartAnnotationDocumentCodec.encode(
+        LegendAnnotation(
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [ChartDataPoint(x: 1, y: 250)],
+            ),
+          ],
+        ),
+        dataStorage: ChartDataStorage.inlineColumns,
+      );
+
+      expect(result, isA<ChartArtifactSuccess<ChartAnnotationDocument>>());
+      final document =
+          (result as ChartArtifactSuccess<ChartAnnotationDocument>).value;
+      final payload = document.payload.toJson() as Map<String, Object?>;
+      final series = payload['series']! as List<Object?>;
+      final nested = series.single! as Map<String, Object?>;
+      final data = nested['data']! as Map<String, Object?>;
+
+      expect(data['storage'], 'inlineColumns');
+      expect(data['x'], [1.0]);
+      expect(data['y'], [250.0]);
+      expect(data, isNot(contains('points')));
+    });
+
     test('uses stable type and capability identifiers for all built-ins', () {
       final values = <ChartAnnotation>[
         PointAnnotation(seriesId: 's', dataPointIndex: 0),

@@ -1,10 +1,16 @@
 import 'dart:collection';
 
+import 'chart_data_storage.dart';
+
 /// Shared recursion guard for mutually nested series and annotation codecs.
 final class ChartModelCodecContext {
-  ChartModelCodecContext({this.maxDepth = 64});
+  ChartModelCodecContext({
+    this.maxDepth = 64,
+    this.dataStorage = ChartDataStorage.inlinePoints,
+  });
 
   final int maxDepth;
+  final ChartDataStorage dataStorage;
   final Set<Object> _active = HashSet.identity();
   int _depth = 0;
 
