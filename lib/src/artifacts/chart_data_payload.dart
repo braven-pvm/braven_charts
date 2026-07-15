@@ -109,10 +109,112 @@ sealed class ChartDataPayload {
     return switch (readRequiredString(json, 'storage')) {
       'inlinePoints' => InlinePointPayload.fromJson(json),
       'inlineColumns' => InlineColumnarPayload.fromJson(json),
+      ReferencedPayload.storageName => ReferencedPayload.fromJson(json),
       final storage => throw FormatException(
         'Unsupported chart data storage: $storage',
       ),
     };
+  }
+}
+
+/// Host-resolved reference to one self-contained chart data payload blob.
+///
+/// The package validates this manifest but never performs network or file I/O.
+/// A host-authorized resolver supplies the bytes when requested.
+@immutable
+final class ReferencedPayload extends ChartDataPayload {
+  ReferencedPayload({
+    required this.contentType,
+    required this.byteLength,
+    required this.checksum,
+    required this.pointCount,
+    this.resolverKey,
+    this.uri,
+  }) {
+    if (!_contentTypePattern.hasMatch(contentType)) {
+      throw ArgumentError.value(
+        contentType,
+        'contentType',
+        'Invalid MIME type',
+      );
+    }
+    if (byteLength <= 0) {
+      throw ArgumentError.value(byteLength, 'byteLength', 'Must be positive');
+    }
+    if (!_checksumPattern.hasMatch(checksum)) {
+      throw ArgumentError.value(
+        checksum,
+        'checksum',
+        'Must be a lowercase sha256 digest',
+      );
+    }
+    if (pointCount < 0) {
+      throw ArgumentError.value(pointCount, 'pointCount', 'Cannot be negative');
+    }
+    if (resolverKey != null && resolverKey!.trim().isEmpty) {
+      throw ArgumentError.value(resolverKey, 'resolverKey', 'Cannot be blank');
+    }
+    final hasResolverKey = resolverKey != null;
+    final hasUri = uri != null;
+    if (hasResolverKey == hasUri) {
+      throw ArgumentError(
+        'Exactly one of resolverKey or uri must be provided.',
+      );
+    }
+    if (uri case final value?) {
+      if (!value.isAbsolute || value.hasFragment || value.userInfo.isNotEmpty) {
+        throw ArgumentError.value(
+          value,
+          'uri',
+          'Must be absolute and contain no user info or fragment',
+        );
+      }
+    }
+  }
+
+  static final RegExp _contentTypePattern = RegExp(
+    r'^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$',
+    caseSensitive: false,
+  );
+  static final RegExp _checksumPattern = RegExp(r'^sha256:[0-9a-f]{64}$');
+  static const storageName = 'referenced';
+
+  @override
+  String get storage => storageName;
+
+  final String contentType;
+  final int byteLength;
+  final String checksum;
+  @override
+  final int pointCount;
+  final String? resolverKey;
+  final Uri? uri;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'storage': storage,
+    'contentType': contentType,
+    'byteLength': byteLength,
+    'checksum': checksum,
+    'pointCount': pointCount,
+    if (resolverKey != null) 'resolverKey': resolverKey,
+    if (uri != null) 'uri': uri.toString(),
+  };
+
+  factory ReferencedPayload.fromJson(Map<String, Object?> json) {
+    final uriValue = readOptionalString(json, 'uri');
+    final uri = uriValue == null ? null : Uri.tryParse(uriValue);
+    if (uriValue != null && uri == null) {
+      throw const FormatException('uri must be a valid URI');
+    }
+    return ReferencedPayload(
+      contentType: readRequiredString(json, 'contentType'),
+      byteLength: readRequiredInt(json, 'byteLength'),
+      checksum: readRequiredString(json, 'checksum'),
+      pointCount: readRequiredInt(json, 'pointCount'),
+      resolverKey: readOptionalString(json, 'resolverKey'),
+      uri: uri,
+    );
   }
 }
 

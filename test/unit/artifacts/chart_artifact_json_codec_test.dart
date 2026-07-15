@@ -228,8 +228,7 @@ void main() {
 
       series.removeLast();
       final firstSeries = series.single as Map<String, dynamic>;
-      (firstSeries['data'] as Map<String, dynamic>)['storage'] =
-          'referencedPayload';
+      (firstSeries['data'] as Map<String, dynamic>)['storage'] = 'binary';
       final unsupportedStorage = ChartArtifactJsonCodec.decode(
         jsonEncode(root),
       );

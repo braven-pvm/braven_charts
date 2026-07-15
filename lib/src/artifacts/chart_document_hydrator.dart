@@ -21,6 +21,7 @@ import 'chart_artifact_json_codec.dart';
 import 'chart_axis_document_codec.dart';
 import 'chart_configuration_document_codec.dart';
 import 'chart_data_payload.dart';
+import 'chart_data_resolver.dart';
 import 'chart_document.dart';
 import 'chart_interaction_document_codec.dart';
 import 'chart_runtime_bindings.dart';
@@ -278,6 +279,93 @@ abstract final class ChartDocumentHydrator {
           decoded,
           options: options,
           runtimeBindings: runtimeBindings,
+        ),
+    };
+  }
+
+  /// Resolves host-owned data blobs before normal artifact hydration.
+  static Future<ChartArtifactResult<HydratedChartConfiguration>>
+  hydrateJsonWithDataResolver(
+    String encoded, {
+    required ChartDataResolver dataResolver,
+    ChartArtifactValidationLimits limits =
+        const ChartArtifactValidationLimits(),
+    ChartHydrationOptions options = const ChartHydrationOptions(),
+    ChartRuntimeBindings runtimeBindings = const ChartRuntimeBindings(),
+  }) async {
+    final decoded = ChartArtifactJsonCodec.decode(
+      encoded,
+      limits: limits,
+      supportedCapabilities: {
+        ..._builtInCapabilities,
+        ...runtimeBindings.extensions.supportedCapabilities,
+      },
+    );
+    if (decoded case ChartArtifactFailure<ChartArtifactDecodeResult>()) {
+      return ChartArtifactFailure(
+        error: decoded.error,
+        warnings: decoded.warnings,
+      );
+    }
+    final success = decoded as ChartArtifactSuccess<ChartArtifactDecodeResult>;
+    final hydrated = await hydrateArtifactWithDataResolver(
+      success.value.artifact,
+      dataResolver: dataResolver,
+      limits: limits,
+      options: options,
+      runtimeBindings: runtimeBindings,
+    );
+    return switch (hydrated) {
+      ChartArtifactSuccess<HydratedChartConfiguration>() =>
+        ChartArtifactSuccess(
+          value: hydrated.value,
+          warnings: [...success.warnings, ...hydrated.warnings],
+        ),
+      ChartArtifactFailure<HydratedChartConfiguration>() =>
+        ChartArtifactFailure(
+          error: hydrated.error,
+          warnings: [...success.warnings, ...hydrated.warnings],
+        ),
+    };
+  }
+
+  /// Resolves all referenced payloads, then uses the synchronous hydrator.
+  static Future<ChartArtifactResult<HydratedChartConfiguration>>
+  hydrateArtifactWithDataResolver(
+    ChartArtifact artifact, {
+    required ChartDataResolver dataResolver,
+    ChartArtifactValidationLimits limits =
+        const ChartArtifactValidationLimits(),
+    ChartHydrationOptions options = const ChartHydrationOptions(),
+    ChartRuntimeBindings runtimeBindings = const ChartRuntimeBindings(),
+  }) async {
+    final resolved = await ChartDataResolution.resolveArtifact(
+      artifact,
+      resolver: dataResolver,
+      limits: limits,
+    );
+    if (resolved case ChartArtifactFailure<ChartArtifact>()) {
+      return ChartArtifactFailure(
+        error: resolved.error,
+        warnings: resolved.warnings,
+      );
+    }
+    final success = resolved as ChartArtifactSuccess<ChartArtifact>;
+    final hydrated = hydrateArtifact(
+      success.value,
+      options: options,
+      runtimeBindings: runtimeBindings,
+    );
+    return switch (hydrated) {
+      ChartArtifactSuccess<HydratedChartConfiguration>() =>
+        ChartArtifactSuccess(
+          value: hydrated.value,
+          warnings: [...success.warnings, ...hydrated.warnings],
+        ),
+      ChartArtifactFailure<HydratedChartConfiguration>() =>
+        ChartArtifactFailure(
+          error: hydrated.error,
+          warnings: [...success.warnings, ...hydrated.warnings],
         ),
     };
   }

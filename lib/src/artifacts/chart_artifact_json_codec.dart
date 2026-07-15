@@ -64,7 +64,7 @@ abstract final class ChartArtifactJsonCodec {
     } on _LimitException catch (error) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          code: error.code,
           message: error.message,
           path: error.path,
         ),
@@ -180,7 +180,7 @@ abstract final class ChartArtifactJsonCodec {
     } on _LimitException catch (error) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
-          code: ChartArtifactDiagnosticCodes.validationLimitExceeded,
+          code: error.code,
           message: error.message,
           path: error.path,
         ),
@@ -275,6 +275,7 @@ abstract final class ChartArtifactJsonCodec {
     final document = _requiredRawMap(root, 'document');
     var seriesCount = 0;
     var pointCount = 0;
+    var dataPayloadBytes = 0;
 
     late void Function(List<Object?> annotations, String path) countAnnotations;
 
@@ -291,17 +292,39 @@ abstract final class ChartArtifactJsonCodec {
         final seriesMap = _rawStringMap(series[index], 'series');
         final data = _requiredRawMap(seriesMap, 'data');
         final storage = data['storage'];
-        if (storage == 'inlinePoints' || storage == 'inlineColumns') {
-          final count = storage == 'inlinePoints'
-              ? _requiredRawList(data, 'points').length
-              : _validateColumnarPayload(data, seriesPath);
+        if (storage == 'inlinePoints' ||
+            storage == 'inlineColumns' ||
+            storage == 'referenced') {
+          final count = switch (storage) {
+            'inlinePoints' => _requiredRawList(data, 'points').length,
+            'inlineColumns' => _validateColumnarPayload(data, seriesPath),
+            'referenced' => _validateReferencedPayload(
+              data,
+              seriesPath,
+              limits,
+              (byteLength) {
+                dataPayloadBytes += byteLength;
+                if (dataPayloadBytes > limits.maxTotalDataPayloadBytes) {
+                  throw _LimitException(
+                    'Referenced data declares more than '
+                        '${limits.maxTotalDataPayloadBytes} total bytes.',
+                    '$seriesPath.data.byteLength',
+                    ChartArtifactDiagnosticCodes.dataPayloadTooLarge,
+                  );
+                }
+              },
+            ),
+            _ => throw StateError('Unreachable storage strategy.'),
+          };
           pointCount += count;
           if (pointCount > limits.maxPoints) {
             throw _LimitException(
               'Artifact has more than ${limits.maxPoints} points.',
-              storage == 'inlinePoints'
-                  ? '$seriesPath.data.points'
-                  : '$seriesPath.data.x',
+              switch (storage) {
+                'inlinePoints' => '$seriesPath.data.points',
+                'inlineColumns' => '$seriesPath.data.x',
+                _ => '$seriesPath.data.pointCount',
+              },
             );
           }
         }
@@ -361,6 +384,36 @@ abstract final class ChartArtifactJsonCodec {
       }
     }
     return x.length;
+  }
+
+  static int _validateReferencedPayload(
+    Map<String, Object?> data,
+    String seriesPath,
+    ChartArtifactValidationLimits limits,
+    void Function(int byteLength) addBytes,
+  ) {
+    final pointCount = data['pointCount'];
+    final byteLength = data['byteLength'];
+    if (pointCount is! int || pointCount < 0) {
+      throw FormatException(
+        '$seriesPath.data.pointCount must be a non-negative integer.',
+      );
+    }
+    if (byteLength is! int || byteLength <= 0) {
+      throw FormatException(
+        '$seriesPath.data.byteLength must be a positive integer.',
+      );
+    }
+    if (byteLength > limits.maxDataPayloadBytes) {
+      throw _LimitException(
+        'Referenced data declares $byteLength bytes; maximum is '
+            '${limits.maxDataPayloadBytes}.',
+        '$seriesPath.data.byteLength',
+        ChartArtifactDiagnosticCodes.dataPayloadTooLarge,
+      );
+    }
+    addBytes(byteLength);
+    return pointCount;
   }
 
   static void _validateStructure(
@@ -465,8 +518,13 @@ abstract final class ChartArtifactJsonCodec {
 }
 
 final class _LimitException implements Exception {
-  const _LimitException(this.message, this.path);
+  const _LimitException(
+    this.message,
+    this.path, [
+    this.code = ChartArtifactDiagnosticCodes.validationLimitExceeded,
+  ]);
 
   final String message;
   final String path;
+  final String code;
 }

@@ -42,6 +42,7 @@ export 'src/artifacts/chart_annotation_document.dart';
 export 'src/artifacts/chart_annotation_document_codec.dart';
 export 'src/artifacts/chart_axis_document_codec.dart';
 export 'src/artifacts/chart_data_payload.dart';
+export 'src/artifacts/chart_data_resolver.dart';
 export 'src/artifacts/chart_data_storage.dart';
 export 'src/artifacts/chart_configuration_document_codec.dart';
 export 'src/artifacts/chart_configuration_documents.dart';

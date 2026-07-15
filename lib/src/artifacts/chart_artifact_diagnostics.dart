@@ -16,6 +16,11 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const unstableStreamRevision = 'unstable_stream_revision';
   static const previewCaptureFailed = 'preview_capture_failed';
   static const previewTooLarge = 'preview_too_large';
+  static const dataPayloadTooLarge = 'data_payload_too_large';
+  static const dataPayloadResolutionFailed = 'data_payload_resolution_failed';
+  static const dataPayloadIntegrityMismatch = 'data_payload_integrity_mismatch';
+  static const unsupportedDataPayloadContentType =
+      'unsupported_data_payload_content_type';
 }
 
 @immutable
@@ -80,12 +85,16 @@ class ChartArtifactValidationLimits {
     this.maxStringLength = 1024 * 1024,
     this.maxSeries = 1000,
     this.maxPoints = 1000 * 1000,
+    this.maxDataPayloadBytes = 64 * 1024 * 1024,
+    this.maxTotalDataPayloadBytes = 256 * 1024 * 1024,
   }) : assert(maxEncodedBytes > 0),
        assert(maxDepth > 0),
        assert(maxCollectionEntries > 0),
        assert(maxStringLength > 0),
        assert(maxSeries > 0),
-       assert(maxPoints > 0);
+       assert(maxPoints > 0),
+       assert(maxDataPayloadBytes > 0),
+       assert(maxTotalDataPayloadBytes > 0);
 
   final int maxEncodedBytes;
   final int maxDepth;
@@ -93,6 +102,8 @@ class ChartArtifactValidationLimits {
   final int maxStringLength;
   final int maxSeries;
   final int maxPoints;
+  final int maxDataPayloadBytes;
+  final int maxTotalDataPayloadBytes;
 }
 
 /// Pure migration step between adjacent artifact schema versions.

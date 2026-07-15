@@ -13,6 +13,7 @@ import 'pages/artifact_export_lab_page.dart';
 import 'pages/artifact_hydration_lab_page.dart';
 import 'pages/artifact_payload_lab_page.dart';
 import 'pages/artifact_preview_lab_page.dart';
+import 'pages/artifact_resolver_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -246,6 +247,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.view_column_outlined,
       selectedIcon: Icons.view_column,
       page: ArtifactPayloadLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Resolver Lab',
+      icon: Icons.cloud_download_outlined,
+      selectedIcon: Icons.cloud_download,
+      page: ArtifactResolverLabPage(),
       badge: 'NEW',
     ),
   ];

@@ -25,6 +25,22 @@ void main() {
     expect(ChartDataStorage.inlineColumns.wireName, 'inlineColumns');
   });
 
+  test('referenced payload resolution is available from the public API', () {
+    final resolver = _PublicResolver();
+    final reference = ReferencedPayload(
+      contentType: ChartDataBlobCodec.contentType,
+      byteLength: 1,
+      checksum:
+          'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      pointCount: 0,
+      resolverKey: 'public-contract',
+    );
+
+    expect(resolver, isA<ChartDataResolver>());
+    expect(reference.storage, 'referenced');
+    expect(const ChartArtifactValidationLimits().maxDataPayloadBytes, 1 << 26);
+  });
+
   test('schema-v1 artifact surface is available from the public barrel', () {
     final artifact = ChartArtifact(
       artifactId: 'public-api',
@@ -53,4 +69,11 @@ void main() {
       contains('braven.chartArtifact'),
     );
   });
+}
+
+class _PublicResolver implements ChartDataResolver {
+  @override
+  Future<ChartArtifactResult<List<int>>> resolve(
+    ReferencedPayload reference,
+  ) async => ChartArtifactSuccess(value: const [0]);
 }
