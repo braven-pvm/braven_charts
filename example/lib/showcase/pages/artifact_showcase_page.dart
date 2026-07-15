@@ -26,7 +26,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   ChartTableModel? _table;
   HydratedChartConfiguration? _hydrated;
   String? _canonicalJson;
-  String _status = 'Mounting the source chart…';
+  String _status = 'Preparing an example chart…';
   String? _error;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
   bool _busy = false;
@@ -35,7 +35,6 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   int? _pointBytes;
   int? _columnBytes;
   int? _binaryBytes;
-  int _restoreCount = 0;
 
   static final _formatterDescriptor = ChartFormatterDescriptor(
     id: 'showcase.fixed',
@@ -80,7 +79,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     setState(() {
       _busy = true;
       _error = null;
-      _status = 'Capturing effective data, view state, and preview…';
+      _status = 'Saving the chart state and preparing its portable copy…';
     });
 
     final result = await _sourceController.extractArtifact(
@@ -144,8 +143,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
           _hydrated = hydration;
           _jsonRoundTripPassed = false;
           _status = hydration == null
-              ? 'Captured the artifact; hydration needs attention.'
-              : 'Captured one immutable artifact and prepared an independent runtime.';
+              ? 'Chart captured, but the restored copy needs attention.'
+              : 'Chart captured. Try the chart, data table, and restored copy below.';
           _error = hydrationError;
         });
         _comparePayloads();
@@ -174,8 +173,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
       _jsonRoundTripPassed =
           decoded is ChartArtifactSuccess<ChartArtifactDecodeResult>;
       _status = _jsonRoundTripPassed
-          ? 'Schema ${artifact.schemaVersion} round trip passed with canonical JSON.'
-          : 'Schema validation reported a compatibility issue.';
+          ? 'Portable chart document validated successfully.'
+          : 'The portable chart document needs a compatibility check.';
       _error = decodeError;
     });
   }
@@ -190,7 +189,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     if (restored case ChartArtifactFailure<HydratedChartConfiguration>()) {
       setState(() {
         _error = '${restored.error.code}: ${restored.error.message}';
-        _status = 'Restore failed';
+        _status = 'The chart could not be restored from this document.';
       });
       return;
     }
@@ -198,10 +197,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
         (restored as ChartArtifactSuccess<HydratedChartConfiguration>).value;
     setState(() {
       _hydrated = hydrated;
-      _restoreCount++;
       _error = null;
-      _status =
-          'Restored copy $_restoreCount from canonical JSON with fresh runtime bindings.';
+      _status = 'Restored a fresh chart copy from the portable document.';
     });
   }
 
@@ -302,14 +299,14 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'One chart, every portable surface',
+                    'Save, share, and restore charts',
                     style: theme.textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 820),
                     child: Text(
-                      'Capture the effective chart once, then inspect its schema, preview, raw data, payload strategy, and independent restored runtime from the same immutable document.',
+                      'Capture the chart your users see, then reuse the same portable document for sharing, data tables, previews, and a fresh restored runtime.',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         height: 1.45,
@@ -326,31 +323,53 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
                   ),
                   const SizedBox(height: 24),
                   const _SectionHeading(
-                    eyebrow: 'LIVE WORKFLOW',
-                    title: 'Chart, data, and restored runtime',
+                    eyebrow: 'THE CHART ARTIFACT JOURNEY',
+                    title: 'One capture. Three useful outcomes.',
                     description:
-                        'The table and hydrated chart are projections of the same captured document.',
+                        'The artifact keeps the effective chart state together so every surface stays consistent.',
+                  ),
+                  const SizedBox(height: 12),
+                  const _JourneySteps(),
+                  const SizedBox(height: 28),
+                  const _SectionHeading(
+                    eyebrow: 'TRY IT',
+                    title: 'Explore the same chart three ways',
+                    description:
+                        'Switch between the interactive chart, its exact-X data table, and an independent restored copy.',
                   ),
                   const SizedBox(height: 12),
                   _buildWorkflowStage(compact),
                   const SizedBox(height: 28),
                   const _SectionHeading(
-                    eyebrow: 'PORTABLE DOCUMENT',
-                    title: 'Inspect, validate, and persist',
+                    eyebrow: 'FEATURE GUIDE',
+                    title: 'Built for real product workflows',
                     description:
-                        'These controls make the transport boundary visible without leaving the page.',
+                        'Use artifacts when a chart needs to move between screens, sessions, services, or people.',
                   ),
                   const SizedBox(height: 12),
-                  _buildDocumentGrid(theme),
+                  const _FeatureGuide(),
                   const SizedBox(height: 28),
                   const _SectionHeading(
-                    eyebrow: 'CAPABILITY MAP',
-                    title: 'What this page proves',
+                    eyebrow: 'HOW TO USE IT',
+                    title: 'Capture once, hydrate anywhere',
                     description:
-                        'Focused lab pages remain available in navigation for test-specific diagnostics.',
+                        'The public API is intentionally small: capture the effective chart, encode it, and hydrate it where you need it.',
                   ),
                   const SizedBox(height: 12),
-                  const _CapabilityMap(),
+                  const _CodeExampleCard(),
+                  const SizedBox(height: 28),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: const Text('Inspect the portable document'),
+                    subtitle: const Text(
+                      'Optional diagnostics for JSON, previews, payload sizes, and compatibility',
+                    ),
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildDocumentGrid(theme),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -986,49 +1005,39 @@ class _ValueLine extends StatelessWidget {
   );
 }
 
-class _CapabilityMap extends StatelessWidget {
-  const _CapabilityMap();
+class _FeatureGuide extends StatelessWidget {
+  const _FeatureGuide();
 
   static const _features = <(IconData, String, String)>[
     (
       Icons.camera_alt_outlined,
-      'Effective extraction',
-      'Widget, controller, annotation, visibility, and stream state',
+      'Capture the effective chart',
+      'Keep the data, annotations, styles, visibility, and viewport users actually see.',
     ),
     (
-      Icons.schema_outlined,
-      'Versioned schema',
-      'Deterministic JSON, validation limits, and migrations',
-    ),
-    (
-      Icons.layers_outlined,
-      'Interactive hydration',
-      'Fresh controllers, view state, and host bindings',
+      Icons.ios_share_outlined,
+      'Save and share safely',
+      'Use deterministic JSON when a chart needs to cross a screen, session, or service boundary.',
     ),
     (
       Icons.table_rows_outlined,
-      'Native data table',
-      'Exact-X transposed rows with raw values and series colours',
+      'Show the data behind it',
+      'Project the same document into a compact, transposed table with exact X values.',
     ),
     (
       Icons.image_outlined,
-      'Preview capture',
-      'Optional PNG tied to the document hash',
+      'Add a preview',
+      'Attach a revision-bound image for reports, messages, and quick visual confirmation.',
     ),
     (
       Icons.storage_outlined,
-      'Large-data payloads',
-      'Columnar, referenced, and compressed binary storage',
+      'Scale for larger data',
+      'Choose inline columns, host-resolved data, or compressed binary payloads as needed.',
     ),
     (
-      Icons.fingerprint_outlined,
-      'Identity + provenance',
-      'Canonical hashes, deduplication, and source metadata',
-    ),
-    (
-      Icons.security_outlined,
-      'Safe compatibility',
-      'Unknown capabilities warn or fail closed before hydration',
+      Icons.restart_alt_outlined,
+      'Restore with confidence',
+      'Validate capabilities and hydrate a fresh runtime without coupling it to the source widget.',
     ),
   ];
 
@@ -1054,4 +1063,176 @@ class _CapabilityMap extends StatelessWidget {
         ),
     ],
   );
+}
+
+class _JourneySteps extends StatelessWidget {
+  const _JourneySteps();
+
+  static const _steps = <(IconData, String, String)>[
+    (
+      Icons.camera_alt_outlined,
+      'Capture what is visible',
+      'Effective data, styles, annotations, and view state travel together.',
+    ),
+    (
+      Icons.ios_share_outlined,
+      'Save or share it',
+      'Use canonical JSON, a preview image, or a compact data payload.',
+    ),
+    (
+      Icons.restart_alt_outlined,
+      'Restore it later',
+      'Hydrate a fresh chart without rebuilding the original widget by hand.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth < 720
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 24) / 3;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (var index = 0; index < _steps.length; index++)
+              SizedBox(
+                width: width,
+                child: _JourneyStep(
+                  number: index + 1,
+                  icon: _steps[index].$1,
+                  title: _steps[index].$2,
+                  description: _steps[index].$3,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _JourneyStep extends StatelessWidget {
+  const _JourneyStep({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  final int number;
+  final IconData icon;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: colors.primaryContainer,
+                  foregroundColor: colors.onPrimaryContainer,
+                  child: Text('$number'),
+                ),
+                const SizedBox(width: 10),
+                Icon(icon, color: colors.primary),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CodeExampleCard extends StatelessWidget {
+  const _CodeExampleCard();
+
+  static const _code = '''final captured = await controller.extractArtifact(
+  const ChartArtifactExtractOptions(
+    artifactId: 'workout-2026-07-15',
+    includePreview: true,
+  ),
+);
+
+final json = ChartArtifactJsonCodec.encode(captured.value);
+final restored = ChartDocumentHydrator.hydrateJson(
+  json.value,
+  runtimeBindings: bindings,
+);''';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A small API surface for a durable chart',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Capture the effective state once, encode the document for storage or transport, then hydrate it where the user needs it.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SelectableText(
+                  _code,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    height: 1.45,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

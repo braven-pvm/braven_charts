@@ -1,5 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts_plus_example/showcase/pages/artifact_data_table_lab_page.dart';
+import 'package:braven_charts_example/showcase/pages/artifact_data_table_lab_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

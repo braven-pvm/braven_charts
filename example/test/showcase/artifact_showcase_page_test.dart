@@ -1,5 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts_plus_example/showcase/pages/artifact_showcase_page.dart';
+import 'package:braven_charts_example/showcase/pages/artifact_showcase_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,16 +16,14 @@ void main() {
     await tester.pumpWidget(subject());
     await _settleCapture(tester);
 
-    expect(find.text('One chart, every portable surface'), findsOneWidget);
+    expect(find.text('Save, share, and restore charts'), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsNWidgets(2));
     expect(find.byType(ChartDataTable), findsOneWidget);
-    expect(find.text('Schema + canonical JSON'), findsOneWidget);
-    expect(find.text('Revision-bound preview'), findsOneWidget);
-    expect(find.text('Payload strategies'), findsOneWidget);
-    expect(find.text('Identity + compatibility'), findsOneWidget);
-    expect(find.text('Effective extraction'), findsOneWidget);
-    expect(find.text('Native data table'), findsOneWidget);
-    expect(find.text('Large-data payloads'), findsOneWidget);
+    expect(find.text('One capture. Three useful outcomes.'), findsOneWidget);
+    expect(find.text('Capture the effective chart'), findsOneWidget);
+    expect(find.text('Show the data behind it'), findsOneWidget);
+    expect(find.text('Scale for larger data'), findsOneWidget);
+    expect(find.text('A small API surface for a durable chart'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -41,7 +39,7 @@ void main() {
 
     expect(find.byTooltip('Capture artifact'), findsOneWidget);
     expect(find.text('Split'), findsNothing);
-    expect(find.text('Chart, data, and restored runtime'), findsOneWidget);
+    expect(find.text('Explore the same chart three ways'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

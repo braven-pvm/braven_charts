@@ -49,6 +49,7 @@ dependencies:
   fleather: ^1.27.0
   flex_color_picker: ^3.8.0
   parchment: ^1.27.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

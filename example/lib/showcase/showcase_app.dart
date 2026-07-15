@@ -6,20 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
-import 'pages/artifact_schema_lab_page.dart';
 import 'pages/artifact_showcase_page.dart';
-import 'pages/artifact_binary_payload_lab_page.dart';
-import 'pages/artifact_data_table_lab_page.dart';
-import 'pages/artifact_extraction_lab_page.dart';
-import 'pages/artifact_export_lab_page.dart';
-import 'pages/artifact_formatter_binding_lab_page.dart';
-import 'pages/artifact_hydration_lab_page.dart';
-import 'pages/artifact_identity_lab_page.dart';
-import 'pages/artifact_migration_lab_page.dart';
-import 'pages/artifact_payload_lab_page.dart';
-import 'pages/artifact_preview_lab_page.dart';
-import 'pages/artifact_resolver_lab_page.dart';
-import 'pages/artifact_save_restore_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -84,6 +71,7 @@ class NavDestination {
     required this.icon,
     required this.selectedIcon,
     required this.page,
+    this.routeSlug,
     this.reviewProposal,
   });
 
@@ -91,13 +79,15 @@ class NavDestination {
   final IconData icon;
   final IconData selectedIcon;
   final Widget page;
+  final String? routeSlug;
   final ShowcaseReviewProposal? reviewProposal;
 
-  String get slug => label
-      .toLowerCase()
-      .replaceAll('+', ' ')
-      .replaceAll(RegExp('[^a-z0-9]+'), '-')
-      .replaceAll(RegExp(r'(^-|-$)'), '');
+  String get slug => routeSlug ??
+      label
+          .toLowerCase()
+          .replaceAll('+', ' ')
+          .replaceAll(RegExp('[^a-z0-9]+'), '-')
+          .replaceAll(RegExp(r'(^-|-$)'), '');
 }
 
 /// Release-review note for a page that may be merged, renamed, or removed.
@@ -209,100 +199,11 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: LoadingStatesPage(),
     ),
     const NavDestination(
-      label: 'Artifact Showcase',
+      label: 'Chart Artifacts',
       icon: Icons.hub_outlined,
       selectedIcon: Icons.hub,
       page: ArtifactShowcasePage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Artifact Lab',
-      icon: Icons.data_object_outlined,
-      selectedIcon: Icons.data_object,
-      page: ArtifactSchemaLabPage(),
-    ),
-    const NavDestination(
-      label: 'Extraction Lab',
-      icon: Icons.camera_outlined,
-      selectedIcon: Icons.camera,
-      page: ArtifactExtractionLabPage(),
-    ),
-    const NavDestination(
-      label: 'Hydration Lab',
-      icon: Icons.layers_outlined,
-      selectedIcon: Icons.layers,
-      page: ArtifactHydrationLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Data Table Lab',
-      icon: Icons.table_chart_outlined,
-      selectedIcon: Icons.table_chart,
-      page: ArtifactDataTableLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Preview Lab',
-      icon: Icons.image_outlined,
-      selectedIcon: Icons.image,
-      page: ArtifactPreviewLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Export Lab',
-      icon: Icons.inventory_2_outlined,
-      selectedIcon: Icons.inventory_2,
-      page: ArtifactExportLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Payload Lab',
-      icon: Icons.view_column_outlined,
-      selectedIcon: Icons.view_column,
-      page: ArtifactPayloadLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Resolver Lab',
-      icon: Icons.cloud_download_outlined,
-      selectedIcon: Icons.cloud_download,
-      page: ArtifactResolverLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Binary Payload Lab',
-      icon: Icons.compress_outlined,
-      selectedIcon: Icons.compress,
-      page: ArtifactBinaryPayloadLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Migration Lab',
-      icon: Icons.account_tree_outlined,
-      selectedIcon: Icons.account_tree,
-      page: ArtifactMigrationLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Identity Lab',
-      icon: Icons.fingerprint_outlined,
-      selectedIcon: Icons.fingerprint,
-      page: ArtifactIdentityLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Save Restore Lab',
-      icon: Icons.save_outlined,
-      selectedIcon: Icons.save,
-      page: ArtifactSaveRestoreLabPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Formatter Binding Lab',
-      icon: Icons.code_outlined,
-      selectedIcon: Icons.code,
-      page: ArtifactFormatterBindingLabPage(),
-      badge: 'NEW',
+      routeSlug: 'artifact-showcase',
     ),
   ];
 
