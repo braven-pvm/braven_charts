@@ -90,12 +90,14 @@ class XAxisPainter {
     // Save canvas state and clip to prevent ticks from extending beyond plot area bounds
     canvas.save();
     // Clip horizontally to plot area, allow vertical overflow for labels below axis
-    canvas.clipRect(Rect.fromLTRB(
-      plotArea.left,
-      plotArea.top,
-      plotArea.right,
-      chartArea.bottom,
-    ));
+    canvas.clipRect(
+      Rect.fromLTRB(
+        plotArea.left,
+        plotArea.top,
+        plotArea.right,
+        chartArea.bottom,
+      ),
+    );
 
     final effectiveRenderMin = config.renderMin ?? axisBounds.min;
     final effectiveRenderMax = config.renderMax ?? axisBounds.max;
@@ -143,7 +145,9 @@ class XAxisPainter {
     }
 
     // Minor ticks — shorter unlabelled marks between major ticks
-    if (config.showMinorTicks && config.minorTickCount > 0 && ticks.length >= 2) {
+    if (config.showMinorTicks &&
+        config.minorTickCount > 0 &&
+        ticks.length >= 2) {
       for (int i = 0; i < ticks.length - 1; i++) {
         final a = ticks[i];
         final b = ticks[i + 1];
@@ -153,8 +157,10 @@ class XAxisPainter {
               ? 0.0
               : (v - axisBounds.min) / axisBounds.span;
           final x = plotArea.left + ratio * plotArea.width;
-          if (x >= plotArea.left && x <= plotArea.right &&
-              v >= effectiveRenderMin && v <= effectiveRenderMax) {
+          if (x >= plotArea.left &&
+              x <= plotArea.right &&
+              v >= effectiveRenderMin &&
+              v <= effectiveRenderMax) {
             canvas.drawLine(
               Offset(x, plotArea.bottom),
               Offset(x, plotArea.bottom + config.minorTickLength),
@@ -172,8 +178,8 @@ class XAxisPainter {
     if (config.shouldShowAxisLabel && config.label != null) {
       final axisLabelText =
           config.shouldAppendUnitToLabel && config.unit != null
-              ? '${config.label} (${config.unit})'
-              : config.label!;
+          ? '${config.label} (${config.unit})'
+          : config.label!;
 
       final axisLabelPainter = TextPainter(
         text: TextSpan(
@@ -190,7 +196,8 @@ class XAxisPainter {
       const tickLength = 6.0;
       // Estimate tick label height (approximately fontSize * 1.2)
       final tickLabelHeight = labelStyle.fontSize ?? 12.0 * 1.2;
-      final axisLabelY = plotArea.bottom +
+      final axisLabelY =
+          plotArea.bottom +
           tickLength +
           config.tickLabelPadding +
           tickLabelHeight +
@@ -216,8 +223,8 @@ class XAxisPainter {
   ///
   /// Returns a list of tick values within the bounds.
   ///
-  /// If [config.min] or [config.max] are set, they override the bounds.
-  /// If [config.tickCount] is set, it overrides maxTicks.
+  /// If `config.min` or `config.max` are set, they override the bounds.
+  /// If `config.tickCount` is set, it overrides maxTicks.
   List<double> generateTicks(DataRange bounds, {int? maxTicks}) {
     // Use config.tickCount if provided, otherwise use maxTicks parameter
     maxTicks = config.tickCount ?? maxTicks ?? 10;
@@ -317,7 +324,7 @@ class XAxisPainter {
 
   /// Resolves the color to use for the axis.
   ///
-  /// Returns [config.color] if provided, otherwise returns a default axis color.
+  /// Returns `config.color` if provided, otherwise returns a default axis color.
   Color resolveAxisColor() {
     // Priority 1: Explicit config color
     if (config.color != null) {

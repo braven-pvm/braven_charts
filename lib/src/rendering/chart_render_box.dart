@@ -226,8 +226,8 @@ class ChartRenderBox extends RenderBox {
   /// Callback for annotation changes (e.g., after drag-to-resize).
   ///
   /// Called when an annotation is modified through user interaction.
-  /// The [annotationId] is the ID of the modified annotation, and
-  /// [updatedAnnotation] is the new annotation object with updated values.
+  /// The `annotationId` is the ID of the modified annotation, and
+  /// `updatedAnnotation` is the new annotation object with updated values.
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)?
   onAnnotationChanged;
 
@@ -2644,14 +2644,14 @@ class ChartRenderBox extends RenderBox {
   // Multi-Axis Normalization Helpers (FR-008)
   // ============================================================================
 
-  /// Normalizes a Y-axis value from data space to normalized [0, 1] space.
+  /// Normalizes a Y-axis value from data space to normalized `0..1` space.
   ///
   /// Delegates to [MultiAxisManager.normalizeValue].
   double normalizeValue(double value, double min, double max) {
     return _multiAxisManager.normalizeValue(value, min, max);
   }
 
-  /// Denormalizes a value from normalized [0, 1] space back to data space.
+  /// Denormalizes a value from normalized `0..1` space back to data space.
   ///
   /// Delegates to [MultiAxisManager.denormalizeValue].
   double denormalizeValue(double normalizedValue, double min, double max) {
