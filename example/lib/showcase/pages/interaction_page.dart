@@ -814,7 +814,8 @@ class _InteractionPageState extends State<InteractionPage> {
       );
     }
 
-    const instruction = 'Wheel to zoom · drag to pan · hover and click points';
+    const instruction =
+        'Shift + wheel to zoom · drag to pan · hover and click points';
     return feedback.isEmpty
         ? instruction
         : '$instruction · ${feedback.join(' · ')}';
@@ -838,7 +839,7 @@ class _InteractionPageState extends State<InteractionPage> {
 
   String _modeGuide() => switch (_mode) {
     _InteractionMode.explore =>
-      'Hover or click a point, zoom with the wheel, and drag to pan. The chart title reports live hover and selection events.',
+      'Hover or click a point, hold Shift while using the wheel to zoom, and drag to pan. The chart title reports live hover and selection events.',
     _InteractionMode.track =>
       'Move horizontally across the chart. La_acc and lactate stop contributing when the cursor passes their final samples.',
     _InteractionMode.normalize =>

@@ -8,10 +8,36 @@
 charting package for live data, multi-axis analysis, annotations, and deeply
 themeable product experiences.
 
-The package API is exposed through `BravenChartPlus`; the product and project
-name is **Braven Charts**.
+[**Open the live interactive showcase →**](https://braven-pvm.github.io/braven_charts/)
 
-![Braven Charts gallery with line, bar, and scatter examples](doc/screenshots/gallery.png)
+The package API is exposed through `BravenChartPlus`.
+
+[![Four-axis analytical chart with normalized signals, annotations, tracking, glow, and a scrollbar](doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
+
+## See it in action
+
+### Full analytical control
+
+Combine independent axes, normalized series, editable annotations, tracking,
+zoom, pan, and synchronized scrollbars in one responsive chart.
+
+[![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
+
+### Stream, pause, catch up
+
+Ingest live points at high frequency, pause the viewport while samples buffer,
+then resume without losing data.
+
+[![Live chart data buffering and catching up](doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream)
+
+## Gallery
+
+Fifteen production-shaped compositions rendered by Braven Charts: baselines,
+stage analysis, glow, small multiples, live data, multi-axis tracking,
+annotations, dashboards, bars, scatter, interpolation, thresholds, and
+positive/negative areas.
+
+[![Fifteen varied Braven Charts examples from the current Gallery](doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Why Braven Charts
 
@@ -26,9 +52,10 @@ name is **Braven Charts**.
 | Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 
-The included showcase turns these capabilities into focused, runnable demos—not
-just static screenshots. See [the showcase guide](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md) for the
-feature-to-page map.
+The [live showcase](https://braven-pvm.github.io/braven_charts/) turns these
+capabilities into focused, runnable demos. See the
+[showcase guide](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
+for the feature-to-page map and local run instructions.
 
 ## Install
 
@@ -246,6 +273,9 @@ and runtime-binding contracts, read the [portable chart artifact guide](doc/char
 
 ## Run the showcase
 
+[Open the hosted showcase](https://braven-pvm.github.io/braven_charts/), or run
+the same application locally:
+
 ```bash
 cd example
 flutter pub get
@@ -260,6 +290,7 @@ state UX.
 
 ## Documentation
 
+- [Live interactive showcase](https://braven-pvm.github.io/braven_charts/)
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)

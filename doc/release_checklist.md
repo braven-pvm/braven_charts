@@ -41,13 +41,28 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] README installation and examples compile against 0.1.0.
 - [ ] `example/lib/main.dart` is concise enough for pub.dev's Example tab.
 - [ ] The public API has useful `///` documentation.
-- [ ] Screenshot 1 is the gallery hero and works as the package thumbnail.
-- [ ] Additional screenshots cover multi-axis tracking, annotations, live data,
-  and loading/empty states.
+- [ ] Screenshot 1 is a chart-only flagship hero and works as the package
+  thumbnail without relying on showcase application chrome.
+- [ ] The remaining screenshot slots show varied chart-only Gallery examples,
+  including multi-axis, annotations, live data, themes, and baseline fills.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
+- [ ] The interaction and live-stream animations show real behavior from the
+  deployed showcase, remain below 4 MB each, and render from package-local
+  README paths on GitHub and pub.dev.
 
 Pub.dev accepts up to 10 PNG, JPG, GIF, or WebP screenshots, each no larger
 than 4 MB. Do not use a standalone logo as a screenshot.
+
+Regenerate the animated GIFs and current Gallery stills with:
+
+```bash
+python -m pip install selenium Pillow
+python tool/capture_showcase_media.py
+```
+
+Use `--capture interaction`, `--capture live-stream`, or `--capture stills`
+when only one media group changed. Capture from a local release build with
+`--url http://127.0.0.1:<port>/` before the public site has the change.
 
 ## Public showcase
 

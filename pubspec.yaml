@@ -3,9 +3,10 @@ description: >-
   Interactive, web-first Flutter charts with multi-axis rendering, annotations,
   streaming, rich theming, and responsive loading and empty states.
 version: 0.1.0
-homepage: https://github.com/braven-pvm/braven_charts
+homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
+documentation: https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md
 
 topics:
   - charts
@@ -16,25 +17,44 @@ topics:
 
 screenshots:
   - description: >-
-      Flagship four-axis physiology analysis with normalization, stage bands,
-      glow, annotations, labels, tracking, and the Braven Charts feature map.
-    path: doc/screenshots/gallery.png
+      Flagship four-axis chart with normalization, annotations, tracking, glow,
+      labels, and a synchronized viewport scrollbar.
+    path: doc/screenshots/hero_chart.png
   - description: >-
-      Three independently scaled Y axes with normalization, range annotations,
-      runtime controls, and axis status.
-    path: doc/screenshots/multi_axis.png
+      Positive and negative baseline fill across three independently scaled
+      signals with inline labels.
+    path: doc/screenshots/gallery_baseline.png
   - description: >-
-      Interactive thresholds, ranges, labels, chords, and draggable annotation
-      controls on a single chart.
-    path: doc/screenshots/annotations.png
+      Raw VO2 signal with stage averages, target range, threshold lines, and a
+      highlighted VO2max event.
+    path: doc/screenshots/gallery_vo2_stage.png
   - description: >-
-      Frame-coalesced live data with a scrolling viewport, bounded buffer, and
-      streaming diagnostics.
-    path: doc/screenshots/live_stream.png
+      Dark themed signal chart with line glow, area context, inline labels, and
+      a highlighted threshold.
+    path: doc/screenshots/gallery_glow.png
   - description: >-
-      Responsive animated chart loading skeleton with selectable indicators,
-      palettes, empty state, and API example.
-    path: doc/screenshots/loading_states.png
+      Reusable lactate chart configuration presented as comparable reference
+      and current-session small multiples.
+    path: doc/screenshots/gallery_lactate.png
+  - description: >-
+      Live sensor data in a follow-latest viewport with a visible synchronized
+      scrollbar.
+    path: doc/screenshots/gallery_live_sensor.png
+  - description: >-
+      Dense normalized pressure and temperature signals on independent axes
+      with crosshair tracking.
+    path: doc/screenshots/gallery_multi_sensor.png
+  - description: >-
+      Point, range, and threshold annotations combined in one analytical chart.
+    path: doc/screenshots/gallery_annotated.png
+  - description: >-
+      Mixed revenue line and forecast area series with markers, independent
+      styling, and a shared viewport.
+    path: doc/screenshots/gallery_revenue_forecast.png
+  - description: >-
+      Dark profit-and-loss chart with independently styled positive and
+      negative baseline area segments.
+    path: doc/screenshots/gallery_profit_loss.png
 
 environment:
   sdk: ">=3.9.0 <4.0.0"
