@@ -354,7 +354,7 @@ class MultiAxisManager {
   /// Restores a previously captured visible-axis slot order.
   ///
   /// Unknown and hidden axis IDs are ignored. Each side remains capped by
-  /// `maxAxesPerSide`, so malformed persisted state cannot over-allocate slots.
+  /// [maxAxesPerSide], so malformed persisted state cannot over-allocate slots.
   void restoreVisibleAxisIds(Iterable<String> visibleAxisIds) {
     final all = getEffectiveYAxes();
     final byId = {for (final axis in all) axis.id: axis};
@@ -406,7 +406,7 @@ class MultiAxisManager {
   /// Promotes an overflow axis into a visible slot when a series is selected.
   ///
   /// The first (longest-visible) axis on the same side is demoted to overflow (FIFO).
-  /// Returns a record with `promotedAxisId` and `demotedAxisId`, or null if the
+  /// Returns a record with [promotedAxisId] and [demotedAxisId], or null if the
   /// selected series' axis is already visible.
   ({String promotedAxisId, String demotedAxisId})? applySeriesSelection(
     String seriesId,
@@ -929,7 +929,7 @@ class MultiAxisManager {
     );
   }
 
-  /// Normalizes a value from data space to normalized `0..1` space.
+  /// Normalizes a value from data space to normalized [0, 1] space.
   ///
   /// This method wraps [MultiAxisNormalizer.normalize] for use in rendering
   /// logic when multiple series with different Y-ranges need to share the
@@ -940,19 +940,19 @@ class MultiAxisManager {
   /// - [min]: The minimum value of the data range
   /// - [max]: The maximum value of the data range
   ///
-  /// **Returns**: A value in the range `0..1`.
+  /// **Returns**: A value in the range [0, 1]
   double normalizeValue(double value, double min, double max) {
     return MultiAxisNormalizer.normalize(value, min, max);
   }
 
-  /// Denormalizes a value from normalized `0..1` space back to data space.
+  /// Denormalizes a value from normalized [0, 1] space back to data space.
   ///
   /// This method wraps [MultiAxisNormalizer.denormalize] for use in
   /// interaction logic (e.g., tooltips, crosshairs) when converting
   /// visual positions back to original data values.
   ///
   /// **Parameters**:
-  /// - [normalizedValue]: A value in the `0..1` range
+  /// - [normalizedValue]: A value in [0, 1] range
   /// - [min]: The minimum value of the target data range
   /// - [max]: The maximum value of the target data range
   ///
