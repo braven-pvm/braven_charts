@@ -256,6 +256,18 @@ Long layout is the canonical lossless row representation. Table options also
 support all, visible, selected, or explicitly named series and optional
 viewport filtering.
 
+The table includes **Copy data**, **Export CSV**, and a trailing **Copy row**
+action without requiring showcase-specific controls. Dataset copy produces
+display-formatted TSV in the active scope and sort order; CSV uses raw values.
+Web builds download CSV directly. Other platforms can provide `onExportCsv` to
+open their file or share-sheet workflow.
+
+Dataset clipboard copy defaults to a 1,000-row and 1,000,000-character limit.
+If either limit is exceeded, the clipboard is left unchanged and the user is
+directed to Export CSV. Configure `clipboardRowLimit` and
+`clipboardCharacterLimit` when the host has a stricter policy. Use
+`onCopyDataset` or `onCopyRow` only to replace the native clipboard delivery.
+
 ## Preview capture
 
 Set `includePreview: true` in `ChartArtifactExtractOptions` to request a PNG.

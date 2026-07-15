@@ -24,7 +24,7 @@ name is **Braven Charts**.
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
 | Presentation | Light/dark and custom themes, legends, labels, loading skeletons, progress indicators, and empty states |
 | Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
-| Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X data tables, attach previews, and hydrate fresh interactive charts |
+| Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 
 The included showcase turns these capabilities into focused, runnable demos—not
 just static screenshots. See [the showcase guide](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md) for the
@@ -237,8 +237,12 @@ if (result case ChartArtifactSuccess<ChartArtifact>()) {
 }
 ```
 
+`ChartDataTable` includes bounded whole-dataset clipboard copy, per-row copy,
+and raw-value CSV export. Web builds download CSV directly; non-web hosts can
+provide delivery callbacks for their file or share-sheet workflow.
+
 For the complete capture, table, transport, hydration, resolver, migration,
-and runtime-binding contracts, read the [portable chart artifact guide](chart_artifacts.md).
+and runtime-binding contracts, read the [portable chart artifact guide](doc/chart_artifacts.md).
 
 ## Run the showcase
 

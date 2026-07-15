@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 /// Interactive proof that chart and table share one captured document.
 class ArtifactDataTableLabPage extends StatefulWidget {
@@ -327,21 +326,6 @@ class _ArtifactDataTableLabPageState extends State<ArtifactDataTableLabPage> {
       isLoading: _model == null && _error == null,
       errorMessage: _error?.message,
       controller: _tableController,
-      onCopyRow: (row) async {
-        await Clipboard.setData(ClipboardData(text: row.tabSeparatedText));
-        if (!mounted) return;
-        setState(() {
-          _status = 'Copied row ${row.displayValues.first} to the clipboard.';
-        });
-      },
-      onExportCsv: (export) async {
-        await Clipboard.setData(ClipboardData(text: export.csv));
-        if (!mounted) return;
-        setState(() {
-          _status =
-              'Copied ${export.rows.length} raw-value CSV rows to the clipboard.';
-        });
-      },
     ),
   );
 }

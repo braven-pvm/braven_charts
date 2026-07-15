@@ -142,6 +142,7 @@ void main() {
     tester,
   ) async {
     ChartTableRowExport? copied;
+    ChartTableCsvExport? copiedDataset;
     ChartTableCsvExport? exported;
     final semantics = tester.ensureSemantics();
     final model = ChartTableModel.fromDocument(
@@ -156,6 +157,7 @@ void main() {
         ChartDataTable(
           model: model,
           onCopyRow: (row) => copied = row,
+          onCopyDataset: (value) => copiedDataset = value,
           onExportCsv: (value) => exported = value,
         ),
       ),
@@ -164,6 +166,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byTooltip('Copy row 1'));
+    await tester.tap(find.text('Copy data'));
     await tester.tap(find.text('Export CSV'));
 
     expect(copied?.headers, ['#', 'X value', 'Power', 'Heart rate']);
@@ -171,11 +174,109 @@ void main() {
     expect(copied?.rawValues, [1, 1.0, 110.0, 131.0]);
     expect(copied?.displayValues, ['1', '1', '110', '131']);
     expect(copied?.references.map((item) => item.pointIndex), [1, 1]);
+    expect(copiedDataset?.rows, hasLength(2));
+    expect(copiedDataset?.rows.first.displayValues, ['1', '1', '110', '131']);
     expect(exported?.rows, hasLength(2));
     expect(exported?.rows.first.rawValues, [1, 1.0, 110.0, 131.0]);
     expect(exported?.rows.last.rawValues, [2, 2.0, 220.0, 142.0]);
     expect(exported?.csv, contains('\r\n1,1.0,110.0,131.0\r\n'));
     semantics.dispose();
+  });
+
+  testWidgets('copies the displayed dataset and individual rows natively', (
+    tester,
+  ) async {
+    final clipboard = _mockClipboard();
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 110), _point(2, 220)]),
+        _series('heart-rate', [_point(1, 131), _point(2, 142)]),
+      ]),
+    );
+
+    await tester.pumpWidget(_host(ChartDataTable(model: model)));
+    await tester.tap(find.text('Copy data'));
+    await tester.pump();
+
+    expect(
+      clipboard.text,
+      '#\tX value\tPower\tHeart rate\r\n'
+      '1\t1\t110\t131\r\n'
+      '2\t2\t220\t142',
+    );
+    expect(find.text('Copied 2 rows to the clipboard.'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Copy row 1'));
+    await tester.pump();
+    expect(clipboard.text, '1\t1\t110\t131');
+    expect(find.text('Copied row 1 to the clipboard.'), findsOneWidget);
+  });
+
+  testWidgets('blocks oversized dataset copies and directs users to export', (
+    tester,
+  ) async {
+    final clipboard = _mockClipboard()..text = 'keep-me';
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 110), _point(2, 220), _point(3, 330)]),
+      ]),
+    );
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, clipboardRowLimit: 2)),
+    );
+    await tester.tap(find.text('Copy data'));
+    await tester.pump();
+
+    expect(
+      find.text(
+        'This table has 3 rows and is too large to copy. '
+        'Use Export CSV instead.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Export CSV'), findsOneWidget);
+    expect(clipboard.text, 'keep-me');
+  });
+
+  testWidgets('also bounds dataset copy by serialized character count', (
+    tester,
+  ) async {
+    final clipboard = _mockClipboard()..text = 'keep-me';
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 110)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, clipboardCharacterLimit: 8)),
+    );
+    await tester.tap(find.text('Copy data'));
+    await tester.pump();
+
+    expect(
+      find.text(
+        'This table is too large to copy safely. Use Export CSV instead.',
+      ),
+      findsOneWidget,
+    );
+    expect(clipboard.text, 'keep-me');
+  });
+
+  testWidgets('uses compact tooltipped actions on narrow tables', (
+    tester,
+  ) async {
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(1, 110)]),
+      ]),
+    );
+
+    await tester.pumpWidget(_host(ChartDataTable(model: model), width: 360));
+
+    expect(find.byTooltip('Copy data'), findsOneWidget);
+    expect(find.byTooltip('Export CSV'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('arrow keys traverse rows and Enter activates the focused row', (
@@ -401,3 +502,28 @@ ChartDocument _document(
 
 ChartArtifactSuccess<T> _success<T>(ChartArtifactResult<T> result) =>
     result as ChartArtifactSuccess<T>;
+
+_ClipboardHarness _mockClipboard() {
+  final harness = _ClipboardHarness();
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    switch (call.method) {
+      case 'Clipboard.setData':
+        harness.text =
+            (call.arguments as Map<Object?, Object?>)['text'] as String?;
+        return null;
+      case 'Clipboard.getData':
+        return <String, Object?>{'text': harness.text};
+    }
+    return null;
+  });
+  addTearDown(
+    () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+  );
+  return harness;
+}
+
+class _ClipboardHarness {
+  String? text;
+}

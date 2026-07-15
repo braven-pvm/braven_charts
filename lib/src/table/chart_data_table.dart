@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chart_table_controller.dart';
+import 'chart_table_csv_download.dart';
 import 'chart_data_table_theme.dart';
 import 'chart_table_export.dart';
 import 'chart_table_model.dart';
@@ -18,6 +19,9 @@ typedef ChartTableRowCallback = void Function(ChartTablePointReference point);
 /// export, and derives unspecified colors and typography from the active
 /// [ChartDataTableTheme] and the ambient Flutter theme.
 class ChartDataTable extends StatefulWidget {
+  static const defaultClipboardRowLimit = 1000;
+  static const defaultClipboardCharacterLimit = 1000000;
+
   const ChartDataTable({
     super.key,
     this.model,
@@ -27,12 +31,24 @@ class ChartDataTable extends StatefulWidget {
     this.onRowFocused,
     this.onRowActivated,
     this.onCopyRow,
+    this.onCopyDataset,
     this.onExportCsv,
+    this.showCopyRowAction = true,
+    this.showCopyDatasetAction = true,
+    this.showExportCsvAction = true,
+    this.clipboardRowLimit = defaultClipboardRowLimit,
+    this.clipboardCharacterLimit = defaultClipboardCharacterLimit,
+    this.csvFileName,
     this.emptyMessage = 'No chart data',
     this.theme,
   }) : assert(
          model != null || isLoading || errorMessage != null,
          'Provide a model, loading state, or error message.',
+       ),
+       assert(clipboardRowLimit > 0, 'clipboardRowLimit must be positive.'),
+       assert(
+         clipboardCharacterLimit > 0,
+         'clipboardCharacterLimit must be positive.',
        );
 
   final ChartTableModel? model;
@@ -42,11 +58,36 @@ class ChartDataTable extends StatefulWidget {
   final ChartTableRowCallback? onRowFocused;
   final ChartTableRowCallback? onRowActivated;
 
-  /// Receives the displayed and raw values for the requested visible row.
+  /// Overrides the default clipboard delivery for one requested visible row.
+  ///
+  /// The row action remains native to the table. When this callback is null,
+  /// the table copies [ChartTableRowExport.tabSeparatedText] itself.
   final ValueChanged<ChartTableRowExport>? onCopyRow;
 
-  /// Receives raw-value CSV in the current scope and sort order.
+  /// Overrides the default clipboard delivery for the displayed dataset.
+  ///
+  /// The table enforces [clipboardRowLimit] and [clipboardCharacterLimit]
+  /// before invoking this callback.
+  final ValueChanged<ChartTableCsvExport>? onCopyDataset;
+
+  /// Overrides default CSV delivery in the current scope and sort order.
+  ///
+  /// Without a callback, web builds download the CSV directly. Other
+  /// platforms keep the action visible and explain that a host delivery
+  /// callback is required.
   final ValueChanged<ChartTableCsvExport>? onExportCsv;
+  final bool showCopyRowAction;
+  final bool showCopyDatasetAction;
+  final bool showExportCsvAction;
+
+  /// Maximum displayed rows allowed in one whole-dataset clipboard copy.
+  final int clipboardRowLimit;
+
+  /// Maximum TSV characters allowed in one whole-dataset clipboard copy.
+  final int clipboardCharacterLimit;
+
+  /// Optional CSV file name. Defaults to the sanitized document ID.
+  final String? csvFileName;
   final String emptyMessage;
 
   /// Per-table visual overrides.
@@ -90,6 +131,85 @@ class _ChartDataTableState extends State<ChartDataTable> {
   }
 
   void _handleControllerChanged() => setState(() {});
+
+  Future<void> _copyDataset(ChartTableCsvExport export) async {
+    if (export.rows.length > widget.clipboardRowLimit) {
+      _showMessage(
+        'This table has ${export.rows.length} rows and is too large to copy. '
+        'Use Export CSV instead.',
+      );
+      return;
+    }
+    final text = export.tabSeparatedText;
+    if (text.length > widget.clipboardCharacterLimit) {
+      _showMessage(
+        'This table is too large to copy safely. Use Export CSV instead.',
+      );
+      return;
+    }
+    final handler = widget.onCopyDataset;
+    if (handler != null) {
+      handler(export);
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    _showMessage('Copied ${export.rows.length} rows to the clipboard.');
+  }
+
+  Future<void> _copyRow(ChartTableRowExport row, int displayIndex) async {
+    final handler = widget.onCopyRow;
+    if (handler != null) {
+      handler(row);
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: row.tabSeparatedText));
+    if (!mounted) return;
+    _showMessage('Copied row ${displayIndex + 1} to the clipboard.');
+  }
+
+  Future<void> _exportCsv(
+    ChartTableModel model,
+    ChartTableCsvExport export,
+  ) async {
+    final handler = widget.onExportCsv;
+    if (handler != null) {
+      handler(export);
+      return;
+    }
+    final fileName = _resolvedCsvFileName(model);
+    final downloaded = await downloadChartTableCsv(
+      csv: export.csv,
+      fileName: fileName,
+    );
+    if (!mounted) return;
+    if (downloaded) {
+      _showMessage('Exported ${export.rows.length} rows to $fileName.');
+    } else {
+      _showMessage(
+        'Automatic CSV download is unavailable on this platform. '
+        'Provide onExportCsv to save the file.',
+      );
+    }
+  }
+
+  String _resolvedCsvFileName(ChartTableModel model) {
+    var fileName = widget.csvFileName?.trim();
+    if (fileName == null || fileName.isEmpty) fileName = model.documentId;
+    fileName = fileName.replaceAll(RegExp(r'''[<>:"/\\|?*\x00-\x1F]'''), '-');
+    if (fileName.isEmpty || fileName == '.' || fileName == '..') {
+      fileName = 'chart-data';
+    }
+    return fileName.toLowerCase().endsWith('.csv') ? fileName : '$fileName.csv';
+  }
+
+  void _showMessage(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   void dispose() {
@@ -151,15 +271,21 @@ class _ChartDataTableState extends State<ChartDataTable> {
                     88 +
                     144 +
                     96 +
-                    (widget.onCopyRow == null ? 0 : 44),
+                    (widget.showCopyRowAction ? 44 : 0),
               )
             : math.max(
                 viewportWidth,
                 tableTheme.rowNumberWidth +
                     tableTheme.xColumnWidth +
                     model.series.length * tableTheme.seriesColumnWidth +
-                    (widget.onCopyRow == null ? 0 : 44),
+                    (widget.showCopyRowAction ? 44 : 0),
               );
+        ChartTableCsvExport buildDatasetExport() =>
+            ChartTableExporter.csvForDisplayedRows(
+              model,
+              longRows: longRows,
+              wideRows: wideRows,
+            );
         return SizedBox(
           height: height,
           child: Column(
@@ -167,15 +293,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
             children: [
               _TableSummary(
                 model: model,
-                onExportCsv: widget.onExportCsv == null
+                onCopyDataset: !widget.showCopyDatasetAction
                     ? null
-                    : () => widget.onExportCsv!(
-                        ChartTableExporter.csvForDisplayedRows(
-                          model,
-                          longRows: longRows,
-                          wideRows: wideRows,
-                        ),
-                      ),
+                    : () => _copyDataset(buildDatasetExport()),
+                onExportCsv: !widget.showExportCsvAction
+                    ? null
+                    : () => _exportCsv(model, buildDatasetExport()),
                 theme: tableTheme,
               ),
               if (model.warnings.isNotEmpty)
@@ -262,7 +385,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? null
                   : Color(column.colorValue!),
             ),
-          if (widget.onCopyRow != null)
+          if (widget.showCopyRowAction)
             _StaticHeader(
               label: '',
               semanticsLabel: 'Row actions',
@@ -307,7 +430,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
         _StaticHeader(label: 'Unit', width: 88, theme: tableTheme),
         _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
         _StaticHeader(label: 'Status', width: 96, theme: tableTheme),
-        if (widget.onCopyRow != null)
+        if (widget.showCopyRowAction)
           _StaticHeader(
             label: '',
             semanticsLabel: 'Row actions',
@@ -364,11 +487,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
           ),
           for (final column in model.series)
             _buildWideValueCell(row, column, theme),
-          if (widget.onCopyRow != null)
+          if (widget.showCopyRowAction)
             _CopyRowButton(
               tooltip: 'Copy row ${index + 1}',
-              onPressed: () => widget.onCopyRow!(
+              onPressed: () => _copyRow(
                 ChartTableExporter.wideRow(model, row, index),
+                index,
               ),
             ),
         ],
@@ -430,12 +554,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
           invalid: !row.isValid,
           theme: theme,
         ),
-        if (widget.onCopyRow != null)
+        if (widget.showCopyRowAction)
           _CopyRowButton(
             tooltip: 'Copy ${row.seriesName} row',
-            onPressed: () => widget.onCopyRow!(
-              ChartTableExporter.longRow(model, row, index),
-            ),
+            onPressed: () =>
+                _copyRow(ChartTableExporter.longRow(model, row, index), index),
           ),
       ],
     );
@@ -555,36 +678,68 @@ class _TableSummary extends StatelessWidget {
   const _TableSummary({
     required this.model,
     required this.theme,
+    this.onCopyDataset,
     this.onExportCsv,
   });
 
   final ChartTableModel model;
   final _ResolvedTableTheme theme;
+  final VoidCallback? onCopyDataset;
   final VoidCallback? onExportCsv;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            '${model.scopeLabel} · ${model.rowCount} rows · ${model.options.viewportOnly ? 'Current viewport' : 'Full data'}',
-            style: theme.summaryTextStyle,
-          ),
-        ),
-        if (onExportCsv != null)
-          TextButton.icon(
-            onPressed: onExportCsv,
-            style: TextButton.styleFrom(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final compactActions = constraints.maxWidth < 520;
+      Widget action({
+        required String label,
+        required IconData icon,
+        required VoidCallback onPressed,
+      }) => compactActions
+          ? IconButton(
+              tooltip: label,
+              onPressed: onPressed,
               visualDensity: VisualDensity.compact,
-              textStyle: theme.summaryTextStyle,
+              icon: Icon(icon, size: 18),
+            )
+          : TextButton.icon(
+              onPressed: onPressed,
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                textStyle: theme.summaryTextStyle,
+              ),
+              icon: Icon(icon, size: 16),
+              label: Text(label),
+            );
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${model.scopeLabel} · ${model.rowCount} rows · ${model.options.viewportOnly ? 'Current viewport' : 'Full data'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.summaryTextStyle,
+              ),
             ),
-            icon: const Icon(Icons.download_outlined, size: 16),
-            label: const Text('Export CSV'),
-          ),
-      ],
-    ),
+            if (onCopyDataset != null)
+              action(
+                label: 'Copy data',
+                icon: Icons.content_copy_outlined,
+                onPressed: onCopyDataset!,
+              ),
+            if (onExportCsv != null)
+              action(
+                label: 'Export CSV',
+                icon: Icons.download_outlined,
+                onPressed: onExportCsv!,
+              ),
+          ],
+        ),
+      );
+    },
   );
 }
 

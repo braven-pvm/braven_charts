@@ -51,7 +51,10 @@ void main() {
     await tester.tap(find.text('Export CSV'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Copied 160 raw-value CSV rows to the clipboard.'),
+      find.text(
+        'Automatic CSV download is unavailable on this platform. '
+        'Provide onExportCsv to save the file.',
+      ),
       findsOneWidget,
     );
 

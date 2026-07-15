@@ -33,14 +33,15 @@ class ChartTableRowExport {
   final List<String> displayValues;
   final List<ChartTablePointReference> references;
 
-  /// Tab-separated formatted text suitable for a host clipboard action.
-  String get tabSeparatedText => displayValues.join('\t');
+  /// Tab-separated formatted text suitable for a spreadsheet clipboard.
+  String get tabSeparatedText => displayValues.map(_escapeTsvCell).join('\t');
 }
 
-/// Raw-value CSV export prepared by [ChartTableExporter] for host delivery.
+/// Raw-value CSV and display-value TSV prepared by [ChartTableExporter].
 ///
-/// The package owns projection and escaping; the host owns clipboard, file,
-/// share-sheet, object-storage, and permission handling.
+/// [ChartDataTable] provides native clipboard delivery and automatic web CSV
+/// download. Hosts can still take this projection over for platform file,
+/// share-sheet, object-storage, permission, or audit workflows.
 @immutable
 class ChartTableCsvExport {
   ChartTableCsvExport({
@@ -57,6 +58,15 @@ class ChartTableCsvExport {
 
   final List<String> headers;
   final List<ChartTableRowExport> rows;
+
+  /// Display-formatted TSV suitable for pasting into a spreadsheet.
+  ///
+  /// CSV exports retain raw values; clipboard copies intentionally use the
+  /// same formatted values shown in the table.
+  String get tabSeparatedText => <String>[
+    headers.map(_escapeTsvCell).join('\t'),
+    for (final row in rows) row.tabSeparatedText,
+  ].join('\r\n');
 
   String get csv => <String>[
     headers.map(_escapeCsvCell).join(','),
@@ -161,3 +171,6 @@ String _escapeCsvCell(Object? value) {
   if (!text.contains(RegExp('[,"\\r\\n]'))) return text;
   return '"${text.replaceAll('"', '""')}"';
 }
+
+String _escapeTsvCell(String value) =>
+    value.replaceAll('\t', ' ').replaceAll(RegExp(r'\r\n|\r|\n'), ' ');

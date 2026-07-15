@@ -178,7 +178,9 @@ direct streaming point.
 ### Tables, identity, and migration
 
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` derive an
-  accessible long or exact-X wide table from the portable document.
+  accessible long or exact-X wide table from the portable document. The widget
+  natively provides bounded dataset clipboard copy, per-row copy, and raw CSV
+  export; web downloads directly and non-web hosts can override delivery.
 - `ChartArtifactCanonicalizer` creates document, document-plus-view, and
   per-payload SHA-256 identities.
 - `ChartArtifactDeduplicator` returns immutable, input-ordered duplicate groups.

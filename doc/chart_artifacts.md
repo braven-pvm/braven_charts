@@ -180,6 +180,42 @@ per-row representation. `ChartDataTable` virtualizes rows, keeps raw values
 for export, and derives its colors and typography from `ChartDataTableTheme`
 and `ThemeData` unless overridden.
 
+### Built-in copy and export actions
+
+`ChartDataTable` shows three actions by default:
+
+- **Copy data** copies the current scope and sort order as display-formatted
+  TSV with headers, ready to paste into a spreadsheet.
+- **Export CSV** exports raw values in the current scope and sort order. Web
+  builds download the file directly.
+- **Copy row** copies one display-formatted TSV row from its trailing row
+  action.
+
+Whole-dataset clipboard copies are bounded to 1,000 rows and 1,000,000
+characters by default. When either limit is exceeded, the table leaves the
+clipboard unchanged and tells the user to use CSV export. Row copy remains
+available. Raw document values are never rounded or replaced by display text.
+
+```dart
+ChartDataTable(
+  model: table,
+  csvFileName: 'workout-2026-07-15.csv',
+  clipboardRowLimit: 500,
+  clipboardCharacterLimit: 500000,
+  // Supply this on platforms where the host owns file/save-sheet delivery.
+  onExportCsv: (export) => fileRepository.save(
+    'workout-2026-07-15.csv',
+    export.csv,
+  ),
+)
+```
+
+`onCopyDataset` and `onCopyRow` replace the default clipboard delivery when a
+host needs its own permission, audit, or messaging flow. `onExportCsv` replaces
+the automatic web download and is the delivery boundary for non-web targets.
+Set `showCopyDatasetAction`, `showCopyRowAction`, or `showExportCsvAction` to
+`false` only when the host intentionally removes that capability.
+
 ## Large or external data
 
 Use `ChartDataStorage.inlineColumns` for compact self-contained payloads. For

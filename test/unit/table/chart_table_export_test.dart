@@ -17,9 +17,30 @@ void main() {
 
     expect(row.tabSeparatedText, '1\t00:07\t241 W\tHard finish');
     expect(
+      export.tabSeparatedText,
+      '#\tSample\tPower, average\tNote\r\n'
+      '1\t00:07\t241 W\tHard finish',
+    );
+    expect(
       export.csv,
       '#,Sample,"Power, average",Note\r\n'
       '1,7,241.44,"Hard ""finish""\ninterval"',
+    );
+  });
+
+  test('TSV flattens tabs and line breaks inside displayed cells', () {
+    final row = ChartTableRowExport(
+      rowId: 'row-1',
+      headers: const ['Series\tname', 'Note'],
+      rawValues: const ['Power', 'First\nSecond'],
+      displayValues: const ['Power\toutput', 'First\nSecond'],
+      references: const [],
+    );
+    final export = ChartTableCsvExport(headers: row.headers, rows: [row]);
+
+    expect(
+      export.tabSeparatedText,
+      'Series name\tNote\r\nPower output\tFirst Second',
     );
   });
 

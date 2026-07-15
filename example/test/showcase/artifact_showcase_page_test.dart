@@ -19,6 +19,9 @@ void main() {
     expect(find.text('Chart Artifacts'), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(find.byTooltip('Copy data'), findsOneWidget);
+    expect(find.byTooltip('Export CSV'), findsOneWidget);
+    expect(find.byTooltip('Copy row 1'), findsOneWidget);
     expect(find.text('Generate random chart'), findsOneWidget);
     expect(find.text('Capture current chart'), findsOneWidget);
     expect(find.text('Captured charts'), findsOneWidget);

@@ -104,7 +104,8 @@ types and where to begin.
   projection and inline point/column storage strategy.
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` — exact-X wide
   rows (one X value with one column per series), lossless long rows, sorting,
-  virtualization, theming, and CSV/raw-value export.
+  virtualization, theming, bounded dataset/row clipboard copy, and raw-value
+  CSV export with automatic web download or host delivery callbacks.
 - `ChartDataBlobCodec`, `ReferencedPayload`, and `ChartDataResolver` — host
   controlled external payload persistence and checksum-verified resolution.
 - `ChartRuntimeBindings` and its formatter, callback, tooltip, and extension
