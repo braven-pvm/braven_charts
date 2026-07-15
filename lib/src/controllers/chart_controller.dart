@@ -39,6 +39,13 @@ class ChartController extends ChangeNotifier {
   /// Counter for generating annotation IDs.
   int _annotationIdCounter = 0;
 
+  /// Monotonically increasing revision of data and annotation mutations.
+  ///
+  /// Snapshot consumers can compare this value before and after assembling a
+  /// document to detect changes across a multi-part capture.
+  int get revision => _revision;
+  int _revision = 0;
+
   // ========== Data Management Methods ==========
 
   /// Adds a data point to the specified series.
@@ -55,6 +62,7 @@ class ChartController extends ChangeNotifier {
     final series = _seriesData.putIfAbsent(seriesId, () => []);
     series.add(point);
 
+    _revision++;
     notifyListeners();
   }
 
@@ -68,6 +76,7 @@ class ChartController extends ChangeNotifier {
 
     series.removeAt(0);
 
+    _revision++;
     notifyListeners();
   }
 
@@ -81,6 +90,7 @@ class ChartController extends ChangeNotifier {
 
     series.clear();
 
+    _revision++;
     notifyListeners();
   }
 
@@ -110,6 +120,7 @@ class ChartController extends ChangeNotifier {
         : annotation.id;
 
     _annotations[id] = annotation;
+    _revision++;
     notifyListeners();
     return id;
   }
@@ -122,6 +133,7 @@ class ChartController extends ChangeNotifier {
     if (!_annotations.containsKey(id)) return;
 
     _annotations.remove(id);
+    _revision++;
     notifyListeners();
   }
 
@@ -136,6 +148,7 @@ class ChartController extends ChangeNotifier {
     }
 
     _annotations[id] = annotation;
+    _revision++;
     notifyListeners();
   }
 
@@ -155,7 +168,9 @@ class ChartController extends ChangeNotifier {
   ///
   /// Notifies listeners after clearing.
   void clearAnnotations() {
+    if (_annotations.isEmpty) return;
     _annotations.clear();
+    _revision++;
     notifyListeners();
   }
 

@@ -47,6 +47,7 @@ class BufferManager<T> {
 
   final int _maxSize;
   final Queue<T> _queue;
+  int _version = 0;
 
   /// Maximum capacity of this buffer.
   ///
@@ -58,6 +59,9 @@ class BufferManager<T> {
   ///
   /// Ranges from 0 (empty) to [maxSize] (full).
   int get length => _queue.length;
+
+  /// Monotonically increasing revision for content mutations.
+  int get version => _version;
 
   /// Whether the buffer has reached its maximum capacity.
   ///
@@ -91,6 +95,7 @@ class BufferManager<T> {
       _queue.removeFirst();
     }
     _queue.addLast(element);
+    _version++;
   }
 
   /// Removes and returns all elements from the buffer in FIFO order.
@@ -110,7 +115,9 @@ class BufferManager<T> {
   /// ```
   List<T> removeAll() {
     final result = _queue.toList();
+    if (result.isEmpty) return result;
     _queue.clear();
+    _version++;
     return result;
   }
 
@@ -128,7 +135,9 @@ class BufferManager<T> {
   /// print(buffer.isEmpty);  // true
   /// ```
   void clear() {
+    if (_queue.isEmpty) return;
     _queue.clear();
+    _version++;
   }
 
   /// Returns a read-only view of the buffer contents without removing them.

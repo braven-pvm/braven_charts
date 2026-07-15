@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
+import 'pages/artifact_showcase_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -70,6 +71,7 @@ class NavDestination {
     required this.icon,
     required this.selectedIcon,
     required this.page,
+    this.routeSlug,
     this.reviewProposal,
   });
 
@@ -77,13 +79,15 @@ class NavDestination {
   final IconData icon;
   final IconData selectedIcon;
   final Widget page;
+  final String? routeSlug;
   final ShowcaseReviewProposal? reviewProposal;
 
-  String get slug => label
-      .toLowerCase()
-      .replaceAll('+', ' ')
-      .replaceAll(RegExp('[^a-z0-9]+'), '-')
-      .replaceAll(RegExp(r'(^-|-$)'), '');
+  String get slug => routeSlug ??
+      label
+          .toLowerCase()
+          .replaceAll('+', ' ')
+          .replaceAll(RegExp('[^a-z0-9]+'), '-')
+          .replaceAll(RegExp(r'(^-|-$)'), '');
 }
 
 /// Release-review note for a page that may be merged, renamed, or removed.
@@ -193,6 +197,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.hourglass_empty_outlined,
       selectedIcon: Icons.hourglass_top,
       page: LoadingStatesPage(),
+    ),
+    const NavDestination(
+      label: 'Chart Artifacts',
+      icon: Icons.hub_outlined,
+      selectedIcon: Icons.hub,
+      page: ArtifactShowcasePage(),
+      routeSlug: 'artifact-showcase',
     ),
   ];
 

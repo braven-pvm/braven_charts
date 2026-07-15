@@ -226,8 +226,8 @@ class ChartRenderBox extends RenderBox {
   /// Callback for annotation changes (e.g., after drag-to-resize).
   ///
   /// Called when an annotation is modified through user interaction.
-  /// The [annotationId] is the ID of the modified annotation, and
-  /// [updatedAnnotation] is the new annotation object with updated values.
+  /// The `annotationId` is the ID of the modified annotation, and
+  /// `updatedAnnotation` is the new annotation object with updated values.
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)?
   onAnnotationChanged;
 
@@ -442,6 +442,34 @@ class ChartRenderBox extends RenderBox {
   /// Public getter for current coordinate transform.
   /// Returns null if chart hasn't been laid out yet.
   ChartTransform? get transform => _transform;
+
+  /// Restores durable data-space viewport bounds after hydration.
+  bool restoreVisibleDataBounds({
+    required double xMin,
+    required double xMax,
+    required double yMin,
+    required double yMax,
+  }) {
+    if (_transform == null ||
+        !xMin.isFinite ||
+        !xMax.isFinite ||
+        !yMin.isFinite ||
+        !yMax.isFinite ||
+        xMin >= xMax ||
+        yMin >= yMax) {
+      return false;
+    }
+    _transform = _transform!.copyWith(
+      dataXMin: xMin,
+      dataXMax: xMax,
+      dataYMin: yMin,
+      dataYMax: yMax,
+    );
+    _updateAxesFromTransform();
+    _rebuildElementsWithTransform();
+    markNeedsPaint();
+    return true;
+  }
 
   // ==========================================================================
   // Lifecycle
@@ -1750,6 +1778,10 @@ class ChartRenderBox extends RenderBox {
   /// Clears crosshair state when the pointer leaves the chart widget.
   void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
 
+  /// Removes crosshair and tooltip state that is not part of the artifact.
+  void clearTransientPreviewState() =>
+      _eventHandlerManager.clearTransientPreviewState();
+
   // ============================================================================
   // Y-Axis Slot Selection Delegation
   // ============================================================================
@@ -1783,6 +1815,12 @@ class ChartRenderBox extends RenderBox {
 
   /// Currently overflow axis IDs.
   List<String> get overflowAxisIds => _multiAxisManager.overflowAxisIds;
+
+  /// Restores captured visible-axis slot order and schedules layout.
+  void restoreVisibleAxisIds(Iterable<String> axisIds) {
+    _multiAxisManager.restoreVisibleAxisIds(axisIds);
+    markNeedsLayout();
+  }
 
   /// Sets the maximum number of visible Y-axes per side.
   void setMaxAxesPerSide(int max) {
@@ -2227,10 +2265,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint grid lines (behind everything)
     if (_xAxis != null && _yAxis != null) {
-      final gridRenderer = GridRenderer(
-        theme: _theme,
-        config: _gridConfig,
-      );
+      final gridRenderer = GridRenderer(theme: _theme, config: _gridConfig);
 
       // Get tick positions for grid lines
       final xTicks = _xAxis!.ticks
@@ -2609,14 +2644,14 @@ class ChartRenderBox extends RenderBox {
   // Multi-Axis Normalization Helpers (FR-008)
   // ============================================================================
 
-  /// Normalizes a Y-axis value from data space to normalized [0, 1] space.
+  /// Normalizes a Y-axis value from data space to normalized `0..1` space.
   ///
   /// Delegates to [MultiAxisManager.normalizeValue].
   double normalizeValue(double value, double min, double max) {
     return _multiAxisManager.normalizeValue(value, min, max);
   }
 
-  /// Denormalizes a value from normalized [0, 1] space back to data space.
+  /// Denormalizes a value from normalized `0..1` space back to data space.
   ///
   /// Delegates to [MultiAxisManager.denormalizeValue].
   double denormalizeValue(double normalizedValue, double min, double max) {

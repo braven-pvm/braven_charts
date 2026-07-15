@@ -1,0 +1,62 @@
+{
+  "artifactType": "braven.chartArtifact",
+  "schemaVersion": 1,
+  "renderer": {
+    "package": "braven_charts",
+    "version": "0.1.0"
+  },
+  "artifactId": "artifact-fixture-1",
+  "createdAt": "2026-07-14T08:30:00.000Z",
+  "document": {
+    "documentId": "document-fixture-1",
+    "revision": 3,
+    "title": "Fixture chart",
+    "series": [
+      {
+        "type": "line",
+        "id": "power",
+        "name": "Power",
+        "unit": "W",
+        "axisId": "power-axis",
+        "data": {
+          "storage": "inlinePoints",
+          "points": [
+            { "x": 0.0, "y": 210.5 },
+            { "x": 1.0, "y": { "kind": "nan" }, "label": "gap" }
+          ]
+        }
+      }
+    ],
+    "xAxis": {
+      "id": "time",
+      "position": "bottom",
+      "label": "Elapsed time",
+      "unit": "s"
+    },
+    "axes": [
+      {
+        "id": "power-axis",
+        "position": "left",
+        "label": "Power",
+        "unit": "W"
+      }
+    ],
+    "theme": {
+      "captureMode": "referenceAndResolved",
+      "reference": "braven.light",
+      "resolved": {}
+    },
+    "interaction": {
+      "configuration": {}
+    }
+  },
+  "viewState": {
+    "hiddenSeriesIds": [],
+    "selectedPointRefs": [],
+    "visibleAxisIds": ["power-axis"],
+    "overflowAxisIds": []
+  },
+  "extensions": {
+    "example.fixture": true
+  }
+}

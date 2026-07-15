@@ -526,8 +526,8 @@ class TooltipStyle {
 
 /// Signature for a custom tooltip builder function.
 ///
-/// Takes a [BuildContext] and a [dataPoint] map containing the data
-/// to display, and returns a [Widget] representing the custom tooltip.
+/// Takes a `BuildContext` and a [dataPoint] map containing the data
+/// to display, and returns a `Widget` representing the custom tooltip.
 typedef TooltipBuilder = Widget Function(BuildContext context, Map<String, dynamic> dataPoint);
 
 /// Configuration for tooltip behavior and appearance.

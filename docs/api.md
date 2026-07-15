@@ -145,6 +145,52 @@ loading has finished and all effective chart series are empty. A chart using a
 `LiveStreamController` keeps its render box mounted while waiting for its first
 direct streaming point.
 
+## Portable Chart Artifacts
+
+### Extraction and transport
+
+- `BravenChartController.extractDocument(...)` captures one immutable
+  `ChartDocumentSnapshot` from effective mounted state.
+- `BravenChartController.extractArtifact(...)` composes a `ChartArtifact` and
+  optional hash-bound `ChartPreview`.
+- `ChartArtifactJsonCodec` validates and canonically encodes/decodes the
+  versioned JSON envelope.
+- `ChartArtifactValidationLimits` bounds untrusted JSON and resolved payloads.
+
+### Hydration and runtime bindings
+
+- `ChartDocumentHydrator` restores documents, artifacts, JSON, and
+  resolver-backed JSON into `HydratedChartConfiguration`.
+- `HydratedChartConfiguration.build(...)` creates a fresh interactive
+  `HydratedBravenChart` runtime.
+- `ChartRuntimeBindings` reattaches host callbacks, formatters, tooltips,
+  codecs, and extension capabilities without serializing executable behavior.
+
+### Data payloads
+
+- `InlinePointPayload` and `InlineColumnarPayload` store self-contained data.
+- `ReferencedPayload` describes host-owned bytes by content type, length,
+  point count, locator, and SHA-256.
+- `ChartDataResolver` is the host authorization and byte-retrieval boundary.
+- `ChartDataBlobCodec` and `ChartDataBinaryCodec` encode deterministic external
+  payload blobs.
+
+### Tables, identity, and migration
+
+- `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` derive an
+  accessible long or exact-X wide table from the portable document. The widget
+  natively provides bounded dataset clipboard copy, per-row copy, and raw CSV
+  export; web downloads directly and non-web hosts can override delivery.
+- `ChartArtifactCanonicalizer` creates document, document-plus-view, and
+  per-payload SHA-256 identities.
+- `ChartArtifactDeduplicator` returns immutable, input-ordered duplicate groups.
+- `ChartArtifactMigration` and `ChartArtifactMigrationRegistry` define trusted
+  adjacent-version JSON migrations supplied explicitly by the caller.
+
+See [Portable Chart Artifacts](guides/chart-artifacts.md) and
+[Chart Artifact Migrations](guides/chart-artifact-migrations.md) for complete
+workflows and security boundaries.
+
 ## Theming
 
 ### `ChartTheme`

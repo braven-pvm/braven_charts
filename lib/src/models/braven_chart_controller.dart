@@ -1,5 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+import '../artifacts/chart_artifact_diagnostics.dart';
+import '../artifacts/chart_artifact.dart';
+import '../artifacts/chart_artifact_extractor.dart';
+import '../artifacts/chart_document_extractor.dart';
+import '../artifacts/chart_preview.dart';
+import '../artifacts/chart_preview_capture.dart';
+import '../artifacts/chart_view_state.dart';
+
 /// Programmatic control over series selection and Y-axis slot state.
 ///
 /// Attach to [BravenChartPlus.controller] to drive series selection
@@ -28,11 +36,16 @@ class BravenChartController extends ChangeNotifier {
   void Function(String seriesId)? _selectHandler;
   void Function(String seriesId)? _deselectHandler;
   void Function()? _clearHandler;
+  void Function(String seriesId, bool visible)? _setVisibilityHandler;
+  ChartDocumentExtractionHandler? _extractDocumentHandler;
+  void Function(ChartViewState viewState)? _restoreViewStateHandler;
+  ChartPreviewCaptureHandler? _capturePreviewHandler;
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
   String? _selectedSeriesId;
   List<String> _visibleAxisIds = const [];
   List<String> _overflowAxisIds = const [];
+  Set<String> _hiddenSeriesIds = const {};
 
   // ---- Public read API ----
 
@@ -44,6 +57,9 @@ class BravenChartController extends ChangeNotifier {
 
   /// Axis IDs currently in overflow (voted out of visible slots).
   List<String> get overflowAxisIds => List.unmodifiable(_overflowAxisIds);
+
+  /// Series IDs currently excluded from rendering by visibility state.
+  Set<String> get hiddenSeriesIds => Set.unmodifiable(_hiddenSeriesIds);
 
   // ---- Public command API ----
 
@@ -67,6 +83,80 @@ class BravenChartController extends ChangeNotifier {
   /// No-op if the controller is not attached to a mounted chart.
   void clearSelection() => _clearHandler?.call();
 
+  /// Shows or hides [seriesId] while retaining it in full-document exports.
+  void setSeriesVisible(String seriesId, bool visible) =>
+      _setVisibilityHandler?.call(seriesId, visible);
+
+  /// Toggles [seriesId] using the latest visibility mirrored from the chart.
+  void toggleSeriesVisibility(String seriesId) =>
+      setSeriesVisible(seriesId, _hiddenSeriesIds.contains(seriesId));
+
+  /// Captures the chart's effective document and optional current view state.
+  ChartArtifactResult<ChartDocumentSnapshot> extractDocument([
+    ChartDocumentExtractOptions options = const ChartDocumentExtractOptions(),
+  ]) {
+    final handler = _extractDocumentHandler;
+    if (handler == null) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.chartNotAttached,
+          message:
+              'The BravenChartController is not attached to a mounted chart.',
+        ),
+      );
+    }
+    return handler(options);
+  }
+
+  /// Restores durable visibility, selection, viewport, and axis-slot state.
+  void restoreViewState(ChartViewState viewState) =>
+      _restoreViewStateHandler?.call(viewState);
+
+  /// Captures a revision-bound PNG preview of the mounted chart.
+  Future<ChartArtifactResult<ChartPreview>> capturePreview([
+    ChartPreviewOptions options = const ChartPreviewOptions(),
+  ]) {
+    final handler = _capturePreviewHandler;
+    if (handler == null) {
+      return Future.value(
+        ChartArtifactFailure(
+          error: const ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.chartNotAttached,
+            message:
+                'The BravenChartController is not attached to a mounted chart.',
+          ),
+        ),
+      );
+    }
+    return handler(options);
+  }
+
+  /// Extracts one portable artifact and optionally a hash-matched preview.
+  ///
+  /// Preview failure is reported as a warning on a document-only success so
+  /// callers never lose a usable native artifact because raster capture failed.
+  Future<ChartArtifactResult<ChartArtifact>> extractArtifact([
+    ChartArtifactExtractOptions options = const ChartArtifactExtractOptions(),
+  ]) {
+    final documentHandler = _extractDocumentHandler;
+    if (documentHandler == null) {
+      return Future.value(
+        ChartArtifactFailure(
+          error: const ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.chartNotAttached,
+            message:
+                'The BravenChartController is not attached to a mounted chart.',
+          ),
+        ),
+      );
+    }
+    return ChartArtifactExtractor.extract(
+      options: options,
+      extractDocument: documentHandler,
+      capturePreview: _capturePreviewHandler,
+    );
+  }
+
   // ---- Internal state sync (called by _BravenChartPlusState) ----
 
   /// Attaches this controller to a chart state. Called by the state.
@@ -74,10 +164,18 @@ class BravenChartController extends ChangeNotifier {
     required void Function(String) onSelect,
     required void Function(String) onDeselect,
     required void Function() onClear,
+    void Function(String, bool)? onSetSeriesVisibility,
+    ChartDocumentExtractionHandler? onExtractDocument,
+    void Function(ChartViewState)? onRestoreViewState,
+    ChartPreviewCaptureHandler? onCapturePreview,
   }) {
     _selectHandler = onSelect;
     _deselectHandler = onDeselect;
     _clearHandler = onClear;
+    _setVisibilityHandler = onSetSeriesVisibility;
+    _extractDocumentHandler = onExtractDocument;
+    _restoreViewStateHandler = onRestoreViewState;
+    _capturePreviewHandler = onCapturePreview;
   }
 
   /// Detaches from the chart state. Called in dispose.
@@ -85,6 +183,10 @@ class BravenChartController extends ChangeNotifier {
     _selectHandler = null;
     _deselectHandler = null;
     _clearHandler = null;
+    _setVisibilityHandler = null;
+    _extractDocumentHandler = null;
+    _restoreViewStateHandler = null;
+    _capturePreviewHandler = null;
   }
 
   /// Updates mirrored slot state (called after every swap or selection change).
@@ -92,10 +194,12 @@ class BravenChartController extends ChangeNotifier {
     required String? selectedSeriesId,
     required List<String> visibleAxisIds,
     required List<String> overflowAxisIds,
+    Set<String> hiddenSeriesIds = const {},
   }) {
     _selectedSeriesId = selectedSeriesId;
     _visibleAxisIds = visibleAxisIds;
     _overflowAxisIds = overflowAxisIds;
+    _hiddenSeriesIds = Set.unmodifiable(hiddenSeriesIds);
     notifyListeners();
   }
 }

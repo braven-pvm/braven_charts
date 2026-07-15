@@ -4,14 +4,23 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 // All dependencies are in src - the main source folder
 import 'axis/axis.dart' as chart_axis;
 import 'axis/normalization_detector.dart';
+import 'artifacts/chart_artifact_diagnostics.dart';
+import 'artifacts/chart_artifact_canonicalizer.dart';
+import 'artifacts/chart_document_extractor.dart';
+import 'artifacts/chart_preview.dart';
+import 'artifacts/chart_preview_capture.dart';
+import 'artifacts/chart_view_state.dart';
+import 'artifacts/resolved_chart_data.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
 import 'coordinates/chart_transform.dart';
@@ -176,7 +185,11 @@ class BravenChartPlus extends StatefulWidget {
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
     void Function(String seriesId)? onSeriesDeselected,
-    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
+    void Function({
+      required String promotedAxisId,
+      required String demotedAxisId,
+    })?
+    onAxisSwapped,
   }) {
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
@@ -277,7 +290,11 @@ class BravenChartPlus extends StatefulWidget {
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
     void Function(String seriesId)? onSeriesDeselected,
-    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
+    void Function({
+      required String promotedAxisId,
+      required String demotedAxisId,
+    })?
+    onAxisSwapped,
   }) {
     // Convert map to data points
     final points = data.entries.map((entry) {
@@ -383,7 +400,11 @@ class BravenChartPlus extends StatefulWidget {
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
     void Function(String seriesId)? onSeriesDeselected,
-    void Function({required String promotedAxisId, required String demotedAxisId})? onAxisSwapped,
+    void Function({
+      required String promotedAxisId,
+      required String demotedAxisId,
+    })?
+    onAxisSwapped,
   }) {
     // Parse JSON
     final dynamic decoded = jsonDecode(json);
@@ -770,7 +791,8 @@ class BravenChartPlus extends StatefulWidget {
   final void Function({
     required String promotedAxisId,
     required String demotedAxisId,
-  })? onAxisSwapped;
+  })?
+  onAxisSwapped;
 
   // ==================== MULTI-AXIS PARAMETERS ====================
 
@@ -878,8 +900,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   // Tracks whether auto-normalization is needed based on series Y-range ratios
   bool _normalizationNeeded = false;
   Map<String, DataRange> _seriesYRanges = {};
+  ResolvedChartData _resolvedChartData = ResolvedChartData.empty;
   List<ChartSeries> _effectiveDataSeries = const <ChartSeries>[];
   List<ChartSeries> _effectiveRenderSeries = const <ChartSeries>[];
+  int _captureStateRevision = 0;
+  int _documentRevision = 0;
+  _ChartCaptureRevisionToken? _lastDocumentRevisionToken;
+  final GlobalKey _previewBoundaryKey = GlobalKey();
+  bool _previewCaptureInProgress = false;
   final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
       <String, _IncomingPointAnimation>{};
   late final AnimationController _incomingDataAnimationController;
@@ -1027,7 +1055,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     widget.bravenChartController?.attach(
       onSelect: _handleSeriesSelected,
       onDeselect: _handleSeriesDeselected,
+      onSetSeriesVisibility: _setSeriesVisibility,
+      onExtractDocument: _extractDocument,
+      onRestoreViewState: _restoreViewState,
+      onCapturePreview: _capturePreview,
       onClear: () {
+        _captureStateRevision++;
         _selectedSeriesId = null;
         final renderBox =
             _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -1040,6 +1073,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _captureStateRevision++;
     // Removed excessive debugPrints (didUpdateWidget details)
 
     // Handle controller changes (matches BravenChart pattern)
@@ -1104,7 +1138,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       widget.bravenChartController?.attach(
         onSelect: _handleSeriesSelected,
         onDeselect: _handleSeriesDeselected,
+        onSetSeriesVisibility: _setSeriesVisibility,
+        onExtractDocument: _extractDocument,
+        onRestoreViewState: _restoreViewState,
+        onCapturePreview: _capturePreview,
         onClear: () {
+          _captureStateRevision++;
           _selectedSeriesId = null;
           final renderBox =
               _renderBoxKey.currentContext?.findRenderObject()
@@ -1163,6 +1202,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   /// Called when controller notifies of changes (matches BravenChart pattern).
   void _onControllerUpdate() {
     if (!mounted) return;
+    _captureStateRevision++;
 
     // Update cached bounds even when paused - needed for pan constraints
     if (widget.controller != null) {
@@ -1280,6 +1320,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleViewportInteractionPulse() {
+    _captureStateRevision++;
     _pauseStreamingForViewportInteraction();
     _scheduleStreamingResumeIfNeeded();
   }
@@ -1305,6 +1346,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!mounted) {
       return;
     }
+    _captureStateRevision++;
 
     // Annotations changed - rebuild elements
     // NOTE: setState() will trigger build() → updateRenderObject() → setElementGenerator()
@@ -1323,6 +1365,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (annotationId == '__internal_legend__' &&
         updatedAnnotation is LegendAnnotation) {
       setState(() {
+        _captureStateRevision++;
         _legendCustomPosition = updatedAnnotation.customPosition;
         _rebuildElements();
       });
@@ -1350,6 +1393,346 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
+  ResolvedChartData _resolveChartData({bool includeDirectStream = false}) {
+    final liveController = includeDirectStream
+        ? widget.liveStreamController
+        : null;
+    return ResolvedChartData.resolve(
+      baseSeries: widget.series,
+      hiddenSeriesIds: _hiddenSeriesIds,
+      controllerSeries: widget.controller?.getAllSeries(),
+      controllerRevision: widget.controller?.revision ?? 0,
+      legacyStreamingPoints: _streamingDataPoints,
+      liveSeries: liveController == null
+          ? null
+          : ResolvedLiveSeriesData(
+              seriesId: liveController.seriesId,
+              points: liveController.points,
+              pendingPoints: liveController.pendingPoints,
+              committedRevision: liveController.committedDataRevision,
+              pendingRevision: liveController.pendingDataRevision,
+              pendingPointCount: liveController.bufferedCount,
+            ),
+      seriesFactory: (seriesId, points, seriesIndex) => LineChartSeries(
+        id: seriesId,
+        name: seriesId,
+        points: points,
+        color: widget.theme?.seriesTheme.colors.isNotEmpty == true
+            ? widget.theme!.seriesTheme.colors[seriesIndex %
+                  widget.theme!.seriesTheme.colors.length]
+            : Colors.blue,
+      ),
+    );
+  }
+
+  /// Returns the annotation projection shared by rendering and extraction.
+  ///
+  /// AnnotationController values take precedence when both controllers contain
+  /// the same stable ID because they represent the chart's editable state.
+  List<ChartAnnotation> _resolveEffectiveAnnotations() {
+    final byId = <String, ChartAnnotation>{};
+    for (final annotation
+        in widget.controller?.getAllAnnotations() ?? const []) {
+      byId[annotation.id] = annotation;
+    }
+    for (final annotation
+        in _effectiveAnnotationController?.annotations ?? const []) {
+      byId[annotation.id] = annotation;
+    }
+    return List.unmodifiable(byId.values);
+  }
+
+  _ChartCaptureRevisionToken _captureRevisionToken(
+    ChartDocumentExtractOptions options,
+  ) {
+    final live = widget.liveStreamController;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final transform = renderBox?.transform;
+    final hiddenIds = _hiddenSeriesIds.toList()..sort();
+    return _ChartCaptureRevisionToken(
+      stateRevision: _captureStateRevision,
+      controllerRevision: widget.controller?.revision ?? 0,
+      annotationRevision: _effectiveAnnotationController?.revision ?? 0,
+      liveCommittedRevision: live?.committedDataRevision ?? 0,
+      livePendingRevision: live?.pendingDataRevision ?? 0,
+      livePendingPointCount: live?.bufferedCount ?? 0,
+      viewStateHash: Object.hash(
+        transform?.dataXMin,
+        transform?.dataXMax,
+        transform?.dataYMin,
+        transform?.dataYMax,
+        Object.hashAll(renderBox?.visibleAxisIds ?? const []),
+        Object.hashAll(renderBox?.overflowAxisIds ?? const []),
+        Object.hashAll(hiddenIds),
+        _selectedSeriesId,
+        _effectiveAnnotationController?.selectedAnnotationId,
+        _legendCustomPosition,
+      ),
+      optionsKey: jsonEncode({
+        'dataScope': options.dataScope.name,
+        'dataStorage': options.dataStorage.wireName,
+        'includeViewState': options.includeViewState,
+        'themeMode': options.themeMode.name,
+        'themeReference': options.themeReference,
+        'xAxisFormatter': options.xAxisFormatterDescriptor?.toJson(),
+        'yAxisFormatters': {
+          for (final key
+              in options.yAxisFormatterDescriptors.keys.toList()..sort())
+            key: options.yAxisFormatterDescriptors[key]!.toJson(),
+        },
+        'interactionBindings': {
+          for (final key
+              in options.interactionBindingDescriptors.keys.toList()..sort())
+            key: options.interactionBindingDescriptors[key]!.toJson(),
+        },
+      }),
+    );
+  }
+
+  ChartArtifactResult<ChartDocumentSnapshot> _extractDocument(
+    ChartDocumentExtractOptions options,
+  ) {
+    for (var attempt = 0; attempt < options.maxSnapshotAttempts; attempt++) {
+      final before = _captureRevisionToken(options);
+      final nextRevision =
+          _lastDocumentRevisionToken == null ||
+              _lastDocumentRevisionToken == before
+          ? _documentRevision
+          : _documentRevision + 1;
+      final assembled = _assembleDocumentSnapshot(options, nextRevision);
+      if (assembled is ChartArtifactFailure<ChartDocumentSnapshot>) {
+        return assembled;
+      }
+      final after = _captureRevisionToken(options);
+      if (before != after) continue;
+
+      _lastDocumentRevisionToken = after;
+      _documentRevision = nextRevision;
+      return assembled;
+    }
+
+    return ChartArtifactFailure(
+      error: ChartArtifactError(
+        code: ChartArtifactDiagnosticCodes.unstableStreamRevision,
+        message:
+            'The chart changed during all ${options.maxSnapshotAttempts} snapshot attempts.',
+      ),
+    );
+  }
+
+  Future<ChartArtifactResult<ChartPreview>> _capturePreview(
+    ChartPreviewOptions options,
+  ) async {
+    if (_previewCaptureInProgress) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.captureInProgress,
+          message: 'A chart preview capture is already in progress.',
+        ),
+      );
+    }
+    if (!options.pixelRatio.isFinite ||
+        options.pixelRatio <= 0 ||
+        options.maxPixelCount <= 0 ||
+        options.maxCaptureAttempts <= 0) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+          message: 'Preview capture options are invalid.',
+        ),
+      );
+    }
+
+    _previewCaptureInProgress = true;
+    try {
+      if (!options.includeTransientInteractions) {
+        _coordinator.setHoveredMarker(null);
+        _coordinator.setHoveredElement(null);
+        final renderBox =
+            _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+        renderBox?.clearTransientPreviewState();
+      }
+      await WidgetsBinding.instance.endOfFrame;
+
+      for (var attempt = 0; attempt < options.maxCaptureAttempts; attempt++) {
+        final documentResult = _extractDocument(options.documentOptions);
+        if (documentResult is ChartArtifactFailure<ChartDocumentSnapshot>) {
+          return ChartArtifactFailure(
+            error: documentResult.error,
+            warnings: documentResult.warnings,
+          );
+        }
+        final documentSuccess =
+            documentResult as ChartArtifactSuccess<ChartDocumentSnapshot>;
+        final revision = _captureRevisionToken(options.documentOptions);
+        await WidgetsBinding.instance.endOfFrame;
+        if (revision != _captureRevisionToken(options.documentOptions)) {
+          continue;
+        }
+
+        final boundary = _previewBoundaryKey.currentContext?.findRenderObject();
+        if (boundary is! RenderRepaintBoundary || !boundary.hasSize) {
+          return ChartArtifactFailure(
+            error: const ChartArtifactError(
+              code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+              message: 'The chart preview boundary is not ready for capture.',
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        }
+        final widthPixels = (boundary.size.width * options.pixelRatio).ceil();
+        final heightPixels = (boundary.size.height * options.pixelRatio).ceil();
+        if (widthPixels <= 0 ||
+            heightPixels <= 0 ||
+            widthPixels * heightPixels > options.maxPixelCount) {
+          return ChartArtifactFailure(
+            error: ChartArtifactError(
+              code: ChartArtifactDiagnosticCodes.previewTooLarge,
+              message:
+                  'Preview dimensions ${widthPixels}x$heightPixels exceed the configured pixel limit.',
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        }
+
+        final image = await boundary.toImage(pixelRatio: options.pixelRatio);
+        try {
+          final byteData = await image.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (byteData == null) {
+            throw StateError('The Flutter engine returned no PNG bytes.');
+          }
+          if (revision != _captureRevisionToken(options.documentOptions)) {
+            continue;
+          }
+          final bytes = byteData.buffer.asUint8List(
+            byteData.offsetInBytes,
+            byteData.lengthInBytes,
+          );
+          return ChartArtifactSuccess(
+            value: ChartPreview(
+              mimeType: 'image/png',
+              widthPixels: image.width,
+              heightPixels: image.height,
+              pixelRatio: options.pixelRatio,
+              documentHash: ChartArtifactCanonicalizer.documentHash(
+                documentSuccess.value.document,
+              ),
+              bytes: bytes,
+              byteLength: bytes.length,
+            ),
+            warnings: documentSuccess.warnings,
+          );
+        } finally {
+          image.dispose();
+        }
+      }
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.unstableStreamRevision,
+          message:
+              'The chart changed during all ${options.maxCaptureAttempts} preview attempts.',
+        ),
+      );
+    } on Object catch (error) {
+      return ChartArtifactFailure(
+        error: ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.previewCaptureFailed,
+          message: 'Chart preview capture failed: $error',
+        ),
+      );
+    } finally {
+      _previewCaptureInProgress = false;
+    }
+  }
+
+  ChartArtifactResult<ChartDocumentSnapshot> _assembleDocumentSnapshot(
+    ChartDocumentExtractOptions options,
+    int revision,
+  ) {
+    final resolved = _resolveChartData(includeDirectStream: true);
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final transform = renderBox?.transform;
+    final axisModels = <YAxisConfig>[];
+    final axisIds = <String>{};
+    void addAxis(YAxisConfig axis, String fallbackId) {
+      final resolvedAxis = axis.id.isEmpty
+          ? axis.copyWith(id: fallbackId)
+          : axis;
+      if (axisIds.add(resolvedAxis.id)) axisModels.add(resolvedAxis);
+    }
+
+    if (widget.yAxis != null) addAxis(widget.yAxis!, 'y');
+    for (final series in resolved.allSeries) {
+      final axis = series.yAxisConfig;
+      if (axis != null) addAxis(axis, '${series.id}_axis');
+    }
+    if (axisModels.isEmpty) {
+      addAxis(YAxisConfig(position: YAxisPosition.left), 'y');
+    }
+    final effectiveTheme = widget.theme ?? ChartTheme.light;
+    final baseInteraction =
+        widget.interactionConfig ?? const InteractionConfig();
+    final legendPosition = _legendCustomPosition;
+    final viewState = ChartViewState(
+      visibleBounds: transform == null
+          ? null
+          : ChartBoundsDocument(
+              xMin: transform.dataXMin,
+              xMax: transform.dataXMax,
+              yMin: transform.dataYMin,
+              yMax: transform.dataYMax,
+            ),
+      hiddenSeriesIds: resolved.hiddenSeriesIds,
+      selectedSeriesId: _selectedSeriesId,
+      visibleAxisIds: renderBox?.visibleAxisIds ?? const [],
+      overflowAxisIds: renderBox?.overflowAxisIds ?? const [],
+      selectedAnnotationId:
+          _effectiveAnnotationController?.selectedAnnotationId,
+      legendPosition: legendPosition == null
+          ? null
+          : ChartPositionDocument(x: legendPosition.dx, y: legendPosition.dy),
+    );
+
+    return ChartDocumentExtractor.extract(
+      source: ChartDocumentExtractionSource(
+        allSeries: resolved.allSeries,
+        visibleSeries: resolved.visibleSeries,
+        declaredSeries: widget.series,
+        annotations: _resolveEffectiveAnnotations(),
+        xAxis: widget.xAxisConfig ?? const XAxisConfig(),
+        axes: axisModels,
+        theme: effectiveTheme,
+        interaction: baseInteraction.copyWith(
+          showXScrollbar:
+              widget.showXScrollbar || baseInteraction.showXScrollbar,
+          showYScrollbar:
+              widget.showYScrollbar || baseInteraction.showYScrollbar,
+        ),
+        legendVisible: widget.showLegend,
+        legendStyle: widget.legendStyle ?? effectiveTheme.legendStyle,
+        grid: widget.grid ?? const GridConfig(),
+        normalizationMode:
+            _effectiveNormalizationMode ?? NormalizationMode.none,
+        title: widget.title,
+        subtitle: widget.subtitle,
+        width: widget.width,
+        height: widget.height,
+        backgroundColor: widget.backgroundColor,
+        showToolbar: widget.showToolbar,
+        interactiveAnnotations: widget.interactiveAnnotations,
+        maxAxesPerSide: widget.maxAxesPerSide,
+        axisSwapMode: widget.axisSwapMode,
+        viewState: viewState,
+      ),
+      options: options,
+      revision: revision,
+    );
+  }
+
   void _rebuildElements({bool detectIncomingAnimations = false}) {
     _spatialIndex.clear();
 
@@ -1357,123 +1740,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       for (final series in _effectiveDataSeries) series.id: series,
     };
 
-    // Start with widget.series as base
-    List<ChartSeries> effectiveSeries = widget.series;
-
-    // Filter out hidden series
-    effectiveSeries = effectiveSeries
-        .where((s) => !_hiddenSeriesIds.contains(s.id))
-        .toList();
-
-    // Merge controller data if controller is provided (matches BravenChart pattern)
-    if (widget.controller != null) {
-      final controllerData = widget.controller!.getAllSeries();
-
-      // Create map of existing series for efficient lookup
-      final seriesMap = <String, ChartSeries>{};
-      for (final series in widget.series) {
-        seriesMap[series.id] = series;
-      }
-
-      // Merge controller data into series
-      final mergedSeriesList = <ChartSeries>[];
-      final processedIds = <String>{};
-
-      // Removed excessive debugPrint
-
-      // First, update existing series with controller data
-      for (final series in widget.series) {
-        // Skip if hidden
-        if (_hiddenSeriesIds.contains(series.id)) continue;
-
-        final controllerPoints = controllerData[series.id];
-        if (controllerPoints != null && controllerPoints.isNotEmpty) {
-          // Removed excessive debugPrints - was firing on every frame
-
-          // Convert src ChartDataPoint to src_plus ChartDataPoint
-          final convertedPoints = controllerPoints
-              .map(
-                (p) => ChartDataPoint(
-                  x: p.x,
-                  y: p.y,
-                  timestamp: p.timestamp,
-                  label: p.label,
-                  metadata: p.metadata,
-                ),
-              )
-              .toList();
-
-          // Removed excessive debugPrint (last point details)
-
-          // Merge series points with controller points
-          final mergedPoints = [...series.points, ...convertedPoints];
-
-          final updatedSeries = switch (series) {
-            LineChartSeries() => series.copyWith(points: mergedPoints),
-            AreaChartSeries() => series.copyWith(points: mergedPoints),
-            _ => series.copyWith(points: mergedPoints),
-          };
-
-          mergedSeriesList.add(updatedSeries);
-        } else {
-          mergedSeriesList.add(series);
-        }
-        processedIds.add(series.id);
-      }
-
-      // Then, add any controller series that don't exist in widget.series
-      for (final entry in controllerData.entries) {
-        if (!processedIds.contains(entry.key)) {
-          // Convert src ChartDataPoint to src_plus ChartDataPoint
-          final convertedPoints = entry.value
-              .map(
-                (p) => ChartDataPoint(
-                  x: p.x,
-                  y: p.y,
-                  timestamp: p.timestamp,
-                  label: p.label,
-                  metadata: p.metadata,
-                ),
-              )
-              .toList();
-
-          // Create new series from controller data
-          mergedSeriesList.add(
-            LineChartSeries(
-              id: entry.key,
-              name: entry.key,
-              points: convertedPoints,
-              color: widget.theme?.seriesTheme.colors.isNotEmpty == true
-                  ? widget.theme!.seriesTheme.colors[mergedSeriesList.length %
-                        widget.theme!.seriesTheme.colors.length]
-                  : Colors.blue,
-            ),
-          );
-        }
-      }
-
-      effectiveSeries = mergedSeriesList;
-    }
-    // Legacy: Also merge _streamingDataPoints if present (for backward compatibility)
-    else if (_streamingDataPoints.isNotEmpty && widget.series.isNotEmpty) {
-      final firstSeries = widget.series.first;
-      final mergedPoints = [...firstSeries.points, ..._streamingDataPoints];
-
-      // Create updated series with streaming data
-      final updatedFirstSeries = switch (firstSeries) {
-        LineChartSeries() => firstSeries.copyWith(points: mergedPoints),
-        AreaChartSeries() => firstSeries.copyWith(points: mergedPoints),
-        _ => firstSeries.copyWith(points: mergedPoints),
-      };
-
-      effectiveSeries = [updatedFirstSeries, ...widget.series.skip(1)];
-    }
-
-    _effectiveDataSeries = effectiveSeries;
+    _resolvedChartData = _resolveChartData();
+    _effectiveDataSeries = _resolvedChartData.renderSeries;
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
         previousSeriesById: previousSeriesById,
-        nextSeries: effectiveSeries,
+        nextSeries: _effectiveDataSeries,
       );
     }
     _refreshAnimatedRenderSeries();
@@ -1502,11 +1774,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ViewportMode.followLatest ||
           widget.streamingController == null;
       final shouldUseWindowBounds =
-          autoScrollEnabled && isFollowingLatest && effectiveSeries.isNotEmpty;
+          autoScrollEnabled &&
+          isFollowingLatest &&
+          _effectiveDataSeries.isNotEmpty;
 
       if (shouldUseWindowBounds) {
         // Calculate sliding window bounds using CONFIGURABLE NUMBER of recent points
-        final allPoints = effectiveSeries.expand((s) => s.points).toList();
+        final allPoints = _effectiveDataSeries.expand((s) => s.points).toList();
         final windowSize =
             widget.autoScrollConfig?.maxVisiblePoints ??
             widget.streamingConfig?.autoScrollWindowSize ??
@@ -1552,7 +1826,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             );
           } else {
             // Removed excessive print (no points in window)
-            dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+            dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
           }
         } else {
           // Removed excessive print (no points at all)
@@ -1560,7 +1834,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         }
       } else {
         // Non-streaming, no auto-scroll, or explore mode: use all data
-        dataBounds = DataConverter.computeDataBounds(effectiveSeries);
+        dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
       }
     }
 
@@ -1584,7 +1858,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     // Multi-axis normalization detection (FR-008, US2)
     // Check if series have vastly different Y-ranges that would benefit from normalization
-    final seriesRanges = _computeSeriesYRanges(effectiveSeries);
+    final seriesRanges = _computeSeriesYRanges(_effectiveDataSeries);
     final needsNormalization = NormalizationDetector.shouldNormalize(
       seriesRanges,
     );
@@ -1645,8 +1919,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Convert annotations to elements
       // Removed excessive debugPrints (annotation conversion details)
       // Use effective controller (user-provided or internal with static annotations)
-      final effectiveAnnotations =
-          _effectiveAnnotationController?.annotations ?? [];
+      final effectiveAnnotations = _resolveEffectiveAnnotations();
       for (final annotation in effectiveAnnotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -2289,9 +2562,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     final result = await showDialog<ChordAnnotation>(
       context: context,
-      builder: (context) => ChordAnnotationDialog(
-        availableSeries: widget.series,
-      ),
+      builder: (context) =>
+          ChordAnnotationDialog(availableSeries: widget.series),
     );
 
     if (result != null && mounted) {
@@ -2616,6 +2888,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _handleSeriesDeselected(seriesId);
       return;
     }
+    _captureStateRevision++;
     _selectedSeriesId = seriesId;
 
     final renderBox =
@@ -2634,6 +2907,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleSeriesDeselected(String seriesId) {
+    _captureStateRevision++;
     _selectedSeriesId = null;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -2642,11 +2916,66 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     widget.onSeriesDeselected?.call(seriesId);
   }
 
+  void _setSeriesVisibility(String seriesId, bool visible) {
+    final changed = visible
+        ? _hiddenSeriesIds.remove(seriesId)
+        : _hiddenSeriesIds.add(seriesId);
+    if (!changed) return;
+    _captureStateRevision++;
+    setState(() => _rebuildElements());
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    _syncControllerState(renderBox);
+  }
+
+  void _restoreViewState(ChartViewState viewState) {
+    _captureStateRevision++;
+    setState(() {
+      _hiddenSeriesIds
+        ..clear()
+        ..addAll(viewState.hiddenSeriesIds);
+      _selectedSeriesId = viewState.selectedSeriesId;
+      if (viewState.selectedAnnotationId != null &&
+          _effectiveAnnotationController?.containsId(
+                viewState.selectedAnnotationId!,
+              ) ==
+              true) {
+        _effectiveAnnotationController?.selectAnnotation(
+          viewState.selectedAnnotationId,
+        );
+      }
+      _legendCustomPosition = viewState.legendPosition == null
+          ? null
+          : Offset(viewState.legendPosition!.x, viewState.legendPosition!.y);
+      _rebuildElements();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      final bounds = viewState.visibleBounds;
+      if (bounds != null) {
+        renderBox?.restoreVisibleDataBounds(
+          xMin: bounds.xMin,
+          xMax: bounds.xMax,
+          yMin: bounds.yMin,
+          yMax: bounds.yMax,
+        );
+      }
+      renderBox?.restoreVisibleAxisIds(viewState.visibleAxisIds);
+      if (viewState.selectedSeriesId != null) {
+        renderBox?.applySeriesSelection(viewState.selectedSeriesId!);
+      }
+      _syncControllerState(renderBox);
+    });
+  }
+
   void _syncControllerState(ChartRenderBox? renderBox) {
     widget.bravenChartController?.updateSlotState(
       selectedSeriesId: _selectedSeriesId,
       visibleAxisIds: renderBox?.visibleAxisIds ?? const [],
       overflowAxisIds: renderBox?.overflowAxisIds ?? const [],
+      hiddenSeriesIds: _hiddenSeriesIds,
     );
   }
 
@@ -2848,6 +3177,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       } else {
         // Legacy path: Add point to streaming data list
         setState(() {
+          _captureStateRevision++;
           _streamingDataPoints.add(point);
           _rebuildElements();
 
@@ -2961,6 +3291,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     } else {
       // Legacy path
       setState(() {
+        _captureStateRevision++;
         _streamingDataPoints.addAll(bufferedPoints);
         _rebuildElements();
       });
@@ -2996,6 +3327,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     } else {
       // Legacy path
       setState(() {
+        _captureStateRevision++;
         _streamingDataPoints.clear();
         _rebuildElements();
       });
@@ -3367,14 +3699,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Legacy ChartLegend widget removed - overlay legend (LegendAnnotation)
       // is now used exclusively for legend rendering within the chart area.
 
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      return RepaintBoundary(
+        key: _previewBoundaryKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       );
     }
 
-    return chartContent;
+    return RepaintBoundary(key: _previewBoundaryKey, child: chartContent);
   }
 }
 
@@ -3540,4 +3875,50 @@ class _IncomingPointAnimation {
 
   final ChartDataPoint anchorPoint;
   final ChartDataPoint targetPoint;
+}
+
+class _ChartCaptureRevisionToken {
+  const _ChartCaptureRevisionToken({
+    required this.stateRevision,
+    required this.controllerRevision,
+    required this.annotationRevision,
+    required this.liveCommittedRevision,
+    required this.livePendingRevision,
+    required this.livePendingPointCount,
+    required this.viewStateHash,
+    required this.optionsKey,
+  });
+
+  final int stateRevision;
+  final int controllerRevision;
+  final int annotationRevision;
+  final int liveCommittedRevision;
+  final int livePendingRevision;
+  final int livePendingPointCount;
+  final int viewStateHash;
+  final String optionsKey;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ChartCaptureRevisionToken &&
+      stateRevision == other.stateRevision &&
+      controllerRevision == other.controllerRevision &&
+      annotationRevision == other.annotationRevision &&
+      liveCommittedRevision == other.liveCommittedRevision &&
+      livePendingRevision == other.livePendingRevision &&
+      livePendingPointCount == other.livePendingPointCount &&
+      viewStateHash == other.viewStateHash &&
+      optionsKey == other.optionsKey;
+
+  @override
+  int get hashCode => Object.hash(
+    stateRevision,
+    controllerRevision,
+    annotationRevision,
+    liveCommittedRevision,
+    livePendingRevision,
+    livePendingPointCount,
+    viewStateHash,
+    optionsKey,
+  );
 }

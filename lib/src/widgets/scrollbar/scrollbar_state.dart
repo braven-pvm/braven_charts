@@ -31,7 +31,7 @@ class ScrollbarState {
   /// For horizontal scrollbar: distance from left edge.
   /// For vertical scrollbar: distance from top edge.
   ///
-  /// Constrained to [0, trackSize - handleSize].
+  /// Constrained to `0..trackSize - handleSize`.
   final double handlePosition;
 
   /// Size of scrollbar handle (pixels along track axis).

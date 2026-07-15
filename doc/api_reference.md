@@ -88,6 +88,35 @@ types and where to begin.
 - `ChartAgentInterface` and chart tool schemas — contracts for tool-driven or
   agent-assisted chart construction.
 
+## Portable chart artifacts and data tables
+
+- `BravenChartController.extractDocument` — captures a stable effective chart
+  document and optional durable view state from a mounted chart.
+- `BravenChartController.extractArtifact` — composes the document with
+  metadata and an optional revision-bound preview.
+- `ChartArtifact`, `ChartDocument`, `ChartViewState`, and `ChartPreview` — the
+  portable envelope and its renderer-independent parts.
+- `ChartArtifactJsonCodec` — canonical JSON encode/decode with schema,
+  capability, and resource-limit validation.
+- `ChartDocumentHydrator`, `HydratedChartConfiguration`, and
+  `HydratedBravenChart` — validated restoration into fresh public chart models.
+- `ChartDataScope` and `ChartDataStorage` — choose the effective data
+  projection and inline point/column storage strategy.
+- `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` — exact-X wide
+  rows (one X value with one column per series), lossless long rows, sorting,
+  virtualization, theming, bounded dataset/row clipboard copy, and raw-value
+  CSV export with automatic web download or host delivery callbacks.
+- `ChartDataBlobCodec`, `ReferencedPayload`, and `ChartDataResolver` — host
+  controlled external payload persistence and checksum-verified resolution.
+- `ChartRuntimeBindings` and its formatter, callback, tooltip, and extension
+  registries — explicit resolution of executable host behavior by stable IDs.
+- `ChartArtifactValidationLimits`, `ChartArtifactMigration`, and
+  `ChartArtifactDiagnosticCodes` — bounded decoding, adjacent schema upgrades,
+  and machine-readable failure handling.
+
+See [Portable chart artifacts](chart_artifacts.md) for the end-to-end guide and
+copyable examples.
+
 ## Export policy
 
 Only symbols exported by `package:braven_charts/braven_charts.dart` are part of

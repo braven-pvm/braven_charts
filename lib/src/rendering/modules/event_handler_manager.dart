@@ -361,6 +361,14 @@ class EventHandlerManager {
     _delegate.markNeedsPaint();
   }
 
+  /// Removes pointer-only overlay state before a durable preview capture.
+  void clearTransientPreviewState() {
+    _cursorPosition = null;
+    _tappedMarker = null;
+    _pendingHitTestPosition = null;
+    _delegate.markNeedsPaint();
+  }
+
   /// Tracks the tapped marker for tap-triggered tooltips.
   HoveredMarkerInfo? _tappedMarker;
 

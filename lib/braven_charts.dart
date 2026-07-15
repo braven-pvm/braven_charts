@@ -31,6 +31,45 @@ export 'src/ai/chart_tool_schema.dart';
 export 'src/axis/normalization_detector.dart';
 export 'src/axis/range_ratio_calculator.dart';
 export 'src/axis/series_axis_resolver.dart';
+// Portable chart artifacts
+export 'src/artifacts/chart_artifact_diagnostics.dart';
+export 'src/artifacts/chart_artifact_canonicalizer.dart';
+export 'src/artifacts/chart_artifact_deduplicator.dart';
+export 'src/artifacts/chart_artifact_json_codec.dart';
+export 'src/artifacts/chart_artifact_migrations.dart';
+export 'src/artifacts/chart_artifact.dart';
+export 'src/artifacts/chart_artifact_extractor.dart'
+    show ChartArtifactExtractOptions;
+export 'src/artifacts/chart_annotation_document.dart';
+export 'src/artifacts/chart_annotation_document_codec.dart';
+export 'src/artifacts/chart_axis_document_codec.dart';
+export 'src/artifacts/chart_data_payload.dart';
+export 'src/artifacts/chart_data_resolver.dart';
+export 'src/artifacts/chart_data_storage.dart';
+export 'src/artifacts/chart_configuration_document_codec.dart';
+export 'src/artifacts/chart_configuration_documents.dart';
+export 'src/artifacts/chart_document.dart';
+export 'src/artifacts/chart_document_hydrator.dart';
+export 'src/artifacts/chart_document_extractor.dart'
+    show
+        ChartDataScope,
+        ChartDocumentExtractOptions,
+        ChartDocumentExtractionHandler,
+        ChartDocumentSnapshot;
+export 'src/artifacts/chart_interaction_document_codec.dart';
+export 'src/artifacts/chart_runtime_bindings.dart';
+export 'src/artifacts/chart_preview.dart';
+export 'src/artifacts/chart_preview_capture.dart';
+export 'src/artifacts/chart_series_document_codec.dart';
+export 'src/artifacts/chart_theme_document_codec.dart';
+export 'src/artifacts/chart_view_state.dart';
+export 'src/table/chart_table_model.dart';
+export 'src/table/chart_table_options.dart';
+export 'src/table/chart_table_controller.dart';
+export 'src/table/chart_table_export.dart';
+export 'src/table/chart_data_table.dart';
+export 'src/table/chart_data_table_theme.dart';
+export 'src/artifacts/json_value.dart';
 // Core chart widget
 export 'src/braven_chart_plus.dart';
 // Controllers

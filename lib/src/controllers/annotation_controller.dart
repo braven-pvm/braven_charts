@@ -11,7 +11,7 @@ import '../models/chart_annotation.dart';
 /// - Add, update, delete, and clear annotations
 /// - Batch operations for multiple annotations
 /// - Selection management
-/// - Reactive updates via [ChangeNotifier]
+/// - Reactive updates via `ChangeNotifier`
 /// - Type-safe queries
 ///
 /// Example usage:
@@ -43,12 +43,22 @@ import '../models/chart_annotation.dart';
 class AnnotationController extends ChangeNotifier {
   /// Creates an [AnnotationController] with an optional initial list of annotations.
   AnnotationController({List<ChartAnnotation>? initialAnnotations})
-      : _annotations =
-            initialAnnotations != null ? List.from(initialAnnotations) : [];
+    : _annotations = initialAnnotations != null
+          ? List.from(initialAnnotations)
+          : [];
 
   // Private state
   List<ChartAnnotation> _annotations;
   String? _selectedAnnotationId;
+  int _revision = 0;
+
+  /// Monotonically increasing revision of annotation and selection mutations.
+  int get revision => _revision;
+
+  void _markChanged() {
+    _revision++;
+    notifyListeners();
+  }
 
   /// Returns an unmodifiable view of all annotations.
   ///
@@ -84,10 +94,11 @@ class AnnotationController extends ChangeNotifier {
   void addAnnotation(ChartAnnotation annotation) {
     if (_annotations.any((a) => a.id == annotation.id)) {
       throw ArgumentError(
-          'Annotation with id "${annotation.id}" already exists');
+        'Annotation with id "${annotation.id}" already exists',
+      );
     }
     _annotations.add(annotation);
-    notifyListeners();
+    _markChanged();
   }
 
   /// Updates an existing annotation.
@@ -110,7 +121,7 @@ class AnnotationController extends ChangeNotifier {
     }
 
     _annotations[index] = updated;
-    notifyListeners();
+    _markChanged();
   }
 
   /// Removes an annotation by ID.
@@ -129,7 +140,7 @@ class AnnotationController extends ChangeNotifier {
       if (_selectedAnnotationId == id) {
         _selectedAnnotationId = null;
       }
-      notifyListeners();
+      _markChanged();
     }
 
     return wasRemoved;
@@ -141,7 +152,7 @@ class AnnotationController extends ChangeNotifier {
 
     _annotations.clear();
     _selectedAnnotationId = null;
-    notifyListeners();
+    _markChanged();
   }
 
   // ============================================================================
@@ -168,12 +179,13 @@ class AnnotationController extends ChangeNotifier {
     for (final annotation in annotations) {
       if (_annotations.any((a) => a.id == annotation.id)) {
         throw ArgumentError(
-            'Annotation with id "${annotation.id}" already exists');
+          'Annotation with id "${annotation.id}" already exists',
+        );
       }
     }
 
     _annotations.addAll(annotations);
-    notifyListeners();
+    _markChanged();
   }
 
   /// Updates multiple annotations at once.
@@ -210,7 +222,7 @@ class AnnotationController extends ChangeNotifier {
       _annotations[index] = entry.value;
     }
 
-    notifyListeners();
+    _markChanged();
   }
 
   /// Removes multiple annotations by their IDs.
@@ -231,7 +243,7 @@ class AnnotationController extends ChangeNotifier {
           ids.contains(_selectedAnnotationId)) {
         _selectedAnnotationId = null;
       }
-      notifyListeners();
+      _markChanged();
     }
 
     return removedCount;
@@ -260,7 +272,7 @@ class AnnotationController extends ChangeNotifier {
       }
     }
 
-    notifyListeners();
+    _markChanged();
   }
 
   // ============================================================================
@@ -279,7 +291,7 @@ class AnnotationController extends ChangeNotifier {
 
     if (_selectedAnnotationId != id) {
       _selectedAnnotationId = id;
-      notifyListeners();
+      _markChanged();
     }
   }
 
@@ -287,7 +299,7 @@ class AnnotationController extends ChangeNotifier {
   void clearSelection() {
     if (_selectedAnnotationId != null) {
       _selectedAnnotationId = null;
-      notifyListeners();
+      _markChanged();
     }
   }
 
