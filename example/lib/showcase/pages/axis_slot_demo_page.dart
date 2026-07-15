@@ -128,8 +128,8 @@ class _AxisSlotDemoPageState extends State<AxisSlotDemoPage> {
         .toList();
 
     return ChartPageLayout(
-      title: 'Y-Axis Slot System',
-      subtitle: 'maxAxesPerSide: 3 — 5 series compete for right axis',
+      title: 'Axis Slots',
+      subtitle: 'Allocate 5 right-side axes into 3 visible slots',
       chart: ChartCard(
         title: 'Axis Slot Demo',
         subtitle: 'Tap a legend item to swap its axis in',
@@ -145,15 +145,16 @@ class _AxisSlotDemoPageState extends State<AxisSlotDemoPage> {
                   label: 'Time',
                   showAxisLine: true,
                 ),
-                onAxisSwapped: ({
-                  required String promotedAxisId,
-                  required String demotedAxisId,
-                }) {
-                  setState(() {
-                    _statusMessage =
-                        'Swapped in: $promotedAxisId\nDemoted: $demotedAxisId';
-                  });
-                },
+                onAxisSwapped:
+                    ({
+                      required String promotedAxisId,
+                      required String demotedAxisId,
+                    }) {
+                      setState(() {
+                        _statusMessage =
+                            'Swapped in: $promotedAxisId\nDemoted: $demotedAxisId';
+                      });
+                    },
               ),
             ),
             if (_statusMessage != null)
@@ -193,14 +194,10 @@ class _AxisSlotDemoPageState extends State<AxisSlotDemoPage> {
       ),
       bottomPanel: StatusPanel(
         items: [
-          StatusItem(
-            label: 'Total Series',
-            value: '${_series.length}',
-          ),
+          StatusItem(label: 'Total Series', value: '${_series.length}'),
           StatusItem(
             label: 'Visible',
-            value:
-                '${_series.length - _hiddenSeriesIds.length}',
+            value: '${_series.length - _hiddenSeriesIds.length}',
           ),
           StatusItem(
             label: 'Axis Slots',

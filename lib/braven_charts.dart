@@ -3,9 +3,9 @@
 ///
 /// Import this library to access the `BravenChartPlus` widget and core models.
 ///
-/// ```dart
-/// import 'package:braven_charts/braven_charts.dart';
+/// Import `package:braven_charts/braven_charts.dart`, then create the widget:
 ///
+/// ```dart
 /// final series = ChartSeries(
 ///   id: 'revenue',
 ///   points: const [

@@ -5,12 +5,12 @@ import '../models/y_axis_config.dart';
 // Re-export DataRange for convenience when importing this file
 export '../models/data_range.dart';
 
-/// Normalizes series data values to [0,1] range for rendering while
+/// Normalizes series data values to the `[0, 1]` range for rendering while
 /// preserving ability to recover original values for display.
 ///
 /// This is the core normalization engine for multi-axis chart rendering.
 /// It converts data values between their original range and a normalized
-/// [0,1] range, allowing multiple series with vastly different Y-ranges
+/// `[0, 1]` range, allowing multiple series with vastly different Y-ranges
 /// to share the same vertical chart space.
 ///
 /// The normalization formula is standard linear interpolation:
@@ -23,13 +23,13 @@ class MultiAxisNormalizer {
   /// Private constructor - this is a utility class with static methods only.
   const MultiAxisNormalizer._();
 
-  /// Normalizes [value] to [0,1] range based on axis [min] and [max].
+  /// Normalizes [value] to the `[0, 1]` range based on axis [min] and [max].
   ///
   /// Returns:
   /// - `0.0` when value equals min
   /// - `1.0` when value equals max
   /// - Proportional values between for intermediate values
-  /// - Values outside [0,1] when value is outside [min,max] range
+  /// - Values outside `[0, 1]` when value is outside the `[min, max]` range
   /// - `0.5` when min equals max (zero range edge case)
   ///
   /// Example:
@@ -95,7 +95,7 @@ class MultiAxisNormalizer {
   ///   computes min from bound series data
   /// - Uses explicit [YAxisConfig.max] when specified, otherwise
   ///   computes max from bound series data
-  /// - Returns default bounds [0.0, 1.0] when no data is available
+  /// - Returns default bounds `[0.0, 1.0]` when no data is available
   ///
   /// Parameters:
   /// - [axisConfigs]: List of Y-axis configurations

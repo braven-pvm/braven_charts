@@ -85,8 +85,8 @@ class _MinorTicksPageState extends State<MinorTicksPage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Minor Ticks',
-      subtitle: 'Verify unlabelled sub-tick marks on X and Y axes',
+      title: 'Ticks & Grid',
+      subtitle: 'Configure minor tick subdivisions across X and Y axes',
       optionsChildren: _buildOptions(),
       chart: _buildCharts(),
       bottomPanel: _buildStatus(),
@@ -167,12 +167,12 @@ class _MinorTicksPageState extends State<MinorTicksPage> {
                     'Linear ramp 0–100. Major ticks every 20 units; '
                     'minor ticks subdivide each interval.',
                 child: BravenChartPlus(
-                  series: [
+                  series: const [
                     LineChartSeries(
                       id: 'linear',
                       name: 'Linear',
                       points: _linearPoints,
-                      color: const Color(0xFF1565C0),
+                      color: Color(0xFF1565C0),
                       interpolation: LineInterpolation.linear,
                       strokeWidth: 2.4,
                       showDataPointMarkers: true,

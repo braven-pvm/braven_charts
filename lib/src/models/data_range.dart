@@ -98,7 +98,7 @@ class DataRange {
   /// Extends the maximum by [padding] × [span] if padding is provided.
   double get paddedMax => max + (span * padding);
 
-  /// Returns true if the value is within [min, max] (inclusive).
+  /// Returns true if the value is within `[min, max]` (inclusive).
   bool contains(double value) => value >= min && value <= max;
 
   /// Returns true if this range overlaps with [other].

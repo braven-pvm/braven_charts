@@ -120,7 +120,9 @@ class _TimerTestPageState extends State<TimerTestPage> {
                   child: Text(
                     '$_targetHz Hz',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -186,9 +188,10 @@ class _TimerTestPageState extends State<TimerTestPage> {
               'This will prove whether Timer.periodic can maintain accurate timing '
               'independent of any chart rendering or browser throttling.',
               style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey),
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
@@ -208,10 +211,7 @@ class _TimerTestPageState extends State<TimerTestPage> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16),
-          ),
+          Text(value, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );

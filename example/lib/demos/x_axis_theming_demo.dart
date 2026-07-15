@@ -107,11 +107,7 @@ class XAxisThemingDemo extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          color: Colors.blue,
-                        ),
+                        Container(width: 16, height: 16, color: Colors.blue),
                         const SizedBox(width: 8),
                         const Text('X-Axis (Time) - Blue'),
                       ],
@@ -119,11 +115,7 @@ class XAxisThemingDemo extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          color: Colors.green,
-                        ),
+                        Container(width: 16, height: 16, color: Colors.green),
                         const SizedBox(width: 8),
                         const Text('Y-Axis (Value) - Green'),
                       ],
@@ -131,11 +123,7 @@ class XAxisThemingDemo extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          color: Colors.orange,
-                        ),
+                        Container(width: 16, height: 16, color: Colors.orange),
                         const SizedBox(width: 8),
                         const Text('Series (Temperature) - Orange'),
                       ],
@@ -156,10 +144,7 @@ class XAxisThemingDemo extends StatelessWidget {
   List<ChartDataPoint> _generateTemperatureData() {
     return List.generate(
       50,
-      (i) => ChartDataPoint(
-        x: i.toDouble(),
-        y: 20 + 10 * (i % 20) / 20,
-      ),
+      (i) => ChartDataPoint(x: i.toDouble(), y: 20 + 10 * (i % 20) / 20),
     );
   }
 }

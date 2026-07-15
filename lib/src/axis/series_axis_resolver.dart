@@ -9,7 +9,7 @@ import '../models/y_axis_config.dart';
 /// Provides utility methods for mapping series to their corresponding Y-axis
 /// configurations based on explicit bindings or default fallbacks.
 ///
-/// This resolver is used by [ChartRenderBox] to determine axis assignment
+/// The chart render pipeline uses this resolver to determine axis assignment
 /// for each series in a multi-axis chart.
 ///
 /// Example:

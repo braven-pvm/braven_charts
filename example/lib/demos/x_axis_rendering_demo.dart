@@ -99,20 +99,14 @@ class XAxisRenderingDemo extends StatelessWidget {
   static List<ChartDataPoint> _velocitySeries() {
     return List.generate(
       60,
-      (i) => ChartDataPoint(
-        x: i.toDouble(),
-        y: 10 + 5 * (i % 10) / 10,
-      ),
+      (i) => ChartDataPoint(x: i.toDouble(), y: 10 + 5 * (i % 10) / 10),
     );
   }
 
   static List<ChartDataPoint> _accelerationSeries() {
     return List.generate(
       60,
-      (i) => ChartDataPoint(
-        x: i.toDouble(),
-        y: 2 + 1.5 * (i % 8) / 8,
-      ),
+      (i) => ChartDataPoint(x: i.toDouble(), y: 2 + 1.5 * (i % 8) / 8),
     );
   }
 }

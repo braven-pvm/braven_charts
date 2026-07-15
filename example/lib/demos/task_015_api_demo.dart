@@ -111,10 +111,7 @@ class Task015ApiDemo extends StatelessWidget {
     return List.generate(50, (i) {
       // Create a wave pattern for power (150-250W range)
       final wave = (i % 10 < 5) ? i % 10 / 5.0 : (10 - i % 10) / 5.0;
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 150 + 100 * wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 150 + 100 * wave);
     });
   }
 
@@ -122,10 +119,7 @@ class Task015ApiDemo extends StatelessWidget {
     return List.generate(50, (i) {
       // Create a wave pattern for heart rate (80-120 bpm range)
       final wave = (i % 10 < 5) ? i % 10 / 5.0 : (10 - i % 10) / 5.0;
-      return ChartDataPoint(
-        x: i.toDouble(),
-        y: 80 + 40 * wave,
-      );
+      return ChartDataPoint(x: i.toDouble(), y: 80 + 40 * wave);
     });
   }
 }

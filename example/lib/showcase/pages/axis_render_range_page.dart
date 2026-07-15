@@ -56,25 +56,19 @@ class _AxisRenderRangePageState extends State<AxisRenderRangePage> {
 
   /// Lactate-like curve: starts at −3, rises steeply to ~14.
   /// The negative portion represents "resting debt" padding in coordinate space.
-  static final List<ChartDataPoint> _lactatePoints = List.generate(
-    21,
-    (i) {
-      final x = i * 5.0;
-      // Sigmoid-like rise from -3 to 14
-      final y = -3 + 17 / (1 + math.exp(-0.15 * (x - 60)));
-      return ChartDataPoint(x: x, y: double.parse(y.toStringAsFixed(2)));
-    },
-  );
+  static final List<ChartDataPoint> _lactatePoints = List.generate(21, (i) {
+    final x = i * 5.0;
+    // Sigmoid-like rise from -3 to 14
+    final y = -3 + 17 / (1 + math.exp(-0.15 * (x - 60)));
+    return ChartDataPoint(x: x, y: double.parse(y.toStringAsFixed(2)));
+  });
 
   /// Heart-rate curve: starts ~100, rises to ~185.
-  static final List<ChartDataPoint> _hrPoints = List.generate(
-    21,
-    (i) {
-      final x = i * 5.0;
-      final y = 100 + 85 * (1 - math.exp(-x / 55));
-      return ChartDataPoint(x: x, y: double.parse(y.toStringAsFixed(1)));
-    },
-  );
+  static final List<ChartDataPoint> _hrPoints = List.generate(21, (i) {
+    final x = i * 5.0;
+    final y = 100 + 85 * (1 - math.exp(-x / 55));
+    return ChartDataPoint(x: x, y: double.parse(y.toStringAsFixed(1)));
+  });
 
   /// Smooth sine-based series for the X-axis render range demo.
   static final List<ChartDataPoint> _sinePoints = List.generate(
@@ -90,8 +84,9 @@ class _AxisRenderRangePageState extends State<AxisRenderRangePage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Axis Render Range',
-      subtitle: 'renderMin / renderMax — filter ticks without affecting data scaling',
+      title: 'Axis Render Windows',
+      subtitle:
+          'Filter visible ticks with renderMin and renderMax without rescaling data',
       optionsChildren: _buildOptions(),
       chart: _buildCharts(),
       bottomPanel: _buildStatus(),

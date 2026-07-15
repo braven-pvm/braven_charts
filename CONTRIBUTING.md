@@ -8,8 +8,8 @@ Thank you for your interest in contributing to Braven Charts! We welcome contrib
 
 Found a bug or have a feature request?
 
-1. Check [existing issues](https://github.com/yourusername/braven_charts/issues)
-2. If it doesn't exist, [create a new issue](https://github.com/yourusername/braven_charts/issues/new)
+1. Check [existing issues](https://github.com/braven-pvm/braven_charts/issues)
+2. If it doesn't exist, [create a new issue](https://github.com/braven-pvm/braven_charts/issues/new)
 3. Use the appropriate template (Bug Report or Feature Request)
 4. Provide as much detail as possible
 
@@ -372,11 +372,11 @@ Documentation is as important as code!
 - Create tutorials
 - Update architecture docs
 
-See [docs/readme.md](docs/readme.md) for structure.
+See the [public API overview](doc/api_reference.md) and repository source for structure.
 
 ## 🆘 Getting Help
 
-- **Questions?** Open a [Discussion](https://github.com/yourusername/braven_charts/discussions)
+- **Questions?** Open a [Discussion](https://github.com/braven-pvm/braven_charts/discussions)
 - **Stuck?** Ask in your PR or issue
 - **Chat:** Join our community (link TBD)
 

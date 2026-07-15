@@ -7,6 +7,17 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
+import '../widgets/gallery_flagships.dart';
+
+const _capabilities = <(IconData, String)>[
+  (Icons.open_with, 'Zoom, pan & scroll'),
+  (Icons.edit_note, 'Annotations'),
+  (Icons.track_changes, 'Tooltips & tracking'),
+  (Icons.align_vertical_bottom, 'Multi-axis & normalization'),
+  (Icons.bolt, 'Streaming & live data'),
+  (Icons.palette_outlined, 'Themes & baselines'),
+  (Icons.settings_remote, 'Controller API'),
+];
 
 /// Gallery page showcasing multiple charts with different themes and complexities.
 class GalleryPage extends StatefulWidget {
@@ -23,90 +34,299 @@ class _GalleryPageState extends State<GalleryPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: CustomScrollView(
-          shrinkWrap: true,
-          slivers: [
-            SliverAppBar(
-              title: Padding(
-                padding: const EdgeInsets.only(top: 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Chart Gallery',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        "Multitude of chart configurations",
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.hintColor,
+      body: CustomScrollView(
+        shrinkWrap: true,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Interactive Flutter charts for live, multi-axis data.',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.7,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        child: Text(
+                          'Explore production-shaped examples across every chart type and the interaction features that define Braven Charts.',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _capabilities
+                            .map(
+                              (capability) => _CapabilityChip(
+                                icon: capability.$1,
+                                label: capability.$2,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              floating: true,
             ),
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent:
-                      750, // Increased from 500 for bigger charts (3 per row on wide screens)
-                  childAspectRatio: 1.2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'FLAGSHIP COMPOSITION',
+              title: 'One chart, the complete analytical story',
+              subtitle:
+                  'A real-world multi-sensor profile with independent axes, normalized values, annotations, labels, tracking, and glow.',
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                height: 520,
+                child: PhysiologySessionGalleryCard(),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'ADVANCED COMPOSITIONS',
+              title: 'Analysis beyond a single line',
+              subtitle:
+                  'Baseline fills, stage windows, glow, small multiples, live data, dense overlays, annotations, and styled tracking.',
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 460,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate([
+                const BaselineResponseGalleryCard(),
+                const Vo2StageGalleryCard(),
+                const GlowSignalGalleryCard(),
+                const LactateComparisonGalleryCard(),
+                const LiveStreamGalleryCard(),
+                _buildNormalizedCrosshairChart(isDark),
+                _buildAnnotatedChart(isDark),
+                _buildMultiLayerAnalyticsChart(isDark),
+                _buildNetworkTrafficChart(isDark),
+                _buildFinancialDashboardChart(isDark),
+                _buildTrackingTooltipStyleChart(isDark),
+              ]),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'CHART TYPES AND STYLING',
+              title: 'The building blocks',
+              subtitle:
+                  'Focused examples for chart types, interpolation, segment styling, thresholds, dashboards, and domain-specific data.',
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 420,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate([
+                _buildMonthlyRevenueChart(isDark),
+                _buildTemperatureTrendChart(isDark),
+                _buildQuarterlySalesBarChart(isDark),
+                _buildExperimentScatterChart(isDark),
+                _buildMixedSeriesTypeChart(isDark), // Line + Area on same chart
+                _buildMixedInterpolationChart(
+                  isDark,
+                ), // Multiple interpolation types on one chart
+                _buildStockPriceChart(isDark),
+                _buildSalesComparisonChart(isDark),
+                _buildHeartRateChart(isDark),
+                _buildEnergyConsumptionChart(isDark), // Energy usage pattern
+                _buildWebTrafficChart(isDark), // Website traffic
+                _buildProjectTimelineChart(isDark), // Project progress
+                _buildCpuUsageChart(isDark), // Real-time CPU monitoring
+                // Segment Colors Showcases - Lines
+                _buildThresholdColoringChart(isDark), // Color by Y threshold
+                _buildGradientSegmentsChart(
+                  isDark,
+                ), // Rainbow gradient segments
+                _buildStockGainLossChart(isDark), // Green/red for gain/loss
+                // Segment Colors Showcases - Areas
+                _buildTemperatureZonesAreaChart(
+                  isDark,
+                ), // Area with hot/cold zones
+                _buildProfitLossAreaChart(
+                  isDark,
+                ), // Area with profit/loss coloring
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuarterlySalesBarChart(bool isDark) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Quarterly Pipeline',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Grouped bars with hover detail',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BravenChartPlus(
+                series: const [
+                  BarChartSeries(
+                    id: 'pipeline',
+                    name: 'Pipeline',
+                    unit: 'k',
+                    points: [
+                      ChartDataPoint(x: 1, y: 48),
+                      ChartDataPoint(x: 2, y: 64),
+                      ChartDataPoint(x: 3, y: 58),
+                      ChartDataPoint(x: 4, y: 76),
+                    ],
+                    color: Color(0xFF6366F1),
+                    barWidthPercent: 0.34,
+                  ),
+                  BarChartSeries(
+                    id: 'closed',
+                    name: 'Closed',
+                    unit: 'k',
+                    points: [
+                      ChartDataPoint(x: 1, y: 31),
+                      ChartDataPoint(x: 2, y: 45),
+                      ChartDataPoint(x: 3, y: 49),
+                      ChartDataPoint(x: 4, y: 62),
+                    ],
+                    color: Color(0xFF14B8A6),
+                    barWidthPercent: 0.34,
+                  ),
+                ],
+                theme: isDark ? ChartTheme.dark : ChartTheme.light,
+                showLegend: true,
+                xAxisConfig: const XAxisConfig(label: 'Quarter'),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Revenue (USD k)',
                 ),
-                delegate: SliverChildListDelegate([
-                  _buildMonthlyRevenueChart(isDark),
-                  _buildTemperatureTrendChart(isDark),
-                  _buildMixedSeriesTypeChart(
-                    isDark,
-                  ), // Line + Area on same chart
-                  _buildNormalizedCrosshairChart(
-                    isDark,
-                  ), // Multi-axis normalized with crosshair tracking
-                  _buildAnnotatedChart(isDark), // Chart with annotations
-                  _buildMixedInterpolationChart(
-                    isDark,
-                  ), // Multiple interpolation types on one chart
-                  _buildStockPriceChart(isDark),
-                  _buildSalesComparisonChart(isDark),
-                  _buildHeartRateChart(isDark),
-                  _buildEnergyConsumptionChart(isDark), // Energy usage pattern
-                  _buildWebTrafficChart(isDark), // Website traffic
-                  _buildProjectTimelineChart(isDark), // Project progress
-                  _buildCpuUsageChart(isDark), // Real-time CPU monitoring
-                  // Segment Colors Showcases - Lines
-                  _buildThresholdColoringChart(isDark), // Color by Y threshold
-                  _buildGradientSegmentsChart(
-                    isDark,
-                  ), // Rainbow gradient segments
-                  _buildStockGainLossChart(isDark), // Green/red for gain/loss
-                  // Segment Colors Showcases - Areas
-                  _buildTemperatureZonesAreaChart(
-                    isDark,
-                  ), // Area with hot/cold zones
-                  _buildProfitLossAreaChart(
-                    isDark,
-                  ), // Area with profit/loss coloring
-                  // Multi-Series Mixed Charts
-                  _buildMultiLayerAnalyticsChart(isDark), // 3 areas + 2 lines
-                  _buildNetworkTrafficChart(
-                    isDark,
-                  ), // Upload/download areas + latency line
-                  _buildFinancialDashboardChart(isDark), // Multiple indicators
-                  _buildTrackingTooltipStyleChart(
-                    isDark,
-                  ), // Styled tracking tooltip
-                ]),
+                interactionConfig: const InteractionConfig(
+                  tooltip: TooltipConfig(
+                    enabled: true,
+                    triggerMode: TooltipTriggerMode.hover,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExperimentScatterChart(bool isDark) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Experiment Cohorts',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Scatter correlation with crosshair tracking',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: BravenChartPlus(
+                series: const [
+                  ScatterChartSeries(
+                    id: 'control',
+                    name: 'Control',
+                    points: [
+                      ChartDataPoint(x: 12, y: 18),
+                      ChartDataPoint(x: 18, y: 25),
+                      ChartDataPoint(x: 24, y: 28),
+                      ChartDataPoint(x: 31, y: 39),
+                      ChartDataPoint(x: 38, y: 42),
+                      ChartDataPoint(x: 45, y: 51),
+                    ],
+                    color: Color(0xFF64748B),
+                    markerRadius: 5,
+                  ),
+                  ScatterChartSeries(
+                    id: 'variant',
+                    name: 'Variant',
+                    points: [
+                      ChartDataPoint(x: 14, y: 28),
+                      ChartDataPoint(x: 21, y: 34),
+                      ChartDataPoint(x: 27, y: 41),
+                      ChartDataPoint(x: 34, y: 49),
+                      ChartDataPoint(x: 41, y: 58),
+                      ChartDataPoint(x: 48, y: 66),
+                    ],
+                    color: Color(0xFFF97316),
+                    markerRadius: 6,
+                  ),
+                ],
+                theme: isDark ? ChartTheme.dark : ChartTheme.light,
+                showLegend: true,
+                xAxisConfig: const XAxisConfig(label: 'Input'),
+                yAxis: YAxisConfig(
+                  position: YAxisPosition.left,
+                  label: 'Outcome',
+                ),
+                interactionConfig: const InteractionConfig(
+                  crosshair: CrosshairConfig(
+                    enabled: true,
+                    mode: CrosshairMode.both,
+                    snapToDataPoint: true,
+                    displayMode: CrosshairDisplayMode.tracking,
+                  ),
+                ),
               ),
             ),
           ],
@@ -2289,6 +2509,99 @@ class _GalleryPageState extends State<GalleryPage> {
                     ),
                   ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CapabilityChip extends StatelessWidget {
+  const _CapabilityChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: scheme.onPrimaryContainer),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: scheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GallerySectionHeader extends StatelessWidget {
+  const _GallerySectionHeader({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 880),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              eyebrow,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.35,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.45,
               ),
             ),
           ],
