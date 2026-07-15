@@ -17,6 +17,7 @@ import 'pages/artifact_migration_lab_page.dart';
 import 'pages/artifact_payload_lab_page.dart';
 import 'pages/artifact_preview_lab_page.dart';
 import 'pages/artifact_resolver_lab_page.dart';
+import 'pages/artifact_save_restore_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -278,6 +279,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.fingerprint_outlined,
       selectedIcon: Icons.fingerprint,
       page: ArtifactIdentityLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Save Restore Lab',
+      icon: Icons.save_outlined,
+      selectedIcon: Icons.save,
+      page: ArtifactSaveRestoreLabPage(),
       badge: 'NEW',
     ),
   ];
