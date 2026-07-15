@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_schema_lab_page.dart';
+import 'pages/artifact_showcase_page.dart';
 import 'pages/artifact_binary_payload_lab_page.dart';
 import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
@@ -206,6 +207,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.hourglass_empty_outlined,
       selectedIcon: Icons.hourglass_top,
       page: LoadingStatesPage(),
+    ),
+    const NavDestination(
+      label: 'Artifact Showcase',
+      icon: Icons.hub_outlined,
+      selectedIcon: Icons.hub,
+      page: ArtifactShowcasePage(),
+      badge: 'NEW',
     ),
     const NavDestination(
       label: 'Artifact Lab',
