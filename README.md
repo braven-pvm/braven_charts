@@ -4,56 +4,68 @@
 [![Flutter](https://img.shields.io/badge/Flutter-%E2%89%A53.35-02569B.svg)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0F766E.svg)](https://github.com/braven-pvm/braven_charts/blob/master/LICENSE)
 
-**Flutter charts that keep up.** Braven Charts is an interactive, web-first
-charting package for live data, multi-axis analysis, annotations, and deeply
-themeable product experiences.
+Braven Charts is a pure Dart charting library for Flutter applications. Chart
+rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
+package does not embed a JavaScript charting engine.
 
-[**Open the live interactive showcase →**](https://braven-pvm.github.io/braven_charts/)
+`BravenChartPlus` supports line, area, bar, scatter, and mixed-series charts;
+multiple independent axes and normalization; zoom, pan, scrollbars, tracking,
+tooltips, and editable annotations; frame-coalesced live data; configurable
+themes and state views; chart/table display modes; and portable chart
+artifacts. Rendering, input handling, and streaming updates remain inside the
+Flutter rendering pipeline.
 
-The package API is exposed through `BravenChartPlus`.
+For update-heavy charts, the implementation uses cached series layers, a
+spatial hit-test index, frame-coalesced point delivery, and a direct render-box
+streaming path so each sample does not require a widget-tree rebuild.
+
+[Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
 [![Four-axis analytical chart with normalized signals, annotations, tracking, glow, and a scrollbar](doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
 
-## See it in action
+## Rendered examples
 
-### Full analytical control
+### Multi-axis interaction
 
-Combine independent axes, normalized series, editable annotations, tracking,
-zoom, pan, and synchronized scrollbars in one responsive chart.
+The example below combines four independently scaled series with per-series
+normalization, range and threshold annotations, tracking tooltips, pointer
+zoom, drag-to-pan, and a synchronized X scrollbar.
 
 [![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 
-### Stream, pause, catch up
+### Live-stream buffering
 
-Ingest live points at high frequency, pause the viewport while samples buffer,
-then resume without losing data.
+`LiveStreamController` sends frame-coalesced point updates directly to the
+rendering layer. The viewport can follow the latest sample, pause while the
+bounded buffer continues receiving data, and resume with buffered catch-up.
 
 [![Live chart data buffering and catching up](doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream)
 
 ## Gallery
 
-Fifteen production-shaped compositions rendered by Braven Charts: baselines,
-stage analysis, glow, small multiples, live data, multi-axis tracking,
-annotations, dashboards, bars, scatter, interpolation, thresholds, and
-positive/negative areas.
+These 15 examples cover baseline fills, stage summaries, line glow, small
+multiples, live data, independent axes, annotations, mixed series, grouped
+bars, scatter plots, interpolation modes, threshold styling, and positive or
+negative area segments.
 
 [![Fifteen varied Braven Charts examples from the current Gallery](doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
 
-## Why Braven Charts
+## Feature coverage
 
-| Capability | What it provides |
+| Area | API and behavior |
 | --- | --- |
+| Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
 | Data series | Line, area, bar, scatter, mixed-series charts, markers, interpolation, segment styling, and baseline fills |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
-| Presentation | Light/dark and custom themes, legends, labels, loading skeletons, progress indicators, and empty states |
+| Display | Light/dark and custom themes, legends, labels, chart/table switching, loading skeletons, progress indicators, and empty states |
 | Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 
-The [live showcase](https://braven-pvm.github.io/braven_charts/) turns these
-capabilities into focused, runnable demos. See the
+The [live showcase](https://braven-pvm.github.io/braven_charts/) provides
+runnable examples and configuration controls for these APIs. See the
 [showcase guide](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 for the feature-to-page map and local run instructions.
 
