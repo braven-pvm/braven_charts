@@ -84,9 +84,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: _buildChart(),
-            ),
+            Expanded(child: _buildChart()),
           ],
         ),
       ),
@@ -137,9 +135,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
 
   Widget _buildChart() {
     final seriesList = _buildSeriesList();
-    return BravenChartPlus(
-      series: seriesList,
-    );
+    return BravenChartPlus(series: seriesList);
   }
 
   List<ChartSeries> _buildSeriesList() {
@@ -157,10 +153,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
       case 'bar-categories':
         return [_buildBarCategories()];
       case 'all-types':
-        return [
-          _buildLineThreshold(),
-          _buildScatterHighlightSmall(),
-        ];
+        return [_buildLineThreshold(), _buildScatterHighlightSmall()];
       default:
         return [_buildLineThreshold()];
     }
@@ -183,10 +176,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
       points: points,
       color: Colors.blue,
       strokeWidth: 2.5,
-    ).withColorWhere(
-      (point) => point.y > 70,
-      Colors.red,
-    );
+    ).withColorWhere((point) => point.y > 70, Colors.red);
   }
 
   LineChartSeries _buildLineIndices() {
@@ -214,10 +204,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
       color: Colors.blue,
       interpolation: LineInterpolation.bezier,
       strokeWidth: 2.5,
-    ).withColorWhere(
-      (point) => point.y > 70,
-      Colors.purple,
-    );
+    ).withColorWhere((point) => point.y > 70, Colors.purple);
   }
 
   AreaChartSeries _buildAreaRange() {
@@ -229,11 +216,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
       color: Colors.blue,
       fillOpacity: 0.3,
       strokeWidth: 2.5,
-    ).withStyleInRange(
-      30.0,
-      60.0,
-      const SegmentStyle.color(Colors.green),
-    );
+    ).withStyleInRange(30.0, 60.0, const SegmentStyle.color(Colors.green));
   }
 
   ScatterChartSeries _buildScatterHighlight() {
@@ -290,11 +273,13 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
       } else {
         barColor = Colors.blue;
       }
-      points.add(ChartDataPoint(
-        x: i.toDouble(),
-        y: y,
-        pointStyle: PointStyle.color(barColor),
-      ));
+      points.add(
+        ChartDataPoint(
+          x: i.toDouble(),
+          y: y,
+          pointStyle: PointStyle.color(barColor),
+        ),
+      );
     }
 
     return BarChartSeries(
@@ -309,8 +294,7 @@ class _SegmentColorsDemoState extends State<SegmentColorsDemo> {
 
 /// Entry point for standalone demo.
 void main() {
-  runApp(const MaterialApp(
-    title: 'Segment Colors Demo',
-    home: SegmentColorsDemo(),
-  ));
+  runApp(
+    const MaterialApp(title: 'Segment Colors Demo', home: SegmentColorsDemo()),
+  );
 }

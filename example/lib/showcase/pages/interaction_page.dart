@@ -9,11 +9,7 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-/// Demonstrates chart interaction features:
-/// - Zoom and pan
-/// - Crosshair
-/// - Tooltips
-/// - Point selection
+/// Browse and configure direct exploration and multi-series tracking patterns.
 class InteractionPage extends StatefulWidget {
   const InteractionPage({super.key});
 
@@ -24,33 +20,35 @@ class InteractionPage extends StatefulWidget {
 class _InteractionPageState extends State<InteractionPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
 
-  // Interaction options
+  _InteractionMode _mode = _InteractionMode.explore;
+  _CurveStudy _curveStudy = _CurveStudy.interpolation;
+  bool _showTrackingTooltip = true;
+  bool _showIntersectionMarkers = true;
   bool _enableCrosshair = true;
   bool _enableTooltips = true;
+  bool _useConstrainedLayout = false;
 
-  // State
   ChartDataPoint? _hoveredPoint;
   ChartDataPoint? _tappedPoint;
-
-  // Generated data
-  late List<ChartDataPoint> _data;
+  late List<ChartDataPoint> _interactionData;
 
   @override
   void initState() {
     super.initState();
-    _optionsController.enableZoom = true;
-    _optionsController.enablePan = true;
-    _regenerateData();
+    _regenerateInteractionData();
   }
 
-  void _regenerateData() {
-    setState(() {
-      _data = DataGenerator.generateRandomWalk(
-        count: 100,
-        startY: 50.0,
-        stepSize: 8.0,
-      );
-    });
+  void _regenerateInteractionData() {
+    _interactionData = DataGenerator.generateRandomWalk(
+      count: 80,
+      startY: 50,
+      stepSize: 9,
+    );
+  }
+
+  void _selectMode(_InteractionMode mode) {
+    if (_mode == mode) return;
+    setState(() => _mode = mode);
   }
 
   @override
@@ -63,157 +61,973 @@ class _InteractionPageState extends State<InteractionPage> {
   Widget build(BuildContext context) {
     return ChartPageLayout(
       title: 'Interaction',
-      subtitle: 'Explore zoom, pan, crosshair and tooltips',
+      subtitle: 'Choose an interaction pattern, then configure it live',
       optionsChildren: _buildOptionsChildren(),
-      chart: _buildChart(),
-      bottomPanel: _buildStatusPanel(),
+      chart: _buildWorkspace(),
     );
   }
 
   List<Widget> _buildOptionsChildren() {
     return [
-      // Standard display options
-      StandardChartOptions(controller: _optionsController),
-
-      // Interaction options
       OptionSection(
-        title: 'Interactions',
-        icon: Icons.touch_app,
+        title: 'Interaction Mode',
+        icon: Icons.touch_app_outlined,
         children: [
-          BoolOption(
-            label: 'Enable Crosshair',
-            value: _enableCrosshair,
-            onChanged: (v) => setState(() => _enableCrosshair = v),
-          ),
-          BoolOption(
-            label: 'Enable Tooltips',
-            value: _enableTooltips,
-            onChanged: (v) => setState(() => _enableTooltips = v),
+          EnumOption<_InteractionMode>(
+            label: 'Pattern',
+            value: _mode,
+            values: _InteractionMode.values,
+            labelBuilder: _modeLabel,
+            onChanged: _selectMode,
           ),
         ],
       ),
-
-      // Actions
+      if (_mode == _InteractionMode.explore)
+        OptionSection(
+          title: 'Explore & Select',
+          icon: Icons.ads_click,
+          children: [
+            BoolOption(
+              label: 'Enable Crosshair',
+              value: _enableCrosshair,
+              onChanged: (value) => setState(() => _enableCrosshair = value),
+            ),
+            BoolOption(
+              label: 'Enable Tooltips',
+              value: _enableTooltips,
+              onChanged: (value) => setState(() => _enableTooltips = value),
+            ),
+            ActionButton(
+              label: 'Clear Selection',
+              icon: Icons.clear,
+              onPressed: () => setState(() {
+                _tappedPoint = null;
+                _hoveredPoint = null;
+              }),
+            ),
+          ],
+        ),
+      if (_mode != _InteractionMode.explore)
+        OptionSection(
+          title: 'Tracking Overlay',
+          icon: Icons.track_changes,
+          children: [
+            BoolOption(
+              label: 'Show Tracking Tooltip',
+              value: _showTrackingTooltip,
+              onChanged: (value) =>
+                  setState(() => _showTrackingTooltip = value),
+            ),
+            BoolOption(
+              label: 'Show Intersection Markers',
+              value: _showIntersectionMarkers,
+              onChanged: (value) =>
+                  setState(() => _showIntersectionMarkers = value),
+            ),
+          ],
+        ),
+      if (_mode == _InteractionMode.normalize)
+        OptionSection(
+          title: 'Layout',
+          icon: Icons.vertical_split_outlined,
+          children: [
+            BoolOption(
+              label: 'Use Constrained Split Pane',
+              value: _useConstrainedLayout,
+              subtitle: 'Validate tracking inside a narrow analytical panel',
+              onChanged: (value) =>
+                  setState(() => _useConstrainedLayout = value),
+            ),
+          ],
+        ),
+      if (_mode == _InteractionMode.curves)
+        OptionSection(
+          title: 'Curve Study',
+          icon: Icons.multiline_chart,
+          children: [
+            EnumOption<_CurveStudy>(
+              label: 'Comparison',
+              value: _curveStudy,
+              values: _CurveStudy.values,
+              labelBuilder: (value) => switch (value) {
+                _CurveStudy.interpolation => 'Interpolation methods',
+                _CurveStudy.tension => 'Bezier tension',
+              },
+              onChanged: (value) => setState(() => _curveStudy = value),
+            ),
+          ],
+        ),
+      StandardChartOptions(
+        controller: _optionsController,
+        showLineStyleOption: false,
+      ),
       OptionSection(
-        title: 'Actions',
+        title: 'How to Explore',
+        icon: Icons.info_outline,
+        children: [InfoBox(message: _modeGuide())],
+      ),
+      OptionSection(
+        title: 'Dataset',
+        icon: Icons.refresh,
         children: [
           ActionButton(
-            label: 'Regenerate Data',
+            label: 'Refresh Example Data',
             icon: Icons.refresh,
-            onPressed: _regenerateData,
-          ),
-          const SizedBox(height: 8),
-          ActionButton(
-            label: 'Clear Selection',
-            icon: Icons.clear,
-            onPressed: () => setState(() {
-              _tappedPoint = null;
-              _hoveredPoint = null;
-            }),
+            onPressed: () => setState(_regenerateInteractionData),
           ),
         ],
-      ),
-
-      // Info
-      const InfoBox(
-        message: 'Try zooming with scroll wheel, panning by dragging, '
-            'hovering for crosshair, and clicking on data points.',
       ),
     ];
   }
 
-  Widget _buildChart() {
+  Widget _buildWorkspace() {
     return ListenableBuilder(
       listenable: _optionsController,
       builder: (context, _) {
-        return ChartCard(
-          title: 'Interactive Line Chart',
-          subtitle: 'Random walk data',
-          child: BravenChartPlus(
-            series: [
-              LineChartSeries(
-                id: 'random_walk',
-                name: 'Random Walk',
-                points: _data,
-                color: Colors.blue,
-                interpolation: LineInterpolation.bezier,
-                strokeWidth: 2.0,
-                showDataPointMarkers: _optionsController.showDataMarkers,
-              ),
-            ],
-            theme: _optionsController.theme,
-            showLegend: _optionsController.showLegend,
-            showXScrollbar: _optionsController.showXScrollbar,
-            showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme:
-                ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-            xAxisConfig: XAxisConfig(
-              showAxisLine: _optionsController.showAxisLines,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose an interaction pattern',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
-            yAxis: YAxisConfig(
-              position: YAxisPosition.left,
-              showAxisLine: _optionsController.showAxisLines,
-            ),
-            interactionConfig: InteractionConfig(
-              enableZoom: _optionsController.enableZoom,
-              enablePan: _optionsController.enablePan,
-              crosshair: _enableCrosshair
-                  ? const CrosshairConfig(enabled: true)
-                  : const CrosshairConfig(enabled: false),
-              tooltip: _enableTooltips
-                  ? const TooltipConfig(enabled: true)
-                  : const TooltipConfig(enabled: false),
-            ),
-            onPointTap: (point, seriesId) {
-              setState(() {
-                _tappedPoint = point;
-              });
-            },
-            onPointHover: (point, seriesId) {
-              setState(() {
-                _hoveredPoint = point;
-              });
-            },
-          ),
+            const SizedBox(height: 8),
+            SizedBox(height: 168, child: _buildModeRibbon()),
+            const SizedBox(height: 16),
+            Expanded(child: _buildMainStage()),
+          ],
         );
       },
     );
   }
 
-  Widget _buildStatusPanel() {
-    final items = <StatusItem>[
-      StatusItem(
-        label: 'Data Points',
-        value: '${_data.length}',
-      ),
-      StatusItem(
-        label: 'Zoom',
-        value: _optionsController.enableZoom ? 'On' : 'Off',
-      ),
-      StatusItem(
-        label: 'Pan',
-        value: _optionsController.enablePan ? 'On' : 'Off',
-      ),
-    ];
+  Widget _buildModeRibbon() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        const minimumCardWidth = 168.0;
+        final fitWidth =
+            (constraints.maxWidth -
+                spacing * (_InteractionMode.values.length - 1)) /
+            _InteractionMode.values.length;
+        final cardWidth = fitWidth >= minimumCardWidth
+            ? fitWidth
+            : minimumCardWidth;
 
+        return ListView.separated(
+          key: const ValueKey('interaction-mode-ribbon'),
+          scrollDirection: Axis.horizontal,
+          itemCount: _InteractionMode.values.length,
+          separatorBuilder: (_, _) => const SizedBox(width: spacing),
+          itemBuilder: (context, index) {
+            final mode = _InteractionMode.values[index];
+            return SizedBox(
+              width: cardWidth,
+              child: _InteractionPreviewCard(
+                key: ValueKey('interaction-preview-${mode.name}'),
+                mode: mode,
+                label: _modeLabel(mode),
+                description: _modeDescription(mode),
+                selected: _mode == mode,
+                onTap: () => _selectMode(mode),
+                chart: _buildPreviewChart(mode),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewChart(_InteractionMode mode) {
+    return BravenChartPlus(
+      series: _previewSeries(mode),
+      theme: _optionsController.theme ?? ChartTheme.light,
+      showLegend: false,
+      grid: const GridConfig(horizontal: false, vertical: false),
+      xAxisConfig: const XAxisConfig(
+        visible: false,
+        minHeight: 0,
+        maxHeight: 0,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.hidden,
+        minWidth: 0,
+        maxWidth: 0,
+      ),
+      normalizationMode: switch (mode) {
+        _InteractionMode.track => NormalizationMode.perSeries,
+        _InteractionMode.normalize => NormalizationMode.auto,
+        _ => NormalizationMode.none,
+      },
+      interactionConfig: InteractionConfig.none(),
+    );
+  }
+
+  List<ChartSeries> _previewSeries(_InteractionMode mode) {
+    switch (mode) {
+      case _InteractionMode.explore:
+        return [
+          LineChartSeries(
+            id: 'preview-explore',
+            name: 'Explore',
+            points: _interactionData,
+            color: const Color(0xFF4F46E5),
+            interpolation: LineInterpolation.bezier,
+            strokeWidth: 2,
+          ),
+        ];
+      case _InteractionMode.track:
+        return _trackingSeries
+            .map((series) {
+              return LineChartSeries(
+                id: 'preview-${series.id}',
+                name: series.name,
+                points: series.points,
+                color: series.color,
+                interpolation: LineInterpolation.monotone,
+                strokeWidth: 1.8,
+              );
+            })
+            .toList(growable: false);
+      case _InteractionMode.normalize:
+        return [
+          AreaChartSeries(
+            id: 'preview-normalized-area',
+            name: 'Fat oxidation',
+            points: _normalizedSeries.first.points,
+            color: const Color(0xFF10B981),
+            interpolation: LineInterpolation.bezier,
+            strokeWidth: 1.8,
+            fillOpacity: 0.3,
+          ),
+          LineChartSeries(
+            id: 'preview-normalized-line',
+            name: 'CHO oxidation',
+            points: _normalizedSeries.last.points,
+            color: const Color(0xFFF59E0B),
+            interpolation: LineInterpolation.bezier,
+            strokeWidth: 1.8,
+          ),
+        ];
+      case _InteractionMode.curves:
+        return _interpolationSeries;
+      case _InteractionMode.stress:
+        return _stressSeries;
+    }
+  }
+
+  Widget _buildMainStage() {
+    return ChartCard(
+      title: _mainTitle(),
+      subtitle: _mainSubtitle(),
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
+      child: switch (_mode) {
+        _InteractionMode.explore => _buildExploreChart(),
+        _InteractionMode.track => _buildTrackingChart(
+          series: _trackingSeries,
+          yAxisLabel: 'Normalized value',
+          normalizationMode: NormalizationMode.perSeries,
+          xAxisConfig: const XAxisConfig(
+            label: 'Time',
+            unit: 'min',
+            min: 0,
+            max: 30,
+          ),
+          annotations: _trackingBoundaryAnnotations,
+        ),
+        _InteractionMode.normalize =>
+          _useConstrainedLayout
+              ? _buildSplitPaneExample()
+              : _buildTrackingChart(
+                  series: _normalizedSeries,
+                  yAxisLabel: 'Substrate oxidation',
+                  normalizationMode: NormalizationMode.auto,
+                  xAxisConfig: const XAxisConfig(
+                    label: 'Power',
+                    unit: 'W',
+                    min: 150,
+                    max: 315,
+                  ),
+                  annotations: _normalizationAnnotations,
+                ),
+        _InteractionMode.curves => _buildTrackingChart(
+          series: _curveStudy == _CurveStudy.interpolation
+              ? _interpolationSeries
+              : _tensionSeries,
+          yAxisLabel: _curveStudy == _CurveStudy.interpolation
+              ? 'Interpolation lane'
+              : 'Tension lane',
+        ),
+        _InteractionMode.stress => _buildTrackingChart(
+          series: _stressSeries,
+          yAxisLabel: 'Stress path',
+        ),
+      },
+    );
+  }
+
+  Widget _buildExploreChart() {
+    return BravenChartPlus(
+      series: [
+        LineChartSeries(
+          id: 'random-walk',
+          name: 'Random walk',
+          points: _interactionData,
+          color: const Color(0xFF4F46E5),
+          interpolation: LineInterpolation.bezier,
+          strokeWidth: 2.4,
+          showDataPointMarkers: _optionsController.showDataMarkers,
+        ),
+      ],
+      theme: _optionsController.theme,
+      showLegend: _optionsController.showLegend,
+      showXScrollbar: _optionsController.showXScrollbar,
+      showYScrollbar: _optionsController.showYScrollbar,
+      scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+      grid: GridConfig(
+        horizontal: _optionsController.showGrid,
+        vertical: _optionsController.showGrid,
+      ),
+      xAxisConfig: XAxisConfig(
+        label: 'Sample',
+        showAxisLine: _optionsController.showAxisLines,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Value',
+        showAxisLine: _optionsController.showAxisLines,
+      ),
+      interactionConfig: InteractionConfig(
+        enableZoom: _optionsController.enableZoom,
+        enablePan: _optionsController.enablePan,
+        crosshair: CrosshairConfig(enabled: _enableCrosshair),
+        tooltip: TooltipConfig(enabled: _enableTooltips),
+      ),
+      onPointTap: (point, seriesId) => setState(() => _tappedPoint = point),
+      onPointHover: (point, seriesId) => setState(() => _hoveredPoint = point),
+    );
+  }
+
+  Widget _buildTrackingChart({
+    required List<ChartSeries> series,
+    required String yAxisLabel,
+    NormalizationMode normalizationMode = NormalizationMode.none,
+    XAxisConfig? xAxisConfig,
+    List<ChartAnnotation> annotations = const [],
+  }) {
+    return BravenChartPlus(
+      series: series,
+      annotations: annotations,
+      theme: _optionsController.theme,
+      showLegend: _optionsController.showLegend,
+      showXScrollbar: _optionsController.showXScrollbar,
+      showYScrollbar: _optionsController.showYScrollbar,
+      scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+      grid: GridConfig(
+        horizontal: _optionsController.showGrid,
+        vertical: _optionsController.showGrid,
+      ),
+      xAxisConfig: (xAxisConfig ?? const XAxisConfig(label: 'Sample')).copyWith(
+        showAxisLine: _optionsController.showAxisLines,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.left,
+        label: yAxisLabel,
+        showAxisLine: _optionsController.showAxisLines,
+      ),
+      normalizationMode: normalizationMode,
+      interactionConfig: InteractionConfig(
+        enableZoom: _optionsController.enableZoom,
+        enablePan: _optionsController.enablePan,
+        crosshair: CrosshairConfig.tracking(
+          interpolate: true,
+          showTooltip: _showTrackingTooltip,
+          showMarkers: _showIntersectionMarkers,
+        ),
+        tooltip: const TooltipConfig(enabled: false),
+      ),
+    );
+  }
+
+  Widget _buildSplitPaneExample() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final chart = _buildTrackingChart(
+          series: _normalizedSeries,
+          yAxisLabel: 'Substrate oxidation',
+          normalizationMode: NormalizationMode.auto,
+          xAxisConfig: const XAxisConfig(
+            label: 'Power',
+            unit: 'W',
+            min: 150,
+            max: 315,
+          ),
+          annotations: _normalizationAnnotations,
+        );
+        final notes = DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Constrained viewport',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 8),
+                Text('A narrow analytical pane with mixed normalized series.'),
+                SizedBox(height: 16),
+                Text(
+                  'Try zooming and panning. Tracking remains aligned after the viewport changes.',
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (constraints.maxWidth >= 760) {
+          return Row(
+            children: [
+              Expanded(flex: 3, child: notes),
+              const SizedBox(width: 16),
+              Expanded(flex: 5, child: chart),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            notes,
+            const SizedBox(height: 12),
+            Expanded(child: chart),
+          ],
+        );
+      },
+    );
+  }
+
+  List<ChartSeries> get _trackingSeries => [
+    LineChartSeries(
+      id: 'tracking-vo2',
+      name: 'VO₂',
+      points: const [
+        ChartDataPoint(x: 0, y: 20),
+        ChartDataPoint(x: 5, y: 23),
+        ChartDataPoint(x: 10, y: 29),
+        ChartDataPoint(x: 15, y: 38),
+        ChartDataPoint(x: 20, y: 49),
+        ChartDataPoint(x: 25, y: 57),
+        ChartDataPoint(x: 30, y: 60),
+      ],
+      color: const Color(0xFF1565C0),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 2.4,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'VO₂',
+        unit: 'mL/kg/min',
+        color: const Color(0xFF1565C0),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'tracking-vo2-axis'),
+    ),
+    LineChartSeries(
+      id: 'tracking-hr',
+      name: 'Heart rate',
+      points: const [
+        ChartDataPoint(x: 0, y: 65),
+        ChartDataPoint(x: 5, y: 78),
+        ChartDataPoint(x: 10, y: 98),
+        ChartDataPoint(x: 15, y: 122),
+        ChartDataPoint(x: 20, y: 148),
+        ChartDataPoint(x: 25, y: 168),
+        ChartDataPoint(x: 30, y: 178),
+      ],
+      color: const Color(0xFFE53935),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 2.2,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.right,
+        label: 'Heart rate',
+        unit: 'bpm',
+        color: const Color(0xFFE53935),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'tracking-hr-axis'),
+    ),
+    LineChartSeries(
+      id: 'tracking-lactate',
+      name: 'Lactate',
+      points: const [
+        ChartDataPoint(x: 0, y: 0.8),
+        ChartDataPoint(x: 4, y: 1.0),
+        ChartDataPoint(x: 8, y: 1.3),
+        ChartDataPoint(x: 12, y: 2.0),
+        ChartDataPoint(x: 16, y: 3.6),
+        ChartDataPoint(x: 20, y: 7.1),
+        ChartDataPoint(x: 22, y: 9.4),
+      ],
+      color: const Color(0xFF2E7D32),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 2.5,
+      showDataPointMarkers: true,
+      dataPointMarkerRadius: 4,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Lactate',
+        unit: 'mmol/L',
+        color: const Color(0xFF2E7D32),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'tracking-lactate-axis'),
+    ),
+    AreaChartSeries(
+      id: 'tracking-la-acc',
+      name: 'La_acc',
+      points: const [
+        ChartDataPoint(x: 0, y: 0),
+        ChartDataPoint(x: 4, y: 0.1),
+        ChartDataPoint(x: 8, y: 0.3),
+        ChartDataPoint(x: 12, y: 1.0),
+        ChartDataPoint(x: 16, y: 3.7),
+        ChartDataPoint(x: 18, y: 7.2),
+      ],
+      color: const Color(0xFF66BB6A),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 2,
+      fillOpacity: 0.24,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'La_acc',
+        unit: 'mmol/L/min',
+        color: const Color(0xFF66BB6A),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'tracking-la-acc-axis'),
+    ),
+  ];
+
+  List<ChartSeries> get _normalizedSeries => [
+    AreaChartSeries(
+      id: 'fat-oxidation',
+      name: 'Fat oxidation',
+      points: const [
+        ChartDataPoint(x: 155, y: 0.32),
+        ChartDataPoint(x: 180, y: 0.48),
+        ChartDataPoint(x: 205, y: 0.66),
+        ChartDataPoint(x: 230, y: 0.82),
+        ChartDataPoint(x: 255, y: 0.91),
+        ChartDataPoint(x: 280, y: 0.74),
+        ChartDataPoint(x: 307, y: 0.38),
+      ],
+      color: const Color(0xFF10B981),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.15,
+      strokeWidth: 2.4,
+      fillOpacity: 0.28,
+      showDataPointMarkers: true,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Fat oxidation',
+        unit: 'g/min',
+        color: const Color(0xFF10B981),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'fat-axis'),
+    ),
+    LineChartSeries(
+      id: 'cho-oxidation',
+      name: 'CHO oxidation',
+      points: const [
+        ChartDataPoint(x: 155, y: 0.4),
+        ChartDataPoint(x: 180, y: 0.6),
+        ChartDataPoint(x: 205, y: 0.9),
+        ChartDataPoint(x: 230, y: 1.35),
+        ChartDataPoint(x: 255, y: 1.9),
+        ChartDataPoint(x: 280, y: 2.5),
+        ChartDataPoint(x: 307, y: 3.1),
+      ],
+      color: const Color(0xFFF59E0B),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.14,
+      strokeWidth: 2.4,
+      showDataPointMarkers: true,
+      yAxisConfig: YAxisConfig(
+        position: YAxisPosition.right,
+        label: 'CHO oxidation',
+        unit: 'g/min',
+        color: const Color(0xFFF59E0B),
+        showCrosshairLabel: true,
+      ).copyWith(id: 'cho-axis'),
+    ),
+  ];
+
+  List<ChartSeries> get _interpolationSeries => [
+    _lineSeries(
+      id: 'linear-reference',
+      name: 'Linear',
+      color: const Color(0xFF1F4E79),
+      interpolation: LineInterpolation.linear,
+      points: _offsetSeries(_baseCurvePoints, 90),
+    ),
+    _lineSeries(
+      id: 'bezier-soft',
+      name: 'Bezier',
+      color: const Color(0xFF2F855A),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.2,
+      points: _offsetSeries(_baseCurvePoints, 55),
+    ),
+    _lineSeries(
+      id: 'monotone-curve',
+      name: 'Monotone',
+      color: const Color(0xFFB7791F),
+      interpolation: LineInterpolation.monotone,
+      points: _offsetSeries(_baseCurvePoints, 20),
+    ),
+    _lineSeries(
+      id: 'stepped-control',
+      name: 'Stepped',
+      color: const Color(0xFF6B46C1),
+      interpolation: LineInterpolation.stepped,
+      points: _offsetSeries(_baseCurvePoints, -15),
+    ),
+  ];
+
+  List<ChartSeries> get _tensionSeries => [
+    _lineSeries(
+      id: 'tension-low',
+      name: 'Tension 0.10',
+      color: const Color(0xFF1565C0),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.10,
+      points: _offsetSeries(_baseStressPoints, 45),
+    ),
+    _lineSeries(
+      id: 'tension-medium',
+      name: 'Tension 0.35',
+      color: const Color(0xFF00897B),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.35,
+      points: _baseStressPoints,
+    ),
+    _lineSeries(
+      id: 'tension-high',
+      name: 'Tension 0.70',
+      color: const Color(0xFFEF6C00),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.70,
+      points: _offsetSeries(_baseStressPoints, -45),
+    ),
+  ];
+
+  List<ChartSeries> get _stressSeries => [
+    _lineSeries(
+      id: 'stress-bezier',
+      name: 'Bezier stress',
+      color: const Color(0xFF3949AB),
+      interpolation: LineInterpolation.bezier,
+      tension: 0.45,
+      points: _baseStressPoints,
+    ),
+    _lineSeries(
+      id: 'stress-monotone',
+      name: 'Monotone stress',
+      color: const Color(0xFFD81B60),
+      interpolation: LineInterpolation.monotone,
+      points: _offsetSeries(_baseStressPoints, -18),
+    ),
+  ];
+
+  LineChartSeries _lineSeries({
+    required String id,
+    required String name,
+    required Color color,
+    required LineInterpolation interpolation,
+    required List<ChartDataPoint> points,
+    double tension = 0.25,
+  }) {
+    return LineChartSeries(
+      id: id,
+      name: name,
+      points: points,
+      color: color,
+      interpolation: interpolation,
+      tension: tension,
+      strokeWidth: 2.5,
+      showDataPointMarkers: _optionsController.showDataMarkers,
+      dataPointMarkerRadius: 3,
+    );
+  }
+
+  List<ChartDataPoint> _offsetSeries(
+    List<ChartDataPoint> source,
+    double offset,
+  ) {
+    return source
+        .map((point) => ChartDataPoint(x: point.x, y: point.y + offset))
+        .toList(growable: false);
+  }
+
+  String _mainTitle() => switch (_mode) {
+    _InteractionMode.explore => 'Explore and select',
+    _InteractionMode.track => 'Multi-series tracking boundaries',
+    _InteractionMode.normalize => 'Tracking with automatic normalization',
+    _InteractionMode.curves =>
+      _curveStudy == _CurveStudy.interpolation
+          ? 'Interpolation-aware tracking'
+          : 'Bezier tension tracking',
+    _InteractionMode.stress => 'Sharp-reversal tracking',
+  };
+
+  String _mainSubtitle() {
+    return switch (_mode) {
+      _InteractionMode.explore => _exploreSubtitle(),
+      _InteractionMode.track =>
+        'Series leave the tracking overlay after their final value',
+      _InteractionMode.normalize =>
+        _useConstrainedLayout
+            ? 'Tracking inside a constrained analytical split pane'
+            : 'Mixed area and line series with dual axes and automatic normalization',
+      _InteractionMode.curves =>
+        _curveStudy == _CurveStudy.interpolation
+            ? 'Linear, Bezier, monotone, and stepped curves share the same anchors'
+            : 'The same anchors rendered with three Bezier tension values',
+      _InteractionMode.stress =>
+        'Markers stay aligned through reversals, plateaus, and strong curvature',
+    };
+  }
+
+  String _exploreSubtitle() {
+    final feedback = <String>[];
     if (_hoveredPoint != null) {
-      items.add(StatusItem(
-        label: 'Hover',
-        value:
-            '(${_hoveredPoint!.x.toStringAsFixed(1)}, ${_hoveredPoint!.y.toStringAsFixed(1)})',
-        color: Colors.blue,
-      ));
+      feedback.add(
+        'Hover ${_hoveredPoint!.x.toStringAsFixed(0)}, ${_hoveredPoint!.y.toStringAsFixed(1)}',
+      );
     }
-
     if (_tappedPoint != null) {
-      items.add(StatusItem(
-        label: 'Selected',
-        value:
-            '(${_tappedPoint!.x.toStringAsFixed(1)}, ${_tappedPoint!.y.toStringAsFixed(1)})',
-        color: Colors.green,
-      ));
+      feedback.add(
+        'Selected ${_tappedPoint!.x.toStringAsFixed(0)}, ${_tappedPoint!.y.toStringAsFixed(1)}',
+      );
     }
 
-    return StatusPanel(items: items);
+    const instruction = 'Wheel to zoom · drag to pan · hover and click points';
+    return feedback.isEmpty
+        ? instruction
+        : '$instruction · ${feedback.join(' · ')}';
+  }
+
+  String _modeLabel(_InteractionMode mode) => switch (mode) {
+    _InteractionMode.explore => 'Explore',
+    _InteractionMode.track => 'Track',
+    _InteractionMode.normalize => 'Normalize',
+    _InteractionMode.curves => 'Compare curves',
+    _InteractionMode.stress => 'Stress paths',
+  };
+
+  String _modeDescription(_InteractionMode mode) => switch (mode) {
+    _InteractionMode.explore => 'Zoom, pan, hover, select',
+    _InteractionMode.track => 'Crosshair + boundaries',
+    _InteractionMode.normalize => 'Mixed scales + axes',
+    _InteractionMode.curves => 'Interpolation-aware',
+    _InteractionMode.stress => 'Reversals + plateaus',
+  };
+
+  String _modeGuide() => switch (_mode) {
+    _InteractionMode.explore =>
+      'Hover or click a point, zoom with the wheel, and drag to pan. The chart title reports live hover and selection events.',
+    _InteractionMode.track =>
+      'Move horizontally across the chart. La_acc and lactate stop contributing when the cursor passes their final samples.',
+    _InteractionMode.normalize =>
+      'Track the mixed-scale series and compare their real axis values. Toggle the constrained layout to test a split pane.',
+    _InteractionMode.curves =>
+      'Move across the curves to verify that each tracking marker remains centered on its rendered interpolation.',
+    _InteractionMode.stress =>
+      'Track across abrupt direction changes and plateaus to inspect marker alignment under difficult geometry.',
+  };
+
+  List<ChartAnnotation> get _trackingBoundaryAnnotations => [
+    ThresholdAnnotation(
+      id: 'la-acc-end',
+      axis: AnnotationAxis.x,
+      value: 18,
+      label: 'La_acc ends',
+      labelPosition: AnnotationLabelPosition.topLeft,
+      lineColor: const Color(0xFF66BB6A),
+      lineWidth: 1.5,
+      dashPattern: [4, 4],
+    ),
+    ThresholdAnnotation(
+      id: 'lactate-end',
+      axis: AnnotationAxis.x,
+      value: 22,
+      label: 'Lactate ends',
+      labelPosition: AnnotationLabelPosition.topLeft,
+      lineColor: const Color(0xFF2E7D32),
+      lineWidth: 1.5,
+      dashPattern: [4, 4],
+    ),
+  ];
+
+  List<ChartAnnotation> get _normalizationAnnotations => [
+    ThresholdAnnotation(
+      id: 'normalized-lt1',
+      axis: AnnotationAxis.x,
+      value: 180,
+      label: 'LT1',
+      lineColor: const Color(0xFFF59E0B),
+      lineWidth: 1.4,
+      dashPattern: [3, 3],
+    ),
+    ThresholdAnnotation(
+      id: 'normalized-lt2',
+      axis: AnnotationAxis.x,
+      value: 255,
+      label: 'LT2',
+      lineColor: const Color(0xFFF59E0B),
+      lineWidth: 1.4,
+      dashPattern: [3, 3],
+    ),
+    ThresholdAnnotation(
+      id: 'normalized-fatmax',
+      axis: AnnotationAxis.x,
+      value: 280,
+      label: 'FatMax',
+      lineColor: const Color(0xFF10B981),
+      lineWidth: 1.4,
+      dashPattern: [3, 3],
+    ),
+  ];
+
+  static const _baseCurvePoints = [
+    ChartDataPoint(x: 0, y: 12),
+    ChartDataPoint(x: 1, y: 28),
+    ChartDataPoint(x: 2, y: 6),
+    ChartDataPoint(x: 3, y: 34),
+    ChartDataPoint(x: 4, y: 14),
+    ChartDataPoint(x: 5, y: 40),
+    ChartDataPoint(x: 6, y: 18),
+    ChartDataPoint(x: 7, y: 46),
+    ChartDataPoint(x: 8, y: 24),
+    ChartDataPoint(x: 9, y: 54),
+    ChartDataPoint(x: 10, y: 30),
+  ];
+
+  static const _baseStressPoints = [
+    ChartDataPoint(x: 0, y: 82),
+    ChartDataPoint(x: 1, y: 88),
+    ChartDataPoint(x: 2, y: 54),
+    ChartDataPoint(x: 3, y: 58),
+    ChartDataPoint(x: 4, y: 22),
+    ChartDataPoint(x: 5, y: 72),
+    ChartDataPoint(x: 6, y: 20),
+    ChartDataPoint(x: 7, y: 74),
+    ChartDataPoint(x: 8, y: 44),
+    ChartDataPoint(x: 9, y: 48),
+    ChartDataPoint(x: 10, y: 16),
+    ChartDataPoint(x: 11, y: 84),
+  ];
+}
+
+enum _InteractionMode { explore, track, normalize, curves, stress }
+
+enum _CurveStudy { interpolation, tension }
+
+class _InteractionPreviewCard extends StatelessWidget {
+  const _InteractionPreviewCard({
+    super.key,
+    required this.mode,
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+    required this.chart,
+  });
+
+  final _InteractionMode mode;
+  final String label;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget chart;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Select $label interaction pattern',
+      child: Material(
+        color: selected
+            ? colors.primaryContainer.withValues(alpha: 0.42)
+            : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected) ...[
+                      Icon(
+                        Icons.check_circle,
+                        key: ValueKey('selected-interaction-${mode.name}'),
+                        size: 16,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Selected',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(child: IgnorePointer(child: chart)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

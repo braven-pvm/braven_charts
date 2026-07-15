@@ -23,7 +23,7 @@
 /// **Immutability**: All fields are final and the class has a const constructor.
 ///
 /// See also:
-/// - [SeriesElement] which stores BarGroupInfo for bar series rendering
+/// - `SeriesElement`, which stores bar group metadata during rendering
 class BarGroupInfo {
   /// Creates bar group positioning metadata.
   ///

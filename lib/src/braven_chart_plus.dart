@@ -521,7 +521,7 @@ class BravenChartPlus extends StatefulWidget {
   /// Modern X-axis configuration using XAxisConfig.
   ///
   /// Provides full access to X-axis features including crosshairLabelPosition.
-  /// When provided, takes precedence over legacy [xAxis] parameter.
+  /// This is the supported X-axis configuration for the chart.
   ///
   /// Example:
   /// ```dart
@@ -559,7 +559,7 @@ class BravenChartPlus extends StatefulWidget {
   ///
   /// Controls visual appearance (colors, thickness, border radius) and
   /// interaction behavior (auto-hide, zoom limits, edge grip width).
-  /// If null, defaults to [ScrollbarConfig.defaultLight()].
+  /// If null, defaults to [ScrollbarConfig.defaultLight].
   ///
   /// **Property Implementation Status:**
   ///
@@ -632,7 +632,7 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Configuration for interactive features (crosshair, tooltip, gestures, keyboard navigation).
   ///
-  /// Controls tooltip visibility via [InteractionConfig.tooltip.enabled].
+  /// Controls tooltip visibility via `InteractionConfig.tooltip.enabled`.
   /// If null, defaults to enabled tooltips with standard behavior.
   final InteractionConfig? interactionConfig;
 
@@ -766,7 +766,7 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Called immediately after an axis swap completes.
   ///
-  /// [promotedAxisId] entered a visible slot; [demotedAxisId] moved to overflow.
+  /// `promotedAxisId` entered a visible slot; `demotedAxisId` moved to overflow.
   final void Function({
     required String promotedAxisId,
     required String demotedAxisId,

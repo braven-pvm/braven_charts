@@ -112,10 +112,7 @@ class _LegendDemoPageState extends State<LegendDemoPage> {
                   value: _position,
                   dropdownColor: Colors.grey[800],
                   items: LegendPosition.values.map((pos) {
-                    return DropdownMenuItem(
-                      value: pos,
-                      child: Text(pos.name),
-                    );
+                    return DropdownMenuItem(value: pos, child: Text(pos.name));
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) setState(() => _position = value);

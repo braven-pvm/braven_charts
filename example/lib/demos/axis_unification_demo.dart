@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 /// Demo showcasing unified axis configuration APIs.
 ///
 /// Features demonstrated:
-/// 1. Multi-axis positioning (left, right, leftOuter, rightOuter)
+/// 1. Multiple independently scaled axes on the left and right sides
 /// 2. CrosshairLabelPosition modes (overAxis vs insidePlot)
 /// 3. GridConfig for independent horizontal/vertical grid control
 /// 4. AxisLabelDisplay options (labelWithUnit, tickUnitOnly, etc.)
@@ -75,9 +75,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: _buildChart(),
-            ),
+            Expanded(child: _buildChart()),
           ],
         ),
       ),
@@ -104,7 +102,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   String _getDemoDescription() {
     switch (_selectedDemo) {
       case 'multi-axis':
-        return 'YAxisConfig allows multiple Y-axes at different positions: left, right, leftOuter, rightOuter. Each series can have its own axis with independent scaling.';
+        return 'YAxisConfig allows multiple Y-axes on the left and right sides. Each series can have its own axis with independent scaling.';
       case 'crosshair-modes':
         return 'CrosshairLabelPosition controls where Y-value labels appear: overAxis (in axis strip) vs insidePlot (near axis edge inside plot area).';
       case 'grid-config':
@@ -171,8 +169,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate sine wave data
-  List<ChartDataPoint> _generateSineData(int count,
-      {double amplitude = 40, double offset = 50, double frequency = 0.1}) {
+  List<ChartDataPoint> _generateSineData(
+    int count, {
+    double amplitude = 40,
+    double offset = 50,
+    double frequency = 0.1,
+  }) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.sin(x * frequency);
@@ -181,8 +183,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
   }
 
   // Generate cosine wave data
-  List<ChartDataPoint> _generateCosineData(int count,
-      {double amplitude = 30, double offset = 150, double frequency = 0.15}) {
+  List<ChartDataPoint> _generateCosineData(
+    int count, {
+    double amplitude = 30,
+    double offset = 150,
+    double frequency = 0.15,
+  }) {
     return List.generate(count, (i) {
       final x = i.toDouble();
       final y = offset + amplitude * math.cos(x * frequency);
@@ -197,8 +203,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points:
-            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.08),
+        points: _generateSineData(
+          100,
+          amplitude: 50,
+          offset: 200,
+          frequency: 0.08,
+        ),
         color: Colors.blue,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -213,8 +223,12 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'heart_rate',
         name: 'Heart Rate (bpm)',
-        points:
-            _generateSineData(100, amplitude: 20, offset: 150, frequency: 0.12),
+        points: _generateSineData(
+          100,
+          amplitude: 20,
+          offset: 150,
+          frequency: 0.12,
+        ),
         color: Colors.red,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
@@ -233,7 +247,7 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
         color: Colors.green,
         strokeWidth: 2.5,
         yAxisConfig: YAxisConfig(
-          position: YAxisPosition.leftOuter,
+          position: YAxisPosition.left,
           label: 'Cadence',
           unit: 'rpm',
           color: Colors.green,
@@ -346,13 +360,17 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
       LineChartSeries(
         id: 'power',
         name: 'Power (W)',
-        points:
-            _generateSineData(100, amplitude: 50, offset: 200, frequency: 0.1),
+        points: _generateSineData(
+          100,
+          amplitude: 50,
+          offset: 200,
+          frequency: 0.1,
+        ),
         color: Colors.blue,
         strokeWidth: 2.5,
         showDataPointMarkers: true,
         yAxisConfig: YAxisConfig(
-          position: YAxisPosition.leftOuter,
+          position: YAxisPosition.left,
           label: 'Power',
           unit: 'W',
           color: Colors.blue,
@@ -369,8 +387,10 @@ class _AxisUnificationDemoState extends State<AxisUnificationDemo> {
 
 /// Entry point for standalone demo.
 void main() {
-  runApp(const MaterialApp(
-    title: 'Axis Unification Demo',
-    home: AxisUnificationDemo(),
-  ));
+  runApp(
+    const MaterialApp(
+      title: 'Axis Unification Demo',
+      home: AxisUnificationDemo(),
+    ),
+  );
 }

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Braven Charts">
+  <defs>
+    <linearGradient id="braven-gradient" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#braven-gradient)"/>
+  <path d="M12 43 25 31 36 38 52 19" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#fff">
+    <circle cx="12" cy="43" r="3"/>
+    <circle cx="25" cy="31" r="3"/>
+    <circle cx="36" cy="38" r="3"/>
+    <circle cx="52" cy="19" r="3"/>
+  </g>
+</svg>

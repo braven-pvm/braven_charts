@@ -11,7 +11,7 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-/// Mixed real-time scenario for reproducing sparse-vs-continuous streaming bugs.
+/// Demonstrates mixed-rate physiological streams and manual sampling.
 class PowerLactatePage extends StatefulWidget {
   const PowerLactatePage({super.key});
 
@@ -346,8 +346,8 @@ class _PowerLactatePageState extends State<PowerLactatePage> {
         ],
       ),
       const OptionSection(
-        title: 'Test Notes',
-        icon: Icons.fact_check_outlined,
+        title: 'Scenario Guide',
+        icon: Icons.info_outline,
         children: [
           InfoBox(
             message:

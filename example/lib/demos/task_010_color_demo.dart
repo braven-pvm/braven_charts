@@ -104,18 +104,18 @@ class ColorCodedAxesDemo extends StatelessWidget {
         // Title and explanation
         Text(
           'Color-Coded Axis Demonstration',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 8),
         Text(
           'Left axis (Power): Derives BLUE color from power series\n'
           'Right axis (Heart Rate): Derives RED color from heartrate series\n'
           'Neither axis has explicit color set - colors come from bound series',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[400],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]),
         ),
         const SizedBox(height: 24),
 
@@ -199,10 +199,7 @@ class _LegendItem extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[300]),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[300])),
       ],
     );
   }
@@ -210,10 +207,7 @@ class _LegendItem extends StatelessWidget {
 
 /// Custom painter that demonstrates MultiAxisPainter with color resolution.
 class _MultiAxisDemoPainter extends CustomPainter {
-  _MultiAxisDemoPainter({
-    required this.config,
-    required this.series,
-  });
+  _MultiAxisDemoPainter({required this.config, required this.series});
 
   final MultiAxisConfig config;
   final List<ChartSeries> series;
@@ -308,8 +302,9 @@ class _MultiAxisDemoPainter extends CustomPainter {
       if (s.points.isEmpty) continue;
 
       // Find the axis for this series
-      final binding =
-          config.bindings.where((b) => b.seriesId == s.id).firstOrNull;
+      final binding = config.bindings
+          .where((b) => b.seriesId == s.id)
+          .firstOrNull;
       if (binding == null) continue;
 
       final bounds = axisBounds[binding.yAxisId];

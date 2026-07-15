@@ -107,9 +107,11 @@ class Task013CrosshairDemo extends StatelessWidget {
                       Text('✓ Move mouse over chart to see crosshair'),
                       Text('✓ Intersection markers appear on BOTH lines'),
                       Text(
-                          '✓ Markers are at correct Y positions (not overlapping)'),
+                        '✓ Markers are at correct Y positions (not overlapping)',
+                      ),
                       Text(
-                          '✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"'),
+                        '✓ Tooltip shows: "Power: [value] W" and "Heart Rate: [value] bpm"',
+                      ),
                       Text('✓ Values are ORIGINAL (not normalized to 0-1)'),
                     ],
                   ),

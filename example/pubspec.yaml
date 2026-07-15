@@ -1,5 +1,5 @@
-name: braven_charts_plus_example
-description: Simple showcase app for BravenChartPlus
+name: braven_charts_example
+description: Interactive web showcase for the Braven Charts Flutter package.
 publish_to: "none"
 version: 1.0.0+1
 
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.8
 
   # Reference the parent braven_charts package
   braven_charts:

@@ -207,7 +207,7 @@ class YAxisConfig {
 
   /// Internal constructor with explicit ID.
   ///
-  /// Used by [MultiAxisManager] to create configs with auto-generated IDs.
+  /// Used by the multi-axis render pipeline to create auto-generated IDs.
   /// Not part of the public API.
   const YAxisConfig._internal({
     required this.id,
@@ -320,7 +320,7 @@ class YAxisConfig {
   /// Internal identifier for axis binding and map keys.
   ///
   /// Auto-generated from series ID when using inline yAxisConfig.
-  /// Empty string until resolved by [MultiAxisManager].
+  /// Empty string until resolved by the multi-axis render pipeline.
   final String id;
 
   /// Physical position of the axis relative to the chart area.
@@ -375,7 +375,7 @@ class YAxisConfig {
   ///
   /// When false, the entire axis (line, ticks, labels, and axis title) is
   /// hidden from display. However, the axis is still used for normalization
-  /// calculations if the series references it via [yAxisConfig].
+  /// calculations if a series references it via `ChartSeries.yAxisConfig`.
   ///
   /// Use case: Show a normalized series without displaying its Y-axis.
   ///

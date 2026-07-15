@@ -10,6 +10,8 @@ import '../data/data_generator.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
+import 'lactate_threshold_page.dart';
+import 'power_lactate_page.dart';
 
 /// Demonstrates scientific/mathematical charting:
 /// - Mathematical functions
@@ -25,6 +27,8 @@ class ScientificPage extends StatefulWidget {
 
 class _ScientificPageState extends State<ScientificPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
+
+  int _selectedSection = 0;
 
   // Demo selection
   int _selectedDemo = 0;
@@ -121,9 +125,27 @@ class _ScientificPageState extends State<ScientificPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ScientificExamplePicker(
+          selected: _selectedSection,
+          onSelected: (value) => setState(() => _selectedSection = value),
+        ),
+        Expanded(
+          child: switch (_selectedSection) {
+            0 => _buildSignalsPage(),
+            1 => const PowerLactatePage(),
+            _ => const LactateThresholdPage(),
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignalsPage() {
     return ChartPageLayout(
-      title: 'Scientific Charts',
-      subtitle: 'Mathematical functions and analysis',
+      title: 'Signals & Distributions',
+      subtitle: 'Configurable waves, Gaussian distributions, and regression',
       optionsChildren: _buildOptionsChildren(),
       chart: _buildChart(),
       bottomPanel: _buildStatusPanel(),
@@ -279,8 +301,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -320,8 +343,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -359,8 +383,9 @@ class _ScientificPageState extends State<ScientificPage> {
           showLegend: _optionsController.showLegend,
           showXScrollbar: _optionsController.showXScrollbar,
           showYScrollbar: _optionsController.showYScrollbar,
-          scrollbarTheme:
-              ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+          scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+            autoHide: false,
+          ),
           xAxisConfig: XAxisConfig(
             showAxisLine: _optionsController.showAxisLines,
           ),
@@ -387,15 +412,102 @@ class _ScientificPageState extends State<ScientificPage> {
             _ => 'Scatter',
           },
         ),
-        StatusItem(
-          label: 'Data Points',
-          value: '${_functionData.length}',
-        ),
+        StatusItem(label: 'Data Points', value: '${_functionData.length}'),
         if (_selectedDemo == 0) ...[
           StatusItem(label: 'Frequency', value: _frequency.toStringAsFixed(2)),
           StatusItem(label: 'Harmonics', value: '$_harmonics'),
         ],
       ],
+    );
+  }
+}
+
+class _ScientificExamplePicker extends StatelessWidget {
+  const _ScientificExamplePicker({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selector = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SegmentedButton<int>(
+        key: const ValueKey('scientific-example-picker'),
+        segments: const [
+          ButtonSegment(
+            value: 0,
+            icon: Icon(Icons.multiline_chart),
+            label: Text('Signals'),
+          ),
+          ButtonSegment(
+            value: 1,
+            icon: Icon(Icons.directions_bike_outlined),
+            label: Text('Power + Lactate'),
+          ),
+          ButtonSegment(
+            value: 2,
+            icon: Icon(Icons.science_outlined),
+            label: Text('Lactate Threshold'),
+          ),
+        ],
+        selected: {selected},
+        showSelectedIcon: false,
+        onSelectionChanged: (selection) => onSelected(selection.first),
+      ),
+    );
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final heading = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Scientific examples',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'From mathematical signals to applied physiology',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+
+            if (constraints.maxWidth < 900) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [heading, const SizedBox(height: 12), selector],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: heading),
+                const SizedBox(width: 24),
+                selector,
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

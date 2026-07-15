@@ -108,7 +108,7 @@ class CrosshairStyle {
   /// The dash pattern for the crosshair lines.
   ///
   /// Null or empty list means solid line. Pattern values are in pixels:
-  /// [dash length, gap length, dash length, gap length, ...]
+  /// `[dash length, gap length, dash length, gap length, ...]`
   final List<double>? dashPattern;
 
   /// The stroke cap style for crosshair lines.

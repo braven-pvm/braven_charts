@@ -139,7 +139,7 @@ class StandardChartOptions extends StatelessWidget {
               ),
 
             // Additional custom options
-            if (additionalOptions != null) ...additionalOptions!,
+            ...?additionalOptions,
           ],
         );
       },
@@ -184,9 +184,7 @@ class ChartCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -216,15 +214,12 @@ class ChartCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                  if (actions != null) ...actions!,
+                  ...?actions,
                 ],
               ),
             ),
           Expanded(
-            child: Padding(
-              padding: padding,
-              child: child,
-            ),
+            child: Padding(padding: padding, child: child),
           ),
         ],
       ),
@@ -255,68 +250,102 @@ class ChartPageLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useOptionsSheet =
+            optionsChildren.isNotEmpty && constraints.maxWidth < 900;
+        final mainContent = _buildMainContent(
+          context,
+          showOptionsButton: useOptionsSheet,
+        );
 
-    return Row(
-      children: [
-        // Main chart area
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
+        if (useOptionsSheet || optionsChildren.isEmpty) return mainContent;
+
+        return Row(
+          children: [
+            Expanded(child: mainContent),
+            OptionsPanel(width: optionsPanelWidth, children: optionsChildren),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMainContent(
+    BuildContext context, {
+    required bool showOptionsButton,
+  }) {
+    final theme = Theme.of(context);
+    final headerActions = <Widget>[
+      ...?actions,
+      if (showOptionsButton)
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+          onPressed: () => _showOptionsSheet(context),
+          icon: const Icon(Icons.tune, size: 18),
+          label: const Text('Options'),
+        ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (subtitle != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                subtitle!,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.hintColor,
-                                ),
-                              ),
-                            ),
-                        ],
+                    Text(
+                      title,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (actions != null) ...actions!,
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          subtitle!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Chart
-                Expanded(child: chart),
-
-                // Bottom panel
-                if (bottomPanel != null) ...[
-                  const SizedBox(height: 16),
-                  bottomPanel!,
-                ],
+              ),
+              if (headerActions.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                Wrap(spacing: 8, runSpacing: 8, children: headerActions),
               ],
-            ),
+            ],
           ),
-        ),
+          const SizedBox(height: 16),
+          Expanded(child: chart),
+          if (bottomPanel != null) ...[
+            const SizedBox(height: 16),
+            bottomPanel!,
+          ],
+        ],
+      ),
+    );
+  }
 
-        // Options panel
-        if (optionsChildren.isNotEmpty)
-          OptionsPanel(
-            width: optionsPanelWidth,
-            children: optionsChildren,
-          ),
-      ],
+  Future<void> _showOptionsSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SizedBox(
+        width: double.infinity,
+        height: MediaQuery.sizeOf(sheetContext).height * 0.85,
+        child: OptionsPanel(title: 'Chart options', children: optionsChildren),
+      ),
     );
   }
 }
@@ -339,8 +368,9 @@ class StatusPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final bgColor =
         color ?? (highlighted ? Colors.green.shade50 : Colors.grey.shade100);
-    final borderColor =
-        highlighted ? Colors.green.shade300 : theme.dividerColor;
+    final borderColor = highlighted
+        ? Colors.green.shade300
+        : theme.dividerColor;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -349,9 +379,26 @@ class StatusPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: items.map((item) => _buildItem(context, item)).toList(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (items.isEmpty) return const SizedBox.shrink();
+
+          final columnCount = constraints.maxWidth < 600
+              ? 2
+              : constraints.maxWidth < 900
+              ? 3
+              : (items.length > 6 ? 6 : items.length);
+          final itemWidth = constraints.maxWidth / columnCount;
+
+          return Wrap(
+            alignment: WrapAlignment.center,
+            runSpacing: 12,
+            children: [
+              for (final item in items)
+                SizedBox(width: itemWidth, child: _buildItem(context, item)),
+            ],
+          );
+        },
       ),
     );
   }
@@ -362,6 +409,9 @@ class StatusPanel extends StatelessWidget {
       children: [
         Text(
           item.value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -371,10 +421,10 @@ class StatusPanel extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           item.label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(context).hintColor,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
         ),
       ],
     );
@@ -382,11 +432,7 @@ class StatusPanel extends StatelessWidget {
 }
 
 class StatusItem {
-  const StatusItem({
-    required this.label,
-    required this.value,
-    this.color,
-  });
+  const StatusItem({required this.label, required this.value, this.color});
 
   final String label;
   final String value;

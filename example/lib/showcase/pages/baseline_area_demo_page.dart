@@ -71,23 +71,23 @@ class BaselineAreaDemoPage extends StatelessWidget {
   );
 
   static YAxisConfig get _yConfig => YAxisConfig(
-        position: YAxisPosition.left,
-        label: 'Power',
-        unit: 'W',
-        min: 60,
-        max: 185,
-      );
+    position: YAxisPosition.left,
+    label: 'Power',
+    unit: 'W',
+    min: 60,
+    max: 185,
+  );
 
   static ThresholdAnnotation get _thresholdLine => ThresholdAnnotation(
-        id: 'baseline',
-        axis: AnnotationAxis.y,
-        value: _baseline,
-        label: '120 W',
-        lineColor: Colors.orange,
-        lineWidth: 1.5,
-        dashPattern: const [6, 4],
-        labelPosition: AnnotationLabelPosition.topRight,
-      );
+    id: 'baseline',
+    axis: AnnotationAxis.y,
+    value: _baseline,
+    label: '120 W',
+    lineColor: Colors.orange,
+    lineWidth: 1.5,
+    dashPattern: const [6, 4],
+    labelPosition: AnnotationLabelPosition.topRight,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -104,16 +104,18 @@ class BaselineAreaDemoPage extends StatelessWidget {
             children: [
               Text(
                 'Baseline Area Fill',
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'AreaChartSeries.baselineValue fills between the series line '
                 'and a fixed Y reference — above and below regions use '
                 'independent colours.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.hintColor),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.hintColor,
+                ),
               ),
             ],
           ),
@@ -146,8 +148,18 @@ class BaselineAreaDemoPage extends StatelessWidget {
                         color: Color(0xFF4CAF50),
                         strokeWidth: 1.5,
                         baselineValue: _baseline,
-                        aboveBaselineFillColor: Color.fromRGBO(76, 175, 80, 0.40),
-                        belowBaselineFillColor: Color.fromRGBO(244, 67, 54, 0.35),
+                        aboveBaselineFillColor: Color.fromRGBO(
+                          76,
+                          175,
+                          80,
+                          0.40,
+                        ),
+                        belowBaselineFillColor: Color.fromRGBO(
+                          244,
+                          67,
+                          54,
+                          0.35,
+                        ),
                       ),
                     ],
                     annotations: [_thresholdLine],
@@ -176,8 +188,18 @@ class BaselineAreaDemoPage extends StatelessWidget {
                         color: Color(0xFFFF9800),
                         strokeWidth: 1.5,
                         baselineValue: _baseline,
-                        aboveBaselineFillColor: Color.fromRGBO(255, 152, 0, 0.35),
-                        belowBaselineFillColor: Color.fromRGBO(255, 152, 0, 0.35),
+                        aboveBaselineFillColor: Color.fromRGBO(
+                          255,
+                          152,
+                          0,
+                          0.35,
+                        ),
+                        belowBaselineFillColor: Color.fromRGBO(
+                          255,
+                          152,
+                          0,
+                          0.35,
+                        ),
                       ),
                     ],
                     annotations: [_thresholdLine],
@@ -207,8 +229,18 @@ class BaselineAreaDemoPage extends StatelessWidget {
                         color: Color(0xFF7C4DFF),
                         strokeWidth: 1.5,
                         baselineValue: _baseline,
-                        aboveBaselineFillColor: Color.fromRGBO(124, 77, 255, 0.40),
-                        belowBaselineFillColor: Color.fromRGBO(244, 67, 54, 0.30),
+                        aboveBaselineFillColor: Color.fromRGBO(
+                          124,
+                          77,
+                          255,
+                          0.40,
+                        ),
+                        belowBaselineFillColor: Color.fromRGBO(
+                          244,
+                          67,
+                          54,
+                          0.30,
+                        ),
                       ),
                     ],
                     annotations: [_thresholdLine],
@@ -238,8 +270,18 @@ class BaselineAreaDemoPage extends StatelessWidget {
                         color: Color(0xFF00BCD4),
                         strokeWidth: 1.5,
                         baselineValue: _baseline,
-                        aboveBaselineFillColor: Color.fromRGBO(0, 188, 212, 0.40),
-                        belowBaselineFillColor: Color.fromRGBO(244, 67, 54, 0.30),
+                        aboveBaselineFillColor: Color.fromRGBO(
+                          0,
+                          188,
+                          212,
+                          0.40,
+                        ),
+                        belowBaselineFillColor: Color.fromRGBO(
+                          244,
+                          67,
+                          54,
+                          0.30,
+                        ),
                       ),
                     ],
                     annotations: [_thresholdLine],
@@ -297,14 +339,16 @@ class _SectionLabel extends StatelessWidget {
       children: [
         Text(
           title,
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           description,
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -322,10 +366,7 @@ class _ChartCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: SizedBox(
         height: 220,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: child,
-        ),
+        child: Padding(padding: const EdgeInsets.all(8), child: child),
       ),
     );
   }

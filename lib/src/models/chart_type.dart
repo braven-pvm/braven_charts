@@ -1,6 +1,6 @@
 /// Chart type enumeration
 ///
-/// Defines the type of chart to be rendered by [BravenChart].
+/// Defines the type of chart series rendered by `BravenChartPlus`.
 enum ChartType {
   /// Line chart with connected points
   line,

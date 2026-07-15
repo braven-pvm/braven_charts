@@ -1,0 +1,43 @@
+name: Package quality
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze package library
+        run: flutter analyze lib
+
+      - name: Run package tests
+        run: flutter test
+
+      - name: Analyze showcase
+        working-directory: example
+        run: flutter analyze
+
+      - name: Generate public API documentation
+        run: |
+          dart pub global activate dartdoc
+          dart pub global run dartdoc --no-validate-links
+
+      - name: Validate publish archive
+        run: dart pub publish --dry-run

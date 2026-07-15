@@ -2,28 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'pages/annotations_page.dart';
+import 'pages/axes_page.dart';
 import 'pages/chart_types_page.dart';
-import 'pages/lactate_threshold_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
-import 'pages/power_lactate_page.dart';
 import 'pages/scientific_page.dart';
-import 'pages/segment_styling_page.dart';
-import 'pages/streaming_page.dart';
 import 'pages/theming_page.dart';
-import 'pages/axis_render_range_page.dart';
-import 'pages/data_point_labels_page.dart';
-import 'pages/minor_ticks_page.dart';
-import 'pages/axis_slot_demo_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
-import 'pages/tracking_page.dart';
+import 'widgets/braven_brand.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -37,26 +31,34 @@ class ShowcaseApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BravenChartPlus Showcase',
+      title: 'Braven Charts Showcase',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        cardTheme: const CardThemeData(elevation: 2, margin: EdgeInsets.all(8)),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        cardTheme: const CardThemeData(elevation: 2, margin: EdgeInsets.all(8)),
-      ),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
       home: const ShowcaseHome(),
+    );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF4F46E5),
+      brightness: brightness,
+    );
+
+    return ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: scheme.surface,
+      cardTheme: CardThemeData(
+        elevation: 0,
+        margin: const EdgeInsets.all(8),
+        color: scheme.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
     );
   }
 }
@@ -68,14 +70,31 @@ class NavDestination {
     required this.icon,
     required this.selectedIcon,
     required this.page,
-    this.badge,
+    this.reviewProposal,
   });
 
   final String label;
   final IconData icon;
   final IconData selectedIcon;
   final Widget page;
-  final String? badge;
+  final ShowcaseReviewProposal? reviewProposal;
+
+  String get slug => label
+      .toLowerCase()
+      .replaceAll('+', ' ')
+      .replaceAll(RegExp('[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'(^-|-$)'), '');
+}
+
+/// Release-review note for a page that may be merged, renamed, or removed.
+///
+/// These proposals are deliberately visual only. No destination is removed
+/// until the release information architecture is approved.
+class ShowcaseReviewProposal {
+  const ShowcaseReviewProposal({required this.action, required this.reason});
+
+  final String action;
+  final String reason;
 }
 
 /// Home page with adaptive navigation layout.
@@ -87,7 +106,7 @@ class ShowcaseHome extends StatefulWidget {
 }
 
 class _ShowcaseHomeState extends State<ShowcaseHome> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   /// All navigation destinations in the showcase.
   static final List<NavDestination> _destinations = [
@@ -96,7 +115,6 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.dashboard_outlined,
       selectedIcon: Icons.dashboard,
       page: GalleryPage(),
-      badge: '★', // Featured overview
     ),
     const NavDestination(
       label: 'Chart Types',
@@ -105,38 +123,10 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: ChartTypesPage(),
     ),
     const NavDestination(
-      label: 'Segment Styling',
-      icon: Icons.format_color_fill_outlined,
-      selectedIcon: Icons.format_color_fill,
-      page: SegmentStylingPage(),
-      badge: '★', // New feature
-    ),
-    const NavDestination(
       label: 'Interaction',
       icon: Icons.touch_app_outlined,
       selectedIcon: Icons.touch_app,
       page: InteractionPage(),
-    ),
-    const NavDestination(
-      label: 'Tracking Lab',
-      icon: Icons.track_changes_outlined,
-      selectedIcon: Icons.track_changes,
-      page: TrackingPage(),
-      badge: '★',
-    ),
-    const NavDestination(
-      label: 'Power + Lactate',
-      icon: Icons.directions_bike_outlined,
-      selectedIcon: Icons.directions_bike,
-      page: PowerLactatePage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Lactate Threshold',
-      icon: Icons.science_outlined,
-      selectedIcon: Icons.science,
-      page: LactateThresholdPage(),
-      badge: 'NEW',
     ),
     const NavDestination(
       label: 'Annotations',
@@ -145,24 +135,16 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: AnnotationsPage(),
     ),
     const NavDestination(
-      label: 'Streaming',
-      icon: Icons.stream_outlined,
-      selectedIcon: Icons.stream,
-      page: StreamingPage(),
-    ),
-    const NavDestination(
       label: 'Live Stream',
       icon: Icons.bolt_outlined,
       selectedIcon: Icons.bolt,
       page: LiveStreamingPage(),
-      badge: '★', // New high-performance API
     ),
     // const NavDestination(
     //   label: 'Timer Test',
     //   icon: Icons.timer_outlined,
     //   selectedIcon: Icons.timer,
     //   page: TimerTestPage(),
-    //   badge: 'TEST', // Standalone timer test
     // ),
     const NavDestination(
       label: 'Theming',
@@ -177,11 +159,16 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: PerformancePage(),
     ),
     const NavDestination(
+      label: 'Axes',
+      icon: Icons.grid_4x4_outlined,
+      selectedIcon: Icons.grid_4x4,
+      page: AxesPage(),
+    ),
+    const NavDestination(
       label: 'Multi-Axis',
       icon: Icons.align_vertical_bottom_outlined,
       selectedIcon: Icons.align_vertical_bottom,
       page: MultiAxisPage(),
-      badge: '★', // Star feature
     ),
     const NavDestination(
       label: 'Scientific',
@@ -190,55 +177,46 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       page: ScientificPage(),
     ),
     const NavDestination(
-      label: 'Minor Ticks',
-      icon: Icons.linear_scale_outlined,
-      selectedIcon: Icons.linear_scale,
-      page: MinorTicksPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Render Range',
-      icon: Icons.tune_outlined,
-      selectedIcon: Icons.tune,
-      page: AxisRenderRangePage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Point Labels',
-      icon: Icons.label_outline,
-      selectedIcon: Icons.label,
-      page: DataPointLabelsPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
       label: 'Series Styling',
       icon: Icons.auto_awesome_outlined,
       selectedIcon: Icons.auto_awesome,
       page: SeriesStylingPage(),
-      badge: 'NEW',
-    ),
-    const NavDestination(
-      label: 'Axis Slots',
-      icon: Icons.swap_vert_outlined,
-      selectedIcon: Icons.swap_vert,
-      page: AxisSlotDemoPage(),
-      badge: 'NEW',
     ),
     const NavDestination(
       label: 'Baseline Fill',
       icon: Icons.area_chart_outlined,
       selectedIcon: Icons.area_chart,
       page: BaselineAreaDemoPage(),
-      badge: 'NEW',
     ),
     const NavDestination(
       label: 'Loading States',
       icon: Icons.hourglass_empty_outlined,
       selectedIcon: Icons.hourglass_top,
       page: LoadingStatesPage(),
-      badge: 'NEW',
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final requestedPage = Uri.base.queryParameters['page'];
+    final requestedIndex = _destinations.indexWhere(
+      (destination) => destination.slug == requestedPage,
+    );
+    _selectedIndex = requestedIndex < 0 ? 0 : requestedIndex;
+  }
+
+  void _selectDestination(int index) {
+    setState(() => _selectedIndex = index);
+    final location = Uri(
+      path: Uri.base.path,
+      queryParameters: {'page': _destinations[index].slug},
+    ).toString();
+    SystemNavigator.routeInformationUpdated(
+      uri: Uri.parse(location),
+      replace: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,28 +232,62 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     }
   }
 
-  /// Mobile layout with bottom navigation bar.
+  /// Mobile layout with a drawer so the complete feature set stays usable.
   Widget _buildMobileLayout() {
+    final destination = _destinations[_selectedIndex];
     return Scaffold(
-      body: _destinations[_selectedIndex].page,
-      bottomNavigationBar: NavigationBar(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Flexible(child: Text(destination.label)),
+            if (destination.reviewProposal != null) ...[
+              const SizedBox(width: 8),
+              const _ReviewBadge(),
+            ],
+          ],
+        ),
+        scrolledUnderElevation: 1,
+      ),
+      drawer: NavigationDrawer(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
+          _selectDestination(index);
+          Navigator.of(context).pop();
         },
-        destinations: _destinations.map((dest) {
-          return NavigationDestination(
-            icon: Icon(dest.icon),
-            selectedIcon: dest.badge != null
-                ? Badge(
-                    label: Text(dest.badge!),
-                    child: Icon(dest.selectedIcon),
-                  )
-                : Icon(dest.selectedIcon),
-            label: dest.label,
-          );
-        }).toList(),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(28, 20, 16, 20),
+            child: BravenBrand(),
+          ),
+          const Divider(),
+          ..._destinations.map(
+            (dest) => NavigationDrawerDestination(
+              icon: Icon(dest.icon),
+              selectedIcon: Icon(dest.selectedIcon),
+              label: SizedBox(
+                width: 190,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        dest.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (dest.reviewProposal != null) ...[
+                      const SizedBox(width: 6),
+                      const _ReviewBadge(compact: true),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
+      body: _buildSelectedPage(),
     );
   }
 
@@ -288,14 +300,25 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             extended: extended,
             destinations: _destinations,
             selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
+            onDestinationSelected: _selectDestination,
           ),
           const VerticalDivider(width: 1, thickness: 1),
-          Expanded(child: _destinations[_selectedIndex].page),
+          Expanded(child: _buildSelectedPage()),
         ],
       ),
+    );
+  }
+
+  Widget _buildSelectedPage() {
+    final destination = _destinations[_selectedIndex];
+    final proposal = destination.reviewProposal;
+    if (proposal == null) return destination.page;
+
+    return Column(
+      children: [
+        _ReviewProposalBanner(proposal: proposal),
+        Expanded(child: destination.page),
+      ],
     );
   }
 }
@@ -327,18 +350,14 @@ class _ScrollableNav extends StatelessWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-            child: extended
-                ? Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Braven Charts',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                : const Icon(Icons.bar_chart, size: 32),
+            padding: EdgeInsets.symmetric(
+              vertical: 20,
+              horizontal: extended ? 16 : 12,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: BravenBrand(compact: !extended),
+            ),
           ),
           // Scrollable destinations
           Expanded(
@@ -354,16 +373,14 @@ class _ScrollableNav extends StatelessWidget {
                         : colorScheme.onSurfaceVariant,
                     size: 22,
                   );
-                  final badgedIcon = dest.badge != null
-                      ? Badge(label: Text(dest.badge!), child: icon)
-                      : icon;
-
                   return InkWell(
                     onTap: () => onDestinationSelected(i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       padding: EdgeInsets.symmetric(
                         horizontal: extended ? 12 : 0,
                         vertical: 10,
@@ -378,7 +395,7 @@ class _ScrollableNav extends StatelessWidget {
                           ? Row(
                               children: [
                                 const SizedBox(width: 4),
-                                badgedIcon,
+                                icon,
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -394,9 +411,26 @@ class _ScrollableNav extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                                if (dest.reviewProposal != null) ...[
+                                  const SizedBox(width: 6),
+                                  const _ReviewBadge(compact: true),
+                                ],
                               ],
                             )
-                          : Center(child: badgedIcon),
+                          : Center(
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  icon,
+                                  if (dest.reviewProposal != null)
+                                    const Positioned(
+                                      right: -6,
+                                      top: -5,
+                                      child: _ReviewDot(),
+                                    ),
+                                ],
+                              ),
+                            ),
                     ),
                   );
                 }),
@@ -404,6 +438,106 @@ class _ScrollableNav extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReviewBadge extends StatelessWidget {
+  const _ReviewBadge({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 8,
+        vertical: compact ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.55)),
+      ),
+      child: Text(
+        'Review',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: scheme.onTertiaryContainer,
+          fontWeight: FontWeight.w800,
+          fontSize: compact ? 9 : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewDot extends StatelessWidget {
+  const _ReviewDot();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Review candidate',
+      child: Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: scheme.tertiary,
+          shape: BoxShape.circle,
+          border: Border.all(color: scheme.surface, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewProposalBanner extends StatelessWidget {
+  const _ReviewProposalBanner({required this.proposal});
+
+  final ShowcaseReviewProposal proposal;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.tertiaryContainer.withValues(alpha: 0.72),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: scheme.tertiary.withValues(alpha: 0.45)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.rate_review_outlined, color: scheme.onTertiaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: 'Review candidate · ',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    TextSpan(text: '${proposal.action}. ${proposal.reason}'),
+                    const TextSpan(text: ' Nothing has been removed.'),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onTertiaryContainer,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

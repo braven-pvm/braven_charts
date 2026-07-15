@@ -1,9 +1,40 @@
 name: braven_charts
-description: "A comprehensive Flutter charting library with advanced customization and annotation capabilities."
+description: >-
+  Interactive, web-first Flutter charts with multi-axis rendering, annotations,
+  streaming, rich theming, and responsive loading and empty states.
 version: 0.1.0
-homepage: https://github.com/yourusername/braven_charts_v2.0
-repository: https://github.com/yourusername/braven_charts_v2.0
-issue_tracker: https://github.com/yourusername/braven_charts_v2.0/issues
+homepage: https://github.com/braven-pvm/braven_charts
+repository: https://github.com/braven-pvm/braven_charts
+issue_tracker: https://github.com/braven-pvm/braven_charts/issues
+
+topics:
+  - charts
+  - data-visualization
+  - flutter-widgets
+  - annotations
+  - streaming
+
+screenshots:
+  - description: >-
+      Flagship four-axis physiology analysis with normalization, stage bands,
+      glow, annotations, labels, tracking, and the Braven Charts feature map.
+    path: doc/screenshots/gallery.png
+  - description: >-
+      Three independently scaled Y axes with normalization, range annotations,
+      runtime controls, and axis status.
+    path: doc/screenshots/multi_axis.png
+  - description: >-
+      Interactive thresholds, ranges, labels, chords, and draggable annotation
+      controls on a single chart.
+    path: doc/screenshots/annotations.png
+  - description: >-
+      Frame-coalesced live data with a scrolling viewport, bounded buffer, and
+      streaming diagnostics.
+    path: doc/screenshots/live_stream.png
+  - description: >-
+      Responsive animated chart loading skeleton with selectable indicators,
+      palettes, empty state, and API example.
+    path: doc/screenshots/loading_states.png
 
 environment:
   sdk: ">=3.9.0 <4.0.0"
@@ -15,14 +46,9 @@ dependencies:
   # braven_data:
   #   git:
   #     url: https://github.com/forcegage-pvm/braven_data.git
-  flex_color_picker: ^3.7.1
-  fleather:
-    path: packages/fleather
-  parchment: ^1.25.1
-  flutter_colorpicker: ^1.1.0
-  shared_preferences: ^2.2.2
-  path_provider: ^2.1.5
-  equatable: ^2.0.8
+  fleather: ^1.27.0
+  flex_color_picker: ^3.8.0
+  parchment: ^1.27.0
 
 dev_dependencies:
   flutter_test:

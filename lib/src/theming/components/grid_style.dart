@@ -41,8 +41,8 @@ class GridStyle {
   final double majorWidth;
 
   /// Dash pattern for major grid lines. Empty list = solid line.
-  /// Pattern format: [onLength, offLength, onLength, offLength, ...]
-  /// Example: [5.0, 5.0] = 5px on, 5px off
+  /// Pattern format: `[onLength, offLength, onLength, offLength, ...]`
+  /// Example: `[5.0, 5.0]` = 5px on, 5px off
   final List<double> majorDashPattern;
 
   /// Color of minor grid lines (if [showMinor] is true).

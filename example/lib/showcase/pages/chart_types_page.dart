@@ -9,13 +9,7 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-/// Demonstrates all available chart types with configurable options.
-///
-/// Chart types:
-/// - Line charts (with various interpolation modes)
-/// - Area charts (filled and stacked)
-/// - Bar charts (grouped and stacked)
-/// - Scatter charts (with markers)
+/// A browse-then-configure showcase for every primary chart type.
 class ChartTypesPage extends StatefulWidget {
   const ChartTypesPage({super.key});
 
@@ -24,20 +18,20 @@ class ChartTypesPage extends StatefulWidget {
 }
 
 class _ChartTypesPageState extends State<ChartTypesPage> {
-  final ChartOptionsController _optionsController = ChartOptionsController();
+  final ChartOptionsController _optionsController = ChartOptionsController(
+    const ChartOptions(showDataMarkers: true),
+  );
 
-  // Chart-specific options
   ChartType _chartType = ChartType.line;
-  LineInterpolation _interpolation = LineInterpolation.linear;
-  double _strokeWidth = 2.0;
-  double _fillOpacity = 0.3;
-  double _barWidthPercent = 0.7;
-  double _markerRadius = 4.0;
-  bool _showSecondSeries = false;
+  LineInterpolation _interpolation = LineInterpolation.bezier;
+  double _strokeWidth = 2.5;
+  double _fillOpacity = 0.28;
+  double _barWidthPercent = 0.64;
+  double _markerRadius = 5.0;
+  bool _showSecondSeries = true;
 
-  // Generated data
-  late List<ChartDataPoint> _data1;
-  late List<ChartDataPoint> _data2;
+  late List<ChartDataPoint> _observedData;
+  late List<ChartDataPoint> _benchmarkData;
 
   @override
   void initState() {
@@ -47,19 +41,26 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
 
   void _regenerateData() {
     setState(() {
-      _data1 = DataGenerator.generateSineWave(
-        count: 50,
-        amplitude: 40,
-        yOffset: 50,
-        stepX: 0.5,
+      _observedData = DataGenerator.generateLinear(
+        count: 16,
+        slope: 3.2,
+        intercept: 28,
+        noise: 22,
+        startX: 1,
       );
-      _data2 = DataGenerator.generateCosineWave(
-        count: 50,
-        amplitude: 30,
-        yOffset: 60,
-        stepX: 0.5,
+      _benchmarkData = DataGenerator.generateLinear(
+        count: 16,
+        slope: 2.6,
+        intercept: 34,
+        noise: 8,
+        startX: 1,
       );
     });
+  }
+
+  void _selectChartType(ChartType chartType) {
+    if (_chartType == chartType) return;
+    setState(() => _chartType = chartType);
   }
 
   @override
@@ -72,41 +73,37 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   Widget build(BuildContext context) {
     return ChartPageLayout(
       title: 'Chart Types',
-      subtitle: 'Explore different visualization styles',
+      subtitle: 'Compare every chart type, then configure it live',
       optionsChildren: _buildOptionsChildren(),
-      chart: _buildChart(),
-      bottomPanel: _buildStatusPanel(),
+      chart: _buildWorkspace(),
     );
   }
 
   List<Widget> _buildOptionsChildren() {
     return [
-      // Standard display options
-      StandardChartOptions(controller: _optionsController),
-
-      // Chart type selector
       OptionSection(
         title: 'Chart Type',
+        icon: Icons.insert_chart_outlined,
         children: [
           EnumOption<ChartType>(
             label: 'Type',
             value: _chartType,
             values: ChartType.values,
-            onChanged: (value) => setState(() => _chartType = value),
+            labelBuilder: (value) => _chartTypeLabel(value),
+            onChanged: _selectChartType,
           ),
           BoolOption(
-            label: 'Show second series',
+            label: 'Show Second Series',
             value: _showSecondSeries,
             onChanged: (value) => setState(() => _showSecondSeries = value),
+            subtitle: 'Compare observed data with a benchmark',
           ),
         ],
       ),
-
-      // Type-specific options
       if (_chartType == ChartType.line || _chartType == ChartType.area)
         OptionSection(
-          title: 'Line Options',
-          initiallyExpanded: false,
+          title: 'Line Appearance',
+          icon: Icons.show_chart,
           children: [
             EnumOption<LineInterpolation>(
               label: 'Interpolation',
@@ -120,15 +117,16 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               min: 0.5,
               max: 5.0,
               divisions: 9,
+              suffix: 'px',
+              decimalPlaces: 1,
               onChanged: (value) => setState(() => _strokeWidth = value),
             ),
           ],
         ),
-
       if (_chartType == ChartType.area)
         OptionSection(
-          title: 'Area Options',
-          initiallyExpanded: false,
+          title: 'Area Fill',
+          icon: Icons.area_chart_outlined,
           children: [
             SliderOption(
               label: 'Fill Opacity',
@@ -136,15 +134,15 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               min: 0.0,
               max: 1.0,
               divisions: 10,
+              decimalPlaces: 1,
               onChanged: (value) => setState(() => _fillOpacity = value),
             ),
           ],
         ),
-
       if (_chartType == ChartType.bar)
         OptionSection(
-          title: 'Bar Options',
-          initiallyExpanded: false,
+          title: 'Bar Appearance',
+          icon: Icons.bar_chart,
           children: [
             SliderOption(
               label: 'Bar Width',
@@ -152,15 +150,15 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               min: 0.1,
               max: 1.0,
               divisions: 9,
+              decimalPlaces: 1,
               onChanged: (value) => setState(() => _barWidthPercent = value),
             ),
           ],
         ),
-
       if (_chartType == ChartType.scatter)
         OptionSection(
-          title: 'Scatter Options',
-          initiallyExpanded: false,
+          title: 'Marker Appearance',
+          icon: Icons.scatter_plot_outlined,
           children: [
             SliderOption(
               label: 'Marker Radius',
@@ -168,17 +166,22 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               min: 1.0,
               max: 10.0,
               divisions: 9,
+              suffix: 'px',
+              decimalPlaces: 0,
               onChanged: (value) => setState(() => _markerRadius = value),
             ),
           ],
         ),
-
-      // Actions
+      StandardChartOptions(
+        controller: _optionsController,
+        showLineStyleOption: false,
+      ),
       OptionSection(
-        title: 'Actions',
+        title: 'Dataset',
+        icon: Icons.refresh,
         children: [
           ActionButton(
-            label: 'Regenerate Data',
+            label: 'Regenerate Dataset',
             icon: Icons.refresh,
             onPressed: _regenerateData,
           ),
@@ -187,171 +190,358 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
     ];
   }
 
-  Widget _buildChart() {
+  Widget _buildWorkspace() {
     return ListenableBuilder(
       listenable: _optionsController,
       builder: (context, _) {
-        return ChartCard(
-          title: '${_chartType.name.toUpperCase()} Chart',
-          subtitle: _getChartSubtitle(),
-          child: BravenChartPlus(
-            series: _buildSeries(),
-            theme: _optionsController.theme,
-            showLegend: _optionsController.showLegend,
-            showXScrollbar: _optionsController.showXScrollbar,
-            showYScrollbar: _optionsController.showYScrollbar,
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
-              autoHide: false,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose a chart type',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
-            xAxisConfig: XAxisConfig(
-              showAxisLine: _optionsController.showAxisLines,
-            ),
-            yAxis: YAxisConfig(
-              position: YAxisPosition.left,
-              showAxisLine: _optionsController.showAxisLines,
-              min: -20,
-            ),
-            interactionConfig: InteractionConfig(
-              enableZoom: _optionsController.enableZoom,
-              enablePan: _optionsController.enablePan,
-            ),
-          ),
+            const SizedBox(height: 8),
+            SizedBox(height: 168, child: _buildChartTypeRibbon()),
+            const SizedBox(height: 16),
+            Expanded(child: _buildMainChart()),
+          ],
         );
       },
     );
   }
 
-  List<ChartSeries> _buildSeries() {
-    final series = <ChartSeries>[];
+  Widget _buildChartTypeRibbon() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        const minimumCardWidth = 168.0;
+        final fitWidth = (constraints.maxWidth - spacing * 3) / 4;
+        final cardWidth = fitWidth >= minimumCardWidth
+            ? fitWidth
+            : minimumCardWidth;
 
-    switch (_chartType) {
+        return ListView.separated(
+          key: const ValueKey('chart-type-ribbon'),
+          scrollDirection: Axis.horizontal,
+          itemCount: ChartType.values.length,
+          separatorBuilder: (_, _) => const SizedBox(width: spacing),
+          itemBuilder: (context, index) {
+            final chartType = ChartType.values[index];
+            return SizedBox(
+              width: cardWidth,
+              child: _ChartTypePreviewCard(
+                key: ValueKey('chart-type-preview-${chartType.name}'),
+                chartType: chartType,
+                label: _chartTypeLabel(chartType),
+                description: _chartTypeDescription(chartType),
+                selected: _chartType == chartType,
+                onTap: () => _selectChartType(chartType),
+                chart: _buildPreviewChart(chartType),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewChart(ChartType chartType) {
+    return BravenChartPlus(
+      series: _buildSeries(chartType, preview: true),
+      theme: _optionsController.theme ?? ChartTheme.light,
+      showLegend: false,
+      grid: const GridConfig(horizontal: false, vertical: false),
+      xAxisConfig: const XAxisConfig(
+        visible: false,
+        minHeight: 0,
+        maxHeight: 0,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.hidden,
+        minWidth: 0,
+        maxWidth: 0,
+      ),
+      interactionConfig: InteractionConfig.none(),
+    );
+  }
+
+  Widget _buildMainChart() {
+    return ChartCard(
+      title: '${_chartTypeLabel(_chartType)} chart playground',
+      subtitle: _mainChartSummary(),
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
+      child: BravenChartPlus(
+        series: _buildSeries(_chartType),
+        theme: _optionsController.theme,
+        showLegend: _optionsController.showLegend,
+        showXScrollbar: _optionsController.showXScrollbar,
+        showYScrollbar: _optionsController.showYScrollbar,
+        scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
+        grid: GridConfig(
+          horizontal: _optionsController.showGrid,
+          vertical: _optionsController.showGrid,
+        ),
+        xAxisConfig: XAxisConfig(
+          label: 'Interval',
+          min: 0,
+          max: 17,
+          renderMin: 1,
+          renderMax: 16,
+          showAxisLine: _optionsController.showAxisLines,
+        ),
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'Value',
+          min: 0,
+          max: 110,
+          showAxisLine: _optionsController.showAxisLines,
+        ),
+        interactionConfig: InteractionConfig(
+          enableZoom: _optionsController.enableZoom,
+          enablePan: _optionsController.enablePan,
+          tooltip: const TooltipConfig(),
+        ),
+      ),
+    );
+  }
+
+  List<ChartSeries> _buildSeries(ChartType chartType, {bool preview = false}) {
+    final showSecondSeries = preview || _showSecondSeries;
+
+    switch (chartType) {
       case ChartType.line:
-        series.add(
+        return [
           LineChartSeries(
-            id: 'series1',
-            name: 'Series 1',
-            points: _data1,
-            color: Colors.blue,
-            interpolation: _interpolation,
-            strokeWidth: _strokeWidth,
-            showDataPointMarkers: _optionsController.showDataMarkers,
+            id: preview ? 'preview-line-observed' : 'line-observed',
+            name: 'Observed',
+            points: _observedData,
+            color: const Color(0xFF6366F1),
+            interpolation: preview ? LineInterpolation.bezier : _interpolation,
+            strokeWidth: preview ? 2.2 : _strokeWidth,
+            showDataPointMarkers: preview || _optionsController.showDataMarkers,
+            dataPointMarkerRadius: preview ? 2.2 : 3.5,
           ),
-        );
-        if (_showSecondSeries) {
-          series.add(
+          if (showSecondSeries)
             LineChartSeries(
-              id: 'series2',
-              name: 'Series 2',
-              points: _data2,
-              color: Colors.red,
-              interpolation: _interpolation,
-              strokeWidth: _strokeWidth,
-              showDataPointMarkers: _optionsController.showDataMarkers,
+              id: preview ? 'preview-line-benchmark' : 'line-benchmark',
+              name: 'Benchmark',
+              points: _benchmarkData,
+              color: const Color(0xFFF97316),
+              interpolation: preview
+                  ? LineInterpolation.bezier
+                  : _interpolation,
+              strokeWidth: preview ? 1.8 : _strokeWidth,
+              showDataPointMarkers:
+                  preview || _optionsController.showDataMarkers,
+              dataPointMarkerRadius: preview ? 1.8 : 3,
             ),
-          );
-        }
-
+        ];
       case ChartType.area:
-        series.add(
+        return [
           AreaChartSeries(
-            id: 'series1',
-            name: 'Series 1',
-            points: _data1,
-            color: Colors.green,
-            interpolation: _interpolation,
-            strokeWidth: _strokeWidth,
-            fillOpacity: _fillOpacity,
+            id: preview ? 'preview-area-observed' : 'area-observed',
+            name: 'Observed',
+            points: _observedData,
+            color: const Color(0xFF10B981),
+            interpolation: preview ? LineInterpolation.bezier : _interpolation,
+            strokeWidth: preview ? 2 : _strokeWidth,
+            fillOpacity: preview ? 0.30 : _fillOpacity,
+            showDataPointMarkers:
+                !preview && _optionsController.showDataMarkers,
           ),
-        );
-        if (_showSecondSeries) {
-          series.add(
+          if (showSecondSeries)
             AreaChartSeries(
-              id: 'series2',
-              name: 'Series 2',
-              points: _data2,
-              color: Colors.teal,
-              interpolation: _interpolation,
-              strokeWidth: _strokeWidth,
-              fillOpacity: _fillOpacity,
+              id: preview ? 'preview-area-benchmark' : 'area-benchmark',
+              name: 'Benchmark',
+              points: _benchmarkData,
+              color: const Color(0xFF6366F1),
+              interpolation: preview
+                  ? LineInterpolation.bezier
+                  : _interpolation,
+              strokeWidth: preview ? 1.8 : _strokeWidth,
+              fillOpacity: preview ? 0.16 : _fillOpacity * 0.65,
+              showDataPointMarkers:
+                  !preview && _optionsController.showDataMarkers,
             ),
-          );
-        }
-
+        ];
       case ChartType.bar:
-        series.add(
+        return [
           BarChartSeries(
-            id: 'series1',
-            name: 'Series 1',
-            points: _data1,
-            color: Colors.orange,
-            barWidthPercent: _barWidthPercent,
+            id: preview ? 'preview-bar-observed' : 'bar-observed',
+            name: 'Observed',
+            points: _observedData,
+            color: const Color(0xFFF59E0B),
+            barWidthPercent: preview ? 0.58 : _barWidthPercent,
           ),
-        );
-        if (_showSecondSeries) {
-          series.add(
+          if (showSecondSeries)
             BarChartSeries(
-              id: 'series2',
-              name: 'Series 2',
-              points: _data2,
-              color: Colors.deepOrange,
-              barWidthPercent: _barWidthPercent,
+              id: preview ? 'preview-bar-benchmark' : 'bar-benchmark',
+              name: 'Benchmark',
+              points: _benchmarkData,
+              color: const Color(0xFF3B82F6),
+              barWidthPercent: preview ? 0.38 : _barWidthPercent * 0.65,
             ),
-          );
-        }
-
+        ];
       case ChartType.scatter:
-        series.add(
+        return [
           ScatterChartSeries(
-            id: 'series1',
-            name: 'Series 1',
-            points: _data1,
-            color: Colors.purple,
-            markerRadius: _markerRadius,
+            id: preview ? 'preview-scatter-observed' : 'scatter-observed',
+            name: 'Observed',
+            points: _observedData,
+            color: const Color(0xFF8B5CF6),
+            markerRadius: preview ? 3.2 : _markerRadius,
           ),
-        );
-        if (_showSecondSeries) {
-          series.add(
+          if (showSecondSeries)
             ScatterChartSeries(
-              id: 'series2',
-              name: 'Series 2',
-              points: _data2,
-              color: Colors.deepPurple,
-              markerRadius: _markerRadius,
+              id: preview ? 'preview-scatter-benchmark' : 'scatter-benchmark',
+              name: 'Benchmark',
+              points: _benchmarkData,
+              color: const Color(0xFF14B8A6),
+              markerRadius: preview ? 2.2 : _markerRadius * 0.72,
             ),
-          );
-        }
-    }
-
-    return series;
-  }
-
-  String _getChartSubtitle() {
-    switch (_chartType) {
-      case ChartType.line:
-        return 'Interpolation: ${_interpolation.name}';
-      case ChartType.area:
-        return 'Opacity: ${(_fillOpacity * 100).toInt()}%';
-      case ChartType.bar:
-        return 'Width: ${(_barWidthPercent * 100).toInt()}%';
-      case ChartType.scatter:
-        return 'Radius: ${_markerRadius.toStringAsFixed(1)}';
+        ];
     }
   }
 
-  Widget _buildStatusPanel() {
-    return StatusPanel(
-      items: [
-        StatusItem(
-          label: 'Data Points',
-          value: '${_data1.length}${_showSecondSeries ? ' × 2' : ''}',
+  String _mainChartSummary() {
+    final seriesCount = _showSecondSeries ? 2 : 1;
+    final configuration = switch (_chartType) {
+      ChartType.line => '${_interpolation.name} interpolation',
+      ChartType.area =>
+        '${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill',
+      ChartType.bar => '${(_barWidthPercent * 100).round()}% bar width',
+      ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
+    };
+
+    return '$seriesCount ${seriesCount == 1 ? 'series' : 'series'} · '
+        '${_observedData.length} points each · $configuration · '
+        '${_themeName()} theme';
+  }
+
+  String _themeName() {
+    final selectedTheme = _optionsController.theme;
+    if (selectedTheme == null) return 'Light';
+
+    for (final preset in ThemePreset.values) {
+      if (preset.theme.backgroundColor == selectedTheme.backgroundColor) {
+        return preset.displayName;
+      }
+    }
+    return 'Custom';
+  }
+
+  String _chartTypeLabel(ChartType chartType) {
+    return switch (chartType) {
+      ChartType.line => 'Line',
+      ChartType.area => 'Area',
+      ChartType.bar => 'Bar',
+      ChartType.scatter => 'Scatter',
+    };
+  }
+
+  String _chartTypeDescription(ChartType chartType) {
+    return switch (chartType) {
+      ChartType.line => 'Smooth + markers',
+      ChartType.area => 'Layered fills',
+      ChartType.bar => 'Multi-series columns',
+      ChartType.scatter => 'Distinct marker sets',
+    };
+  }
+}
+
+class _ChartTypePreviewCard extends StatelessWidget {
+  const _ChartTypePreviewCard({
+    super.key,
+    required this.chartType,
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+    required this.chart,
+  });
+
+  final ChartType chartType;
+  final String label;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget chart;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Select $label chart',
+      child: Material(
+        color: selected
+            ? colors.primaryContainer.withValues(alpha: 0.42)
+            : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
         ),
-        StatusItem(label: 'Chart Type', value: _chartType.name),
-        StatusItem(
-          label: 'Theme',
-          value:
-              _optionsController.theme?.toString().split('.').last ?? 'Default',
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected) ...[
+                      Icon(
+                        Icons.check_circle,
+                        key: ValueKey('selected-chart-type-${chartType.name}'),
+                        size: 16,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Selected',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(child: IgnorePointer(child: chart)),
+              ],
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 }

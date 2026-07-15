@@ -246,7 +246,7 @@ extension SegmentColorExtensions on LineChartSeries {
   /// Creates a copy with segment styles at specified indices.
   ///
   /// The index refers to the starting point of the segment. For example,
-  /// index 5 styles the segment from points[5] to points[6].
+  /// index 5 styles the segment from `points[5]` to `points[6]`.
   ///
   /// Indices outside the valid range (0 to length-2) are ignored.
   ///

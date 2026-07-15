@@ -92,17 +92,17 @@ class ChartOptions {
 
   /// Creates InteractionConfig with current options applied.
   InteractionConfig get interactionConfig => InteractionConfig(
-        enableZoom: enableZoom,
-        enablePan: enablePan,
-        showXScrollbar: showXScrollbar,
-        showYScrollbar: showYScrollbar,
-      );
+    enableZoom: enableZoom,
+    enablePan: enablePan,
+    showXScrollbar: showXScrollbar,
+    showYScrollbar: showYScrollbar,
+  );
 }
 
 /// Controller for managing chart options with change notifications.
 class ChartOptionsController extends ChangeNotifier {
   ChartOptionsController([ChartOptions? initial])
-      : _options = initial ?? const ChartOptions();
+    : _options = initial ?? const ChartOptions();
 
   ChartOptions _options;
 
@@ -131,19 +131,21 @@ class ChartOptionsController extends ChangeNotifier {
     LineStyle? lineStyle,
     Color? backgroundColor,
   }) {
-    update(_options.copyWith(
-      theme: theme,
-      showGrid: showGrid,
-      showAxisLines: showAxisLines,
-      showDataMarkers: showDataMarkers,
-      showXScrollbar: showXScrollbar,
-      showYScrollbar: showYScrollbar,
-      showLegend: showLegend,
-      enableZoom: enableZoom,
-      enablePan: enablePan,
-      lineStyle: lineStyle,
-      backgroundColor: backgroundColor,
-    ));
+    update(
+      _options.copyWith(
+        theme: theme,
+        showGrid: showGrid,
+        showAxisLines: showAxisLines,
+        showDataMarkers: showDataMarkers,
+        showXScrollbar: showXScrollbar,
+        showYScrollbar: showYScrollbar,
+        showLegend: showLegend,
+        enableZoom: enableZoom,
+        enablePan: enablePan,
+        lineStyle: lineStyle,
+        backgroundColor: backgroundColor,
+      ),
+    );
   }
 
   // Convenience setters

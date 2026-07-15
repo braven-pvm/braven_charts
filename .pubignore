@@ -1,0 +1,40 @@
+# Development and agent tooling
+/.claude/
+/.github/
+/.idx/
+/.orchestra/
+/.specify/
+/.superpowers/
+/.vscode/
+/.worktrees/
+/.dart_tool/
+/.metadata
+/devtools_options.yaml
+/build.yaml
+
+# Internal design history, fixtures, and vendored dependencies
+/data/
+/docs/
+/packages/
+/specs/
+/test/
+
+# Example build and test artifacts; keep example/lib and example/web public
+/example/.dart_tool/
+/example/build/
+/example/lib/demos/
+/example/lib/timer_test_page.dart
+/example/test/
+/example/windows/
+/example/pubspec.lock
+/example/devtools_options.yaml
+/example/run.md
+
+# Generated output
+/build/
+/coverage/
+/doc/api/
+/pubspec.lock
+*.log
+*.backup
+*.tmp

@@ -83,7 +83,8 @@ class _Task014DemoState extends State<Task014Demo> {
                               50,
                               (i) => ChartDataPoint(
                                 x: i.toDouble(),
-                                y: 100 +
+                                y:
+                                    100 +
                                     40 * ((i + 3) % 10 / 10) +
                                     20 * (i ~/ 10),
                               ),
@@ -116,7 +117,8 @@ class _Task014DemoState extends State<Task014Demo> {
                               50,
                               (i) => ChartDataPoint(
                                 x: i.toDouble(),
-                                y: 100 +
+                                y:
+                                    100 +
                                     40 * ((i + 3) % 10 / 10) +
                                     20 * (i ~/ 10),
                               ),
@@ -147,12 +149,12 @@ class _Task014DemoState extends State<Task014Demo> {
                   Text(
                     _multiAxisMode
                         ? '• No horizontal grid lines (each axis has different scale)\n'
-                            '• Y-zoom disabled (would break per-axis normalization)\n'
-                            '• Y-pan disabled (would break per-axis normalization)\n'
-                            '• X-zoom still works (Shift + scroll wheel)'
+                              '• Y-zoom disabled (would break per-axis normalization)\n'
+                              '• Y-pan disabled (would break per-axis normalization)\n'
+                              '• X-zoom still works (Shift + scroll wheel)'
                         : '• Horizontal grid lines visible\n'
-                            '• Both X and Y zoom work (Shift + scroll wheel)\n'
-                            '• Both X and Y pan work (middle mouse button drag)',
+                              '• Both X and Y zoom work (Shift + scroll wheel)\n'
+                              '• Both X and Y pan work (middle mouse button drag)',
                     style: const TextStyle(fontSize: 14),
                   ),
                 ],

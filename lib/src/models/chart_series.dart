@@ -66,8 +66,8 @@ class ChartSeries {
 
   /// Optional Y-axis ID for referencing a shared axis in multi-axis mode.
   ///
-  /// Use this when multiple series should share the same Y-axis defined
-  /// in [BravenChartPlus.yAxes]. The ID should match a [YAxisConfig.id].
+  /// Use this when multiple series should resolve to the same Y-axis. The ID
+  /// should match a [YAxisConfig.id].
   ///
   /// For series with their own dedicated axis, prefer using [yAxisConfig]
   /// instead, which allows inline axis configuration.
@@ -91,7 +91,7 @@ class ChartSeries {
   ///
   /// This is the preferred way to configure axes when each series has
   /// its own axis. For shared axes (multiple series on one axis), use
-  /// [yAxisId] to reference axes defined in [BravenChartPlus.yAxes].
+  /// [yAxisId] to bind those series to the same resolved axis.
   ///
   /// Example:
   /// ```dart

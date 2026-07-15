@@ -10,7 +10,7 @@ import '../widgets/standard_options.dart';
 
 /// Demonstrates a lactate threshold detection chart using ChordAnnotation.
 ///
-/// Reproduces the classic LT1 detection pattern:
+/// Models the classic LT1 detection pattern:
 /// - Lactate curve (exponential rise over time)
 /// - "Section" chord (solid line from baseline to LT1 point)
 /// - "Ramp" chord (thick dashed line from LT1 to peak)
@@ -161,7 +161,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           ),
           perpendicularLineColor: const Color(0xFFE64A19),
           perpendicularDashPattern: [4, 3],
-          perpendicularLabelOffset: Offset(5, -10),
+          perpendicularLabelOffset: const Offset(5, -10),
         ),
       );
     }
@@ -401,7 +401,7 @@ class _LactateThresholdPageState extends State<LactateThresholdPage> {
           title: 'Lactate Threshold Detection',
           subtitle: 'Chord method for LT1 identification',
           child: BravenChartPlus(
-            grid: GridConfig(horizontal: false, vertical: false),
+            grid: const GridConfig(horizontal: false, vertical: false),
             series: [
               LineChartSeries(
                 id: 'lactate',
