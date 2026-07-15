@@ -789,7 +789,8 @@ class _CapturedArtifactEntry {
     required this.json,
     required this.table,
     required this.hydrated,
-  }) : prettyJson = const JsonEncoder.withIndent(
+  }) : thumbnailProvider = _thumbnailProviderFor(artifact),
+       prettyJson = const JsonEncoder.withIndent(
          '  ',
        ).convert(jsonDecode(json));
 
@@ -799,6 +800,7 @@ class _CapturedArtifactEntry {
   final String prettyJson;
   final ChartTableModel table;
   final HydratedChartConfiguration hydrated;
+  final MemoryImage? thumbnailProvider;
 
   String get artifactId => artifact.artifactId;
   String get title => artifact.document.title ?? 'Untitled chart';
@@ -815,6 +817,13 @@ class _CapturedArtifactEntry {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
   }
+}
+
+MemoryImage? _thumbnailProviderFor(ChartArtifact artifact) {
+  // ChartPreview.bytes returns a defensive copy. Resolve it once per capture
+  // so unrelated page rebuilds retain the same image-cache key and frame.
+  final bytes = artifact.preview?.bytes;
+  return bytes == null ? null : MemoryImage(bytes);
 }
 
 extension on _GeneratedChartKind {
@@ -1020,6 +1029,14 @@ class _ArtifactLibrary extends StatelessWidget {
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: captures.length,
+                    findItemIndexCallback: (key) {
+                      final index = captures.indexWhere(
+                        (entry) =>
+                            ValueKey('artifact-library-${entry.artifactId}') ==
+                            key,
+                      );
+                      return index < 0 ? null : index;
+                    },
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final entry = captures[index];
@@ -1081,7 +1098,7 @@ class _ArtifactLibraryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final bytes = entry.artifact.preview?.bytes;
+    final thumbnailProvider = entry.thumbnailProvider;
     return Material(
       color: selected
           ? colors.primaryContainer.withValues(alpha: 0.42)
@@ -1111,12 +1128,16 @@ class _ArtifactLibraryCard extends StatelessWidget {
                   border: Border.all(color: colors.outlineVariant),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: bytes == null
+                child: thumbnailProvider == null
                     ? Icon(
                         Icons.image_not_supported_outlined,
                         color: colors.onSurfaceVariant,
                       )
-                    : Image.memory(bytes, fit: BoxFit.cover),
+                    : Image(
+                        image: thumbnailProvider,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                      ),
               ),
               const SizedBox(width: 10),
               Expanded(

@@ -166,6 +166,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('keeps captured thumbnails stable across page interactions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleCapture(tester);
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+
+    final firstProvider = _thumbnailImage(tester, 1).image;
+    final firstCardElement = tester.element(
+      find.byKey(const ValueKey('artifact-library-showcase-capture-1')),
+    );
+    expect(_thumbnailImage(tester, 1).gaplessPlayback, isTrue);
+
+    await tester.tap(find.text('Generate random chart'));
+    await tester.pump();
+    expect(identical(_thumbnailImage(tester, 1).image, firstProvider), isTrue);
+
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+    expect(identical(_thumbnailImage(tester, 1).image, firstProvider), isTrue);
+    expect(
+      identical(
+        tester.element(
+          find.byKey(const ValueKey('artifact-library-showcase-capture-1')),
+        ),
+        firstCardElement,
+      ),
+      isTrue,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('artifact-library-showcase-capture-1')),
+    );
+    await tester.pump();
+    expect(identical(_thumbnailImage(tester, 1).image, firstProvider), isTrue);
+
+    await tester.tap(find.text('Restore chart'));
+    await tester.pump();
+    expect(identical(_thumbnailImage(tester, 1).image, firstProvider), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('keeps the single page usable on a compact viewport', (
     tester,
   ) async {
@@ -200,3 +247,11 @@ void _expectTwoDecimalSeriesValues(ChartTableModel model) {
     expect(cell.yDisplay, cell.yRaw.toStringAsFixed(2));
   }
 }
+
+Image _thumbnailImage(WidgetTester tester, int sequence) =>
+    tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(ValueKey('artifact-thumbnail-$sequence')),
+        matching: find.byType(Image),
+      ),
+    );
