@@ -20,6 +20,8 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/line-style-comparison.md](guides/line-style-comparison.md) - Line interpolation styles
 - [guides/annotation_quick_reference.md](guides/annotation_quick_reference.md) - Annotation quick reference
 - [guides/annotation_persistence_guide.md](guides/annotation_persistence_guide.md) - Annotation persistence
+- [guides/chart-artifacts.md](guides/chart-artifacts.md) - Portable chart save, restore, external payloads, tables, and hashing
+- [guides/chart-artifact-migrations.md](guides/chart-artifact-migrations.md) - Trusted schema migration authoring and validation
 
 ## Development Notes
 
