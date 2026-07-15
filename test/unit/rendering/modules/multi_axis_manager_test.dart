@@ -496,6 +496,47 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(105.0, 0.001));
       });
 
+      test(
+        'computeSeriesBounds resolves explicit limits through the series axis binding',
+        () {
+          manager.setNormalizationMode(NormalizationMode.perSeries);
+          manager.setSeries([
+            ChartSeries(
+              id: 'session_average_heart_rate',
+              name: 'Heart rate',
+              points: const [
+                ChartDataPoint(x: 0, y: 107),
+                ChartDataPoint(x: 1, y: 136),
+              ],
+              yAxisConfig: YAxisConfig(
+                position: YAxisPosition.left,
+                min: 105,
+                max: 160,
+              ),
+            ),
+          ]);
+
+          final axisBounds = manager.computeAxisBounds();
+          final seriesBounds = manager.computeSeriesBounds();
+          final heartRateBounds = seriesBounds['session_average_heart_rate']!;
+
+          expect(
+            heartRateBounds,
+            axisBounds['session_average_heart_rate_axis'],
+          );
+          expect(heartRateBounds.min, closeTo(102.25, 0.001));
+          expect(heartRateBounds.max, closeTo(162.75, 0.001));
+          expect(
+            manager.normalizeYValue(
+              147,
+              heartRateBounds.min,
+              heartRateBounds.max,
+            ),
+            closeTo(0.73967, 0.00001),
+          );
+        },
+      );
+
       test('computeAxisBounds computes from series data', () {
         manager.setSeries([
           ChartSeries(

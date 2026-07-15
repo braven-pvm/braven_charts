@@ -222,6 +222,88 @@ void main() {
       });
     });
 
+    group('Y-axis crosshair label placement', () {
+      const chartSize = Size(500, 400);
+      const labelWidth = 30.0;
+      const labelPadding = 4.0;
+
+      test('uses each repeated left axis strip', () {
+        final axes = [
+          YAxisConfig.withId(id: 'power', position: YAxisPosition.left),
+          YAxisConfig.withId(id: 'cadence', position: YAxisPosition.left),
+        ];
+        final info = MultiAxisInfo(
+          effectiveAxes: axes,
+          axisBounds: const {
+            'power': DataRange(min: 100, max: 200),
+            'cadence': DataRange(min: 60, max: 100),
+          },
+          axisWidths: const {'power': 55.0, 'cadence': 65.0},
+          effectiveBindings: const [],
+          normalizationMode: NormalizationMode.perSeries,
+          series: const [],
+        );
+
+        final powerX = renderer.calculateYAxisCrosshairLabelX(
+          chartSize: chartSize,
+          plotArea: const Rect.fromLTWH(120, 10, 380, 340),
+          axis: axes[0],
+          textWidth: labelWidth,
+          labelPadding: labelPadding,
+          multiAxisInfo: info,
+        );
+        final cadenceX = renderer.calculateYAxisCrosshairLabelX(
+          chartSize: chartSize,
+          plotArea: const Rect.fromLTWH(120, 10, 380, 340),
+          axis: axes[1],
+          textWidth: labelWidth,
+          labelPadding: labelPadding,
+          multiAxisInfo: info,
+        );
+
+        expect(powerX, 17.0);
+        expect(cadenceX, 82.0);
+      });
+
+      test('uses each repeated right axis strip', () {
+        final axes = [
+          YAxisConfig.withId(id: 'heart-rate', position: YAxisPosition.right),
+          YAxisConfig.withId(id: 'cadence', position: YAxisPosition.right),
+        ];
+        final info = MultiAxisInfo(
+          effectiveAxes: axes,
+          axisBounds: const {
+            'heart-rate': DataRange(min: 100, max: 180),
+            'cadence': DataRange(min: 60, max: 100),
+          },
+          axisWidths: const {'heart-rate': 60.0, 'cadence': 70.0},
+          effectiveBindings: const [],
+          normalizationMode: NormalizationMode.perSeries,
+          series: const [],
+        );
+
+        final heartRateX = renderer.calculateYAxisCrosshairLabelX(
+          chartSize: chartSize,
+          plotArea: const Rect.fromLTWH(0, 10, 370, 340),
+          axis: axes[0],
+          textWidth: labelWidth,
+          labelPadding: labelPadding,
+          multiAxisInfo: info,
+        );
+        final cadenceX = renderer.calculateYAxisCrosshairLabelX(
+          chartSize: chartSize,
+          plotArea: const Rect.fromLTWH(0, 10, 370, 340),
+          axis: axes[1],
+          textWidth: labelWidth,
+          labelPadding: labelPadding,
+          multiAxisInfo: info,
+        );
+
+        expect(heartRateX, 448.0);
+        expect(cadenceX, 378.0);
+      });
+    });
+
     group('Paint Method', () {
       test('paint executes without errors for standard mode', () {
         final recorder = PictureRecorder();

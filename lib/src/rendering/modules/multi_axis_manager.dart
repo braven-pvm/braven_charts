@@ -682,12 +682,13 @@ class MultiAxisManager {
     return bounds;
   }
 
-  /// Computes Y-bounds for each series by series ID.
+  /// Computes rendered Y-axis bounds for each series by series ID.
   ///
-  /// This is used for threshold annotations with perSeries normalization mode.
-  /// Unlike [computeAxisBounds] which is keyed by axis ID, this method returns
-  /// bounds keyed by the series ID, allowing threshold annotations to reference
-  /// the correct data range using `seriesId` property.
+  /// This is used for annotations with per-series normalization. Unlike
+  /// [computeAxisBounds], which is keyed by axis ID, this method resolves each
+  /// series through its effective axis binding and returns the same rendered
+  /// bounds keyed by series ID. This keeps annotations aligned with series and
+  /// axis rendering, including explicit axis limits and shared axes.
   ///
   /// **Parameters**:
   /// - [transform]: Current chart transform (may be zoomed/panned)
@@ -701,63 +702,17 @@ class MultiAxisManager {
     ChartTransform? originalTransform,
     bool forPainting = false,
   }) {
+    final axisBounds = computeAxisBounds(
+      transform: transform,
+      originalTransform: originalTransform,
+      forPainting: forPainting,
+    );
     final bounds = <String, DataRange>{};
 
-    if (_series.isEmpty) return bounds;
-
-    // Use local variables for null-safety promotion
-    final t = transform;
-    final ot = originalTransform;
-    final effectiveMode = effectiveNormalizationMode;
-
-    // Check if multi-axis config is active (perSeries normalization in effect)
-    final hasMultiAxisConfig = _series.any(
-      (s) =>
-          s.yAxisConfig != null || (s.yAxisId != null && s.yAxisId!.isNotEmpty),
-    );
-
-    // Determine if we should apply viewport transformation
-    final usePaintingBounds =
-        forPainting &&
-        effectiveMode == NormalizationMode.perSeries &&
-        hasMultiAxisConfig &&
-        t != null &&
-        ot != null &&
-        (t.dataYMin != ot.dataYMin || t.dataYMax != ot.dataYMax);
-
-    for (final series in _series) {
-      // Compute bounds from series data points
-      double? minY;
-      double? maxY;
-
-      for (final point in series.points) {
-        if (minY == null || point.y < minY) minY = point.y;
-        if (maxY == null || point.y > maxY) maxY = point.y;
-      }
-
-      // Use computed bounds, or fallback to 0-100 if no data
-      final fullMin = minY ?? 0.0;
-      final fullMax = maxY ?? 100.0;
-
-      // Add 5% padding buffer to prevent data points from being cut off at edges
-      // This matches the padding used in DataConverter.computeBounds()
-      final range = fullMax - fullMin;
-      final paddingAmount = range * 0.05;
-      final paddedMin = fullMin - paddingAmount;
-      final paddedMax = fullMax + paddingAmount;
-
-      if (usePaintingBounds) {
-        // Transform computed bounds based on viewport (zoom/pan)
-        final originalRange = ot.dataYMax - ot.dataYMin;
-        final viewportRatioMin = (t.dataYMin - ot.dataYMin) / originalRange;
-        final viewportRatioMax = (t.dataYMax - ot.dataYMin) / originalRange;
-        final paddedRange = paddedMax - paddedMin;
-        bounds[series.id] = DataRange(
-          min: paddedMin + (viewportRatioMin * paddedRange),
-          max: paddedMin + (viewportRatioMax * paddedRange),
-        );
-      } else {
-        bounds[series.id] = DataRange(min: paddedMin, max: paddedMax);
+    for (final binding in getEffectiveBindings()) {
+      final bound = axisBounds[binding.yAxisId];
+      if (bound != null) {
+        bounds[binding.seriesId] = bound;
       }
     }
 

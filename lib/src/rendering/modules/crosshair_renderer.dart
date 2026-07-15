@@ -11,6 +11,7 @@ import '../../elements/annotation_elements.dart';
 import '../../elements/series_element.dart';
 import '../../formatting/multi_axis_value_formatter.dart';
 import '../../interaction/core/crosshair_tracker.dart';
+import '../../layout/axis_layout_manager.dart';
 import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
@@ -120,6 +121,40 @@ class MultiAxisInfo {
 /// ```
 class CrosshairRenderer {
   const CrosshairRenderer();
+
+  /// Calculates the horizontal text origin for a Y-axis crosshair label.
+  ///
+  /// Over-axis labels use the same per-axis rectangle as [MultiAxisPainter],
+  /// keeping multiple axes on the same side in their own reserved strips.
+  double calculateYAxisCrosshairLabelX({
+    required Size chartSize,
+    required Rect plotArea,
+    required YAxisConfig axis,
+    required double textWidth,
+    required double labelPadding,
+    required MultiAxisInfo multiAxisInfo,
+  }) {
+    final isLeftAxis =
+        axis.position == YAxisPosition.left ||
+        axis.position == YAxisPosition.leftOuter;
+
+    if (axis.crosshairLabelPosition == CrosshairLabelPosition.insidePlot) {
+      return isLeftAxis
+          ? plotArea.left + labelPadding
+          : plotArea.right - textWidth - labelPadding;
+    }
+
+    final axisRect = const AxisLayoutManager().getAxisRect(
+      chartArea: Offset.zero & chartSize,
+      axis: axis,
+      axisWidths: multiAxisInfo.axisWidths,
+      allAxes: multiAxisInfo.effectiveAxes,
+    );
+
+    return isLeftAxis
+        ? axisRect.right - textWidth - labelPadding * 2
+        : axisRect.left + labelPadding * 2;
+  }
 
   /// Paints the crosshair overlay.
   ///
@@ -269,6 +304,7 @@ class CrosshairRenderer {
     // Draw coordinate labels
     _paintCrosshairLabels(
       canvas: canvas,
+      size: size,
       cursorPosition: cursorPosition,
       plotArea: plotArea,
       transform: transform,
@@ -457,6 +493,7 @@ class CrosshairRenderer {
               (plotArea.bottom - cursorPosition.dy) / plotArea.height;
           _paintPerAxisCrosshairLabels(
             canvas: canvas,
+            size: size,
             cursorPosition: cursorPosition,
             plotArea: plotArea,
             theme: theme,
@@ -470,6 +507,7 @@ class CrosshairRenderer {
           final dataY = transform.plotToData(0, plotY).dy;
           _paintPerAxisCrosshairLabels(
             canvas: canvas,
+            size: size,
             cursorPosition: cursorPosition,
             plotArea: plotArea,
             theme: theme,
@@ -496,6 +534,7 @@ class CrosshairRenderer {
   /// Paints coordinate labels (X and Y values).
   void _paintCrosshairLabels({
     required Canvas canvas,
+    required Size size,
     required Offset cursorPosition,
     required Rect plotArea,
     required ChartTransform transform,
@@ -600,6 +639,7 @@ class CrosshairRenderer {
             (plotArea.bottom - cursorPosition.dy) / plotArea.height;
         _paintPerAxisCrosshairLabels(
           canvas: canvas,
+          size: size,
           cursorPosition: cursorPosition,
           plotArea: plotArea,
           theme: theme,
@@ -611,6 +651,7 @@ class CrosshairRenderer {
         // For non-normalized, use dataY directly
         _paintPerAxisCrosshairLabels(
           canvas: canvas,
+          size: size,
           cursorPosition: cursorPosition,
           plotArea: plotArea,
           theme: theme,
@@ -631,6 +672,7 @@ class CrosshairRenderer {
   /// the data Y value and will be used directly.
   void _paintPerAxisCrosshairLabels({
     required Canvas canvas,
+    required Size size,
     required Offset cursorPosition,
     required Rect plotArea,
     required ChartTheme? theme,
@@ -676,35 +718,14 @@ class CrosshairRenderer {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Calculate label X position based on axis position and crosshairLabelPosition
-      final double labelX;
-      final isLeftAxis =
-          axis.position == YAxisPosition.left ||
-          axis.position == YAxisPosition.leftOuter;
-
-      if (axis.crosshairLabelPosition == CrosshairLabelPosition.insidePlot) {
-        // Position inside the plot area near the axis edge
-        if (isLeftAxis) {
-          labelX = plotArea.left + labelPadding;
-        } else {
-          labelX = plotArea.right - textPainter.width - labelPadding;
-        }
-      } else {
-        // Default overAxis behavior: position outside plot area in axis strip
-        if (isLeftAxis) {
-          final axisLineX = axis.position == YAxisPosition.left
-              ? plotArea.left
-              : plotArea.left -
-                    multiAxisInfo.getPositionWidth(YAxisPosition.left);
-          labelX = axisLineX - textPainter.width - labelPadding * 2;
-        } else {
-          final axisLineX = axis.position == YAxisPosition.right
-              ? plotArea.right
-              : plotArea.right +
-                    multiAxisInfo.getPositionWidth(YAxisPosition.right);
-          labelX = axisLineX + labelPadding * 2;
-        }
-      }
+      final labelX = calculateYAxisCrosshairLabelX(
+        chartSize: size,
+        plotArea: plotArea,
+        axis: axis,
+        textWidth: textPainter.width,
+        labelPadding: labelPadding,
+        multiAxisInfo: multiAxisInfo,
+      );
 
       final labelY = (cursorPosition.dy - textPainter.height / 2).clamp(
         plotArea.top + labelPadding,

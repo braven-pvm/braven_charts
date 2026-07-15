@@ -222,10 +222,9 @@ class BaselineAreaDemoPage extends StatelessWidget {
                 const _SectionLabel(
                   title: 'Monotone interpolation',
                   description:
-                      'Smooth curves with baseline fill. The crossing is '
-                      'detected via linear interpolation between data points — '
-                      'works well for smooth data where the curve closely '
-                      'tracks the underlying points.',
+                      'The fill and stroke share the same monotone curve. '
+                      'Baseline clipping keeps their boundaries aligned at '
+                      'every crossing.',
                 ),
                 const SizedBox(height: 8),
                 _ChartCard(
