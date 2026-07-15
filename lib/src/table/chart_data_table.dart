@@ -52,7 +52,8 @@ class ChartDataTable extends StatefulWidget {
   /// Per-table visual overrides.
   ///
   /// When omitted, the widget uses the nearest [ChartDataTableTheme] extension
-  /// and then derives any unspecified colors and text styles from [ThemeData].
+  /// and then derives any unspecified colors and text styles from the ambient
+  /// Flutter theme.
   final ChartDataTableTheme? theme;
 
   @override

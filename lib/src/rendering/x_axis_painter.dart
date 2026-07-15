@@ -216,8 +216,8 @@ class XAxisPainter {
   ///
   /// Returns a list of tick values within the bounds.
   ///
-  /// If [config.min] or [config.max] are set, they override the bounds.
-  /// If [config.tickCount] is set, it overrides maxTicks.
+  /// If `config.min` or `config.max` are set, they override the bounds.
+  /// If `config.tickCount` is set, it overrides maxTicks.
   List<double> generateTicks(DataRange bounds, {int? maxTicks}) {
     // Use config.tickCount if provided, otherwise use maxTicks parameter
     maxTicks = config.tickCount ?? maxTicks ?? 10;
@@ -317,7 +317,7 @@ class XAxisPainter {
 
   /// Resolves the color to use for the axis.
   ///
-  /// Returns [config.color] if provided, otherwise returns a default axis color.
+  /// Returns `config.color` if provided, otherwise returns a default axis color.
   Color resolveAxisColor() {
     // Priority 1: Explicit config color
     if (config.color != null) {

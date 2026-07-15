@@ -11,7 +11,7 @@ import '../models/chart_annotation.dart';
 /// - Add, update, delete, and clear annotations
 /// - Batch operations for multiple annotations
 /// - Selection management
-/// - Reactive updates via [ChangeNotifier]
+/// - Reactive updates via `ChangeNotifier`
 /// - Type-safe queries
 ///
 /// Example usage:
