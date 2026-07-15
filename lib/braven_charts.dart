@@ -35,6 +35,7 @@ export 'src/axis/series_axis_resolver.dart';
 export 'src/artifacts/chart_artifact_diagnostics.dart';
 export 'src/artifacts/chart_artifact_canonicalizer.dart';
 export 'src/artifacts/chart_artifact_json_codec.dart';
+export 'src/artifacts/chart_artifact_migrations.dart';
 export 'src/artifacts/chart_artifact.dart';
 export 'src/artifacts/chart_artifact_extractor.dart'
     show ChartArtifactExtractOptions;

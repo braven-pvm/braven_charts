@@ -45,6 +45,10 @@ void main() {
   });
 
   test('schema-v1 artifact surface is available from the public barrel', () {
+    expect(
+      ChartArtifactMigrationRegistry(const []),
+      isA<ChartArtifactMigrationRegistry>(),
+    );
     final artifact = ChartArtifact(
       artifactId: 'public-api',
       renderer: const ChartRendererInfo(

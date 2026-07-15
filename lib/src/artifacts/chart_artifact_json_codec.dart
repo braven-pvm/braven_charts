@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'chart_artifact_diagnostics.dart';
 import 'chart_artifact.dart';
+import 'chart_artifact_migrations.dart';
 import 'json_value.dart';
 
 @immutable
@@ -84,6 +85,7 @@ abstract final class ChartArtifactJsonCodec {
     ChartArtifactValidationLimits limits =
         const ChartArtifactValidationLimits(),
     Set<String> supportedCapabilities = const {},
+    Iterable<ChartArtifactMigration> migrations = const [],
   }) {
     if (encoded.length > limits.maxEncodedBytes) {
       return ChartArtifactFailure(
@@ -122,12 +124,12 @@ abstract final class ChartArtifactJsonCodec {
 
     try {
       _validateStructure(decoded, limits);
-      final root = _stringMap(decoded);
+      var root = _stringMap(decoded);
       final version = root['schemaVersion'];
       if (version is! int) {
         throw const FormatException('schemaVersion must be an integer');
       }
-      if (version != ChartArtifact.currentSchemaVersion) {
+      if (version > ChartArtifact.currentSchemaVersion) {
         return ChartArtifactFailure(
           error: ChartArtifactError(
             code: ChartArtifactDiagnosticCodes.unsupportedSchemaVersion,
@@ -137,6 +139,27 @@ abstract final class ChartArtifactJsonCodec {
             path: r'$.schemaVersion',
           ),
         );
+      }
+
+      var migratedSchemaVersion = version;
+      var migrationsApplied = const <String>[];
+      if (version < ChartArtifact.currentSchemaVersion) {
+        final migrated = ChartArtifactMigrationRegistry(migrations).migrate(
+          root,
+          targetSchemaVersion: ChartArtifact.currentSchemaVersion,
+        );
+        if (migrated case ChartArtifactFailure<ChartArtifactMigrationRun>()) {
+          return ChartArtifactFailure(
+            error: migrated.error,
+            warnings: migrated.warnings,
+          );
+        }
+        final run =
+            (migrated as ChartArtifactSuccess<ChartArtifactMigrationRun>).value;
+        root = run.artifactJson;
+        migratedSchemaVersion = run.migratedSchemaVersion;
+        migrationsApplied = run.migrationsApplied;
+        _validateStructure(root, limits);
       }
 
       _validateRawDocumentCounts(root, limits);
@@ -174,7 +197,8 @@ abstract final class ChartArtifactJsonCodec {
         value: ChartArtifactDecodeResult(
           artifact: artifact,
           sourceSchemaVersion: version,
-          migratedSchemaVersion: version,
+          migratedSchemaVersion: migratedSchemaVersion,
+          migrationsApplied: migrationsApplied,
         ),
       );
     } on _LimitException catch (error) {

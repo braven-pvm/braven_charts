@@ -256,6 +256,7 @@ abstract final class ChartDocumentHydrator {
   /// Validates, decodes, migrates, and hydrates an artifact JSON envelope.
   static ChartArtifactResult<HydratedChartConfiguration> hydrateJson(
     String encoded, {
+    Iterable<ChartArtifactMigration> migrations = const [],
     ChartArtifactValidationLimits limits =
         const ChartArtifactValidationLimits(),
     ChartHydrationOptions options = const ChartHydrationOptions(),
@@ -264,6 +265,7 @@ abstract final class ChartDocumentHydrator {
     final decoded = ChartArtifactJsonCodec.decode(
       encoded,
       limits: limits,
+      migrations: migrations,
       supportedCapabilities: {
         ..._builtInCapabilities,
         ...runtimeBindings.extensions.supportedCapabilities,
@@ -288,6 +290,7 @@ abstract final class ChartDocumentHydrator {
   hydrateJsonWithDataResolver(
     String encoded, {
     required ChartDataResolver dataResolver,
+    Iterable<ChartArtifactMigration> migrations = const [],
     ChartArtifactValidationLimits limits =
         const ChartArtifactValidationLimits(),
     ChartHydrationOptions options = const ChartHydrationOptions(),
@@ -296,6 +299,7 @@ abstract final class ChartDocumentHydrator {
     final decoded = ChartArtifactJsonCodec.decode(
       encoded,
       limits: limits,
+      migrations: migrations,
       supportedCapabilities: {
         ..._builtInCapabilities,
         ...runtimeBindings.extensions.supportedCapabilities,

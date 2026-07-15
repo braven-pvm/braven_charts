@@ -1,0 +1,56 @@
+{
+  "artifactType": "braven.chartArtifact",
+  "schemaVersion": 0,
+  "renderer": {
+    "package": "braven_charts",
+    "version": "0.0.legacy"
+  },
+  "id": "artifact-fixture-legacy",
+  "createdAt": "2026-07-14T08:30:00.000Z",
+  "document": {
+    "documentId": "document-fixture-legacy",
+    "version": 3,
+    "title": "Legacy fixture chart",
+    "series": [
+      {
+        "type": "line",
+        "id": "power",
+        "name": "Power",
+        "unit": "W",
+        "style": {
+          "isXOrdered": false,
+          "interpolation": "linear",
+          "strokeWidth": 2.0,
+          "tension": 0.25,
+          "showDataPointMarkers": false,
+          "dataPointMarkerRadius": 3.0,
+          "dataPointMarkerStyle": "filled",
+          "dataPointMarkerBackground": 4294967295,
+          "lineGlow": 0.0
+        },
+        "data": {
+          "storage": "inlinePoints",
+          "points": [
+            { "x": 0.0, "y": 210.5 },
+            { "x": 1.0, "y": 225.0 }
+          ]
+        }
+      }
+    ],
+    "xAxis": {
+      "id": "time",
+      "position": "bottom",
+      "label": "Elapsed time",
+      "unit": "s"
+    },
+    "axes": [],
+    "theme": {
+      "captureMode": "referenceAndResolved",
+      "reference": "braven.light",
+      "resolved": {}
+    },
+    "interaction": {
+      "configuration": {}
+    }
+  }
+}

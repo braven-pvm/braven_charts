@@ -5,6 +5,8 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const invalidJson = 'invalid_json';
   static const invalidArtifact = 'invalid_artifact';
   static const unsupportedSchemaVersion = 'unsupported_schema_version';
+  static const invalidMigrationRegistry = 'invalid_migration_registry';
+  static const artifactMigrationFailed = 'artifact_migration_failed';
   static const missingRequiredCapability = 'missing_required_capability';
   static const validationLimitExceeded = 'validation_limit_exceeded';
   static const metadataValueNotJsonSafe = 'metadata_value_not_json_safe';
