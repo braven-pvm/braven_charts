@@ -11,6 +11,7 @@ import 'pages/artifact_binary_payload_lab_page.dart';
 import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
 import 'pages/artifact_export_lab_page.dart';
+import 'pages/artifact_formatter_binding_lab_page.dart';
 import 'pages/artifact_hydration_lab_page.dart';
 import 'pages/artifact_identity_lab_page.dart';
 import 'pages/artifact_migration_lab_page.dart';
@@ -286,6 +287,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.save_outlined,
       selectedIcon: Icons.save,
       page: ArtifactSaveRestoreLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Formatter Binding Lab',
+      icon: Icons.code_outlined,
+      selectedIcon: Icons.code,
+      page: ArtifactFormatterBindingLabPage(),
       badge: 'NEW',
     ),
   ];

@@ -270,4 +270,5 @@ query parameter:
 - `resolver-lab` and `binary-payload-lab`: external blob validation;
 - `migration-lab`: explicit trusted migration path;
 - `identity-lab`: document/view/payload hashes and deduplication;
-- `save-restore-lab`: canonical persistence and comparison gallery.
+- `save-restore-lab`: canonical persistence and comparison gallery;
+- `formatter-binding-lab`: safe formatter fallback and explicit host rebinding.
