@@ -1,23 +1,15 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 
-import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
-// The focused showcase uses a small subset of the legacy diagnostic cards
-// below; they remain available as validation fixtures for future lab surfaces.
-// ignore_for_file: unused_element, unused_element_parameter
+enum _GeneratedChartKind { line, area, bar, scatter, mixed }
 
-enum _ArtifactFocus { surfaces, transport, preview }
+enum _ArtifactInspectorMode { data, json }
 
-/// The single product-facing overview for the complete chart-artifact flow.
-///
-/// The smaller artifact lab pages remain intentionally focused validation
-/// fixtures. This page composes their user-visible capabilities into one
-/// end-to-end story: capture, inspect, preview, tabulate, persist, restore,
-/// and reason about payload compatibility.
 class ArtifactShowcasePage extends StatefulWidget {
   const ArtifactShowcasePage({super.key});
 
@@ -26,51 +18,40 @@ class ArtifactShowcasePage extends StatefulWidget {
 }
 
 class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
+  static const _palette = <Color>[
+    Color(0xFF2563EB),
+    Color(0xFFDC2626),
+    Color(0xFF059669),
+    Color(0xFFD97706),
+    Color(0xFF7C3AED),
+  ];
+
+  final _random = math.Random(7162026);
   final _sourceController = BravenChartController();
   final _restoredController = BravenChartController();
   final _tableController = ChartTableController();
+  final _inspectorKey = GlobalKey();
 
-  ChartArtifact? _artifact;
-  ChartTableModel? _table;
-  HydratedChartConfiguration? _hydrated;
-  String? _canonicalJson;
-  String? _savedJson;
-  String _status = 'Preparing an example chart…';
-  String? _error;
-  _ArtifactFocus _focus = _ArtifactFocus.surfaces;
+  late _GeneratedChartSpec _generated;
+  ChartTableModel? _liveTable;
+  final List<_CapturedArtifactEntry> _captures = [];
+  String? _selectedCaptureId;
+  String? _restoredCaptureId;
+  HydratedChartConfiguration? _restoredConfiguration;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
-  bool _includePreview = true;
+  _ArtifactInspectorMode _inspectorMode = _ArtifactInspectorMode.data;
+  int _generation = 0;
+  int _captureSequence = 0;
   bool _busy = false;
-  bool _heartRateVisible = true;
-
-  static final _formatterDescriptor = ChartFormatterDescriptor(
-    id: 'showcase.fixed',
-    arguments: {'decimals': JsonNumberValue(1)},
-    fallbackPattern: '{value}',
-  );
-
-  static final _formatterRegistry = ChartFormatterRegistry(
-    customFormatters: {
-      'showcase.fixed': (value, _) => value.toStringAsFixed(1),
-    },
-  );
-
-  ChartRuntimeBindings get _runtimeBindings => ChartRuntimeBindings(
-    formatters: _formatterRegistry,
-    callbacks: ChartCallbackRegistry(
-      callbacks: {
-        'showcase.seriesSelected': (String seriesId) {
-          if (!mounted) return;
-          setState(() => _status = 'Restored callback: selected $seriesId');
-        },
-      },
-    ),
-  );
+  String _status =
+      'Generate a chart, capture it, then restore or inspect the saved copy.';
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _capture());
+    _generated = _nextGeneratedChart();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLiveTable());
   }
 
   @override
@@ -81,29 +62,205 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     super.dispose();
   }
 
-  Future<void> _capture() async {
+  _GeneratedChartSpec _nextGeneratedChart() {
+    _generation += 1;
+    final previousKind = _generation == 1 ? null : _generated.kind;
+    var kind = _GeneratedChartKind
+        .values[_random.nextInt(_GeneratedChartKind.values.length)];
+    if (kind == previousKind) {
+      kind =
+          _GeneratedChartKind.values[(kind.index + 1 + _random.nextInt(4)) %
+              _GeneratedChartKind.values.length];
+    }
+
+    final pointCount = 12 + _random.nextInt(9);
+    final seriesCount = kind == _GeneratedChartKind.mixed
+        ? 3
+        : 1 + _random.nextInt(3);
+    final base = 45 + _random.nextDouble() * 90;
+    final amplitude = 12 + _random.nextDouble() * 28;
+    final slope = (_random.nextDouble() - 0.5) * 2.4;
+    final phase = _random.nextDouble() * math.pi;
+    final series = <ChartSeries>[];
+
+    for (var seriesIndex = 0; seriesIndex < seriesCount; seriesIndex++) {
+      final points = <ChartDataPoint>[];
+      for (var pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+        final wave = math.sin(pointIndex / (2.1 + seriesIndex * 0.55) + phase);
+        final noise = (_random.nextDouble() - 0.5) * amplitude * 0.42;
+        final y = math.max(
+          2,
+          base +
+              seriesIndex * 18 +
+              wave * amplitude +
+              slope * pointIndex +
+              noise,
+        );
+        points.add(
+          ChartDataPoint(
+            x: pointIndex.toDouble(),
+            y: y.toDouble(),
+            label: pointIndex % 5 == 0 ? 'Sample ${pointIndex + 1}' : null,
+          ),
+        );
+      }
+      final seriesKind = kind == _GeneratedChartKind.mixed
+          ? _GeneratedChartKind.values[seriesIndex % 4]
+          : kind;
+      series.add(
+        _seriesFor(
+          seriesKind,
+          id: 'generation-$_generation-series-$seriesIndex',
+          name: _seriesName(seriesIndex),
+          color: _palette[seriesIndex % _palette.length],
+          points: points,
+        ),
+      );
+    }
+
+    final titleStem = switch (kind) {
+      _GeneratedChartKind.line => 'Signal trend',
+      _GeneratedChartKind.area => 'Cumulative load',
+      _GeneratedChartKind.bar => 'Interval comparison',
+      _GeneratedChartKind.scatter => 'Sample distribution',
+      _GeneratedChartKind.mixed => 'Multi-series report',
+    };
+    return _GeneratedChartSpec(
+      generation: _generation,
+      kind: kind,
+      title: '$titleStem $_generation',
+      subtitle:
+          '${kind.label} · $seriesCount ${seriesCount == 1 ? 'series' : 'series'} · $pointCount samples',
+      series: series,
+      annotations: [
+        ThresholdAnnotation(
+          id: 'generated-threshold-$_generation',
+          axis: AnnotationAxis.y,
+          value: base + amplitude * 0.45,
+          label: 'Reference',
+        ),
+      ],
+    );
+  }
+
+  ChartSeries _seriesFor(
+    _GeneratedChartKind kind, {
+    required String id,
+    required String name,
+    required Color color,
+    required List<ChartDataPoint> points,
+  }) => switch (kind) {
+    _GeneratedChartKind.line => LineChartSeries(
+      id: id,
+      name: name,
+      unit: 'units',
+      color: color,
+      points: points,
+      interpolation: LineInterpolation.bezier,
+      showDataPointMarkers: true,
+      dataPointMarkerRadius: 2.5,
+    ),
+    _GeneratedChartKind.area => AreaChartSeries(
+      id: id,
+      name: name,
+      unit: 'units',
+      color: color,
+      points: points,
+      interpolation: LineInterpolation.bezier,
+      fillOpacity: 0.24,
+    ),
+    _GeneratedChartKind.bar => BarChartSeries(
+      id: id,
+      name: name,
+      unit: 'units',
+      color: color,
+      points: points,
+      barWidthPercent: 0.62,
+    ),
+    _GeneratedChartKind.scatter => ScatterChartSeries(
+      id: id,
+      name: name,
+      unit: 'units',
+      color: color,
+      points: points,
+      markerRadius: 4,
+    ),
+    _GeneratedChartKind.mixed => throw StateError(
+      'Mixed charts are assembled from concrete series kinds.',
+    ),
+  };
+
+  String _seriesName(int index) => switch (index) {
+    0 => 'Observed',
+    1 => 'Benchmark',
+    _ => 'Forecast',
+  };
+
+  void _generateRandomChart() {
     if (_busy) return;
+    setState(() {
+      _generated = _nextGeneratedChart();
+      _liveTable = null;
+      _restoredCaptureId = null;
+      _restoredConfiguration = null;
+      _displayMode = ChartDisplayMode.split;
+      _error = null;
+      _status =
+          'Generated ${_generated.kind.label.toLowerCase()} with fresh data. Capture it to keep a portable copy.';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLiveTable());
+  }
+
+  void _refreshLiveTable() {
+    if (!mounted || _restoredConfiguration != null) return;
+    final result = _sourceController.extractDocument(
+      ChartDocumentExtractOptions(
+        documentId: 'live-generation-${_generated.generation}',
+        dataStorage: ChartDataStorage.inlineColumns,
+      ),
+    );
+    if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
+      final table = ChartTableModel.fromDocument(
+        result.value.document,
+        viewState: result.value.viewState,
+      );
+      setState(() => _liveTable = table);
+    }
+  }
+
+  Future<void> _captureCurrentChart() async {
+    if (_busy) return;
+    if (_displayMode == ChartDisplayMode.data) {
+      setState(() => _displayMode = ChartDisplayMode.chart);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted) return;
     setState(() {
       _busy = true;
       _error = null;
-      _status = 'Saving the chart state and preparing its portable copy…';
+      _status = 'Capturing the chart document and creating its PNG preview…';
     });
 
-    final result = await _sourceController.extractArtifact(
+    final sequence = ++_captureSequence;
+    final sourceEntry = _restoredEntry;
+    final controller = _restoredConfiguration == null
+        ? _sourceController
+        : _restoredController;
+    final result = await controller.extractArtifact(
       ChartArtifactExtractOptions(
-        artifactId: 'artifact-showcase',
-        createdAt: DateTime.utc(2026, 7, 15, 12),
-        includePreview: _includePreview,
+        artifactId: 'showcase-capture-$sequence',
+        createdAt: DateTime.now().toUtc(),
+        includePreview: true,
         documentOptions: ChartDocumentExtractOptions(
-          documentId: 'artifact-showcase-document',
+          documentId: 'showcase-capture-$sequence-document',
           dataStorage: ChartDataStorage.inlineColumns,
-          xAxisFormatterDescriptor: _formatterDescriptor.toDocument(),
-          yAxisFormatterDescriptors: {'y': _formatterDescriptor.toDocument()},
         ),
         provenance: ChartArtifactProvenance(
-          values: JsonObjectValue(const {
-            'surface': JsonStringValue('artifact-showcase'),
-            'purpose': JsonStringValue('complete feature overview'),
+          values: JsonObjectValue({
+            'surface': const JsonStringValue('artifact-showcase'),
+            'source': JsonStringValue(
+              sourceEntry == null ? 'random-generator' : sourceEntry.artifactId,
+            ),
           }),
         ),
       ),
@@ -115,92 +272,144 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
         setState(() {
           _busy = false;
           _error = '${result.error.code}: ${result.error.message}';
-          _status = 'Capture failed';
+          _status = 'Capture failed. Keep the chart visible and try again.';
         });
       case ChartArtifactSuccess<ChartArtifact>():
         final artifact = result.value;
         final encoded = ChartArtifactJsonCodec.encode(artifact);
-        final json = switch (encoded) {
-          ChartArtifactSuccess<String>() => encoded.value,
-          ChartArtifactFailure<String>() => null,
-        };
+        if (encoded case ChartArtifactFailure<String>()) {
+          setState(() {
+            _busy = false;
+            _error = '${encoded.error.code}: ${encoded.error.message}';
+            _status = 'The chart was captured but could not be encoded.';
+          });
+          return;
+        }
+        final json = (encoded as ChartArtifactSuccess<String>).value;
+        final hydrated = ChartDocumentHydrator.hydrateJson(
+          json,
+          runtimeBindings: _runtimeBindings,
+        );
+        if (hydrated case ChartArtifactFailure<HydratedChartConfiguration>()) {
+          setState(() {
+            _busy = false;
+            _error = '${hydrated.error.code}: ${hydrated.error.message}';
+            _status = 'The chart was captured but could not be restored.';
+          });
+          return;
+        }
         final table = ChartTableModel.fromDocument(
           artifact.document,
           viewState: artifact.viewState,
-          options: ChartTableOptions(formatters: _formatterRegistry),
         );
-        final hydrated = ChartDocumentHydrator.hydrateArtifact(
-          artifact,
-          runtimeBindings: _runtimeBindings,
+        final entry = _CapturedArtifactEntry(
+          sequence: sequence,
+          artifact: artifact,
+          json: json,
+          table: table,
+          hydrated:
+              (hydrated as ChartArtifactSuccess<HydratedChartConfiguration>)
+                  .value,
         );
-        final hydration = switch (hydrated) {
-          ChartArtifactSuccess<HydratedChartConfiguration>() => hydrated.value,
-          ChartArtifactFailure<HydratedChartConfiguration>() => null,
-        };
-        String? hydrationError;
-        if (hydrated case ChartArtifactFailure<HydratedChartConfiguration>()) {
-          hydrationError = '${hydrated.error.code}: ${hydrated.error.message}';
-        }
-
         setState(() {
           _busy = false;
-          _artifact = artifact;
-          _canonicalJson = json;
-          _savedJson = null;
-          _table = table;
-          _hydrated = hydration;
-          _status = hydration == null
-              ? 'Chart captured, but the restored copy needs attention.'
-              : 'Chart captured. Try the chart, data table, and restored copy below.';
-          _error = hydrationError;
+          _captures.insert(0, entry);
+          _selectedCaptureId = entry.artifactId;
+          _inspectorMode = _ArtifactInspectorMode.data;
+          _status =
+              'Captured “${entry.title}”. It is now stored in the artifact library with its data and preview.';
         });
     }
   }
 
-  void _restoreCopy() {
-    final json = _savedJson;
-    if (json == null) {
-      setState(() {
-        _status = 'Save the portable document first, then restore it here.';
-      });
-      return;
-    }
-    final restored = ChartDocumentHydrator.hydrateJson(
-      json,
-      runtimeBindings: _runtimeBindings,
-    );
-    if (restored case ChartArtifactFailure<HydratedChartConfiguration>()) {
-      setState(() {
-        _error = '${restored.error.code}: ${restored.error.message}';
-        _status = 'The chart could not be restored from this document.';
-      });
-      return;
-    }
-    final hydrated =
-        (restored as ChartArtifactSuccess<HydratedChartConfiguration>).value;
-    setState(() {
-      _hydrated = hydrated;
-      _error = null;
-      _status = 'Restored a fresh chart copy from the portable document.';
-    });
-  }
+  ChartRuntimeBindings get _runtimeBindings => ChartRuntimeBindings(
+    callbacks: ChartCallbackRegistry(
+      callbacks: {
+        'showcase.seriesSelected': (String seriesId) {
+          if (!mounted) return;
+          setState(() => _status = 'Restored callback selected $seriesId.');
+        },
+      },
+    ),
+  );
 
-  void _saveDocument() {
-    final json = _canonicalJson;
-    if (json == null) return;
+  void _selectCapture(
+    _CapturedArtifactEntry entry, {
+    _ArtifactInspectorMode? inspectorMode,
+  }) {
     setState(() {
-      _savedJson = json;
+      _selectedCaptureId = entry.artifactId;
+      if (inspectorMode != null) _inspectorMode = inspectorMode;
       _status =
-          'Portable chart saved. This example can now restore it independently.';
+          'Selected capture ${entry.sequence}. Inspect its data or restore it into the main chart.';
       _error = null;
     });
   }
 
-  void _toggleHeartRate() {
-    setState(() => _heartRateVisible = !_heartRateVisible);
-    _sourceController.setSeriesVisible('heart-rate', _heartRateVisible);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _capture());
+  void _restoreSelectedCapture() {
+    final entry = _selectedEntry;
+    if (entry == null) {
+      setState(() => _status = 'Select a captured chart before restoring.');
+      return;
+    }
+    setState(() {
+      _restoredCaptureId = entry.artifactId;
+      _restoredConfiguration = entry.hydrated;
+      _displayMode = ChartDisplayMode.split;
+      _status =
+          'Restored capture ${entry.sequence}. The main surface now comes from the saved JSON document.';
+      _error = null;
+    });
   }
+
+  void _showSelectedData() {
+    if (_selectedEntry == null) {
+      setState(() => _status = 'Select a captured chart before inspecting it.');
+      return;
+    }
+    setState(() {
+      _inspectorMode = _ArtifactInspectorMode.data;
+      _status = 'Showing the exact data stored in the selected chart artifact.';
+      _error = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final inspectorContext = _inspectorKey.currentContext;
+      if (inspectorContext == null) return;
+      Scrollable.ensureVisible(
+        inspectorContext,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        alignment: 0.05,
+      );
+    });
+  }
+
+  void _returnToGenerator() {
+    setState(() {
+      _restoredCaptureId = null;
+      _restoredConfiguration = null;
+      _displayMode = ChartDisplayMode.split;
+      _status = 'Returned to the live random generator.';
+      _error = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLiveTable());
+  }
+
+  _CapturedArtifactEntry? get _selectedEntry {
+    for (final entry in _captures) {
+      if (entry.artifactId == _selectedCaptureId) return entry;
+    }
+    return null;
+  }
+
+  _CapturedArtifactEntry? get _restoredEntry {
+    for (final entry in _captures) {
+      if (entry.artifactId == _restoredCaptureId) return entry;
+    }
+    return null;
+  }
+
+  ChartTableModel? get _activeTable => _restoredEntry?.table ?? _liveTable;
 
   @override
   Widget build(BuildContext context) {
@@ -208,453 +417,838 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
     return ChartPageLayout(
       title: 'Chart Artifacts',
       subtitle:
-          'Explore one chart as a live surface, a data table, a portable document, and an image preview',
-      actions: [
-        if (compactHeader)
-          IconButton(
-            tooltip: 'Capture example',
-            onPressed: _busy ? null : _capture,
-            icon: _busy
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.camera_alt_outlined),
-          )
-        else
-          FilledButton.icon(
-            onPressed: _busy ? null : _capture,
-            icon: _busy
-                ? const SizedBox.square(
-                    dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.camera_alt_outlined),
-            label: const Text('Capture example'),
-          ),
-      ],
-      optionsChildren: _buildOptionsChildren(),
-      bottomPanel: compactHeader
-          ? null
-          : _StatusBanner(status: _status, error: _error),
-      chart: _buildWorkspace(),
-    );
-  }
-
-  List<Widget> _buildOptionsChildren() => [
-    OptionSection(
-      title: 'Showcase focus',
-      icon: Icons.hub_outlined,
-      children: [
-        EnumOption<_ArtifactFocus>(
-          label: 'Feature',
-          value: _focus,
-          values: _ArtifactFocus.values,
-          labelBuilder: _focusLabel,
-          onChanged: (value) => setState(() => _focus = value),
-        ),
-      ],
-    ),
-    OptionSection(
-      title: 'Capture and transport',
-      icon: Icons.save_outlined,
-      children: [
-        BoolOption(
-          label: 'Create image preview',
-          subtitle: 'Attach a revision-bound PNG to the artifact',
-          value: _includePreview,
-          onChanged: (value) {
-            setState(() => _includePreview = value);
-            _capture();
-          },
-        ),
-        ActionButton(
-          label: 'Capture chart artifact',
-          icon: Icons.camera_alt_outlined,
-          isPrimary: true,
-          onPressed: _capture,
-        ),
-        if (_canonicalJson != null)
-          ActionButton(
-            label: 'Save portable document',
-            icon: Icons.save_outlined,
-            onPressed: _saveDocument,
-          ),
-        if (_savedJson != null)
-          ActionButton(
-            label: 'Restore saved copy',
-            icon: Icons.restart_alt_outlined,
-            onPressed: _restoreCopy,
-          ),
-      ],
-    ),
-    OptionSection(
-      title: 'How to explore',
-      icon: Icons.info_outline,
-      children: [InfoBox(message: _focusGuide())],
-    ),
-  ];
-
-  Widget _buildWorkspace() {
-    final compact = MediaQuery.sizeOf(context).width < 760;
-    final children = <Widget>[
-      Text(
-        'Choose a chart-artifact feature',
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 8),
-      const SizedBox(height: 168),
-      const SizedBox(height: 16),
-      _ArtifactGuide(focus: _focus),
-      const SizedBox(height: 16),
-    ];
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ...children,
-          SizedBox(
-            height: compact ? 520 : 620,
-            child: _buildFocusStage(compact),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFocusRibbon() => LayoutBuilder(
-    builder: (context, constraints) {
-      const spacing = 12.0;
-      final width = math.max(220.0, (constraints.maxWidth - 24) / 3);
-      return SingleChildScrollView(
-        key: const ValueKey('artifact-focus-ribbon'),
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final focus in _ArtifactFocus.values) ...[
-              SizedBox(
-                width: width,
-                child: _ArtifactFocusCard(
-                  key: ValueKey('artifact-focus-${focus.name}'),
-                  focus: focus,
-                  selected: _focus == focus,
-                  onTap: () => setState(() => _focus = focus),
-                ),
+          'Generate charts, capture portable copies, restore them, and inspect the data they carry',
+      actions: compactHeader
+          ? [
+              IconButton(
+                tooltip: 'Generate random chart',
+                onPressed: _generateRandomChart,
+                icon: const Icon(Icons.casino_outlined),
               ),
-              if (focus != _ArtifactFocus.values.last)
-                const SizedBox(width: spacing),
+              IconButton.filled(
+                tooltip: 'Capture current chart',
+                onPressed: _captureCurrentChart,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.camera_alt_outlined),
+              ),
+            ]
+          : [
+              OutlinedButton.icon(
+                onPressed: _generateRandomChart,
+                icon: const Icon(Icons.casino_outlined),
+                label: const Text('Generate random chart'),
+              ),
+              FilledButton.icon(
+                onPressed: _captureCurrentChart,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.camera_alt_outlined),
+                label: Text(_busy ? 'Capturing…' : 'Capture current chart'),
+              ),
             ],
+      chart: _buildWorkbench(),
+    );
+  }
+
+  Widget _buildWorkbench() => LayoutBuilder(
+    builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 1040;
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _WorkflowStrip(
+              hasCaptures: _captures.isNotEmpty,
+              hasSelection: _selectedEntry != null,
+              hasRestored: _restoredEntry != null,
+            ),
+            const SizedBox(height: 16),
+            _StatusBanner(status: _status, error: _error),
+            const SizedBox(height: 16),
+            if (wide)
+              SizedBox(
+                height: 560,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _buildActiveChartPanel()),
+                    const SizedBox(width: 16),
+                    SizedBox(width: 360, child: _buildArtifactLibrary()),
+                  ],
+                ),
+              )
+            else ...[
+              SizedBox(height: 540, child: _buildActiveChartPanel()),
+              const SizedBox(height: 16),
+              SizedBox(height: 440, child: _buildArtifactLibrary()),
+            ],
+            if (_selectedEntry != null) ...[
+              const SizedBox(height: 24),
+              SizedBox(height: 440, child: _buildArtifactInspector()),
+            ],
+            const SizedBox(height: 16),
           ],
         ),
       );
     },
   );
 
-  Widget _buildFocusStage(bool compact) => switch (_focus) {
-    _ArtifactFocus.surfaces => _buildWorkflowStage(compact),
-    _ArtifactFocus.transport => _buildTransportStage(compact),
-    _ArtifactFocus.preview => _buildPreviewStage(compact),
-  };
-
-  String _focusLabel(_ArtifactFocus focus) => switch (focus) {
-    _ArtifactFocus.surfaces => 'Chart, data, or split view',
-    _ArtifactFocus.transport => 'Save and restore',
-    _ArtifactFocus.preview => 'Create image preview',
-  };
-
-  String _focusGuide() => switch (_focus) {
-    _ArtifactFocus.surfaces =>
-      'Use Chart, Data, or Split to compare the same captured document across product surfaces.',
-    _ArtifactFocus.transport =>
-      'Save the canonical JSON, then restore a new chart from that saved copy. The restored chart has independent runtime state.',
-    _ArtifactFocus.preview =>
-      'Capture a PNG preview that is hash-matched to the chart document. Use it for reports, messages, or quick visual confirmation.',
-  };
-
-  Widget _buildTransportStage(bool compact) {
-    final source = _sourceChart();
-    final restored = _hydrated == null
-        ? const _PlaceholderPanel(
-            label: 'Save the portable document to unlock the restored copy.',
-          )
-        : _hydrated!.build(bravenChartController: _restoredController);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
+  Widget _buildActiveChartPanel() {
+    final restored = _restoredEntry;
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FilledButton.tonalIcon(
-              onPressed: _canonicalJson == null ? null : _saveDocument,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save portable document'),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SurfaceBadge(
+                        restored: restored != null,
+                        label: restored == null
+                            ? 'LIVE GENERATOR'
+                            : 'RESTORED FROM CAPTURE ${restored.sequence}',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        restored?.title ?? _generated.title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        restored?.summary ?? _generated.subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (restored != null)
+                  TextButton.icon(
+                    onPressed: _returnToGenerator,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('Return to generator'),
+                  ),
+              ],
             ),
-            OutlinedButton.icon(
-              onPressed: _savedJson == null ? null : _restoreCopy,
-              icon: const Icon(Icons.restart_alt_outlined),
-              label: const Text('Restore saved copy'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _TransportSteps(saved: _savedJson != null, restored: _hydrated != null),
-        const SizedBox(height: 12),
-        Expanded(
-          child: compact
-              ? Column(
-                  children: [
-                    Expanded(
-                      child: _SurfaceCard(label: 'SOURCE CHART', child: source),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: _savedJson == null
-                            ? 'RESTORED COPY · WAITING'
-                            : 'RESTORED COPY',
-                        child: restored,
-                      ),
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: _SurfaceCard(label: 'SOURCE CHART', child: source),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: _savedJson == null
-                            ? 'RESTORED COPY · WAITING'
-                            : 'RESTORED COPY',
-                        child: restored,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreviewStage(bool compact) {
-    final preview = _artifact?.preview;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FilledButton.tonalIcon(
-          onPressed: _busy ? null : _capture,
-          icon: const Icon(Icons.image_outlined),
-          label: const Text('Create image preview'),
-        ),
-        const SizedBox(height: 12),
-        _PreviewSteps(hasPreview: preview != null),
-        const SizedBox(height: 12),
-        Expanded(
-          child: compact
-              ? Column(
-                  children: [
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: 'SOURCE CHART',
-                        child: _sourceChart(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: preview == null
-                            ? 'IMAGE PREVIEW · WAITING'
-                            : 'IMAGE PREVIEW',
-                        child: preview == null
-                            ? const _PlaceholderPanel(
-                                label:
-                                    'Capture the artifact to create its PNG preview.',
-                              )
-                            : _PreviewStageImage(preview: preview),
-                      ),
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: 'SOURCE CHART',
-                        child: _sourceChart(),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _SurfaceCard(
-                        label: preview == null
-                            ? 'IMAGE PREVIEW · WAITING'
-                            : 'IMAGE PREVIEW',
-                        child: preview == null
-                            ? const _PlaceholderPanel(
-                                label:
-                                    'Capture the artifact to create its PNG preview.',
-                              )
-                            : _PreviewStageImage(preview: preview),
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWorkflowStage(bool compact) {
-    final table = _table;
-    final chart = _sourceChart();
-    final data = table == null
-        ? const _PlaceholderPanel(
-            label: 'Capture the chart to build its table.',
-          )
-        : ChartDataTable(model: table, controller: _tableController);
-    final mode = compact && _displayMode == ChartDisplayMode.split
-        ? ChartDisplayMode.chart
-        : _displayMode;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            SegmentedButton<ChartDisplayMode>(
-              segments: [
-                const ButtonSegment(
-                  value: ChartDisplayMode.chart,
-                  icon: Icon(Icons.show_chart),
-                  label: Text('Chart'),
-                ),
-                const ButtonSegment(
-                  value: ChartDisplayMode.data,
-                  icon: Icon(Icons.table_rows_outlined),
-                  label: Text('Data'),
-                ),
-                if (!compact)
-                  const ButtonSegment(
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<ChartDisplayMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ChartDisplayMode.chart,
+                    icon: Icon(Icons.show_chart),
+                    label: Text('Chart'),
+                  ),
+                  ButtonSegment(
+                    value: ChartDisplayMode.data,
+                    icon: Icon(Icons.table_rows_outlined),
+                    label: Text('Data'),
+                  ),
+                  ButtonSegment(
                     value: ChartDisplayMode.split,
                     icon: Icon(Icons.vertical_split_outlined),
                     label: Text('Split'),
                   ),
-              ],
-              selected: {mode},
-              onSelectionChanged: (selection) =>
-                  setState(() => _displayMode = selection.single),
-            ),
-            OutlinedButton.icon(
-              onPressed: _toggleHeartRate,
-              icon: Icon(
-                _heartRateVisible
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-              ),
-              label: Text(
-                _heartRateVisible ? 'Hide heart rate' : 'Show heart rate',
+                ],
+                selected: {_displayMode},
+                onSelectionChanged: (selection) {
+                  setState(() => _displayMode = selection.single);
+                },
               ),
             ),
+            const SizedBox(height: 12),
+            Expanded(child: _buildActiveSurface()),
           ],
         ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxHeight < 160) {
-                return const SizedBox.shrink();
-              }
-              final gap = mode == ChartDisplayMode.split ? 16.0 : 0.0;
-              final half = math.max(0.0, (constraints.maxWidth - gap) / 2);
-              return Stack(
-                children: [
-                  if (mode != ChartDisplayMode.data)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: mode == ChartDisplayMode.split
-                          ? half
-                          : constraints.maxWidth,
-                      child: _SurfaceCard(label: 'SOURCE CHART', child: chart),
-                    ),
-                  if (mode != ChartDisplayMode.chart)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: mode == ChartDisplayMode.split
-                          ? half
-                          : constraints.maxWidth,
-                      child: _SurfaceCard(
-                        label: 'NATIVE DATA TABLE',
-                        child: data,
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _sourceChart() => BravenChartPlus(
-    bravenChartController: _sourceController,
-    title: 'Training response',
-    subtitle: 'Effective data + durable view state',
-    annotations: [
-      ThresholdAnnotation(
-        id: 'power-target',
-        axis: AnnotationAxis.y,
-        value: 260,
-        label: 'Target',
-      ),
-    ],
-    series: [
-      LineChartSeries(
-        id: 'power',
-        name: 'Power',
-        unit: 'W',
-        color: const Color(0xFF2563EB),
-        points: _points(
-          (index) =>
-              (220 + math.sin(index / 2.4) * 32 + index * 2.5).toDouble(),
-        ),
-      ),
-      LineChartSeries(
-        id: 'heart-rate',
-        name: 'Heart rate',
-        unit: 'bpm',
-        color: const Color(0xFFDC2626),
-        points: _points(
-          (index) =>
-              (128 + math.sin(index / 3.5) * 12 + index * 1.2).toDouble(),
-        ),
-      ),
-    ],
+  Widget _buildActiveSurface() {
+    final chart = _restoredConfiguration == null
+        ? BravenChartPlus(
+            key: ValueKey('generated-chart-${_generated.generation}'),
+            bravenChartController: _sourceController,
+            title: _generated.title,
+            subtitle: _generated.subtitle,
+            annotations: _generated.annotations,
+            series: _generated.series,
+          )
+        : _restoredConfiguration!.build(
+            key: ValueKey('restored-chart-$_restoredCaptureId'),
+            bravenChartController: _restoredController,
+          );
+    final table = _activeTable;
+    final data = table == null
+        ? const _EmptyPanel(
+            icon: Icons.hourglass_top_outlined,
+            title: 'Preparing data table',
+            message: 'The exact-X table will appear after the chart is ready.',
+          )
+        : ChartDataTable(
+            key: ValueKey('active-table-${table.documentId}'),
+            model: table,
+            controller: _tableController,
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final canSplit = constraints.maxWidth >= 720;
+        final effectiveMode =
+            !canSplit && _displayMode == ChartDisplayMode.split
+            ? ChartDisplayMode.chart
+            : _displayMode;
+        if (effectiveMode == ChartDisplayMode.chart) {
+          return _SurfaceFrame(label: 'CHART', child: chart);
+        }
+        if (effectiveMode == ChartDisplayMode.data) {
+          return _SurfaceFrame(label: 'DATA TABLE', child: data);
+        }
+        return Row(
+          children: [
+            Expanded(
+              child: _SurfaceFrame(label: 'CHART', child: chart),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _SurfaceFrame(label: 'DATA TABLE', child: data),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildArtifactLibrary() => _ArtifactLibrary(
+    captures: _captures,
+    selectedId: _selectedCaptureId,
+    restoredId: _restoredCaptureId,
+    busy: _busy,
+    onSelect: _selectCapture,
+    onRestore: _restoreSelectedCapture,
+    onInspect: _showSelectedData,
+    onCapture: _captureCurrentChart,
   );
 
-  List<ChartDataPoint> _points(double Function(int) y) => [
-    for (var index = 0; index < 18; index++)
-      ChartDataPoint(
-        x: index.toDouble(),
-        y: y(index),
-        label: index % 6 == 0 ? 'Interval ${index ~/ 6 + 1}' : null,
+  Widget _buildArtifactInspector() {
+    final entry = _selectedEntry!;
+    return Card(
+      key: _inspectorKey,
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.manage_search_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Inspect capture ${entry.sequence}: ${entry.title}',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '${entry.summary} · ${entry.jsonBytesLabel}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SegmentedButton<_ArtifactInspectorMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _ArtifactInspectorMode.data,
+                      icon: Icon(Icons.table_rows_outlined),
+                      label: Text('Captured data'),
+                    ),
+                    ButtonSegment(
+                      value: _ArtifactInspectorMode.json,
+                      icon: Icon(Icons.data_object),
+                      label: Text('Raw JSON'),
+                    ),
+                  ],
+                  selected: {_inspectorMode},
+                  onSelectionChanged: (selection) {
+                    setState(() => _inspectorMode = selection.single);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _inspectorMode == _ArtifactInspectorMode.data
+                  ? ChartDataTable(
+                      key: ValueKey('captured-data-${entry.artifactId}'),
+                      model: entry.table,
+                    )
+                  : _RawJsonViewer(json: entry.prettyJson),
+            ),
+          ],
+        ),
       ),
-  ];
+    );
+  }
+}
+
+class _GeneratedChartSpec {
+  const _GeneratedChartSpec({
+    required this.generation,
+    required this.kind,
+    required this.title,
+    required this.subtitle,
+    required this.series,
+    required this.annotations,
+  });
+
+  final int generation;
+  final _GeneratedChartKind kind;
+  final String title;
+  final String subtitle;
+  final List<ChartSeries> series;
+  final List<ChartAnnotation> annotations;
+}
+
+class _CapturedArtifactEntry {
+  _CapturedArtifactEntry({
+    required this.sequence,
+    required this.artifact,
+    required this.json,
+    required this.table,
+    required this.hydrated,
+  }) : prettyJson = const JsonEncoder.withIndent(
+         '  ',
+       ).convert(jsonDecode(json));
+
+  final int sequence;
+  final ChartArtifact artifact;
+  final String json;
+  final String prettyJson;
+  final ChartTableModel table;
+  final HydratedChartConfiguration hydrated;
+
+  String get artifactId => artifact.artifactId;
+  String get title => artifact.document.title ?? 'Untitled chart';
+  String get typeLabel {
+    final types = artifact.document.series.map((series) => series.type).toSet();
+    return types.length == 1 ? types.single.toUpperCase() : 'MIXED';
+  }
+
+  String get summary =>
+      '$typeLabel · ${artifact.document.series.length} series · ${artifact.document.pointCount} points';
+  String get jsonBytesLabel => '${utf8.encode(json).length} JSON bytes';
+  String get capturedTime {
+    final local = artifact.createdAt.toLocal();
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
+  }
+}
+
+extension on _GeneratedChartKind {
+  String get label => switch (this) {
+    _GeneratedChartKind.line => 'Line chart',
+    _GeneratedChartKind.area => 'Area chart',
+    _GeneratedChartKind.bar => 'Bar chart',
+    _GeneratedChartKind.scatter => 'Scatter chart',
+    _GeneratedChartKind.mixed => 'Mixed chart',
+  };
+}
+
+class _WorkflowStrip extends StatelessWidget {
+  const _WorkflowStrip({
+    required this.hasCaptures,
+    required this.hasSelection,
+    required this.hasRestored,
+  });
+
+  final bool hasCaptures;
+  final bool hasSelection;
+  final bool hasRestored;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final steps = [
+        const _WorkflowStep(
+          number: 1,
+          title: 'Generate',
+          detail: 'Create a fresh chart and data set',
+          complete: true,
+        ),
+        _WorkflowStep(
+          number: 2,
+          title: 'Capture',
+          detail: 'Store JSON, data, state, and preview',
+          complete: hasCaptures,
+        ),
+        _WorkflowStep(
+          number: 3,
+          title: 'Restore or inspect',
+          detail: 'Select a saved copy and prove it travels',
+          complete: hasSelection || hasRestored,
+        ),
+      ];
+      if (constraints.maxWidth < 720) {
+        return Column(
+          children: [
+            for (final step in steps) ...[
+              step,
+              if (step != steps.last) const SizedBox(height: 8),
+            ],
+          ],
+        );
+      }
+      return Row(
+        children: [
+          for (final step in steps) ...[
+            Expanded(child: step),
+            if (step != steps.last) const SizedBox(width: 12),
+          ],
+        ],
+      );
+    },
+  );
+}
+
+class _WorkflowStep extends StatelessWidget {
+  const _WorkflowStep({
+    required this.number,
+    required this.title,
+    required this.detail,
+    required this.complete,
+  });
+
+  final int number;
+  final String title;
+  final String detail;
+  final bool complete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: complete
+            ? colors.primaryContainer.withValues(alpha: 0.45)
+            : colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: complete ? colors.primary : colors.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: complete
+                ? colors.primary
+                : colors.surfaceContainerHighest,
+            foregroundColor: complete
+                ? colors.onPrimary
+                : colors.onSurfaceVariant,
+            child: complete
+                ? const Icon(Icons.check, size: 18)
+                : Text('$number'),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$number. $title',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(detail, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtifactLibrary extends StatelessWidget {
+  const _ArtifactLibrary({
+    required this.captures,
+    required this.selectedId,
+    required this.restoredId,
+    required this.busy,
+    required this.onSelect,
+    required this.onRestore,
+    required this.onInspect,
+    required this.onCapture,
+  });
+
+  final List<_CapturedArtifactEntry> captures;
+  final String? selectedId;
+  final String? restoredId;
+  final bool busy;
+  final ValueChanged<_CapturedArtifactEntry> onSelect;
+  final VoidCallback onRestore;
+  final VoidCallback onInspect;
+  final VoidCallback onCapture;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = captures.any((entry) => entry.artifactId == selectedId);
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.collections_bookmark_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Captured charts',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '${captures.length} saved in this demo session',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                if (captures.isNotEmpty)
+                  Badge(label: Text('${captures.length}')),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: captures.isEmpty
+                ? _EmptyPanel(
+                    icon: Icons.add_photo_alternate_outlined,
+                    title: 'No captured charts yet',
+                    message:
+                        'Capture the current chart to add a portable copy with a thumbnail and raw data.',
+                    action: FilledButton.icon(
+                      onPressed: onCapture,
+                      icon: const Icon(Icons.camera_alt_outlined),
+                      label: const Text('Capture first chart'),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: captures.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final entry = captures[index];
+                      return _ArtifactLibraryCard(
+                        key: ValueKey('artifact-library-${entry.artifactId}'),
+                        entry: entry,
+                        selected: entry.artifactId == selectedId,
+                        restored: entry.artifactId == restoredId,
+                        onTap: () => onSelect(entry),
+                      );
+                    },
+                  ),
+          ),
+          if (captures.isNotEmpty) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: selected ? onInspect : null,
+                      icon: const Icon(Icons.table_rows_outlined),
+                      label: const Text('View data'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: selected ? onRestore : null,
+                      icon: const Icon(Icons.restore_outlined),
+                      label: const Text('Restore chart'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtifactLibraryCard extends StatelessWidget {
+  const _ArtifactLibraryCard({
+    super.key,
+    required this.entry,
+    required this.selected,
+    required this.restored,
+    required this.onTap,
+  });
+
+  final _CapturedArtifactEntry entry;
+  final bool selected;
+  final bool restored;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final bytes = entry.artifact.preview?.bytes;
+    return Material(
+      color: selected
+          ? colors.primaryContainer.withValues(alpha: 0.42)
+          : colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                key: ValueKey('artifact-thumbnail-${entry.sequence}'),
+                width: 96,
+                height: 68,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: bytes == null
+                    ? Icon(
+                        Icons.image_not_supported_outlined,
+                        color: colors.onSurfaceVariant,
+                      )
+                    : Image.memory(bytes, fit: BoxFit.cover),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        if (selected)
+                          Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: colors.primary,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      entry.summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _TinyLabel(
+                          icon: Icons.schedule,
+                          label: entry.capturedTime,
+                        ),
+                        if (restored)
+                          const _TinyLabel(
+                            icon: Icons.restore,
+                            label: 'Restored',
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TinyLabel extends StatelessWidget {
+  const _TinyLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+      ],
+    ),
+  );
+}
+
+class _SurfaceBadge extends StatelessWidget {
+  const _SurfaceBadge({required this.restored, required this.label});
+
+  final bool restored;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: restored ? colors.tertiaryContainer : colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: restored
+              ? colors.onTertiaryContainer
+              : colors.onSecondaryContainer,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+class _SurfaceFrame extends StatelessWidget {
+  const _SurfaceFrame({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: child,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RawJsonViewer extends StatelessWidget {
+  const _RawJsonViewer({required this.json});
+
+  final String json;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: SingleChildScrollView(
+      child: SelectableText(
+        json,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace', height: 1.45),
+      ),
+    ),
+  );
 }
 
 class _StatusBanner extends StatelessWidget {
   const _StatusBanner({required this.status, this.error});
+
   final String status;
   final String? error;
 
@@ -664,21 +1258,20 @@ class _StatusBanner extends StatelessWidget {
     final isError = error != null;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isError ? colors.errorContainer : colors.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            isError ? Icons.error_outline : Icons.check_circle_outline,
+            isError ? Icons.error_outline : Icons.info_outline,
             color: isError
                 ? colors.onErrorContainer
                 : colors.onPrimaryContainer,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               error ?? status,
@@ -695,956 +1288,53 @@ class _StatusBanner extends StatelessWidget {
   }
 }
 
-class _OverviewCards extends StatelessWidget {
-  const _OverviewCards({this.artifact, this.table, this.preview});
-  final ChartArtifact? artifact;
-  final ChartTableModel? table;
-  final ChartPreview? preview;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 12,
-    runSpacing: 12,
-    children: [
-      _MetricCard(
-        label: 'Schema',
-        value: artifact == null ? '—' : 'v${artifact!.schemaVersion}',
-        icon: Icons.schema_outlined,
-      ),
-      _MetricCard(
-        label: 'Series',
-        value: artifact == null ? '—' : '${artifact!.document.series.length}',
-        icon: Icons.stacked_line_chart,
-      ),
-      _MetricCard(
-        label: 'Table rows',
-        value: table == null ? '—' : '${table!.rowCount}',
-        icon: Icons.table_rows_outlined,
-      ),
-      _MetricCard(
-        label: 'Preview',
-        value: preview == null
-            ? 'Pending'
-            : '${preview!.widthPixels} × ${preview!.heightPixels}',
-        icon: Icons.image_outlined,
-      ),
-    ],
-  );
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
+class _EmptyPanel extends StatelessWidget {
+  const _EmptyPanel({
     required this.icon,
-  });
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 180,
-    child: Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({
-    required this.eyebrow,
     required this.title,
-    required this.description,
+    required this.message,
+    this.action,
   });
-  final String eyebrow;
+
+  final IconData icon;
   final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        eyebrow,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.1,
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        description,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    ],
-  );
-}
-
-class _SurfaceCard extends StatelessWidget {
-  const _SurfaceCard({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: child,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _PlaceholderPanel extends StatelessWidget {
-  const _PlaceholderPanel({required this.label});
-  final String label;
+  final String message;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Text(
-      label,
-      textAlign: TextAlign.center,
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    ),
-  );
-}
-
-class _JsonCard extends StatelessWidget {
-  const _JsonCard({
-    required this.json,
-    required this.roundTripPassed,
-    required this.onRoundTrip,
-  });
-  final String? json;
-  final bool roundTripPassed;
-  final VoidCallback onRoundTrip;
-
-  @override
-  Widget build(BuildContext context) => _InfoCard(
-    title: 'Schema + canonical JSON',
-    icon: Icons.data_object,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          json == null
-              ? 'Capture the chart to create a deterministic schema-v1 envelope.'
-              : '${json!.length} characters · artifactType braven.chartArtifact',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            FilledButton.tonalIcon(
-              onPressed: json == null ? null : onRoundTrip,
-              icon: const Icon(Icons.sync, size: 18),
-              label: const Text('Validate round trip'),
-            ),
-            const SizedBox(width: 12),
-            if (roundTripPassed)
-              const Chip(
-                avatar: Icon(Icons.check, size: 16),
-                label: Text('Validated'),
-              ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({this.preview});
-  final ChartPreview? preview;
-
-  @override
-  Widget build(BuildContext context) => _InfoCard(
-    title: 'Revision-bound preview',
-    icon: Icons.image_outlined,
-    child: preview?.bytes == null
-        ? const _PlaceholderPanel(label: 'PNG preview appears after capture.')
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                    preview!.bytes!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${preview!.mimeType} · ${preview!.widthPixels} × ${preview!.heightPixels} · hash matched',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-            ],
-          ),
-  );
-}
-
-class _PayloadCard extends StatelessWidget {
-  const _PayloadCard({this.pointBytes, this.columnBytes, this.binaryBytes});
-  final int? pointBytes;
-  final int? columnBytes;
-  final int? binaryBytes;
-
-  @override
-  Widget build(BuildContext context) => _InfoCard(
-    title: 'Payload strategies',
-    icon: Icons.view_column_outlined,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Lossless inline points, inline columns, host-resolved blobs, and compressed binary remain explicit storage choices.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 12),
-        _ValueLine(label: 'Inline points', value: _bytes(pointBytes)),
-        _ValueLine(label: 'Inline columns', value: _bytes(columnBytes)),
-        _ValueLine(label: 'Binary v1', value: _bytes(binaryBytes)),
-      ],
-    ),
-  );
-
-  String _bytes(int? value) => value == null ? 'Pending' : '$value bytes';
-}
-
-class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({this.artifact});
-  final ChartArtifact? artifact;
-
-  @override
-  Widget build(BuildContext context) {
-    final result = artifact == null
-        ? null
-        : ChartArtifactDeduplicator.group([artifact!, artifact!]);
-    return _InfoCard(
-      title: 'Identity + compatibility',
-      icon: Icons.fingerprint,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _ValueLine(
-            label: 'Document hash',
-            value: artifact == null
-                ? 'Pending'
-                : '${ChartArtifactCanonicalizer.documentHash(artifact!.document).substring(0, 16)}…',
-          ),
-          _ValueLine(
-            label: 'Duplicate groups',
-            value: result == null
-                ? 'Pending'
-                : '${result.groups.length} unique / ${result.duplicateCount} duplicate',
-          ),
-          const SizedBox(height: 8),
-          const Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              Chip(label: Text('Migrations')),
-              Chip(label: Text('Formatter bindings')),
-              Chip(label: Text('Validation')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
-  final String title;
-  final IconData icon;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
     child: Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(height: 280, child: child),
-        ],
-      ),
-    ),
-  );
-}
-
-class _ValueLine extends StatelessWidget {
-  const _ValueLine({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(
-      children: [
-        Expanded(child: Text(label)),
-        Flexible(
-          child: Text(
-            value,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _ArtifactGuide extends StatelessWidget {
-  const _ArtifactGuide({required this.focus});
-
-  final _ArtifactFocus focus;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final content = switch (focus) {
-      _ArtifactFocus.surfaces => (
-        Icons.view_quilt_outlined,
-        'Chart, data, or split view',
-        'The chart and the transposed data table are two views of the same captured document. Split keeps them side by side for comparison.',
-      ),
-      _ArtifactFocus.transport => (
-        Icons.swap_horiz_outlined,
-        'A chart that can travel',
-        'Save the canonical document, then restore a fresh chart from that saved copy. The restored runtime is independent of the source chart.',
-      ),
-      _ArtifactFocus.preview => (
-        Icons.image_outlined,
-        'An image you can send',
-        'Create a PNG preview at capture time. The preview is bound to the exact chart document revision it represents.',
-      ),
-    };
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(content.$1, color: colors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  content.$2,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(content.$3),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: colors.outlineVariant),
-            ),
-            child: Text(switch (focus) {
-              _ArtifactFocus.surfaces => 'Compare',
-              _ArtifactFocus.transport => 'Save → restore',
-              _ArtifactFocus.preview => 'Capture PNG',
-            }, style: Theme.of(context).textTheme.labelMedium),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ArtifactFocusCard extends StatelessWidget {
-  const _ArtifactFocusCard({
-    super.key,
-    required this.focus,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _ArtifactFocus focus;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final content = switch (focus) {
-      _ArtifactFocus.surfaces => (
-        Icons.view_quilt_outlined,
-        'Chart · data · split',
-        'Compare the live chart and its exact-X table.',
-      ),
-      _ArtifactFocus.transport => (
-        Icons.swap_horiz_outlined,
-        'Save + restore',
-        'Move the chart through a portable document.',
-      ),
-      _ArtifactFocus.preview => (
-        Icons.image_outlined,
-        'Image preview',
-        'Create a shareable PNG of the captured chart.',
-      ),
-    };
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: selected ? colors.primary : colors.outlineVariant,
-          width: selected ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      color: selected ? colors.primaryContainer.withValues(alpha: 0.45) : null,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(content.$1, color: colors.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      content.$2,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (selected) Icon(Icons.check_circle, color: colors.primary),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                content.$3,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const Spacer(),
-              _FocusVisual(focus: focus),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FocusVisual extends StatelessWidget {
-  const _FocusVisual({required this.focus});
-
-  final _ArtifactFocus focus;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      height: 48,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: switch (focus) {
-        _ArtifactFocus.surfaces => const FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _VisualPill(label: 'Chart', active: true),
-              SizedBox(width: 6),
-              _VisualPill(label: 'Data'),
-              SizedBox(width: 6),
-              _VisualPill(label: 'Split'),
-            ],
-          ),
-        ),
-        _ArtifactFocus.transport => Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.save_outlined, size: 20, color: colors.primary),
-            const SizedBox(width: 12),
-            Icon(Icons.arrow_forward, size: 18, color: colors.onSurfaceVariant),
-            const SizedBox(width: 12),
-            Icon(Icons.restart_alt_outlined, size: 20, color: colors.primary),
-          ],
-        ),
-        _ArtifactFocus.preview => Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.show_chart, size: 20, color: colors.primary),
-            const SizedBox(width: 12),
-            Icon(Icons.arrow_forward, size: 18, color: colors.onSurfaceVariant),
-            const SizedBox(width: 12),
-            Icon(Icons.image_outlined, size: 20, color: colors.primary),
-          ],
-        ),
-      },
-    );
-  }
-}
-
-class _VisualPill extends StatelessWidget {
-  const _VisualPill({required this.label, this.active = false});
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-    decoration: BoxDecoration(
-      color: active
-          ? Theme.of(context).colorScheme.primaryContainer
-          : Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text(label, style: Theme.of(context).textTheme.labelSmall),
-  );
-}
-
-class _TransportSteps extends StatelessWidget {
-  const _TransportSteps({required this.saved, required this.restored});
-
-  final bool saved;
-  final bool restored;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      const _ProgressChip(label: '1 Capture', active: true),
-      _ProgressChip(label: '2 Save JSON', active: saved),
-      _ProgressChip(label: '3 Restore copy', active: restored),
-    ],
-  );
-}
-
-class _PreviewSteps extends StatelessWidget {
-  const _PreviewSteps({required this.hasPreview});
-
-  final bool hasPreview;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      const _ProgressChip(label: '1 Capture chart', active: true),
-      _ProgressChip(label: '2 Create PNG', active: hasPreview),
-      _ProgressChip(label: '3 Share or embed', active: hasPreview),
-    ],
-  );
-}
-
-class _ProgressChip extends StatelessWidget {
-  const _ProgressChip({required this.label, required this.active});
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: active
-            ? colors.primaryContainer
-            : colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            active ? Icons.check_circle : Icons.radio_button_unchecked,
-            size: 16,
-            color: active ? colors.primary : colors.onSurfaceVariant,
+            icon,
+            size: 40,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 6),
-          Text(label),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
-    );
-  }
-}
-
-class _PreviewStageImage extends StatelessWidget {
-  const _PreviewStageImage({required this.preview});
-
-  final ChartPreview preview;
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = preview.bytes;
-    if (bytes == null) {
-      return const _PlaceholderPanel(label: 'Preview bytes are not inline.');
-    }
-    return Column(
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.memory(
-              bytes,
-              fit: BoxFit.contain,
-              width: double.infinity,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${preview.mimeType} · ${preview.widthPixels} × ${preview.heightPixels} · document hash matched',
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
-      ],
-    );
-  }
-}
-
-class _FeatureGuide extends StatelessWidget {
-  const _FeatureGuide();
-
-  static const _features = <(IconData, String, String)>[
-    (
-      Icons.camera_alt_outlined,
-      'Capture the effective chart',
-      'Keep the data, annotations, styles, visibility, and viewport users actually see.',
     ),
-    (
-      Icons.ios_share_outlined,
-      'Save and share safely',
-      'Use deterministic JSON when a chart needs to cross a screen, session, or service boundary.',
-    ),
-    (
-      Icons.table_rows_outlined,
-      'Show the data behind it',
-      'Project the same document into a compact, transposed table with exact X values.',
-    ),
-    (
-      Icons.image_outlined,
-      'Add a preview',
-      'Attach a revision-bound image for reports, messages, and quick visual confirmation.',
-    ),
-    (
-      Icons.storage_outlined,
-      'Scale for larger data',
-      'Choose inline columns, host-resolved data, or compressed binary payloads as needed.',
-    ),
-    (
-      Icons.restart_alt_outlined,
-      'Restore with confidence',
-      'Validate capabilities and hydrate a fresh runtime without coupling it to the source widget.',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 12,
-    runSpacing: 12,
-    children: [
-      for (final feature in _features)
-        SizedBox(
-          width: 320,
-          child: Card(
-            margin: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(
-                feature.$1,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              title: Text(feature.$2),
-              subtitle: Text(feature.$3),
-            ),
-          ),
-        ),
-    ],
   );
-}
-
-class _JourneySteps extends StatelessWidget {
-  const _JourneySteps();
-
-  static const _steps = <(IconData, String, String)>[
-    (
-      Icons.camera_alt_outlined,
-      'Capture what is visible',
-      'Effective data, styles, annotations, and view state travel together.',
-    ),
-    (
-      Icons.ios_share_outlined,
-      'Save or share it',
-      'Use canonical JSON, a preview image, or a compact data payload.',
-    ),
-    (
-      Icons.restart_alt_outlined,
-      'Restore it later',
-      'Hydrate a fresh chart without rebuilding the original widget by hand.',
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth < 720
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 24) / 3;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (var index = 0; index < _steps.length; index++)
-              SizedBox(
-                width: width,
-                child: _JourneyStep(
-                  number: index + 1,
-                  icon: _steps[index].$1,
-                  title: _steps[index].$2,
-                  description: _steps[index].$3,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _JourneyStep extends StatelessWidget {
-  const _JourneyStep({
-    required this.number,
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final int number;
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: colors.primaryContainer,
-                  foregroundColor: colors.onPrimaryContainer,
-                  child: Text('$number'),
-                ),
-                const SizedBox(width: 10),
-                Icon(icon, color: colors.primary),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CodeExampleCard extends StatelessWidget {
-  const _CodeExampleCard();
-
-  static const _code = '''final captured = await controller.extractArtifact(
-  const ChartArtifactExtractOptions(
-    artifactId: 'workout-2026-07-15',
-    includePreview: true,
-  ),
-);
-
-final json = ChartArtifactJsonCodec.encode(captured.value);
-final restored = ChartDocumentHydrator.hydrateJson(
-  json.value,
-  runtimeBindings: bindings,
-);''';
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'A small API surface for a durable chart',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Capture the effective state once, encode the document for storage or transport, then hydrate it where the user needs it.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SelectableText(
-                  _code,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    height: 1.45,
-                    color: colors.onSurface,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
