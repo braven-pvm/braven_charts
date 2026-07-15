@@ -1024,16 +1024,15 @@ class SeriesElement implements ChartElement {
 
   /// Paints an area series filled relative to a fixed [AreaChartSeries.baselineValue].
   ///
-  /// Walks consecutive point pairs in plot space. When a pair crosses the
-  /// baseline, the exact intersection is computed via linear interpolation and
-  /// the segment is closed at that point. Each resulting polygon is painted with
-  /// [AreaChartSeries.aboveBaselineFillColor] (region above the baseline) or
-  /// [AreaChartSeries.belowBaselineFillColor] (region below), falling back to
-  /// the series colour at [AreaChartSeries.fillOpacity] when the colour is null.
+  /// Builds one area path from the exact same interpolation geometry as the
+  /// stroke, then paints it through clips above and below the baseline. This
+  /// keeps curved fills aligned with their stroke without approximating curve
+  /// crossings or recalculating tangents for partial point lists.
   ///
-  /// The series stroke is drawn on top, identical to the single-colour path.
-  /// Crossing detection uses linear interpolation between consecutive data
-  /// points regardless of the chosen [LineInterpolation] mode.
+  /// [AreaChartSeries.aboveBaselineFillColor] and
+  /// [AreaChartSeries.belowBaselineFillColor] fall back to the series colour at
+  /// [AreaChartSeries.fillOpacity] when null. The series stroke is drawn on top,
+  /// identical to the single-colour path.
   void _paintAreaSeriesBaseline(
     Canvas canvas,
     AreaChartSeries series,
@@ -1042,78 +1041,62 @@ class SeriesElement implements ChartElement {
     double opacity,
     double strokeWidth,
   ) {
-    final baselineY =
-        _currentTransform.dataToPlot(0, series.baselineValue!).dy; // X is arbitrary; only .dy is used
+    final baselineY = _currentTransform
+        .dataToPlot(0, series.baselineValue!)
+        .dy; // X is arbitrary; only .dy is used
 
-    final aboveColor = series.aboveBaselineFillColor ??
+    final aboveColor =
+        series.aboveBaselineFillColor ??
         baseColor.withValues(alpha: series.fillOpacity);
-    final belowColor = series.belowBaselineFillColor ??
+    final belowColor =
+        series.belowBaselineFillColor ??
         baseColor.withValues(alpha: series.fillOpacity);
 
-    // Split points into contiguous above/below segments.
-    // A "segment" is a list of Offsets whose first and last points lie on
-    // the baseline (either as crossing intersections or original endpoints).
-    final segments = <({List<Offset> points, bool isAbove})>[];
-    var currentPoints = <Offset>[transformedPoints.first];
-    // dy < baselineY means above (smaller Y = higher on screen).
-    var currentAbove = transformedPoints.first.dy < baselineY;
+    final first = transformedPoints.first;
+    final last = transformedPoints.last;
+    final fillPath = Path()
+      ..fillType = PathFillType.evenOdd
+      ..moveTo(first.dx, baselineY)
+      ..lineTo(first.dx, first.dy);
+    InterpolationGeometry.addPathSegments<Offset>(
+      path: fillPath,
+      points: transformedPoints,
+      interpolation: series.interpolation,
+      getX: (point) => point.dx,
+      getY: (point) => point.dy,
+      tension: series.tension,
+    );
+    fillPath
+      ..lineTo(last.dx, baselineY)
+      ..close();
 
-    for (var i = 1; i < transformedPoints.length; i++) {
-      final p1 = transformedPoints[i - 1];
-      final p2 = transformedPoints[i];
-      final p2Above = p2.dy < baselineY;
+    final plotWidth = _currentTransform.plotWidth;
+    final plotHeight = _currentTransform.plotHeight;
+    final clippedBaselineY = baselineY.clamp(0.0, plotHeight).toDouble();
 
-      if (currentAbove != p2Above) {
-        // For stepped interpolation the vertical edge is always at p2.dx.
-        // For all other modes, find the crossing via linear interpolation.
-        final crossing = series.interpolation == LineInterpolation.stepped
-            ? Offset(p2.dx, baselineY)
-            : Offset(
-                p1.dx + (baselineY - p1.dy) / (p2.dy - p1.dy) * (p2.dx - p1.dx),
-                baselineY,
-              );
-        currentPoints.add(crossing);
-        segments.add((points: List.of(currentPoints), isAbove: currentAbove));
-        currentPoints = [crossing, p2];
-        currentAbove = p2Above;
-      } else {
-        currentPoints.add(p2);
-      }
-    }
-    // Flush final segment.
-    segments.add((points: List.of(currentPoints), isAbove: currentAbove));
-
-    // Paint each segment as a closed fill polygon.
-    for (final seg in segments) {
-      if (seg.points.length < 2) continue;
-      final first = seg.points.first;
-      final last = seg.points.last;
-
-      final path = Path();
-      // Start at baseline directly below/above the first point.
-      path.moveTo(first.dx, baselineY);
-      // Move to the first series point (zero-length line when first is a crossing).
-      path.lineTo(first.dx, first.dy);
-      // Draw the interpolated curve through the segment.
-      InterpolationGeometry.addPathSegments<Offset>(
-        path: path,
-        points: seg.points,
-        interpolation: series.interpolation,
-        getX: (p) => p.dx,
-        getY: (p) => p.dy,
-        startIndex: 1,
-        endIndex: seg.points.length - 1,
-        tension: series.tension,
-      );
-      // Close back to baseline.
-      path.lineTo(last.dx, baselineY);
-      path.close();
-
+    void paintClippedFill(Color color, Rect clip) {
+      if (clip.isEmpty) return;
+      canvas.save();
+      canvas.clipRect(clip, doAntiAlias: false);
       canvas.drawPath(
-        path,
+        fillPath,
         Paint()
-          ..color = seg.isAbove ? aboveColor : belowColor
+          ..color = color
           ..style = PaintingStyle.fill,
+      );
+      canvas.restore();
+    }
+
+    if (clippedBaselineY > 0) {
+      paintClippedFill(
+        aboveColor,
+        Rect.fromLTRB(0, 0, plotWidth, clippedBaselineY),
+      );
+    }
+    if (clippedBaselineY < plotHeight) {
+      paintClippedFill(
+        belowColor,
+        Rect.fromLTRB(0, clippedBaselineY, plotWidth, plotHeight),
       );
     }
 
