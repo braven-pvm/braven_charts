@@ -20,6 +20,10 @@ void main() {
     );
     expect(find.text('Endurance session profile'), findsOneWidget);
     expect(find.text('4 Y axes'), findsOneWidget);
+    expect(
+      find.text('Hover to track · wheel to zoom · drag to pan'),
+      findsOneWidget,
+    );
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -1900));
     await tester.pump(const Duration(milliseconds: 600));
@@ -33,4 +37,50 @@ void main() {
 
     expect(find.text('The building blocks'), findsOneWidget);
   });
+
+  testWidgets('gallery separates curated highlights from the full catalog', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1600 * pixelRatio, 1000 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(home: GalleryPage()));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byKey(const ValueKey('gallery-mode-control')), findsOneWidget);
+    expect(find.text('17 representative compositions'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('gallery-advanced-curated')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('gallery-building-blocks-curated')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-advanced-curated'), 8);
+    expect(_gridCount(tester, 'gallery-building-blocks-curated'), 8);
+
+    await tester.tap(find.text('Full catalog'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(
+      find.text('30 examples across the complete catalog'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('gallery-advanced-full')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('gallery-building-blocks-full')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-advanced-full'), 11);
+    expect(_gridCount(tester, 'gallery-building-blocks-full'), 18);
+  });
+}
+
+int? _gridCount(WidgetTester tester, String key) {
+  return tester
+      .widget<SliverGrid>(find.byKey(ValueKey(key)))
+      .delegate
+      .estimatedChildCount;
 }

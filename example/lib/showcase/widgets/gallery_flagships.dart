@@ -67,6 +67,7 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final compact = MediaQuery.sizeOf(context).width < 1100;
 
     return _FlagshipCard(
       icon: Icons.monitor_heart_outlined,
@@ -74,6 +75,7 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
       subtitle:
           'Four independent Y axes, normalized tracking, stage bands, thresholds, labels, and glow',
       badges: const ['4 Y axes', 'Annotations', 'Tracking', 'Glow'],
+      interactionHint: 'Hover to track · wheel to zoom · drag to pan',
       child: BravenChartPlus(
         series: [
           AreaChartSeries(
@@ -108,6 +110,12 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
             color: _heartRateBlue,
             interpolation: LineInterpolation.monotone,
             strokeWidth: 1.8,
+            inlineLabel: const SeriesInlineLabelConfig(
+              text: 'Heart rate',
+              position: SeriesLabelPosition.left,
+              offsetY: 10,
+              color: _heartRateBlue,
+            ),
             yAxisConfig: YAxisConfig(
               position: YAxisPosition.left,
               label: 'Heart rate',
@@ -200,7 +208,7 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
               id: 'stage-$stage',
               axis: AnnotationAxis.x,
               value: stage,
-              label: '${stage.toInt()} h',
+              label: compact ? null : '${stage.toInt()} h',
               lineColor: _violet,
               lineWidth: 1.2,
               dashPattern: const [4, 3],
@@ -210,7 +218,7 @@ class PhysiologySessionGalleryCard extends StatelessWidget {
             ),
         ],
         theme: isDark ? ChartTheme.dark : ChartTheme.light,
-        showLegend: true,
+        showLegend: MediaQuery.sizeOf(context).width >= 1100,
         normalizationMode: NormalizationMode.perSeries,
         xAxisConfig: const XAxisConfig(
           label: 'Time',
@@ -822,6 +830,7 @@ class _FlagshipCard extends StatelessWidget {
     required this.subtitle,
     required this.badges,
     required this.child,
+    this.interactionHint,
     this.darkSurface = false,
     this.live = false,
   });
@@ -831,6 +840,7 @@ class _FlagshipCard extends StatelessWidget {
   final String subtitle;
   final List<String> badges;
   final Widget child;
+  final String? interactionHint;
   final bool darkSurface;
   final bool live;
 
@@ -930,7 +940,27 @@ class _FlagshipCard extends StatelessWidget {
                   )
                   .toList(),
             ),
-            const SizedBox(height: 12),
+            if (interactionHint != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.mouse_outlined, size: 16, color: muted),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      interactionHint!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
             Expanded(child: child),
           ],
         ),

@@ -182,6 +182,13 @@ double _generateValueInIsolate(
 /// Data generation pattern for streaming demo.
 enum DataPattern { randomWalk, sine, sawtooth, noise, stepFunction }
 
+enum _LiveScenario {
+  followLatest,
+  pausedBuffer,
+  expandThenSlide,
+  highFrequency,
+}
+
 /// Demonstrates the recommended live-data workflow using LiveStreamController.
 ///
 /// Key features:
@@ -201,6 +208,8 @@ class LiveStreamingPage extends StatefulWidget {
 class _LiveStreamingPageState extends State<LiveStreamingPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
 
+  _LiveScenario _selectedScenario = _LiveScenario.followLatest;
+
   // LiveStreamController - the recommended streaming API
   LiveStreamController? _streamController;
 
@@ -208,6 +217,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   Isolate? _generatorIsolate;
   SendPort? _isolateSendPort;
   ReceivePort? _isolateReceivePort;
+  int _streamGeneration = 0;
   bool _useIsolate = !kIsWeb; // Isolates not supported on web platform
 
   // Main-thread Timer-based generation (used by the web showcase)
@@ -345,15 +355,28 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       // Start isolate-based generation (native platforms only)
       print('Starting ISOLATE-based generation: $_updateRateHz Hz');
 
+      final generation = ++_streamGeneration;
+      final receivePort = ReceivePort();
+      _isolateReceivePort = receivePort;
       try {
-        _isolateReceivePort = ReceivePort();
-        _generatorIsolate = await Isolate.spawn(
+        final isolate = await Isolate.spawn(
           _dataGeneratorIsolate,
-          _isolateReceivePort!.sendPort,
+          receivePort.sendPort,
         );
 
+        // Isolate startup is asynchronous. A preset change or page disposal
+        // can supersede this request before it completes.
+        if (!mounted || generation != _streamGeneration) {
+          isolate.kill(priority: Isolate.immediate);
+          receivePort.close();
+          return;
+        }
+
+        _generatorIsolate = isolate;
+
         // Wait for isolate to send back its SendPort
-        _isolateReceivePort!.listen((message) {
+        receivePort.listen((message) {
+          if (!mounted || generation != _streamGeneration) return;
           if (message is SendPort) {
             _isolateSendPort = message;
             // Start generation
@@ -372,10 +395,12 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           }
         });
       } catch (e) {
+        receivePort.close();
+        if (!mounted || generation != _streamGeneration) return;
         print('Failed to spawn isolate: $e');
         print('Falling back to main thread Timer');
         _useIsolate = false;
-        setState(() {});
+        if (mounted) setState(() {});
       }
     }
 
@@ -392,7 +417,7 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       );
     }
 
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _handleDataBatch(DataBatch batch) {
@@ -420,7 +445,9 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   }
 
   void _stopStreaming({bool rebuild = true}) {
-    if (_useIsolate && !kIsWeb && _generatorIsolate != null) {
+    _streamGeneration++;
+
+    if (_useIsolate && !kIsWeb) {
       try {
         _isolateSendPort?.send(IsolateControlMessage(command: 'stop'));
         _generatorIsolate?.kill(priority: Isolate.immediate);
@@ -534,6 +561,66 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     }
   }
 
+  void _selectScenario(_LiveScenario scenario) {
+    if (_selectedScenario == scenario) return;
+
+    _stopStreaming(rebuild: false);
+    _streamController?.clear();
+    _pointCounter = 0;
+    _lastValue = 50;
+    _totalPointsGenerated = 0;
+    _pointsInLastSecond = 0;
+    _lastSecondStart = null;
+
+    switch (scenario) {
+      case _LiveScenario.followLatest:
+        _autoScroll = true;
+        _maxPoints = 500;
+        _viewportDataPoints = 100;
+        _updateRateHz = 20;
+        _dataPattern = DataPattern.randomWalk;
+        _lineColor = const Color(0xFF3B82F6);
+        _interpolation = LineInterpolation.monotone;
+        break;
+      case _LiveScenario.pausedBuffer:
+        _autoScroll = true;
+        _maxPoints = 500;
+        _viewportDataPoints = 100;
+        _pauseBufferSize = 5000;
+        _updateRateHz = 20;
+        _dataPattern = DataPattern.sine;
+        _lineColor = const Color(0xFFF59E0B);
+        _interpolation = LineInterpolation.bezier;
+        break;
+      case _LiveScenario.expandThenSlide:
+        _autoScroll = false;
+        _maxVisiblePoints = 500;
+        _updateRateHz = 20;
+        _dataPattern = DataPattern.sawtooth;
+        _lineColor = const Color(0xFF10B981);
+        _interpolation = LineInterpolation.linear;
+        break;
+      case _LiveScenario.highFrequency:
+        _autoScroll = true;
+        _maxPoints = 2000;
+        _viewportDataPoints = 250;
+        _updateRateHz = 120;
+        _dataPattern = DataPattern.noise;
+        _lineColor = const Color(0xFF8B5CF6);
+        _interpolation = LineInterpolation.linear;
+        break;
+    }
+
+    _selectedScenario = scenario;
+    _createStreamController();
+    _initializeData();
+    _startStreaming();
+    if (scenario == _LiveScenario.pausedBuffer) {
+      _streamController?.pause();
+    }
+    setState(() {});
+  }
+
   void _resetData() {
     _stopStreaming(rebuild: false);
     _streamController?.clear();
@@ -571,12 +658,11 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Live Streaming',
+      title: 'Live Stream',
       subtitle:
-          'Buffered pause, follow-latest viewports, and frame-coalesced chart updates',
+          'Compare real-time viewport and buffering strategies, then configure them live',
       optionsChildren: _buildOptionsChildren(),
-      chart: _buildChart(),
-      bottomPanel: _buildStatusPanel(),
+      chart: _buildWorkspace(),
     );
   }
 
@@ -587,13 +673,44 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
     final isPaused = !(_streamController?.isStreaming ?? true);
 
     return [
-      // Standard display options (disable marker/lineStyle since we have custom controls)
-      StandardChartOptions(
-        controller: _optionsController,
-        showMarkerOption:
-            false, // We have custom 'Show Data Markers' in Line Styling
-        showLineStyleOption: false, // We use interpolation setting instead
-        showLegendOption: false, // Legend not needed for single series
+      OptionSection(
+        title: 'Streaming Strategy',
+        icon: Icons.bolt,
+        children: [
+          EnumOption<_LiveScenario>(
+            label: 'Preset',
+            value: _selectedScenario,
+            values: _LiveScenario.values,
+            labelBuilder: _scenarioLabel,
+            onChanged: _selectScenario,
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Data Flow',
+        icon: Icons.play_arrow,
+        children: [
+          ActionButton(
+            label: isDataFlowing ? 'Stop Data' : 'Start Data',
+            icon: isDataFlowing ? Icons.stop : Icons.play_arrow,
+            isPrimary: !isDataFlowing,
+            isDestructive: isDataFlowing,
+            onPressed: isDataFlowing ? _stopStreaming : _startStreaming,
+          ),
+          const SizedBox(height: 8),
+          ActionButton(
+            label: isPaused ? 'Resume Chart' : 'Pause Chart',
+            icon: isPaused ? Icons.play_arrow : Icons.pause,
+            isPrimary: isPaused,
+            onPressed: _togglePause,
+          ),
+          const SizedBox(height: 8),
+          ActionButton(
+            label: 'Reset Stream',
+            icon: Icons.refresh,
+            onPressed: _resetData,
+          ),
+        ],
       ),
 
       // LiveStreamController Configuration
@@ -817,33 +934,11 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
           ),
         ],
       ),
-
-      // Data flow controls
-      OptionSection(
-        title: 'Data Flow',
-        icon: Icons.play_arrow,
-        children: [
-          ActionButton(
-            label: isDataFlowing ? 'Stop Data' : 'Start Data',
-            icon: isDataFlowing ? Icons.stop : Icons.play_arrow,
-            isPrimary: !isDataFlowing,
-            isDestructive: isDataFlowing,
-            onPressed: isDataFlowing ? _stopStreaming : _startStreaming,
-          ),
-          const SizedBox(height: 8),
-          ActionButton(
-            label: isPaused ? 'Resume Chart' : 'Pause Chart',
-            icon: isPaused ? Icons.play_arrow : Icons.pause,
-            isPrimary: isPaused,
-            onPressed: _togglePause,
-          ),
-          const SizedBox(height: 8),
-          ActionButton(
-            label: 'Reset',
-            icon: Icons.refresh,
-            onPressed: _resetData,
-          ),
-        ],
+      StandardChartOptions(
+        controller: _optionsController,
+        showMarkerOption: false,
+        showLineStyleOption: false,
+        showLegendOption: false,
       ),
 
       // Streaming API guidance
@@ -858,6 +953,154 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
             : (isDataFlowing ? InfoBoxType.success : InfoBoxType.info),
       ),
     ];
+  }
+
+  String _scenarioLabel(_LiveScenario scenario) => switch (scenario) {
+    _LiveScenario.followLatest => 'Follow latest',
+    _LiveScenario.pausedBuffer => 'Paused buffer',
+    _LiveScenario.expandThenSlide => 'Expand then slide',
+    _LiveScenario.highFrequency => 'High frequency',
+  };
+
+  String _scenarioDescription(_LiveScenario scenario) => switch (scenario) {
+    _LiveScenario.followLatest => 'Rolling window tracks new data',
+    _LiveScenario.pausedBuffer => 'Freeze view while ingest continues',
+    _LiveScenario.expandThenSlide => 'Grow viewport before scrolling',
+    _LiveScenario.highFrequency => 'Frame-coalesced 120 Hz ingest',
+  };
+
+  String _scenarioExplanation(_LiveScenario scenario) => switch (scenario) {
+    _LiveScenario.followLatest =>
+      'A fixed-width viewport follows the newest samples and evicts the oldest points when the rolling buffer reaches its limit.',
+    _LiveScenario.pausedBuffer =>
+      'The viewport freezes while incoming samples collect in a FIFO pause buffer. Resume applies them together and returns to the latest data.',
+    _LiveScenario.expandThenSlide =>
+      'The visible domain expands as data arrives. Once it reaches the configured maximum, older samples move off-screen without being discarded.',
+    _LiveScenario.highFrequency =>
+      'Rapid samples travel directly through LiveStreamController. Paints are coalesced to display frames so widget rebuilds do not become the bottleneck.',
+  };
+
+  String _scenarioApiSummary(_LiveScenario scenario) => switch (scenario) {
+    _LiveScenario.followLatest =>
+      'autoScroll: true  ·  viewportDataPoints: $_viewportDataPoints  ·  maxPoints: $_maxPoints',
+    _LiveScenario.pausedBuffer =>
+      'pause() → addPoint() buffers  ·  resume() flushes ${_streamController?.bufferedCount ?? 0} queued points',
+    _LiveScenario.expandThenSlide =>
+      'autoScroll: false  ·  maxVisiblePoints: $_maxVisiblePoints  ·  history retained',
+    _LiveScenario.highFrequency =>
+      'addPoint() at $_updateRateHz Hz  ·  direct RenderBox path  ·  frame coalescing',
+  };
+
+  Color _scenarioColor(_LiveScenario scenario) => switch (scenario) {
+    _LiveScenario.followLatest => const Color(0xFF3B82F6),
+    _LiveScenario.pausedBuffer => const Color(0xFFF59E0B),
+    _LiveScenario.expandThenSlide => const Color(0xFF10B981),
+    _LiveScenario.highFrequency => const Color(0xFF8B5CF6),
+  };
+
+  Widget _buildWorkspace() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose a streaming strategy',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(height: 168, child: _buildScenarioRibbon()),
+        const SizedBox(height: 16),
+        _StreamingGuide(
+          title: _scenarioLabel(_selectedScenario),
+          explanation: _scenarioExplanation(_selectedScenario),
+          apiSummary: _scenarioApiSummary(_selectedScenario),
+        ),
+        const SizedBox(height: 16),
+        Expanded(child: _buildChart()),
+      ],
+    );
+  }
+
+  Widget _buildScenarioRibbon() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        const minimumCardWidth = 168.0;
+        final fitWidth = (constraints.maxWidth - spacing * 3) / 4;
+        final cardWidth = fitWidth >= minimumCardWidth
+            ? fitWidth
+            : minimumCardWidth;
+
+        return ListView.separated(
+          key: const ValueKey('streaming-scenario-ribbon'),
+          scrollDirection: Axis.horizontal,
+          itemCount: _LiveScenario.values.length,
+          separatorBuilder: (_, _) => const SizedBox(width: spacing),
+          itemBuilder: (context, index) {
+            final scenario = _LiveScenario.values[index];
+            return SizedBox(
+              width: cardWidth,
+              child: _StreamingScenarioCard(
+                key: ValueKey('streaming-scenario-${scenario.name}'),
+                scenario: scenario,
+                label: _scenarioLabel(scenario),
+                description: _scenarioDescription(scenario),
+                selected: _selectedScenario == scenario,
+                onTap: () => _selectScenario(scenario),
+                chart: _buildScenarioPreview(scenario),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildScenarioPreview(_LiveScenario scenario) {
+    final color = _scenarioColor(scenario);
+    final points = List.generate(32, (index) {
+      final x = index.toDouble();
+      final y = switch (scenario) {
+        _LiveScenario.followLatest =>
+          48 + sin(index * 0.42) * 16 + index * 0.45,
+        _LiveScenario.pausedBuffer => 50 + sin(index * 0.38) * 22,
+        _LiveScenario.expandThenSlide => 28 + (index % 9) * 4.5 + index * 0.55,
+        _LiveScenario.highFrequency =>
+          50 + sin(index * 1.85) * 17 + sin(index * 0.31) * 8,
+      };
+      return ChartDataPoint(x: x, y: y);
+    });
+
+    return BravenChartPlus(
+      series: [
+        LineChartSeries(
+          id: 'preview-${scenario.name}',
+          name: _scenarioLabel(scenario),
+          points: points,
+          color: color,
+          interpolation: scenario == _LiveScenario.highFrequency
+              ? LineInterpolation.linear
+              : LineInterpolation.monotone,
+          strokeWidth: 2,
+          showDataPointMarkers: scenario == _LiveScenario.pausedBuffer,
+          dataPointMarkerRadius: 1.8,
+        ),
+      ],
+      showLegend: false,
+      grid: const GridConfig(horizontal: false, vertical: false),
+      xAxisConfig: const XAxisConfig(
+        visible: false,
+        minHeight: 0,
+        maxHeight: 0,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.hidden,
+        minWidth: 0,
+        maxWidth: 0,
+      ),
+      interactionConfig: InteractionConfig.none(),
+    );
   }
 
   Widget _buildChart() {
@@ -932,52 +1175,61 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
               ),
             ),
           ],
-          child: BravenChartPlus(
-            // Series defines styling, LiveStreamController provides data
-            series: [
-              LineChartSeries(
-                id: 'live-data', // Must match LiveStreamController.seriesId!
-                name: 'Live Data',
-                points: const [], // Initial points (can be empty)
-                color: effectiveColor,
-                interpolation: _interpolation,
-                strokeWidth: _strokeWidth,
-                showDataPointMarkers: _optionsController.showDataMarkers,
+          child: Column(
+            children: [
+              _buildTelemetryBar(
+                isDataFlowing: isDataFlowing,
+                isPaused: isPaused,
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: BravenChartPlus(
+                  key: const ValueKey('live-stream-main-chart'),
+                  // Series defines styling, LiveStreamController provides data
+                  series: [
+                    LineChartSeries(
+                      id: 'live-data',
+                      name: 'Live Data',
+                      points: const [],
+                      color: effectiveColor,
+                      interpolation: _interpolation,
+                      strokeWidth: _strokeWidth,
+                      showDataPointMarkers: _optionsController.showDataMarkers,
+                    ),
+                  ],
+                  // LiveStreamController owns the high-frequency data path.
+                  liveStreamController: _streamController,
+                  theme: _optionsController.theme,
+                  showLegend: false,
+                  showXScrollbar: _optionsController.showXScrollbar,
+                  showYScrollbar: _optionsController.showYScrollbar,
+                  scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
+                    autoHide: false,
+                  ),
+                  xAxisConfig: XAxisConfig(
+                    showAxisLine: _optionsController.showAxisLines,
+                  ),
+                  yAxis: YAxisConfig(
+                    position: YAxisPosition.left,
+                    showAxisLine: _optionsController.showAxisLines,
+                  ),
+                  interactionConfig: InteractionConfig(
+                    enableZoom: _optionsController.enableZoom,
+                    enablePan: _optionsController.enablePan,
+                  ),
+                ),
               ),
             ],
-            // Connect LiveStreamController - this is the key!
-            liveStreamController: _streamController,
-            theme: _optionsController.theme,
-            showLegend: false,
-            showXScrollbar: _optionsController.showXScrollbar,
-            showYScrollbar: _optionsController.showYScrollbar,
-
-            scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(
-              autoHide: false,
-            ),
-            xAxisConfig: XAxisConfig(
-              showAxisLine: _optionsController.showAxisLines,
-            ),
-            yAxis: YAxisConfig(
-              position: YAxisPosition.left,
-              showAxisLine: _optionsController.showAxisLines,
-            ),
-            interactionConfig: InteractionConfig(
-              enableZoom: _optionsController.enableZoom,
-              enablePan: _optionsController.enablePan,
-            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildStatusPanel() {
-    final isDataFlowing = _useIsolate
-        ? _generatorIsolate != null
-        : _dataTimer != null;
-    final isPaused = !(_streamController?.isStreaming ?? true);
-    // Calculate effective rate - use rolling 1-second window for accuracy
+  Widget _buildTelemetryBar({
+    required bool isDataFlowing,
+    required bool isPaused,
+  }) {
     String effectiveRate = '$_updateRateHz Hz';
     if (isDataFlowing && _lastSecondStart != null) {
       final elapsedInSecond = DateTime.now()
@@ -991,33 +1243,275 @@ class _LiveStreamingPageState extends State<LiveStreamingPage> {
       }
     }
 
-    return StatusPanel(
-      highlighted: isDataFlowing && !isPaused,
-      items: [
-        StatusItem(
-          label: 'Status',
-          value: isPaused
-              ? 'Paused'
-              : (isDataFlowing ? 'Streaming' : 'Stopped'),
-          color: isPaused
-              ? Colors.orange
-              : (isDataFlowing ? Colors.green : Colors.grey),
+    final metrics = <(String, String, Color?)>[
+      (
+        'State',
+        isPaused ? 'Paused' : (isDataFlowing ? 'Live' : 'Stopped'),
+        isPaused ? Colors.orange : (isDataFlowing ? Colors.green : Colors.grey),
+      ),
+      ('Points', '${_streamController?.pointCount ?? 0}', null),
+      (
+        'Buffered',
+        '${_streamController?.bufferedCount ?? 0}',
+        (_streamController?.bufferedCount ?? 0) > 0 ? Colors.orange : null,
+      ),
+      ('Rate', effectiveRate, null),
+      (
+        'Latest',
+        _streamController?.latestPoint?.y.toStringAsFixed(1) ?? '—',
+        null,
+      ),
+    ];
+
+    return Container(
+      key: const ValueKey('live-stream-telemetry'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          for (var index = 0; index < metrics.length; index++) ...[
+            if (index > 0)
+              Container(
+                width: 1,
+                height: 28,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: Theme.of(context).dividerColor,
+              ),
+            Expanded(
+              child: _TelemetryMetric(
+                label: metrics[index].$1,
+                value: metrics[index].$2,
+                color: metrics[index].$3,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StreamingGuide extends StatelessWidget {
+  const _StreamingGuide({
+    required this.title,
+    required this.explanation,
+    required this.apiSummary,
+  });
+
+  final String title;
+  final String explanation;
+  final String apiSummary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Container(
+      key: const ValueKey('streaming-strategy-guide'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.22),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final explanationBlock = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.bolt, size: 20, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      explanation,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+          final apiBlock = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: colors.surface.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.code, size: 17, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    apiSummary,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          if (constraints.maxWidth < 760) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                explanationBlock,
+                const SizedBox(height: 10),
+                apiBlock,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 6, child: explanationBlock),
+              const SizedBox(width: 24),
+              Expanded(flex: 5, child: apiBlock),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StreamingScenarioCard extends StatelessWidget {
+  const _StreamingScenarioCard({
+    super.key,
+    required this.scenario,
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+    required this.chart,
+  });
+
+  final _LiveScenario scenario;
+  final String label;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget chart;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Select $label streaming strategy',
+      child: Material(
+        color: selected
+            ? colors.primaryContainer.withValues(alpha: 0.42)
+            : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
         ),
-        StatusItem(
-          label: 'Points',
-          value: '${_streamController?.pointCount ?? 0}/$_maxPoints',
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(
+                        Icons.check_circle,
+                        key: ValueKey('selected-streaming-${scenario.name}'),
+                        size: 17,
+                        color: colors.primary,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(child: IgnorePointer(child: chart)),
+              ],
+            ),
+          ),
         ),
-        StatusItem(
-          label: 'Buffered',
-          value: '${_streamController?.bufferedCount ?? 0}',
-          color: (_streamController?.bufferedCount ?? 0) > 0
-              ? Colors.orange
-              : null,
+      ),
+    );
+  }
+}
+
+class _TelemetryMetric extends StatelessWidget {
+  const _TelemetryMetric({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final valueColor = color ?? theme.colorScheme.onSurface;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: valueColor,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        StatusItem(label: 'Actual Rate', value: effectiveRate),
-        StatusItem(
-          label: 'Latest',
-          value: _streamController?.latestPoint?.y.toStringAsFixed(1) ?? '-',
+        const SizedBox(height: 1),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
