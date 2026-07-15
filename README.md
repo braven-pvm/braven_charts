@@ -21,7 +21,7 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
-[![Two-chart analytical showcase combining threshold-styled mixed series with a dark power-duration baseline model](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
+[![Two-chart analytical showcase combining threshold-styled mixed series with a dark power-duration baseline model](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.2/doc/screenshots/hero_chart.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Rendered examples
 
@@ -75,7 +75,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.1.2
+  braven_charts: ^0.1.3
 ```
 
 Then fetch dependencies:
@@ -84,7 +84,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.1.2 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.1.3 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
