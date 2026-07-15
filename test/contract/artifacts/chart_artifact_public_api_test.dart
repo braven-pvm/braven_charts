@@ -75,6 +75,16 @@ void main() {
       (result as ChartArtifactSuccess<String>).value,
       contains('braven.chartArtifact'),
     );
+    expect(ChartArtifactDeduplicator.group([artifact]).uniqueArtifacts, [
+      artifact,
+    ]);
+    expect(
+      ChartArtifactCanonicalizer.viewHash(
+        artifact.document,
+        artifact.viewState,
+      ),
+      startsWith('sha256:'),
+    );
   });
 }
 

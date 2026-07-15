@@ -12,6 +12,7 @@ import 'pages/artifact_data_table_lab_page.dart';
 import 'pages/artifact_extraction_lab_page.dart';
 import 'pages/artifact_export_lab_page.dart';
 import 'pages/artifact_hydration_lab_page.dart';
+import 'pages/artifact_identity_lab_page.dart';
 import 'pages/artifact_migration_lab_page.dart';
 import 'pages/artifact_payload_lab_page.dart';
 import 'pages/artifact_preview_lab_page.dart';
@@ -270,6 +271,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.account_tree_outlined,
       selectedIcon: Icons.account_tree,
       page: ArtifactMigrationLabPage(),
+      badge: 'NEW',
+    ),
+    const NavDestination(
+      label: 'Identity Lab',
+      icon: Icons.fingerprint_outlined,
+      selectedIcon: Icons.fingerprint,
+      page: ArtifactIdentityLabPage(),
       badge: 'NEW',
     ),
   ];

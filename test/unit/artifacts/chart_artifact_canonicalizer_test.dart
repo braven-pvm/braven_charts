@@ -30,6 +30,74 @@ void main() {
 
     expect(second, isNot(first));
   });
+
+  test(
+    'view hash includes durable state without changing document identity',
+    () {
+      final document = _document();
+      final firstView = ChartViewState(hiddenSeriesIds: const {'b', 'a'});
+      final equivalentView = ChartViewState(hiddenSeriesIds: const {'a', 'b'});
+      final changedView = ChartViewState(hiddenSeriesIds: const {'a'});
+
+      final documentHash = ChartArtifactCanonicalizer.documentHash(document);
+      final firstHash = ChartArtifactCanonicalizer.viewHash(
+        document,
+        firstView,
+      );
+
+      expect(
+        ChartArtifactCanonicalizer.viewHash(document, equivalentView),
+        firstHash,
+      );
+      expect(
+        ChartArtifactCanonicalizer.viewHash(document, changedView),
+        isNot(firstHash),
+      );
+      expect(ChartArtifactCanonicalizer.documentHash(document), documentHash);
+      expect(
+        ChartArtifactCanonicalizer.viewHash(document, null),
+        isNot(documentHash),
+      );
+    },
+  );
+
+  test('payload hashes are canonical and reuse external content checksums', () {
+    final first = InlinePointPayload([
+      ChartPointDocument(
+        x: ChartNumberDocument.fromDouble(1),
+        y: ChartNumberDocument.fromDouble(2),
+        metadata: JsonObjectValue({
+          'b': JsonNumberValue(2),
+          'a': JsonNumberValue(1),
+        }),
+      ),
+    ]);
+    final equivalent = InlinePointPayload([
+      ChartPointDocument(
+        x: ChartNumberDocument.fromDouble(1),
+        y: ChartNumberDocument.fromDouble(2),
+        metadata: JsonObjectValue({
+          'a': JsonNumberValue(1),
+          'b': JsonNumberValue(2),
+        }),
+      ),
+    ]);
+    const checksum =
+        'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    final external = ReferencedPayload(
+      contentType: ChartDataBlobCodec.contentType,
+      byteLength: 42,
+      checksum: checksum,
+      pointCount: 1,
+      resolverKey: 'payload',
+    );
+
+    expect(
+      ChartArtifactCanonicalizer.dataPayloadHash(equivalent),
+      ChartArtifactCanonicalizer.dataPayloadHash(first),
+    );
+    expect(ChartArtifactCanonicalizer.dataPayloadHash(external), checksum);
+  });
 }
 
 ChartDocument _document({double y = 10, JsonObjectValue? metadata}) =>
