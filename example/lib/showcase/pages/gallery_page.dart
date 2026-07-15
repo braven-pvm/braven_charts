@@ -160,17 +160,17 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'FLAGSHIP COMPOSITION',
-              title: 'One chart, the complete analytical story',
+              title: 'Two analytical viewpoints, one rendering engine',
               subtitle:
-                  'A real-world multi-sensor profile with independent axes, normalized values, annotations, labels, tracking, and glow.',
+                  'Mixed interval thresholds and continuous power-duration modelling show how one API supports radically different analytical layouts.',
             ),
           ),
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: SizedBox(
-                height: 520,
-                child: PhysiologySessionGalleryCard(),
+                height: 680,
+                child: PerformanceIntelligenceGalleryHero(),
               ),
             ),
           ),

@@ -24,6 +24,7 @@ from selenium.webdriver.chrome.options import Options
 
 VIEWPORT = (1440, 900)
 INTERACTION_CROP = (280, 12, 1418, 518)
+HERO_CROP = (280, 0, 1418, 688)
 LIVE_CROP = (272, 300, 1110, 880)
 INTERACTION_SIZE = (900, 400)
 LIVE_SIZE = (754, 522)
@@ -233,10 +234,36 @@ def _save_png(
     driver: webdriver.Chrome,
     output: Path,
     crop: tuple[int, int, int, int] | None = None,
+    max_left_dark_fraction: float | None = None,
 ) -> None:
-    image = Image.open(io.BytesIO(driver.get_screenshot_as_png())).convert("RGB")
-    if crop is not None:
-        image = image.crop(crop)
+    image: Image.Image | None = None
+    for attempt in range(3):
+        candidate = Image.open(
+            io.BytesIO(driver.get_screenshot_as_png())
+        ).convert("RGB")
+        if crop is not None:
+            candidate = candidate.crop(crop)
+        if max_left_dark_fraction is None:
+            image = candidate
+            break
+
+        left_half = candidate.crop((0, 0, candidate.width // 2, candidate.height))
+        pixels = left_half.getdata()
+        dark_pixels = sum(1 for red, green, blue in pixels if max(red, green, blue) < 48)
+        dark_fraction = dark_pixels / (left_half.width * left_half.height)
+        if dark_fraction <= max_left_dark_fraction:
+            image = candidate
+            break
+
+        print(
+            f"Retrying {output.name}: incomplete canvas capture "
+            f"({dark_fraction:.1%} dark pixels on attempt {attempt + 1})"
+        )
+        driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
+        time.sleep(1)
+
+    if image is None:
+        raise RuntimeError(f"Could not capture a complete canvas for {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, format="PNG", optimize=True)
     print(f"Wrote {output} ({image.width}x{image.height})")
@@ -284,15 +311,30 @@ def _scroll(driver: webdriver.Chrome, delta_y: int) -> None:
     time.sleep(0.7)
 
 
-def _gallery_stills(
+def _hero_still(
     driver: webdriver.Chrome,
     base_url: str,
     output_dir: Path,
 ) -> None:
-    """Capture a chart-only hero and the Gallery's real compositions."""
+    """Capture the flagship chart with an active tracking tooltip."""
     _load(driver, base_url)
     _scroll(driver, 420)
-    _save_png(driver, output_dir / "hero_chart.png", INTERACTION_CROP)
+    _mouse(driver, "mouseMoved", 590, 360)
+    time.sleep(0.8)
+    _save_png(
+        driver,
+        output_dir / "hero_chart.png",
+        HERO_CROP,
+        max_left_dark_fraction=0.12,
+    )
+
+
+def _gallery_stills_intro(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture the first advanced-composition row."""
 
     # Advanced row 1: baseline response and VO2 stage analysis.
     _load(driver, base_url)
@@ -308,6 +350,13 @@ def _gallery_stills(
         (865, 323, 1416, 766),
     )
 
+
+def _gallery_stills_remainder(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture the remaining Gallery cards after the first advanced row."""
     # Advanced row 2: dark glow treatment and lactate small multiples.
     _scroll(driver, 780)
     _save_png(driver, output_dir / "gallery_glow.png", LEFT_CARD)
@@ -381,6 +430,17 @@ def _gallery_stills(
         (865, 459, 1416, 863),
     )
     _save_gallery_mosaic(output_dir)
+
+
+def _gallery_stills(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture a chart-only hero and the Gallery's real compositions."""
+    _hero_still(driver, base_url, output_dir)
+    _gallery_stills_intro(driver, base_url, output_dir)
+    _gallery_stills_remainder(driver, base_url, output_dir)
 
 
 def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
@@ -636,7 +696,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--capture",
-        choices=("all", "interaction", "live-stream", "stills"),
+        choices=("all", "interaction", "live-stream", "stills", "hero"),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
     )
@@ -659,6 +719,8 @@ def main() -> None:
             )
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
+        elif args.capture == "hero":
+            _hero_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()
 

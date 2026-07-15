@@ -15,21 +15,28 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(
-      find.text('One chart, the complete analytical story'),
+      find.text('Two analytical viewpoints, one rendering engine'),
       findsOneWidget,
     );
-    expect(find.text('Endurance session profile'), findsOneWidget);
-    expect(find.text('4 Y axes'), findsOneWidget);
+    expect(find.text('Threshold exposure by interval'), findsOneWidget);
+    expect(find.text('Adaptive power-duration model'), findsOneWidget);
+    expect(find.text('Mixed series'), findsOneWidget);
+    expect(find.text('Baseline fill'), findsOneWidget);
     expect(
-      find.text('Hover to track · Shift + wheel to zoom · drag to pan'),
+      find.text('Hover for exact interval values · wheel to zoom'),
       findsOneWidget,
     );
-    final flagship = tester.widget<BravenChartPlus>(
-      find.byType(BravenChartPlus).first,
-    );
-    expect(flagship.series, hasLength(4));
-    expect(flagship.annotations, hasLength(4));
-    expect(flagship.showXScrollbar, isTrue);
+    final flagshipCharts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .take(2)
+        .toList();
+    expect(flagshipCharts, hasLength(2));
+    expect(flagshipCharts.first.series, hasLength(2));
+    expect(flagshipCharts.first.annotations, hasLength(7));
+    expect(flagshipCharts.first.showXScrollbar, isFalse);
+    expect(flagshipCharts.last.series, hasLength(6));
+    expect(flagshipCharts.last.annotations, hasLength(5));
+    expect(flagshipCharts.last.showXScrollbar, isTrue);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -1900));
     await tester.pump(const Duration(milliseconds: 600));
