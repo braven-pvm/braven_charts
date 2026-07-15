@@ -65,6 +65,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('formats live and captured series values to two decimals', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleCapture(tester);
+
+    final liveTable = tester.widget<ChartDataTable>(
+      find.byType(ChartDataTable).first,
+    );
+    _expectTwoDecimalSeriesValues(liveTable.model!);
+
+    await tester.tap(find.text('Capture current chart'));
+    await _settleCapture(tester);
+    final capturedTable = tester.widget<ChartDataTable>(
+      find.byKey(const ValueKey('captured-data-showcase-capture-1')),
+    );
+    _expectTwoDecimalSeriesValues(capturedTable.model!);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('regenerates a different live chart', (tester) async {
     tester.view.physicalSize = const Size(1500, 1200);
     tester.view.devicePixelRatio = 1;
@@ -165,4 +189,11 @@ Future<void> _settleCapture(WidgetTester tester) async {
     () => Future<void>.delayed(const Duration(milliseconds: 100)),
   );
   await tester.pump();
+}
+
+void _expectTwoDecimalSeriesValues(ChartTableModel model) {
+  final firstRow = model.wideRows.first;
+  for (final cell in firstRow.cells.values) {
+    expect(cell.yDisplay, cell.yRaw.toStringAsFixed(2));
+  }
 }

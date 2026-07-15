@@ -18,6 +18,11 @@ class ArtifactShowcasePage extends StatefulWidget {
 }
 
 class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
+  static final _twoDecimalFormatter = ChartFormatterDescriptor(
+    id: 'braven.number.fixed',
+    arguments: {'decimals': JsonNumberValue(2)},
+  ).toDocument();
+
   static const _palette = <Color>[
     Color(0xFF2563EB),
     Color(0xFFDC2626),
@@ -214,10 +219,7 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
   void _refreshLiveTable([int attachmentAttempt = 0]) {
     if (!mounted || _restoredConfiguration != null) return;
     final result = _sourceController.extractDocument(
-      ChartDocumentExtractOptions(
-        documentId: 'live-generation-${_generated.generation}',
-        dataStorage: ChartDataStorage.inlineColumns,
-      ),
+      _tableDocumentOptions('live-generation-${_generated.generation}'),
     );
     if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
       final table = ChartTableModel.fromDocument(
@@ -237,6 +239,13 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
       }
     }
   }
+
+  ChartDocumentExtractOptions _tableDocumentOptions(String documentId) =>
+      ChartDocumentExtractOptions(
+        documentId: documentId,
+        dataStorage: ChartDataStorage.inlineColumns,
+        yAxisFormatterDescriptors: {'y': _twoDecimalFormatter},
+      );
 
   Future<ChartArtifactResult<ChartArtifact>> _extractAttachedArtifact(
     BravenChartController controller,
@@ -289,9 +298,8 @@ class _ArtifactShowcasePageState extends State<ArtifactShowcasePage> {
         artifactId: 'showcase-capture-$sequence',
         createdAt: DateTime.now().toUtc(),
         includePreview: true,
-        documentOptions: ChartDocumentExtractOptions(
-          documentId: 'showcase-capture-$sequence-document',
-          dataStorage: ChartDataStorage.inlineColumns,
+        documentOptions: _tableDocumentOptions(
+          'showcase-capture-$sequence-document',
         ),
         provenance: ChartArtifactProvenance(
           values: JsonObjectValue({
