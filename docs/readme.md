@@ -30,6 +30,10 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [development.md](development.md) - Local development setup
 - [technical_debt.md](technical_debt.md) - Known debt and cleanup targets
 
+## Parked Feature Investigations
+
+- [pie_chart_implementation_investigation.md](pie_chart_implementation_investigation.md) - Recommended product contract, radial architecture, implementation slices, and release gates for a future pie chart type
+
 ## Archived Materials
 
 Development artifacts and historical specs were moved to [archive_release_1.0](archive_release_1.0).
