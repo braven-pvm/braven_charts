@@ -1,0 +1,71 @@
+name: Usage or API question
+description: Ask for help configuring or integrating Braven Charts.
+title: "[Question]: "
+labels:
+  - question
+  - "status: needs-triage"
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when the package behaves as documented but you need help choosing or configuring an API. Use the bug form for reproducible incorrect behavior.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Chart and series configuration
+        - Axes and normalization
+        - Interaction and annotations
+        - Streaming and live data
+        - Tables, export, or artifacts
+        - Theming and visual states
+        - Installation, packaging, or platform support
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to build?
+      description: Describe the desired chart behavior and the application context.
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Include relevant configuration, documentation consulted, and the result you observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Relevant code
+      description: Provide a reduced example with private data and credentials removed.
+      render: dart
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: Package and Flutter versions
+      placeholder: "braven_charts 0.2.0; Flutter 3.x stable"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched the README, API reference, showcase, and existing issues.
+          required: true
+        - label: I removed credentials, private data, and proprietary datasets.
+          required: true

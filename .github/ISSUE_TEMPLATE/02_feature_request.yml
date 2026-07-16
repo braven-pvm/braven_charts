@@ -1,0 +1,137 @@
+name: Feature or API proposal
+description: Propose a capability, public API, interaction, or supported use case.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - "status: needs-triage"
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the developer problem and desired outcome. A proposed implementation is useful, but it should not replace the use case or acceptance criteria.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Rendering and layout
+        - Chart or series types
+        - Axes and normalization
+        - Interaction, zoom, pan, or tracking
+        - Annotations
+        - Streaming and live data
+        - Tables, export, or artifacts
+        - Theming and visual states
+        - Showcase or documentation
+        - Packaging or tooling
+        - Cross-cutting or unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Developer problem
+      description: What cannot be expressed or completed with the current package?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Real-world use case
+      description: Describe the application, data shape, interaction, and user outcome that motivate the request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the observable capability without assuming a particular internal implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed API or usage example
+      description: Optional Dart sketch showing how a Flutter developer should configure or control the feature.
+      render: dart
+    validations:
+      required: false
+
+  - type: dropdown
+    id: compatibility
+    attributes:
+      label: Expected compatibility impact
+      options:
+        - Additive public API
+        - Behavior change with no public API change
+        - Deprecation or migration required
+        - Breaking API change
+        - Showcase or documentation only
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope boundaries
+      description: Separate what must be included from related work that can remain out of scope.
+      value: |
+        In scope:
+        -
+
+        Out of scope:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use observable, testable results. Include desktop/mobile, accessibility, serialization, or performance expectations when relevant.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds considered
+      description: Explain current workarounds and why they are insufficient.
+    validations:
+      required: false
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Suggested verification
+      description: Name the tests, sample application state, performance measurement, or visual evidence that should prove completion.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and related work
+      description: Link related issues, specifications, downstream integrations, or decisions.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues and proposals for this capability.
+          required: true
+        - label: The request describes a concrete Flutter developer use case, not only an internal implementation preference.
+          required: true

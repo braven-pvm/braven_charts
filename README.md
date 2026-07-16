@@ -359,6 +359,7 @@ state UX.
 - [Chart Document Comparison](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_comparison.md)
 - [Feature coverage matrix](https://github.com/braven-pvm/braven_charts/blob/master/doc/feature_matrix.md)
 - [Release and publishing checklist](https://github.com/braven-pvm/braven_charts/blob/master/doc/release_checklist.md)
+- [Issue and delivery workflow](https://github.com/braven-pvm/braven_charts/blob/master/docs/issue_workflow.md)
 - [Changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md)
 - [Contributing](https://github.com/braven-pvm/braven_charts/blob/master/CONTRIBUTING.md)
 
