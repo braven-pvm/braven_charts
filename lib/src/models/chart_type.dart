@@ -13,4 +13,7 @@ enum ChartType {
 
   /// Scatter chart with individual points
   scatter,
+
+  /// Pie chart with category contributions rendered as radial slices
+  pie,
 }

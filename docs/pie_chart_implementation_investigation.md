@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **Ready for product decision; implementation not started**
+Status: **In progress — Slice 1 complete; Slice 2 rendering next**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -372,6 +372,8 @@ extended as if it were current.
 
 ### Slice 1: radial foundation and public models
 
+Status: **Complete locally.**
+
 - Add layout-kind resolution and mixed-series validation.
 - Add pie series and style/config models.
 - Add ergonomic category/value construction.
@@ -428,9 +430,9 @@ extended as if it were current.
 - `dart pub publish --dry-run`.
 - `git diff --check` before review readiness.
 
-## Decisions required before implementation
+## Approved first-release decisions
 
-Recommended defaults are recorded below but remain subject to user approval:
+The following defaults were approved before Slice 1 implementation began:
 
 1. One pie series and no mixed Cartesian composition in the first release.
 2. Strict rejection of negative and non-finite slice values.

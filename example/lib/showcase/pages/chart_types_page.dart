@@ -9,6 +9,13 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
+const _availableChartTypes = <ChartType>[
+  ChartType.line,
+  ChartType.area,
+  ChartType.bar,
+  ChartType.scatter,
+];
+
 /// A browse-then-configure showcase for every primary chart type.
 class ChartTypesPage extends StatefulWidget {
   const ChartTypesPage({super.key});
@@ -88,7 +95,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
           EnumOption<ChartType>(
             label: 'Type',
             value: _chartType,
-            values: ChartType.values,
+            values: _availableChartTypes,
             labelBuilder: (value) => _chartTypeLabel(value),
             onChanged: _selectChartType,
           ),
@@ -226,10 +233,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         return ListView.separated(
           key: const ValueKey('chart-type-ribbon'),
           scrollDirection: Axis.horizontal,
-          itemCount: ChartType.values.length,
+          itemCount: _availableChartTypes.length,
           separatorBuilder: (_, _) => const SizedBox(width: spacing),
           itemBuilder: (context, index) {
-            final chartType = ChartType.values[index];
+            final chartType = _availableChartTypes[index];
             return SizedBox(
               width: cardWidth,
               child: _ChartTypePreviewCard(
@@ -403,6 +410,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               markerRadius: preview ? 2.2 : _markerRadius * 0.72,
             ),
         ];
+      case ChartType.pie:
+        throw StateError(
+          'Pie moves into Chart Types after its radial renderer is available',
+        );
     }
   }
 
@@ -414,6 +425,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         '${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill',
       ChartType.bar => '${(_barWidthPercent * 100).round()}% bar width',
       ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
+      ChartType.pie => 'Radial renderer pending',
     };
 
     return '$seriesCount ${seriesCount == 1 ? 'series' : 'series'} · '
@@ -439,6 +451,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.area => 'Area',
       ChartType.bar => 'Bar',
       ChartType.scatter => 'Scatter',
+      ChartType.pie => 'Pie',
     };
   }
 
@@ -448,6 +461,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.area => 'Layered fills',
       ChartType.bar => 'Multi-series columns',
       ChartType.scatter => 'Distinct marker sets',
+      ChartType.pie => 'Category contributions',
     };
   }
 }

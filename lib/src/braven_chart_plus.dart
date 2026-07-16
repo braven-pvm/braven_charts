@@ -32,6 +32,7 @@ import 'interaction/core/coordinator.dart';
 import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
+import 'layout/chart_layout_kind.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
 import 'models/braven_chart_controller.dart';
@@ -46,6 +47,7 @@ import 'models/enums.dart';
 import 'models/grid_config.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
+import 'models/pie_chart_series.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -192,6 +194,13 @@ class BravenChartPlus extends StatefulWidget {
     })?
     onAxisSwapped,
   }) {
+    if (chartType == ChartType.pie) {
+      throw ArgumentError(
+        'BravenChartPlus.fromValues cannot infer pie category labels. '
+        'Use PieChartSeries.fromMap with BravenChartPlus instead.',
+      );
+    }
+
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
 
@@ -207,8 +216,8 @@ class BravenChartPlus extends StatefulWidget {
       (i) => ChartDataPoint(x: xVals[i], y: yValues[i]),
     );
 
-    // Create series
-    final series = LineChartSeries(
+    final series = _createSeriesForType(
+      chartType: chartType,
       id: seriesId,
       name: seriesName ?? seriesId,
       points: points,
@@ -297,26 +306,37 @@ class BravenChartPlus extends StatefulWidget {
     })?
     onAxisSwapped,
   }) {
-    // Convert map to data points
-    final points = data.entries.map((entry) {
-      // Convert key to double (supports int, double, String numbers)
-      final x = switch (entry.key) {
-        final int v => v.toDouble(),
-        final double v => v,
-        final String v => double.parse(v),
-        _ => throw ArgumentError('Map keys must be numeric or numeric strings'),
-      };
-      return ChartDataPoint(x: x, y: entry.value);
-    }).toList();
-
-    // Create series
-    final series = LineChartSeries(
-      id: seriesId,
-      name: seriesName ?? seriesId,
-      points: points,
-      color: seriesColor ?? Colors.blue,
-      interpolation: interpolation,
-    );
+    final ChartSeries series;
+    if (chartType == ChartType.pie) {
+      series = PieChartSeries.fromMap(
+        id: seriesId,
+        name: seriesName ?? seriesId,
+        values: <String, num>{
+          for (final entry in data.entries) entry.key.toString(): entry.value,
+        },
+        color: seriesColor,
+      );
+    } else {
+      final points = data.entries.map((entry) {
+        final x = switch (entry.key) {
+          final int v => v.toDouble(),
+          final double v => v,
+          final String v => double.parse(v),
+          _ => throw ArgumentError(
+            'Map keys must be numeric or numeric strings',
+          ),
+        };
+        return ChartDataPoint(x: x, y: entry.value);
+      }).toList();
+      series = _createSeriesForType(
+        chartType: chartType,
+        id: seriesId,
+        name: seriesName ?? seriesId,
+        points: points,
+        color: seriesColor ?? Colors.blue,
+        interpolation: interpolation,
+      );
+    }
 
     return BravenChartPlus(
       key: key,
@@ -430,41 +450,14 @@ class BravenChartPlus extends StatefulWidget {
       throw ArgumentError('JSON must be an array of data points');
     }
 
-    // Create series
-    final ChartSeries series;
-    switch (chartType) {
-      case ChartType.line:
-        series = LineChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-          interpolation: interpolation,
-        );
-      case ChartType.area:
-        series = AreaChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-          interpolation: interpolation,
-        );
-      case ChartType.bar:
-        series = BarChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-          barWidthPercent: 0.8,
-        );
-      case ChartType.scatter:
-        series = ScatterChartSeries(
-          id: seriesId,
-          name: seriesName ?? seriesId,
-          points: points,
-          color: seriesColor ?? Colors.blue,
-        );
-    }
+    final series = _createSeriesForType(
+      chartType: chartType,
+      id: seriesId,
+      name: seriesName ?? seriesId,
+      points: points,
+      color: seriesColor ?? Colors.blue,
+      interpolation: interpolation,
+    );
 
     return BravenChartPlus(
       key: key,
@@ -508,6 +501,51 @@ class BravenChartPlus extends StatefulWidget {
       onSeriesDeselected: onSeriesDeselected,
       onAxisSwapped: onAxisSwapped,
     );
+  }
+
+  static ChartSeries _createSeriesForType({
+    required ChartType chartType,
+    required String id,
+    required String name,
+    required List<ChartDataPoint> points,
+    required Color color,
+    required LineInterpolation interpolation,
+  }) {
+    return switch (chartType) {
+      ChartType.line => LineChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        interpolation: interpolation,
+      ),
+      ChartType.area => AreaChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        interpolation: interpolation,
+      ),
+      ChartType.bar => BarChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        barWidthPercent: 0.8,
+      ),
+      ChartType.scatter => ScatterChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+      ),
+      ChartType.pie => PieChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+      ),
+    };
   }
 
   final List<ChartSeries> series;
@@ -1850,6 +1888,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     _resolvedChartData = _resolveChartData();
     _effectiveDataSeries = _resolvedChartData.renderSeries;
+    final layoutKind = ChartLayoutResolver.resolve(
+      _resolvedChartData.allSeries,
+    );
+    if (layoutKind == ChartLayoutKind.radial) {
+      throw UnsupportedError(
+        'PieChartSeries rendering is introduced by the radial rendering slice',
+      );
+    }
     _pruneInvalidPointRefs();
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
