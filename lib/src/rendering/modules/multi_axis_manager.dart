@@ -171,9 +171,19 @@ class MultiAxisManager {
     return effectiveAxes.length > 1;
   }
 
-  /// Checks if perSeries normalization is active with multiple axes.
+  /// Checks whether configured series need per-series rendering transforms.
+  ///
+  /// Explicit per-series normalization remains active when visibility filtering
+  /// leaves only one configured series. The chart-level transform still uses
+  /// normalized `0..1` bounds in that state, so the surviving series must keep
+  /// its axis-specific data transform or it will be painted outside the plot.
   bool isMultiAxisNormalizationActive() {
-    return hasMultipleYAxes() &&
+    final hasConfiguredAxis = _series.any(
+      (series) =>
+          series.yAxisConfig != null ||
+          (series.yAxisId != null && series.yAxisId!.isNotEmpty),
+    );
+    return hasConfiguredAxis &&
         effectiveNormalizationMode == NormalizationMode.perSeries;
   }
 

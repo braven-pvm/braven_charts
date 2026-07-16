@@ -768,6 +768,8 @@ class ChartRenderBox extends RenderBox {
   /// Delegates to [MultiAxisManager.setNormalizationMode].
   void setNormalizationMode(NormalizationMode? mode) {
     if (_multiAxisManager.setNormalizationMode(mode)) {
+      _seriesCacheManager.invalidate();
+      markNeedsLayout();
       markNeedsPaint();
     }
   }
@@ -777,6 +779,8 @@ class ChartRenderBox extends RenderBox {
   /// Delegates to [MultiAxisManager.setSeries].
   void setSeries(List<ChartSeries>? series) {
     if (_multiAxisManager.setSeries(series)) {
+      _seriesCacheManager.invalidate();
+      markNeedsLayout();
       markNeedsPaint();
     }
   }

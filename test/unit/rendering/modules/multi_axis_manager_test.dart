@@ -134,6 +134,30 @@ void main() {
         expect(manager.isMultiAxisNormalizationActive(), isTrue);
       });
 
+      test(
+        'explicit per-series normalization survives one-series visibility',
+        () {
+          manager.setSeries([
+            ChartSeries(
+              id: 'power',
+              name: 'Power',
+              points: const [
+                ChartDataPoint(x: 0, y: 120),
+                ChartDataPoint(x: 1, y: 210),
+              ],
+              yAxisConfig: YAxisConfig.withId(
+                id: 'power-axis',
+                position: YAxisPosition.left,
+              ),
+            ),
+          ]);
+          manager.setNormalizationMode(NormalizationMode.perSeries);
+
+          expect(manager.hasMultipleYAxes(), isFalse);
+          expect(manager.isMultiAxisNormalizationActive(), isTrue);
+        },
+      );
+
       test('auto mode activates normalization for large range disparity', () {
         manager.setSeries([
           ChartSeries(
