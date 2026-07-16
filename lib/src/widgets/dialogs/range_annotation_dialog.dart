@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:braven_charts/src/widgets/dialogs/annotation_style_editor.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,6 +10,9 @@ import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
 import '../../models/normalization_mode.dart';
+import 'annotation_color_palette.dart';
+import 'annotation_dialog_header.dart';
+import 'annotation_label_position_selector.dart';
 
 /// Dialog for creating or editing RangeAnnotations.
 ///
@@ -83,7 +85,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   late final TextEditingController _startYController;
   late final TextEditingController _endYController;
 
-  Color _fillColor = Colors.blue.withOpacity(0.2);
+  Color? _fillColor = Colors.blue.withOpacity(0.2);
   Color? _borderColor;
   AnnotationLabelPosition _labelPosition = AnnotationLabelPosition.topLeft;
   AnnotationStyle? _labelStyle;
@@ -204,7 +206,7 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
 
     if (annotation != null) {
       // Edit mode - use existing annotation values
-      _fillColor = annotation.fillColor ?? Colors.blue.withOpacity(0.2);
+      _fillColor = annotation.fillColor;
       _borderColor = annotation.borderColor;
       _labelPosition = annotation.labelPosition;
       _labelStyle = annotation.style;
@@ -235,137 +237,87 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
 
     return Dialog(
       backgroundColor: colorScheme.surface,
-      insetPadding: const EdgeInsets.all(0),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        width: 380,
-        constraints: const BoxConstraints(maxHeight: 600),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+        width: 480,
+        constraints: const BoxConstraints(maxHeight: 720),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with close button
-                  Row(
-                    children: [
-                      Icon(
-                        isEditMode ? Icons.edit : Icons.select_all,
-                        size: 20,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isEditMode ? 'Edit Range Annotation' : 'Add Range Annotation',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Info message
-                  _buildInfoMessage(),
-                  const SizedBox(height: 20),
-
-                  // Range Mode Selector
-                  _buildRangeModeSelector(),
-                  const SizedBox(height: 20),
-
-                  // Label field (optional)
-                  _buildLabelField(),
-                  const SizedBox(height: 20),
-
-                  // Range inputs (X-axis) - shown for Vertical and Custom modes
-                  if (_rangeMode == RangeMode.vertical || _rangeMode == RangeMode.custom) ...[
-                    _buildRangeInputs(
-                      title: 'X-Axis Range',
-                      startController: _startXController,
-                      endController: _endXController,
-                      hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // Range inputs (Y-axis) - shown for Horizontal and Custom modes
-                  if (_rangeMode == RangeMode.horizontal || _rangeMode == RangeMode.custom) ...[
-                    _buildRangeInputs(
-                      title: 'Y-Axis Range',
-                      startController: _startYController,
-                      endController: _endYController,
-                      hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
-                    ),
-                  ],
-
-                  // Series Selection (only in perSeries normalization mode and when Y is shown)
-                  if (_showSeriesSelector && _rangeMode != RangeMode.vertical) ...[
-                    const SizedBox(height: 20),
-                    _buildSeriesSelector(),
-                  ],
-                  const SizedBox(height: 20),
-
-                  // Snap to data points checkbox
-                  _buildSnapToDataPointsCheckbox(),
-                  const SizedBox(height: 20),
-
-                  // Fill color picker
-                  _buildFillColorPicker(),
-                  const SizedBox(height: 20),
-
-                  // Border color picker
-                  _buildBorderColorPicker(),
-                  const SizedBox(height: 20),
-
-                  // Label position selector
-                  _buildLabelPositionSelector(),
-                  const SizedBox(height: 20),
-
-                  // Label styling
-                  AnnotationStyleEditor(
-                    initialStyle: _labelStyle,
-                    onStyleChanged: (style) {
-                      setState(() {
-                        _labelStyle = style;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Action buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _handleSave,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        ),
-                        child: Text(isEditMode ? 'Update' : 'Add'),
-                      ),
-                    ],
-                  ),
-                ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnnotationDialogHeader(
+                key: const ValueKey('range-dialog-sticky-header'),
+                title: isEditMode
+                    ? 'Edit Range Annotation'
+                    : 'Add Range Annotation',
+                icon: isEditMode ? Icons.edit : Icons.select_all,
+                primaryLabel: isEditMode ? 'Update' : 'Add',
+                onPrimary: _handleSave,
+                onCancel: () => Navigator.of(context).pop(),
               ),
-            ),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInfoMessage(),
+                        const SizedBox(height: 20),
+                        _buildRangeModeSelector(),
+                        const SizedBox(height: 20),
+                        _buildLabelField(),
+                        const SizedBox(height: 20),
+                        if (_rangeMode == RangeMode.vertical || _rangeMode == RangeMode.custom) ...[
+                          _buildRangeInputs(
+                            title: 'X-Axis Range',
+                            startController: _startXController,
+                            endController: _endXController,
+                            hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        if (_rangeMode == RangeMode.horizontal || _rangeMode == RangeMode.custom) ...[
+                          _buildRangeInputs(
+                            title: 'Y-Axis Range',
+                            startController: _startYController,
+                            endController: _endYController,
+                            hint: _rangeMode == RangeMode.custom ? 'Leave blank for full range' : null,
+                          ),
+                        ],
+                        if (_showSeriesSelector && _rangeMode != RangeMode.vertical) ...[
+                          const SizedBox(height: 20),
+                          _buildSeriesSelector(),
+                        ],
+                        const SizedBox(height: 20),
+                        _buildSnapToDataPointsCheckbox(),
+                        const SizedBox(height: 20),
+                        _buildFillColorPicker(),
+                        const SizedBox(height: 20),
+                        _buildBorderColorPicker(),
+                        const SizedBox(height: 20),
+                        _buildLabelPositionSelector(),
+                        const SizedBox(height: 20),
+                        AnnotationStyleEditor(
+                          initialStyle: _labelStyle,
+                          onStyleChanged: (style) {
+                            setState(() {
+                              _labelStyle = style;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -675,120 +627,28 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
   }
 
   Widget _buildFillColorPicker() {
-    final presetColors = [
-      Colors.blue.withOpacity(0.2),
-      Colors.green.withOpacity(0.2),
-      Colors.red.withOpacity(0.2),
-      Colors.orange.withOpacity(0.2),
-      Colors.purple.withOpacity(0.2),
-      Colors.yellow.withOpacity(0.2),
-      Colors.grey.withOpacity(0.2),
-      Colors.teal.withOpacity(0.2),
-      Colors.pink.withOpacity(0.2),
-      Colors.indigo.withOpacity(0.2),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Fill Color',
+          'Fill Color (Optional)',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 5,
-          runSpacing: 5,
-          children: [
-            ...presetColors.map((color) {
-              final isSelected = _fillColor == color;
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _fillColor = color;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: isSelected ? Colors.black87 : Colors.grey.shade300,
-                      width: isSelected ? 0.5 : 0.2,
-                    ),
-                  ),
-                  child: isSelected
-                      ? const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: Colors.white,
-                        )
-                      : null,
-                ),
-              );
-            }),
-            // Custom color picker button
-            InkWell(
-              onTap: () => _showCustomColorPicker(_fillColor, (color) {
-                setState(() {
-                  _fillColor = color;
-                });
-              }),
-              borderRadius: BorderRadius.circular(5),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Row(
-                  spacing: 5,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
-                    const Text(
-                      'Custom',
-                      style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
-                    ),
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: _fillColor,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        AnnotationColorPalette(
+          value: _fillColor,
+          keyPrefix: 'range-fill-color',
+          presetOpacity: 0.2,
+          customColorFallback: Colors.blue.withOpacity(0.2),
+          onChanged: (color) => setState(() => _fillColor = color),
         ),
       ],
     );
   }
 
   Widget _buildBorderColorPicker() {
-    final presetColors = [
-      Colors.transparent,
-      Colors.blue,
-      Colors.green,
-      Colors.red,
-      Colors.orange,
-      Colors.purple,
-      Colors.black,
-      Colors.grey,
-      Colors.teal,
-      Colors.pink,
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -799,206 +659,25 @@ class _RangeAnnotationDialogState extends State<RangeAnnotationDialog> {
               ),
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 5,
-          runSpacing: 5,
-          children: [
-            ...presetColors.map((color) {
-              final isSelected = _borderColor == color;
-              final isTransparent = color == Colors.transparent;
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _borderColor = color == Colors.transparent ? null : color;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isTransparent ? Colors.white : color,
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: isSelected ? Colors.black87 : Colors.grey.shade300,
-                      width: isSelected ? 0.5 : 0.2,
-                    ),
-                  ),
-                  child: isTransparent
-                      ? Icon(
-                          Icons.block,
-                          size: 16,
-                          color: isSelected ? Colors.red : Colors.grey,
-                        )
-                      : isSelected
-                          ? Icon(
-                              Icons.check,
-                              size: 16,
-                              color: color == Colors.black ? Colors.white : Colors.white,
-                            )
-                          : null,
-                ),
-              );
-            }),
-            // Custom color picker button
-            if (_borderColor != null && _borderColor != Colors.transparent)
-              InkWell(
-                onTap: () => _showCustomColorPicker(_borderColor!, (color) {
-                  setState(() {
-                    _borderColor = color;
-                  });
-                }),
-                borderRadius: BorderRadius.circular(5),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Row(
-                    spacing: 5,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.palette, size: 16, color: Colors.deepOrange.shade400),
-                      const Text(
-                        'Custom',
-                        style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
-                      ),
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: _borderColor,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+        AnnotationColorPalette(
+          value: _borderColor,
+          keyPrefix: 'range-border-color',
+          customColorFallback: Colors.blue,
+          onChanged: (color) => setState(() => _borderColor = color),
         ),
       ],
     );
   }
 
   Widget _buildLabelPositionSelector() {
-    final positions = [
-      (AnnotationLabelPosition.topLeft, 'Top Left', Icons.north_west),
-      (AnnotationLabelPosition.topRight, 'Top Right', Icons.north_east),
-      (AnnotationLabelPosition.center, 'Center', Icons.center_focus_strong),
-      (AnnotationLabelPosition.bottomLeft, 'Bottom Left', Icons.south_west),
-      (AnnotationLabelPosition.bottomRight, 'Bottom Right', Icons.south_east),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Label Position',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 5,
-          runSpacing: 5,
-          children: positions.map((pos) {
-            final position = pos.$1;
-            final label = pos.$2;
-            final icon = pos.$3;
-            final isSelected = position == _labelPosition;
-
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _labelPosition = position;
-                });
-              },
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  spacing: 5,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icon,
-                      size: 14,
-                      color: isSelected ? Colors.white : Colors.grey[700],
-                    ),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: isSelected ? Colors.white : Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+    return AnnotationLabelPositionSelector(
+      value: _labelPosition,
+      onChanged: (position) {
+        setState(() {
+          _labelPosition = position;
+        });
+      },
     );
-  }
-
-  Future<void> _showCustomColorPicker(Color currentColor, void Function(Color) onColorChanged) async {
-    Color selectedColor = currentColor;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Color'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            color: selectedColor,
-            onColorChanged: (color) => selectedColor = color,
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            showColorName: true,
-            showColorCode: true,
-            colorCodeHasColor: true,
-            enableOpacity: true,
-            opacityTrackHeight: 30,
-            opacityThumbRadius: 16,
-            recentColorsSubheading: const Text('Recent colors'),
-            maxRecentColors: 5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true) {
-      onColorChanged(selectedColor);
-    }
   }
 
   void _handleSave() {

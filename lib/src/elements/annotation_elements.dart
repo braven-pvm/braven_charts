@@ -20,6 +20,99 @@ import 'resize_handle_element.dart';
 /// Position for edge value labels during range annotation resize.
 enum EdgeLabelPosition { left, right, top, bottom }
 
+/// Resolves a label rectangle within a range annotation for any 3×3 anchor.
+Rect resolveRangeAnnotationLabelRect({
+  required Rect rangeRect,
+  required Size labelSize,
+  required double labelMargin,
+  required AnnotationLabelPosition position,
+}) {
+  final x = switch (position) {
+    AnnotationLabelPosition.topLeft ||
+    AnnotationLabelPosition.centerLeft ||
+    AnnotationLabelPosition.bottomLeft => rangeRect.left + labelMargin,
+    AnnotationLabelPosition.topCenter ||
+    AnnotationLabelPosition.center ||
+    AnnotationLabelPosition.bottomCenter => rangeRect.center.dx - labelSize.width / 2,
+    AnnotationLabelPosition.topRight ||
+    AnnotationLabelPosition.centerRight ||
+    AnnotationLabelPosition.bottomRight => rangeRect.right - labelSize.width - labelMargin,
+  };
+  final y = switch (position) {
+    AnnotationLabelPosition.topLeft ||
+    AnnotationLabelPosition.topCenter ||
+    AnnotationLabelPosition.topRight => rangeRect.top + labelMargin,
+    AnnotationLabelPosition.centerLeft ||
+    AnnotationLabelPosition.center ||
+    AnnotationLabelPosition.centerRight => rangeRect.center.dy - labelSize.height / 2,
+    AnnotationLabelPosition.bottomLeft ||
+    AnnotationLabelPosition.bottomCenter ||
+    AnnotationLabelPosition.bottomRight => rangeRect.bottom - labelSize.height - labelMargin,
+  };
+
+  return Rect.fromLTWH(x, y, labelSize.width, labelSize.height);
+}
+
+/// Resolves a label rectangle around a threshold line for any 3×3 anchor.
+Rect resolveThresholdAnnotationLabelRect({
+  required Offset start,
+  required Offset end,
+  required AnnotationAxis axis,
+  required Size labelSize,
+  required double labelMargin,
+  required AnnotationLabelPosition position,
+}) {
+  if (axis == AnnotationAxis.y) {
+    final x = switch (position) {
+      AnnotationLabelPosition.topLeft ||
+      AnnotationLabelPosition.centerLeft ||
+      AnnotationLabelPosition.bottomLeft => start.dx + labelMargin,
+      AnnotationLabelPosition.topCenter ||
+      AnnotationLabelPosition.center ||
+      AnnotationLabelPosition.bottomCenter => (start.dx + end.dx) / 2 - labelSize.width / 2,
+      AnnotationLabelPosition.topRight ||
+      AnnotationLabelPosition.centerRight ||
+      AnnotationLabelPosition.bottomRight => end.dx - labelSize.width - labelMargin,
+    };
+    final y = switch (position) {
+      AnnotationLabelPosition.topLeft ||
+      AnnotationLabelPosition.topCenter ||
+      AnnotationLabelPosition.topRight => start.dy - labelSize.height - labelMargin,
+      AnnotationLabelPosition.centerLeft ||
+      AnnotationLabelPosition.center ||
+      AnnotationLabelPosition.centerRight => start.dy - labelSize.height / 2,
+      AnnotationLabelPosition.bottomLeft ||
+      AnnotationLabelPosition.bottomCenter ||
+      AnnotationLabelPosition.bottomRight => start.dy + labelMargin,
+    };
+    return Rect.fromLTWH(x, y, labelSize.width, labelSize.height);
+  }
+
+  final x = switch (position) {
+    AnnotationLabelPosition.topLeft ||
+    AnnotationLabelPosition.centerLeft ||
+    AnnotationLabelPosition.bottomLeft => start.dx - labelSize.width - labelMargin,
+    AnnotationLabelPosition.topCenter ||
+    AnnotationLabelPosition.center ||
+    AnnotationLabelPosition.bottomCenter => start.dx - labelSize.width / 2,
+    AnnotationLabelPosition.topRight ||
+    AnnotationLabelPosition.centerRight ||
+    AnnotationLabelPosition.bottomRight => start.dx + labelMargin,
+  };
+  final y = switch (position) {
+    AnnotationLabelPosition.topLeft ||
+    AnnotationLabelPosition.topCenter ||
+    AnnotationLabelPosition.topRight => start.dy + labelMargin,
+    AnnotationLabelPosition.centerLeft ||
+    AnnotationLabelPosition.center ||
+    AnnotationLabelPosition.centerRight => (start.dy + end.dy) / 2 - labelSize.height / 2,
+    AnnotationLabelPosition.bottomLeft ||
+    AnnotationLabelPosition.bottomCenter ||
+    AnnotationLabelPosition.bottomRight => end.dy - labelSize.height - labelMargin,
+  };
+  return Rect.fromLTWH(x, y, labelSize.width, labelSize.height);
+}
+
 /// A chart element that renders a point annotation marker.
 ///
 /// Marks a specific data point with a custom marker shape and color.
@@ -1065,36 +1158,12 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     // Use labelMargin from annotation
     final labelMargin = annotation.labelMargin;
 
-    // Position label container (bgRect) based on labelPosition
-    // The container edge should be labelMargin away from the range edge
-    Rect bgRect;
-    switch (annotation.labelPosition) {
-      case AnnotationLabelPosition.topLeft:
-        // Container's top-left corner is labelMargin from range's top-left corner
-        bgRect = Rect.fromLTWH(rect.left + labelMargin, rect.top + labelMargin, containerWidth, containerHeight);
-        break;
-      case AnnotationLabelPosition.topRight:
-        // Container's top-right corner is labelMargin from range's top-right corner
-        bgRect = Rect.fromLTWH(rect.right - containerWidth - labelMargin, rect.top + labelMargin, containerWidth, containerHeight);
-        break;
-      case AnnotationLabelPosition.bottomLeft:
-        // Container's bottom-left corner is labelMargin from range's bottom-left corner
-        bgRect = Rect.fromLTWH(rect.left + labelMargin, rect.bottom - containerHeight - labelMargin, containerWidth, containerHeight);
-        break;
-      case AnnotationLabelPosition.bottomRight:
-        // Container's bottom-right corner is labelMargin from range's bottom-right corner
-        bgRect = Rect.fromLTWH(
-          rect.right - containerWidth - labelMargin,
-          rect.bottom - containerHeight - labelMargin,
-          containerWidth,
-          containerHeight,
-        );
-        break;
-      case AnnotationLabelPosition.center:
-        // Container centered within the range
-        bgRect = Rect.fromLTWH(rect.center.dx - containerWidth / 2, rect.center.dy - containerHeight / 2, containerWidth, containerHeight);
-        break;
-    }
+    final bgRect = resolveRangeAnnotationLabelRect(
+      rangeRect: rect,
+      labelSize: Size(containerWidth, containerHeight),
+      labelMargin: labelMargin,
+      position: annotation.labelPosition,
+    );
 
     // Draw background if specified
     if (annotation.style.backgroundColor != null) {
@@ -1683,37 +1752,14 @@ class ThresholdAnnotationElement extends ChartElement {
     final containerHeight = textPainter.height + padding.top + padding.bottom;
     final labelMargin = annotation.labelMargin;
 
-    // Position label container based on labelPosition and axis orientation (same as paint())
-    Rect bgRect;
-    if (annotation.axis == AnnotationAxis.y) {
-      final lineY = start.dy;
-      switch (annotation.labelPosition) {
-        case AnnotationLabelPosition.topLeft:
-          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.topRight:
-          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.bottomLeft:
-          bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.bottomRight:
-          bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.center:
-          bgRect = Rect.fromLTWH((start.dx + end.dx) / 2 - containerWidth / 2, lineY - containerHeight / 2, containerWidth, containerHeight);
-      }
-    } else {
-      final lineX = start.dx;
-      switch (annotation.labelPosition) {
-        case AnnotationLabelPosition.topLeft:
-          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.topRight:
-          bgRect = Rect.fromLTWH(lineX + labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.bottomLeft:
-          bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.bottomRight:
-          bgRect = Rect.fromLTWH(lineX + labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
-        case AnnotationLabelPosition.center:
-          bgRect = Rect.fromLTWH(lineX - containerWidth / 2, (start.dy + end.dy) / 2 - containerHeight / 2, containerWidth, containerHeight);
-      }
-    }
+    final bgRect = resolveThresholdAnnotationLabelRect(
+      start: start,
+      end: end,
+      axis: annotation.axis,
+      labelSize: Size(containerWidth, containerHeight),
+      labelMargin: labelMargin,
+      position: annotation.labelPosition,
+    );
 
     return bgRect;
   }
@@ -1860,59 +1906,14 @@ class ThresholdAnnotationElement extends ChartElement {
       // Use labelMargin from annotation
       final labelMargin = annotation.labelMargin;
 
-      // Position label container based on labelPosition and axis orientation
-      Rect bgRect;
-      if (annotation.axis == AnnotationAxis.y) {
-        // Horizontal line - position label relative to line Y coordinate
-        final lineY = start.dy;
-        switch (annotation.labelPosition) {
-          case AnnotationLabelPosition.topLeft:
-            // Container above line, aligned left
-            bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.topRight:
-            // Container above line, aligned right
-            bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY - containerHeight - labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.bottomLeft:
-            // Container below line, aligned left
-            bgRect = Rect.fromLTWH(start.dx + labelMargin, lineY + labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.bottomRight:
-            // Container below line, aligned right
-            bgRect = Rect.fromLTWH(end.dx - containerWidth - labelMargin, lineY + labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.center:
-            // Container centered on line
-            bgRect = Rect.fromLTWH((start.dx + end.dx) / 2 - containerWidth / 2, lineY - containerHeight / 2, containerWidth, containerHeight);
-            break;
-        }
-      } else {
-        // Vertical line - position label relative to line X coordinate
-        final lineX = start.dx;
-        switch (annotation.labelPosition) {
-          case AnnotationLabelPosition.topLeft:
-            // Container left of line, aligned top
-            bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.topRight:
-            // Container right of line, aligned top
-            bgRect = Rect.fromLTWH(lineX + labelMargin, start.dy + labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.bottomLeft:
-            // Container left of line, aligned bottom
-            bgRect = Rect.fromLTWH(lineX - containerWidth - labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.bottomRight:
-            // Container right of line, aligned bottom
-            bgRect = Rect.fromLTWH(lineX + labelMargin, end.dy - containerHeight - labelMargin, containerWidth, containerHeight);
-            break;
-          case AnnotationLabelPosition.center:
-            // Container centered on line
-            bgRect = Rect.fromLTWH(lineX - containerWidth / 2, (start.dy + end.dy) / 2 - containerHeight / 2, containerWidth, containerHeight);
-            break;
-        }
-      }
+      final bgRect = resolveThresholdAnnotationLabelRect(
+        start: start,
+        end: end,
+        axis: annotation.axis,
+        labelSize: Size(containerWidth, containerHeight),
+        labelMargin: labelMargin,
+        position: annotation.labelPosition,
+      );
 
       // Draw background if backgroundColor is set
       if (annotation.style.backgroundColor != null) {

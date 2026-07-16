@@ -1,10 +1,10 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Annotation Style Editor for BravenChartPlus
 
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
+import 'annotation_color_palette.dart';
 
 /// Reusable widget for editing annotation styling properties.
 ///
@@ -66,11 +66,11 @@ class AnnotationStyleEditor extends StatefulWidget {
 
 class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
   // Style properties
-  late Color _textColor;
+  late Color? _textColor;
   late double _fontSize;
   late FontWeight _fontWeight;
-  late Color _backgroundColor;
-  late Color _borderColor;
+  late Color? _backgroundColor;
+  late Color? _borderColor;
   late double _borderWidth;
   late double _borderRadius;
   late double _paddingValue;
@@ -84,11 +84,11 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
 
     // Initialize from provided style or defaults
     final style = widget.initialStyle ?? const AnnotationStyle();
-    _textColor = style.textColor;
+    _textColor = style.textStyle.color;
     _fontSize = style.fontSize;
     _fontWeight = style.fontWeight;
-    _backgroundColor = style.backgroundColor ?? Colors.white;
-    _borderColor = style.borderColor ?? Colors.grey;
+    _backgroundColor = style.backgroundColor;
+    _borderColor = style.borderColor;
     _borderWidth = style.borderWidth;
     _borderRadius = (style.borderRadius?.topLeft.x ?? 4.0);
     _paddingValue = (style.padding?.top ?? 8.0);
@@ -172,7 +172,7 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Text Color',
+          'Text Color (Optional)',
           style: TextStyle(
               fontSize: 11,
               color: Colors.grey[700],
@@ -180,7 +180,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
+          selectorName: 'text',
           currentColor: _textColor,
+          allowClear: true,
+          customFallback: Colors.black,
           onColorChanged: (color) {
             setState(() {
               _textColor = color;
@@ -197,7 +200,7 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Background Color',
+          'Background Color (Optional)',
           style: TextStyle(
               fontSize: 11,
               color: Colors.grey[700],
@@ -205,7 +208,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
+          selectorName: 'background',
           currentColor: _backgroundColor,
+          allowClear: true,
+          customFallback: Colors.white,
           onColorChanged: (color) {
             setState(() {
               _backgroundColor = color;
@@ -222,7 +228,7 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Border Color',
+          'Border Color (Optional)',
           style: TextStyle(
               fontSize: 11,
               color: Colors.grey[700],
@@ -230,7 +236,10 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
         ),
         const SizedBox(height: 8),
         _buildColorSelector(
+          selectorName: 'border',
           currentColor: _borderColor,
+          allowClear: true,
+          customFallback: Colors.grey,
           onColorChanged: (color) {
             setState(() {
               _borderColor = color;
@@ -243,93 +252,18 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
   }
 
   Widget _buildColorSelector({
-    required Color currentColor,
-    required void Function(Color) onColorChanged,
+    required String selectorName,
+    required Color? currentColor,
+    required void Function(Color?) onColorChanged,
+    bool allowClear = false,
+    Color customFallback = Colors.black,
   }) {
-    final presetColors = [
-      Colors.black,
-      Colors.white,
-      Colors.grey[600]!,
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.pink,
-      Colors.teal,
-      Colors.amber,
-      Colors.indigo,
-    ];
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        ...presetColors.map((color) {
-          final isSelected = currentColor == color;
-          return InkWell(
-            onTap: () => onColorChanged(color),
-            borderRadius: BorderRadius.circular(5),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
-                  color: isSelected ? Colors.black87 : Colors.grey.shade300,
-                  width: isSelected ? 2.0 : 1.0,
-                ),
-              ),
-              child: isSelected
-                  ? Icon(
-                      Icons.check,
-                      size: 16,
-                      color: _getContrastColor(color),
-                    )
-                  : null,
-            ),
-          );
-        }),
-        // Custom color button
-        InkWell(
-          onTap: () => _showCustomColorPicker(currentColor, onColorChanged),
-          borderRadius: BorderRadius.circular(5),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.palette,
-                    size: 16, color: Colors.deepOrange.shade400),
-                const SizedBox(width: 5),
-                const Text(
-                  'Custom',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 5),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: currentColor,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return AnnotationColorPalette(
+      value: currentColor,
+      keyPrefix: 'annotation-style-$selectorName-color',
+      allowClear: allowClear,
+      customColorFallback: customFallback,
+      onChanged: onColorChanged,
     );
   }
 
@@ -553,84 +487,6 @@ class _AnnotationStyleEditorState extends State<AnnotationStyleEditor> {
         ),
       ],
     );
-  }
-
-  void _showCustomColorPicker(
-      Color currentColor, void Function(Color) onColorChanged) {
-    Color selectedColor = currentColor;
-
-    showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Color'),
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              color: selectedColor,
-              onColorChanged: (Color color) {
-                selectedColor = color;
-              },
-              width: 40,
-              height: 40,
-              borderRadius: 4,
-              spacing: 5,
-              runSpacing: 5,
-              wheelDiameter: 200,
-              heading: Text(
-                'Select color',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              subheading: Text(
-                'Select color shade',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              wheelSubheading: Text(
-                'Selected color and its shades',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              showMaterialName: true,
-              showColorName: true,
-              showColorCode: true,
-              materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
-              colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
-              colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
-              pickersEnabled: const <ColorPickerType, bool>{
-                ColorPickerType.both: false,
-                ColorPickerType.primary: true,
-                ColorPickerType.accent: true,
-                ColorPickerType.bw: false,
-                ColorPickerType.custom: false,
-                ColorPickerType.wheel: true,
-              },
-              enableShadesSelection: true,
-              enableOpacity: true,
-              showRecentColors: true,
-              maxRecentColors: 5,
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                onColorChanged(selectedColor);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Select'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Color _getContrastColor(Color backgroundColor) {
-    // Calculate relative luminance
-    final luminance = backgroundColor.computeLuminance();
-    // Use white text on dark backgrounds, black on light backgrounds
-    return luminance > 0.5 ? Colors.black : Colors.white;
   }
 
   void _notifyStyleChanged() {

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
 import '../../models/chart_theme.dart';
+import 'annotation_dialog_header.dart';
 import 'annotation_style_editor.dart';
 
 /// Text editing mode for TextAnnotationDialog.
@@ -158,82 +159,42 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 650),
-        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with close button
-                Row(
-                  children: [
-                    Icon(
-                      isEditMode ? Icons.edit : Icons.text_fields,
-                      size: 20,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isEditMode
-                          ? 'Edit Text Annotation'
-                          : 'Add Text Annotation',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnnotationDialogHeader(
+                key: const ValueKey('text-dialog-sticky-header'),
+                title: isEditMode
+                    ? 'Edit Text Annotation'
+                    : 'Add Text Annotation',
+                icon: isEditMode ? Icons.edit : Icons.text_fields,
+                primaryLabel: isEditMode ? 'Update' : 'Add',
+                onPrimary: _handleSave,
+                onCancel: () => Navigator.of(context).pop(),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField(),
+                      const SizedBox(height: 20),
+                      _buildAllowDraggingCheckbox(),
+                      const SizedBox(height: 20),
+                      _buildStylingSection(),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-
-                // Text field
-                _buildTextField(),
-                const SizedBox(height: 20),
-
-                // Anchor selector
-                _buildAnchorSelector(),
-                const SizedBox(height: 20),
-
-                // Allow dragging checkbox
-                _buildAllowDraggingCheckbox(),
-                const SizedBox(height: 20),
-
-                // Styling section
-                _buildStylingSection(),
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _handleSave,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                      ),
-                      child: Text(isEditMode ? 'Update' : 'Add'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -449,82 +410,6 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
     );
   }
 
-  Widget _buildAnchorSelector() {
-    final anchors = [
-      AnnotationAnchor.topLeft,
-      AnnotationAnchor.topCenter,
-      AnnotationAnchor.topRight,
-      AnnotationAnchor.centerLeft,
-      AnnotationAnchor.center,
-      AnnotationAnchor.centerRight,
-      AnnotationAnchor.bottomLeft,
-      AnnotationAnchor.bottomCenter,
-      AnnotationAnchor.bottomRight,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Anchor Point',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-              ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Determines how the text box aligns to the click position',
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: anchors.map((anchor) {
-            final isSelected = anchor == _anchor;
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _anchor = anchor;
-                });
-              },
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey[300]!,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  _anchorLabel(anchor),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : Colors.grey[700],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   Widget _buildAllowDraggingCheckbox() {
     return Row(
       children: [
@@ -577,29 +462,6 @@ class _TextAnnotationDialogState extends State<TextAnnotationDialog> {
       showBorderControls: true,
       showPaddingControls: true,
     );
-  }
-
-  String _anchorLabel(AnnotationAnchor anchor) {
-    switch (anchor) {
-      case AnnotationAnchor.topLeft:
-        return 'Top Left';
-      case AnnotationAnchor.topCenter:
-        return 'Top Center';
-      case AnnotationAnchor.topRight:
-        return 'Top Right';
-      case AnnotationAnchor.centerLeft:
-        return 'Center Left';
-      case AnnotationAnchor.center:
-        return 'Center';
-      case AnnotationAnchor.centerRight:
-        return 'Center Right';
-      case AnnotationAnchor.bottomLeft:
-        return 'Bottom Left';
-      case AnnotationAnchor.bottomCenter:
-        return 'Bottom Center';
-      case AnnotationAnchor.bottomRight:
-        return 'Bottom Right';
-    }
   }
 
   void _handleSave() {

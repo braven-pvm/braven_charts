@@ -1,13 +1,14 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // ThresholdAnnotation Dialog - Material Design 3
 
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
 import '../../models/chart_theme.dart';
 import '../../models/normalization_mode.dart';
+import 'annotation_color_palette.dart';
+import 'annotation_dialog_header.dart';
 
 /// Dialog for creating or editing a ThresholdAnnotation.
 ///
@@ -226,39 +227,24 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     final isEditing = widget.annotation != null;
 
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isEditing ? 'Edit Threshold' : 'Add Threshold',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Horizontal or vertical reference line',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color:
-                          theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
+            AnnotationDialogHeader(
+              key: const ValueKey('threshold-dialog-sticky-header'),
+              title: isEditing ? 'Edit Threshold' : 'Add Threshold',
+              icon: Icons.horizontal_rule,
+              primaryLabel: isEditing ? 'Update' : 'Add',
+              onPrimary: _handleCreate,
+              onCancel: () => Navigator.of(context).pop(),
             ),
 
             // Content
@@ -374,28 +360,24 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
                     Text('Line Style', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 16),
 
-                    // Line Color
-                    Row(
+                    const Row(
                       children: [
-                        const Icon(Icons.palette, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Color'),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () => _showColorPicker(),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 80,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: _lineColor,
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: theme.colorScheme.outline),
-                            ),
-                          ),
-                        ),
+                        Icon(Icons.palette, size: 20),
+                        SizedBox(width: 12),
+                        Text('Color'),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    AnnotationColorPalette(
+                      value: _lineColor,
+                      keyPrefix: 'threshold-line-color',
+                      allowClear: false,
+                      customColorFallback: Colors.red,
+                      onChanged: (color) {
+                        if (color != null) {
+                          setState(() => _lineColor = color);
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -548,25 +530,6 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
               ),
             ),
 
-            // Actions
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 16),
-                  FilledButton.icon(
-                    onPressed: _handleCreate,
-                    icon: Icon(isEditing ? Icons.check : Icons.add),
-                    label: Text(isEditing ? 'Update' : 'Add'),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -577,48 +540,23 @@ class _ThresholdAnnotationDialogState extends State<ThresholdAnnotationDialog> {
     switch (position) {
       case AnnotationLabelPosition.topLeft:
         return 'Top Left';
+      case AnnotationLabelPosition.topCenter:
+        return 'Top Center';
       case AnnotationLabelPosition.topRight:
         return 'Top Right';
-      case AnnotationLabelPosition.bottomLeft:
-        return 'Bottom Left';
-      case AnnotationLabelPosition.bottomRight:
-        return 'Bottom Right';
+      case AnnotationLabelPosition.centerLeft:
+        return 'Center Left';
       case AnnotationLabelPosition.center:
         return 'Center';
+      case AnnotationLabelPosition.centerRight:
+        return 'Center Right';
+      case AnnotationLabelPosition.bottomLeft:
+        return 'Bottom Left';
+      case AnnotationLabelPosition.bottomCenter:
+        return 'Bottom Center';
+      case AnnotationLabelPosition.bottomRight:
+        return 'Bottom Right';
     }
   }
 
-  Future<void> _showColorPicker() async {
-    await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Line Color'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            color: _lineColor,
-            onColorChanged: (color) => setState(() => _lineColor = color),
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            spacing: 8,
-            runSpacing: 8,
-            wheelDiameter: 200,
-            enableShadesSelection: false,
-            pickersEnabled: const {
-              ColorPickerType.both: false,
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: false,
-              ColorPickerType.wheel: true,
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
 }
