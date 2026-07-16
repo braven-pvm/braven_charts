@@ -584,6 +584,56 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(94.0, 0.001));
       });
 
+      for (final testCase in <({String name, double value})>[
+        (name: 'positive', value: 180),
+        (name: 'zero', value: 0),
+        (name: 'negative', value: -40),
+      ]) {
+        test(
+          'constant ${testCase.name} values receive finite non-zero bounds',
+          () {
+            manager.setNormalizationMode(NormalizationMode.perSeries);
+            manager.setSeries([
+              ChartSeries(
+                id: 'constant',
+                name: 'Constant',
+                points: [
+                  ChartDataPoint(x: 0, y: testCase.value),
+                  ChartDataPoint(x: 1, y: testCase.value),
+                ],
+                yAxisConfig: YAxisConfig.withId(
+                  id: 'constant-axis',
+                  position: YAxisPosition.left,
+                ),
+              ),
+            ]);
+
+            final axisRange = manager.computeAxisBounds()['constant-axis']!;
+            final seriesRange = manager.computeSeriesBounds()['constant']!;
+
+            expect(axisRange.min.isFinite, isTrue);
+            expect(axisRange.max.isFinite, isTrue);
+            expect(axisRange.min, lessThan(testCase.value));
+            expect(axisRange.max, greaterThan(testCase.value));
+            expect(axisRange.max, greaterThan(axisRange.min));
+            expect(axisRange.center, closeTo(testCase.value, 1e-9));
+            expect(seriesRange, axisRange);
+          },
+        );
+      }
+
+      test('equal explicit axis bounds remain rejected by configuration', () {
+        expect(
+          () => YAxisConfig.withId(
+            id: 'invalid-axis',
+            position: YAxisPosition.left,
+            min: 10,
+            max: 10,
+          ),
+          throwsAssertionError,
+        );
+      });
+
       test('computeAxisBounds uses default 0-100 when no data', () {
         manager.setSeries([
           ChartSeries(
