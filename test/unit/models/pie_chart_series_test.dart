@@ -156,6 +156,14 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        () => build(style: const PieChartStyle(opacity: 1.01)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(style: const PieChartStyle(cornerRadius: -1)),
+        throwsArgumentError,
+      );
+      expect(
         () => build(labels: const PieDataLabelConfig(minimumShare: 1.01)),
         throwsArgumentError,
       );

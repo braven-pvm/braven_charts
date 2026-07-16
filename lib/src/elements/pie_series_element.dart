@@ -12,6 +12,7 @@ import '../models/chart_theme.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../rendering/pie_slice_color_resolver.dart';
+import '../theming/styles/label_style.dart';
 
 /// Radial chart element responsible for pie wedges and deterministic labels.
 class PieSeriesElement implements DataHitElement {
@@ -25,6 +26,8 @@ class PieSeriesElement implements DataHitElement {
     this.focusedPointIndices = const <int>{},
     this.selectedPointIndices = const <int>{},
     this.coordinator,
+    this.animationProgress = 1,
+    this.selectionProgress = 1,
     this.isSelected = false,
     this.isHovered = false,
   }) : geometry = PieChartGeometryCalculator.calculate(
@@ -32,6 +35,10 @@ class PieSeriesElement implements DataHitElement {
          size: size,
          padding: _geometryPadding(series, size, textScaleFactor),
          explodedPointIndices: selectedPointIndices,
+         cornerRadius:
+             series.pieStyle.cornerRadius ?? theme.pieChartTheme.cornerRadius,
+         animationProgress: animationProgress,
+         selectionProgress: selectionProgress,
        );
 
   @override
@@ -57,6 +64,12 @@ class PieSeriesElement implements DataHitElement {
 
   /// Shared interaction state used for dynamic hover highlighting.
   final ChartInteractionCoordinator? coordinator;
+
+  /// Radial entrance progress in the inclusive range 0–1.
+  final double animationProgress;
+
+  /// Selected explode/elevation progress in the inclusive range 0–1.
+  final double selectionProgress;
 
   /// Immutable geometry shared by painting and hit testing.
   final PieChartGeometry geometry;
@@ -124,13 +137,51 @@ class PieSeriesElement implements DataHitElement {
   @override
   void paint(Canvas canvas, Size size) {
     final slices = geometry.slices;
+    final opacity = series.pieStyle.opacity ?? theme.pieChartTheme.opacity;
+    final shadow = series.pieStyle.shadow ?? theme.pieChartTheme.shadow;
+    final combinedShadow = shadow.isVisible && shadow.color != null;
+    if (combinedShadow && slices.isNotEmpty) {
+      final combinedPath = Path();
+      for (final slice in slices) {
+        combinedPath.addPath(slice.path, Offset.zero);
+      }
+      _paintElevation(
+        canvas,
+        combinedPath,
+        shadow.color!,
+        shadow,
+        opacity: opacity,
+      );
+    }
     for (final (index, slice) in slices.indexed) {
       final fillColor = _resolveSliceColor(slice.point, index);
+      final selected = selectedPointIndices.contains(slice.pointIndex);
+      final selectedElevation =
+          series.pieStyle.selectedElevation ??
+          theme.pieChartTheme.selectedElevation;
+      if (!combinedShadow) {
+        _paintElevation(
+          canvas,
+          slice.path,
+          fillColor,
+          shadow,
+          opacity: opacity,
+        );
+      }
+      if (selected) {
+        _paintElevation(
+          canvas,
+          slice.path,
+          fillColor,
+          selectedElevation,
+          opacity: opacity * selectionProgress,
+        );
+      }
       canvas.drawPath(
         slice.path,
         Paint()
           ..style = PaintingStyle.fill
-          ..color = fillColor
+          ..color = fillColor.withValues(alpha: fillColor.a * opacity)
           ..isAntiAlias = true,
       );
       if (series.pieStyle.borderWidth > 0) {
@@ -157,8 +208,7 @@ class PieSeriesElement implements DataHitElement {
             ..isAntiAlias = true,
         );
       }
-      if (selectedPointIndices.contains(slice.pointIndex) ||
-          focusedPointIndices.contains(slice.pointIndex)) {
+      if (selected || focusedPointIndices.contains(slice.pointIndex)) {
         final isFocused = focusedPointIndices.contains(slice.pointIndex);
         canvas.drawPath(
           slice.path,
@@ -176,7 +226,9 @@ class PieSeriesElement implements DataHitElement {
       }
     }
 
-    if (!series.dataLabels.isVisible || slices.isEmpty) {
+    if (!series.dataLabels.isVisible ||
+        slices.isEmpty ||
+        animationProgress < 0.999) {
       return;
     }
     if (series.dataLabels.position == PieDataLabelPosition.inside) {
@@ -186,7 +238,64 @@ class PieSeriesElement implements DataHitElement {
     }
   }
 
+  void _paintElevation(
+    Canvas canvas,
+    Path path,
+    Color sliceColor,
+    PieElevationStyle style, {
+    required double opacity,
+  }) {
+    if (!style.isVisible || opacity <= 0) return;
+    final source = style.color ?? sliceColor;
+    final color = source.withValues(
+      alpha: (source.a * style.opacity * opacity).clamp(0, 1),
+    );
+    canvas.save();
+    canvas.translate(style.offset.dx, style.offset.dy);
+    _paintSoftPathShadow(
+      canvas,
+      path,
+      color: color,
+      blurRadius: style.blurRadius,
+      spreadRadius: style.spreadRadius,
+    );
+    canvas.restore();
+  }
+
+  void _paintSoftPathShadow(
+    Canvas canvas,
+    Path path, {
+    required Color color,
+    required double blurRadius,
+    required double spreadRadius,
+  }) {
+    const layers = 4;
+    for (var layer = layers; layer >= 1; layer--) {
+      final fraction = layer / layers;
+      final extent = spreadRadius + blurRadius * fraction * 0.65;
+      if (extent <= 0) continue;
+      final layerAlpha = color.a * (0.08 + (1 - fraction) * 0.16);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = extent * 2
+          ..strokeJoin = StrokeJoin.round
+          ..color = color.withValues(alpha: layerAlpha.clamp(0, 1))
+          ..isAntiAlias = true,
+      );
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = color.withValues(alpha: (color.a * 0.45).clamp(0, 1))
+        ..isAntiAlias = true,
+    );
+  }
+
   void _paintInsideLabels(Canvas canvas) {
+    final calloutStyle = _effectiveCalloutStyle;
     for (final (index, slice) in geometry.slices.indexed) {
       if (!_isLabelEligible(slice)) {
         continue;
@@ -199,19 +308,23 @@ class PieSeriesElement implements DataHitElement {
             : const Color(0xFFFFFFFF),
         fontWeight: FontWeight.w600,
       );
+      final labelSize = _labelSize(painter, calloutStyle);
       final radialThickness = slice.outerRadius - slice.innerRadius;
-      if (painter.width > radialThickness * 0.95 ||
-          painter.height > radialThickness * 0.55) {
+      if (labelSize.width > radialThickness * 0.95 ||
+          labelSize.height > radialThickness * 0.55) {
         continue;
       }
-      painter.paint(
-        canvas,
-        slice.insideLabelAnchor - Offset(painter.width / 2, painter.height / 2),
+      final rect = Rect.fromCenter(
+        center: slice.insideLabelAnchor,
+        width: labelSize.width,
+        height: labelSize.height,
       );
+      _paintLabel(canvas, painter, rect, calloutStyle);
     }
   }
 
   void _paintOutsideLabels(Canvas canvas) {
+    final calloutStyle = _effectiveCalloutStyle;
     final candidates = <_PieLabelCandidate>[];
     for (final (index, slice) in geometry.slices.indexed) {
       if (!_isLabelEligible(slice)) {
@@ -228,6 +341,7 @@ class PieSeriesElement implements DataHitElement {
           painter: painter,
           color: _resolveSliceColor(slice.point, index),
           isLeft: math.cos(slice.midAngle) < 0,
+          size: _labelSize(painter, calloutStyle),
         ),
       );
     }
@@ -236,8 +350,10 @@ class PieSeriesElement implements DataHitElement {
     final right = candidates.where((candidate) => !candidate.isLeft).toList();
     _resolveLabelLane(left);
     _resolveLabelLane(right);
+    final visibleCandidates = [...left, ...right];
+    _paintCalloutShadows(canvas, visibleCandidates, calloutStyle);
 
-    for (final candidate in [...left, ...right]) {
+    for (final candidate in visibleCandidates) {
       final rect = candidate.labelRect;
       if (rect == null) {
         continue;
@@ -262,7 +378,13 @@ class PieSeriesElement implements DataHitElement {
         ..color = series.dataLabels.connectorColor ?? candidate.color;
       canvas.drawLine(candidate.slice.connectorOrigin, elbow, connectorPaint);
       canvas.drawLine(elbow, labelEdge, connectorPaint);
-      candidate.painter.paint(canvas, rect.topLeft);
+      _paintLabel(
+        canvas,
+        candidate.painter,
+        rect,
+        calloutStyle,
+        paintShadow: false,
+      );
     }
   }
 
@@ -311,18 +433,18 @@ class PieSeriesElement implements DataHitElement {
     var nextTop = edgePadding;
     for (final candidate in lane) {
       final desiredTop =
-          candidate.slice.outsideLabelAnchor.dy - candidate.painter.height / 2;
+          candidate.slice.outsideLabelAnchor.dy - candidate.size.height / 2;
       final top = allowShift ? math.max(desiredTop, nextTop) : desiredTop;
       final x = candidate.isLeft
           ? edgePadding
-          : size.width - edgePadding - candidate.painter.width;
+          : size.width - edgePadding - candidate.size.width;
       candidate.labelRect = Rect.fromLTWH(
         x,
         top,
-        candidate.painter.width,
-        candidate.painter.height,
+        candidate.size.width,
+        candidate.size.height,
       );
-      nextTop = top + candidate.painter.height + minimumGap;
+      nextTop = top + candidate.size.height + minimumGap;
     }
 
     final overflow =
@@ -363,23 +485,107 @@ class PieSeriesElement implements DataHitElement {
     required FontWeight fontWeight,
   }) {
     final typography = theme.typographyTheme;
-    final fontSize =
-        typography.baseFontSize * typography.labelMultiplier * textScaleFactor;
+    final calloutTextStyle = _effectiveCalloutStyle?.textStyle;
+    final resolvedFontSize =
+        (calloutTextStyle?.fontSize ??
+            typography.baseFontSize * typography.labelMultiplier) *
+        textScaleFactor;
     return TextPainter(
       text: TextSpan(
         text: _labelText(slice),
         style: TextStyle(
           color: color,
           fontFamily: typography.fontFamily,
-          fontSize: fontSize,
           fontWeight: fontWeight,
           height: 1.1,
-        ),
+        ).merge(calloutTextStyle).copyWith(fontSize: resolvedFontSize),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
       ellipsis: '…',
     )..layout(maxWidth: math.max(32, size.width * 0.32));
+  }
+
+  LabelStyle? get _effectiveCalloutStyle =>
+      series.dataLabels.calloutStyle ?? theme.pieChartTheme.calloutStyle;
+
+  Size _labelSize(TextPainter painter, LabelStyle? style) {
+    final padding = style?.padding ?? EdgeInsets.zero;
+    return Size(
+      painter.width + padding.horizontal,
+      painter.height + padding.vertical,
+    );
+  }
+
+  void _paintLabel(
+    Canvas canvas,
+    TextPainter painter,
+    Rect rect,
+    LabelStyle? style, {
+    bool paintShadow = true,
+  }) {
+    if (style == null) {
+      painter.paint(canvas, rect.topLeft);
+      return;
+    }
+    final rounded = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(style.borderRadius),
+    );
+    if (paintShadow &&
+        style.shadowColor != null &&
+        (style.shadowBlurRadius ?? 0) > 0) {
+      _paintSoftPathShadow(
+        canvas,
+        Path()..addRRect(rounded),
+        color: style.shadowColor!,
+        blurRadius: style.shadowBlurRadius!,
+        spreadRadius: 0,
+      );
+    }
+    if (style.backgroundColor.a > 0) {
+      canvas.drawRRect(
+        rounded,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = style.backgroundColor,
+      );
+    }
+    if (style.borderWidth > 0 && style.borderColor.a > 0) {
+      canvas.drawRRect(
+        rounded,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.borderWidth
+          ..color = style.borderColor,
+      );
+    }
+    painter.paint(canvas, rect.topLeft + style.padding.topLeft);
+  }
+
+  void _paintCalloutShadows(
+    Canvas canvas,
+    List<_PieLabelCandidate> candidates,
+    LabelStyle? style,
+  ) {
+    if (style?.shadowColor == null || (style?.shadowBlurRadius ?? 0) <= 0) {
+      return;
+    }
+    final path = Path();
+    for (final candidate in candidates) {
+      final rect = candidate.labelRect;
+      if (rect == null) continue;
+      path.addRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(style!.borderRadius)),
+      );
+    }
+    _paintSoftPathShadow(
+      canvas,
+      path,
+      color: style!.shadowColor!,
+      blurRadius: style.shadowBlurRadius!,
+      spreadRadius: 0,
+    );
   }
 
   String _labelText(PieSliceGeometry slice) {
@@ -454,6 +660,8 @@ class PieSeriesElement implements DataHitElement {
       focusedPointIndices: focusedPointIndices,
       selectedPointIndices: selectedPointIndices,
       coordinator: coordinator,
+      animationProgress: animationProgress,
+      selectionProgress: selectionProgress,
       isHovered: isHovered ?? this.isHovered,
       isSelected: isSelected ?? this.isSelected,
     );
@@ -483,11 +691,13 @@ class _PieLabelCandidate {
     required this.painter,
     required this.color,
     required this.isLeft,
+    required this.size,
   });
 
   final PieSliceGeometry slice;
   final TextPainter painter;
   final Color color;
   final bool isLeft;
+  final Size size;
   Rect? labelRect;
 }

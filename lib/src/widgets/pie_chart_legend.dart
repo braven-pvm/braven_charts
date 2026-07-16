@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/chart_theme.dart';
+import '../models/legend_style.dart';
 import '../models/pie_chart_series.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 
@@ -43,46 +44,70 @@ class PieChartLegend extends StatelessWidget {
     final total = series.total;
     if (visibleIndices.isEmpty || total <= 0) return const SizedBox.shrink();
 
-    return Material(
-      color: style.backgroundColor ?? chartTheme.backgroundColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: style.effectiveBorderRadius,
-        side: style.borderWidth > 0
-            ? BorderSide(
-                color: style.borderColor ?? chartTheme.axisStyle.lineColor,
-                width: style.borderWidth,
-              )
-            : BorderSide.none,
-      ),
-      child: Padding(
-        padding: style.padding ?? const EdgeInsets.fromLTRB(8, 4, 8, 8),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: math.max(8, style.itemSpacing),
-          runSpacing: 8,
-          children: [
-            for (final (visibleIndex, pointIndex) in visibleIndices.indexed)
-              _PieLegendItem(
-                key: ValueKey<String>('pie-legend-item-$pointIndex'),
-                category: series.points[pointIndex].label!.trim(),
-                value: series.points[pointIndex].y,
-                unit: series.unit,
-                share: series.points[pointIndex].y / total,
-                color: PieSliceColorResolver.resolve(
-                  series: series,
-                  theme: chartTheme,
-                  point: series.points[pointIndex],
-                  visibleIndex: visibleIndex,
-                ),
-                selectionColor: chartTheme.focusBorderColor,
-                textStyle: style.textStyle,
-                selected: selectedPointIndices.contains(pointIndex),
-                duration: disableAnimations
-                    ? Duration.zero
-                    : chartTheme.animationTheme.interactionDuration,
-                onTap: () => onSliceTap(pointIndex),
-              ),
-          ],
+    final items = [
+      for (final (visibleIndex, pointIndex) in visibleIndices.indexed)
+        _PieLegendItem(
+          key: ValueKey<String>('pie-legend-item-$pointIndex'),
+          category: series.points[pointIndex].label!.trim(),
+          value: series.points[pointIndex].y,
+          unit: series.unit,
+          share: series.points[pointIndex].y / total,
+          color: PieSliceColorResolver.resolve(
+            series: series,
+            theme: chartTheme,
+            point: series.points[pointIndex],
+            visibleIndex: visibleIndex,
+          ),
+          selectionColor: chartTheme.focusBorderColor,
+          textStyle: style.textStyle,
+          markerShape: style.markerShape,
+          markerSize: style.markerSize,
+          markerLineWidth: style.markerLineWidth,
+          markerLabelSpacing: style.markerLabelSpacing,
+          selected: selectedPointIndices.contains(pointIndex),
+          duration: disableAnimations
+              ? Duration.zero
+              : chartTheme.animationTheme.interactionDuration,
+          onTap: () => onSliceTap(pointIndex),
+        ),
+    ];
+    final itemLayout = style.orientation == LegendOrientation.vertical
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (index, item) in items.indexed) ...[
+                if (index > 0) SizedBox(height: math.max(8, style.itemSpacing)),
+                item,
+              ],
+            ],
+          )
+        : Wrap(
+            alignment: WrapAlignment.center,
+            spacing: math.max(8, style.itemSpacing),
+            runSpacing: 8,
+            children: items,
+          );
+
+    return Transform.translate(
+      offset: style.offset,
+      child: Opacity(
+        opacity: style.opacity.clamp(0, 1),
+        child: Material(
+          color: style.backgroundColor ?? chartTheme.backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: style.effectiveBorderRadius,
+            side: style.borderWidth > 0
+                ? BorderSide(
+                    color: style.borderColor ?? chartTheme.axisStyle.lineColor,
+                    width: style.borderWidth,
+                  )
+                : BorderSide.none,
+          ),
+          child: Padding(
+            padding: style.padding ?? const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: itemLayout,
+          ),
         ),
       ),
     );
@@ -99,6 +124,10 @@ class _PieLegendItem extends StatelessWidget {
     required this.color,
     required this.selectionColor,
     required this.textStyle,
+    required this.markerShape,
+    required this.markerSize,
+    required this.markerLineWidth,
+    required this.markerLabelSpacing,
     required this.selected,
     required this.duration,
     required this.onTap,
@@ -111,6 +140,10 @@ class _PieLegendItem extends StatelessWidget {
   final Color color;
   final Color selectionColor;
   final TextStyle textStyle;
+  final LegendMarkerShape markerShape;
+  final double markerSize;
+  final double markerLineWidth;
+  final double markerLabelSpacing;
   final bool selected;
   final Duration duration;
   final VoidCallback onTap;
@@ -149,19 +182,14 @@ class _PieLegendItem extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: textStyle.color ?? Colors.black87,
-                      width: 1,
-                    ),
-                  ),
+                _PieLegendMarker(
+                  color: color,
+                  borderColor: textStyle.color ?? Colors.black87,
+                  shape: markerShape,
+                  size: markerSize,
+                  lineWidth: markerLineWidth,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: markerLabelSpacing),
                 Flexible(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -193,6 +221,70 @@ class _PieLegendItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PieLegendMarker extends StatelessWidget {
+  const _PieLegendMarker({
+    required this.color,
+    required this.borderColor,
+    required this.shape,
+    required this.size,
+    required this.lineWidth,
+  });
+
+  final Color color;
+  final Color borderColor;
+  final LegendMarkerShape shape;
+  final double size;
+  final double lineWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final dimension = math.max(8, size).toDouble();
+    return SizedBox.square(
+      dimension: dimension,
+      child: switch (shape) {
+        LegendMarkerShape.circle => DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor, width: 1),
+          ),
+        ),
+        LegendMarkerShape.square => DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            border: Border.all(color: borderColor, width: 1),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        LegendMarkerShape.line => Center(
+          child: Container(
+            width: dimension,
+            height: math.max(2, lineWidth).toDouble(),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(lineWidth),
+            ),
+          ),
+        ),
+        LegendMarkerShape.diamond => Transform.rotate(
+          angle: math.pi / 4,
+          child: FractionallySizedBox(
+            widthFactor: 0.72,
+            heightFactor: 0.72,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: color,
+                border: Border.all(color: borderColor, width: 1),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+        ),
+      },
     );
   }
 }

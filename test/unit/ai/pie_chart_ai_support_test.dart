@@ -34,6 +34,14 @@ void main() {
           'pie_border_width': 2,
           'pie_border_color': '#223344',
           'pie_selection_explode_offset': 12,
+          'pie_opacity': 0.78,
+          'pie_corner_radius': 10,
+          'pie_shadow_color': '#33000000',
+          'pie_shadow_blur': 8,
+          'pie_shadow_offset_y': 3,
+          'pie_selected_glow_blur': 12,
+          'pie_selected_glow_spread': 2,
+          'pie_animation_mode': 'grow',
           'show_data_labels': true,
           'pie_label_position': 'inside',
           'pie_label_content': 'category_value_and_percentage',
@@ -65,6 +73,14 @@ void main() {
       expect(series.pieStyle.borderWidth, 2);
       expect(series.pieStyle.borderColor, const Color(0xFF223344));
       expect(series.pieStyle.selectionExplodeOffset, 12);
+      expect(series.pieStyle.opacity, 0.78);
+      expect(series.pieStyle.cornerRadius, 10);
+      expect(series.pieStyle.shadow?.color, const Color(0x33000000));
+      expect(series.pieStyle.shadow?.blurRadius, 8);
+      expect(series.pieStyle.shadow?.offset, const Offset(0, 3));
+      expect(series.pieStyle.selectedElevation?.blurRadius, 12);
+      expect(series.pieStyle.selectedElevation?.spreadRadius, 2);
+      expect(series.pieStyle.animationMode, PieAnimationMode.grow);
       expect(series.dataLabels.position, PieDataLabelPosition.inside);
       expect(
         series.dataLabels.content,
@@ -198,6 +214,8 @@ void main() {
       contains('Required'),
     );
     expect(styleProperties.keys, contains('pie_start_angle'));
+    expect(styleProperties.keys, contains('pie_corner_radius'));
+    expect(styleProperties.keys, contains('pie_selected_glow_blur'));
     expect(styleProperties.keys, contains('pie_label_content'));
     expect(
       (properties['x_axis'] as Map<String, dynamic>)['description'],

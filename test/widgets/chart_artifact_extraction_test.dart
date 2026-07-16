@@ -93,7 +93,10 @@ void main() {
       final source =
           (sourceResult as ChartArtifactSuccess<ChartArtifact>).value;
       expect(source.document.series.single.type, 'pie');
-      expect(source.document.requiredCapabilities, {'series.pie'});
+      expect(source.document.requiredCapabilities, {
+        'series.pie',
+        'series.pie.style.v2',
+      });
       expect(source.preview?.bytes, isNotEmpty);
 
       final json =

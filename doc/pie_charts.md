@@ -113,8 +113,52 @@ const PieChartStyle(
   logical pixels;
 - `borderColor` is optional and otherwise derives from the chart theme.
 
+`sliceGap` preserves each category's angular sweep. It translates complete
+wedges apart and reserves enough radius for the separation, so increasing the
+gap behaves like padding rather than sharpening the wedge at the center.
+
 The geometry preserves an internal inner-radius seam, but doughnut, nested,
 rose, and semi-circular charts are not part of this release.
+
+## Theme and advanced slice styling
+
+`ChartTheme.pieChartTheme` defines reusable product-wide Pie defaults. A
+`PieChartStyle` may override opacity, corner radius, elevation, or animation
+for one series. Null series values continue to inherit the chart theme.
+
+```dart
+final theme = ChartTheme.light.copyWith(
+  seriesTheme: ChartTheme.light.seriesTheme.copyWith(
+    colors: const [
+      Color(0xFF006D77),
+      Color(0xFF0A9396),
+      Color(0xFF48CAE4),
+      Color(0xFF023E8A),
+    ],
+  ),
+  pieChartTheme: const PieChartTheme(
+    opacity: 0.88,
+    cornerRadius: 12,
+    shadow: PieElevationStyle(
+      color: Color(0x401A1A1A),
+      blurRadius: 8,
+      offset: Offset(0, 4),
+      opacity: 0.7,
+    ),
+    selectedElevation: PieElevationStyle(
+      blurRadius: 12,
+      spreadRadius: 2,
+      opacity: 0.5,
+    ),
+    animationMode: PieAnimationMode.grow,
+  ),
+);
+```
+
+`PieElevationStyle.color == null` derives the elevation color from its slice.
+Use a dark color plus a downward offset for a shadow, or a slice-derived color
+with zero offset for a glow. `MediaQuery.disableAnimationsOf` and a zero theme
+duration always win over `PieAnimationMode.grow`.
 
 ## Data labels
 
@@ -143,6 +187,17 @@ hidden.
 `minimumShare` uses the inclusive range 0–1. `minimumSweepDegrees` uses 0–360.
 Connector length, width, and label padding must be finite and non-negative.
 
+### Callout styling
+
+Set `PieDataLabelConfig.calloutStyle` for one series, or
+`PieChartTheme.calloutStyle` for every Pie chart in a theme. Both use the
+shared `LabelStyle` model, including text, surface, border, radius, padding,
+and shadow. A null callout style preserves plain label text.
+
+Tooltips remain part of the shared interaction system. Configure one chart
+with `TooltipConfig.style`, or theme every chart through
+`ChartTheme.interactionTheme.tooltipStyle`.
+
 ## Per-slice colors
 
 Supply category colors with the convenience constructor:
@@ -162,6 +217,26 @@ PieChartSeries.fromMap(
 Unspecified slices use the series color when present, then the active
 `ChartTheme` palette. Keep category text visible in labels or the legend so
 color is not the only meaning.
+
+## Legend position and appearance
+
+Pie legends honor the shared `LegendStyle` fields, including all nine
+`LegendPosition` anchors, horizontal or vertical orientation, marker shape,
+marker size, spacing, background, border, opacity, and offset.
+
+```dart
+final theme = ChartTheme.light.copyWith(
+  legendStyle: ChartTheme.light.legendStyle.copyWith(
+    position: LegendPosition.centerRight,
+    orientation: LegendOrientation.vertical,
+    markerShape: LegendMarkerShape.circle,
+  ),
+);
+```
+
+Top and bottom anchors reserve vertical space. Center-left and center-right
+anchors place the legend beside the plot. `LegendPosition.center` overlays the
+legend and should be reserved for charts with deliberate empty center space.
 
 ## Interaction and callbacks
 
@@ -272,7 +347,9 @@ final widget = switch (restored) {
 
 Slice order, values, labels, point styles, geometry, data labels, durable
 selection, theme, and optional revision-bound PNG preview round-trip through
-the artifact.
+the artifact. New encoders declare both `series.pie` and
+`series.pie.style.v2`, so older readers fail closed rather than silently
+dropping advanced appearance values.
 
 ## AI and tool configuration
 
@@ -280,7 +357,8 @@ The public tool schema accepts `chart_type: "pie"`. It requires exactly one
 series, a non-empty point label, a non-negative finite `y`, and a stable
 ordering `x`. Omit Cartesian axes, crosshair, pan, and zoom. Pie-specific style
 keys include start angle, direction, radius, gaps, borders, explode offset,
-label position/content, and label thresholds.
+opacity, corner radius, shadow, selected glow, animation mode, label
+position/content, and label thresholds.
 
 ## Accessibility and responsive behavior
 
@@ -296,6 +374,6 @@ table rows use 48 logical-pixel minimum targets in the public showcase.
 
 Open [Pie Charts](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 to change datasets, labels, geometry, themes, and interaction; switch among
-Chart, Data, and Split; capture canonical JSON and a preview; then restore a
-fresh chart runtime.
-
+Chart, Data, and Split; change palettes, transparency, corners, elevation,
+callout/tooltip styles, and legend placement; capture canonical JSON and a
+preview; then restore a fresh chart runtime.

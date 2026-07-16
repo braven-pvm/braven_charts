@@ -107,6 +107,70 @@ void main() {
     await tester.pumpAndSettle();
     await _expectGolden(tester, 'goldens/pie_selected_legend.png');
   });
+
+  testWidgets('advanced Pie styling and right-side legend', (tester) async {
+    final base = ChartTheme.light;
+    final theme = _goldenTheme(
+      base.copyWith(
+        seriesTheme: base.seriesTheme.copyWith(
+          colors: const [
+            Color(0xFF006D77),
+            Color(0xFF0A9396),
+            Color(0xFF48CAE4),
+            Color(0xFF023E8A),
+          ],
+        ),
+        legendStyle: base.legendStyle.copyWith(
+          position: LegendPosition.centerRight,
+          orientation: LegendOrientation.vertical,
+          markerShape: LegendMarkerShape.circle,
+        ),
+        pieChartTheme: const PieChartTheme(
+          opacity: 0.88,
+          cornerRadius: 12,
+          shadow: PieElevationStyle(
+            color: Color(0x401A1A1A),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+            opacity: 0.7,
+          ),
+          selectedElevation: PieElevationStyle(
+            blurRadius: 12,
+            spreadRadius: 2,
+            opacity: 0.5,
+          ),
+          calloutStyle: LabelStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+            backgroundColor: Color(0xF2FFFFFF),
+            borderColor: Color(0xFF94A3B8),
+            borderWidth: 1,
+            borderRadius: 8,
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            shadowColor: Color(0x331A1A1A),
+            shadowBlurRadius: 5,
+          ),
+          animationMode: PieAnimationMode.none,
+        ),
+      ),
+    );
+    await _pumpSurface(
+      tester,
+      size: const Size(680, 430),
+      theme: theme,
+      showLegend: true,
+      series: _standardSeries().copyWith(
+        pieStyle: const PieChartStyle(sliceGap: 8, selectionExplodeOffset: 12),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+    await tester.pumpAndSettle();
+    await _expectGolden(tester, 'goldens/pie_advanced_styling.png');
+  });
 }
 
 Future<void> _pumpSurface(
@@ -134,14 +198,17 @@ Future<void> _pumpSurface(
         body: Center(
           child: RepaintBoundary(
             key: const ValueKey('pie-golden-surface'),
-            child: SizedBox.fromSize(
-              size: size,
-              child: BravenChartPlus(
-                title: 'Revenue contribution',
-                subtitle: 'Share by product category',
-                showLegend: showLegend,
-                theme: theme,
-                series: [series],
+            child: ColoredBox(
+              color: theme.backgroundColor,
+              child: SizedBox.fromSize(
+                size: size,
+                child: BravenChartPlus(
+                  title: 'Revenue contribution',
+                  subtitle: 'Share by product category',
+                  showLegend: showLegend,
+                  theme: theme,
+                  series: [series],
+                ),
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/pie_series_element.dart';
 import 'package:braven_charts/src/interaction/core/chart_element.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -95,6 +96,76 @@ void main() {
 
         expect(pixelAt(145, 100), ChartTheme.light.seriesTheme.colorAt(0));
         expect(pixelAt(55, 100), ChartTheme.light.seriesTheme.colorAt(1));
+      },
+    );
+
+    test('theme opacity is applied to slice pixels', () async {
+      final series = PieChartSeries.fromMap(
+        id: 'transparent',
+        values: const {'Only': 1},
+        pieStyle: const PieChartStyle(
+          radiusFactor: 1,
+          sliceGap: 0,
+          borderWidth: 0,
+          animationMode: PieAnimationMode.none,
+        ),
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+      );
+      final theme = ChartTheme.light.copyWith(
+        pieChartTheme: const PieChartTheme(
+          opacity: 0.5,
+          animationMode: PieAnimationMode.none,
+        ),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(100),
+        theme: theme,
+      );
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(100));
+      final image = await recorder.endRecording().toImage(100, 100);
+      addTearDown(image.dispose);
+      final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+      expect(bytes, isNotNull);
+      final centerOffset = (50 * 100 + 50) * 4;
+
+      expect(bytes!.getUint8(centerOffset + 3), closeTo(128, 2));
+    });
+
+    test(
+      'callout and selected elevation styles paint without changing hits',
+      () {
+        final series = PieChartSeries.fromMap(
+          id: 'styled',
+          values: const {'A': 2, 'B': 1},
+          pieStyle: const PieChartStyle(cornerRadius: 10),
+          dataLabels: const PieDataLabelConfig(
+            calloutStyle: LabelStyle(
+              textStyle: TextStyle(color: Color(0xFF111827), fontSize: 12),
+              backgroundColor: Color(0xF2FFFFFF),
+              borderColor: Color(0xFF64748B),
+              borderWidth: 1,
+              borderRadius: 8,
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              shadowColor: Color(0x33000000),
+              shadowBlurRadius: 5,
+            ),
+          ),
+        );
+        final element = PieSeriesElement(
+          series: series,
+          size: const Size(320, 240),
+          theme: ChartTheme.light,
+          selectedPointIndices: const {0},
+        );
+        final recorder = PictureRecorder();
+
+        element.paint(Canvas(recorder), const Size(320, 240));
+
+        expect(element.dataHitForPointIndex(0), isNotNull);
+        expect(element.geometry.slices.first.path, isNotNull);
+        recorder.endRecording().dispose();
       },
     );
 

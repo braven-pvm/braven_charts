@@ -1,6 +1,172 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Offset;
 
 import 'package:flutter/foundation.dart';
+
+import '../theming/styles/label_style.dart';
+
+/// Entrance animation used when a pie first mounts or receives new data.
+enum PieAnimationMode {
+  /// Render the final geometry immediately.
+  none,
+
+  /// Grow every slice radially from the shared center.
+  grow,
+}
+
+/// A reusable blurred elevation layer for pie slices.
+///
+/// A downward [offset] and dark [color] reads as a shadow. A zero offset with
+/// a slice-derived color reads as a glow. When [color] is null, the renderer
+/// derives the layer from the slice color.
+@immutable
+class PieElevationStyle {
+  /// Creates an elevation layer.
+  const PieElevationStyle({
+    this.color,
+    this.blurRadius = 0,
+    this.spreadRadius = 0,
+    this.offset = Offset.zero,
+    this.opacity = 1,
+  }) : assert(blurRadius >= 0),
+       assert(spreadRadius >= 0),
+       assert(opacity >= 0 && opacity <= 1);
+
+  /// Optional fixed layer color; null derives it from the slice.
+  final Color? color;
+
+  /// Soft-edge blur extent in logical pixels.
+  final double blurRadius;
+
+  /// Extra logical pixels drawn around the slice before blur.
+  final double spreadRadius;
+
+  /// Layer offset in logical pixels.
+  final Offset offset;
+
+  /// Layer opacity in the inclusive range 0–1.
+  final double opacity;
+
+  /// Whether this layer changes the rendered output.
+  bool get isVisible =>
+      opacity > 0 &&
+      (blurRadius > 0 || spreadRadius > 0 || offset != Offset.zero);
+
+  /// Returns a copy with selected fields replaced.
+  PieElevationStyle copyWith({
+    Color? color,
+    bool clearColor = false,
+    double? blurRadius,
+    double? spreadRadius,
+    Offset? offset,
+    double? opacity,
+  }) {
+    return PieElevationStyle(
+      color: clearColor ? null : (color ?? this.color),
+      blurRadius: blurRadius ?? this.blurRadius,
+      spreadRadius: spreadRadius ?? this.spreadRadius,
+      offset: offset ?? this.offset,
+      opacity: opacity ?? this.opacity,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieElevationStyle &&
+          color == other.color &&
+          blurRadius == other.blurRadius &&
+          spreadRadius == other.spreadRadius &&
+          offset == other.offset &&
+          opacity == other.opacity;
+
+  @override
+  int get hashCode =>
+      Object.hash(color, blurRadius, spreadRadius, offset, opacity);
+}
+
+/// Theme defaults shared by radial Pie charts.
+///
+/// Per-series values in [PieChartStyle] and [PieDataLabelConfig] take
+/// precedence. Existing [SeriesTheme], [LegendStyle], and [InteractionTheme]
+/// continue to own palettes, legends, and tooltips respectively.
+@immutable
+class PieChartTheme {
+  /// Creates radial theme defaults.
+  const PieChartTheme({
+    this.opacity = 1,
+    this.cornerRadius = 0,
+    this.shadow = const PieElevationStyle(),
+    this.selectedElevation = const PieElevationStyle(
+      blurRadius: 10,
+      spreadRadius: 1,
+      opacity: 0.38,
+    ),
+    this.calloutStyle,
+    this.animationMode = PieAnimationMode.grow,
+  }) : assert(opacity >= 0 && opacity <= 1),
+       assert(cornerRadius >= 0);
+
+  /// Default slice opacity in the inclusive range 0–1.
+  final double opacity;
+
+  /// Default corner radius in logical pixels.
+  final double cornerRadius;
+
+  /// Default elevation applied to every slice.
+  final PieElevationStyle shadow;
+
+  /// Additional elevation applied to selected slices.
+  final PieElevationStyle selectedElevation;
+
+  /// Optional outside/inside data-label callout styling.
+  final LabelStyle? calloutStyle;
+
+  /// Default Pie entrance animation.
+  final PieAnimationMode animationMode;
+
+  /// Returns a copy with selected fields replaced.
+  PieChartTheme copyWith({
+    double? opacity,
+    double? cornerRadius,
+    PieElevationStyle? shadow,
+    PieElevationStyle? selectedElevation,
+    LabelStyle? calloutStyle,
+    bool clearCalloutStyle = false,
+    PieAnimationMode? animationMode,
+  }) {
+    return PieChartTheme(
+      opacity: opacity ?? this.opacity,
+      cornerRadius: cornerRadius ?? this.cornerRadius,
+      shadow: shadow ?? this.shadow,
+      selectedElevation: selectedElevation ?? this.selectedElevation,
+      calloutStyle: clearCalloutStyle
+          ? null
+          : (calloutStyle ?? this.calloutStyle),
+      animationMode: animationMode ?? this.animationMode,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieChartTheme &&
+          opacity == other.opacity &&
+          cornerRadius == other.cornerRadius &&
+          shadow == other.shadow &&
+          selectedElevation == other.selectedElevation &&
+          calloutStyle == other.calloutStyle &&
+          animationMode == other.animationMode;
+
+  @override
+  int get hashCode => Object.hash(
+    opacity,
+    cornerRadius,
+    shadow,
+    selectedElevation,
+    calloutStyle,
+    animationMode,
+  );
+}
 
 /// Content rendered for an eligible pie-slice data label.
 enum PieDataLabelContent {
@@ -47,10 +213,10 @@ enum PieDataLabelCollisionStrategy {
   shiftAndHide,
 }
 
-/// Immutable visual configuration for pie geometry.
+/// Immutable per-series Pie geometry and appearance overrides.
 @immutable
 class PieChartStyle {
-  /// Creates pie geometry styling.
+  /// Creates Pie geometry and optional theme overrides.
   const PieChartStyle({
     this.startAngleDegrees = -90,
     this.clockwise = true,
@@ -59,6 +225,11 @@ class PieChartStyle {
     this.borderWidth = 1,
     this.borderColor,
     this.selectionExplodeOffset = 8,
+    this.opacity,
+    this.cornerRadius,
+    this.shadow,
+    this.selectedElevation,
+    this.animationMode,
   });
 
   /// Angle in degrees at which the first slice begins.
@@ -82,6 +253,21 @@ class PieChartStyle {
   /// Logical-pixel offset applied to a selected, exploded slice.
   final double selectionExplodeOffset;
 
+  /// Optional slice opacity overriding [PieChartTheme.opacity].
+  final double? opacity;
+
+  /// Optional corner radius overriding [PieChartTheme.cornerRadius].
+  final double? cornerRadius;
+
+  /// Optional base elevation overriding [PieChartTheme.shadow].
+  final PieElevationStyle? shadow;
+
+  /// Optional selected elevation overriding [PieChartTheme.selectedElevation].
+  final PieElevationStyle? selectedElevation;
+
+  /// Optional entrance animation overriding [PieChartTheme.animationMode].
+  final PieAnimationMode? animationMode;
+
   /// Returns a copy with selected fields replaced.
   PieChartStyle copyWith({
     double? startAngleDegrees,
@@ -92,6 +278,16 @@ class PieChartStyle {
     Color? borderColor,
     bool clearBorderColor = false,
     double? selectionExplodeOffset,
+    double? opacity,
+    bool clearOpacity = false,
+    double? cornerRadius,
+    bool clearCornerRadius = false,
+    PieElevationStyle? shadow,
+    bool clearShadow = false,
+    PieElevationStyle? selectedElevation,
+    bool clearSelectedElevation = false,
+    PieAnimationMode? animationMode,
+    bool clearAnimationMode = false,
   }) {
     return PieChartStyle(
       startAngleDegrees: startAngleDegrees ?? this.startAngleDegrees,
@@ -102,6 +298,17 @@ class PieChartStyle {
       borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
       selectionExplodeOffset:
           selectionExplodeOffset ?? this.selectionExplodeOffset,
+      opacity: clearOpacity ? null : (opacity ?? this.opacity),
+      cornerRadius: clearCornerRadius
+          ? null
+          : (cornerRadius ?? this.cornerRadius),
+      shadow: clearShadow ? null : (shadow ?? this.shadow),
+      selectedElevation: clearSelectedElevation
+          ? null
+          : (selectedElevation ?? this.selectedElevation),
+      animationMode: clearAnimationMode
+          ? null
+          : (animationMode ?? this.animationMode),
     );
   }
 
@@ -115,7 +322,12 @@ class PieChartStyle {
           sliceGap == other.sliceGap &&
           borderWidth == other.borderWidth &&
           borderColor == other.borderColor &&
-          selectionExplodeOffset == other.selectionExplodeOffset;
+          selectionExplodeOffset == other.selectionExplodeOffset &&
+          opacity == other.opacity &&
+          cornerRadius == other.cornerRadius &&
+          shadow == other.shadow &&
+          selectedElevation == other.selectedElevation &&
+          animationMode == other.animationMode;
 
   @override
   int get hashCode => Object.hash(
@@ -126,10 +338,15 @@ class PieChartStyle {
     borderWidth,
     borderColor,
     selectionExplodeOffset,
+    opacity,
+    cornerRadius,
+    shadow,
+    selectedElevation,
+    animationMode,
   );
 }
 
-/// Immutable eligibility, placement, and connector policy for pie labels.
+/// Immutable eligibility, placement, connector, and callout policy for labels.
 @immutable
 class PieDataLabelConfig {
   /// Creates pie data-label configuration.
@@ -144,6 +361,7 @@ class PieDataLabelConfig {
     this.connectorWidth = 1,
     this.connectorColor,
     this.collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide,
+    this.calloutStyle,
   });
 
   /// Whether data labels are rendered.
@@ -176,6 +394,9 @@ class PieDataLabelConfig {
   /// Collision policy for outside labels.
   final PieDataLabelCollisionStrategy collisionStrategy;
 
+  /// Optional label callout override; null resolves from [PieChartTheme].
+  final LabelStyle? calloutStyle;
+
   /// Returns a copy with selected fields replaced.
   PieDataLabelConfig copyWith({
     bool? isVisible,
@@ -189,6 +410,8 @@ class PieDataLabelConfig {
     Color? connectorColor,
     bool clearConnectorColor = false,
     PieDataLabelCollisionStrategy? collisionStrategy,
+    LabelStyle? calloutStyle,
+    bool clearCalloutStyle = false,
   }) {
     return PieDataLabelConfig(
       isVisible: isVisible ?? this.isVisible,
@@ -203,6 +426,9 @@ class PieDataLabelConfig {
           ? null
           : (connectorColor ?? this.connectorColor),
       collisionStrategy: collisionStrategy ?? this.collisionStrategy,
+      calloutStyle: clearCalloutStyle
+          ? null
+          : (calloutStyle ?? this.calloutStyle),
     );
   }
 
@@ -219,7 +445,8 @@ class PieDataLabelConfig {
           connectorLength == other.connectorLength &&
           connectorWidth == other.connectorWidth &&
           connectorColor == other.connectorColor &&
-          collisionStrategy == other.collisionStrategy;
+          collisionStrategy == other.collisionStrategy &&
+          calloutStyle == other.calloutStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -233,5 +460,6 @@ class PieDataLabelConfig {
     connectorWidth,
     connectorColor,
     collisionStrategy,
+    calloutStyle,
   );
 }

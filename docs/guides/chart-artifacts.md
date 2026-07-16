@@ -292,8 +292,11 @@ explicitly supplies a trusted adjacent-version migration chain. See
 [chart-artifact-migrations.md](chart-artifact-migrations.md).
 
 Built-in series capabilities also fail closed. Pie documents require
-`series.pie`; older readers reject that capability rather than misrendering
-the document. The built-in capability remains within schema version 1.
+`series.pie` and `series.pie.style.v2`; older readers reject those capabilities
+rather than misrendering or silently dropping appearance. Advanced Pie
+values—gap separation, corners, opacity, elevation, callouts, and animation
+mode—remain deterministic parts of the series/theme documents. Capability
+negotiation keeps this within schema version 1.
 
 ## Showcase checkpoints
 

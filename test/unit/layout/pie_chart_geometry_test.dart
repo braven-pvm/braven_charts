@@ -91,7 +91,7 @@ void main() {
       expect(geometry.sliceAt(const Offset(100, 20))?.pointIndex, 1);
     });
 
-    test('physical gaps reduce sweep and reject points in the gap', () {
+    test('physical gaps preserve sweep and translate slices apart', () {
       final series = PieChartSeries.fromMap(
         id: 'gapped',
         values: const {'A': 1, 'B': 1},
@@ -107,9 +107,63 @@ void main() {
         size: const Size.square(200),
       );
 
-      expect(geometry.slices.first.sweepAngle, lessThan(math.pi));
+      expect(geometry.slices.first.sweepAngle, closeTo(math.pi, 1e-9));
+      expect(geometry.slices.first.spacingOffset, isNot(Offset.zero));
+      expect(geometry.slices.last.spacingOffset, isNot(Offset.zero));
+      expect(geometry.slices.first.spacingOffset.dy, greaterThan(0));
+      expect(geometry.slices.last.spacingOffset.dy, lessThan(0));
       expect(geometry.sliceAt(const Offset(200, 100)), isNull);
+      expect(geometry.sliceAt(const Offset(100, 100)), isNull);
       expect(geometry.sliceAt(const Offset(100, 180))?.pointIndex, 0);
+    });
+
+    test('rounded corners retain the slice centerline and trim sharp tips', () {
+      final series = PieChartSeries.fromMap(
+        id: 'rounded',
+        values: const {'A': 1, 'B': 1, 'C': 1, 'D': 1},
+        pieStyle: const PieChartStyle(
+          startAngleDegrees: 0,
+          radiusFactor: 1,
+          sliceGap: 4,
+          cornerRadius: 12,
+        ),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+      );
+      final first = geometry.slices.first;
+
+      expect(first.sweepAngle, closeTo(math.pi / 2, 1e-9));
+      expect(first.contains(first.insideLabelAnchor), isTrue);
+      expect(first.path.contains(first.center), isFalse);
+      expect(first.path.getBounds(), isNot(Rect.zero));
+    });
+
+    test('grow progress scales radius without changing category shares', () {
+      final series = PieChartSeries.fromMap(
+        id: 'animated',
+        values: const {'A': 1, 'B': 3},
+        pieStyle: const PieChartStyle(sliceGap: 0, radiusFactor: 1),
+      );
+
+      final full = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+      );
+      final halfway = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+        animationProgress: 0.5,
+      );
+
+      expect(halfway.outerRadius, closeTo(full.outerRadius / 2, 1e-9));
+      expect(halfway.slices.map((slice) => slice.share), [0.25, 0.75]);
+      expect(halfway.slices.map((slice) => slice.sweepAngle), [
+        closeTo(math.pi / 2, 1e-9),
+        closeTo(math.pi * 1.5, 1e-9),
+      ]);
     });
 
     test(

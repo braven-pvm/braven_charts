@@ -193,6 +193,21 @@ void main() {
           borderWidth: 2,
           borderColor: Color(0xFF223344),
           selectionExplodeOffset: 12,
+          opacity: 0.76,
+          cornerRadius: 9,
+          shadow: PieElevationStyle(
+            color: Color(0x55000000),
+            blurRadius: 7,
+            spreadRadius: 1,
+            offset: Offset(0, 3),
+            opacity: 0.8,
+          ),
+          selectedElevation: PieElevationStyle(
+            blurRadius: 12,
+            spreadRadius: 2,
+            opacity: 0.45,
+          ),
+          animationMode: PieAnimationMode.none,
         ),
         dataLabels: const PieDataLabelConfig(
           isVisible: false,
@@ -205,6 +220,16 @@ void main() {
           connectorWidth: 2,
           connectorColor: Color(0xFF556677),
           collisionStrategy: PieDataLabelCollisionStrategy.shift,
+          calloutStyle: LabelStyle(
+            textStyle: TextStyle(color: Colors.white, fontSize: 12),
+            backgroundColor: Color(0xDD223344),
+            borderColor: Color(0xFF556677),
+            borderWidth: 1,
+            borderRadius: 6,
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            shadowColor: Color(0x44000000),
+            shadowBlurRadius: 4,
+          ),
         ),
       );
 
@@ -292,7 +317,10 @@ void main() {
         final document =
             (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
         expect(document.type, expected.$1);
-        expect(document.requiredCapabilities, {expected.$2});
+        expect(document.requiredCapabilities, {
+          expected.$2,
+          if (series is PieChartSeries) 'series.pie.style.v2',
+        });
       }
     });
 

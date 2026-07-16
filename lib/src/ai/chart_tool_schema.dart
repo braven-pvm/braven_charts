@@ -250,6 +250,50 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'minimum': 0,
               'description': 'Pie-only offset applied to a selected slice.',
             },
+            'pie_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pie-only slice opacity in the range [0, 1].',
+            },
+            'pie_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Pie-only rounded-corner radius in logical pixels.',
+            },
+            'pie_shadow_color': {
+              'type': 'string',
+              'description': 'Optional Pie slice shadow color.',
+            },
+            'pie_shadow_blur': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie slice shadow blur radius.',
+            },
+            'pie_shadow_offset_x': {
+              'type': 'number',
+              'description': 'Horizontal Pie slice shadow offset.',
+            },
+            'pie_shadow_offset_y': {
+              'type': 'number',
+              'description': 'Vertical Pie slice shadow offset.',
+            },
+            'pie_selected_glow_blur': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Blur radius for selected-slice elevation.',
+            },
+            'pie_selected_glow_spread': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Spread radius for selected-slice elevation.',
+            },
+            'pie_animation_mode': {
+              'type': 'string',
+              'enum': ['none', 'grow'],
+              'description': 'Pie entrance animation mode.',
+            },
             'show_data_labels': {
               'type': 'boolean',
               'description': 'Show labels on eligible pie slices.',

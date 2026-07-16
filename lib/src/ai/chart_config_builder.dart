@@ -418,6 +418,47 @@ class ChartConfigBuilder {
       selectionExplodeOffset:
           (json?['pie_selection_explode_offset'] as num?)?.toDouble() ??
           defaults.selectionExplodeOffset,
+      opacity: (json?['pie_opacity'] as num?)?.toDouble(),
+      cornerRadius: (json?['pie_corner_radius'] as num?)?.toDouble(),
+      shadow: _parsePieElevation(json, prefix: 'pie_shadow'),
+      selectedElevation: _parsePieElevation(json, prefix: 'pie_selected_glow'),
+      animationMode: switch (json?['pie_animation_mode']) {
+        null => null,
+        'none' => PieAnimationMode.none,
+        'grow' => PieAnimationMode.grow,
+        final value => throw FormatException(
+          'Unknown pie_animation_mode "$value".',
+        ),
+      },
+    );
+  }
+
+  static PieElevationStyle? _parsePieElevation(
+    Map<String, dynamic>? json, {
+    required String prefix,
+  }) {
+    if (json == null) return null;
+    final colorValue = json['${prefix}_color'];
+    final blurValue = json['${prefix}_blur'];
+    final spreadValue = json['${prefix}_spread'];
+    final offsetXValue = json['${prefix}_offset_x'];
+    final offsetYValue = json['${prefix}_offset_y'];
+    if (colorValue == null &&
+        blurValue == null &&
+        spreadValue == null &&
+        offsetXValue == null &&
+        offsetYValue == null) {
+      return null;
+    }
+    return PieElevationStyle(
+      color: colorValue is String ? _parseColor(colorValue) : null,
+      blurRadius: (blurValue as num?)?.toDouble() ?? 0,
+      spreadRadius: (spreadValue as num?)?.toDouble() ?? 0,
+      offset: Offset(
+        (offsetXValue as num?)?.toDouble() ?? 0,
+        (offsetYValue as num?)?.toDouble() ?? 0,
+      ),
+      opacity: prefix == 'pie_selected_glow' ? 0.45 : 0.65,
     );
   }
 

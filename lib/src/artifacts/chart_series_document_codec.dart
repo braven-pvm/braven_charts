@@ -17,6 +17,7 @@ import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
 import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
+import 'chart_style_document_codec.dart';
 import 'json_value.dart';
 
 /// Audited adapter between public built-in series models and schema-v1
@@ -94,7 +95,10 @@ abstract final class ChartSeriesDocumentCodec {
               points,
             ),
           },
-          requiredCapabilities: {'series.${_typeOf(series)}'},
+          requiredCapabilities: {
+            'series.${_typeOf(series)}',
+            if (series is PieChartSeries) 'series.pie.style.v2',
+          },
         ),
       );
     } on _RuntimeBindingException catch (error) {
@@ -475,6 +479,12 @@ Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
   'borderWidth': _number(style.borderWidth),
   if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
   'selectionExplodeOffset': _number(style.selectionExplodeOffset),
+  if (style.opacity != null) 'opacity': _number(style.opacity!),
+  if (style.cornerRadius != null) 'cornerRadius': _number(style.cornerRadius!),
+  if (style.shadow != null) 'shadow': _encodePieElevation(style.shadow!),
+  if (style.selectedElevation != null)
+    'selectedElevation': _encodePieElevation(style.selectedElevation!),
+  if (style.animationMode != null) 'animationMode': style.animationMode!.name,
 };
 
 PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
@@ -488,7 +498,38 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
     r'$.style.pieStyle.borderColor',
   ),
   selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
+  opacity: _optionalDouble(value['opacity']),
+  cornerRadius: _optionalDouble(value['cornerRadius']),
+  shadow: _optionalMap(value, 'shadow') == null
+      ? null
+      : _decodePieElevation(_map(value, 'shadow')),
+  selectedElevation: _optionalMap(value, 'selectedElevation') == null
+      ? null
+      : _decodePieElevation(_map(value, 'selectedElevation')),
+  animationMode: _optionalEnum(
+    value['animationMode'],
+    PieAnimationMode.values,
+    r'$.style.pieStyle.animationMode',
+  ),
 );
+
+Map<String, Object?> _encodePieElevation(PieElevationStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _number(style.blurRadius),
+  'spreadRadius': _number(style.spreadRadius),
+  'offsetX': _number(style.offset.dx),
+  'offsetY': _number(style.offset.dy),
+  'opacity': _number(style.opacity),
+};
+
+PieElevationStyle _decodePieElevation(Map<String, Object?> value) =>
+    PieElevationStyle(
+      color: _optionalColor(value['color'], r'$.style.pieElevation.color'),
+      blurRadius: _double(value, 'blurRadius'),
+      spreadRadius: _double(value, 'spreadRadius'),
+      offset: Offset(_double(value, 'offsetX'), _double(value, 'offsetY')),
+      opacity: _double(value, 'opacity'),
+    );
 
 Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
   'isVisible': config.isVisible,
@@ -502,6 +543,10 @@ Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
   if (config.connectorColor != null)
     'connectorColor': config.connectorColor!.toARGB32(),
   'collisionStrategy': config.collisionStrategy.name,
+  if (config.calloutStyle != null)
+    'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      config.calloutStyle!,
+    ).toJson(),
 };
 
 PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
@@ -523,6 +568,14 @@ PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
         'collisionStrategy',
         PieDataLabelCollisionStrategy.values,
       ),
+      calloutStyle: _optionalMap(value, 'calloutStyle') == null
+          ? null
+          : ChartStyleDocumentCodec.decodeLabelStyle(
+              _jsonObject(
+                _map(value, 'calloutStyle'),
+                path: r'$.style.dataLabels.calloutStyle',
+              ),
+            ),
     );
 
 Map<String, Object?> _encodeLineStyle({

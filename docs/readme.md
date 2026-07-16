@@ -14,7 +14,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 ## Guides
 
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
-- [guides/pie-charts.md](guides/pie-charts.md) - Pie data, labels, selection, tables, artifacts, and accessibility
+- [guides/pie-charts.md](guides/pie-charts.md) - Pie data, advanced theming, labels, legends, selection, motion, tables, artifacts, and accessibility
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system

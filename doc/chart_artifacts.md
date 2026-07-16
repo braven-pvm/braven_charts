@@ -116,9 +116,12 @@ schema version `1`. Store the JSON string as UTF-8; do not depend on the
 private files under `lib/src` or on the order of Dart object fields.
 
 Built-in series capabilities are explicit. A pie document declares
-`series.pie`; a reader that does not support that capability rejects the
-document instead of interpreting radial data as a Cartesian series. Adding
-the built-in capability does not require a schema-version bump.
+`series.pie` and `series.pie.style.v2`; a reader that does not support those
+capabilities rejects the document instead of interpreting or silently
+degrading radial data. Capability negotiation adds the advanced style payload
+without changing schema version 1. Pie series and theme payloads preserve
+physical separation, corners, opacity, elevation, callout styling, and
+animation mode alongside the original geometry.
 
 ## Hydrate a fresh chart
 

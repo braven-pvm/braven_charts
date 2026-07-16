@@ -181,6 +181,7 @@ void main() {
     await _settleCapture(tester);
 
     expect(find.text('series.pie'), findsOneWidget);
+    expect(find.text('series.pie.style.v2'), findsOneWidget);
     expect(find.text('Schema 1'), findsOneWidget);
     expect(find.bySemanticsLabel('Captured pie chart preview'), findsOneWidget);
     expect(find.text('Restore captured chart'), findsOneWidget);

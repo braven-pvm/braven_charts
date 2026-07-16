@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/chart_theme.dart';
+import '../models/pie_chart_config.dart';
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
@@ -92,6 +93,7 @@ Map<String, Object?> _encodeTheme(ChartTheme theme) => {
   'legendStyle': ChartStyleDocumentCodec.encodeLegendStyle(
     theme.legendStyle,
   ).toJson(),
+  'pieChartTheme': _encodePieChartTheme(theme.pieChartTheme),
   'focusBorderColor': theme.focusBorderColor.toARGB32(),
   'focusBorderWidth': _n(theme.focusBorderWidth),
   'focusBorderRadius': _n(theme.focusBorderRadius),
@@ -112,10 +114,60 @@ ChartTheme _decodeTheme(Map<String, Object?> map) => ChartTheme(
   legendStyle: ChartStyleDocumentCodec.decodeLegendStyle(
     _object(_requiredMap(map, 'legendStyle')),
   ),
+  pieChartTheme: map['pieChartTheme'] == null
+      ? const PieChartTheme()
+      : _decodePieChartTheme(_requiredMap(map, 'pieChartTheme')),
   focusBorderColor: _color(map, 'focusBorderColor'),
   focusBorderWidth: _double(map, 'focusBorderWidth'),
   focusBorderRadius: _double(map, 'focusBorderRadius'),
 );
+
+Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
+  'opacity': _n(theme.opacity),
+  'cornerRadius': _n(theme.cornerRadius),
+  'shadow': _encodePieElevation(theme.shadow),
+  'selectedElevation': _encodePieElevation(theme.selectedElevation),
+  if (theme.calloutStyle != null)
+    'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      theme.calloutStyle!,
+    ).toJson(),
+  'animationMode': theme.animationMode.name,
+};
+
+PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
+  opacity: _double(map, 'opacity'),
+  cornerRadius: _double(map, 'cornerRadius'),
+  shadow: _decodePieElevation(_requiredMap(map, 'shadow')),
+  selectedElevation: _decodePieElevation(
+    _requiredMap(map, 'selectedElevation'),
+  ),
+  calloutStyle: map['calloutStyle'] == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _object(_requiredMap(map, 'calloutStyle')),
+        ),
+  animationMode: _enum(_string(map, 'animationMode'), PieAnimationMode.values),
+);
+
+Map<String, Object?> _encodePieElevation(PieElevationStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _n(style.blurRadius),
+  'spreadRadius': _n(style.spreadRadius),
+  'offset': {'dx': _n(style.offset.dx), 'dy': _n(style.offset.dy)},
+  'opacity': _n(style.opacity),
+};
+
+PieElevationStyle _decodePieElevation(Map<String, Object?> map) =>
+    PieElevationStyle(
+      color: _optionalColor(map['color']),
+      blurRadius: _double(map, 'blurRadius'),
+      spreadRadius: _double(map, 'spreadRadius'),
+      offset: Offset(
+        _double(_requiredMap(map, 'offset'), 'dx'),
+        _double(_requiredMap(map, 'offset'), 'dy'),
+      ),
+      opacity: _double(map, 'opacity'),
+    );
 
 Map<String, Object?> _encodeGridStyle(GridStyle style) => {
   'majorColor': style.majorColor.toARGB32(),

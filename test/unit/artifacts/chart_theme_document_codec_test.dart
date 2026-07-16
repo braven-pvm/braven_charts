@@ -1,5 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/animation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -47,6 +47,7 @@ void main() {
         'annotationTheme',
         'scrollbarConfig',
         'legendStyle',
+        'pieChartTheme',
         'focusBorderColor',
         'focusBorderWidth',
         'focusBorderRadius',
@@ -61,6 +62,47 @@ void main() {
         'thresholdDefaults',
         'trendDefaults',
       });
+    });
+
+    test('round-trips advanced Pie theme styling', () {
+      final theme = ChartTheme.dark.copyWith(
+        pieChartTheme: const PieChartTheme(
+          opacity: 0.72,
+          cornerRadius: 11,
+          shadow: PieElevationStyle(
+            color: Color(0x66000000),
+            blurRadius: 8,
+            spreadRadius: 1,
+            offset: Offset(0, 3),
+            opacity: 0.8,
+          ),
+          selectedElevation: PieElevationStyle(
+            color: Color(0xFF64B5F6),
+            blurRadius: 14,
+            spreadRadius: 2,
+            opacity: 0.5,
+          ),
+          calloutStyle: LabelStyle(
+            textStyle: TextStyle(color: Colors.white, fontSize: 13),
+            backgroundColor: Color(0xE6212121),
+            borderColor: Color(0xFF64B5F6),
+            borderWidth: 1.5,
+            borderRadius: 9,
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            shadowColor: Color(0x66000000),
+            shadowBlurRadius: 6,
+          ),
+          animationMode: PieAnimationMode.none,
+        ),
+      );
+
+      final decoded = _success(
+        ChartThemeDocumentCodec.decode(
+          _success(ChartThemeDocumentCodec.encode(theme)),
+        ),
+      );
+
+      expect(decoded.pieChartTheme, theme.pieChartTheme);
     });
 
     test('reference-only capture requires a host registry to hydrate', () {
@@ -170,6 +212,7 @@ void _expectThemeFields(ChartTheme actual, ChartTheme expected, String reason) {
     reason: '$reason scrollbar',
   );
   expect(actual.legendStyle, expected.legendStyle, reason: '$reason legend');
+  expect(actual.pieChartTheme, expected.pieChartTheme, reason: '$reason pie');
   expect(
     actual.focusBorderColor.toARGB32(),
     expected.focusBorderColor.toARGB32(),

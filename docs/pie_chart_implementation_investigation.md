@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **Review needed — Slices 1–5 complete locally; release verification complete**
+Status: **Slices 1–6 complete locally and ready for live review**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -36,7 +36,7 @@ The recommended architectural shape is:
 - generalized data-element contracts for cache, hit testing, tooltip,
   selection, and semantics;
 - slice-aware legend and table projections; and
-- built-in artifact capability `series.pie`.
+- built-in artifact capabilities `series.pie` and `series.pie.style.v2`.
 
 ## Recommended first-release boundary
 
@@ -267,7 +267,8 @@ artifact persistence gain a stable hidden-slice identity model.
 
 ### Artifacts and previews
 
-Add a built-in `pie` series codec and required capability `series.pie` to:
+Add a built-in `pie` series codec and required capabilities `series.pie` and
+`series.pie.style.v2` to:
 
 - series document encoding and decoding;
 - the built-in hydrator capability and model sets;
@@ -278,9 +279,9 @@ The existing point document already preserves `x`, `y`, `label`, metadata, and
 point style, so no new point payload is required. Pie style properties belong
 in the series style document.
 
-No schema-version bump is required merely to add a capability-gated built-in
-series type. Older readers will reject the unsupported `series.pie`
-capability rather than misrendering it.
+No schema-version bump is required merely to add capability-gated built-in
+series styling. Older readers reject unsupported Pie or advanced-style
+capabilities rather than misrendering or silently dropping appearance.
 
 Preview capture should work through the existing revision-bound repaint
 boundary once radial rendering and hydration are complete.
@@ -440,10 +441,43 @@ drift outside this feature. Every Dart file touched by the Pie slice is
 formatted and analyzes cleanly; broad mechanical formatting remains separate
 release-process debt rather than part of the radial feature diff.
 
+### Slice 6: advanced styling, theming, and motion
+
+Status: **Complete locally and ready for live review.**
+
+- Correct `sliceGap` so it preserves category angles and translates complete
+  wedges apart instead of subtracting angular sweep.
+- Add theme and per-series opacity, rounded corners, base shadow, selected
+  glow/elevation, and reduced-motion-aware radial grow/selection animations.
+- Add shared-`LabelStyle` callouts and retain the existing interaction-theme
+  tooltip precedence.
+- Honor `LegendStyle` position, orientation, marker, background, border,
+  opacity, spacing, and offset for the native slice legend.
+- Extend artifact codecs and AI style parsing for the advanced public values.
+- Expose palette, transparency, corner, elevation, callout, tooltip, legend,
+  and motion controls on the public Pie showcase.
+
+The visual regression surface includes an advanced configuration with rounded
+separated slices, translucent palette colors, shadow, selected glow, raised
+callouts, and a vertical right-side legend.
+
+Slice 6 release evidence:
+
+- `flutter test`: 1,555 package tests passed on the current `master` baseline.
+- `flutter test` in `example`: 93 showcase tests passed.
+- `flutter analyze lib` and `flutter analyze` in `example`: no issues.
+- `flutter build web --release --base-href /braven_charts/`: passed,
+  including Flutter's WebAssembly dry run.
+- dartdoc 9.0.8: one public library documented with zero warnings or errors.
+- The advanced 12-slice paint benchmark averaged 0.411 ms over 100 measured
+  iterations on the release-gate host.
+- `git diff --check`: passed.
+
 ## Acceptance gates
 
 - Geometry tests for one slice, multiple slices, angle wraparound, gaps,
-  exploded offsets, and boundary hit testing.
+  rounded corners, animation progress, exploded offsets, and boundary hit
+  testing.
 - Validation tests for empty, all-zero, negative, `NaN`, and infinite data.
 - Tests for stable color resolution and per-slice overrides.
 - Dense-label, small-container, text-scale, and collision tests.

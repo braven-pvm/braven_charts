@@ -183,6 +183,21 @@ class PieChartSeries extends ChartSeries {
       pieStyle.selectionExplodeOffset,
       'pieStyle.selectionExplodeOffset',
     );
+    if (pieStyle.opacity != null) {
+      _requireRange(pieStyle.opacity!, 'pieStyle.opacity', min: 0, max: 1);
+    }
+    if (pieStyle.cornerRadius != null) {
+      _requireNonNegative(pieStyle.cornerRadius!, 'pieStyle.cornerRadius');
+    }
+    if (pieStyle.shadow != null) {
+      _validateElevation(pieStyle.shadow!, 'pieStyle.shadow');
+    }
+    if (pieStyle.selectedElevation != null) {
+      _validateElevation(
+        pieStyle.selectedElevation!,
+        'pieStyle.selectedElevation',
+      );
+    }
     _requireRange(
       dataLabels.minimumShare,
       'dataLabels.minimumShare',
@@ -235,6 +250,14 @@ class PieChartSeries extends ChartSeries {
         'Value must be finite and in $left$min, $max]',
       );
     }
+  }
+
+  static void _validateElevation(PieElevationStyle value, String name) {
+    _requireNonNegative(value.blurRadius, '$name.blurRadius');
+    _requireNonNegative(value.spreadRadius, '$name.spreadRadius');
+    _requireRange(value.opacity, '$name.opacity', min: 0, max: 1);
+    _requireFinite(value.offset.dx, '$name.offset.dx');
+    _requireFinite(value.offset.dy, '$name.offset.dy');
   }
 
   @override

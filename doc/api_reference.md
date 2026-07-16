@@ -26,10 +26,14 @@ types and where to begin.
 - `PieChartSeries.fromMap` converts insertion-ordered category/value pairs into
   stable slices; the explicit constructor preserves source point metadata and
   optional per-point colors.
-- `PieChartStyle` controls start angle, direction, radius, gaps, borders, and
-  the selected-slice explode offset.
+- `PieChartStyle` controls start angle, direction, radius, physical slice
+  separation, borders, selection explode offset, and optional per-series
+  opacity, corner, elevation, and animation overrides.
+- `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
+  theme-level radial styling, shadows/glows, callouts, and motion defaults.
 - `PieDataLabelConfig`, `PieDataLabelPosition`, `PieDataLabelContent`, and
-  `PieDataLabelCollisionStrategy` control label eligibility and placement.
+  `PieDataLabelCollisionStrategy` control label eligibility, placement, and
+  optional shared-`LabelStyle` callouts.
 
 A chart accepts exactly one pie series and cannot mix radial and Cartesian
 series. Pie charts do not use axes, crosshairs, scrollbars, pan, zoom, or

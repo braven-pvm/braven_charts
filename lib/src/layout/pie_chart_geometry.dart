@@ -20,6 +20,7 @@ class PieSliceGeometry {
     required this.center,
     required this.innerRadius,
     required this.outerRadius,
+    required this.spacingOffset,
     required this.explodeOffset,
     required this.path,
     required this.tooltipAnchor,
@@ -37,10 +38,10 @@ class PieSliceGeometry {
   /// Fraction of the validated positive total represented by this slice.
   final double share;
 
-  /// Gap-adjusted start angle in radians.
+  /// Unmodified source start angle in radians.
   final double startAngle;
 
-  /// Signed, gap-adjusted sweep angle in radians.
+  /// Signed source sweep angle in radians.
   final double sweepAngle;
 
   /// Angular center in radians.
@@ -54,6 +55,9 @@ class PieSliceGeometry {
 
   /// Outer radius in logical pixels.
   final double outerRadius;
+
+  /// Translation that creates physical padding without sharpening the wedge.
+  final Offset spacingOffset;
 
   /// Applied explode vector.
   final Offset explodeOffset;
@@ -143,6 +147,9 @@ class PieChartGeometryCalculator {
     EdgeInsets padding = EdgeInsets.zero,
     Set<int> explodedPointIndices = const <int>{},
     double innerRadiusFactor = 0,
+    double? cornerRadius,
+    double animationProgress = 1,
+    double selectionProgress = 1,
   }) {
     if (!size.width.isFinite ||
         !size.height.isFinite ||
@@ -161,6 +168,33 @@ class PieChartGeometryCalculator {
         innerRadiusFactor,
         'innerRadiusFactor',
         'Value must be finite and in [0, 1)',
+      );
+    }
+    if (!animationProgress.isFinite ||
+        animationProgress < 0 ||
+        animationProgress > 1) {
+      throw ArgumentError.value(
+        animationProgress,
+        'animationProgress',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+    if (!selectionProgress.isFinite ||
+        selectionProgress < 0 ||
+        selectionProgress > 1) {
+      throw ArgumentError.value(
+        selectionProgress,
+        'selectionProgress',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+    final requestedCornerRadius =
+        cornerRadius ?? series.pieStyle.cornerRadius ?? 0;
+    if (!requestedCornerRadius.isFinite || requestedCornerRadius < 0) {
+      throw ArgumentError.value(
+        requestedCornerRadius,
+        'cornerRadius',
+        'Value must be finite and non-negative',
       );
     }
     final paddingValues = <double>[
@@ -185,7 +219,13 @@ class PieChartGeometryCalculator {
     );
     final center = contentRect.center;
     final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
-    final outerRadius = availableRadius * series.pieStyle.radiusFactor;
+    final visibleSliceCount = series.visiblePointIndices.length;
+    final fullOuterRadius = availableRadius * series.pieStyle.radiusFactor;
+    final gapInset = visibleSliceCount <= 1
+        ? 0.0
+        : math.min(series.pieStyle.sliceGap * 2, fullOuterRadius * 0.12);
+    final outerRadius =
+        math.max(0, fullOuterRadius - gapInset) * animationProgress;
     final innerRadius = outerRadius * innerRadiusFactor;
     final total = series.total;
 
@@ -202,8 +242,6 @@ class PieChartGeometryCalculator {
     final direction = series.pieStyle.clockwise ? 1.0 : -1.0;
     var cursor = _degreesToRadians(series.pieStyle.startAngleDegrees);
     final slices = <PieSliceGeometry>[];
-    final visibleSliceCount = series.visiblePointIndices.length;
-
     for (final (pointIndex, point) in series.points.indexed) {
       if (point.y == 0) {
         continue;
@@ -211,25 +249,31 @@ class PieChartGeometryCalculator {
 
       final share = point.y / total;
       final rawSweepMagnitude = _tau * share;
-      final requestedGapAngle = visibleSliceCount <= 1
-          ? 0.0
-          : series.pieStyle.sliceGap / outerRadius;
-      final gapAngle = math.min(requestedGapAngle, rawSweepMagnitude * 0.25);
-      final startAngle = cursor + direction * gapAngle / 2;
-      final sweepAngle =
-          direction * (rawSweepMagnitude - gapAngle).clamp(0, _tau);
+      final startAngle = cursor;
+      final sweepAngle = direction * rawSweepMagnitude;
       final midAngle = cursor + direction * rawSweepMagnitude / 2;
+      final halfSweepSine = math.sin(rawSweepMagnitude / 2).abs();
+      final spacingDistance = visibleSliceCount <= 1
+          ? 0.0
+          : math.min(
+              series.pieStyle.sliceGap *
+                  animationProgress /
+                  (2 * math.max(0.25, halfSweepSine)),
+              outerRadius * 0.12,
+            );
+      final spacingOffset = Offset.fromDirection(midAngle, spacingDistance);
       final explodeDistance = explodedPointIndices.contains(pointIndex)
-          ? series.pieStyle.selectionExplodeOffset
+          ? series.pieStyle.selectionExplodeOffset * selectionProgress
           : 0.0;
       final explodeOffset = Offset.fromDirection(midAngle, explodeDistance);
-      final sliceCenter = center + explodeOffset;
+      final sliceCenter = center + spacingOffset + explodeOffset;
       final path = _sectorPath(
         center: sliceCenter,
         innerRadius: innerRadius,
         outerRadius: outerRadius,
         startAngle: startAngle,
         sweepAngle: sweepAngle,
+        cornerRadius: requestedCornerRadius * animationProgress,
       );
       final tooltipRadius = innerRadius + (outerRadius - innerRadius) * 0.62;
       final insideRadius = innerRadius + (outerRadius - innerRadius) * 0.58;
@@ -250,6 +294,7 @@ class PieChartGeometryCalculator {
           center: sliceCenter,
           innerRadius: innerRadius,
           outerRadius: outerRadius,
+          spacingOffset: spacingOffset,
           explodeOffset: explodeOffset,
           path: path,
           tooltipAnchor:
@@ -281,6 +326,7 @@ Path _sectorPath({
   required double outerRadius,
   required double startAngle,
   required double sweepAngle,
+  double cornerRadius = 0,
 }) {
   final outerRect = Rect.fromCircle(center: center, radius: outerRadius);
   final path = Path();
@@ -293,6 +339,16 @@ Path _sectorPath({
       path.addOval(Rect.fromCircle(center: center, radius: innerRadius));
     }
     return path;
+  }
+
+  if (cornerRadius > 0 && innerRadius == 0) {
+    return _roundedPieSectorPath(
+      center: center,
+      outerRadius: outerRadius,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+      cornerRadius: cornerRadius,
+    );
   }
 
   final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
@@ -314,6 +370,75 @@ Path _sectorPath({
   }
   path.close();
   return path;
+}
+
+Path _roundedPieSectorPath({
+  required Offset center,
+  required double outerRadius,
+  required double startAngle,
+  required double sweepAngle,
+  required double cornerRadius,
+}) {
+  final sweepMagnitude = sweepAngle.abs();
+  final direction = sweepAngle.sign;
+  final maximumBySweep =
+      outerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45;
+  final radius = math.min(
+    cornerRadius,
+    math.min(outerRadius * 0.24, maximumBySweep),
+  );
+  if (radius <= _angleEpsilon || outerRadius <= _angleEpsilon) {
+    return _sectorPath(
+      center: center,
+      innerRadius: 0,
+      outerRadius: outerRadius,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+    );
+  }
+
+  final endAngle = startAngle + sweepAngle;
+  final angleTrim = math.min(radius / outerRadius, sweepMagnitude * 0.2);
+  final arcStartAngle = startAngle + direction * angleTrim;
+  final arcSweep = sweepAngle - direction * angleTrim * 2;
+  final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
+  final outerEnd = center + Offset.fromDirection(endAngle, outerRadius);
+  final startEdge =
+      center + Offset.fromDirection(startAngle, outerRadius - radius);
+  final endEdge = center + Offset.fromDirection(endAngle, outerRadius - radius);
+  final arcStart = center + Offset.fromDirection(arcStartAngle, outerRadius);
+  final centerTrim = sweepMagnitude < math.pi
+      ? math.min(
+          radius / math.max(0.2, math.tan(sweepMagnitude / 2)),
+          outerRadius * 0.32,
+        )
+      : 0.0;
+  final centerStart = center + Offset.fromDirection(startAngle, centerTrim);
+  final centerEnd = center + Offset.fromDirection(endAngle, centerTrim);
+
+  final path = Path()
+    ..moveTo(centerStart.dx, centerStart.dy)
+    ..lineTo(startEdge.dx, startEdge.dy)
+    ..quadraticBezierTo(outerStart.dx, outerStart.dy, arcStart.dx, arcStart.dy)
+    ..arcTo(
+      Rect.fromCircle(center: center, radius: outerRadius),
+      arcStartAngle,
+      arcSweep,
+      false,
+    )
+    ..quadraticBezierTo(outerEnd.dx, outerEnd.dy, endEdge.dx, endEdge.dy)
+    ..lineTo(centerEnd.dx, centerEnd.dy);
+  if (centerTrim > 0) {
+    path.quadraticBezierTo(
+      center.dx,
+      center.dy,
+      centerStart.dx,
+      centerStart.dy,
+    );
+  } else {
+    path.lineTo(center.dx, center.dy);
+  }
+  return path..close();
 }
 
 double _degreesToRadians(double degrees) => degrees * math.pi / 180;

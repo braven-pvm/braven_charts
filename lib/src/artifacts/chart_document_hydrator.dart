@@ -236,6 +236,7 @@ abstract final class ChartDocumentHydrator {
     'series.area',
     'series.bar',
     'series.pie',
+    'series.pie.style.v2',
     'annotation.point',
     'annotation.range',
     'annotation.text',

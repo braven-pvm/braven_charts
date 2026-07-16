@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   capture, category/value/share table projection, native copy/CSV actions,
   and tool-schema support.
 - Dedicated Pie Charts showcase and Pie option in the Chart Types comparison.
+- Theme-level Pie palettes, opacity, rounded corners, shadows, selected glow,
+  styled label callouts, tooltip presets, positioned/oriented slice legends,
+  and reduced-motion-aware radial animations.
+
+### Fixed
+- Pie slice gaps now preserve category angles and separate complete wedges like
+  physical padding instead of narrowing wedges into sharp center spikes.
 
 ### Fixed
 - Expand data-derived constant per-axis ranges to a stable non-zero span so

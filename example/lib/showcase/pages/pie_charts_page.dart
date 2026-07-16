@@ -35,10 +35,20 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _startAngle = -90;
   bool _clockwise = true;
   double _radiusFactor = 0.86;
-  double _sliceGap = 2;
+  double _sliceGap = 4;
   double _borderWidth = 1;
   double _selectionExplodeOffset = 10;
+  double _cornerRadius = 8;
+  double _sliceOpacity = 1;
+  bool _showShadow = false;
+  bool _showSelectedGlow = true;
+  bool _animateSlices = true;
+  _PiePalette _palette = _PiePalette.theme;
+  _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
+  _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
   bool _showLegend = true;
+  LegendPosition _legendPosition = LegendPosition.bottomCenter;
+  LegendOrientation _legendOrientation = LegendOrientation.horizontal;
   bool _showTooltips = true;
   String? _selectedCategory;
   ChartDisplayMode _displayMode = ChartDisplayMode.chart;
@@ -252,6 +262,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _minimumShare = value / 100),
             ),
+            EnumOption<_PieCalloutPreset>(
+              label: 'Callout style',
+              value: _calloutPreset,
+              values: _PieCalloutPreset.values,
+              labelBuilder: _calloutPresetName,
+              onChanged: (value) => setState(() => _calloutPreset = value),
+            ),
           ],
         ],
       ),
@@ -318,8 +335,57 @@ class _PieChartsPageState extends State<PieChartsPage> {
         ],
       ),
       OptionSection(
-        title: 'Interaction',
-        icon: Icons.touch_app_outlined,
+        title: 'Slice appearance',
+        icon: Icons.palette_outlined,
+        children: [
+          EnumOption<_PiePalette>(
+            label: 'Color palette',
+            value: _palette,
+            values: _PiePalette.values,
+            labelBuilder: _paletteName,
+            onChanged: (value) => setState(() => _palette = value),
+          ),
+          SliderOption(
+            label: 'Transparency',
+            value: _sliceOpacity * 100,
+            min: 25,
+            max: 100,
+            divisions: 15,
+            suffix: '%',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _sliceOpacity = value / 100),
+          ),
+          SliderOption(
+            label: 'Rounded corners',
+            value: _cornerRadius,
+            min: 0,
+            max: 20,
+            divisions: 10,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _cornerRadius = value),
+          ),
+          BoolOption(
+            label: 'Slice shadow',
+            value: _showShadow,
+            onChanged: (value) => setState(() => _showShadow = value),
+          ),
+          BoolOption(
+            label: 'Selected slice glow',
+            value: _showSelectedGlow,
+            onChanged: (value) => setState(() => _showSelectedGlow = value),
+          ),
+          BoolOption(
+            label: 'Animate changes',
+            value: _animateSlices,
+            onChanged: (value) => setState(() => _animateSlices = value),
+            subtitle: 'Regenerate values to replay the radial entrance',
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Legend',
+        icon: Icons.view_list_outlined,
         children: [
           BoolOption(
             label: 'Show slice legend',
@@ -327,12 +393,42 @@ class _PieChartsPageState extends State<PieChartsPage> {
             onChanged: (value) => setState(() => _showLegend = value),
             subtitle: 'Legend items select slices; they do not hide data',
           ),
+          if (_showLegend) ...[
+            EnumOption<LegendPosition>(
+              label: 'Position',
+              value: _legendPosition,
+              values: LegendPosition.values,
+              labelBuilder: _legendPositionName,
+              onChanged: (value) => setState(() => _legendPosition = value),
+            ),
+            EnumOption<LegendOrientation>(
+              label: 'Orientation',
+              value: _legendOrientation,
+              values: LegendOrientation.values,
+              labelBuilder: _legendOrientationName,
+              onChanged: (value) => setState(() => _legendOrientation = value),
+            ),
+          ],
+        ],
+      ),
+      OptionSection(
+        title: 'Interaction',
+        icon: Icons.touch_app_outlined,
+        children: [
           BoolOption(
             label: 'Show tooltips',
             value: _showTooltips,
             onChanged: (value) => setState(() => _showTooltips = value),
             subtitle: 'Hover or tap a slice for category, value, and share',
           ),
+          if (_showTooltips)
+            EnumOption<_PieTooltipPreset>(
+              label: 'Tooltip style',
+              value: _tooltipPreset,
+              values: _PieTooltipPreset.values,
+              labelBuilder: _tooltipPresetName,
+              onChanged: (value) => setState(() => _tooltipPreset = value),
+            ),
         ],
       ),
       StandardChartOptions(
@@ -478,13 +574,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
   }
 
   Widget _buildLiveChart() {
+    final theme = _buildPieTheme();
     return BravenChartPlus(
       key: const ValueKey('pie-showcase-chart'),
       title: _dataset.chartTitle,
       subtitle: _dataset.chartSubtitle,
       bravenChartController: _chartController,
       showLegend: _showLegend,
-      theme: _optionsController.theme,
+      theme: theme,
       interactionConfig: InteractionConfig(
         crosshair: const CrosshairConfig(enabled: false),
         tooltip: TooltipConfig(
@@ -772,6 +869,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           children: [
             Chip(label: Text('Schema ${artifact.schemaVersion}')),
             const Chip(label: Text('series.pie')),
+            const Chip(label: Text('series.pie.style.v2')),
             Chip(
               label: Text(
                 preview == null
@@ -784,7 +882,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
         const SizedBox(height: 12),
         Text(
           '${artifact.document.series.single.data.pointCount} transported categories · '
-          '${artifact.document.requiredCapabilities.length} required capability · '
+          '${artifact.document.requiredCapabilities.length} required capabilities · '
           '${_portableJson?.length ?? 0} JSON characters',
           style: Theme.of(
             context,
@@ -1054,7 +1152,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   icon: Icons.contrast_outlined,
                   title: 'Theme-aware rendering',
                   description:
-                      'Slice colors, borders, connectors, and text follow the active Braven chart theme, including dark and high contrast.',
+                      'Palettes, opacity, corners, shadow, selected glow, callouts, tooltips, and legends resolve through the active chart theme.',
                 ),
                 _FeatureCard(
                   width: cardWidth,
@@ -1101,14 +1199,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Create a pie from category values',
+                'Style a pie through the chart theme',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
-                'Insertion order becomes slice order. Geometry and labels live on the series; tooltips, selection, legend controls, and keyboard input are built in.',
+                'Insertion order becomes slice order. Keep geometry with the series and reusable presentation defaults in PieChartTheme, LegendStyle, and InteractionTheme.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                   height: 1.5,
@@ -1135,8 +1233,24 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    position: PieDataLabelPosition.outside,\n"
               "  ),\n"
               ");\n\n"
+              "final theme = ChartTheme.light.copyWith(\n"
+              "  legendStyle: ChartTheme.light.legendStyle.copyWith(\n"
+              "    position: LegendPosition.centerRight,\n"
+              "    orientation: LegendOrientation.vertical,\n"
+              "  ),\n"
+              "  pieChartTheme: const PieChartTheme(\n"
+              "    cornerRadius: 10,\n"
+              "    selectedElevation: PieElevationStyle(\n"
+              "      blurRadius: 12,\n"
+              "      spreadRadius: 2,\n"
+              "      opacity: 0.5,\n"
+              "    ),\n"
+              "  ),\n"
+              ");\n\n"
               "BravenChartPlus(\n"
               "  series: [series],\n"
+              "  theme: theme,\n"
+              "  showLegend: true,\n"
               "  onPointTap: (point, seriesId) {\n"
               "    // Respond to the selected source slice.\n"
               "  },\n"
@@ -1188,6 +1302,142 @@ class _PieChartsPageState extends State<PieChartsPage> {
     );
   }
 
+  ChartTheme _buildPieTheme() {
+    final base = _optionsController.theme ?? ChartTheme.light;
+    final palette = _paletteColors;
+    final seriesTheme = palette == null
+        ? base.seriesTheme
+        : base.seriesTheme.copyWith(colors: palette);
+    final calloutStyle = _calloutStyle(base);
+    final tooltipStyle = _tooltipStyle(base);
+    return base.copyWith(
+      seriesTheme: seriesTheme,
+      legendStyle: base.legendStyle.copyWith(
+        position: _legendPosition,
+        orientation: _legendOrientation,
+        markerShape: LegendMarkerShape.circle,
+        markerSize: 14,
+        markerLabelSpacing: 8,
+      ),
+      interactionTheme: base.interactionTheme.copyWith(
+        tooltipStyle: tooltipStyle,
+      ),
+      pieChartTheme: PieChartTheme(
+        opacity: _sliceOpacity,
+        cornerRadius: _cornerRadius,
+        shadow: _showShadow
+            ? const PieElevationStyle(
+                color: Color(0x4D1A1A1A),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+                opacity: 0.7,
+              )
+            : const PieElevationStyle(),
+        selectedElevation: _showSelectedGlow
+            ? const PieElevationStyle(
+                blurRadius: 12,
+                spreadRadius: 2,
+                opacity: 0.48,
+              )
+            : const PieElevationStyle(),
+        calloutStyle: calloutStyle,
+        animationMode: _animateSlices
+            ? PieAnimationMode.grow
+            : PieAnimationMode.none,
+      ),
+    );
+  }
+
+  List<Color>? get _paletteColors => switch (_palette) {
+    _PiePalette.theme => null,
+    _PiePalette.ocean => const [
+      Color(0xFF006D77),
+      Color(0xFF0A9396),
+      Color(0xFF48CAE4),
+      Color(0xFF90E0EF),
+      Color(0xFF023E8A),
+      Color(0xFF0077B6),
+    ],
+    _PiePalette.sunset => const [
+      Color(0xFFE63946),
+      Color(0xFFF77F00),
+      Color(0xFFFCBF49),
+      Color(0xFFD62828),
+      Color(0xFF9D4EDD),
+      Color(0xFF5A189A),
+    ],
+    _PiePalette.earth => const [
+      Color(0xFF386641),
+      Color(0xFF6A994E),
+      Color(0xFFA7C957),
+      Color(0xFFBC6C25),
+      Color(0xFFDDA15E),
+      Color(0xFF606C38),
+    ],
+    _PiePalette.monochrome => const [
+      Color(0xFF1F2937),
+      Color(0xFF374151),
+      Color(0xFF4B5563),
+      Color(0xFF6B7280),
+      Color(0xFF9CA3AF),
+      Color(0xFFD1D5DB),
+    ],
+  };
+
+  LabelStyle? _calloutStyle(ChartTheme theme) => switch (_calloutPreset) {
+    _PieCalloutPreset.none => null,
+    _PieCalloutPreset.surface => LabelStyle(
+      textStyle: theme.axisStyle.labelStyle.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor: theme.backgroundColor.withValues(alpha: 0.94),
+      borderColor: theme.axisStyle.lineColor.withValues(alpha: 0.55),
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shadowColor: const Color(0x261A1A1A),
+      shadowBlurRadius: 6,
+    ),
+    _PieCalloutPreset.accent => LabelStyle(
+      textStyle: theme.axisStyle.labelStyle.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: theme.seriesTheme.colorAt(0).withValues(alpha: 0.12),
+      borderColor: theme.seriesTheme.colorAt(0).withValues(alpha: 0.72),
+      borderWidth: 1.5,
+      borderRadius: 12,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      shadowColor: theme.seriesTheme.colorAt(0).withValues(alpha: 0.18),
+      shadowBlurRadius: 8,
+    ),
+  };
+
+  LabelStyle _tooltipStyle(ChartTheme theme) => switch (_tooltipPreset) {
+    _PieTooltipPreset.theme => theme.interactionTheme.tooltipStyle,
+    _PieTooltipPreset.elevated => theme.interactionTheme.tooltipStyle.copyWith(
+      borderRadius: 10,
+      borderWidth: 1,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      shadowColor: const Color(0x401A1A1A),
+      shadowBlurRadius: 12,
+    ),
+    _PieTooltipPreset.contrast => LabelStyle(
+      textStyle: TextStyle(
+        color: theme.backgroundColor,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      backgroundColor:
+          theme.axisStyle.labelStyle.color ?? const Color(0xFF1A1A1A),
+      borderColor: theme.backgroundColor.withValues(alpha: 0.72),
+      borderWidth: 1,
+      borderRadius: 6,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      shadowColor: const Color(0x4D1A1A1A),
+      shadowBlurRadius: 8,
+    ),
+  };
+
   String _chartSummary() {
     final total = _values.values.fold<double>(
       0,
@@ -1221,7 +1471,50 @@ class _PieChartsPageState extends State<PieChartsPage> {
     PieDataLabelCollisionStrategy.shift => 'Shift to avoid overlap',
     PieDataLabelCollisionStrategy.shiftAndHide => 'Shift, then hide if needed',
   };
+
+  String _paletteName(_PiePalette value) => switch (value) {
+    _PiePalette.theme => 'Chart theme',
+    _PiePalette.ocean => 'Ocean',
+    _PiePalette.sunset => 'Sunset',
+    _PiePalette.earth => 'Earth',
+    _PiePalette.monochrome => 'Monochrome',
+  };
+
+  String _calloutPresetName(_PieCalloutPreset value) => switch (value) {
+    _PieCalloutPreset.none => 'Plain text',
+    _PieCalloutPreset.surface => 'Raised surface',
+    _PieCalloutPreset.accent => 'Palette accent',
+  };
+
+  String _tooltipPresetName(_PieTooltipPreset value) => switch (value) {
+    _PieTooltipPreset.theme => 'Chart theme',
+    _PieTooltipPreset.elevated => 'Elevated surface',
+    _PieTooltipPreset.contrast => 'High contrast',
+  };
+
+  String _legendPositionName(LegendPosition value) => switch (value) {
+    LegendPosition.topLeft => 'Top left',
+    LegendPosition.topCenter => 'Top center',
+    LegendPosition.topRight => 'Top right',
+    LegendPosition.centerLeft => 'Center left',
+    LegendPosition.center => 'Overlay center',
+    LegendPosition.centerRight => 'Center right',
+    LegendPosition.bottomLeft => 'Bottom left',
+    LegendPosition.bottomCenter => 'Bottom center',
+    LegendPosition.bottomRight => 'Bottom right',
+  };
+
+  String _legendOrientationName(LegendOrientation value) => switch (value) {
+    LegendOrientation.horizontal => 'Horizontal',
+    LegendOrientation.vertical => 'Vertical',
+  };
 }
+
+enum _PiePalette { theme, ocean, sunset, earth, monochrome }
+
+enum _PieCalloutPreset { none, surface, accent }
+
+enum _PieTooltipPreset { theme, elevated, contrast }
 
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({

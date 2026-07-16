@@ -110,7 +110,7 @@ lib/
     ├── models/                 # ★ All data models (immutable value objects)
     │   ├── chart_series.dart          # Cartesian series hierarchy
     │   ├── pie_chart_series.dart      # Validated radial pie series
-    │   ├── pie_chart_config.dart      # Pie geometry and label configuration
+    │   ├── pie_chart_config.dart      # Pie geometry, theme, elevation, labels, motion
     │   ├── chart_data_point.dart      # (x,y) with optional metadata
     │   ├── chart_annotation.dart      # Sealed annotation hierarchy
     │   ├── interaction_config.dart    # Full interaction configuration
@@ -205,7 +205,7 @@ lib/
 ┌─────────────────────────────────────────────────────────────┐
 │  ChartElement (interface) — unified element model            │
 │  ├── SeriesElement      — renders line/area/bar/scatter      │
-│  ├── PieSeriesElement   — renders pie slices and labels      │
+│  ├── PieSeriesElement   — renders styled/animated pie slices │
 │  ├── *AnnotationElement — renders each annotation type       │
 │  └── ResizeHandleElement — drag handles on annotations       │
 │                                                              │

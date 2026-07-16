@@ -15,14 +15,14 @@ is added to package marketing.
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties | Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarGroupInfo` | Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
-| Pie charts | `PieChartSeries`, `PieChartStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |
+| Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
 | Configurable X axis | `XAxisConfig` | Minor Ticks, Render Range, all chart pages |
 | Streaming data | `StreamingConfig`, `StreamingController` | Streaming |
 | Direct live ingestion | `LiveStreamController`, `StreamingBuffer` | Gallery, Live Stream |
-| Theming | `ChartTheme` and component theme types | Theming, Gallery |
+| Theming | `ChartTheme` and component theme types, including radial defaults | Theming, Pie Charts, Gallery |
 | Loading and empty UX | `isLoading`, `ChartLoadingConfig`, `ChartEmptyStateConfig` | Loading States |
 | Runtime control | `BravenChartController`, `ChartController`, callbacks | Axis Slots, Annotations, Live Stream |
 | Native chart data | `ChartTableModel`, `ChartDataTable`, copy and CSV export | Chart Artifacts, Chart Workbench, Pie Charts |

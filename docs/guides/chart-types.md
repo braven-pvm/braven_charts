@@ -157,6 +157,20 @@ final pie = PieChartSeries.fromMap(
 BravenChartPlus(
   series: [pie],
   showLegend: true,
+  theme: ChartTheme.light.copyWith(
+    legendStyle: ChartTheme.light.legendStyle.copyWith(
+      position: LegendPosition.centerRight,
+      orientation: LegendOrientation.vertical,
+    ),
+    pieChartTheme: const PieChartTheme(
+      cornerRadius: 10,
+      selectedElevation: PieElevationStyle(
+        blurRadius: 12,
+        spreadRadius: 2,
+        opacity: 0.5,
+      ),
+    ),
+  ),
   interactionConfig: const InteractionConfig(
     tooltip: TooltipConfig(enabled: true),
   ),
@@ -174,7 +188,8 @@ Pie has these enforced boundaries:
   stable identity.
 
 See the complete [Pie chart guide](../../doc/pie_charts.md) for labels,
-selection, tables, artifacts, AI configuration, and accessibility.
+palettes, callouts, tooltips, legends, rounded/translucent slices, elevation,
+animation, selection, tables, artifacts, AI configuration, and accessibility.
 
 ## Mixed Cartesian charts
 
