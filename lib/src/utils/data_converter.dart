@@ -2,6 +2,7 @@
 // BravenChartPlus - Data Conversion Utilities
 
 import '../coordinates/chart_transform.dart';
+import '../artifacts/chart_view_state.dart';
 import '../elements/series_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../models/bar_group_info.dart';
@@ -43,6 +44,8 @@ class DataConverter {
     required List<ChartSeries> series,
     required ChartTransform transform,
     ChartTheme? theme,
+    Set<ChartPointRef> focusedPointRefs = const {},
+    Set<ChartPointRef> selectedPointRefs = const {},
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
@@ -75,6 +78,16 @@ class DataConverter {
         seriesIndex: index,
         coordinator: coordinator,
         barGroupInfo: barGroupInfo,
+        focusedPointIndices: {
+          for (final ref in focusedPointRefs)
+            if (ref.seriesId == s.id) ref.pointIndex,
+        },
+        selectedPointIndices: {
+          for (final ref in selectedPointRefs)
+            if (ref.seriesId == s.id) ref.pointIndex,
+        },
+        pointFocusColor: theme?.interactionTheme.crosshairColor,
+        pointSelectionColor: theme?.interactionTheme.selectionColor,
       );
     }).toList();
   }
@@ -143,20 +156,22 @@ class DataConverter {
     }
 
     return DataBounds(
-        xMin: xMin - xPadding,
-        xMax: xMax + xPadding,
-        yMin: yMin - yPadding,
-        yMax: yMax + yPadding);
+      xMin: xMin - xPadding,
+      xMax: xMax + xPadding,
+      yMin: yMin - yPadding,
+      yMax: yMax + yPadding,
+    );
   }
 }
 
 /// Data bounds for chart viewport setup.
 class DataBounds {
-  const DataBounds(
-      {required this.xMin,
-      required this.xMax,
-      required this.yMin,
-      required this.yMax});
+  const DataBounds({
+    required this.xMin,
+    required this.xMax,
+    required this.yMin,
+    required this.yMax,
+  });
 
   final double xMin;
   final double xMax;

@@ -21,6 +21,8 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/annotation_quick_reference.md](guides/annotation_quick_reference.md) - Annotation quick reference
 - [guides/annotation_persistence_guide.md](guides/annotation_persistence_guide.md) - Annotation persistence
 - [guides/chart-artifacts.md](guides/chart-artifacts.md) - Portable chart save, restore, external payloads, tables, and hashing
+- [guides/chart-workbench.md](guides/chart-workbench.md) - Reusable Chart/Data/Split presentation, host actions, refresh, and lifecycle
+- [guides/chart-comparison.md](guides/chart-comparison.md) - Explicit multi-document series mapping, alignment, deltas, unit safety, and export
 - [guides/chart-artifact-migrations.md](guides/chart-artifact-migrations.md) - Trusted schema migration authoring and validation
 
 ## Development Notes

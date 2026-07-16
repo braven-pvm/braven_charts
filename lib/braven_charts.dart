@@ -55,6 +55,7 @@ export 'src/artifacts/chart_document_extractor.dart'
         ChartDataScope,
         ChartDocumentExtractOptions,
         ChartDocumentExtractionHandler,
+        ChartDocumentRevision,
         ChartDocumentSnapshot;
 export 'src/artifacts/chart_interaction_document_codec.dart';
 export 'src/artifacts/chart_runtime_bindings.dart';
@@ -69,12 +70,18 @@ export 'src/table/chart_table_controller.dart';
 export 'src/table/chart_table_export.dart';
 export 'src/table/chart_data_table.dart';
 export 'src/table/chart_data_table_theme.dart';
+export 'src/workbench/braven_chart_workbench.dart';
+export 'src/workbench/chart_workbench_models.dart';
 export 'src/artifacts/json_value.dart';
 // Core chart widget
 export 'src/braven_chart_plus.dart';
 // Controllers
 export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
+// Comparison
+export 'src/comparison/chart_comparison_builder.dart';
+export 'src/comparison/chart_comparison_export.dart';
+export 'src/comparison/chart_comparison_model.dart';
 // Formatting
 export 'src/formatting/multi_axis_value_formatter.dart';
 // Layout

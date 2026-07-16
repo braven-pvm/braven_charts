@@ -292,3 +292,8 @@ import 'package:braven_charts/braven_charts.dart';
 Only symbols re-exported by that entrypoint are part of the supported package
 surface. The generated pub.dev API reference is built from the `///` comments
 on those exported symbols.
+
+Use [Chart Workbench](chart_workbench.md) to compose one mounted chart with its
+native table and host actions. Use
+[Chart Document Comparison](chart_comparison.md) when a host needs explicit
+multi-document series mapping, alignment, deltas, and export.

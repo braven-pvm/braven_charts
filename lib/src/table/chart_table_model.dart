@@ -8,16 +8,9 @@ import '../artifacts/chart_view_state.dart';
 import '../artifacts/json_value.dart';
 import 'chart_table_options.dart';
 
-@immutable
-class ChartTablePointReference {
-  const ChartTablePointReference({
-    required this.seriesId,
-    required this.pointIndex,
-  });
-
-  final String seriesId;
-  final int pointIndex;
-}
+/// Deprecated table-specific name for the canonical chart point identity.
+@Deprecated('Use ChartPointRef instead.')
+typedef ChartTablePointReference = ChartPointRef;
 
 @immutable
 class ChartTableSeriesColumn {

@@ -49,7 +49,7 @@ void main() {
   ) async {
     final controller = ChartTableController();
     addTearDown(controller.dispose);
-    ChartTablePointReference? activated;
+    List<ChartPointRef>? activated;
     final model = _model(
       points: [
         _point(2, 220, label: 'Later'),
@@ -77,8 +77,8 @@ void main() {
     );
 
     await tester.tap(find.text('Earlier'));
-    expect(activated?.seriesId, 'series');
-    expect(activated?.pointIndex, 1);
+    expect(activated?.single.seriesId, 'series');
+    expect(activated?.single.pointIndex, 1);
   });
 
   testWidgets('renders exact-X wide cells and meaningful missing values', (
@@ -99,6 +99,72 @@ void main() {
     expect(find.text('Heart rate'), findsOneWidget);
     expect(find.text('No value'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wide row activation reports every populated point reference', (
+    tester,
+  ) async {
+    List<ChartPointRef>? activated;
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          onRowActivated: (points) => activated = points,
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(ValueKey(model.wideRows.single.rowId)));
+
+    expect(activated, const [
+      ChartPointRef(seriesId: 'power', pointIndex: 0),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    ]);
+  });
+
+  testWidgets('mirrors complete point selection into a themed table row', (
+    tester,
+  ) async {
+    const selectedColor = Color(0xFFE0E7FF);
+    final points = <ChartPointRef>{
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    };
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+    final row = find.byKey(ValueKey(model.wideRows.single.rowId));
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          selectedPointRefs: points,
+          theme: const ChartDataTableTheme(selectedRowColor: selectedColor),
+        ),
+      ),
+    );
+
+    final surface = tester.widget<Container>(
+      find.descendant(of: row, matching: find.byType(Container)).first,
+    );
+    expect((surface.decoration! as BoxDecoration).color, selectedColor);
+    final selectionBorder =
+        (surface.foregroundDecoration! as BoxDecoration).border! as Border;
+    expect(selectionBorder.left.width, 4);
+    final semantics = tester.widget<Semantics>(
+      find.descendant(of: row, matching: find.byType(Semantics)).first,
+    );
+    expect(semantics.properties.selected, isTrue);
   });
 
   testWidgets(
@@ -322,8 +388,9 @@ void main() {
   testWidgets('arrow keys traverse rows and Enter activates the focused row', (
     tester,
   ) async {
-    ChartTablePointReference? focused;
-    ChartTablePointReference? activated;
+    List<ChartPointRef>? focused;
+    List<ChartPointRef>? activated;
+    var focusCleared = false;
     final model = ChartTableModel.fromDocument(
       _document([
         _series('power', [_point(1, 100), _point(2, 200), _point(3, 300)]),
@@ -335,6 +402,7 @@ void main() {
         ChartDataTable(
           model: model,
           onRowFocused: (value) => focused = value,
+          onRowFocusCleared: () => focusCleared = true,
           onRowActivated: (value) => activated = value,
         ),
         width: 260,
@@ -349,7 +417,7 @@ void main() {
     );
     firstDetector.focusNode!.requestFocus();
     await tester.pump();
-    expect(focused?.pointIndex, 0);
+    expect(focused?.single.pointIndex, 0);
     final focusedContainer = tester.widget<Container>(
       find
           .descendant(
@@ -384,11 +452,15 @@ void main() {
       ),
     );
     expect(secondDetector.focusNode?.hasFocus, isTrue);
-    expect(focused?.pointIndex, 1);
+    expect(focused?.single.pointIndex, 1);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(activated?.pointIndex, 1);
+    expect(activated?.single.pointIndex, 1);
+
+    secondDetector.focusNode?.unfocus();
+    await tester.pump();
+    expect(focusCleared, isTrue);
   });
 
   testWidgets('large text and high contrast expand density without overflow', (

@@ -8,6 +8,7 @@ import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_showcase_page.dart';
 import 'pages/chart_types_page.dart';
+import 'pages/chart_workbench_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
@@ -206,6 +207,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.hub,
       page: ArtifactShowcasePage(),
       routeSlug: 'artifact-showcase',
+    ),
+    const NavDestination(
+      label: 'Chart Workbench',
+      icon: Icons.view_week_outlined,
+      selectedIcon: Icons.view_week,
+      page: ChartWorkbenchPage(),
+      routeSlug: 'chart-workbench',
     ),
   ];
 

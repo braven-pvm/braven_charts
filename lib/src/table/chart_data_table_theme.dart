@@ -18,6 +18,7 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
     this.oddRowColor,
     this.dividerColor,
     this.focusedRowColor,
+    this.selectedRowColor,
     this.headerTextStyle,
     this.cellTextStyle,
     this.rowNumberTextStyle,
@@ -34,6 +35,7 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
   final Color? oddRowColor;
   final Color? dividerColor;
   final Color? focusedRowColor;
+  final Color? selectedRowColor;
   final TextStyle? headerTextStyle;
   final TextStyle? cellTextStyle;
   final TextStyle? rowNumberTextStyle;
@@ -51,6 +53,7 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
     Color? oddRowColor,
     Color? dividerColor,
     Color? focusedRowColor,
+    Color? selectedRowColor,
     TextStyle? headerTextStyle,
     TextStyle? cellTextStyle,
     TextStyle? rowNumberTextStyle,
@@ -66,6 +69,7 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
     oddRowColor: oddRowColor ?? this.oddRowColor,
     dividerColor: dividerColor ?? this.dividerColor,
     focusedRowColor: focusedRowColor ?? this.focusedRowColor,
+    selectedRowColor: selectedRowColor ?? this.selectedRowColor,
     headerTextStyle: headerTextStyle ?? this.headerTextStyle,
     cellTextStyle: cellTextStyle ?? this.cellTextStyle,
     rowNumberTextStyle: rowNumberTextStyle ?? this.rowNumberTextStyle,
@@ -98,6 +102,7 @@ class ChartDataTableTheme extends ThemeExtension<ChartDataTableTheme> {
       oddRowColor: Color.lerp(oddRowColor, other.oddRowColor, t),
       dividerColor: Color.lerp(dividerColor, other.dividerColor, t),
       focusedRowColor: Color.lerp(focusedRowColor, other.focusedRowColor, t),
+      selectedRowColor: Color.lerp(selectedRowColor, other.selectedRowColor, t),
       headerTextStyle: TextStyle.lerp(
         headerTextStyle,
         other.headerTextStyle,

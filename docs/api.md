@@ -147,6 +147,49 @@ direct streaming point.
 
 ## Portable Chart Artifacts
 
+### Chart workbench
+
+- `BravenChartWorkbench` composes one mounted chart with Chart, Data, and
+  responsive Split presentations.
+- `ChartWorkbenchController` is the caller-owned imperative controller and
+  stable `ChartWorkbenchHandle` supplied to host actions.
+- `ChartWorkbenchStatus`, `ChartWorkbenchTableState`, and
+  `ChartWorkbenchArtifactState` expose operation-scoped phases, warnings, and
+  structured errors.
+- `ChartTableRefreshPolicy` selects first-use/manual, mode-entry, or bounded
+  effective-document revision refresh.
+- `ChartDocumentRevision` is the opaque equality token shared by
+  `ChartDocumentSnapshot.revision` and
+  `BravenChartController.effectiveDocumentRevision`.
+- `ChartPointRef` is the canonical value identity for linked chart/table
+  points. Controller focus and selection commands require the issuing document
+  revision; transient focus is runtime-only, while selection is captured in
+  `ChartViewState.selectedPointRefs`.
+- Default workbench row activation refreshes the snapshot after a successful
+  durable selection, keeping later row references valid without changing the
+  configured policy for independent chart or data revisions.
+
+The workbench owns no persistence. `actionsBuilder` lets the host attach save,
+share, report, or comparison actions and use `extractArtifact()` without
+duplicating the chart/table lifecycle. See [Chart Workbench](guides/chart-workbench.md)
+for responsive behavior, freshness rules, controller ownership, and examples.
+
+### Document comparison
+
+- `ChartComparisonInput` gives each portable document a host identity and label.
+- `ChartSeriesMatch` declares semantic series identity explicitly; names are
+  never inferred.
+- `ChartComparisonOptions` selects exact-X, timestamp-tolerance, or independent
+  long-row behavior, plus explicit baseline, duplicate, and unit rules.
+- `ChartComparisonBuilder` returns a pure `ChartComparisonModel` with raw source
+  values, missing cells, converted comparison values, and optional deltas.
+- `ChartComparisonExporter` creates a rectangular CSV projection whose source
+  and derived columns remain machine-readable.
+
+The package does not own a comparison repository or global screen. See
+[Chart Document Comparison](guides/chart-comparison.md) for deterministic
+alignment, unit/domain safety, diagnostics, and independent hydration.
+
 ### Extraction and transport
 
 - `BravenChartController.extractDocument(...)` captures one immutable
@@ -180,7 +223,9 @@ direct streaming point.
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` derive an
   accessible long or exact-X wide table from the portable document. The widget
   natively provides bounded dataset clipboard copy, per-row copy, and raw CSV
-  export; web downloads directly and non-web hosts can override delivery.
+  export; web downloads directly and non-web hosts can override delivery. Row
+  callbacks report one point ref for long rows and every populated point ref
+  for wide rows.
 - `ChartArtifactCanonicalizer` creates document, document-plus-view, and
   per-payload SHA-256 identities.
 - `ChartArtifactDeduplicator` returns immutable, input-ordered duplicate groups.

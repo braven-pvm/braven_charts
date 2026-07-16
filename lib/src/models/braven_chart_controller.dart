@@ -8,14 +8,24 @@ import '../artifacts/chart_preview.dart';
 import '../artifacts/chart_preview_capture.dart';
 import '../artifacts/chart_view_state.dart';
 
-/// Programmatic control over series selection and Y-axis slot state.
+/// Internal chart-state bridge for revision-bound point commands.
+typedef ChartPointCommandHandler =
+    ChartArtifactResult<void> Function(
+      Iterable<ChartPointRef> points,
+      ChartDocumentRevision revision, {
+      required bool reveal,
+      required bool additive,
+    });
+
+/// Programmatic control over series, point linking, and Y-axis slot state.
 ///
 /// Attach to [BravenChartPlus.controller] to drive series selection
 /// and axis swaps from outside the chart widget.
 ///
 /// The controller is optional — charts without one still respond to
-/// legend taps and data-point taps internally. Add a controller only
-/// when you need to read slot state or trigger selection externally.
+/// legend taps and data-point taps internally. Add a controller when you need
+/// to read slot state, link another surface by [ChartPointRef], capture an
+/// effective document, or trigger selection externally.
 ///
 /// Example:
 /// ```dart
@@ -40,12 +50,21 @@ class BravenChartController extends ChangeNotifier {
   ChartDocumentExtractionHandler? _extractDocumentHandler;
   void Function(ChartViewState viewState)? _restoreViewStateHandler;
   ChartPreviewCaptureHandler? _capturePreviewHandler;
+  ChartPointCommandHandler? _focusPointsHandler;
+  ChartPointCommandHandler? _selectPointsHandler;
+  void Function()? _clearPointFocusHandler;
+  void Function()? _clearPointSelectionHandler;
+  final ValueNotifier<ChartDocumentRevision?> _effectiveDocumentRevision =
+      ValueNotifier(null);
+  bool _disposed = false;
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
   String? _selectedSeriesId;
   List<String> _visibleAxisIds = const [];
   List<String> _overflowAxisIds = const [];
   Set<String> _hiddenSeriesIds = const {};
+  Set<ChartPointRef> _focusedPointRefs = const {};
+  Set<ChartPointRef> _selectedPointRefs = const {};
 
   // ---- Public read API ----
 
@@ -60,6 +79,21 @@ class BravenChartController extends ChangeNotifier {
 
   /// Series IDs currently excluded from rendering by visibility state.
   Set<String> get hiddenSeriesIds => Set.unmodifiable(_hiddenSeriesIds);
+
+  /// Transient point focus currently rendered by the attached chart.
+  Set<ChartPointRef> get focusedPointRefs =>
+      Set.unmodifiable(_focusedPointRefs);
+
+  /// Durable point selection currently rendered by the attached chart.
+  Set<ChartPointRef> get selectedPointRefs =>
+      Set.unmodifiable(_selectedPointRefs);
+
+  /// Opaque revision of the effective document source attached to this chart.
+  ///
+  /// The value is null while the controller is detached. Compare a non-null
+  /// value only with [ChartDocumentSnapshot.revision].
+  ValueListenable<ChartDocumentRevision?> get effectiveDocumentRevision =>
+      _effectiveDocumentRevision;
 
   // ---- Public command API ----
 
@@ -90,6 +124,61 @@ class BravenChartController extends ChangeNotifier {
   /// Toggles [seriesId] using the latest visibility mirrored from the chart.
   void toggleSeriesVisibility(String seriesId) =>
       setSeriesVisible(seriesId, _hiddenSeriesIds.contains(seriesId));
+
+  /// Focuses one point from a document captured at [revision].
+  ///
+  /// Focus is transient and is not included in [ChartViewState]. A stale or
+  /// invalid reference returns a structured failure without changing the chart.
+  ChartArtifactResult<void> focusPoint(
+    ChartPointRef point, {
+    required ChartDocumentRevision revision,
+    bool reveal = false,
+  }) => focusPoints([point], revision: revision, reveal: reveal);
+
+  /// Focuses every point represented by one row or host interaction.
+  ChartArtifactResult<void> focusPoints(
+    Iterable<ChartPointRef> points, {
+    required ChartDocumentRevision revision,
+    bool reveal = false,
+  }) {
+    final handler = _focusPointsHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(points, revision, reveal: reveal, additive: false);
+  }
+
+  /// Selects one durable point from a document captured at [revision].
+  ChartArtifactResult<void> selectPoint(
+    ChartPointRef point, {
+    required ChartDocumentRevision revision,
+    bool reveal = false,
+    bool additive = false,
+  }) => selectPoints(
+    [point],
+    revision: revision,
+    reveal: reveal,
+    additive: additive,
+  );
+
+  /// Selects every point represented by one row or host interaction.
+  ///
+  /// Unless [additive] is true, the supplied points replace the previous point
+  /// selection. Selection is captured in [ChartViewState.selectedPointRefs].
+  ChartArtifactResult<void> selectPoints(
+    Iterable<ChartPointRef> points, {
+    required ChartDocumentRevision revision,
+    bool reveal = false,
+    bool additive = false,
+  }) {
+    final handler = _selectPointsHandler;
+    if (handler == null) return _pointCommandDetachedFailure();
+    return handler(points, revision, reveal: reveal, additive: additive);
+  }
+
+  /// Clears transient point focus.
+  void clearPointFocus() => _clearPointFocusHandler?.call();
+
+  /// Clears durable point selection.
+  void clearPointSelection() => _clearPointSelectionHandler?.call();
 
   /// Captures the chart's effective document and optional current view state.
   ChartArtifactResult<ChartDocumentSnapshot> extractDocument([
@@ -168,6 +257,11 @@ class BravenChartController extends ChangeNotifier {
     ChartDocumentExtractionHandler? onExtractDocument,
     void Function(ChartViewState)? onRestoreViewState,
     ChartPreviewCaptureHandler? onCapturePreview,
+    ChartPointCommandHandler? onFocusPoints,
+    ChartPointCommandHandler? onSelectPoints,
+    void Function()? onClearPointFocus,
+    void Function()? onClearPointSelection,
+    ChartDocumentRevision? effectiveDocumentRevision,
   }) {
     _selectHandler = onSelect;
     _deselectHandler = onDeselect;
@@ -176,6 +270,13 @@ class BravenChartController extends ChangeNotifier {
     _extractDocumentHandler = onExtractDocument;
     _restoreViewStateHandler = onRestoreViewState;
     _capturePreviewHandler = onCapturePreview;
+    _focusPointsHandler = onFocusPoints;
+    _selectPointsHandler = onSelectPoints;
+    _clearPointFocusHandler = onClearPointFocus;
+    _clearPointSelectionHandler = onClearPointSelection;
+    if (!_disposed) {
+      _effectiveDocumentRevision.value = effectiveDocumentRevision;
+    }
   }
 
   /// Detaches from the chart state. Called in dispose.
@@ -187,6 +288,19 @@ class BravenChartController extends ChangeNotifier {
     _extractDocumentHandler = null;
     _restoreViewStateHandler = null;
     _capturePreviewHandler = null;
+    _focusPointsHandler = null;
+    _selectPointsHandler = null;
+    _clearPointFocusHandler = null;
+    _clearPointSelectionHandler = null;
+    if (!_disposed) _effectiveDocumentRevision.value = null;
+  }
+
+  /// Publishes an effective source revision from the attached chart state.
+  @internal
+  void updateEffectiveDocumentRevision(ChartDocumentRevision revision) {
+    if (_disposed) return;
+    if (_effectiveDocumentRevision.value == revision) return;
+    _effectiveDocumentRevision.value = revision;
   }
 
   /// Updates mirrored slot state (called after every swap or selection change).
@@ -201,5 +315,37 @@ class BravenChartController extends ChangeNotifier {
     _overflowAxisIds = overflowAxisIds;
     _hiddenSeriesIds = Set.unmodifiable(hiddenSeriesIds);
     notifyListeners();
+  }
+
+  /// Mirrors transient and durable linked-point state from the mounted chart.
+  @internal
+  void updatePointState({
+    required Set<ChartPointRef> focusedPointRefs,
+    required Set<ChartPointRef> selectedPointRefs,
+  }) {
+    if (_disposed) return;
+    if (setEquals(_focusedPointRefs, focusedPointRefs) &&
+        setEquals(_selectedPointRefs, selectedPointRefs)) {
+      return;
+    }
+    _focusedPointRefs = Set.unmodifiable(focusedPointRefs);
+    _selectedPointRefs = Set.unmodifiable(selectedPointRefs);
+    notifyListeners();
+  }
+
+  ChartArtifactResult<void> _pointCommandDetachedFailure() =>
+      ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.chartNotAttached,
+          message:
+              'The BravenChartController is not attached to a mounted chart.',
+        ),
+      );
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _effectiveDocumentRevision.dispose();
+    super.dispose();
   }
 }
