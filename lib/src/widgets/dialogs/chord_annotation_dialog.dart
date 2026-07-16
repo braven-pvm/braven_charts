@@ -1,12 +1,13 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // ChordAnnotation Dialog - Material Design 3
 
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
 import '../../models/chart_series.dart';
+import 'annotation_color_palette.dart';
+import 'annotation_dialog_header.dart';
 
 /// Dialog for creating or editing a ChordAnnotation.
 ///
@@ -264,37 +265,24 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
     final pointCount = _selectedSeriesPointCount;
 
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 800),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isEditing ? 'Edit Chord' : 'Add Chord',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Straight line between two data points',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer
-                            .withOpacity(0.8)),
-                  ),
-                ],
-              ),
+            AnnotationDialogHeader(
+              key: const ValueKey('chord-dialog-sticky-header'),
+              title: isEditing ? 'Edit Chord' : 'Add Chord',
+              icon: Icons.show_chart,
+              primaryLabel: isEditing ? 'Update' : 'Add',
+              onPrimary: _handleCreate,
+              onCancel: () => Navigator.of(context).pop(),
             ),
 
             // Content
@@ -414,75 +402,30 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
 
                     const SizedBox(height: 8),
 
-                    // Label text color
-                    Row(
-                      children: [
-                        const Icon(Icons.format_color_text, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Label Color'),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () => _showColorPicker(
-                              initial: _labelTextColor,
-                              onChanged: (c) =>
-                                  setState(() => _labelTextColor = c)),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 60,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: _labelTextColor,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: theme.colorScheme.outline),
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildColorPalette(
+                      label: 'Label color',
+                      icon: Icons.format_color_text,
+                      value: _labelTextColor,
+                      keyPrefix: 'chord-label-text-color',
+                      allowClear: false,
+                      customColorFallback: Colors.black,
+                      onChanged: (color) {
+                        if (color != null) {
+                          setState(() => _labelTextColor = color);
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 12),
 
-                    // Label background color
-                    Row(
-                      children: [
-                        const Icon(Icons.format_color_fill, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Label Background'),
-                        const Spacer(),
-                        if (_labelBgColor != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () =>
-                                setState(() => _labelBgColor = null),
-                            tooltip: 'Remove background',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () => _showColorPicker(
-                              initial: _labelBgColor ?? Colors.white,
-                              onChanged: (c) =>
-                                  setState(() => _labelBgColor = c)),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 60,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: _labelBgColor ?? Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: theme.colorScheme.outline),
-                            ),
-                            child: _labelBgColor == null
-                                ? Center(
-                                    child: Text('None',
-                                        style: theme.textTheme.bodySmall))
-                                : null,
-                          ),
-                        ),
-                      ],
+                    _buildColorPalette(
+                      label: 'Label background',
+                      icon: Icons.format_color_fill,
+                      value: _labelBgColor,
+                      keyPrefix: 'chord-label-background-color',
+                      customColorFallback: Colors.white,
+                      onChanged: (color) =>
+                          setState(() => _labelBgColor = color),
                     ),
 
                     const SizedBox(height: 12),
@@ -546,28 +489,18 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
                     Text('Line Style', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 16),
 
-                    // Line Color
-                    Row(
-                      children: [
-                        const Icon(Icons.palette, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Color'),
-                        const Spacer(),
-                        InkWell(
-                          onTap: () => _showColorPicker(),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 80,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: _lineColor,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: theme.colorScheme.outline),
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildColorPalette(
+                      label: 'Color',
+                      icon: Icons.palette,
+                      value: _lineColor,
+                      keyPrefix: 'chord-line-color',
+                      allowClear: false,
+                      customColorFallback: Colors.blue,
+                      onChanged: (color) {
+                        if (color != null) {
+                          setState(() => _lineColor = color);
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -715,78 +648,31 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
 
                       const SizedBox(height: 8),
 
-                      // Perp label text color
-                      Row(
-                        children: [
-                          const Icon(Icons.format_color_text, size: 20),
-                          const SizedBox(width: 12),
-                          const Text('Label Color'),
-                          const Spacer(),
-                          InkWell(
-                            onTap: () => _showColorPicker(
-                                initial: _perpLabelTextColor,
-                                onChanged: (c) => setState(
-                                    () => _perpLabelTextColor = c)),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 60,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: _perpLabelTextColor,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: theme.colorScheme.outline),
-                              ),
-                            ),
-                          ),
-                        ],
+                      _buildColorPalette(
+                        label: 'Label color',
+                        icon: Icons.format_color_text,
+                        value: _perpLabelTextColor,
+                        keyPrefix: 'chord-perpendicular-label-text-color',
+                        allowClear: false,
+                        customColorFallback: Colors.black,
+                        onChanged: (color) {
+                          if (color != null) {
+                            setState(() => _perpLabelTextColor = color);
+                          }
+                        },
                       ),
 
                       const SizedBox(height: 12),
 
-                      // Perp label background color
-                      Row(
-                        children: [
-                          const Icon(Icons.format_color_fill, size: 20),
-                          const SizedBox(width: 12),
-                          const Text('Label Background'),
-                          const Spacer(),
-                          if (_perpLabelBgColor != null)
-                            IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () => setState(
-                                  () => _perpLabelBgColor = null),
-                              tooltip: 'Remove background',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showColorPicker(
-                                initial:
-                                    _perpLabelBgColor ?? Colors.white,
-                                onChanged: (c) => setState(
-                                    () => _perpLabelBgColor = c)),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              width: 60,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: _perpLabelBgColor ??
-                                    Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: theme.colorScheme.outline),
-                              ),
-                              child: _perpLabelBgColor == null
-                                  ? Center(
-                                      child: Text('None',
-                                          style:
-                                              theme.textTheme.bodySmall))
-                                  : null,
-                            ),
-                          ),
-                        ],
+                      _buildColorPalette(
+                        label: 'Label background',
+                        icon: Icons.format_color_fill,
+                        value: _perpLabelBgColor,
+                        keyPrefix:
+                            'chord-perpendicular-label-background-color',
+                        customColorFallback: Colors.white,
+                        onChanged: (color) =>
+                            setState(() => _perpLabelBgColor = color),
                       ),
 
                       const SizedBox(height: 12),
@@ -858,31 +744,18 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
                       if (_perpSeparateStyling) ...[
                         const SizedBox(height: 8),
 
-                        // Perp Color
-                        Row(
-                          children: [
-                            const Icon(Icons.palette, size: 20),
-                            const SizedBox(width: 12),
-                            const Text('Color'),
-                            const Spacer(),
-                            InkWell(
-                              onTap: () => _showColorPicker(
-                                  initial: _perpLineColor,
-                                  onChanged: (c) =>
-                                      setState(() => _perpLineColor = c)),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                width: 80,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: _perpLineColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: theme.colorScheme.outline),
-                                ),
-                              ),
-                            ),
-                          ],
+                        _buildColorPalette(
+                          label: 'Color',
+                          icon: Icons.palette,
+                          value: _perpLineColor,
+                          keyPrefix: 'chord-perpendicular-line-color',
+                          allowClear: false,
+                          customColorFallback: Colors.blue,
+                          onChanged: (color) {
+                            if (color != null) {
+                              setState(() => _perpLineColor = color);
+                            }
+                          },
                         ),
 
                         const SizedBox(height: 16),
@@ -980,68 +853,40 @@ class _ChordAnnotationDialogState extends State<ChordAnnotationDialog> {
               ),
             ),
 
-            // Actions
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 16),
-                  FilledButton.icon(
-                    onPressed: _handleCreate,
-                    icon: Icon(isEditing ? Icons.check : Icons.add),
-                    label: Text(isEditing ? 'Update' : 'Add'),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _showColorPicker({
-    Color? initial,
-    ValueChanged<Color>? onChanged,
-  }) async {
-    final color = initial ?? _lineColor;
-    final handler =
-        onChanged ?? (Color c) => setState(() => _lineColor = c);
-    await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Line Color'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            color: color,
-            onColorChanged: handler,
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            spacing: 8,
-            runSpacing: 8,
-            wheelDiameter: 200,
-            enableShadesSelection: false,
-            pickersEnabled: const {
-              ColorPickerType.both: false,
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: false,
-              ColorPickerType.wheel: true,
-            },
-          ),
+  Widget _buildColorPalette({
+    required String label,
+    required IconData icon,
+    required Color? value,
+    required String keyPrefix,
+    required ValueChanged<Color?> onChanged,
+    bool allowClear = true,
+    Color? customColorFallback,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 12),
+            Text(label),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
+        const SizedBox(height: 8),
+        AnnotationColorPalette(
+          value: value,
+          keyPrefix: keyPrefix,
+          allowClear: allowClear,
+          customColorFallback: customColorFallback,
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

@@ -1,13 +1,14 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // PointAnnotation Dialog - Material Design 3
 
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/annotation_style.dart';
 import '../../models/chart_annotation.dart';
 import '../../models/chart_theme.dart';
 import '../../models/enums.dart';
+import 'annotation_color_palette.dart';
+import 'annotation_dialog_header.dart';
 import 'annotation_style_editor.dart';
 
 /// Dialog for creating or editing PointAnnotations.
@@ -47,7 +48,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
 
   MarkerShape _markerShape = MarkerShape.circle;
   double _markerSize = 12.0;
-  Color _markerColor = Colors.red;
+  Color? _markerColor = Colors.red;
   Offset _offset = Offset.zero;
   AnnotationStyle _currentStyle = const AnnotationStyle();
 
@@ -67,7 +68,9 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       // Edit mode - use existing annotation values
       _markerShape = annotation.markerShape;
       _markerSize = annotation.markerSize;
-      _markerColor = annotation.markerColor;
+      _markerColor = annotation.markerColor == Colors.transparent
+          ? null
+          : annotation.markerColor;
       _offset = annotation.offset;
       _currentStyle = annotation.style;
     } else if (pointDefaults != null) {
@@ -142,106 +145,61 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 650),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with close button
-                Row(
-                  children: [
-                    Icon(
-                      isEditMode ? Icons.edit : Icons.place,
-                      size: 20,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      isEditMode
-                          ? 'Edit Point Annotation'
-                          : 'Add Point Annotation',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Close',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Data point info (read-only)
-                _buildDataPointInfo(),
-                const SizedBox(height: 20),
-
-                // Label field (optional)
-                _buildLabelField(),
-                const SizedBox(height: 20),
-
-                // Marker shape selector
-                _buildMarkerShapeSelector(),
-                const SizedBox(height: 20),
-
-                // Marker size slider
-                _buildMarkerSizeSlider(),
-                const SizedBox(height: 20),
-
-                // Marker color picker
-                _buildMarkerColorPicker(),
-                const SizedBox(height: 20),
-
-                // Label styling (collapsible)
-                AnnotationStyleEditor(
-                  initialStyle: _currentStyle,
-                  onStyleChanged: (style) {
-                    setState(() {
-                      _currentStyle = style;
-                    });
-                  },
-                  showTextControls: true,
-                  showBackgroundControls: true,
-                  showBorderControls: true,
-                  showPaddingControls: false,
-                ),
-                const SizedBox(height: 20),
-
-                // Advanced section (offset)
-                _buildAdvancedSection(),
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _handleSave,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnnotationDialogHeader(
+                key: const ValueKey('point-dialog-sticky-header'),
+                title: isEditMode
+                    ? 'Edit Point Annotation'
+                    : 'Add Point Annotation',
+                icon: isEditMode ? Icons.edit : Icons.place,
+                primaryLabel: isEditMode ? 'Update' : 'Add',
+                onPrimary: _handleSave,
+                onCancel: () => Navigator.of(context).pop(),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDataPointInfo(),
+                      const SizedBox(height: 20),
+                      _buildLabelField(),
+                      const SizedBox(height: 20),
+                      _buildMarkerShapeSelector(),
+                      const SizedBox(height: 20),
+                      _buildMarkerSizeSlider(),
+                      const SizedBox(height: 20),
+                      _buildMarkerColorPicker(),
+                      const SizedBox(height: 20),
+                      AnnotationStyleEditor(
+                        initialStyle: _currentStyle,
+                        onStyleChanged: (style) {
+                          setState(() {
+                            _currentStyle = style;
+                          });
+                        },
+                        showTextControls: true,
+                        showBackgroundControls: true,
+                        showBorderControls: true,
+                        showPaddingControls: false,
                       ),
-                      child: Text(isEditMode ? 'Update' : 'Add'),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                      _buildAdvancedSection(),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -477,93 +435,21 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
   }
 
   Widget _buildMarkerColorPicker() {
-    final presetColors = [
-      Colors.red,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.pink,
-      Colors.teal,
-      Colors.amber,
-      Colors.indigo,
-      Colors.black,
-      Colors.white,
-      Colors.grey.shade600,
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Marker Color',
+          'Marker Color (Optional)',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ...presetColors.map((color) {
-              final isSelected = _markerColor == color;
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _markerColor = color;
-                  });
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isSelected ? Colors.black87 : Colors.grey.shade300,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: isSelected
-                      ? Icon(
-                          Icons.check,
-                          size: 18,
-                          color: _getContrastColor(color),
-                        )
-                      : null,
-                ),
-              );
-            }),
-            // Custom color picker button
-            InkWell(
-              onTap: _showCustomColorPicker,
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.palette,
-                        size: 16, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Custom',
-                      style:
-                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        AnnotationColorPalette(
+          value: _markerColor,
+          keyPrefix: 'point-marker-color',
+          customColorFallback: Colors.red,
+          onChanged: (color) => setState(() => _markerColor = color),
         ),
       ],
     );
@@ -674,83 +560,6 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
     );
   }
 
-  void _showCustomColorPicker() {
-    Color selectedColor = _markerColor;
-
-    showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Marker Color'),
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              color: selectedColor,
-              onColorChanged: (Color color) {
-                selectedColor = color;
-              },
-              width: 40,
-              height: 40,
-              borderRadius: 4,
-              spacing: 5,
-              runSpacing: 5,
-              wheelDiameter: 200,
-              heading: Text(
-                'Select color',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              subheading: Text(
-                'Select color shade',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              wheelSubheading: Text(
-                'Selected color and its shades',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              showMaterialName: true,
-              showColorName: true,
-              showColorCode: true,
-              materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
-              colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
-              colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
-              pickersEnabled: const <ColorPickerType, bool>{
-                ColorPickerType.both: false,
-                ColorPickerType.primary: true,
-                ColorPickerType.accent: true,
-                ColorPickerType.bw: false,
-                ColorPickerType.custom: false,
-                ColorPickerType.wheel: true,
-              },
-              enableShadesSelection: true,
-              enableOpacity: true,
-              showRecentColors: true,
-              maxRecentColors: 5,
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                setState(() {
-                  _markerColor = selectedColor;
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('Select'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Color _getContrastColor(Color color) {
-    final luminance = color.computeLuminance();
-    return luminance > 0.5 ? Colors.black87 : Colors.white;
-  }
-
   void _handleSave() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -767,7 +576,7 @@ class _PointAnnotationDialogState extends State<PointAnnotationDialog> {
       dataPointIndex: widget.dataPointIndex,
       markerShape: _markerShape,
       markerSize: _markerSize,
-      markerColor: _markerColor,
+      markerColor: _markerColor ?? Colors.transparent,
       offset: _offset,
       allowDragging: true,
       allowEditing: true,

@@ -108,7 +108,17 @@ sealed class ChartAnnotation {
 enum AnnotationAnchor { topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight }
 
 /// Position for range annotation labels.
-enum AnnotationLabelPosition { topLeft, topRight, bottomLeft, bottomRight, center }
+enum AnnotationLabelPosition {
+  topLeft,
+  topCenter,
+  topRight,
+  centerLeft,
+  center,
+  centerRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight,
+}
 
 /// A point annotation that marks a specific data point with a custom marker.
 ///
