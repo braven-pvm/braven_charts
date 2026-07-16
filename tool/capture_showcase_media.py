@@ -25,6 +25,7 @@ from selenium.webdriver.chrome.options import Options
 VIEWPORT = (1440, 900)
 INTERACTION_CROP = (280, 12, 1418, 518)
 HERO_CROP = (280, 0, 1418, 688)
+HERO_PANEL_CROP = (444, 228, 996, 672)
 LIVE_CROP = (272, 300, 1110, 880)
 INTERACTION_SIZE = (900, 400)
 LIVE_SIZE = (754, 522)
@@ -327,6 +328,20 @@ def _hero_still(
         HERO_CROP,
         max_left_dark_fraction=0.12,
     )
+
+
+def _hero_panel_stills(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture the two package hero panels at README-friendly ratios."""
+    for query, filename in (
+        ("hero-threshold", "hero_threshold.png"),
+        ("hero-duration", "hero_power_duration.png"),
+    ):
+        _load(driver, f"{base_url}?capture={query}")
+        _save_png(driver, output_dir / filename, HERO_PANEL_CROP)
 
 
 def _gallery_stills_intro(
@@ -720,6 +735,7 @@ def main() -> None:
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
         elif args.capture == "hero":
+            _hero_panel_stills(driver, base_url, args.output_dir)
             _hero_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()

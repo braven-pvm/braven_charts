@@ -19,6 +19,7 @@ import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
+import 'widgets/gallery_flagships.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -82,7 +83,8 @@ class NavDestination {
   final String? routeSlug;
   final ShowcaseReviewProposal? reviewProposal;
 
-  String get slug => routeSlug ??
+  String get slug =>
+      routeSlug ??
       label
           .toLowerCase()
           .replaceAll('+', ' ')
@@ -231,6 +233,18 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
 
   @override
   Widget build(BuildContext context) {
+    final capture = Uri.base.queryParameters['capture'];
+    if (capture == 'hero-threshold') {
+      return const _HeroMediaCapture(
+        panel: PerformanceIntelligenceHeroPanel.thresholdExposure,
+      );
+    }
+    if (capture == 'hero-duration') {
+      return const _HeroMediaCapture(
+        panel: PerformanceIntelligenceHeroPanel.powerDuration,
+      );
+    }
+
     final width = MediaQuery.of(context).size.width;
 
     // Adaptive layout breakpoints
@@ -330,6 +344,26 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
         _ReviewProposalBanner(proposal: proposal),
         Expanded(child: destination.page),
       ],
+    );
+  }
+}
+
+/// Deterministic, navigation-free surface used by the media capture tool.
+class _HeroMediaCapture extends StatelessWidget {
+  const _HeroMediaCapture({required this.panel});
+
+  final PerformanceIntelligenceHeroPanel panel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SizedBox(
+          width: 552,
+          height: 444,
+          child: PerformanceIntelligenceGalleryHero(panel: panel),
+        ),
+      ),
     );
   }
 }

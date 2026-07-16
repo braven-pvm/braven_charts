@@ -2,7 +2,7 @@ name: braven_charts
 description: >-
   Pure Dart Flutter charts with custom rendering, multi-axis interaction, live
   streaming, editable annotations, data tables, and portable artifacts.
-version: 0.1.3
+version: 0.1.4
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -17,10 +17,13 @@ topics:
 
 screenshots:
   - description: >-
-      Side-by-side analytical charts combining threshold-styled mixed series,
-      multiple axes, tracking, trends, annotations, dark theming, baseline
-      fills, glow, and a synchronized viewport scrollbar.
-    path: doc/screenshots/hero_chart.png
+      Mixed interval chart with threshold-styled bars, cardiac drift, multiple
+      axes, tracking, LT1 annotations, and a polynomial trend.
+    path: doc/screenshots/hero_threshold.png
+  - description: >-
+      Dark power-duration model with six curves, positive and negative
+      baseline fills, range sections, glow, annotations, and a scrollbar.
+    path: doc/screenshots/hero_power_duration.png
   - description: >-
       Positive and negative baseline fill across three independently scaled
       signals with inline labels.
@@ -52,11 +55,6 @@ screenshots:
       Mixed revenue line and forecast area series with markers, independent
       styling, and a shared viewport.
     path: doc/screenshots/gallery_revenue_forecast.png
-  - description: >-
-      Dark profit-and-loss chart with independently styled positive and
-      negative baseline area segments.
-    path: doc/screenshots/gallery_profit_loss.png
-
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

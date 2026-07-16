@@ -15,9 +15,17 @@ const _violet = Color(0xFF8B5CF6);
 const _emerald = Color(0xFF10B981);
 const _cadenceTeal = Color(0xFF0F9F8F);
 
+/// Selects which analytical composition the package hero renders.
+enum PerformanceIntelligenceHeroPanel { both, thresholdExposure, powerDuration }
+
 /// Two visually distinct analytical compositions for the package hero.
 class PerformanceIntelligenceGalleryHero extends StatelessWidget {
-  const PerformanceIntelligenceGalleryHero({super.key});
+  const PerformanceIntelligenceGalleryHero({
+    super.key,
+    this.panel = PerformanceIntelligenceHeroPanel.both,
+  });
+
+  final PerformanceIntelligenceHeroPanel panel;
 
   static const _belowThreshold = Color(0xFF22C55E);
   static const _nearThreshold = Color(0xFF3B82F6);
@@ -160,6 +168,13 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (panel == PerformanceIntelligenceHeroPanel.thresholdExposure) {
+      return _buildThresholdExposureChart();
+    }
+    if (panel == PerformanceIntelligenceHeroPanel.powerDuration) {
+      return _buildDurationModelChart();
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 960;
