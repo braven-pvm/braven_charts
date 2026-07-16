@@ -76,6 +76,9 @@ class ChartDataTable extends StatefulWidget {
   final ChartTableRowHoverCallback? onRowHoverChanged;
 
   /// Called by row click or Enter with every point represented by that row.
+  ///
+  /// When supplied, activation takes precedence over drag-selecting cell text;
+  /// use the table's row or dataset copy actions for clipboard workflows.
   final ChartTableRowCallback? onRowActivated;
 
   /// Durable chart-point selection mirrored into visible table rows.
@@ -358,7 +361,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
                             child: Scrollbar(
                               controller: _verticalController,
                               thumbVisibility: true,
-                              child: SelectionArea(
+                              child: _TableSelectionBoundary(
+                                enableSelection: widget.onRowActivated == null,
                                 child: ListView.builder(
                                   controller: _verticalController,
                                   itemExtent: tableTheme.rowHeight,
@@ -1289,6 +1293,20 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
       ),
     );
   }
+}
+
+class _TableSelectionBoundary extends StatelessWidget {
+  const _TableSelectionBoundary({
+    required this.enableSelection,
+    required this.child,
+  });
+
+  final bool enableSelection;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      enableSelection ? SelectionArea(child: child) : child;
 }
 
 class _TableCell extends StatelessWidget {

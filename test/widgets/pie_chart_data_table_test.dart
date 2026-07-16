@@ -51,10 +51,10 @@ void main() {
     await tester.pump();
     expect(exportedDataset?.csv, contains('Hardware,27.0,0.27'));
 
-    await tester.tap(find.byKey(const ValueKey('revenue:0')));
+    await tester.tap(find.text('Hardware'));
     await tester.pump();
     expect(activated, [
-      const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 2),
     ]);
   });
 

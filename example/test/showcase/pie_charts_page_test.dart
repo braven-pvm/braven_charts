@@ -92,6 +92,7 @@ void main() {
   testWidgets('shows native pie data and restores a captured artifact', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     tester.view.physicalSize = const Size(1440, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -104,7 +105,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byKey(const ValueKey('pie-display-mode')),
-        matching: find.text('Data'),
+        matching: find.text('Split'),
       ),
     );
     await _settleCapture(tester);
@@ -118,9 +119,38 @@ void main() {
     expect(find.text('Value (USD)'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('pie-showcase-revenue:0')));
-    await tester.pump();
-    expect(find.text('Selected: Subscriptions'), findsOneWidget);
+    final hardwareCell = find.descendant(
+      of: find.byKey(const ValueKey('pie-showcase-table')),
+      matching: find.text('Hardware'),
+    );
+    await tester.tap(hardwareCell);
+    await tester.pumpAndSettle();
+    expect(find.text('Selected: Hardware'), findsOneWidget);
+    final selectedTable = tester.widget<ChartDataTable>(
+      find.byKey(const ValueKey('pie-showcase-table')),
+    );
+    expect(selectedTable.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'pie-showcase-revenue', pointIndex: 2),
+    });
+    expect(
+      find.semantics.byLabel(
+        'Hardware, 16.00 USD, 16.0 percent, slice 3 of 5, selected',
+      ),
+      findsOne,
+    );
+
+    await tester.tap(hardwareCell);
+    await tester.pumpAndSettle();
+    expect(find.text('Try slice interaction'), findsOneWidget);
+    expect(
+      tester
+          .widget<ChartDataTable>(
+            find.byKey(const ValueKey('pie-showcase-table')),
+          )
+          .selectedPointRefs,
+      isEmpty,
+    );
+    semantics.dispose();
 
     final scrollable = find
         .descendant(

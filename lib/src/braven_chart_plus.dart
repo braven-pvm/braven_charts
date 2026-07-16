@@ -3470,6 +3470,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _captureStateRevision++;
     _refreshLinkedPointRendering();
     _syncControllerPointState();
+    _notifyPointSelectionChanged();
     if (reveal) _revealPoints(refs);
     return ChartArtifactSuccess(value: null);
   }
@@ -3549,6 +3550,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _captureStateRevision++;
     _refreshLinkedPointRendering();
     _syncControllerPointState();
+    _notifyPointSelectionChanged();
   }
 
   void _refreshLinkedPointRendering() {

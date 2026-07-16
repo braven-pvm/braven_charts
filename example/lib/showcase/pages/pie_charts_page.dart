@@ -444,29 +444,37 @@ class _PieChartsPageState extends State<PieChartsPage> {
   Widget _buildDataSurface({required bool compact}) {
     final chart = _buildLiveChart();
     final table = _buildLiveTable();
-    return switch (_displayMode) {
-      ChartDisplayMode.chart => IndexedStack(
-        index: 0,
-        children: [chart, table],
-      ),
-      ChartDisplayMode.data => IndexedStack(index: 1, children: [chart, table]),
-      ChartDisplayMode.split =>
-        compact
-            ? Column(
-                children: [
-                  Expanded(child: chart),
-                  const SizedBox(height: 8),
-                  Expanded(child: table),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(child: chart),
-                  const SizedBox(width: 8),
-                  Expanded(child: table),
-                ],
-              ),
-    };
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final split = _displayMode == ChartDisplayMode.split;
+        final showChart = _displayMode != ChartDisplayMode.data;
+        final showTable = _displayMode != ChartDisplayMode.chart;
+        final splitWidth = (constraints.maxWidth - gap) / 2;
+        final splitHeight = (constraints.maxHeight - gap) / 2;
+
+        // Keep both surfaces in stable slots so changing the view never
+        // remounts the chart or detaches its controller.
+        return Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              width: split && !compact ? splitWidth : constraints.maxWidth,
+              height: split && compact ? splitHeight : constraints.maxHeight,
+              child: Offstage(offstage: !showChart, child: chart),
+            ),
+            Positioned(
+              left: split && !compact ? splitWidth + gap : 0,
+              top: split && compact ? splitHeight + gap : 0,
+              width: split && !compact ? splitWidth : constraints.maxWidth,
+              height: split && compact ? splitHeight : constraints.maxHeight,
+              child: Offstage(offstage: !showTable, child: table),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildLiveChart() {
@@ -523,6 +531,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
     final revision =
         _chartController.effectiveDocumentRevision.value ?? _tableRevision;
     if (revision == null) return;
+    final selectedPoints = _chartController.selectedPointRefs;
+    if (points.isNotEmpty &&
+        selectedPoints.length == points.length &&
+        selectedPoints.containsAll(points)) {
+      _chartController.clearPointSelection();
+      setState(() => _selectedCategory = null);
+      _scheduleTableRefresh();
+      return;
+    }
     final result = _chartController.selectPoints(points, revision: revision);
     if (result case ChartArtifactSuccess<void>()) {
       final selected = points.isEmpty ? null : points.first;

@@ -111,6 +111,51 @@ void main() {
     },
   );
 
+  testWidgets(
+    'controller selection updates pie rendering and interaction callbacks',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      final semantics = tester.ensureSemantics();
+      List<ChartDataPoint>? selected;
+
+      await tester.pumpWidget(
+        _host(
+          controller: controller,
+          interactionConfig: InteractionConfig(
+            onSelectionChanged: (points) => selected = points,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final revision = controller.effectiveDocumentRevision.value!;
+      final result = controller.selectPoint(
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+        revision: revision,
+      );
+      expect(result, isA<ChartArtifactSuccess<void>>());
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
+      });
+      expect(selected?.single.label, 'Services');
+      expect(
+        find.semantics.byLabel(
+          'Services, 31.00 USD, 31.0 percent, slice 2 of 3, selected',
+        ),
+        findsOne,
+      );
+
+      controller.clearPointSelection();
+      await tester.pumpAndSettle();
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(selected, isEmpty);
+      semantics.dispose();
+    },
+  );
+
   testWidgets('InteractionConfig.none keeps pie input disabled', (
     tester,
   ) async {
