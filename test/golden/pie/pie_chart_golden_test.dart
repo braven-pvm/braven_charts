@@ -93,6 +93,20 @@ void main() {
 
     await _expectGolden(tester, 'goldens/pie_compact_dense.png');
   });
+
+  testWidgets('selected pie and native slice legend', (tester) async {
+    await _pumpSurface(
+      tester,
+      size: const Size(600, 520),
+      theme: _goldenTheme(ChartTheme.light),
+      series: _standardSeries(),
+      showLegend: true,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+    await tester.pumpAndSettle();
+    await _expectGolden(tester, 'goldens/pie_selected_legend.png');
+  });
 }
 
 Future<void> _pumpSurface(
@@ -102,6 +116,7 @@ Future<void> _pumpSurface(
   required PieChartSeries series,
   TextScaler textScaler = TextScaler.noScaling,
   bool highContrast = false,
+  bool showLegend = false,
 }) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -124,7 +139,7 @@ Future<void> _pumpSurface(
               child: BravenChartPlus(
                 title: 'Revenue contribution',
                 subtitle: 'Share by product category',
-                showLegend: false,
+                showLegend: showLegend,
                 theme: theme,
                 series: [series],
               ),

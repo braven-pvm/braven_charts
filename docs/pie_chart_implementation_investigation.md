@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **In progress — Slices 1–2 complete locally; live rendering review open**
+Status: **In progress — Slices 1–3 complete locally; live interaction review open**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -391,6 +391,8 @@ Status: **Complete locally and available in the live showcase review.**
   route and run the Flutter web development app for live review.
 
 ### Slice 3: interaction, legend, and accessibility
+
+Status: **Complete locally and ready in the live showcase review.**
 
 - Generalize data hits and tooltip payloads.
 - Add hover, tap, selection, callbacks, and keyboard behavior.

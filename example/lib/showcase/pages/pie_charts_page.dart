@@ -4,7 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
@@ -20,6 +20,7 @@ class PieChartsPage extends StatefulWidget {
 
 class _PieChartsPageState extends State<PieChartsPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
+  final BravenChartController _chartController = BravenChartController();
   final math.Random _random = math.Random();
 
   _PieDataset _dataset = _PieDataset.revenue;
@@ -35,6 +36,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _radiusFactor = 0.86;
   double _sliceGap = 2;
   double _borderWidth = 1;
+  double _selectionExplodeOffset = 10;
+  bool _showLegend = true;
+  bool _showTooltips = true;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
   @override
   void dispose() {
     _optionsController.dispose();
+    _chartController.dispose();
     super.dispose();
   }
 
@@ -53,11 +59,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
     setState(() {
       _dataset = dataset;
       _values = Map<String, num>.of(dataset.categoryValues);
+      _selectedCategory = null;
     });
+    _chartController.clearPointSelection();
   }
 
   void _regenerateValues() {
+    _chartController.clearPointSelection();
     setState(() {
+      _selectedCategory = null;
       _values = {
         for (final entry in _dataset.categoryValues.entries)
           entry.key: math.max(
@@ -176,6 +186,35 @@ class _PieChartsPageState extends State<PieChartsPage> {
             decimalPlaces: 1,
             onChanged: (value) => setState(() => _borderWidth = value),
           ),
+          SliderOption(
+            label: 'Selected slice offset',
+            value: _selectionExplodeOffset,
+            min: 0,
+            max: 24,
+            divisions: 12,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _selectionExplodeOffset = value),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Interaction',
+        icon: Icons.touch_app_outlined,
+        children: [
+          BoolOption(
+            label: 'Show slice legend',
+            value: _showLegend,
+            onChanged: (value) => setState(() => _showLegend = value),
+            subtitle: 'Legend items select slices; they do not hide data',
+          ),
+          BoolOption(
+            label: 'Show tooltips',
+            value: _showTooltips,
+            onChanged: (value) => setState(() => _showTooltips = value),
+            subtitle: 'Hover or tap a slice for category, value, and share',
+          ),
         ],
       ),
       StandardChartOptions(
@@ -217,9 +256,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   _buildDatasetHeader(compact: compact),
                   const SizedBox(height: 8),
                   _buildDatasetSelector(compact: compact),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  _buildInteractionGuide(),
+                  const SizedBox(height: 16),
                   SizedBox(
-                    height: compact ? 440 : 500,
+                    height: compact ? 600 : 620,
                     child: ChartCard(
                       key: const ValueKey('pie-showcase-card'),
                       title: _dataset.title,
@@ -229,8 +270,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
                         key: const ValueKey('pie-showcase-chart'),
                         title: _dataset.chartTitle,
                         subtitle: _dataset.chartSubtitle,
-                        showLegend: false,
+                        bravenChartController: _chartController,
+                        showLegend: _showLegend,
                         theme: _optionsController.theme,
+                        interactionConfig: InteractionConfig(
+                          crosshair: const CrosshairConfig(enabled: false),
+                          tooltip: TooltipConfig(
+                            enabled: _showTooltips,
+                            triggerMode: TooltipTriggerMode.both,
+                          ),
+                          enableZoom: false,
+                          enablePan: false,
+                          enableSelection: true,
+                          showFocusBorder: true,
+                        ),
+                        onPointTap: _handlePointActivation,
                         series: [_buildSeries()],
                       ),
                     ),
@@ -247,6 +301,67 @@ class _PieChartsPageState extends State<PieChartsPage> {
         );
       },
     );
+  }
+
+  Widget _buildInteractionGuide() {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.touch_app_outlined, color: colors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedCategory == null
+                      ? 'Try slice interaction'
+                      : 'Selected: $_selectedCategory',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Hover for details. Select a slice or legend item to explode it. '
+                  'With chart focus, use arrow keys to move, Enter to select, and Escape to clear.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_selectedCategory != null)
+            IconButton(
+              tooltip: 'Clear slice selection',
+              onPressed: () {
+                _chartController.clearPointSelection();
+                setState(() => _selectedCategory = null);
+              },
+              icon: const Icon(Icons.close),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _handlePointActivation(ChartDataPoint point, String seriesId) {
+    final pointIndex = point.x.round();
+    final isSelected = _chartController.selectedPointRefs.contains(
+      ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
+    );
+    setState(() => _selectedCategory = isSelected ? point.label : null);
   }
 
   Widget _buildDatasetHeader({required bool compact}) {
@@ -416,6 +531,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   description:
                       'Slice colors, borders, connectors, and text follow the active Braven chart theme, including dark and high contrast.',
                 ),
+                _FeatureCard(
+                  width: cardWidth,
+                  icon: Icons.keyboard_alt_outlined,
+                  title: 'Selection for every input',
+                  description:
+                      'Hover, tap, legend controls, arrow keys, and assistive actions resolve the same stable source slice.',
+                ),
               ],
             );
           },
@@ -447,7 +569,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Insertion order becomes slice order. Configure geometry and labels on the series, then render it with BravenChartPlus.',
+                'Insertion order becomes slice order. Geometry and labels live on the series; tooltips, selection, legend controls, and keyboard input are built in.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                   height: 1.5,
@@ -474,7 +596,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    position: PieDataLabelPosition.outside,\n"
               "  ),\n"
               ");\n\n"
-              "BravenChartPlus(series: [series]);",
+              "BravenChartPlus(\n"
+              "  series: [series],\n"
+              "  onPointTap: (point, seriesId) {\n"
+              "    // Respond to the selected source slice.\n"
+              "  },\n"
+              ");",
               style: TextStyle(fontFamily: 'monospace', fontSize: 12.5),
             ),
           );
@@ -510,6 +637,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
         radiusFactor: _radiusFactor,
         sliceGap: _sliceGap,
         borderWidth: _borderWidth,
+        selectionExplodeOffset: _selectionExplodeOffset,
       ),
       dataLabels: PieDataLabelConfig(
         isVisible: _showLabels,

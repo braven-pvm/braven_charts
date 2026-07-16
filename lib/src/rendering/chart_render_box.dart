@@ -3,6 +3,7 @@
 
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -14,6 +15,7 @@ import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/axis_swap_mode.dart';
@@ -82,15 +84,19 @@ class ChartRenderBox extends RenderBox {
     List<ChartSeries>? series,
     this.onElementClick,
     this.onElementHover,
+    this.onDataHitActivate,
+    this.onDataHitFocus,
     this.onEmptyAreaClick,
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
     this.onViewportInteracted,
+    double textScaleFactor = 1,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
        _interactionConfig = interactionConfig,
+       _textScaleFactor = textScaleFactor,
        assert(
          (elements != null) != (elementGenerator != null),
          'Must provide either elements or elementGenerator, but not both',
@@ -217,6 +223,12 @@ class ChartRenderBox extends RenderBox {
   /// Callback for element hover events.
   void Function(ChartElement? element)? onElementHover;
 
+  /// Activates a resolved datum through assistive semantics.
+  void Function(ChartDataHit hit)? onDataHitActivate;
+
+  /// Focuses a resolved datum through assistive semantics.
+  void Function(ChartDataHit hit)? onDataHitFocus;
+
   /// Callback for empty area click (for box select start).
   final void Function(Offset position, PointerEvent event)? onEmptyAreaClick;
 
@@ -271,6 +283,12 @@ class ChartRenderBox extends RenderBox {
 
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
+
+  /// Effective MediaQuery text scale used by canvas tooltips.
+  double _textScaleFactor;
+
+  final Map<String, SemanticsNode> _dataSemanticsNodes =
+      <String, SemanticsNode>{};
 
   /// X-axis for the chart (optional).
   chart_axis.Axis? _xAxis;
@@ -524,6 +542,7 @@ class ChartRenderBox extends RenderBox {
 
     _rebuildSpatialIndex();
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   /// Sets the X-axis for the chart.
@@ -759,6 +778,14 @@ class ChartRenderBox extends RenderBox {
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
+  }
+
+  /// Updates canvas text scaling for tooltip content.
+  void setTextScaleFactor(double value) {
+    if (_textScaleFactor == value) return;
+    _textScaleFactor = value;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   // ==================== MULTI-AXIS SETTERS ====================
@@ -1374,6 +1401,7 @@ class ChartRenderBox extends RenderBox {
 
     // Mark for repaint to show updated elements
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   // ============================================================================
@@ -1730,6 +1758,25 @@ class ChartRenderBox extends RenderBox {
     return hits.first;
   }
 
+  /// Resolves one renderer-neutral datum from widget-local coordinates.
+  ChartDataHit? dataHitAtWidgetPosition(Offset widgetPosition) {
+    final plotPosition = widgetToPlot(widgetPosition);
+    for (final element in _elements.whereType<DataHitElement>()) {
+      final hit = element.dataHitAt(plotPosition);
+      if (hit != null) return hit;
+    }
+    return null;
+  }
+
+  /// Resolves one visible datum by stable series ID and source point index.
+  ChartDataHit? dataHitForPointIndex(String seriesId, int pointIndex) {
+    for (final element in _elements.whereType<DataHitElement>()) {
+      if (element.id != seriesId) continue;
+      return element.dataHitForPointIndex(pointIndex);
+    }
+    return null;
+  }
+
   /// Ensures SeriesElement transforms are updated before hit testing.
   ///
   /// In perSeries normalization mode, each series needs its own Y bounds
@@ -1811,8 +1858,10 @@ class ChartRenderBox extends RenderBox {
   void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
 
   /// Removes crosshair and tooltip state that is not part of the artifact.
-  void clearTransientPreviewState() =>
-      _eventHandlerManager.clearTransientPreviewState();
+  void clearTransientPreviewState() {
+    _eventHandlerManager.clearTransientPreviewState();
+    _tooltipAnimator.hideImmediately();
+  }
 
   // ============================================================================
   // Y-Axis Slot Selection Delegation
@@ -2642,6 +2691,12 @@ class ChartRenderBox extends RenderBox {
     Size size,
     HoveredMarkerInfo markerInfo,
   ) {
+    if (!_elements.whereType<DataHitElement>().any(
+      (element) => element.id == markerInfo.seriesId,
+    )) {
+      _tooltipAnimator.hideImmediately();
+      return;
+    }
     _tooltipRenderer.drawMarkerTooltip(
       canvas: canvas,
       size: size,
@@ -2655,7 +2710,79 @@ class ChartRenderBox extends RenderBox {
       effectiveBindings: _getEffectiveBindings(),
       formatDataValue: _formatDataValue,
       plotToWidget: plotToWidget,
+      textScaleFactor: _textScaleFactor,
     );
+  }
+
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    final hitCount = _elements
+        .whereType<DataHitElement>()
+        .expand((element) => element.semanticDataHits)
+        .length;
+    if (hitCount == 0) return;
+    config
+      ..isSemanticBoundary = true
+      ..explicitChildNodes = true
+      ..textDirection = TextDirection.ltr
+      ..label = 'Pie chart with $hitCount slices';
+  }
+
+  @override
+  void assembleSemanticsNode(
+    SemanticsNode node,
+    SemanticsConfiguration config,
+    Iterable<SemanticsNode> children,
+  ) {
+    final hits = _elements
+        .whereType<DataHitElement>()
+        .expand((element) => element.semanticDataHits)
+        .toList();
+    if (hits.isEmpty) {
+      _dataSemanticsNodes.clear();
+      super.assembleSemanticsNode(node, config, children);
+      return;
+    }
+
+    final nextNodes = <String, SemanticsNode>{};
+    final orderedNodes = <SemanticsNode>[];
+    for (final hit in hits) {
+      final identity = '${hit.seriesId}:${hit.pointIndex}';
+      final semanticConfig = SemanticsConfiguration()
+        ..sortKey = OrdinalSortKey(hit.ordinal.toDouble())
+        ..textDirection = TextDirection.ltr
+        ..identifier = identity
+        ..label = hit.semanticLabel
+        ..isButton = true
+        ..isSelected = hit.isSelected
+        ..isFocusable = true
+        ..isFocused = hit.isFocused
+        ..onTap = () => onDataHitActivate?.call(hit);
+      semanticConfig.onDidGainAccessibilityFocus = () {
+        onDataHitFocus?.call(hit);
+      };
+      final semanticNode =
+          _dataSemanticsNodes[identity] ??
+          SemanticsNode(key: ValueKey(identity));
+      semanticNode
+        ..rect = hit.semanticBounds
+            .shift(_plotArea.topLeft)
+            .intersect(Offset.zero & size)
+        ..updateWith(config: semanticConfig);
+      nextNodes[identity] = semanticNode;
+      orderedNodes.add(semanticNode);
+    }
+    _dataSemanticsNodes
+      ..clear()
+      ..addAll(nextNodes);
+    node.updateWith(config: config, childrenInInversePaintOrder: orderedNodes);
+  }
+
+  @override
+  void clearSemantics() {
+    super.clearSemantics();
+    _dataSemanticsNodes.clear();
   }
 
   // ============================================================================

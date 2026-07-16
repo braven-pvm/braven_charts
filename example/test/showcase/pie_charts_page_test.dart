@@ -23,8 +23,35 @@ void main() {
     expect(find.byKey(const ValueKey('pie-dataset-revenue')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-dataset-effort')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-dataset-support')), findsOneWidget);
+    expect(find.text('Try slice interaction'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-legend-item-0')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('pie-legend-item-0')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('pie-showcase-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Selected: Subscriptions'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('pie-dataset-support')),
+      -500,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey('pie-showcase-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.byKey(const ValueKey('pie-dataset-support')));
     await tester.pump(const Duration(milliseconds: 200));
 
@@ -32,7 +59,12 @@ void main() {
     expect(find.textContaining('8 categories'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byKey(const ValueKey('regenerate-pie-values')));
+    await tester.pump(const Duration(seconds: 2));
+    tester
+        .widget<ElevatedButton>(
+          find.byKey(const ValueKey('regenerate-pie-values')),
+        )
+        .onPressed!();
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.textContaining('tickets total'), findsOneWidget);

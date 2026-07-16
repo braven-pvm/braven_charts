@@ -3,15 +3,18 @@ import 'dart:math' as math;
 import 'package:flutter/painting.dart';
 
 import '../interaction/core/chart_element.dart';
+import '../interaction/core/coordinator.dart';
+import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../layout/pie_chart_geometry.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_theme.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../rendering/pie_slice_color_resolver.dart';
 
 /// Radial chart element responsible for pie wedges and deterministic labels.
-class PieSeriesElement implements DataSeriesElement {
+class PieSeriesElement implements DataHitElement {
   /// Creates a pie element for one resolved plot size.
   PieSeriesElement({
     required this.series,
@@ -19,7 +22,9 @@ class PieSeriesElement implements DataSeriesElement {
     required this.theme,
     this.seriesIndex = 0,
     this.textScaleFactor = 1,
+    this.focusedPointIndices = const <int>{},
     this.selectedPointIndices = const <int>{},
+    this.coordinator,
     this.isSelected = false,
     this.isHovered = false,
   }) : geometry = PieChartGeometryCalculator.calculate(
@@ -44,8 +49,14 @@ class PieSeriesElement implements DataSeriesElement {
   /// Media text scale captured by the widget layer.
   final double textScaleFactor;
 
+  /// Source-point indices receiving transient keyboard or linked focus.
+  final Set<int> focusedPointIndices;
+
   /// Durable source-point indices shown with explode geometry.
   final Set<int> selectedPointIndices;
+
+  /// Shared interaction state used for dynamic hover highlighting.
+  final ChartInteractionCoordinator? coordinator;
 
   /// Immutable geometry shared by painting and hit testing.
   final PieChartGeometry geometry;
@@ -84,6 +95,24 @@ class PieSeriesElement implements DataSeriesElement {
   PieSliceGeometry? sliceAt(Offset position) => geometry.sliceAt(position);
 
   @override
+  ChartDataHit? dataHitAt(Offset position, {double maxDistance = 20}) {
+    final slice = sliceAt(position);
+    return slice == null ? null : _dataHitForSlice(slice);
+  }
+
+  @override
+  ChartDataHit? dataHitForPointIndex(int pointIndex) {
+    for (final slice in geometry.slices) {
+      if (slice.pointIndex == pointIndex) return _dataHitForSlice(slice);
+    }
+    return null;
+  }
+
+  @override
+  Iterable<ChartDataHit> get semanticDataHits =>
+      geometry.slices.map(_dataHitForSlice);
+
+  @override
   bool get isSelectable => false;
 
   @override
@@ -112,6 +141,36 @@ class PieSeriesElement implements DataSeriesElement {
             ..strokeWidth = series.pieStyle.borderWidth
             ..strokeJoin = StrokeJoin.round
             ..color = series.pieStyle.borderColor ?? theme.axisStyle.lineColor
+            ..isAntiAlias = true,
+        );
+      }
+      final hoveredMarker = coordinator?.hoveredMarker;
+      final isHovered =
+          hoveredMarker?.seriesId == series.id &&
+          hoveredMarker?.markerIndex == slice.pointIndex;
+      if (isHovered) {
+        canvas.drawPath(
+          slice.path,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = theme.interactionTheme.selectionColor
+            ..isAntiAlias = true,
+        );
+      }
+      if (selectedPointIndices.contains(slice.pointIndex) ||
+          focusedPointIndices.contains(slice.pointIndex)) {
+        final isFocused = focusedPointIndices.contains(slice.pointIndex);
+        canvas.drawPath(
+          slice.path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = isFocused
+                ? math.max(3, theme.focusBorderWidth)
+                : math.max(2, series.pieStyle.borderWidth + 1)
+            ..strokeJoin = StrokeJoin.round
+            ..color = isFocused
+                ? theme.focusBorderColor
+                : theme.interactionTheme.selectionColor.withValues(alpha: 1)
             ..isAntiAlias = true,
         );
       }
@@ -342,14 +401,34 @@ class PieSeriesElement implements DataSeriesElement {
   }
 
   Color _resolveSliceColor(ChartDataPoint point, int visibleIndex) {
-    final pointColor = point.pointStyle?.color;
-    if (pointColor != null) {
-      return pointColor;
-    }
-    if (visibleIndex == 0 && series.color != null) {
-      return series.color!;
-    }
-    return theme.seriesTheme.colorAt(visibleIndex);
+    return PieSliceColorResolver.resolve(
+      series: series,
+      theme: theme,
+      point: point,
+      visibleIndex: visibleIndex,
+    );
+  }
+
+  ChartDataHit _dataHitForSlice(PieSliceGeometry slice) {
+    final visibleIndex = geometry.slices.indexOf(slice);
+    final unit = series.unit == null || series.unit!.isEmpty
+        ? ''
+        : ' ${series.unit}';
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: slice.pointIndex,
+      plotPosition: slice.insideLabelAnchor,
+      semanticBounds: slice.path.getBounds(),
+      point: slice.point,
+      category: slice.point.label!.trim(),
+      total: geometry.total,
+      share: slice.share,
+      formattedValue: '${slice.point.y.toStringAsFixed(2)}$unit',
+      ordinal: visibleIndex + 1,
+      count: geometry.slices.length,
+      isSelected: selectedPointIndices.contains(slice.pointIndex),
+      isFocused: focusedPointIndices.contains(slice.pointIndex),
+    );
   }
 
   @override
@@ -372,7 +451,9 @@ class PieSeriesElement implements DataSeriesElement {
       theme: theme,
       seriesIndex: seriesIndex,
       textScaleFactor: textScaleFactor,
+      focusedPointIndices: focusedPointIndices,
       selectedPointIndices: selectedPointIndices,
+      coordinator: coordinator,
       isHovered: isHovered ?? this.isHovered,
       isSelected: isSelected ?? this.isSelected,
     );

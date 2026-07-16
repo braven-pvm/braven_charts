@@ -9,6 +9,7 @@ import 'package:flutter/painting.dart'
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
+import '../interaction/core/data_hit.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
@@ -128,7 +129,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 /// - Selectable: Click to select entire series
 /// - Hoverable: Hover to highlight series
 /// - Not draggable: Series lines are stationary (datapoints can be dragged separately)
-class SeriesElement implements DataSeriesElement {
+class SeriesElement implements DataHitElement {
   SeriesElement({
     required this.series,
     required this.transform,
@@ -406,6 +407,50 @@ class SeriesElement implements DataSeriesElement {
 
     return false;
   }
+
+  @override
+  ChartDataHit? dataHitAt(Offset position, {double maxDistance = 20}) {
+    final source = series;
+    if (source is LineChartSeries && !source.showDataPointMarkers) return null;
+    if (source is AreaChartSeries && !source.showDataPointMarkers) return null;
+
+    ChartDataHit? nearest;
+    var nearestDistance = maxDistance;
+    for (var index = 0; index < source.points.length; index++) {
+      final hit = dataHitForPointIndex(index);
+      if (hit == null) continue;
+      final distance = (position - hit.plotPosition).distance;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = hit;
+      }
+    }
+    return nearest;
+  }
+
+  @override
+  ChartDataHit? dataHitForPointIndex(int pointIndex) {
+    if (pointIndex < 0 || pointIndex >= series.points.length) return null;
+    final point = series.points[pointIndex];
+    if (!point.isValid) return null;
+    final position = _currentTransform.dataToPlot(point.x, point.y);
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: pointIndex,
+      plotPosition: position,
+      semanticBounds: Rect.fromCircle(center: position, radius: 24),
+      point: point,
+      formattedValue:
+          '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      ordinal: pointIndex + 1,
+      count: series.points.length,
+      isSelected: selectedPointIndices.contains(pointIndex),
+      isFocused: focusedPointIndices.contains(pointIndex),
+    );
+  }
+
+  @override
+  Iterable<ChartDataHit> get semanticDataHits => const <ChartDataHit>[];
 
   /// Calculate distance from point to line segment.
   double _distanceToLineSegment(Offset point, Offset segStart, Offset segEnd) {

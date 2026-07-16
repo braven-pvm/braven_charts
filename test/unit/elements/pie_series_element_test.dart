@@ -112,5 +112,36 @@ void main() {
       expect(copied.geometry.slices.single.explodeOffset.distance, 8);
       expect(copied.theme, same(ChartTheme.dark));
     });
+
+    test('returns a complete slice data-hit payload', () {
+      final series = PieChartSeries.fromMap(
+        id: 'share',
+        unit: 'USD',
+        values: const {'Subscriptions': 42, 'Services': 58},
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size(320, 240),
+        theme: ChartTheme.light,
+        selectedPointIndices: const {0},
+        focusedPointIndices: const {0},
+      );
+
+      final firstSlice = element.geometry.slices.first;
+      final hit = element.dataHitAt(firstSlice.insideLabelAnchor);
+
+      expect(hit, isNotNull);
+      expect(hit!.seriesId, 'share');
+      expect(hit.pointIndex, 0);
+      expect(hit.category, 'Subscriptions');
+      expect(hit.formattedValue, '42.00 USD');
+      expect(hit.total, 100);
+      expect(hit.share, 0.42);
+      expect(hit.ordinal, 1);
+      expect(hit.count, 2);
+      expect(hit.isSelected, isTrue);
+      expect(hit.isFocused, isTrue);
+      expect(hit.semanticLabel, contains('slice 1 of 2, selected'));
+    });
   });
 }
