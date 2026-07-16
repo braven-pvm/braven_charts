@@ -3036,7 +3036,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     setState(() => _rebuildElements());
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    // Publish hidden IDs immediately, then refresh axis-slot state after the
+    // render object receives the filtered series during this frame.
     _syncControllerState(renderBox);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final updatedRenderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      _syncControllerState(updatedRenderBox);
+    });
   }
 
   void _restoreViewState(ChartViewState viewState) {
@@ -4107,6 +4115,13 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   @override
   void updateRenderObject(BuildContext context, ChartRenderBox renderObject) {
     renderObject
+      // Multi-axis state must be current before elements are regenerated.
+      // Visibility changes can alter the effective axes without changing the
+      // chart's explicit per-series normalization contract.
+      ..setNormalizationMode(normalizationMode)
+      ..setSeries(series)
+      ..setMaxAxesPerSide(maxAxesPerSide)
+      ..setAxisSwapMode(axisSwapMode)
       ..setElementGenerator(elementGenerator, elementGeneratorVersion)
       ..setXAxis(xAxis)
       ..setXAxisConfig(xAxisConfig)
@@ -4118,10 +4133,6 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setShowYScrollbar(showYScrollbar)
       ..setScrollbarTheme(scrollbarTheme)
       ..setInteractionConfig(interactionConfig)
-      ..setNormalizationMode(normalizationMode)
-      ..setSeries(series)
-      ..setMaxAxesPerSide(maxAxesPerSide)
-      ..setAxisSwapMode(axisSwapMode)
       ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
       ..onElementHover = onElementHover;
