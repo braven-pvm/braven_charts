@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import 'chart_table_model.dart';
-import 'chart_table_options.dart';
 
 /// One displayed table row prepared for host copy/export behavior.
 ///
@@ -80,16 +79,19 @@ abstract final class ChartTableExporter {
     ChartTableModel model, {
     Iterable<ChartTableLongRow> longRows = const [],
     Iterable<ChartTableWideRow> wideRows = const [],
+    Iterable<ChartTablePieRow> pieRows = const [],
   }) {
-    final rows = model.options.rowLayout == ChartTableRowLayout.wide
-        ? [
-            for (final (index, row) in wideRows.indexed)
-              wideRow(model, row, index),
-          ]
-        : [
-            for (final (index, row) in longRows.indexed)
-              longRow(model, row, index),
-          ];
+    final rows = switch (model.projectionKind) {
+      ChartTableProjectionKind.cartesianWide => [
+        for (final (index, row) in wideRows.indexed) wideRow(model, row, index),
+      ],
+      ChartTableProjectionKind.cartesianLong => [
+        for (final (index, row) in longRows.indexed) longRow(model, row, index),
+      ],
+      ChartTableProjectionKind.pie => [
+        for (final (index, row) in pieRows.indexed) pieRow(model, row, index),
+      ],
+    };
     return ChartTableCsvExport(headers: headers(model), rows: rows);
   }
 
@@ -145,17 +147,34 @@ abstract final class ChartTableExporter {
     references: [row.reference],
   );
 
+  static ChartTableRowExport pieRow(
+    ChartTableModel model,
+    ChartTablePieRow row,
+    int displayIndex,
+  ) => ChartTableRowExport(
+    rowId: row.rowId,
+    headers: headers(model),
+    rawValues: [displayIndex + 1, row.category, row.valueRaw, row.shareRaw],
+    displayValues: [
+      '${displayIndex + 1}',
+      row.category,
+      row.valueDisplay,
+      row.shareDisplay,
+    ],
+    references: [row.reference],
+  );
+
   static List<String> headers(ChartTableModel model) =>
-      model.options.rowLayout == ChartTableRowLayout.wide
-      ? [
+      switch (model.projectionKind) {
+        ChartTableProjectionKind.cartesianWide => [
           '#',
           model.xColumnLabel,
           for (final column in model.series)
             column.unit == null
                 ? column.seriesName
                 : '${column.seriesName} (${column.unit})',
-        ]
-      : [
+        ],
+        ChartTableProjectionKind.cartesianLong => [
           '#',
           'Series',
           model.xColumnLabel,
@@ -163,7 +182,16 @@ abstract final class ChartTableExporter {
           'Unit',
           'Label',
           'Status',
-        ];
+        ],
+        ChartTableProjectionKind.pie => [
+          '#',
+          'Category',
+          model.series.single.unit == null
+              ? 'Value'
+              : 'Value (${model.series.single.unit})',
+          'Share',
+        ],
+      };
 }
 
 String _escapeCsvCell(Object? value) {

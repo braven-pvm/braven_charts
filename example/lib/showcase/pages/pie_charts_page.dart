@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
@@ -40,11 +41,22 @@ class _PieChartsPageState extends State<PieChartsPage> {
   bool _showLegend = true;
   bool _showTooltips = true;
   String? _selectedCategory;
+  ChartDisplayMode _displayMode = ChartDisplayMode.chart;
+  ChartTableModel? _tableModel;
+  ChartDocumentRevision? _tableRevision;
+  ChartArtifact? _capturedArtifact;
+  HydratedChartConfiguration? _restoredConfiguration;
+  String? _portableJson;
+  String? _captureError;
+  bool _isCapturing = false;
+  bool _showRestoredCopy = false;
+  int _tableRefreshAttempts = 0;
 
   @override
   void initState() {
     super.initState();
     _values = Map<String, num>.of(_dataset.categoryValues);
+    _scheduleTableRefresh();
   }
 
   @override
@@ -60,14 +72,17 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _dataset = dataset;
       _values = Map<String, num>.of(dataset.categoryValues);
       _selectedCategory = null;
+      _clearPortableState();
     });
     _chartController.clearPointSelection();
+    _scheduleTableRefresh();
   }
 
   void _regenerateValues() {
     _chartController.clearPointSelection();
     setState(() {
       _selectedCategory = null;
+      _clearPortableState();
       _values = {
         for (final entry in _dataset.categoryValues.entries)
           entry.key: math.max(
@@ -75,6 +90,109 @@ class _PieChartsPageState extends State<PieChartsPage> {
             entry.value * (0.72 + _random.nextDouble() * 0.56),
           ),
       };
+    });
+    _scheduleTableRefresh();
+  }
+
+  void _clearPortableState() {
+    _capturedArtifact = null;
+    _restoredConfiguration = null;
+    _portableJson = null;
+    _captureError = null;
+    _showRestoredCopy = false;
+  }
+
+  void _scheduleTableRefresh({bool resetAttempts = true}) {
+    if (resetAttempts) _tableRefreshAttempts = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshTableFromChart();
+    });
+  }
+
+  void _refreshTableFromChart() {
+    final result = _chartController.extractDocument(
+      ChartDocumentExtractOptions(documentId: 'pie-showcase-${_dataset.name}'),
+    );
+    if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
+      final snapshot = result.value;
+      final model = ChartTableModel.fromDocument(
+        snapshot.document,
+        viewState: snapshot.viewState,
+      );
+      if (!mounted) return;
+      setState(() {
+        _tableModel = model;
+        _tableRevision = snapshot.revision;
+      });
+      _tableRefreshAttempts = 0;
+      return;
+    }
+    if (_tableRefreshAttempts < 3) {
+      _tableRefreshAttempts++;
+      _scheduleTableRefresh(resetAttempts: false);
+    }
+  }
+
+  Future<void> _capturePortableCopy() async {
+    if (_isCapturing) return;
+    final previousMode = _displayMode;
+    if (previousMode == ChartDisplayMode.data) {
+      setState(() => _displayMode = ChartDisplayMode.chart);
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted) return;
+    setState(() {
+      _isCapturing = true;
+      _captureError = null;
+    });
+    final captured = await _chartController.extractArtifact(
+      ChartArtifactExtractOptions(
+        artifactId: 'pie-showcase-${DateTime.now().microsecondsSinceEpoch}',
+        createdAt: DateTime.now().toUtc(),
+        includePreview: true,
+        documentOptions: ChartDocumentExtractOptions(
+          documentId: 'pie-showcase-${_dataset.name}',
+        ),
+        previewOptions: const ChartPreviewOptions(pixelRatio: 0.75),
+      ),
+    );
+    if (!mounted) return;
+    if (captured case ChartArtifactFailure<ChartArtifact>()) {
+      setState(() {
+        _isCapturing = false;
+        _captureError =
+            '${captured.error.message} Try again after the chart finishes rendering.';
+        _displayMode = previousMode;
+      });
+      return;
+    }
+    final artifact = (captured as ChartArtifactSuccess<ChartArtifact>).value;
+    final encoded = ChartArtifactJsonCodec.encode(artifact);
+    if (encoded case ChartArtifactFailure<String>()) {
+      setState(() {
+        _isCapturing = false;
+        _captureError = encoded.error.message;
+        _displayMode = previousMode;
+      });
+      return;
+    }
+    final json = (encoded as ChartArtifactSuccess<String>).value;
+    final hydrated = ChartDocumentHydrator.hydrateJson(json);
+    if (hydrated case ChartArtifactFailure<HydratedChartConfiguration>()) {
+      setState(() {
+        _isCapturing = false;
+        _captureError = hydrated.error.message;
+        _displayMode = previousMode;
+      });
+      return;
+    }
+    setState(() {
+      _isCapturing = false;
+      _capturedArtifact = artifact;
+      _portableJson = json;
+      _restoredConfiguration =
+          (hydrated as ChartArtifactSuccess<HydratedChartConfiguration>).value;
+      _displayMode = previousMode;
     });
   }
 
@@ -260,35 +378,24 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   _buildInteractionGuide(),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: compact ? 600 : 620,
+                    height: compact ? 680 : 640,
                     child: ChartCard(
                       key: const ValueKey('pie-showcase-card'),
                       title: _dataset.title,
                       subtitle: _chartSummary(),
                       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                      child: BravenChartPlus(
-                        key: const ValueKey('pie-showcase-chart'),
-                        title: _dataset.chartTitle,
-                        subtitle: _dataset.chartSubtitle,
-                        bravenChartController: _chartController,
-                        showLegend: _showLegend,
-                        theme: _optionsController.theme,
-                        interactionConfig: InteractionConfig(
-                          crosshair: const CrosshairConfig(enabled: false),
-                          tooltip: TooltipConfig(
-                            enabled: _showTooltips,
-                            triggerMode: TooltipTriggerMode.both,
-                          ),
-                          enableZoom: false,
-                          enablePan: false,
-                          enableSelection: true,
-                          showFocusBorder: true,
-                        ),
-                        onPointTap: _handlePointActivation,
-                        series: [_buildSeries()],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildDisplayModeSelector(),
+                          const SizedBox(height: 8),
+                          Expanded(child: _buildDataSurface(compact: compact)),
+                        ],
                       ),
                     ),
                   ),
+                  const SizedBox(height: 32),
+                  _buildPortableWorkflow(compact: compact),
                   const SizedBox(height: 32),
                   _buildFeatureGuide(),
                   const SizedBox(height: 32),
@@ -300,6 +407,407 @@ class _PieChartsPageState extends State<PieChartsPage> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildDisplayModeSelector() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SegmentedButton<ChartDisplayMode>(
+        key: const ValueKey('pie-display-mode'),
+        segments: const [
+          ButtonSegment(
+            value: ChartDisplayMode.chart,
+            icon: Icon(Icons.show_chart, size: 18),
+            label: Text('Chart'),
+          ),
+          ButtonSegment(
+            value: ChartDisplayMode.data,
+            icon: Icon(Icons.table_rows_outlined, size: 18),
+            label: Text('Data'),
+          ),
+          ButtonSegment(
+            value: ChartDisplayMode.split,
+            icon: Icon(Icons.vertical_split_outlined, size: 18),
+            label: Text('Split'),
+          ),
+        ],
+        selected: {_displayMode},
+        onSelectionChanged: (selected) {
+          setState(() => _displayMode = selected.single);
+          if (_tableModel == null) _scheduleTableRefresh();
+        },
+      ),
+    );
+  }
+
+  Widget _buildDataSurface({required bool compact}) {
+    final chart = _buildLiveChart();
+    final table = _buildLiveTable();
+    return switch (_displayMode) {
+      ChartDisplayMode.chart => IndexedStack(
+        index: 0,
+        children: [chart, table],
+      ),
+      ChartDisplayMode.data => IndexedStack(index: 1, children: [chart, table]),
+      ChartDisplayMode.split =>
+        compact
+            ? Column(
+                children: [
+                  Expanded(child: chart),
+                  const SizedBox(height: 8),
+                  Expanded(child: table),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: chart),
+                  const SizedBox(width: 8),
+                  Expanded(child: table),
+                ],
+              ),
+    };
+  }
+
+  Widget _buildLiveChart() {
+    return BravenChartPlus(
+      key: const ValueKey('pie-showcase-chart'),
+      title: _dataset.chartTitle,
+      subtitle: _dataset.chartSubtitle,
+      bravenChartController: _chartController,
+      showLegend: _showLegend,
+      theme: _optionsController.theme,
+      interactionConfig: InteractionConfig(
+        crosshair: const CrosshairConfig(enabled: false),
+        tooltip: TooltipConfig(
+          enabled: _showTooltips,
+          triggerMode: TooltipTriggerMode.both,
+        ),
+        enableZoom: false,
+        enablePan: false,
+        enableSelection: true,
+        showFocusBorder: true,
+      ),
+      onPointTap: _handlePointActivation,
+      series: [_buildSeries()],
+    );
+  }
+
+  Widget _buildLiveTable() {
+    final model = _tableModel;
+    if (model == null) {
+      return const ChartDataTable(isLoading: true);
+    }
+    return ChartDataTable(
+      key: const ValueKey('pie-showcase-table'),
+      model: model,
+      selectedPointRefs: _chartController.selectedPointRefs,
+      csvFileName: 'pie-${_dataset.name}.csv',
+      onRowFocused: _focusTablePoints,
+      onRowFocusCleared: _chartController.clearPointFocus,
+      onRowHoverChanged: (points) => points == null
+          ? _chartController.clearPointFocus()
+          : _focusTablePoints(points),
+      onRowActivated: _selectTablePoints,
+    );
+  }
+
+  void _focusTablePoints(List<ChartPointRef> points) {
+    final revision =
+        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+    if (revision == null) return;
+    _chartController.focusPoints(points, revision: revision);
+  }
+
+  void _selectTablePoints(List<ChartPointRef> points) {
+    final revision =
+        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+    if (revision == null) return;
+    final result = _chartController.selectPoints(points, revision: revision);
+    if (result case ChartArtifactSuccess<void>()) {
+      final selected = points.isEmpty ? null : points.first;
+      String? category;
+      if (selected != null) {
+        for (final row in _tableModel?.pieRows ?? const <ChartTablePieRow>[]) {
+          if (row.reference == selected) {
+            category = row.category;
+            break;
+          }
+        }
+      }
+      setState(() => _selectedCategory = category);
+      _scheduleTableRefresh();
+    }
+  }
+
+  Widget _buildPortableWorkflow({required bool compact}) {
+    final colors = Theme.of(context).colorScheme;
+    final artifact = _capturedArtifact;
+    final previewBytes = artifact?.preview?.bytes;
+    final captureButton = ElevatedButton.icon(
+      key: const ValueKey('capture-pie-artifact'),
+      style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
+      onPressed: _isCapturing ? null : _capturePortableCopy,
+      icon: _isCapturing
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.camera_alt_outlined, size: 18),
+      label: Text(_isCapturing ? 'Capturing copy…' : 'Capture portable copy'),
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (compact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildPortableHeading(),
+                const SizedBox(height: 16),
+                captureButton,
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildPortableHeading()),
+                const SizedBox(width: 24),
+                captureButton,
+              ],
+            ),
+          if (_captureError != null) ...[
+            const SizedBox(height: 16),
+            _buildCaptureMessage(
+              icon: Icons.error_outline,
+              message: _captureError!,
+              color: colors.errorContainer,
+              foreground: colors.onErrorContainer,
+            ),
+          ],
+          if (artifact == null && _captureError == null) ...[
+            const SizedBox(height: 16),
+            _buildCaptureMessage(
+              icon: Icons.info_outline,
+              message:
+                  'Capture stores the Pie series, current configuration, view state, and a revision-bound PNG preview.',
+              color: colors.primaryContainer.withValues(alpha: 0.36),
+              foreground: colors.onPrimaryContainer,
+            ),
+          ],
+          if (artifact != null) ...[
+            const SizedBox(height: 24),
+            _buildCapturedArtifactBody(
+              artifact: artifact,
+              previewBytes: previewBytes,
+              compact: compact,
+            ),
+            const SizedBox(height: 16),
+            Material(
+              color: Colors.transparent,
+              child: ExpansionTile(
+                key: const ValueKey('inspect-pie-artifact-json'),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                leading: const Icon(Icons.data_object_outlined),
+                title: const Text('Inspect canonical JSON'),
+                subtitle: Text(
+                  '${_portableJson?.length ?? 0} UTF-16 characters',
+                ),
+                children: [
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        _portableJson ?? '',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (_showRestoredCopy && _restoredConfiguration != null) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Icon(Icons.restore, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Restored from canonical JSON into a fresh chart runtime',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              key: const ValueKey('restored-pie-artifact'),
+              height: compact ? 440 : 420,
+              child: _restoredConfiguration!.build(
+                key: ValueKey('restored-${artifact?.artifactId}'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCapturedArtifactBody({
+    required ChartArtifact artifact,
+    required Uint8List? previewBytes,
+    required bool compact,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final preview = AspectRatio(
+      aspectRatio: 16 / 10,
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.outlineVariant),
+        ),
+        child: previewBytes == null
+            ? const Center(child: Text('Preview was not available'))
+            : Image.memory(
+                previewBytes,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+                semanticLabel: 'Captured pie chart preview',
+              ),
+      ),
+    );
+    final details = _buildPortableDetails(artifact);
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [preview, const SizedBox(height: 16), details],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 2, child: preview),
+        const SizedBox(width: 24),
+        Expanded(flex: 3, child: details),
+      ],
+    );
+  }
+
+  Widget _buildPortableHeading() {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Capture, transport, and restore',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Create a schema-v1 artifact, inspect its real JSON and PNG preview, then hydrate an independent chart from that saved copy.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortableDetails(ChartArtifact artifact) {
+    final colors = Theme.of(context).colorScheme;
+    final preview = artifact.preview;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(label: Text('Schema ${artifact.schemaVersion}')),
+            const Chip(label: Text('series.pie')),
+            Chip(
+              label: Text(
+                preview == null
+                    ? 'No PNG preview'
+                    : '${preview.widthPixels.toInt()} × ${preview.heightPixels.toInt()} PNG',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${artifact.document.series.single.data.pointCount} transported categories · '
+          '${artifact.document.requiredCapabilities.length} required capability · '
+          '${_portableJson?.length ?? 0} JSON characters',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          key: const ValueKey('restore-pie-artifact'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+          onPressed: () => setState(() => _showRestoredCopy = true),
+          icon: const Icon(Icons.restore, size: 18),
+          label: const Text('Restore captured chart'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCaptureMessage({
+    required IconData icon,
+    required String message,
+    required Color color,
+    required Color foreground,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: foreground),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(message, style: TextStyle(color: foreground)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -537,6 +1045,20 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   title: 'Selection for every input',
                   description:
                       'Hover, tap, legend controls, arrow keys, and assistive actions resolve the same stable source slice.',
+                ),
+                _FeatureCard(
+                  width: cardWidth,
+                  icon: Icons.table_rows_outlined,
+                  title: 'Category-first data table',
+                  description:
+                      'Switch to Data or Split for sortable Category, Value, and Share rows with native row copy, dataset copy, and CSV export.',
+                ),
+                _FeatureCard(
+                  width: cardWidth,
+                  icon: Icons.inventory_2_outlined,
+                  title: 'Portable by default',
+                  description:
+                      'Capture canonical schema-v1 JSON and a revision-bound PNG, then hydrate a fresh chart runtime from that saved document.',
                 ),
               ],
             );

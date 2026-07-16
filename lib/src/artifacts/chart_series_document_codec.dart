@@ -5,6 +5,8 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
+import '../models/pie_chart_config.dart';
+import '../models/pie_chart_series.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
@@ -291,6 +293,16 @@ abstract final class ChartSeriesDocumentCodec {
           minWidth: _double(style, 'minWidth'),
           maxWidth: _double(style, 'maxWidth'),
         ),
+        'pie' => PieChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
+          dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+        ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
@@ -325,6 +337,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   ScatterChartSeries() => 'scatter',
   AreaChartSeries() => 'area',
   BarChartSeries() => 'bar',
+  PieChartSeries() => 'pie',
   ChartSeries() => 'base',
 };
 
@@ -443,12 +456,74 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
             : _number(series.barWidthPixels!)
         ..['minWidth'] = _number(series.minWidth)
         ..['maxWidth'] = _number(series.maxWidth);
+    case PieChartSeries():
+      result
+        ..['pieStyle'] = _encodePieStyle(series.pieStyle)
+        ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
     case ChartSeries():
       break;
   }
   result.removeWhere((_, value) => value == null);
   return result;
 }
+
+Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
+  'startAngleDegrees': _number(style.startAngleDegrees),
+  'clockwise': style.clockwise,
+  'radiusFactor': _number(style.radiusFactor),
+  'sliceGap': _number(style.sliceGap),
+  'borderWidth': _number(style.borderWidth),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  'selectionExplodeOffset': _number(style.selectionExplodeOffset),
+};
+
+PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
+  startAngleDegrees: _double(value, 'startAngleDegrees'),
+  clockwise: _bool(value, 'clockwise'),
+  radiusFactor: _double(value, 'radiusFactor'),
+  sliceGap: _double(value, 'sliceGap'),
+  borderWidth: _double(value, 'borderWidth'),
+  borderColor: _optionalColor(
+    value['borderColor'],
+    r'$.style.pieStyle.borderColor',
+  ),
+  selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
+);
+
+Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
+  'isVisible': config.isVisible,
+  'position': config.position.name,
+  'content': config.content.name,
+  'minimumShare': _number(config.minimumShare),
+  'minimumSweepDegrees': _number(config.minimumSweepDegrees),
+  'padding': _number(config.padding),
+  'connectorLength': _number(config.connectorLength),
+  'connectorWidth': _number(config.connectorWidth),
+  if (config.connectorColor != null)
+    'connectorColor': config.connectorColor!.toARGB32(),
+  'collisionStrategy': config.collisionStrategy.name,
+};
+
+PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
+    PieDataLabelConfig(
+      isVisible: _bool(value, 'isVisible'),
+      position: _enum(value, 'position', PieDataLabelPosition.values),
+      content: _enum(value, 'content', PieDataLabelContent.values),
+      minimumShare: _double(value, 'minimumShare'),
+      minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
+      padding: _double(value, 'padding'),
+      connectorLength: _double(value, 'connectorLength'),
+      connectorWidth: _double(value, 'connectorWidth'),
+      connectorColor: _optionalColor(
+        value['connectorColor'],
+        r'$.style.dataLabels.connectorColor',
+      ),
+      collisionStrategy: _enum(
+        value,
+        'collisionStrategy',
+        PieDataLabelCollisionStrategy.values,
+      ),
+    );
 
 Map<String, Object?> _encodeLineStyle({
   required LineInterpolation interpolation,

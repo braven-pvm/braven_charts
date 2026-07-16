@@ -66,6 +66,83 @@ void main() {
     );
   });
 
+  testWidgets(
+    'round-trips a pie artifact and recaptures its restored preview',
+    (tester) async {
+      final sourceController = BravenChartController();
+      final restoredController = BravenChartController();
+      addTearDown(sourceController.dispose);
+      addTearDown(restoredController.dispose);
+      await tester.pumpWidget(_pieHost(sourceController));
+      await tester.pump();
+
+      final sourceResult = await _capture(
+        tester,
+        sourceController.extractArtifact(
+          ChartArtifactExtractOptions(
+            artifactId: 'pie-source',
+            createdAt: DateTime.utc(2026, 7, 16, 10),
+            includePreview: true,
+            documentOptions: const ChartDocumentExtractOptions(
+              documentId: 'pie-document',
+            ),
+            previewOptions: const ChartPreviewOptions(pixelRatio: 1),
+          ),
+        ),
+      );
+      final source =
+          (sourceResult as ChartArtifactSuccess<ChartArtifact>).value;
+      expect(source.document.series.single.type, 'pie');
+      expect(source.document.requiredCapabilities, {'series.pie'});
+      expect(source.preview?.bytes, isNotEmpty);
+
+      final json =
+          (ChartArtifactJsonCodec.encode(source)
+                  as ChartArtifactSuccess<String>)
+              .value;
+      final hydrated =
+          (ChartDocumentHydrator.hydrateJson(json)
+                  as ChartArtifactSuccess<HydratedChartConfiguration>)
+              .value;
+      final restoredSeries = hydrated.series.single as PieChartSeries;
+      expect(restoredSeries.points.map((point) => point.label), [
+        'Subscriptions',
+        'Services',
+        'Hardware',
+      ]);
+      expect(restoredSeries.pieStyle.selectionExplodeOffset, 10);
+
+      await tester.pumpWidget(
+        _hydratedPieHost(
+          hydrated.build(bravenChartController: restoredController),
+        ),
+      );
+      await tester.pump();
+      final restoredResult = await _capture(
+        tester,
+        restoredController.extractArtifact(
+          ChartArtifactExtractOptions(
+            artifactId: 'pie-restored',
+            createdAt: DateTime.utc(2026, 7, 16, 10, 1),
+            includePreview: true,
+            documentOptions: const ChartDocumentExtractOptions(
+              documentId: 'pie-restored-document',
+            ),
+            previewOptions: const ChartPreviewOptions(pixelRatio: 1),
+          ),
+        ),
+      );
+      final restored =
+          (restoredResult as ChartArtifactSuccess<ChartArtifact>).value;
+      expect(restored.preview?.bytes, isNotEmpty);
+      expect(
+        restored.preview?.documentHash,
+        ChartArtifactCanonicalizer.documentHash(restored.document),
+      );
+      expect(restored.document.series.single.type, 'pie');
+    },
+  );
+
   test('detached controller returns chart_not_attached', () async {
     final controller = BravenChartController();
     addTearDown(controller.dispose);
@@ -97,6 +174,32 @@ Widget _host(BravenChartController controller) => MaterialApp(
       ),
     ),
   ),
+);
+
+Widget _pieHost(BravenChartController controller) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 420,
+      height: 320,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        title: 'Revenue mix',
+        showLegend: true,
+        series: [
+          PieChartSeries.fromMap(
+            id: 'revenue',
+            unit: 'USD',
+            values: const {'Subscriptions': 42, 'Services': 31, 'Hardware': 27},
+            pieStyle: const PieChartStyle(selectionExplodeOffset: 10),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
+Widget _hydratedPieHost(Widget chart) => MaterialApp(
+  home: Scaffold(body: SizedBox(width: 420, height: 320, child: chart)),
 );
 
 Future<ChartArtifactResult<ChartArtifact>> _capture(

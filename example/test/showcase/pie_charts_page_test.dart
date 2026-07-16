@@ -88,4 +88,76 @@ void main() {
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('shows native pie data and restores a captured artifact', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await _settleCapture(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('pie-display-mode')),
+        matching: find.text('Data'),
+      ),
+    );
+    await _settleCapture(tester);
+    final initialTable = tester.widget<ChartDataTable>(
+      find.byKey(const ValueKey('pie-showcase-table')),
+    );
+    expect(initialTable.model?.projectionKind, ChartTableProjectionKind.pie);
+    expect(initialTable.model?.pieRows.first.category, 'Subscriptions');
+    expect(initialTable.model?.pieRows.first.shareDisplay, '42.00%');
+    expect(find.text('Category'), findsOneWidget);
+    expect(find.text('Value (USD)'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('pie-showcase-revenue:0')));
+    await tester.pump();
+    expect(find.text('Selected: Subscriptions'), findsOneWidget);
+
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const ValueKey('pie-showcase-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('capture-pie-artifact')),
+      500,
+      scrollable: scrollable,
+    );
+    await tester.tap(find.byKey(const ValueKey('capture-pie-artifact')));
+    await _settleCapture(tester);
+
+    expect(find.text('series.pie'), findsOneWidget);
+    expect(find.text('Schema 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Captured pie chart preview'), findsOneWidget);
+    expect(find.text('Restore captured chart'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('restore-pie-artifact')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('restored-pie-artifact')), findsOneWidget);
+    expect(
+      find.text('Restored from canonical JSON into a fresh chart runtime'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _settleCapture(WidgetTester tester) async {
+  for (var index = 0; index < 8; index++) {
+    await tester.pump();
+  }
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 100)),
+  );
+  await tester.pump();
 }

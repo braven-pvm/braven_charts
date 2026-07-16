@@ -9,7 +9,6 @@ import 'chart_table_csv_download.dart';
 import 'chart_data_table_theme.dart';
 import 'chart_table_export.dart';
 import 'chart_table_model.dart';
-import 'chart_table_options.dart';
 
 /// Reports every chart point represented by one visible table row.
 ///
@@ -270,12 +269,17 @@ class _ChartDataTableState extends State<ChartDataTable> {
         message: 'Change the active series or viewport scope to show rows.',
       );
     }
-    final longRows = model.options.rowLayout == ChartTableRowLayout.long
+    final longRows =
+        model.projectionKind == ChartTableProjectionKind.cartesianLong
         ? _sortedLongRows(model)
         : const <ChartTableLongRow>[];
-    final wideRows = model.options.rowLayout == ChartTableRowLayout.wide
+    final wideRows =
+        model.projectionKind == ChartTableProjectionKind.cartesianWide
         ? _sortedWideRows(model)
         : const <ChartTableWideRow>[];
+    final pieRows = model.projectionKind == ChartTableProjectionKind.pie
+        ? _sortedPieRows(model)
+        : const <ChartTablePieRow>[];
     final tableTheme = _ResolvedTableTheme.from(
       context,
       widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
@@ -289,30 +293,36 @@ class _ChartDataTableState extends State<ChartDataTable> {
         final viewportWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : 960.0;
-        final contentWidth = model.options.rowLayout == ChartTableRowLayout.long
-            ? math.max(
-                viewportWidth,
-                tableTheme.rowNumberWidth +
-                    192 +
-                    tableTheme.xColumnWidth +
-                    tableTheme.seriesColumnWidth +
-                    88 +
-                    144 +
-                    96 +
-                    (widget.showCopyRowAction ? 44 : 0),
-              )
-            : math.max(
-                viewportWidth,
-                tableTheme.rowNumberWidth +
-                    tableTheme.xColumnWidth +
-                    model.series.length * tableTheme.seriesColumnWidth +
-                    (widget.showCopyRowAction ? 44 : 0),
-              );
+        final contentWidth = math.max(
+          viewportWidth,
+          switch (model.projectionKind) {
+            ChartTableProjectionKind.cartesianLong =>
+              tableTheme.rowNumberWidth +
+                  192 +
+                  tableTheme.xColumnWidth +
+                  tableTheme.seriesColumnWidth +
+                  88 +
+                  144 +
+                  96 +
+                  (widget.showCopyRowAction ? 44 : 0),
+            ChartTableProjectionKind.cartesianWide =>
+              tableTheme.rowNumberWidth +
+                  tableTheme.xColumnWidth +
+                  model.series.length * tableTheme.seriesColumnWidth +
+                  (widget.showCopyRowAction ? 44 : 0),
+            ChartTableProjectionKind.pie =>
+              tableTheme.rowNumberWidth +
+                  192 +
+                  tableTheme.seriesColumnWidth * 2 +
+                  (widget.showCopyRowAction ? 44 : 0),
+          },
+        );
         ChartTableCsvExport buildDatasetExport() =>
             ChartTableExporter.csvForDisplayedRows(
               model,
               longRows: longRows,
               wideRows: wideRows,
+              pieRows: pieRows,
             );
         return SizedBox(
           height: height,
@@ -358,6 +368,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                                     index,
                                     longRows: longRows,
                                     wideRows: wideRows,
+                                    pieRows: pieRows,
                                     theme: tableTheme,
                                   ),
                                 ),
@@ -378,7 +389,56 @@ class _ChartDataTableState extends State<ChartDataTable> {
   }
 
   Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
-    if (model.options.rowLayout == ChartTableRowLayout.wide) {
+    if (model.projectionKind == ChartTableProjectionKind.pie) {
+      final unit = model.series.single.unit;
+      return _TableHeader(
+        theme: tableTheme,
+        children: [
+          if (widget.showCopyRowAction)
+            _StaticHeader(
+              key: const ValueKey('chart-table-header-row-actions'),
+              label: '',
+              semanticsLabel: 'Row actions',
+              width: 44,
+              theme: tableTheme,
+            ),
+          _StaticHeader(
+            key: const ValueKey('chart-table-header-index'),
+            label: '#',
+            width: tableTheme.rowNumberWidth,
+            theme: tableTheme,
+            numeric: true,
+          ),
+          _SortHeader(
+            key: const ValueKey('chart-table-header-category'),
+            label: 'Category',
+            columnId: 'category',
+            width: 192,
+            controller: _controller,
+            theme: tableTheme,
+          ),
+          _SortHeader(
+            key: const ValueKey('chart-table-header-value'),
+            label: unit == null ? 'Value' : 'Value ($unit)',
+            columnId: 'value',
+            width: tableTheme.seriesColumnWidth,
+            controller: _controller,
+            theme: tableTheme,
+            numeric: true,
+          ),
+          _SortHeader(
+            key: const ValueKey('chart-table-header-share'),
+            label: 'Share',
+            columnId: 'share',
+            width: tableTheme.seriesColumnWidth,
+            controller: _controller,
+            theme: tableTheme,
+            numeric: true,
+          ),
+        ],
+      );
+    }
+    if (model.projectionKind == ChartTableProjectionKind.cartesianWide) {
       return _TableHeader(
         theme: tableTheme,
         children: [
@@ -477,9 +537,72 @@ class _ChartDataTableState extends State<ChartDataTable> {
     int index, {
     required List<ChartTableLongRow> longRows,
     required List<ChartTableWideRow> wideRows,
+    required List<ChartTablePieRow> pieRows,
     required _ResolvedTableTheme theme,
   }) {
-    if (model.options.rowLayout == ChartTableRowLayout.wide) {
+    if (model.projectionKind == ChartTableProjectionKind.pie) {
+      final row = pieRows[index];
+      final references = List<ChartPointRef>.unmodifiable([row.reference]);
+      final unitSuffix = row.unit == null ? '' : ' ${row.unit}';
+      return _FocusableTableRow(
+        key: ValueKey(row.rowId),
+        semanticsLabel:
+            'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
+        references: references,
+        selected: _isRowSelected(references),
+        rowIndex: index,
+        theme: theme,
+        focusNode: _focusNodeFor(row.rowId),
+        onMoveVertical: (delta) => _moveRowFocus(
+          pieRows.length,
+          (targetIndex) => pieRows[targetIndex].rowId,
+          index,
+          delta,
+          theme.rowHeight,
+        ),
+        onMoveHorizontal: (delta) =>
+            _moveHorizontal(delta, theme.seriesColumnWidth),
+        onFocused: widget.onRowFocused,
+        onFocusCleared: widget.onRowFocusCleared,
+        onHoverChanged: widget.onRowHoverChanged,
+        onActivated: widget.onRowActivated,
+        children: [
+          if (widget.showCopyRowAction)
+            _CopyRowButton(
+              tooltip: 'Copy ${row.category} row',
+              onPressed: () =>
+                  _copyRow(ChartTableExporter.pieRow(model, row, index), index),
+            ),
+          _TableCell(
+            key: ValueKey('chart-table-row-index-$index'),
+            text: '${index + 1}',
+            width: theme.rowNumberWidth,
+            numeric: true,
+            theme: theme,
+            rowNumber: true,
+          ),
+          _PieCategoryCell(row: row, width: 192, theme: theme),
+          _TableCell(
+            key: ValueKey('chart-table-cell-value-$index'),
+            text: row.valueDisplay,
+            width: theme.seriesColumnWidth,
+            numeric: true,
+            invalid: !row.isValid,
+            color: row.colorValue == null ? null : Color(row.colorValue!),
+            theme: theme,
+          ),
+          _TableCell(
+            key: ValueKey('chart-table-cell-share-$index'),
+            text: row.shareDisplay,
+            width: theme.seriesColumnWidth,
+            numeric: true,
+            invalid: !row.isValid,
+            theme: theme,
+          ),
+        ],
+      );
+    }
+    if (model.projectionKind == ChartTableProjectionKind.cartesianWide) {
       final row = wideRows[index];
       final references = List<ChartPointRef>.unmodifiable(
         row.cells.values.map((cell) => cell.reference),
@@ -704,6 +827,24 @@ class _ChartDataTableState extends State<ChartDataTable> {
               right.cells[column.substring(7)]?.yRaw,
             )
           : 0;
+      return _controller.sortAscending ? result : -result;
+    });
+    return rows;
+  }
+
+  List<ChartTablePieRow> _sortedPieRows(ChartTableModel model) {
+    final rows = [...model.pieRows];
+    final column = _controller.sortColumnId;
+    if (column == null) return rows;
+    rows.sort((left, right) {
+      final result = switch (column) {
+        'category' => left.category.toLowerCase().compareTo(
+          right.category.toLowerCase(),
+        ),
+        'value' => _compareNumbers(left.valueRaw, right.valueRaw),
+        'share' => _compareNumbers(left.shareRaw, right.shareRaw),
+        _ => 0,
+      };
       return _controller.sortAscending ? result : -result;
     });
     return rows;
@@ -1203,6 +1344,61 @@ class _TableCell extends StatelessWidget {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+class _PieCategoryCell extends StatelessWidget {
+  const _PieCategoryCell({
+    required this.row,
+    required this.width,
+    required this.theme,
+  });
+
+  final ChartTablePieRow row;
+  final double width;
+  final _ResolvedTableTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: theme.cellHorizontalPadding),
+        child: Row(
+          children: [
+            if (row.colorValue != null) ...[
+              Semantics(
+                label: '${row.category} slice color',
+                child: DecoratedBox(
+                  key: ValueKey(
+                    'chart-table-pie-color-${row.reference.pointIndex}',
+                  ),
+                  decoration: BoxDecoration(
+                    color: Color(row.colorValue!),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: theme.dividerColor),
+                  ),
+                  child: const SizedBox.square(dimension: 10),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                row.category,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: row.isValid
+                    ? theme.cellTextStyle
+                    : theme.cellTextStyle.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

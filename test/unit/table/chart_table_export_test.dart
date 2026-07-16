@@ -56,4 +56,57 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('pie CSV and clipboard exports use category, value, and share', () {
+    final model = _pieModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      pieRows: model.pieRows,
+    );
+
+    expect(export.headers, ['#', 'Category', 'Value (USD)', 'Share']);
+    expect(
+      export.tabSeparatedText,
+      '#\tCategory\tValue (USD)\tShare\r\n'
+      '1\tSubscriptions\t42.00\t42.00%\r\n'
+      '2\tServices\t58.00\t58.00%',
+    );
+    expect(
+      export.csv,
+      '#,Category,Value (USD),Share\r\n'
+      '1,Subscriptions,42.0,0.42\r\n'
+      '2,Services,58.0,0.58',
+    );
+    expect(export.rows.first.references.single.pointIndex, 0);
+  });
+}
+
+ChartTableModel _pieModel() {
+  final series =
+      (ChartSeriesDocumentCodec.encode(
+                PieChartSeries.fromMap(
+                  id: 'revenue',
+                  unit: 'USD',
+                  values: const {'Subscriptions': 42, 'Services': 58},
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value;
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'pie-export',
+      revision: 1,
+      series: [series],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
 }

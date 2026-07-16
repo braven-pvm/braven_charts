@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **In progress — Slices 1–3 complete locally; live interaction review open**
+Status: **In progress — Slices 1–4 complete locally; live portability review open**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -400,6 +400,8 @@ Status: **Complete locally and ready in the live showcase review.**
 - Verify reduced motion and text scaling.
 
 ### Slice 4: portability and data surfaces
+
+Status: **Complete locally and ready in the live showcase review.**
 
 - Add artifact codec/hydrator capability and round-trip tests.
 - Verify restored preview capture.
