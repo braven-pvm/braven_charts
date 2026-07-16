@@ -86,6 +86,20 @@ void main() {
     expect(find.text('Options'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-scroll')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
+    expect(
+      tester
+          .getRect(find.byKey(const ValueKey('chart-page-options-button')))
+          .right,
+      lessThanOrEqualTo(390),
+    );
+    expect(
+      tester.getRect(find.byKey(const ValueKey('pie-showcase-card'))).right,
+      lessThanOrEqualTo(390),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('chart-page-options-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Chart options'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

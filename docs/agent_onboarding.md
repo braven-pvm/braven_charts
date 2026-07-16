@@ -40,7 +40,8 @@ shared implementation contract.
 
 **Key capabilities:**
 
-- Line, area, bar, scatter chart types with bezier/monotone/stepped interpolation
+- Line, area, bar, scatter, and single-series pie charts; Cartesian lines and
+  areas support bezier/monotone/stepped interpolation
 - Multi-axis support with independent Y-axis scales and per-series normalization
 - Interactive annotations: point, range, text, threshold, trend, pin, legend
 - Crosshair with standard and tracking modes, per-axis labels
@@ -89,6 +90,7 @@ lib/
     │   └── chart_transform.dart # ★ Universal data↔plot coordinate converter
     ├── elements/               # ChartElement implementations
     │   ├── series_element.dart        # ★ Series rendering (line/area/bar/scatter)
+    │   ├── pie_series_element.dart    # ★ Radial pie rendering, labels, and hits
     │   ├── annotation_elements.dart   # All annotation element types
     │   ├── resize_handle_element.dart # Drag handles for annotations
     │   └── simulated_*.dart           # Test harness elements
@@ -104,9 +106,11 @@ lib/
     │   └── recognizers/
     │       ├── priority_pan_recognizer.dart  # Coordinator-aware pan
     │       └── priority_tap_recognizer.dart  # Coordinator-aware tap
-    ├── layout/                 # Multi-axis layout computation
+    ├── layout/                 # Cartesian/radial and multi-axis layout computation
     ├── models/                 # ★ All data models (immutable value objects)
-    │   ├── chart_series.dart          # Series hierarchy (Line/Area/Bar/Scatter)
+    │   ├── chart_series.dart          # Cartesian series hierarchy
+    │   ├── pie_chart_series.dart      # Validated radial pie series
+    │   ├── pie_chart_config.dart      # Pie geometry and label configuration
     │   ├── chart_data_point.dart      # (x,y) with optional metadata
     │   ├── chart_annotation.dart      # Sealed annotation hierarchy
     │   ├── interaction_config.dart    # Full interaction configuration
@@ -201,6 +205,7 @@ lib/
 ┌─────────────────────────────────────────────────────────────┐
 │  ChartElement (interface) — unified element model            │
 │  ├── SeriesElement      — renders line/area/bar/scatter      │
+│  ├── PieSeriesElement   — renders pie slices and labels      │
 │  ├── *AnnotationElement — renders each annotation type       │
 │  └── ResizeHandleElement — drag handles on annotations       │
 │                                                              │
@@ -714,7 +719,8 @@ Element conversion happens in `_rebuildElements()` via exhaustive `switch` on th
 | Fix interaction/gesture bugs | `lib/src/rendering/modules/event_handler_manager.dart`                               |
 | Fix hit testing              | `lib/src/rendering/spatial_index.dart`                                               |
 | Fix crosshair/tooltip        | `lib/src/rendering/modules/crosshair_renderer.dart` / `tooltip_renderer.dart`        |
-| Add/modify chart types       | `lib/src/elements/series_element.dart`                                               |
+| Add/modify Cartesian types   | `lib/src/models/chart_series.dart` + `lib/src/elements/series_element.dart`          |
+| Add/modify radial types      | `lib/src/layout/` + dedicated model and element (see pie files)                      |
 | Add/modify annotation types  | `lib/src/elements/annotation_elements.dart` + `lib/src/models/chart_annotation.dart` |
 | Fix multi-axis rendering     | `lib/src/rendering/modules/multi_axis_manager.dart`                                  |
 | Fix streaming                | `lib/src/streaming/live_stream_controller.dart`                                      |
@@ -727,10 +733,15 @@ Element conversion happens in `_rebuildElements()` via exhaustive `switch` on th
 
 ### Adding a New Chart Type
 
-1. Add variant to `ChartType` enum in `lib/src/models/chart_type.dart`
-2. Create new `XxxChartSeries` subclass in `lib/src/models/chart_series.dart`
-3. Add rendering logic in `SeriesElement.paint()` (`lib/src/elements/series_element.dart`)
-4. Handle in `DataConverter.seriesToElements()` (`lib/src/utils/data_converter.dart`)
+1. Add the `ChartType`/`SeriesStyle` variants and a validated public series
+   model.
+2. Decide whether the type is Cartesian or needs a distinct layout kind.
+3. Extend exhaustive series construction, codecs, hydration capabilities, AI
+   schema, tables, and the public barrel.
+4. Reuse `SeriesElement` only for Cartesian geometry. Radial or other layouts
+   require a dedicated `ChartElement` and pure geometry layer.
+5. Add rendering, interaction, accessibility, artifact, table, showcase, and
+   documentation coverage before advertising the type.
 
 ### Adding a New Annotation Type
 
@@ -868,10 +879,10 @@ If you change anything that affects how SERIES are drawn (not overlays), remembe
 
 ## Related Documentation
 
-- [docs/development.md](../development.md) — Development setup, TDD workflow, code standards
-- [docs/api.md](../api.md) — Public API reference
-- [docs/guides/coordinate-system.md](../guides/coordinate-system.md) — Full coordinate space theory
-- [docs/guides/chart-types.md](../guides/chart-types.md) — Chart type rendering details
-- [docs/guides/theming-usage.md](../guides/theming-usage.md) — Theming guide
-- [docs/guides/annotation_quick_reference.md](../guides/annotation_quick_reference.md) — Annotation types
-- [docs/technical_debt.md](../technical_debt.md) — Known debt and TODOs
+- [docs/development.md](development.md) — Development setup, TDD workflow, code standards
+- [docs/api.md](api.md) — Public API reference
+- [docs/guides/coordinate-system.md](guides/coordinate-system.md) — Full coordinate space theory
+- [docs/guides/chart-types.md](guides/chart-types.md) — Chart type rendering details
+- [docs/guides/theming-usage.md](guides/theming-usage.md) — Theming guide
+- [docs/guides/annotation_quick_reference.md](guides/annotation_quick_reference.md) — Annotation types
+- [docs/technical_debt.md](technical_debt.md) — Known debt and TODOs

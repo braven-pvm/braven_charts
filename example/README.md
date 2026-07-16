@@ -7,6 +7,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Chart Workbench directly →**](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
 
+[**Open Pie Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
+
 ## Run locally
 
 From the repository root:
@@ -28,7 +30,8 @@ flutter build web --release --base-href /braven_charts/
 | Showcase page | What to try |
 | --- | --- |
 | Gallery | Flagship multi-axis analysis, baseline fills, glow, live streaming, small multiples, chart types, annotations, tracking, and real-world compositions |
-| Chart Types | Switch among line, area, bar, and scatter series and tune their visual parameters |
+| Chart Types | Switch among line, area, bar, scatter, and pie charts and tune their visual parameters |
+| Pie Charts | Compare category stories, configure labels and geometry, select linked slices/table rows, and capture or restore a portable pie artifact |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; reset the viewport |
 | Tracking Lab | Crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
@@ -54,6 +57,7 @@ annotations.
 - Drag to pan; hold Shift while using the wheel to zoom around the pointer.
 - Use scrollbars where enabled to inspect a constrained viewport.
 - Select a legend entry or series in multi-axis demos to exercise axis slots.
+- Select a pie slice, legend item, or table row and confirm all three surfaces stay linked.
 - Pause live streams, allow points to buffer, then resume.
 - Open annotation controls to create, edit, drag, or remove overlays.
 
@@ -66,8 +70,9 @@ bar.
 ## Screenshot routes
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
-also be captured from Multi-Axis, Live Stream, Annotations, and Loading States
-to show the interaction engine and application states in more detail.
+also be captured from Pie Charts, Multi-Axis, Live Stream, Annotations, and
+Loading States to show radial rendering, the interaction engine, and
+application states in more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
@@ -75,3 +80,4 @@ Chart Artifacts page, see [Portable chart artifacts](../doc/chart_artifacts.md).
 For the reusable Chart/Data/Split composition shown by Chart Workbench, see
 [Chart Workbench](../doc/chart_workbench.md) and
 [Chart Document Comparison](../doc/chart_comparison.md).
+For the radial series contract, see [Pie charts](../doc/pie_charts.md).

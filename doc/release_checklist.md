@@ -5,9 +5,8 @@ Charts release.
 
 ## Package identity and ownership
 
-- [ ] Confirm `braven_charts` is still available on pub.dev immediately before
-  the first publish.
-- [ ] Confirm the publishing Google account and intended verified publisher.
+- [ ] Confirm the publishing account still has access to the verified
+  publisher that owns `braven_charts`.
 - [ ] Confirm the MIT license and copyright holder text.
 - [ ] Confirm version, changelog date, repository, issue tracker, description,
   and topics in `pubspec.yaml`.
@@ -44,8 +43,9 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] The public API has useful `///` documentation.
 - [ ] Screenshot 1 is a chart-only flagship hero and works as the package
   thumbnail without relying on showcase application chrome.
-- [ ] The remaining screenshot slots show varied chart-only Gallery examples,
-  including multi-axis, annotations, live data, themes, and baseline fills.
+- [ ] The remaining screenshot slots show varied chart-only examples,
+  including pie, multi-axis, annotations, live data, themes, and baseline
+  fills.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
 - [ ] The interaction and live-stream animations show real behavior from the
   deployed showcase, remain below 4 MB each, and render from package-local
@@ -71,6 +71,7 @@ when only one media group changed. Capture from a local release build with
   `example/`.
 - [ ] GitHub Pages is configured to use GitHub Actions as its source.
 - [ ] The deployed Gallery route loads directly and after a browser refresh.
+- [ ] The deployed Pie Charts route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.

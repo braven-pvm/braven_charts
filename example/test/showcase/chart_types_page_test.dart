@@ -83,6 +83,11 @@ void main() {
     expect(find.text('Pie chart playground'), findsOneWidget);
     expect(find.textContaining('5 categories'), findsOneWidget);
     expect(find.text('Show Second Series'), findsNothing);
+    expect(find.text('Show Grid Lines'), findsNothing);
+    expect(find.text('Show Axis Lines'), findsNothing);
+    expect(find.text('Show X Scrollbar'), findsNothing);
+    expect(find.text('Enable Zoom'), findsNothing);
+    expect(find.text('Show Legend'), findsOneWidget);
   });
 
   testWidgets('chart-defining controls precede generic display controls', (

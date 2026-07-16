@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.3.1 - 2026-07-17
 
+### Added
+- First-class `PieChartSeries` rendering with deterministic radial geometry,
+  inside or collision-managed outside labels, slice legends, tooltips,
+  keyboard navigation, accessible slice semantics, and selectable explode
+  state.
+- Pie artifact capability (`series.pie`), canonical JSON hydration, preview
+  capture, category/value/share table projection, native copy/CSV actions,
+  and tool-schema support.
+- Dedicated Pie Charts showcase and Pie option in the Chart Types comparison.
+
 ### Fixed
 - Expand data-derived constant per-axis ranges to a stable non-zero span so
   single-point and constant-valued series render safely with per-series

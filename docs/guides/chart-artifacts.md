@@ -256,6 +256,12 @@ Long layout is the canonical lossless row representation. Table options also
 support all, visible, selected, or explicitly named series and optional
 viewport filtering.
 
+Pie documents use a dedicated `Category | Value | Share` projection. The
+ordering X value remains internal, while every row retains its original
+`ChartPointRef`, raw contribution, unit, share, category, and resolved slice
+color. This keeps chart/table selection revision-safe without presenting pie
+ordinals as meaningful X values.
+
 The table includes **Copy data**, **Export CSV**, and a trailing **Copy row**
 action without requiring showcase-specific controls. Dataset copy produces
 display-formatted TSV in the active scope and sort order; CSV uses raw values.
@@ -285,6 +291,10 @@ Future schemas fail closed. Older schemas are accepted only when the caller
 explicitly supplies a trusted adjacent-version migration chain. See
 [chart-artifact-migrations.md](chart-artifact-migrations.md).
 
+Built-in series capabilities also fail closed. Pie documents require
+`series.pie`; older readers reject that capability rather than misrendering
+the document. The built-in capability remains within schema version 1.
+
 ## Showcase checkpoints
 
 Run the example app and open these surfaces from navigation or with the `page`
@@ -299,4 +309,6 @@ query parameter:
 - `migration-lab`: explicit trusted migration path;
 - `identity-lab`: document/view/payload hashes and deduplication;
 - `save-restore-lab`: canonical persistence and comparison gallery;
-- `formatter-binding-lab`: safe formatter fallback and explicit host rebinding.
+- `formatter-binding-lab`: safe formatter fallback and explicit host rebinding;
+- `pie-charts`: pie table projection, `series.pie`, preview capture, canonical
+  JSON, and fresh-runtime restore.

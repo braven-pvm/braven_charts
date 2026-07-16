@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **In progress — Slices 1–4 complete locally; live portability review open**
+Status: **Review needed — Slices 1–5 complete locally; release verification complete**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -410,10 +410,35 @@ Status: **Complete locally and ready in the live showcase review.**
 
 ### Slice 5: showcase, documentation, and release gates
 
+Status: **Complete locally and ready for live review.**
+
 - Polish the already-live Pie Charts showcase page and its Chart Types
   integration after interaction and data surfaces land.
 - Complete public guides, examples, dartdoc, and feature matrix.
 - Run performance, package, showcase, publish, and live web-review gates.
+
+Release verification completed on 2026-07-16:
+
+- `flutter analyze lib` and the full example analyzer passed with no issues;
+- the complete package and showcase test suites passed, including all Pie
+  goldens and bidirectional chart/table selection;
+- a 24-slice paint benchmark averaged well below the 16.67 ms frame budget
+  with labels disabled and with collision-managed outside labels;
+- Dartdoc 9.0.8 generated the public library with zero warnings or errors;
+- Pana scored 150/160: analysis, platforms, dependencies, lower-bound
+  compatibility, and Dartdoc passed; its screenshot check could not run because
+  the local Windows environment does not provide the optional WebP CLI tools;
+- the publish dry run validated the package archive, with only the expected
+  dirty-worktree warning before the Slice 5 commit;
+- the GitHub Pages release build completed with
+  `--base-href /braven_charts/`; and
+- the direct Pie route and responsive narrow layout were exercised through
+  widget tests and the local web review server.
+
+The repository-wide formatter check still reports pre-existing formatting
+drift outside this feature. Every Dart file touched by the Pie slice is
+formatted and analyzes cleanly; broad mechanical formatting remains separate
+release-process debt rather than part of the radial feature diff.
 
 ## Acceptance gates
 

@@ -151,7 +151,11 @@ class BravenChartPlus extends StatefulWidget {
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
-  /// Creates a chart from a simple list of y-values.
+  /// Creates a Cartesian chart from a simple list of y-values.
+  ///
+  /// Supports line, area, bar, and scatter. Pie is rejected because numeric
+  /// values alone cannot provide the required accessible category labels; use
+  /// [PieChartSeries.fromMap] with the primary constructor instead.
   factory BravenChartPlus.fromValues({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -264,7 +268,11 @@ class BravenChartPlus extends StatefulWidget {
     );
   }
 
-  /// Creates a chart from a Map of x->y values.
+  /// Creates a chart from a map.
+  ///
+  /// For Cartesian chart types, keys must be numbers or numeric strings and
+  /// are interpreted as X values. For [ChartType.pie], keys become category
+  /// labels and map insertion order becomes stable slice order.
   factory BravenChartPlus.fromMap({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -377,7 +385,10 @@ class BravenChartPlus extends StatefulWidget {
     );
   }
 
-  /// Creates a chart from a JSON string.
+  /// Creates a chart from a JSON array of point objects.
+  ///
+  /// Every object requires numeric `x` and `y` fields. Pie points also require
+  /// a non-empty `label`; pie validation runs when the series is constructed.
   factory BravenChartPlus.fromJson({
     Key? key,
     ChartType chartType = ChartType.line,

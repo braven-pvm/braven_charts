@@ -183,7 +183,12 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         ),
       StandardChartOptions(
         controller: _optionsController,
+        showGridOption: _chartType != ChartType.pie,
+        showAxisOption: _chartType != ChartType.pie,
+        showMarkerOption: _chartType != ChartType.pie,
+        showScrollbarOptions: _chartType != ChartType.pie,
         showLineStyleOption: false,
+        showInteractionOptions: _chartType != ChartType.pie,
       ),
       OptionSection(
         title: 'Dataset',
@@ -278,6 +283,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   }
 
   Widget _buildMainChart() {
+    final isPie = _chartType == ChartType.pie;
     return ChartCard(
       title: '${_chartTypeLabel(_chartType)} chart playground',
       subtitle: _mainChartSummary(),
@@ -286,33 +292,46 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         series: _buildSeries(_chartType),
         theme: _optionsController.theme,
         showLegend: _optionsController.showLegend,
-        showXScrollbar: _optionsController.showXScrollbar,
-        showYScrollbar: _optionsController.showYScrollbar,
+        showXScrollbar: !isPie && _optionsController.showXScrollbar,
+        showYScrollbar: !isPie && _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        grid: GridConfig(
-          horizontal: _optionsController.showGrid,
-          vertical: _optionsController.showGrid,
-        ),
-        xAxisConfig: XAxisConfig(
-          label: 'Interval',
-          min: 0,
-          max: 17,
-          renderMin: 1,
-          renderMax: 16,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          label: 'Value',
-          min: 0,
-          max: 110,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        interactionConfig: InteractionConfig(
-          enableZoom: _optionsController.enableZoom,
-          enablePan: _optionsController.enablePan,
-          tooltip: const TooltipConfig(),
-        ),
+        grid: isPie
+            ? const GridConfig(horizontal: false, vertical: false)
+            : GridConfig(
+                horizontal: _optionsController.showGrid,
+                vertical: _optionsController.showGrid,
+              ),
+        xAxisConfig: isPie
+            ? null
+            : XAxisConfig(
+                label: 'Interval',
+                min: 0,
+                max: 17,
+                renderMin: 1,
+                renderMax: 16,
+                showAxisLine: _optionsController.showAxisLines,
+              ),
+        yAxis: isPie
+            ? null
+            : YAxisConfig(
+                position: YAxisPosition.left,
+                label: 'Value',
+                min: 0,
+                max: 110,
+                showAxisLine: _optionsController.showAxisLines,
+              ),
+        interactionConfig: isPie
+            ? const InteractionConfig(
+                crosshair: CrosshairConfig(enabled: false),
+                tooltip: TooltipConfig(enabled: true),
+                enableZoom: false,
+                enablePan: false,
+              )
+            : InteractionConfig(
+                enableZoom: _optionsController.enableZoom,
+                enablePan: _optionsController.enablePan,
+                tooltip: const TooltipConfig(),
+              ),
       ),
     );
   }

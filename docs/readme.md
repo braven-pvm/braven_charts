@@ -14,6 +14,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 ## Guides
 
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
+- [guides/pie-charts.md](guides/pie-charts.md) - Pie data, labels, selection, tables, artifacts, and accessibility
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system
@@ -32,7 +33,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 
 ## Parked Feature Investigations
 
-- [pie_chart_implementation_investigation.md](pie_chart_implementation_investigation.md) - Recommended product contract, radial architecture, implementation slices, and release gates for a future pie chart type
+- [pie_chart_implementation_investigation.md](pie_chart_implementation_investigation.md) - Approved product contract, radial architecture, completed slices, and release gates for first-class pie charts
 
 ## Archived Materials
 

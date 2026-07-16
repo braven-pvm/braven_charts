@@ -15,6 +15,7 @@ is added to package marketing.
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties | Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarGroupInfo` | Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
+| Pie charts | `PieChartSeries`, `PieChartStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
@@ -24,11 +25,16 @@ is added to package marketing.
 | Theming | `ChartTheme` and component theme types | Theming, Gallery |
 | Loading and empty UX | `isLoading`, `ChartLoadingConfig`, `ChartEmptyStateConfig` | Loading States |
 | Runtime control | `BravenChartController`, `ChartController`, callbacks | Axis Slots, Annotations, Live Stream |
-| Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas | API documentation |
+| Native chart data | `ChartTableModel`, `ChartDataTable`, copy and CSV export | Chart Artifacts, Chart Workbench, Pie Charts |
+| Portable chart artifacts | `ChartArtifact`, canonical JSON, preview capture, hydration | Chart Artifacts, Pie Charts |
+| Reusable chart workbench | `BravenChartWorkbench`, revision-safe linked point identity | Chart Workbench |
+| Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
+| Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including the `pie` contract | Pie Charts, API documentation |
 | Dense-data performance | bounded buffers, viewport culling, render caches | Performance, Live Stream |
 
 ## Current boundary
 
-Version 0.1.0 supports one configurable X axis and multiple independent Y axes.
-Multiple simultaneous X axes are not part of the current public contract and
-must not be advertised until implemented and demonstrated.
+Cartesian charts support one configurable X axis and multiple independent Y
+axes. Multiple simultaneous X axes are not part of the public contract. A pie
+chart accepts exactly one `PieChartSeries`, has no Cartesian axes, and cannot
+be mixed with line, area, bar, or scatter series.
