@@ -2,7 +2,7 @@ name: braven_charts
 description: >-
   Pure Dart Flutter charts with custom rendering, multi-axis interaction, live
   streaming, editable annotations, data tables, and portable artifacts.
-version: 0.1.4
+version: 0.2.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues

@@ -205,6 +205,75 @@ void main() {
       'scroll ${_ms(scrollWatch.elapsed)}ms',
     );
   });
+
+  testWidgets('workbench mode switches and table refreshes stay bounded', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    var chartBuilds = 0;
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+    final series = <ChartSeries>[
+      for (var seriesIndex = 0; seriesIndex < 3; seriesIndex++)
+        LineChartSeries(
+          id: 'series-$seriesIndex',
+          name: 'Series $seriesIndex',
+          points: [
+            for (var pointIndex = 0; pointIndex < 2000; pointIndex++)
+              ChartDataPoint(
+                x: pointIndex.toDouble(),
+                y: 100 + seriesIndex * 20 + (pointIndex % 120) * 0.5,
+              ),
+          ],
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 1200,
+            height: 700,
+            child: BravenChartWorkbench(
+              chartController: chartController,
+              workbenchController: workbenchController,
+              tableRefreshPolicy: ChartTableRefreshPolicy.manual,
+              chartBuilder: (context, controller) {
+                chartBuilds++;
+                return BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: series,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final watch = Stopwatch()..start();
+    for (var iteration = 0; iteration < 12; iteration++) {
+      workbenchController.setDisplayMode(ChartDisplayMode.data);
+      await tester.pumpAndSettle();
+      workbenchController.refreshTable();
+      await tester.pumpAndSettle();
+      workbenchController.setDisplayMode(ChartDisplayMode.split);
+      await tester.pumpAndSettle();
+      workbenchController.setDisplayMode(ChartDisplayMode.chart);
+      await tester.pumpAndSettle();
+    }
+    watch.stop();
+
+    expect(chartBuilds, 1);
+    expect(workbenchController.tableModel?.rowCount, 2000);
+    expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
+    expect(tester.takeException(), isNull);
+    // ignore: avoid_print
+    print('12 workbench mode cycles with 6K points: ${_ms(watch.elapsed)}ms');
+  });
 }
 
 ChartDocumentExtractionSource _source(int pointCount) {

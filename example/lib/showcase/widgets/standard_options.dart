@@ -259,12 +259,13 @@ class ChartPageLayout extends StatelessWidget {
           showOptionsButton: useOptionsSheet,
         );
 
-        if (useOptionsSheet || optionsChildren.isEmpty) return mainContent;
+        if (optionsChildren.isEmpty) return mainContent;
 
         return Row(
           children: [
             Expanded(child: mainContent),
-            OptionsPanel(width: optionsPanelWidth, children: optionsChildren),
+            if (!useOptionsSheet)
+              OptionsPanel(width: optionsPanelWidth, children: optionsChildren),
           ],
         );
       },

@@ -1,15 +1,11 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // BravenChartPlus - Series Rendering
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/painting.dart'
-    show
-        TextAlign,
-        TextDirection,
-        TextPainter,
-        TextSpan,
-        TextStyle;
+    show TextAlign, TextDirection, TextPainter, TextSpan, TextStyle;
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
@@ -142,6 +138,10 @@ class SeriesElement implements ChartElement {
     this.seriesIndex = 0,
     this.coordinator,
     this.barGroupInfo,
+    this.focusedPointIndices = const {},
+    this.selectedPointIndices = const {},
+    this.pointFocusColor,
+    this.pointSelectionColor,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -156,6 +156,15 @@ class SeriesElement implements ChartElement {
   final SeriesTheme? seriesTheme;
   final int seriesIndex;
   final ChartInteractionCoordinator? coordinator;
+
+  /// Point indices receiving transient linked focus from another surface.
+  final Set<int> focusedPointIndices;
+
+  /// Point indices receiving durable linked selection from another surface.
+  final Set<int> selectedPointIndices;
+
+  final Color? pointFocusColor;
+  final Color? pointSelectionColor;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -441,6 +450,40 @@ class SeriesElement implements ChartElement {
         _paintAreaSeries(canvas, series as AreaChartSeries, baseColor);
         break;
     }
+    _paintLinkedPoints(canvas, baseColor);
+  }
+
+  void _paintLinkedPoints(Canvas canvas, Color baseColor) {
+    if (focusedPointIndices.isEmpty && selectedPointIndices.isEmpty) return;
+    final focusPaint = Paint()
+      ..color = pointFocusColor ?? const Color(0xFF616161)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    final selectionFill = Paint()
+      ..color = pointSelectionColor ?? const Color(0x4D2196F3)
+      ..style = PaintingStyle.fill;
+    final selectionBorder = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    final pointFill = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
+
+    for (final index in selectedPointIndices) {
+      if (index < 0 || index >= series.points.length) continue;
+      final point = series.points[index];
+      final offset = _currentTransform.dataToPlot(point.x, point.y);
+      canvas.drawCircle(offset, markerSize + 5, selectionFill);
+      canvas.drawCircle(offset, markerSize + 3, selectionBorder);
+      canvas.drawCircle(offset, math.max(2, markerSize * 0.5), pointFill);
+    }
+    for (final index in focusedPointIndices) {
+      if (index < 0 || index >= series.points.length) continue;
+      final point = series.points[index];
+      final offset = _currentTransform.dataToPlot(point.x, point.y);
+      canvas.drawCircle(offset, markerSize + 7, focusPaint);
+    }
   }
 
   void _paintLineSeries(
@@ -609,7 +652,12 @@ class SeriesElement implements ChartElement {
       );
     }
 
-    _paintSeriesInlineLabel(canvas, series, _cachedTransformedPoints ?? [], baseColor);
+    _paintSeriesInlineLabel(
+      canvas,
+      series,
+      _cachedTransformedPoints ?? [],
+      baseColor,
+    );
   }
 
   /// Multi-style line rendering with per-segment color/width overrides.
@@ -1377,7 +1425,13 @@ class SeriesElement implements ChartElement {
   ) {
     if (config.background == null) return;
     final (tp, paintOrigin) = _resolveLabelLayout(
-        markerCenter, markerRadius, point, seriesColor, config, unit);
+      markerCenter,
+      markerRadius,
+      point,
+      seriesColor,
+      config,
+      unit,
+    );
     const hPad = 4.0;
     const vPad = 2.0;
     final bgRect = Rect.fromLTWH(
@@ -1388,9 +1442,13 @@ class SeriesElement implements ChartElement {
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-          bgRect, Radius.circular((tp.height + vPad * 2) / 2)),
+        bgRect,
+        Radius.circular((tp.height + vPad * 2) / 2),
+      ),
       Paint()
-        ..color = config.background!.withValues(alpha: config.backgroundOpacity),
+        ..color = config.background!.withValues(
+          alpha: config.backgroundOpacity,
+        ),
     );
   }
 
@@ -1404,7 +1462,13 @@ class SeriesElement implements ChartElement {
     String? unit,
   ) {
     final (tp, paintOrigin) = _resolveLabelLayout(
-        markerCenter, markerRadius, point, seriesColor, config, unit);
+      markerCenter,
+      markerRadius,
+      point,
+      seriesColor,
+      config,
+      unit,
+    );
     tp.paint(canvas, paintOrigin);
   }
 
@@ -1468,8 +1532,15 @@ class SeriesElement implements ChartElement {
       for (int i = 0; i < transformedPoints.length; i++) {
         final originalIndex = originalIndices?[i] ?? i;
         if (originalIndex < series.points.length) {
-          _paintDataPointLabelBackground(canvas, transformedPoints[i], radius,
-              series.points[originalIndex], baseColor, labelConfig, series.unit);
+          _paintDataPointLabelBackground(
+            canvas,
+            transformedPoints[i],
+            radius,
+            series.points[originalIndex],
+            baseColor,
+            labelConfig,
+            series.unit,
+          );
         }
       }
     }
@@ -1493,8 +1564,15 @@ class SeriesElement implements ChartElement {
       for (int i = 0; i < transformedPoints.length; i++) {
         final originalIndex = originalIndices?[i] ?? i;
         if (originalIndex < series.points.length) {
-          _paintDataPointLabelText(canvas, transformedPoints[i], radius,
-              series.points[originalIndex], baseColor, labelConfig, series.unit);
+          _paintDataPointLabelText(
+            canvas,
+            transformedPoints[i],
+            radius,
+            series.points[originalIndex],
+            baseColor,
+            labelConfig,
+            series.unit,
+          );
         }
       }
     }
@@ -1568,7 +1646,8 @@ class SeriesElement implements ChartElement {
         tp.height + pad.vertical,
       );
       final radius = Radius.circular(
-          bg.cornerRadius ?? (tp.height + pad.vertical) / 2);
+        bg.cornerRadius ?? (tp.height + pad.vertical) / 2,
+      );
       final rrect = RRect.fromRectAndRadius(bgRect, radius);
       canvas.drawRRect(rrect, Paint()..color = bg.color);
       if (bg.borderColor != null) {
@@ -1617,6 +1696,10 @@ class SeriesElement implements ChartElement {
       seriesIndex: seriesIndex,
       coordinator: coordinator,
       barGroupInfo: barGroupInfo, // Preserve bar group info for grouped bars
+      focusedPointIndices: focusedPointIndices,
+      selectedPointIndices: selectedPointIndices,
+      pointFocusColor: pointFocusColor,
+      pointSelectionColor: pointSelectionColor,
     );
   }
 }

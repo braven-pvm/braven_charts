@@ -5,6 +5,27 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.0 - 2026-07-16
+
+### Added
+- `BravenChartWorkbench` with one mounted Chart/Data/Split runtime, responsive
+  compact fallback, document freshness policies, and host-defined artifact
+  actions.
+- Revision-safe table-to-chart point focus and durable point selection through
+  canonical `ChartPointRef` values, including wide-row multi-point linking and
+  artifact/hydration round-trip.
+- Pure multi-document comparison models with explicit semantic series mapping,
+  exact-X, timestamp-tolerance, and independent alignment, safe unit
+  conversion, missing-value state, deltas, and source-preserving CSV export.
+- Release-packaged Workbench and Chart Document Comparison guides plus an
+  interactive showcase covering capture, canonical JSON diagnostics,
+  recoverable table states, bounded-stream snapshots, aligned values, and
+  three independently hydrated charts.
+
+### Fixed
+- Initial workbench table failures remain observable until the user retries;
+  layout rebuilds no longer trigger an uncontrolled automatic retry loop.
+
 ## 0.1.4 - 2026-07-16
 
 ### Changed

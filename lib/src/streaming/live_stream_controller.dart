@@ -200,6 +200,9 @@ class LiveStreamController extends ChangeNotifier {
   /// Whether this controller has been disposed.
   bool _isDisposed = false;
 
+  /// Internal notification of effective stream data mutations.
+  final ValueNotifier<int> _effectiveDataRevision = ValueNotifier(0);
+
   /// Frame rate tracking for diagnostics.
   int _frameCount = 0;
   DateTime? _frameCountStartTime;
@@ -260,6 +263,13 @@ class LiveStreamController extends ChangeNotifier {
   /// Revision of points waiting in the pause buffer.
   int get pendingDataRevision => _pauseBuffer.version;
 
+  /// Effective-data mutation signal used by chart extraction.
+  ///
+  /// This signal is internal. Applications should observe
+  /// `BravenChartController.effectiveDocumentRevision` instead.
+  @internal
+  ValueListenable<int> get effectiveDataRevision => _effectiveDataRevision;
+
   // ============================================================================
   // Data Input
   // ============================================================================
@@ -302,11 +312,13 @@ class LiveStreamController extends ChangeNotifier {
     if (_isStreaming) {
       // Streaming: add to buffer immediately
       _streamingBuffer.add(point);
+      _effectiveDataRevision.value++;
       // Schedule render update (frame-coalesced)
       _scheduleFrameCallback();
     } else {
       // Paused: buffer for later
       _pauseBuffer.add(point);
+      _effectiveDataRevision.value++;
       // Notify listeners so UI can show buffer count (no frame needed)
       notifyListeners();
     }
@@ -333,6 +345,7 @@ class LiveStreamController extends ChangeNotifier {
     if (_isStreaming) {
       // Streaming: add all to buffer immediately
       _streamingBuffer.addAll(points);
+      _effectiveDataRevision.value++;
       // Schedule render update (frame-coalesced)
       _scheduleFrameCallback();
     } else {
@@ -340,6 +353,7 @@ class LiveStreamController extends ChangeNotifier {
       for (final point in points) {
         _pauseBuffer.add(point);
       }
+      _effectiveDataRevision.value++;
       // Notify listeners so UI can show buffer count (no frame needed)
       notifyListeners();
     }
@@ -408,6 +422,7 @@ class LiveStreamController extends ChangeNotifier {
     _streamingBuffer.clear();
     _pauseBuffer.clear();
     _pendingPoints.clear();
+    _effectiveDataRevision.value++;
 
     // Update RenderBox
     _renderBox?.clearStreamingData(seriesId);
@@ -529,6 +544,7 @@ class LiveStreamController extends ChangeNotifier {
     _pendingPoints.clear();
     _streamingBuffer.clear();
     _pauseBuffer.clear();
+    _effectiveDataRevision.dispose();
     super.dispose();
   }
 

@@ -90,6 +90,16 @@ types and where to begin.
 
 ## Portable chart artifacts and data tables
 
+- `BravenChartWorkbench`, `ChartWorkbenchController`, and
+  `ChartWorkbenchHandle` — one mounted Chart/Data/Split product surface with
+  responsive fallback, snapshot freshness, independent operation state, and
+  host-defined artifact actions.
+- `ChartDocumentRevision` and `ChartPointRef` — opaque snapshot freshness and
+  canonical series/index identity for revision-safe table focus and durable
+  point selection.
+- `BravenChartController.focusPoint`, `focusPoints`, `selectPoint`, and
+  `selectPoints` — linked-surface commands that reject stale or invalid refs;
+  selected refs round-trip through `ChartViewState`.
 - `BravenChartController.extractDocument` — captures a stable effective chart
   document and optional durable view state from a mounted chart.
 - `BravenChartController.extractArtifact` — composes the document with
@@ -105,7 +115,8 @@ types and where to begin.
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` — exact-X wide
   rows (one X value with one column per series), lossless long rows, sorting,
   virtualization, theming, bounded dataset/row clipboard copy, and raw-value
-  CSV export with automatic web download or host delivery callbacks.
+  CSV export with automatic web download or host delivery callbacks. Pass
+  `selectedPointRefs` to mirror durable chart selection into rows.
 - `ChartDataBlobCodec`, `ReferencedPayload`, and `ChartDataResolver` — host
   controlled external payload persistence and checksum-verified resolution.
 - `ChartRuntimeBindings` and its formatter, callback, tooltip, and extension
@@ -113,9 +124,18 @@ types and where to begin.
 - `ChartArtifactValidationLimits`, `ChartArtifactMigration`, and
   `ChartArtifactDiagnosticCodes` — bounded decoding, adjacent schema upgrades,
   and machine-readable failure handling.
+- `ChartComparisonInput`, `ChartSeriesMatch`, and `ChartComparisonOptions` —
+  explicit multi-document identity, alignment, baseline, duplicate, and unit
+  rules without name inference.
+- `ChartComparisonBuilder`, `ChartComparisonModel`, and
+  `ChartComparisonExporter` — source-preserving exact-X, timestamp-tolerance,
+  or independent alignment with missing cells, safe deltas, and labelled
+  derived CSV columns.
 
 See [Portable chart artifacts](chart_artifacts.md) for the end-to-end guide and
-copyable examples.
+copyable examples, [Chart Workbench](chart_workbench.md) for the reusable
+single-chart surface, and [Chart Document Comparison](chart_comparison.md) for
+multi-document alignment and export.
 
 ## Export policy
 

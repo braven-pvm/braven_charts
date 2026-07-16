@@ -33,10 +33,17 @@ class ChartBoundsDocument {
 }
 
 @immutable
+/// Canonical identity of one point in an effective chart document.
+///
+/// References are meaningful only with the `ChartDocumentRevision` that
+/// issued them. They use value equality so sets, table rows, and hydrated view
+/// state can compare identities without retaining runtime objects.
 class ChartPointRef {
   const ChartPointRef({required this.seriesId, required this.pointIndex});
 
   final String seriesId;
+
+  /// Zero-based index in the referenced series' effective point collection.
   final int pointIndex;
 
   Map<String, Object?> toJson() => {
@@ -48,6 +55,19 @@ class ChartPointRef {
     seriesId: readRequiredString(json, 'seriesId'),
     pointIndex: readRequiredInt(json, 'pointIndex'),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChartPointRef &&
+          other.seriesId == seriesId &&
+          other.pointIndex == pointIndex;
+
+  @override
+  int get hashCode => Object.hash(seriesId, pointIndex);
+
+  @override
+  String toString() => 'ChartPointRef($seriesId, $pointIndex)';
 }
 
 @immutable
@@ -85,6 +105,8 @@ class ChartViewState {
   final ChartBoundsDocument? visibleBounds;
   final Set<String> hiddenSeriesIds;
   final String? selectedSeriesId;
+
+  /// Durable linked-point selection captured and restored with this view.
   final List<ChartPointRef> selectedPointRefs;
   final List<String> visibleAxisIds;
   final List<String> overflowAxisIds;

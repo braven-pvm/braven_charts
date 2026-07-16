@@ -18,6 +18,20 @@ abstract final class ChartArtifactDiagnosticCodes {
   static const unstableStreamRevision = 'unstable_stream_revision';
   static const previewCaptureFailed = 'preview_capture_failed';
   static const previewTooLarge = 'preview_too_large';
+  static const requestedDisplayModeUnavailable =
+      'requested_display_mode_unavailable';
+  static const tableProjectionFailed = 'table_projection_failed';
+  static const stalePointReference = 'stale_point_reference';
+  static const invalidPointReference = 'invalid_point_reference';
+  static const comparisonInvalidInput = 'comparison_invalid_input';
+  static const comparisonAmbiguousMapping = 'comparison_ambiguous_mapping';
+  static const comparisonSeriesNotFound = 'comparison_series_not_found';
+  static const comparisonPayloadUnsupported = 'comparison_payload_unsupported';
+  static const comparisonUnitMismatch = 'comparison_unit_mismatch';
+  static const comparisonIncompatibleDomain = 'comparison_incompatible_domain';
+  static const comparisonDuplicateKey = 'comparison_duplicate_key';
+  static const comparisonMissingTimestamp = 'comparison_missing_timestamp';
+  static const comparisonAmbiguousTimestamp = 'comparison_ambiguous_timestamp';
   static const dataPayloadTooLarge = 'data_payload_too_large';
   static const dataPayloadResolutionFailed = 'data_payload_resolution_failed';
   static const dataPayloadIntegrityMismatch = 'data_payload_integrity_mismatch';

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -117,6 +118,261 @@ void main() {
     expect(unchanged.document.revision, first.document.revision);
     expect(changed.document.revision, first.document.revision + 1);
     expect(annotations.revision, 1);
+  });
+
+  testWidgets('snapshot carries the controller effective revision signal', (
+    tester,
+  ) async {
+    final bravenController = BravenChartController();
+    final dataController = ChartController();
+    addTearDown(bravenController.dispose);
+    addTearDown(dataController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: bravenController,
+          controller: dataController,
+          series: [_series()],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final first = _success(bravenController.extractDocument()).value;
+    expect(
+      first.revision,
+      same(bravenController.effectiveDocumentRevision.value),
+    );
+
+    dataController.addPoint('series', const ChartDataPoint(x: 2, y: 20));
+    await tester.pump();
+    final changedSignal = bravenController.effectiveDocumentRevision.value;
+    final changed = _success(bravenController.extractDocument()).value;
+
+    expect(changedSignal, isNot(same(first.revision)));
+    expect(changed.revision, same(changedSignal));
+  });
+
+  testWidgets('transient pointer motion does not change document revision', (
+    tester,
+  ) async {
+    final bravenController = BravenChartController();
+    addTearDown(bravenController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: bravenController,
+          series: [_series()],
+        ),
+      ),
+    );
+    await tester.pump();
+    final before = bravenController.effectiveDocumentRevision.value;
+    final center = tester.getCenter(find.byType(BravenChartPlus));
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await pointer.addPointer(location: center);
+    await tester.pump();
+    await pointer.moveTo(center + const Offset(12, 6));
+    await tester.pump();
+
+    expect(bravenController.effectiveDocumentRevision.value, same(before));
+    await pointer.removePointer();
+  });
+
+  testWidgets(
+    'point commands validate revisions and separate focus from selection',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      const point = ChartPointRef(seriesId: 'series', pointIndex: 0);
+
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: [_series()],
+          ),
+        ),
+      );
+      await tester.pump();
+      final first = _success(controller.extractDocument()).value;
+
+      expect(
+        controller.focusPoint(point, revision: first.revision),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      await tester.pump();
+      expect(controller.focusedPointRefs, {point});
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(controller.effectiveDocumentRevision.value, same(first.revision));
+
+      final invalid = controller.selectPoint(
+        const ChartPointRef(seriesId: 'series', pointIndex: 99),
+        revision: first.revision,
+      );
+      expect(invalid, isA<ChartArtifactFailure<void>>());
+      expect(
+        (invalid as ChartArtifactFailure<void>).error.code,
+        ChartArtifactDiagnosticCodes.invalidPointReference,
+      );
+      expect(controller.selectedPointRefs, isEmpty);
+
+      expect(
+        controller.selectPoint(point, revision: first.revision),
+        isA<ChartArtifactSuccess<void>>(),
+      );
+      final selected = _success(controller.extractDocument()).value;
+      expect(selected.viewState?.selectedPointRefs, [point]);
+      expect(controller.selectedPointRefs, {point});
+
+      final stale = controller.focusPoint(point, revision: first.revision);
+      expect(stale, isA<ChartArtifactFailure<void>>());
+      expect(
+        (stale as ChartArtifactFailure<void>).error.code,
+        ChartArtifactDiagnosticCodes.stalePointReference,
+      );
+      expect(controller.focusedPointRefs, {point});
+
+      controller.clearPointFocus();
+      controller.clearPointSelection();
+      expect(controller.focusedPointRefs, isEmpty);
+      expect(controller.selectedPointRefs, isEmpty);
+    },
+  );
+
+  testWidgets('hidden-series point selection is retained deterministically', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    const point = ChartPointRef(seriesId: 'series', pointIndex: 0);
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(bravenChartController: controller, series: [_series()]),
+      ),
+    );
+    await tester.pump();
+    controller.setSeriesVisible('series', false);
+    await tester.pump();
+    final hidden = _success(controller.extractDocument()).value;
+
+    expect(
+      controller.selectPoint(point, revision: hidden.revision),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    final selected = _success(controller.extractDocument()).value;
+
+    expect(selected.viewState?.hiddenSeriesIds, {'series'});
+    expect(selected.viewState?.selectedPointRefs, [point]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('point selection can be additive and reveal an offscreen X', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    const firstPoint = ChartPointRef(seriesId: 'series', pointIndex: 0);
+    const secondPoint = ChartPointRef(seriesId: 'series', pointIndex: 1);
+    const lastPoint = ChartPointRef(seriesId: 'series', pointIndex: 2);
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          series: const [
+            LineChartSeries(
+              id: 'series',
+              points: [
+                ChartDataPoint(x: 0, y: 1),
+                ChartDataPoint(x: 5, y: 2),
+                ChartDataPoint(x: 10, y: 3),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump();
+    final initial = _success(controller.extractDocument()).value;
+    controller.selectPoint(firstPoint, revision: initial.revision);
+    final afterFirst = _success(controller.extractDocument()).value;
+    controller.selectPoint(
+      secondPoint,
+      revision: afterFirst.revision,
+      additive: true,
+    );
+    expect(controller.selectedPointRefs, {firstPoint, secondPoint});
+
+    controller.restoreViewState(
+      ChartViewState(
+        visibleBounds: const ChartBoundsDocument(
+          xMin: 0,
+          xMax: 1,
+          yMin: 0,
+          yMax: 4,
+        ),
+        selectedPointRefs: const [firstPoint, secondPoint],
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    final narrowed = _success(controller.extractDocument()).value;
+    expect(narrowed.viewState?.visibleBounds?.xMax, 1);
+
+    controller.focusPoint(lastPoint, revision: narrowed.revision, reveal: true);
+    final revealed = _success(controller.extractDocument()).value;
+    expect(revealed.viewState!.visibleBounds!.xMin, lessThan(10));
+    expect(revealed.viewState!.visibleBounds!.xMax, greaterThan(10));
+  });
+
+  testWidgets('coalesces direct streaming revision notifications', (
+    tester,
+  ) async {
+    final bravenController = BravenChartController();
+    final liveController = LiveStreamController(seriesId: 'series');
+    addTearDown(bravenController.dispose);
+    addTearDown(liveController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: bravenController,
+          liveStreamController: liveController,
+          series: [_series()],
+        ),
+      ),
+    );
+    await tester.pump();
+    final before = bravenController.effectiveDocumentRevision.value;
+    var signalChanges = 0;
+    void listener() => signalChanges++;
+    bravenController.effectiveDocumentRevision.addListener(listener);
+    addTearDown(
+      () => bravenController.effectiveDocumentRevision.removeListener(listener),
+    );
+
+    for (var index = 0; index < 20; index++) {
+      liveController.addPoint(
+        ChartDataPoint(x: index + 2, y: index.toDouble()),
+      );
+    }
+    await tester.pump();
+    await tester.pump();
+    expect(liveController.effectiveDataRevision.value, greaterThan(0));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(signalChanges, 0);
+    expect(bravenController.effectiveDocumentRevision.value, same(before));
+
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(signalChanges, 1);
+    expect(
+      bravenController.effectiveDocumentRevision.value,
+      isNot(same(before)),
+    );
   });
 
   testWidgets('supports declared-source and configuration-only scopes', (
@@ -484,6 +740,14 @@ void main() {
     firstController.setSeriesVisible('first', false);
     await tester.pump();
 
+    final firstBeforeSelection = _success(
+      firstController.extractDocument(),
+    ).value;
+    firstController.selectPoint(
+      const ChartPointRef(seriesId: 'first', pointIndex: 0),
+      revision: firstBeforeSelection.revision,
+    );
+
     final first = _success(
       firstController.extractDocument(
         const ChartDocumentExtractOptions(documentId: 'first-document'),
@@ -497,8 +761,12 @@ void main() {
 
     expect(first.document.series.single.id, 'first');
     expect(first.viewState?.hiddenSeriesIds, {'first'});
+    expect(first.viewState?.selectedPointRefs, const [
+      ChartPointRef(seriesId: 'first', pointIndex: 0),
+    ]);
     expect(second.document.series.single.id, 'second');
     expect(second.viewState?.hiddenSeriesIds, isEmpty);
+    expect(second.viewState?.selectedPointRefs, isEmpty);
   });
 }
 

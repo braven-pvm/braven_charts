@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../artifacts/chart_view_state.dart';
 import 'chart_table_controller.dart';
 import 'chart_table_csv_download.dart';
 import 'chart_data_table_theme.dart';
@@ -10,7 +11,14 @@ import 'chart_table_export.dart';
 import 'chart_table_model.dart';
 import 'chart_table_options.dart';
 
-typedef ChartTableRowCallback = void Function(ChartTablePointReference point);
+/// Reports every chart point represented by one visible table row.
+///
+/// Long-form rows contain one reference. Wide-form rows contain one reference
+/// per populated series cell at the row's exact X value.
+typedef ChartTableRowCallback = void Function(List<ChartPointRef> points);
+
+/// Reports the row currently under the pointer, or null when it exits.
+typedef ChartTableRowHoverCallback = void Function(List<ChartPointRef>? points);
 
 /// Accessible, horizontally scrollable, row-virtualized chart data table.
 ///
@@ -29,7 +37,10 @@ class ChartDataTable extends StatefulWidget {
     this.isLoading = false,
     this.errorMessage,
     this.onRowFocused,
+    this.onRowFocusCleared,
+    this.onRowHoverChanged,
     this.onRowActivated,
+    this.selectedPointRefs = const <ChartPointRef>{},
     this.onCopyRow,
     this.onCopyDataset,
     this.onExportCsv,
@@ -55,8 +66,25 @@ class ChartDataTable extends StatefulWidget {
   final ChartTableController? controller;
   final bool isLoading;
   final String? errorMessage;
+
+  /// Called with every point represented by a row when it gains keyboard focus.
   final ChartTableRowCallback? onRowFocused;
+
+  /// Called when keyboard focus leaves a focused row.
+  final VoidCallback? onRowFocusCleared;
+
+  /// Reports pointer entry with row refs and pointer exit with null.
+  final ChartTableRowHoverCallback? onRowHoverChanged;
+
+  /// Called by row click or Enter with every point represented by that row.
   final ChartTableRowCallback? onRowActivated;
+
+  /// Durable chart-point selection mirrored into visible table rows.
+  ///
+  /// A long row is selected when its point is present. A wide exact-X row is
+  /// selected only when every populated series point represented by that row
+  /// is present, so a partial point selection never implies whole-row state.
+  final Set<ChartPointRef> selectedPointRefs;
 
   /// Overrides the default clipboard delivery for one requested visible row.
   ///
@@ -453,11 +481,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
   }) {
     if (model.options.rowLayout == ChartTableRowLayout.wide) {
       final row = wideRows[index];
-      final firstReference = row.cells.values.first.reference;
+      final references = List<ChartPointRef>.unmodifiable(
+        row.cells.values.map((cell) => cell.reference),
+      );
       return _FocusableTableRow(
         key: ValueKey(row.rowId),
         semanticsLabel: 'Row ${index + 1}, ${_wideSemantics(row, model)}',
-        reference: firstReference,
+        references: references,
+        selected: _isRowSelected(references),
         rowIndex: index,
         theme: theme,
         focusNode: _focusNodeFor(row.rowId),
@@ -471,6 +502,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onMoveHorizontal: (delta) =>
             _moveHorizontal(delta, theme.seriesColumnWidth),
         onFocused: widget.onRowFocused,
+        onFocusCleared: widget.onRowFocusCleared,
+        onHoverChanged: widget.onRowHoverChanged,
         onActivated: widget.onRowActivated,
         children: [
           if (widget.showCopyRowAction)
@@ -506,7 +539,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
       key: ValueKey(row.rowId),
       semanticsLabel:
           'Row ${index + 1}, ${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}${row.unit == null ? '' : ' ${row.unit}'}, ${row.isValid ? 'valid point' : 'invalid point'}',
-      reference: row.reference,
+      references: List.unmodifiable([row.reference]),
+      selected: _isRowSelected([row.reference]),
       rowIndex: index,
       theme: theme,
       focusNode: _focusNodeFor(row.rowId),
@@ -520,6 +554,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
       onMoveHorizontal: (delta) =>
           _moveHorizontal(delta, theme.seriesColumnWidth),
       onFocused: widget.onRowFocused,
+      onFocusCleared: widget.onRowFocusCleared,
+      onHoverChanged: widget.onRowHoverChanged,
       onActivated: widget.onRowActivated,
       children: [
         if (widget.showCopyRowAction)
@@ -566,6 +602,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
         ),
       ],
     );
+  }
+
+  bool _isRowSelected(Iterable<ChartPointRef> references) {
+    final points = references.toList(growable: false);
+    return points.isNotEmpty && points.every(widget.selectedPointRefs.contains);
   }
 
   Widget _buildWideValueCell(
@@ -960,7 +1001,8 @@ class _FocusableTableRow extends StatefulWidget {
   const _FocusableTableRow({
     super.key,
     required this.semanticsLabel,
-    required this.reference,
+    required this.references,
+    required this.selected,
     required this.children,
     required this.rowIndex,
     required this.theme,
@@ -968,11 +1010,14 @@ class _FocusableTableRow extends StatefulWidget {
     required this.onMoveVertical,
     required this.onMoveHorizontal,
     this.onFocused,
+    this.onFocusCleared,
+    this.onHoverChanged,
     this.onActivated,
   });
 
   final String semanticsLabel;
-  final ChartTablePointReference reference;
+  final List<ChartPointRef> references;
+  final bool selected;
   final List<Widget> children;
   final int rowIndex;
   final _ResolvedTableTheme theme;
@@ -980,6 +1025,8 @@ class _FocusableTableRow extends StatefulWidget {
   final ValueChanged<int> onMoveVertical;
   final ValueChanged<int> onMoveHorizontal;
   final ChartTableRowCallback? onFocused;
+  final VoidCallback? onFocusCleared;
+  final ChartTableRowHoverCallback? onHoverChanged;
   final ChartTableRowCallback? onActivated;
 
   @override
@@ -995,6 +1042,7 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
       label: widget.semanticsLabel,
       button: widget.onActivated != null,
       focused: _focused,
+      selected: widget.selected,
       child: FocusableActionDetector(
         focusNode: widget.focusNode,
         shortcuts: const {
@@ -1026,14 +1074,18 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
           ),
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
-              widget.onActivated?.call(widget.reference);
+              widget.onActivated?.call(widget.references);
               return null;
             },
           ),
         },
         onFocusChange: (focused) {
           if (_focused != focused) setState(() => _focused = focused);
-          if (focused) widget.onFocused?.call(widget.reference);
+          if (focused) {
+            widget.onFocused?.call(widget.references);
+          } else {
+            widget.onFocusCleared?.call();
+          }
         },
         mouseCursor: widget.onActivated == null
             ? MouseCursor.defer
@@ -1042,14 +1094,16 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
           canRequestFocus: false,
           onTap: widget.onActivated == null
               ? null
-              : () => widget.onActivated!(widget.reference),
+              : () => widget.onActivated!(widget.references),
           onHover: (hovering) {
-            if (hovering) widget.onFocused?.call(widget.reference);
+            widget.onHoverChanged?.call(hovering ? widget.references : null);
           },
           child: Container(
             height: widget.theme.rowHeight,
             decoration: BoxDecoration(
-              color: _focused
+              color: widget.selected
+                  ? widget.theme.selectedRowColor
+                  : _focused
                   ? widget.theme.focusedRowColor
                   : widget.rowIndex.isEven
                   ? widget.theme.evenRowColor
@@ -1058,11 +1112,33 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
                 bottom: BorderSide(color: widget.theme.dividerColor),
               ),
             ),
-            foregroundDecoration: _focused
+            foregroundDecoration: _focused || widget.selected
                 ? BoxDecoration(
-                    border: Border.all(
-                      color: widget.theme.focusBorderColor,
-                      width: widget.theme.focusBorderWidth,
+                    border: Border(
+                      left: BorderSide(
+                        color: widget.theme.focusBorderColor,
+                        width: widget.selected
+                            ? math.max(4, widget.theme.focusBorderWidth)
+                            : widget.theme.focusBorderWidth,
+                      ),
+                      top: _focused
+                          ? BorderSide(
+                              color: widget.theme.focusBorderColor,
+                              width: widget.theme.focusBorderWidth,
+                            )
+                          : BorderSide.none,
+                      right: _focused
+                          ? BorderSide(
+                              color: widget.theme.focusBorderColor,
+                              width: widget.theme.focusBorderWidth,
+                            )
+                          : BorderSide.none,
+                      bottom: _focused
+                          ? BorderSide(
+                              color: widget.theme.focusBorderColor,
+                              width: widget.theme.focusBorderWidth,
+                            )
+                          : BorderSide.none,
                     ),
                   )
                 : null,
@@ -1210,6 +1286,7 @@ class _ResolvedTableTheme {
     required this.oddRowColor,
     required this.dividerColor,
     required this.focusedRowColor,
+    required this.selectedRowColor,
     required this.focusBorderColor,
     required this.focusBorderWidth,
     required this.headerTextStyle,
@@ -1266,6 +1343,9 @@ class _ResolvedTableTheme {
               ? colors.outline
               : colors.outlineVariant.withValues(alpha: 0.65)),
       focusedRowColor: source.focusedRowColor ?? colors.primaryContainer,
+      selectedRowColor:
+          source.selectedRowColor ??
+          colors.primaryContainer.withValues(alpha: 0.72),
       focusBorderColor: colors.primary,
       focusBorderWidth: highContrast ? 3 : 2,
       headerTextStyle: headerTextStyle,
@@ -1302,6 +1382,7 @@ class _ResolvedTableTheme {
   final Color oddRowColor;
   final Color dividerColor;
   final Color focusedRowColor;
+  final Color selectedRowColor;
   final Color focusBorderColor;
   final double focusBorderWidth;
   final TextStyle headerTextStyle;

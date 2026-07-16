@@ -55,6 +55,9 @@ void main() {
           yMax: 19,
         ),
         hiddenSeriesIds: const {'hidden'},
+        selectedPointRefs: const [
+          ChartPointRef(seriesId: 'series', pointIndex: 1),
+        ],
       );
 
       var selected = 0;
@@ -81,6 +84,9 @@ void main() {
       expect(hydrated.viewState?.hiddenSeriesIds, {'hidden'});
       expect(hydrated.viewState?.visibleBounds?.xMin, 1.25);
       expect(hydrated.viewState?.visibleBounds?.xMax, 1.75);
+      expect(hydratedController.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'series', pointIndex: 1),
+      });
       expect(selected, 1);
       expect(tester.takeException(), isNull);
     },
@@ -372,12 +378,23 @@ void main() {
     await tester.pump();
     firstController.setSeriesVisible('series', false);
     await tester.pump();
+    final firstBeforeSelection = _success(
+      firstController.extractDocument(),
+    ).value;
+    firstController.selectPoint(
+      const ChartPointRef(seriesId: 'series', pointIndex: 0),
+      revision: firstBeforeSelection.revision,
+    );
 
     final first = _success(firstController.extractDocument()).value;
     final second = _success(secondController.extractDocument()).value;
 
     expect(first.viewState?.hiddenSeriesIds, {'series'});
+    expect(first.viewState?.selectedPointRefs, const [
+      ChartPointRef(seriesId: 'series', pointIndex: 0),
+    ]);
     expect(second.viewState?.hiddenSeriesIds, isEmpty);
+    expect(second.viewState?.selectedPointRefs, isEmpty);
   });
 
   test('rehydrates registered formatters and warns on safe fallback', () {

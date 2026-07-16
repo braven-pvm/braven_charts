@@ -96,13 +96,52 @@ class ChartDocumentExtractOptions {
   final int maxSnapshotAttempts;
 }
 
+/// Opaque identity for one effective mounted-chart source revision.
+///
+/// Compare revisions with `==`. Their representation is deliberately hidden;
+/// callers must not infer ordering or attempt to recreate a matching value.
+@immutable
+class ChartDocumentRevision {
+  const ChartDocumentRevision._(this._identity);
+
+  final Object _identity;
+
+  /// Creates a new package-owned opaque identity.
+  ///
+  /// This member is internal infrastructure and is not a host revision API.
+  @internal
+  static ChartDocumentRevision next() =>
+      ChartDocumentRevision._(_ChartDocumentRevisionIdentity());
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChartDocumentRevision && identical(_identity, other._identity);
+
+  @override
+  int get hashCode => identityHashCode(_identity);
+
+  @override
+  String toString() => 'ChartDocumentRevision(opaque)';
+}
+
+class _ChartDocumentRevisionIdentity {
+  _ChartDocumentRevisionIdentity();
+}
+
 /// An immutable document and optional view state captured at one revision.
 @immutable
 class ChartDocumentSnapshot {
-  const ChartDocumentSnapshot({required this.document, this.viewState});
+  ChartDocumentSnapshot({
+    required this.document,
+    this.viewState,
+    ChartDocumentRevision? revision,
+  }) : revision = revision ?? ChartDocumentRevision.next();
 
   final ChartDocument document;
   final ChartViewState? viewState;
+
+  /// Effective mounted-source revision represented by this snapshot.
+  final ChartDocumentRevision revision;
 }
 
 typedef ChartDocumentExtractionHandler =
@@ -175,6 +214,7 @@ abstract final class ChartDocumentExtractor {
     required ChartDocumentExtractionSource source,
     required ChartDocumentExtractOptions options,
     required int revision,
+    ChartDocumentRevision? effectiveRevision,
   }) {
     final warnings = <ChartArtifactWarning>[];
     try {
@@ -290,6 +330,7 @@ abstract final class ChartDocumentExtractor {
             extensions: {'dataScope': JsonStringValue(options.dataScope.name)},
           ),
           viewState: viewState,
+          revision: effectiveRevision,
         ),
         warnings: warnings,
       );

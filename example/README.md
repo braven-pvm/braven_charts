@@ -5,6 +5,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open the public Braven Charts showcase →**](https://braven-pvm.github.io/braven_charts/)
 
+[**Open Chart Workbench directly →**](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
+
 ## Run locally
 
 From the repository root:
@@ -18,7 +20,7 @@ flutter run -d chrome
 For a release build:
 
 ```bash
-flutter build web --release
+flutter build web --release --base-href /braven_charts/
 ```
 
 ## Feature map
@@ -39,6 +41,7 @@ flutter build web --release
 | Loading States | Animated chart skeleton, circular/linear progress, empty results, and custom state content |
 | Performance | Large data sets and rendering diagnostics |
 | Chart Artifacts | Capture effective chart state, switch between chart/table/restored views, inspect canonical JSON, and restore an independent chart |
+| Chart Workbench | Keep one chart mounted across Chart/Data/Split views, link rows to points, inspect captured JSON and diagnostics, recover table failures, refresh a bounded-stream snapshot deliberately, and prove three hydrated charts remain independent |
 
 Additional focused pages cover minor ticks, explicit render ranges, point
 labels, series styling, power/lactate analysis, and lactate-threshold chord
@@ -69,3 +72,6 @@ to show the interaction engine and application states in more detail.
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
 Chart Artifacts page, see [Portable chart artifacts](../doc/chart_artifacts.md).
+For the reusable Chart/Data/Split composition shown by Chart Workbench, see
+[Chart Workbench](../doc/chart_workbench.md) and
+[Chart Document Comparison](../doc/chart_comparison.md).
