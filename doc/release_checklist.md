@@ -1,7 +1,7 @@
 # Pub.dev release checklist
 
-This checklist is for Braven Charts 0.1.0. Run every validation from a clean
-release branch before publishing.
+Run every validation from a clean release branch before publishing a Braven
+Charts release.
 
 ## Package identity and ownership
 
@@ -31,7 +31,8 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] `flutter analyze lib`
 - [ ] Analyze the release-facing example separately.
 - [ ] Run the package test suite and focused showcase widget tests.
-- [ ] `dart doc` completes without unresolved references.
+- [ ] `dart pub global run dartdoc --no-validate-links` completes with zero
+  warnings and zero errors.
 - [ ] `flutter pub outdated` is reviewed.
 - [ ] Run `pana` against a disposable copy of the package and review every lost
   pub point.

@@ -5,7 +5,14 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.3.0 - 2026-07-16
+
+### Added
+- Expand range and threshold annotation label placement from five positions to
+  a complete 3x3 anchor model while retaining all legacy position names.
+- Standardize native annotation editors on a shared sticky header, consistent
+  actions, a compact spatial label-position selector, and the universal color
+  palette for every annotation color field.
 
 ### Fixed
 - Preserve the remaining normalized multi-axis series, visible-axis slots, and
