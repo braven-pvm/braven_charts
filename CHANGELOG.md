@@ -5,6 +5,12 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.4 - 2026-07-16
+
+### Changed
+- Recompose the pub.dev introduction as two compact analytical stills followed by one full-width animated interaction example.
+- Add deterministic, independently rendered media-capture surfaces for the light threshold and dark power-duration charts.
+
 ## 0.1.3 - 2026-07-15
 
 ### Fixed
