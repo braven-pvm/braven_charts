@@ -1432,7 +1432,9 @@ class ChartRenderBox extends RenderBox {
     // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
     // This ensures consistent layout whether using single or multiple axes.
     // Previously, single-axis mode used hardcoded 60px margin which caused gaps.
-    final effectiveAxes = _getEffectiveYAxes();
+    final effectiveAxes = _yAxis == null
+        ? const <YAxisConfig>[]
+        : _getEffectiveYAxes();
     if (effectiveAxes.isNotEmpty) {
       final axisBounds = _computeAxisBounds();
       final axisWidths = _multiAxisManager.computeAxisWidths(
@@ -1577,6 +1579,32 @@ class ChartRenderBox extends RenderBox {
             _seriesCacheManager.invalidate();
           }
         }
+      }
+    } else if (_elementGenerator != null) {
+      // Radial layouts do not have Cartesian axes, but their element generator
+      // still needs the resolved plot dimensions. Keep a neutral transform as
+      // the render-box sizing contract without exposing axes or data scaling.
+      final needsAxislessTransform =
+          _transform == null ||
+          _transform!.dataXMin != 0 ||
+          _transform!.dataXMax != 1 ||
+          _transform!.dataYMin != 0 ||
+          _transform!.dataYMax != 1 ||
+          _transform!.plotWidth != _plotArea.width ||
+          _transform!.plotHeight != _plotArea.height;
+      if (needsAxislessTransform) {
+        _transform = ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: 0,
+          dataYMax: 1,
+          plotWidth: _plotArea.width,
+          plotHeight: _plotArea.height,
+          invertY: true,
+        );
+        _originalTransform = _transform!.copyWith();
+        _rebuildElementsWithTransform();
+        _seriesCacheManager.invalidate();
       }
     }
 
@@ -1875,7 +1903,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
-    final seriesElements = _elements.whereType<SeriesElement>().toList()
+    final seriesElements = _elements.whereType<DataSeriesElement>().toList()
       ..sort((a, b) => a.priority.compareTo(b.priority));
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
@@ -1898,7 +1926,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint each series with current transform
     for (final series in seriesElements) {
-      if (_transform != null) {
+      if (_transform != null && series is SeriesElement) {
         // CRITICAL: Update transform before painting (enables path caching!)
         // This allows SeriesElement to cache paths and only regenerate when transform changes.
 
@@ -2285,7 +2313,9 @@ class ChartRenderBox extends RenderBox {
 
     // Paint axes (behind all chart elements)
     // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
-    _paintMultipleYAxes(canvas);
+    if (_yAxis != null) {
+      _paintMultipleYAxes(canvas);
+    }
 
     // Paint X-axis using XAxisPainter (unified approach)
     if (_xAxis != null) {
@@ -2331,7 +2361,8 @@ class ChartRenderBox extends RenderBox {
     final backgroundElements =
         _elements
             .where(
-              (e) => e is! SeriesElement && e.renderOrder < RenderOrder.series,
+              (e) =>
+                  e is! DataSeriesElement && e.renderOrder < RenderOrder.series,
             )
             .toList()
           ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
@@ -2408,7 +2439,9 @@ class ChartRenderBox extends RenderBox {
     final foregroundElements =
         _elements
             .where(
-              (e) => e is! SeriesElement && e.renderOrder >= RenderOrder.series,
+              (e) =>
+                  e is! DataSeriesElement &&
+                  e.renderOrder >= RenderOrder.series,
             )
             .toList()
           ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));

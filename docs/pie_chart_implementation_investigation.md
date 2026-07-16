@@ -1,6 +1,6 @@
 # Pie chart implementation investigation
 
-Status: **In progress — Slice 1 complete; Slice 2 rendering next**
+Status: **In progress — Slices 1–2 complete locally; live rendering review open**
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -381,6 +381,8 @@ Status: **Complete locally.**
 
 ### Slice 2: rendering and responsive labels
 
+Status: **Complete locally and available in the live showcase review.**
+
 - Add `PieSeriesElement` and radial layout.
 - Integrate cache invalidation and theme palette resolution.
 - Add borders, gaps, explode geometry, and inside/outside labels.
@@ -404,8 +406,8 @@ Status: **Complete locally.**
 
 ### Slice 5: showcase, documentation, and release gates
 
-- Polish the already-live Pie Charts showcase page and add Chart Types
-  integration.
+- Polish the already-live Pie Charts showcase page and its Chart Types
+  integration after interaction and data surfaces land.
 - Complete public guides, examples, dartdoc, and feature matrix.
 - Run performance, package, showcase, publish, and live web-review gates.
 

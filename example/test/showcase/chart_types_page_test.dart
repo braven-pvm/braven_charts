@@ -63,6 +63,26 @@ void main() {
     );
     expect(find.text('Scatter chart playground'), findsOneWidget);
     expect(find.text('Marker Appearance'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('chart-type-ribbon')),
+      const Offset(-360, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('chart-type-preview-pie')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('chart-type-preview-pie')));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      find.byKey(const ValueKey('selected-chart-type-pie')),
+      findsOneWidget,
+    );
+    expect(find.text('Pie chart playground'), findsOneWidget);
+    expect(find.textContaining('5 categories'), findsOneWidget);
+    expect(find.text('Show Second Series'), findsNothing);
   });
 
   testWidgets('chart-defining controls precede generic display controls', (

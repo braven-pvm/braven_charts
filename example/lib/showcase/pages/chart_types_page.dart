@@ -14,6 +14,7 @@ const _availableChartTypes = <ChartType>[
   ChartType.area,
   ChartType.bar,
   ChartType.scatter,
+  ChartType.pie,
 ];
 
 /// A browse-then-configure showcase for every primary chart type.
@@ -99,12 +100,13 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             labelBuilder: (value) => _chartTypeLabel(value),
             onChanged: _selectChartType,
           ),
-          BoolOption(
-            label: 'Show Second Series',
-            value: _showSecondSeries,
-            onChanged: (value) => setState(() => _showSecondSeries = value),
-            subtitle: 'Compare observed data with a benchmark',
-          ),
+          if (_chartType != ChartType.pie)
+            BoolOption(
+              label: 'Show Second Series',
+              value: _showSecondSeries,
+              onChanged: (value) => setState(() => _showSecondSeries = value),
+              subtitle: 'Compare observed data with a benchmark',
+            ),
         ],
       ),
       if (_chartType == ChartType.line || _chartType == ChartType.area)
@@ -411,25 +413,58 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             ),
         ];
       case ChartType.pie:
-        throw StateError(
-          'Pie moves into Chart Types after its radial renderer is available',
-        );
+        const categories = [
+          'Subscriptions',
+          'Services',
+          'Hardware',
+          'Training',
+          'Other',
+        ];
+        final categoryCount = preview ? 4 : categories.length;
+        return [
+          PieChartSeries.fromMap(
+            id: preview ? 'preview-pie' : 'pie-contributions',
+            name: 'Contribution',
+            unit: 'units',
+            values: {
+              for (var index = 0; index < categoryCount; index++)
+                categories[index]: _observedData[index].y.clamp(
+                  1,
+                  double.infinity,
+                ),
+            },
+            pieStyle: PieChartStyle(
+              radiusFactor: preview ? 0.82 : 0.86,
+              sliceGap: preview ? 1 : 2,
+              borderWidth: preview ? 0 : 1,
+            ),
+            dataLabels: PieDataLabelConfig(
+              isVisible: !preview,
+              position: PieDataLabelPosition.outside,
+              content: PieDataLabelContent.categoryAndPercentage,
+            ),
+          ),
+        ];
     }
   }
 
   String _mainChartSummary() {
-    final seriesCount = _showSecondSeries ? 2 : 1;
+    final seriesCount = _chartType == ChartType.pie
+        ? 1
+        : (_showSecondSeries ? 2 : 1);
     final configuration = switch (_chartType) {
       ChartType.line => '${_interpolation.name} interpolation',
       ChartType.area =>
         '${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill',
       ChartType.bar => '${(_barWidthPercent * 100).round()}% bar width',
       ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
-      ChartType.pie => 'Radial renderer pending',
+      ChartType.pie => '5 categories · collision-aware outside labels',
     };
 
-    return '$seriesCount ${seriesCount == 1 ? 'series' : 'series'} · '
-        '${_observedData.length} points each · $configuration · '
+    final dataSummary = _chartType == ChartType.pie
+        ? '1 series'
+        : '$seriesCount series · ${_observedData.length} points each';
+    return '$dataSummary · $configuration · '
         '${_themeName()} theme';
   }
 

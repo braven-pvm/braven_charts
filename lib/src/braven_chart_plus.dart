@@ -26,6 +26,7 @@ import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
 import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
+import 'elements/pie_series_element.dart';
 import 'elements/series_element.dart';
 import 'interaction/core/chart_element.dart';
 import 'interaction/core/coordinator.dart';
@@ -897,6 +898,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   final Set<ChartPointRef> _focusedPointRefs = <ChartPointRef>{};
   final Set<ChartPointRef> _selectedPointRefs = <ChartPointRef>{};
 
+  ChartLayoutKind _layoutKind = ChartLayoutKind.cartesian;
+  double _textScaleFactor = 1;
+
   // Element generator function for pan/zoom regeneration
   List<ChartElement> Function(ChartTransform)? _elementGenerator;
 
@@ -1169,6 +1173,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     _syncControllerPointState();
     _scheduleEffectiveDocumentRevisionPublish();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextTextScale = MediaQuery.maybeOf(context)?.textScaler.scale(1) ?? 1;
+    if (nextTextScale != _textScaleFactor) {
+      _textScaleFactor = nextTextScale;
+      _rebuildElements();
+    }
   }
 
   @override
@@ -1888,12 +1902,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     _resolvedChartData = _resolveChartData();
     _effectiveDataSeries = _resolvedChartData.renderSeries;
-    final layoutKind = ChartLayoutResolver.resolve(
-      _resolvedChartData.allSeries,
-    );
-    if (layoutKind == ChartLayoutKind.radial) {
-      throw UnsupportedError(
-        'PieChartSeries rendering is introduced by the radial rendering slice',
+    _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
+    if (_layoutKind == ChartLayoutKind.radial &&
+        _resolveEffectiveAnnotations().isNotEmpty) {
+      throw ArgumentError(
+        'Pie charts do not support Cartesian annotations in the first release',
       );
     }
     _pruneInvalidPointRefs();
@@ -2064,14 +2077,35 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Removed excessive debugPrint (element generator executing)
 
       // Generate series elements from effective series (with streaming data)
-      final elements = DataConverter.seriesToElements(
-        series: _effectiveRenderSeries,
-        transform: transform,
-        theme: widget.theme,
-        coordinator: _coordinator,
-        focusedPointRefs: _focusedPointRefs,
-        selectedPointRefs: _selectedPointRefs,
-      ).cast<ChartElement>().toList();
+      final List<ChartElement> elements;
+      if (_layoutKind == ChartLayoutKind.radial) {
+        if (_effectiveRenderSeries.isEmpty) {
+          elements = <ChartElement>[];
+        } else {
+          final pieSeries = _effectiveRenderSeries.single as PieChartSeries;
+          elements = <ChartElement>[
+            PieSeriesElement(
+              series: pieSeries,
+              size: Size(transform.plotWidth, transform.plotHeight),
+              theme: widget.theme ?? ChartTheme.light,
+              textScaleFactor: _textScaleFactor,
+              selectedPointIndices: {
+                for (final ref in _selectedPointRefs)
+                  if (ref.seriesId == pieSeries.id) ref.pointIndex,
+              },
+            ),
+          ];
+        }
+      } else {
+        elements = DataConverter.seriesToElements(
+          series: _effectiveRenderSeries,
+          transform: transform,
+          theme: widget.theme,
+          coordinator: _coordinator,
+          focusedPointRefs: _focusedPointRefs,
+          selectedPointRefs: _selectedPointRefs,
+        ).cast<ChartElement>().toList();
+      }
 
       // Convert annotations to elements
       // Removed excessive debugPrints (annotation conversion details)
@@ -2143,7 +2177,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
 
       // Auto-generate legend overlay if showLegend is true
-      if (widget.showLegend && _effectiveRenderSeries.isNotEmpty) {
+      if (widget.showLegend &&
+          _layoutKind == ChartLayoutKind.cartesian &&
+          _effectiveRenderSeries.isNotEmpty) {
         // Use widget legendStyle if provided, otherwise fall back to theme's legendStyle
         final effectiveLegendStyle =
             widget.legendStyle ??
@@ -3825,9 +3861,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         chartTheme: widget.theme,
       );
     } else {
-      final hasData = _effectiveDataSeries.any(
-        (series) => series.points.any((point) => point.isValid),
-      );
+      final hasData = _layoutKind == ChartLayoutKind.radial
+          ? _effectiveDataSeries.whereType<PieChartSeries>().any(
+              (series) => series.total > 0,
+            )
+          : _effectiveDataSeries.any(
+              (series) => series.points.any((point) => point.isValid),
+            );
       final mustKeepRenderBoxMounted = widget.liveStreamController != null;
       if (!hasData && !mustKeepRenderBoxMounted) {
         content = ChartEmptyStateView(
@@ -3860,10 +3900,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BrowserContextMenu.disableContextMenu();
     }
 
+    final isRadial = _layoutKind == ChartLayoutKind.radial;
+    final effectiveInteractionConfig = isRadial
+        ? InteractionConfig.none()
+        : widget.interactionConfig;
+
     final Widget renderedChart = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
+        if (isRadial) {
+          return KeyEventResult.ignored;
+        }
         _handleKeyEvent(event);
         return KeyEventResult.handled;
       },
@@ -3871,7 +3919,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         builder: (context) {
           final hasFocus = _focusNode.hasFocus;
           final enableFocusOnHover =
-              widget.interactionConfig?.enableFocusOnHover ?? true;
+              effectiveInteractionConfig?.enableFocusOnHover ?? true;
           return MouseRegion(
             onEnter: (_) {
               if (enableFocusOnHover && !_focusNode.hasFocus) {
@@ -3934,28 +3982,33 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         spatialIndex: _spatialIndex,
                         elementGenerator: _elementGenerator,
                         elementGeneratorVersion: _elementGeneratorVersion,
-                        xAxis: _xAxis,
-                        xAxisConfig: widget.xAxisConfig,
-                        yAxis: _yAxis,
-                        primaryYAxisConfig: widget.yAxis,
+                        xAxis: isRadial ? null : _xAxis,
+                        xAxisConfig: isRadial ? null : widget.xAxisConfig,
+                        yAxis: isRadial ? null : _yAxis,
+                        primaryYAxisConfig: isRadial ? null : widget.yAxis,
                         theme: widget.theme,
                         tooltipsEnabled:
-                            widget.interactionConfig?.tooltip.enabled ?? true,
+                            !isRadial &&
+                            (widget.interactionConfig?.tooltip.enabled ?? true),
                         // Prioritize widget's direct showXScrollbar/showYScrollbar properties
                         // InteractionConfig's defaults are false, so ?? doesn't work correctly
-                        showXScrollbar: widget.showXScrollbar,
-                        showYScrollbar: widget.showYScrollbar,
+                        showXScrollbar: !isRadial && widget.showXScrollbar,
+                        showYScrollbar: !isRadial && widget.showYScrollbar,
                         scrollbarTheme: widget.scrollbarTheme,
-                        interactionConfig: widget.interactionConfig,
+                        interactionConfig: effectiveInteractionConfig,
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
-                        gridConfig: widget.grid,
+                        gridConfig: isRadial ? null : widget.grid,
                         // Multi-axis parameters
-                        normalizationMode: _effectiveNormalizationMode,
-                        series: _effectiveRenderSeries,
+                        normalizationMode: isRadial
+                            ? NormalizationMode.none
+                            : _effectiveNormalizationMode,
+                        series: isRadial
+                            ? const <ChartSeries>[]
+                            : _effectiveRenderSeries,
                         maxAxesPerSide: widget.maxAxesPerSide,
                         axisSwapMode: widget.axisSwapMode,
                       ),

@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import '../../models/chart_series.dart';
 import 'element_types.dart';
 
 /// Base interface for all interactive chart elements.
@@ -124,6 +125,21 @@ abstract class ChartElement {
   ///
   /// Immutable pattern for state updates without rebuilding entire tree.
   ChartElement copyWith({bool? isHovered, bool? isSelected});
+}
+
+/// Shared contract for cached elements that render chart data series.
+///
+/// Cartesian and radial series use different geometry, but the render pipeline
+/// can cache and order them through this common boundary.
+abstract interface class DataSeriesElement implements ChartElement {
+  /// Source public series represented by this element.
+  ChartSeries get series;
+
+  /// Stable series position used for theme palette resolution.
+  int get seriesIndex;
+
+  /// Number of transported points used by lightweight cache validation.
+  int get pointCount;
 }
 
 /// Mixin for elements with resize handles.

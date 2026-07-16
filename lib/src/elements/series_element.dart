@@ -128,7 +128,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 /// - Selectable: Click to select entire series
 /// - Hoverable: Hover to highlight series
 /// - Not draggable: Series lines are stationary (datapoints can be dragged separately)
-class SeriesElement implements ChartElement {
+class SeriesElement implements DataSeriesElement {
   SeriesElement({
     required this.series,
     required this.transform,
@@ -150,11 +150,16 @@ class SeriesElement implements ChartElement {
     _computeBounds();
   }
 
+  @override
   ChartSeries series; // Made mutable for updateSeries()
   final ChartTransform transform; // Initial transform for bounds computation
   ChartTransform _currentTransform; // Current transform for painting
   final SeriesTheme? seriesTheme;
+  @override
   final int seriesIndex;
+
+  @override
+  int get pointCount => series.points.length;
   final ChartInteractionCoordinator? coordinator;
 
   /// Point indices receiving transient linked focus from another surface.
