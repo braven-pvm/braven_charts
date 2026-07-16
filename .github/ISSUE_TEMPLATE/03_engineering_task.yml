@@ -1,0 +1,144 @@
+name: Scoped engineering task
+description: Define an implementation-ready maintainer task with explicit scope and verification.
+title: "[Task]: "
+labels:
+  - "type: task"
+  - "status: needs-triage"
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for maintainers turning a confirmed problem, specification, or release requirement into an executable work item. The issue should become the contract shared by the implementer, reviewer, and coding agent.
+
+  - type: input
+    id: source
+    attributes:
+      label: Source issue, specification, or decision
+      description: Link the upstream issue, document, discussion, or release requirement.
+      placeholder: "Example: #123 or docs/mobile_interaction.md"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Rendering and layout
+        - Series and interpolation
+        - Axes and normalization
+        - Interaction, zoom, pan, or tracking
+        - Annotations
+        - Streaming and live data
+        - Tables, export, or artifacts
+        - Theming and visual states
+        - Showcase or documentation
+        - Packaging or release
+        - Repository infrastructure
+        - Cross-cutting
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective and user value
+      description: State the concrete outcome and why it matters to package consumers or maintainers.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current state and evidence
+      description: Record confirmed behavior, reproduction evidence, relevant architecture, and why the task is needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: In scope
+      description: List the exact behavior, interfaces, documentation, and tests this task owns.
+      placeholder: |
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Name adjacent work that must not be silently absorbed into this task.
+      placeholder: |
+        -
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: interfaces
+    attributes:
+      label: Interfaces and invariants
+      description: Identify public APIs, controllers, codecs, render paths, persisted formats, performance budgets, or compatibility guarantees that must remain coherent.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Every item should be observable and independently verifiable.
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Required verification
+      description: List exact automated commands and manual or visual checks. Include platforms and representative states where applicable.
+      value: |
+        Automated:
+        -
+
+        Manual or visual:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies, blockers, and sequencing
+      description: State what must merge, be decided, or be available before implementation can complete.
+    validations:
+      required: false
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and compatibility notes
+      description: Cover regression surfaces, migration requirements, performance risk, platform differences, and rollback considerations.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness checks
+      description: If these are not true, leave the issue in needs-triage rather than assigning it for implementation.
+      options:
+        - label: The objective and acceptance criteria describe behavior, not only files to edit.
+          required: true
+        - label: In-scope and out-of-scope boundaries are explicit.
+          required: true
+        - label: Verification can prove the runtime or user-facing result.
+          required: true
+        - label: Known blockers and unresolved decisions are recorded above.
+          required: true

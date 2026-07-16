@@ -9,20 +9,28 @@ Thank you for your interest in contributing to Braven Charts! We welcome contrib
 Found a bug or have a feature request?
 
 1. Check [existing issues](https://github.com/braven-pvm/braven_charts/issues)
-2. If it doesn't exist, [create a new issue](https://github.com/braven-pvm/braven_charts/issues/new)
-3. Use the appropriate template (Bug Report or Feature Request)
-4. Provide as much detail as possible
+2. If it does not exist, [choose the appropriate issue form](https://github.com/braven-pvm/braven_charts/issues/new/choose)
+3. Provide the requested reproduction, environment, scope, and observable acceptance criteria
+4. Remove credentials, private data, and proprietary datasets before submitting
+
+The forms cover bug reports, feature/API proposals, scoped maintainer tasks, and
+usage questions. See the [issue and delivery workflow](docs/issue_workflow.md)
+for triage states, the definition of ready, agent handoffs, and closure rules.
+Report security vulnerabilities through
+[GitHub private vulnerability reporting](https://github.com/braven-pvm/braven_charts/security/advisories/new),
+not a public issue.
 
 ### Pull Requests
 
 1. **Fork** the repository
-2. **Create a branch** for your feature (`git checkout -b feature/amazing-feature`)
-3. **Write tests first** (TDD approach)
-4. **Implement** your feature
-5. **Ensure all tests pass** (`flutter test`)
-6. **Commit** your changes (`git commit -m 'feat: Add amazing feature'`)
-7. **Push** to your branch (`git push origin feature/amazing-feature`)
-8. **Open a Pull Request**
+2. **Start from an implementation-ready issue** with explicit acceptance criteria
+3. **Create a branch** for the issue (`git checkout -b feature/amazing-feature`)
+4. **Write tests first** (TDD approach)
+5. **Implement only the agreed scope**
+6. **Run the issue's required verification** and the relevant regression suite
+7. **Commit** your changes (`git commit -m 'feat: add amazing feature'`)
+8. **Push** to your branch (`git push origin feature/amazing-feature`)
+9. **Open a pull request** using `Closes #<issue>` and complete every applicable section of the repository template
 
 ## 🧪 Test-Driven Development
 
@@ -237,45 +245,17 @@ All components must support:
 
 ## 📦 Pull Request Checklist
 
-Before submitting your PR, ensure:
+The repository's pull request template is applied automatically. It requires:
 
-- [ ] Tests are written and passing
-- [ ] Code follows style guidelines
-- [ ] Documentation is updated
-- [ ] Commit messages follow conventions
-- [ ] No breaking changes (or documented)
-- [ ] All CI checks pass
-- [ ] Code is reviewed (self-review first)
+- a closing link to the implementation issue;
+- the delivered outcome and explicit scope boundaries;
+- important implementation and compatibility decisions;
+- exact automated, manual, and visual verification results; and
+- residual risks, skipped checks, and linked follow-up work.
 
-### PR Template
-
-```markdown
-## Description
-
-Brief description of changes
-
-## Type of Change
-
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
-
-## Testing
-
-- [ ] Unit tests added/updated
-- [ ] Widget tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Web tests added/updated
-- [ ] All tests passing
-
-## Checklist
-
-- [ ] Code follows style guidelines
-- [ ] Self-review completed
-- [ ] Documentation updated
-- [ ] No console errors/warnings
-```
+Before submitting, also confirm that tests prove the requested behavior, touched
+Dart files analyze cleanly, documentation is current, commit messages follow the
+repository convention, and any breaking change has migration guidance.
 
 ## 🔍 Code Review Process
 
@@ -376,9 +356,8 @@ See the [public API overview](doc/api_reference.md) and repository source for st
 
 ## 🆘 Getting Help
 
-- **Questions?** Open a [Discussion](https://github.com/braven-pvm/braven_charts/discussions)
+- **Questions?** Open a [usage or API question](https://github.com/braven-pvm/braven_charts/issues/new?template=04_usage_question.yml)
 - **Stuck?** Ask in your PR or issue
-- **Chat:** Join our community (link TBD)
 
 ## 📜 License
 

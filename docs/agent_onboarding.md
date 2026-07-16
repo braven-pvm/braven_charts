@@ -3,6 +3,10 @@
 > **Purpose**: Get any AI agent or new developer productive in this codebase within minutes.
 > Read this FIRST before touching any code.
 
+For issue-driven work, also read [Issue and delivery workflow](issue_workflow.md)
+and treat the linked issue's scope, acceptance criteria, and verification as the
+shared implementation contract.
+
 ---
 
 ## Table of Contents

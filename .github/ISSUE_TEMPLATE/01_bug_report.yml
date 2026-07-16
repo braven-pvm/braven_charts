@@ -1,0 +1,177 @@
+name: Bug report
+description: Report reproducible incorrect behavior in the package or showcase.
+title: "[Bug]: "
+labels:
+  - bug
+  - "status: needs-triage"
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please provide the smallest reproducible case you can. Clear behavior, environment, and acceptance criteria let maintainers and coding agents investigate without guessing.
+
+        Do not disclose security vulnerabilities here. Use [GitHub private vulnerability reporting](https://github.com/braven-pvm/braven_charts/security/advisories/new).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Select the subsystem most closely related to the problem.
+      options:
+        - Rendering and layout
+        - Series and interpolation
+        - Axes and normalization
+        - Interaction, zoom, pan, or tracking
+        - Annotations
+        - Streaming and live data
+        - Tables, export, or artifacts
+        - Theming and visual states
+        - Showcase or documentation
+        - Packaging or release
+        - Unsure
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: Braven Charts version or commit
+      description: Provide the pub.dev version, Git commit, or dependency reference.
+      placeholder: "Example: 0.2.0 or 3d1fa4e7"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected platforms
+      description: Select every platform on which you reproduced the problem.
+      multiple: true
+      options:
+        - Web
+        - Android
+        - iOS
+        - Windows
+        - macOS
+        - Linux
+        - Not platform-specific
+    validations:
+      required: true
+
+  - type: input
+    id: flutter-version
+    attributes:
+      label: Flutter and Dart versions
+      description: Paste the relevant version line from `flutter --version`.
+      placeholder: "Flutter 3.x stable / Dart 3.x"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem summary
+      description: Describe the failure and its user or application impact in a few sentences.
+      placeholder: "What breaks, when does it break, and why does it matter?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: List deterministic steps, including the relevant chart configuration and state changes.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Minimal code sample or repository
+      description: Provide a reduced Dart example or a link to a repository that reproduces the problem. Remove secrets and proprietary data.
+      render: dart
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: State the observable result that should occur.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: State what happens instead, including errors or inconsistent state.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression status
+      options:
+        - Worked in an earlier Braven Charts version
+        - Has never worked
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact severity
+      description: Choose based on user impact, not implementation difficulty.
+      options:
+        - Blocker - prevents release or causes data loss
+        - High - core workflow is unusable with no practical workaround
+        - Medium - workflow is degraded but has a workaround
+        - Low - localized defect or visual inconsistency
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, recordings, or diagnostics
+      description: Drag files here or paste relevant logs. Include browser/device details when applicable.
+    validations:
+      required: false
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Suggested acceptance criteria
+      description: Optional, but especially useful when multiple states or integrations must remain consistent.
+      placeholder: |
+        - [ ] The minimal reproduction passes.
+        - [ ] Existing related behavior remains unchanged.
+        - [ ] A regression test covers the failure and the expected result.
+    validations:
+      required: false
+
+  - type: textarea
+    id: agent-context
+    attributes:
+      label: Investigation context
+      description: Optional source paths, suspected boundaries, invariants, downstream consumers, or failed approaches that would help an implementer.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues and did not find the same problem.
+          required: true
+        - label: I removed credentials, private data, and proprietary datasets from the report.
+          required: true
