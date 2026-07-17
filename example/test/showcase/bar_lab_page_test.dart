@@ -325,6 +325,7 @@ void main() {
 
     for (final label in [
       'Capacity',
+      'Targets',
       'Rods',
       'Gradient',
       'Signed',
@@ -334,6 +335,7 @@ void main() {
       'Waterfall',
       'Horizontal',
       'Axes',
+      'Motion',
       'States',
       'Stacked',
       '100%',
@@ -573,6 +575,107 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('shows benchmark markers and transposes them with the chart', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-targets')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Actual against target'), findsOneWidget);
+    expect(find.text('Target markers', skipOffstage: false), findsOneWidget);
+    expect(find.text('Marker width', skipOffstage: false), findsOneWidget);
+    expect(find.text('Marker span', skipOffstage: false), findsOneWidget);
+
+    var bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars, hasLength(1));
+    expect(bars.single.name, 'Actual');
+    expect(bars.single.targetValues, const [72, 78, 85, 68, 84, 95, 76]);
+    expect(bars.single.targetMarkerStyle.width, 2);
+
+    var renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    var element = renderBox.debugElements.whereType<SeriesElement>().single;
+    var geometry = element.barGeometryForPoint(0)!;
+    expect(geometry.targetStart, isNotNull);
+    expect(geometry.targetEnd, isNotNull);
+    expect(geometry.targetStart!.dy, closeTo(geometry.targetEnd!.dy, 0.001));
+
+    await tester.tap(find.byType(DropdownButtonFormField<BarOrientation>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Horizontal').last);
+    await tester.pumpAndSettle();
+
+    bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars.single.orientation, BarOrientation.horizontal);
+    renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    element = renderBox.debugElements.whereType<SeriesElement>().single;
+    geometry = element.barGeometryForPoint(0)!;
+    expect(geometry.targetStart!.dx, closeTo(geometry.targetEnd!.dx, 0.001));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('replays bar values from the Motion preset', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-motion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Animated value updates'), findsOneWidget);
+    expect(find.text('Duration', skipOffstage: false), findsOneWidget);
+    expect(find.text('Animate bars', skipOffstage: false), findsOneWidget);
+
+    final replay = find.byKey(
+      const ValueKey('bar-lab-replay-motion'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(replay);
+    await tester.pumpAndSettle();
+    await tester.tap(replay);
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pump(const Duration(milliseconds: 325));
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final animatedValue =
+        (renderBox.debugElements.whereType<SeriesElement>().first.series
+                as BarChartSeries)
+            .points
+            .first
+            .y;
+    expect(animatedValue, greaterThan(54));
+    expect(animatedValue, lessThan(82));
+
+    await tester.pumpAndSettle();
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect((chart.series.first as BarChartSeries).points.first.y, 82);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('keeps chart options reachable on a compact viewport', (

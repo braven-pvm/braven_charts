@@ -464,6 +464,7 @@ void main() {
                     cornerRadius: 7,
                     cornerRadiusPolicy: BarCornerRadiusPolicy.all,
                     opacity: 0.85,
+                    animationMode: BarAnimationMode.none,
                     gradient: BarGradient(
                       colors: [Color(0xFF123456), Color(0xFF65AADD)],
                       stops: [0, 1],
@@ -490,6 +491,13 @@ void main() {
                     opacity: 0.6,
                     cornerRadius: 9,
                     border: BarBorderStyle(color: Color(0xFFB0B0B0)),
+                  ),
+                  targetValues: [8],
+                  targetMarkerStyle: BarTargetMarkerStyle(
+                    color: Color(0xFF334155),
+                    width: 3,
+                    lengthFactor: 1.4,
+                    opacity: 0.8,
                   ),
                   labelStyle: BarLabelStyle(
                     show: true,
@@ -519,6 +527,7 @@ void main() {
       expect(bar.barStyle.cornerRadius, 7);
       expect(bar.barStyle.cornerRadiusPolicy, BarCornerRadiusPolicy.all);
       expect(bar.barStyle.opacity, 0.85);
+      expect(bar.barStyle.animationMode, BarAnimationMode.none);
       expect(bar.barStyle.gradient?.colors, const [
         Color(0xFF123456),
         Color(0xFF65AADD),
@@ -544,6 +553,16 @@ void main() {
       );
       expect(bar.trackStyle?.value, 10);
       expect(bar.trackStyle?.border?.color, const Color(0xFFB0B0B0));
+      expect(bar.targetValues, const [8]);
+      expect(
+        bar.targetMarkerStyle,
+        const BarTargetMarkerStyle(
+          color: Color(0xFF334155),
+          width: 3,
+          lengthFactor: 1.4,
+          opacity: 0.8,
+        ),
+      );
       expect(bar.labelStyle.show, isTrue);
       expect(bar.labelStyle.position, BarLabelPosition.insideEnd);
       expect(bar.labelStyle.valueMode, BarLabelValueMode.percentage);

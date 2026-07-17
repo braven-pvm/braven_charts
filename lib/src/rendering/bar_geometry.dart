@@ -29,6 +29,10 @@ class BarGeometry {
     this.percentage,
     this.trackRect,
     this.trackRRect,
+    this.targetValue,
+    this.targetStart,
+    this.targetEnd,
+    this.targetBounds,
   });
 
   final int pointIndex;
@@ -66,10 +70,17 @@ class BarGeometry {
   final double? percentage;
   final Rect? trackRect;
   final RRect? trackRRect;
+  final double? targetValue;
+  final Offset? targetStart;
+  final Offset? targetEnd;
+  final Rect? targetBounds;
 
-  /// The bar body plus its optional background track.
-  Rect get paintBounds =>
-      trackRect == null ? rect : rect.expandToInclude(trackRect!);
+  /// The bar body plus its optional background track and target marker.
+  Rect get paintBounds {
+    var result = trackRect == null ? rect : rect.expandToInclude(trackRect!);
+    if (targetBounds != null) result = result.expandToInclude(targetBounds!);
+    return result;
+  }
 
   /// A forgiving hit target for very thin rod-style bars.
   Rect get hitBounds {
@@ -324,6 +335,32 @@ abstract final class BarGeometryEngine {
       );
     }
 
+    final targetValue = series.targetValueFor(pointIndex);
+    Offset? targetStart;
+    Offset? targetEnd;
+    Rect? targetBounds;
+    final targetStyle = series.targetMarkerStyle;
+    if (targetValue != null && targetValue.isFinite && targetStyle.width > 0) {
+      final targetPosition = transform.dataToPlot(point.x, targetValue);
+      final halfLength =
+          (series.orientation == BarOrientation.horizontal
+              ? rect.height
+              : rect.width) *
+          targetStyle.lengthFactor /
+          2;
+      if (series.orientation == BarOrientation.horizontal) {
+        targetStart = Offset(targetPosition.dx, rect.center.dy - halfLength);
+        targetEnd = Offset(targetPosition.dx, rect.center.dy + halfLength);
+      } else {
+        targetStart = Offset(rect.center.dx - halfLength, targetPosition.dy);
+        targetEnd = Offset(rect.center.dx + halfLength, targetPosition.dy);
+      }
+      targetBounds = Rect.fromPoints(
+        targetStart,
+        targetEnd,
+      ).inflate(targetStyle.width / 2);
+    }
+
     return BarGeometry(
       pointIndex: pointIndex,
       point: point,
@@ -338,6 +375,10 @@ abstract final class BarGeometryEngine {
       percentage: groupInfo?.percentageFor(pointIndex),
       trackRect: trackRect,
       trackRRect: trackRRect,
+      targetValue: targetValue,
+      targetStart: targetStart,
+      targetEnd: targetEnd,
+      targetBounds: targetBounds,
     );
   }
 

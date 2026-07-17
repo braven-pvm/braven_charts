@@ -348,6 +348,13 @@ abstract final class ChartSeriesDocumentCodec {
           minBarLength: _optionalDouble(style['minBarLength']) ?? 0.0,
           barStyle: _decodeBarStyle(_optionalMap(style, 'barStyle')),
           trackStyle: _decodeBarTrack(_optionalMap(style, 'barTrack')),
+          targetValues: _decodeOptionalDoubleList(
+            style['barTargetValues'],
+            r'$.style.barTargetValues',
+          ),
+          targetMarkerStyle: _decodeBarTargetMarker(
+            _optionalMap(style, 'barTargetMarker'),
+          ),
           labelStyle: _decodeBarLabels(_optionalMap(style, 'barLabels')),
         ),
         'pie' => PieChartSeries(
@@ -564,6 +571,15 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
         ..['barTrack'] = series.trackStyle == null
             ? null
             : _encodeBarTrack(series.trackStyle!)
+        ..['barTargetValues'] = series.targetValues.isEmpty
+            ? null
+            : [
+                for (final value in series.targetValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['barTargetMarker'] = series.targetValues.isEmpty
+            ? null
+            : _encodeBarTargetMarker(series.targetMarkerStyle)
         ..['barLabels'] = _encodeBarLabels(series.labelStyle);
     case PieChartSeries():
       result
@@ -599,6 +615,7 @@ Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {
     },
   if (style.border != null) 'border': _encodeBarBorder(style.border!),
   'interaction': _encodeBarInteraction(style.interaction),
+  'animationMode': style.animationMode.name,
 };
 
 BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
@@ -616,6 +633,13 @@ BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
     gradient: _decodeBarGradient(_optionalMap(value, 'gradient')),
     border: _decodeBarBorder(_optionalMap(value, 'border')),
     interaction: _decodeBarInteraction(_optionalMap(value, 'interaction')),
+    animationMode:
+        _optionalEnum(
+          value['animationMode'],
+          BarAnimationMode.values,
+          r'$.style.barStyle.animationMode',
+        ) ??
+        BarAnimationMode.grow,
   );
 }
 
@@ -768,6 +792,23 @@ BarTrackStyle? _decodeBarTrack(Map<String, Object?>? value) {
     opacity: _optionalDouble(value['opacity']) ?? 1.0,
     cornerRadius: _optionalDouble(value['cornerRadius']),
     border: _decodeBarBorder(_optionalMap(value, 'border')),
+  );
+}
+
+Map<String, Object?> _encodeBarTargetMarker(BarTargetMarkerStyle marker) => {
+  if (marker.color != null) 'color': marker.color!.toARGB32(),
+  'width': _number(marker.width),
+  'lengthFactor': _number(marker.lengthFactor),
+  'opacity': _number(marker.opacity),
+};
+
+BarTargetMarkerStyle _decodeBarTargetMarker(Map<String, Object?>? value) {
+  if (value == null) return const BarTargetMarkerStyle();
+  return BarTargetMarkerStyle(
+    color: _optionalColor(value['color'], r'$.style.barTargetMarker.color'),
+    width: _optionalDouble(value['width']) ?? 2.0,
+    lengthFactor: _optionalDouble(value['lengthFactor']) ?? 1.3,
+    opacity: _optionalDouble(value['opacity']) ?? 1.0,
   );
 }
 

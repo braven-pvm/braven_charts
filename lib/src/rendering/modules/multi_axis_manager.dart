@@ -732,6 +732,11 @@ class MultiAxisManager {
                     if (minY == null || end < minY) minY = end;
                     if (maxY == null || end > maxY) maxY = end;
                   }
+                  final target = series.targetValueFor(pointIndex);
+                  if (target != null && target.isFinite) {
+                    if (minY == null || target < minY) minY = target;
+                    if (maxY == null || target > maxY) maxY = target;
+                  }
                 } else {
                   if (minY == null || point.y < minY) minY = point.y;
                   if (maxY == null || point.y > maxY) maxY = point.y;

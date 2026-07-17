@@ -110,11 +110,19 @@ class TooltipRenderer {
       unit: yUnit,
     );
 
-    final tooltipText = dataHit.category == null || dataHit.share == null
+    final baseTooltipText = dataHit.category == null || dataHit.share == null
         ? '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY'
         : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
               'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%'
               '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
+    final targetValue = dataElement.series is BarChartSeries
+        ? (dataElement.series as BarChartSeries).targetValueFor(
+            markerInfo.markerIndex,
+          )
+        : null;
+    final tooltipText = targetValue == null
+        ? baseTooltipText
+        : '$baseTooltipText\nTarget: ${MultiAxisValueFormatter.format(value: targetValue, unit: yUnit)}';
 
     // Create text painter with configured style
     final textStyle = TextStyle(

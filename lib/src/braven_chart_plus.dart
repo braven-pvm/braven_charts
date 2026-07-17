@@ -63,6 +63,7 @@ import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
+import 'utils/bar_series_transition.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/chord_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
@@ -1004,7 +1005,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   bool _previewCaptureInProgress = false;
   final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
       <String, _IncomingPointAnimation>{};
+  final Map<String, _ActiveBarSeriesTransition> _barSeriesTransitions =
+      <String, _ActiveBarSeriesTransition>{};
   late final AnimationController _incomingDataAnimationController;
+  late final AnimationController _barDataAnimationController;
   late final AnimationController _radialRevealAnimationController;
   late final AnimationController _radialSelectionAnimationController;
 
@@ -1158,6 +1162,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           )
           ..addListener(_handleIncomingDataAnimationTick)
           ..addStatusListener(_handleIncomingDataAnimationStatus);
+    _barDataAnimationController = AnimationController(vsync: this, value: 1)
+      ..addListener(_handleBarDataAnimationTick)
+      ..addStatusListener(_handleBarDataAnimationStatus);
     _radialRevealAnimationController = AnimationController(
       vsync: this,
       value: 1,
@@ -1182,6 +1189,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
 
     _rebuildElements();
+    _startBarEntranceAnimation();
     _startRadialRevealAnimation();
 
     // Initialize cached bounds from existing series data for pan constraints
@@ -1239,6 +1247,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _textScaleFactor = nextTextScale;
       _disableAnimations = nextDisableAnimations;
       if (_disableAnimations) {
+        _barDataAnimationController
+          ..stop()
+          ..value = 1;
+        _barSeriesTransitions.clear();
         _radialRevealAnimationController
           ..stop()
           ..value = 1;
@@ -1246,6 +1258,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
       }
+      _refreshAnimatedRenderSeries();
       _rebuildElements();
     }
   }
@@ -1359,7 +1372,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations) {
       // Removed excessive debugPrint (theme/series/annotations changed)
-      _rebuildElements();
+      _rebuildElements(detectBarAnimations: seriesChanged);
       if (radialDataChanged) _startRadialRevealAnimation();
       // Focus will be acquired on next mouse enter — no need to grab it here.
       // Previously this called requestFocus() which caused 21 charts to fight
@@ -1390,6 +1403,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _incomingDataAnimationController
       ..removeListener(_handleIncomingDataAnimationTick)
       ..removeStatusListener(_handleIncomingDataAnimationStatus)
+      ..dispose();
+    _barDataAnimationController
+      ..removeListener(_handleBarDataAnimationTick)
+      ..removeStatusListener(_handleBarDataAnimationStatus)
       ..dispose();
     _radialRevealAnimationController
       ..removeListener(_handleRadialAnimationTick)
@@ -1978,11 +1995,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
-  void _rebuildElements({bool detectIncomingAnimations = false}) {
+  void _rebuildElements({
+    bool detectIncomingAnimations = false,
+    bool detectBarAnimations = false,
+  }) {
     _spatialIndex.clear();
 
     final previousSeriesById = <String, ChartSeries>{
       for (final series in _effectiveDataSeries) series.id: series,
+    };
+    final previousRenderSeriesById = <String, ChartSeries>{
+      for (final series in _effectiveRenderSeries) series.id: series,
     };
 
     _resolvedChartData = _resolveChartData();
@@ -2029,6 +2052,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
         previousSeriesById: previousSeriesById,
+        nextSeries: _effectiveDataSeries,
+      );
+    }
+    if (detectBarAnimations) {
+      _updateBarSeriesTransitions(
+        previousSeriesById: previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
     }
@@ -2352,6 +2381,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  void _handleBarDataAnimationTick() {
+    if (!mounted || _barSeriesTransitions.isEmpty) return;
+    setState(() {
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _handleBarDataAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() {
+      _barSeriesTransitions.clear();
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
   void _handleIncomingDataAnimationStatus(AnimationStatus status) {
     if (status != AnimationStatus.completed || !mounted) {
       return;
@@ -2367,6 +2413,68 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _handleRadialAnimationTick() {
     if (!mounted || _layoutKind != ChartLayoutKind.radial) return;
     setState(() => _elementGeneratorVersion++);
+  }
+
+  Duration get _barDataAnimationDuration =>
+      (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateDuration;
+
+  double get _barDataAnimationProgress {
+    final curve =
+        (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
+    return curve.transform(_barDataAnimationController.value).clamp(0.0, 1.0);
+  }
+
+  bool get _canAnimateBars =>
+      !_disableAnimations && _barDataAnimationDuration > Duration.zero;
+
+  void _startBarEntranceAnimation() {
+    _updateBarSeriesTransitions(
+      previousSeriesById: const <String, ChartSeries>{},
+      nextSeries: _effectiveDataSeries,
+      entrance: true,
+    );
+    _refreshAnimatedRenderSeries();
+    _elementGeneratorVersion++;
+  }
+
+  void _updateBarSeriesTransitions({
+    required Map<String, ChartSeries> previousSeriesById,
+    required List<ChartSeries> nextSeries,
+    bool entrance = false,
+  }) {
+    _barSeriesTransitions.clear();
+    _barDataAnimationController.stop();
+    if (!_canAnimateBars || _layoutKind != ChartLayoutKind.cartesian) {
+      _barDataAnimationController.value = 1;
+      return;
+    }
+    _barDataAnimationController.value = 0;
+
+    for (final next in nextSeries.whereType<BarChartSeries>()) {
+      if (next.barStyle.animationMode == BarAnimationMode.none) continue;
+      final previous = previousSeriesById[next.id];
+      final from = entrance || previous is! BarChartSeries
+          ? BarSeriesTransition.collapsed(next)
+          : BarSeriesTransition.hasCompatibleLayout(previous, next)
+          ? previous
+          : BarSeriesTransition.collapsed(next);
+      if (!entrance && from == next) continue;
+      _barSeriesTransitions[next.id] = _ActiveBarSeriesTransition(
+        from: from,
+        to: next,
+      );
+    }
+
+    if (_barSeriesTransitions.isEmpty) {
+      _barDataAnimationController.value = 1;
+      return;
+    }
+
+    _barDataAnimationController.duration = _barDataAnimationDuration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _barSeriesTransitions.isEmpty) return;
+      _barDataAnimationController.forward();
+    });
   }
 
   bool _radialDataChanged(List<ChartSeries> previous, List<ChartSeries> next) {
@@ -2503,13 +2611,33 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _refreshAnimatedRenderSeries() {
-    if (_effectiveDataSeries.isEmpty || _incomingPointAnimations.isEmpty) {
+    if (_effectiveDataSeries.isEmpty) {
       _effectiveRenderSeries = _effectiveDataSeries;
       return;
     }
 
+    var renderSeries = _effectiveDataSeries;
+    if (_barSeriesTransitions.isNotEmpty) {
+      final progress = _barDataAnimationProgress;
+      renderSeries = _effectiveDataSeries
+          .map((series) {
+            final transition = _barSeriesTransitions[series.id];
+            if (transition == null) return series;
+            return BarSeriesTransition.interpolate(
+              from: transition.from,
+              to: transition.to,
+              progress: progress,
+            );
+          })
+          .toList(growable: false);
+    }
+    if (_incomingPointAnimations.isEmpty) {
+      _effectiveRenderSeries = renderSeries;
+      return;
+    }
+
     final progress = _incomingDataAnimationController.value;
-    _effectiveRenderSeries = _effectiveDataSeries
+    _effectiveRenderSeries = renderSeries
         .map((series) {
           final animation = _incomingPointAnimations[series.id];
           if (animation == null || series.points.length < 2) {
@@ -2538,12 +2666,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     double t,
   ) {
     final clampedT = t.clamp(0.0, 1.0);
-    return ChartDataPoint(
+    return to.copyWith(
       x: from.x + ((to.x - from.x) * clampedT),
       y: from.y + ((to.y - from.y) * clampedT),
-      timestamp: to.timestamp,
-      label: to.label,
-      metadata: to.metadata,
     );
   }
 
@@ -4389,6 +4514,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         if (point.y < minY) minY = point.y;
         if (point.y > maxY) maxY = point.y;
       }
+      if (series is BarChartSeries) {
+        for (final target in series.targetValues.whereType<double>()) {
+          if (!target.isFinite) continue;
+          if (target < minY) minY = target;
+          if (target > maxY) maxY = target;
+        }
+      }
 
       // Handle edge case where all Y values are identical (zero span)
       if (minY == maxY) {
@@ -4518,8 +4650,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BarLayoutMode.normalizedStacked => '${point.y}$unit, normalized segment',
       _ => '${point.y}$unit',
     };
+    final target = series.targetValueFor(ref.pointIndex);
+    final targetDescription = target == null ? '' : ', target $target$unit';
     return (
-      value: '${series.name}, $category, $value',
+      value: '${series.name}, $category, $value$targetDescription',
       isSelected: _selectedPointRefs.contains(ref),
     );
   }
@@ -5150,6 +5284,13 @@ class _IncomingPointAnimation {
 
   final ChartDataPoint anchorPoint;
   final ChartDataPoint targetPoint;
+}
+
+class _ActiveBarSeriesTransition {
+  const _ActiveBarSeriesTransition({required this.from, required this.to});
+
+  final BarChartSeries from;
+  final BarChartSeries to;
 }
 
 class _ChartEffectiveRevisionToken {
