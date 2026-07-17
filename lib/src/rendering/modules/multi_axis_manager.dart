@@ -44,6 +44,8 @@ class MultiAxisManager {
   /// Creates a MultiAxisManager instance.
   MultiAxisManager();
 
+  static const double _minimumDegenerateHalfSpan = 0.5;
+
   // ============================================================================
   // State
   // ============================================================================
@@ -706,6 +708,7 @@ class MultiAxisManager {
           for (final series in _series) {
             if (series.id == binding.seriesId) {
               for (final point in series.points) {
+                if (!point.y.isFinite) continue;
                 if (minY == null || point.y < minY) minY = point.y;
                 if (maxY == null || point.y > maxY) maxY = point.y;
               }
@@ -720,10 +723,9 @@ class MultiAxisManager {
 
       // Add 5% padding buffer to prevent data points from being cut off at edges
       // This matches the padding used in DataConverter.computeBounds()
-      final range = fullMax - fullMin;
-      final paddingAmount = range * 0.05;
-      final paddedMin = fullMin - paddingAmount;
-      final paddedMax = fullMax + paddingAmount;
+      final paddedRange = _paddedDataRange(fullMin, fullMax);
+      final paddedMin = paddedRange.min;
+      final paddedMax = paddedRange.max;
 
       if (usePaintingBounds) {
         // Transform computed bounds based on viewport (zoom/pan)
@@ -742,6 +744,37 @@ class MultiAxisManager {
     }
 
     return bounds;
+  }
+
+  /// Adds the normal five-percent axis padding while ensuring data-derived
+  /// constant ranges remain valid for [ChartTransform].
+  ///
+  /// A relative half-span keeps non-zero constants visually proportional. The
+  /// absolute floor gives zero and near-zero constants a stable finite range.
+  /// Explicit axis limits do not use this fallback and remain governed by
+  /// [YAxisConfig]'s `min < max` validation contract.
+  DataRange _paddedDataRange(double min, double max) {
+    if (min == max && min.isFinite) {
+      final relativeHalfSpan = min.abs() * 0.05;
+      final halfSpan = relativeHalfSpan > _minimumDegenerateHalfSpan
+          ? relativeHalfSpan
+          : _minimumDegenerateHalfSpan;
+      var expandedMin = min - halfSpan;
+      var expandedMax = max + halfSpan;
+
+      // Preserve a valid one-sided span at the finite double limits instead
+      // of allowing the relative expansion to overflow to infinity.
+      if (!expandedMin.isFinite) expandedMin = min;
+      if (!expandedMax.isFinite) expandedMax = max;
+
+      if (expandedMax > expandedMin) {
+        return DataRange(min: expandedMin, max: expandedMax);
+      }
+    }
+
+    final range = max - min;
+    final paddingAmount = range * 0.05;
+    return DataRange(min: min - paddingAmount, max: max + paddingAmount);
   }
 
   /// Computes rendered Y-axis bounds for each series by series ID.
