@@ -2477,7 +2477,12 @@ class ChartRenderBox extends RenderBox {
       );
     } else {
       // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
-      _paintMultipleYAxes(canvas);
+      // Radial layouts deliberately provide no Cartesian Y-axis. Preserve that
+      // boundary so pie charts do not paint the manager's synthetic fallback
+      // axis behind their slices.
+      if (_yAxis != null) {
+        _paintMultipleYAxes(canvas);
+      }
 
       // Paint X-axis using XAxisPainter (unified approach)
       if (_xAxis != null) {
