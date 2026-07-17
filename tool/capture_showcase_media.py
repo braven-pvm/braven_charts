@@ -460,21 +460,26 @@ def _gallery_stills(
     _gallery_stills_remainder(driver, base_url, output_dir)
 
 
-def _native_pie_stills(output_dir: Path) -> None:
-    """Capture Pie PNGs through BravenChartController.capturePreview()."""
+def _native_stills(output_dir: Path, group: str | None = None) -> None:
+    """Capture static PNGs through BravenChartController.capturePreview()."""
     repository = Path(__file__).resolve().parent.parent
     output = output_dir.resolve()
     flutter = shutil.which("flutter")
     if flutter is None:
         raise RuntimeError("Flutter is required to capture native Pie media.")
+    command = [
+        flutter,
+        "test",
+        "--no-pub",
+        f"--dart-define=PUBDEV_MEDIA_OUTPUT_DIR={output}",
+        "tool/capture_pubdev_static_media_test.dart",
+    ]
+    if group == "pie":
+        command.extend(["--plain-name", "capture pub.dev Pie media"])
+    elif group == "interaction":
+        command.extend(["--plain-name", "capture pub.dev interaction media"])
     subprocess.run(
-        [
-            flutter,
-            "test",
-            "--no-pub",
-            f"--dart-define=PUBDEV_MEDIA_OUTPUT_DIR={output}",
-            "tool/capture_pubdev_pie_media_test.dart",
-        ],
+        command,
         cwd=repository,
         check=True,
     )
@@ -740,6 +745,7 @@ def main() -> None:
             "stills",
             "hero",
             "pie",
+            "interaction-still",
         ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
@@ -748,7 +754,10 @@ def main() -> None:
     base_url = args.url.rstrip("/") + "/"
 
     if args.capture == "pie":
-        _native_pie_stills(args.output_dir)
+        _native_stills(args.output_dir, "pie")
+        return
+    if args.capture == "interaction-still":
+        _native_stills(args.output_dir, "interaction")
         return
 
     driver = _driver()
@@ -774,7 +783,7 @@ def main() -> None:
         driver.quit()
 
     if args.capture in ("all", "stills"):
-        _native_pie_stills(args.output_dir)
+        _native_stills(args.output_dir)
 
 
 if __name__ == "__main__":

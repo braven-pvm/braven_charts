@@ -57,6 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and off before the chart settles.
 - Native PNG previews now paint the chart theme background across the complete
   capture boundary, including positioned Pie legend space.
+- Canvas-rendered multi-axis titles, series labels, point labels, and tracking
+  tooltips now preserve the chart typography theme's font family.
 
 ## 0.3.1 - 2026-07-17
 

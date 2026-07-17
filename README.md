@@ -29,9 +29,15 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 ### Multi-axis interaction
 
-The example below combines four independently scaled series with per-series
-normalization, range and threshold annotations, tracking tooltips, pointer
-zoom, drag-to-pan, and a synchronized X scrollbar.
+The example below combines seven signals across five independently scaled axes
+with per-series normalization, stage ranges, thresholds, a trend line, tracking
+markers and tooltip, glow, pointer zoom, drag-to-pan, and a synchronized X
+scrollbar. The PNG is exported by the chart's native preview API with transient
+interaction state included.
+
+[![Five-axis chart with seven tracked signals, stage annotations, threshold, trend, glow, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/native_multi_axis_interaction.png)](https://braven-pvm.github.io/braven_charts/)
+
+The animated example shows zooming and panning in the same interaction model:
 
 [![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 

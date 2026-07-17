@@ -18,6 +18,10 @@ topics:
 
 screenshots:
   - description: >-
+      Five-axis endurance analysis with seven signals, stage annotations,
+      tracking tooltip, trend, thresholds, glow, and a synchronized scrollbar.
+    path: doc/screenshots/native_multi_axis_interaction.png
+  - description: >-
       Mixed interval chart with threshold-styled bars, cardiac drift, multiple
       axes, tracking, LT1 annotations, and a polynomial trend.
     path: doc/screenshots/hero_threshold.png
@@ -49,10 +53,6 @@ screenshots:
       Live sensor data in a follow-latest viewport with a visible synchronized
       scrollbar.
     path: doc/screenshots/gallery_live_sensor.png
-  - description: >-
-      Dense normalized pressure and temperature signals on independent axes
-      with crosshair tracking.
-    path: doc/screenshots/gallery_multi_sensor.png
   - description: >-
       Point, range, and threshold annotations combined in one analytical chart.
     path: doc/screenshots/gallery_annotated.png
