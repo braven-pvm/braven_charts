@@ -11,6 +11,7 @@ class ChartDataHit {
   const ChartDataHit({
     required this.seriesId,
     required this.pointIndex,
+    this.sourcePointIndices = const <int>[],
     required this.plotPosition,
     required this.semanticBounds,
     required this.point,
@@ -32,6 +33,17 @@ class ChartDataHit {
 
   /// Stable source point index within the series.
   final int pointIndex;
+
+  /// Original point indices represented by this hit.
+  ///
+  /// Cartesian data and ungrouped radial slices leave this empty and use
+  /// [pointIndex]. Grouped radial slices carry every source point here.
+  final List<int> sourcePointIndices;
+
+  /// Complete source identity represented by this hit.
+  List<int> get effectiveSourcePointIndices => sourcePointIndices.isEmpty
+      ? <int>[pointIndex]
+      : List<int>.unmodifiable(sourcePointIndices);
 
   /// Preferred tooltip anchor in plot-local coordinates.
   final Offset plotPosition;
@@ -84,6 +96,9 @@ class ChartDataHit {
     }
     if (formattedRadiusValue != null) {
       parts.add('${radiusLabel ?? 'Radius'} $formattedRadiusValue');
+    }
+    if (effectiveSourcePointIndices.length > 1) {
+      parts.add('${effectiveSourcePointIndices.length} grouped categories');
     }
     parts.add('${share == null ? 'point' : 'slice'} $ordinal of $count');
     parts.add(isSelected ? 'selected' : 'not selected');

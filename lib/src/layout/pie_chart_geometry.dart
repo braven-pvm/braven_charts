@@ -14,6 +14,7 @@ class PieSliceGeometry {
   const PieSliceGeometry({
     required this.point,
     required this.pointIndex,
+    required this.sourcePointIndices,
     required this.share,
     required this.startAngle,
     required this.sweepAngle,
@@ -36,6 +37,12 @@ class PieSliceGeometry {
 
   /// Original point index, including any zero-valued points omitted from paint.
   final int pointIndex;
+
+  /// Original point indices represented by this visible slice.
+  final List<int> sourcePointIndices;
+
+  /// Whether this visible slice aggregates multiple source categories.
+  bool get isGrouped => sourcePointIndices.length > 1;
 
   /// Fraction of the validated positive total represented by this slice.
   final double share;
@@ -231,7 +238,8 @@ class PieChartGeometryCalculator {
     );
     final center = contentRect.center;
     final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
-    final visibleSliceCount = series.visiblePointIndices.length;
+    final visibleSlices = series.visibleSlices;
+    final visibleSliceCount = visibleSlices.length;
     final fullOuterRadius = availableRadius * series.radialStyle.radiusFactor;
     final outerRadius = fullOuterRadius * geometryProgress;
     final configuredInnerRadius = outerRadius * effectiveInnerRadiusFactor;
@@ -268,10 +276,9 @@ class PieChartGeometryCalculator {
     var consumedSweep = 0.0;
     var cursor = _degreesToRadians(series.radialStyle.startAngleDegrees);
     final slices = <PieSliceGeometry>[];
-    for (final (pointIndex, point) in series.points.indexed) {
-      if (point.y == 0) {
-        continue;
-      }
+    for (final projectedSlice in visibleSlices) {
+      final point = projectedSlice.point;
+      final pointIndex = projectedSlice.pointIndex;
 
       final share = point.y / total;
       final sliceRadiusFactor = sliceRadiusFactors[pointIndex] ?? 1;
@@ -326,7 +333,8 @@ class PieChartGeometryCalculator {
       final sliceInnerRadius = math
           .min(innerRadius, sliceOuterRadius)
           .toDouble();
-      final explodeDistance = explodedPointIndices.contains(pointIndex)
+      final explodeDistance =
+          projectedSlice.sourcePointIndices.any(explodedPointIndices.contains)
           ? series.radialStyle.selectionExplodeOffset * selectionProgress
           : 0.0;
       final explodeOffset = Offset.fromDirection(midAngle, explodeDistance);
@@ -378,6 +386,7 @@ class PieChartGeometryCalculator {
         PieSliceGeometry(
           point: point,
           pointIndex: pointIndex,
+          sourcePointIndices: projectedSlice.sourcePointIndices,
           share: share,
           startAngle: startAngle,
           sweepAngle: sweepAngle,

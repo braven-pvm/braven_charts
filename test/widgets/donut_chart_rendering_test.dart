@@ -1,4 +1,4 @@
-import 'dart:ui' show SemanticsAction;
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/pie_series_element.dart';
@@ -416,19 +416,151 @@ void main() {
     expect(find.byKey(const ValueKey('table-donut:1')), findsOneWidget);
     semantics.dispose();
   });
+
+  testWidgets(
+    'grouped Donut selection expands to every original table row and controller ref',
+    (tester) async {
+      tester.view.physicalSize = const Size(1100, 620);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final semantics = tester.ensureSemantics();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: _DonutTableSelectionHost(
+              controller: controller,
+              grouped: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Email'));
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'table-donut', pointIndex: 1),
+        const ChartPointRef(seriesId: 'table-donut', pointIndex: 2),
+        const ChartPointRef(seriesId: 'table-donut', pointIndex: 3),
+      });
+      expect(
+        find.semantics.byLabel(
+          'Donut center, Other, 20 USD, selected slice Other',
+        ),
+        findsOne,
+      );
+      for (final index in <int>[1, 2, 3]) {
+        expect(
+          tester
+              .getSemantics(find.byKey(ValueKey<String>('table-donut:$index')))
+              .flagsCollection
+              .isSelected,
+          Tristate.isTrue,
+        );
+      }
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    'grouped legend activation reports one visible point and original selection points',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      ChartDataPoint? tappedPoint;
+      List<ChartDataPoint> selectedPoints = const <ChartDataPoint>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 520,
+            height: 420,
+            child: BravenChartPlus(
+              bravenChartController: controller,
+              showLegend: true,
+              theme: ChartTheme.light.copyWith(
+                pieChartTheme: const PieChartTheme(
+                  animationMode: PieAnimationMode.none,
+                ),
+              ),
+              interactionConfig: InteractionConfig(
+                onSelectionChanged: (points) => selectedPoints = points,
+              ),
+              onPointTap: (point, _) => tappedPoint = point,
+              series: [
+                DonutChartSeries.fromMap(
+                  id: 'group-callbacks',
+                  unit: 'tickets',
+                  values: const {
+                    'Core': 80,
+                    'Email': 8,
+                    'Chat': 7,
+                    'Other source': 5,
+                  },
+                  sliceGroupingConfig: const RadialSliceGroupingConfig(
+                    minimumShare: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('pie-legend-item-1-2-3')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tappedPoint?.label, 'Other');
+      expect(tappedPoint?.y, 20);
+      expect(
+        selectedPoints.map((point) => point.label),
+        orderedEquals(<String?>['Email', 'Chat', 'Other source']),
+      );
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'group-callbacks', pointIndex: 1),
+        const ChartPointRef(seriesId: 'group-callbacks', pointIndex: 2),
+        const ChartPointRef(seriesId: 'group-callbacks', pointIndex: 3),
+      });
+      expect(
+        find.semantics.byLabel(
+          'Other, 20.00 tickets, 20.0 percent, 3 grouped categories, slice 2 of 2, selected',
+        ),
+        findsOne,
+      );
+      semantics.dispose();
+    },
+  );
 }
 
 class _DonutTableSelectionHost extends StatelessWidget {
-  const _DonutTableSelectionHost({required this.controller});
+  const _DonutTableSelectionHost({
+    required this.controller,
+    this.grouped = false,
+  });
 
   final BravenChartController controller;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
     final series = DonutChartSeries.fromMap(
       id: 'table-donut',
       unit: 'USD',
-      values: const {'Subscriptions': 42, 'Services': 58},
+      values: grouped
+          ? const {'Core': 80, 'Email': 8, 'Chat': 7, 'Other source': 5}
+          : const {'Subscriptions': 42, 'Services': 58},
+      sliceGroupingConfig: grouped
+          ? const RadialSliceGroupingConfig(minimumShare: 0.1)
+          : null,
       centerContent: const DonutCenterContent(
         valueMode: DonutCenterValueMode.selectedOrTotal,
       ),

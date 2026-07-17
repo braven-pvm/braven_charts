@@ -286,5 +286,32 @@ void main() {
         expect(slice.contains(ringMidpoint), isTrue);
       }
     });
+
+    test('grouped geometry retains every source point identity', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'grouped-ring',
+        values: const {'Core': 80, 'Email': 8, 'Chat': 7, 'Other source': 5},
+        sliceGroupingConfig: const RadialSliceGroupingConfig(minimumShare: 0.1),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(240),
+        explodedPointIndices: const <int>{3},
+      );
+
+      expect(geometry.slices, hasLength(2));
+      expect(geometry.slices.last.point.label, 'Other');
+      expect(geometry.slices.last.point.y, 20);
+      expect(
+        geometry.slices.last.sourcePointIndices,
+        orderedEquals(<int>[1, 2, 3]),
+      );
+      expect(geometry.slices.last.explodeOffset, isNot(Offset.zero));
+      expect(
+        geometry.slices.fold<double>(0, (sum, slice) => sum + slice.share),
+        closeTo(1, 1e-9),
+      );
+    });
   });
 }

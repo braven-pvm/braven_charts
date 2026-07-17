@@ -68,6 +68,38 @@ For a vertical split, set `splitAxis: Axis.vertical`. `splitRatio` is the chart
 share of the available content dimension and must be greater than zero and less
 than one.
 
+Horizontal Split mode can auto-fit the table to its native column footprint,
+capped by `maximumAutoTablePaneExtent`. The chart retains
+`minimumChartPaneExtent`; the table retains `minimumTablePaneExtent` and uses
+its native horizontal scrollbar if all columns cannot fit.
+
+The divider is resizable by default. Users can drag its 12-pixel pointer strip,
+focus its 48-pixel semantic lane and use arrow keys, or press Escape/double-
+click to return to the configured automatic sizing. Configure this behavior
+with:
+
+```dart
+BravenChartWorkbench(
+  autoFitTablePane: true,
+  isSplitResizable: true,
+  minimumChartPaneExtent: 320,
+  minimumTablePaneExtent: 360,
+  maximumAutoTablePaneExtent: 640,
+  splitGap: 16,
+  onSplitRatioChanged: (chartShare) {
+    // Optionally retain the user's effective chart/table preference.
+  },
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: series,
+  ),
+)
+```
+
+Set `autoFitTablePane: true` to enable content-aware sizing; otherwise
+`splitRatio` defines the initial layout. Set `isSplitResizable: false` for a
+deliberately fixed product surface.
+
 ## Add host-defined actions
 
 `actionsBuilder` receives a stable `ChartWorkbenchHandle`. The package manages

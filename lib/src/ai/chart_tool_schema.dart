@@ -471,6 +471,29 @@ same radial interaction contract.
               'enum': ['none', 'grow', 'sweep', 'fade'],
               'description': 'Radial Pie/Donut entrance animation mode.',
             },
+            'pie_grouping_minimum_share': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'exclusiveMaximum': 1,
+              'description':
+                  'Group positive Pie/Donut categories below this fractional share into one visible slice. Original rows remain available to tables and exports.',
+            },
+            'pie_grouping_minimum_source_count': {
+              'type': 'integer',
+              'minimum': 2,
+              'description':
+                  'Minimum number of qualifying source categories required before a grouped slice is created.',
+            },
+            'pie_grouping_label': {
+              'type': 'string',
+              'minLength': 1,
+              'description': 'Label for the grouped radial slice.',
+            },
+            'pie_grouping_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed color for the grouped radial slice.',
+            },
             'show_data_labels': {
               'type': 'boolean',
               'description': 'Show labels on eligible Pie/Donut slices.',

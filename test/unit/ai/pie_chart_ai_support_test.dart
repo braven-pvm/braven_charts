@@ -297,6 +297,39 @@ void main() {
         DonutCenterValueMode.selectedOrTotal,
       );
     });
+
+    test('builds a source-preserving grouped radial projection', () {
+      final result = ChartConfigBuilder.fromJson({
+        'chart_type': 'donut',
+        'series': [
+          {
+            'id': 'requests',
+            'data': [
+              {'x': 0, 'y': 80, 'label': 'Core'},
+              {'x': 1, 'y': 8, 'label': 'Email'},
+              {'x': 2, 'y': 7, 'label': 'Chat'},
+              {'x': 3, 'y': 5, 'label': 'Other source'},
+            ],
+          },
+        ],
+        'style': {
+          'pie_grouping_minimum_share': 0.1,
+          'pie_grouping_minimum_source_count': 2,
+          'pie_grouping_label': 'Smaller channels',
+          'pie_grouping_color': '#6750A4',
+        },
+      });
+
+      final series = result.series.single as DonutChartSeries;
+      expect(series.points, hasLength(4));
+      expect(series.visibleSlices, hasLength(2));
+      expect(series.visibleSlices.last.point.label, 'Smaller channels');
+      expect(
+        series.visibleSlices.last.point.pointStyle?.color,
+        const Color(0xFF6750A4),
+      );
+      expect(series.visibleSlices.last.sourcePointIndices, <int>[1, 2, 3]);
+    });
   });
 
   test('tool schema advertises the renderer-aware pie contract', () {
@@ -351,6 +384,10 @@ void main() {
     expect(styleProperties.keys, contains('pie_gradient_type'));
     expect(styleProperties.keys, contains('pie_gradient_angle'));
     expect(styleProperties.keys, contains('pie_selected_glow_blur'));
+    expect(styleProperties.keys, contains('pie_grouping_minimum_share'));
+    expect(styleProperties.keys, contains('pie_grouping_minimum_source_count'));
+    expect(styleProperties.keys, contains('pie_grouping_label'));
+    expect(styleProperties.keys, contains('pie_grouping_color'));
     expect(styleProperties.keys, contains('pie_label_content'));
     expect(styleProperties.keys, contains('pie_label_offset'));
     expect(

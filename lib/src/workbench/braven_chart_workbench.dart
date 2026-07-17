@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../artifacts/chart_artifact.dart';
 import '../artifacts/chart_artifact_diagnostics.dart';
@@ -11,6 +12,7 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/braven_chart_controller.dart';
 import '../table/chart_data_table.dart';
+import '../table/chart_data_table_theme.dart';
 import '../table/chart_table_controller.dart';
 import '../table/chart_table_model.dart';
 import '../table/chart_table_options.dart';
@@ -547,16 +549,28 @@ class BravenChartWorkbench extends StatefulWidget {
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
     this.onTableRowFocusCleared,
+    this.onTableRowHoverChanged,
     this.onTableRowActivated,
     this.onPointLinkError,
     this.showModeSwitcher = true,
     this.splitBreakpoint = 900,
     this.splitAxis = Axis.horizontal,
     this.splitRatio = 0.5,
+    this.isSplitResizable = true,
+    this.autoFitTablePane = false,
+    this.minimumChartPaneExtent = 320,
+    this.minimumTablePaneExtent = 360,
+    this.maximumAutoTablePaneExtent = 640,
+    this.splitGap = 16,
+    this.onSplitRatioChanged,
     this.onStatusChanged,
   }) : assert(availableDisplayModes.length > 0),
        assert(splitBreakpoint > 0),
-       assert(splitRatio > 0 && splitRatio < 1);
+       assert(splitRatio > 0 && splitRatio < 1),
+       assert(minimumChartPaneExtent >= 0),
+       assert(minimumTablePaneExtent >= 0),
+       assert(maximumAutoTablePaneExtent > 0),
+       assert(splitGap >= 0);
 
   /// Builds the chart with the controller owned or adopted by this workbench.
   final BravenChartBuilder chartBuilder;
@@ -597,6 +611,9 @@ class BravenChartWorkbench extends StatefulWidget {
   /// Overrides the default focus-clear behavior when supplied.
   final VoidCallback? onTableRowFocusCleared;
 
+  /// Overrides the default transient pointer-hover linking when supplied.
+  final ChartTableRowHoverCallback? onTableRowHoverChanged;
+
   /// Overrides the default durable point-selection behavior when supplied.
   final ChartTableRowCallback? onTableRowActivated;
 
@@ -613,7 +630,35 @@ class BravenChartWorkbench extends StatefulWidget {
   final Axis splitAxis;
 
   /// Fraction of the available split dimension assigned to the chart.
+  ///
+  /// This is the fallback before a table is ready, when [autoFitTablePane] is
+  /// disabled, and after a host rebuild resets this workbench state.
   final double splitRatio;
+
+  /// Whether the user can drag or keyboard-adjust the Split divider.
+  final bool isSplitResizable;
+
+  /// Sizes a horizontal table pane to its native column footprint when true.
+  ///
+  /// The estimate is capped by [maximumAutoTablePaneExtent] and constrained by
+  /// both minimum pane extents. A manual resize takes precedence until the
+  /// divider is reset with Escape or a double click.
+  final bool autoFitTablePane;
+
+  /// Smallest chart width or height retained while Split is active.
+  final double minimumChartPaneExtent;
+
+  /// Smallest data-table width or height retained while Split is active.
+  final double minimumTablePaneExtent;
+
+  /// Largest automatic width assigned to the table before it scrolls.
+  final double maximumAutoTablePaneExtent;
+
+  /// Visual space between the chart and table panes.
+  final double splitGap;
+
+  /// Reports the effective chart share after a user resize or reset.
+  final ValueChanged<double>? onSplitRatioChanged;
 
   /// Reports mode, table, and artifact status without owning host messaging.
   final ValueChanged<ChartWorkbenchStatus>? onStatusChanged;
@@ -632,6 +677,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   ChartDisplayMode _compactSplitPane = ChartDisplayMode.chart;
   ChartDisplayMode? _scheduledEffectiveMode;
   ChartArtifactError? _pointLinkError;
+  double? _manualSplitRatio;
 
   @override
   void initState() {
@@ -666,6 +712,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         oldWidget.workbenchController != widget.workbenchController;
     final chartChanged = oldWidget.chartController != widget.chartController;
     final tableChanged = oldWidget.tableController != widget.tableController;
+    if (oldWidget.splitAxis != widget.splitAxis) {
+      _manualSplitRatio = null;
+    }
 
     if (workbenchChanged) {
       final oldController = _workbenchController;
@@ -863,13 +912,16 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     ChartDisplayMode effective,
   ) {
     final size = constraints.biggest;
-    const gap = 16.0;
+    final gap = widget.splitGap;
     var chartRect = Offset.zero & size;
     var tableRect = Offset.zero & size;
+    Rect? dividerRect;
+    var effectiveSplitRatio = widget.splitRatio;
     if (effective == ChartDisplayMode.split) {
+      effectiveSplitRatio = _resolveSplitRatio(context, size);
       if (widget.splitAxis == Axis.horizontal) {
         final available = math.max(0.0, size.width - gap);
-        final chartWidth = available * widget.splitRatio;
+        final chartWidth = available * effectiveSplitRatio;
         chartRect = Rect.fromLTWH(0, 0, chartWidth, size.height);
         tableRect = Rect.fromLTWH(
           chartWidth + gap,
@@ -877,15 +929,25 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
           available - chartWidth,
           size.height,
         );
+        dividerRect = Rect.fromCenter(
+          center: Offset(chartWidth + gap / 2, size.height / 2),
+          width: 48,
+          height: size.height,
+        );
       } else {
         final available = math.max(0.0, size.height - gap);
-        final chartHeight = available * widget.splitRatio;
+        final chartHeight = available * effectiveSplitRatio;
         chartRect = Rect.fromLTWH(0, 0, size.width, chartHeight);
         tableRect = Rect.fromLTWH(
           0,
           chartHeight + gap,
           size.width,
           available - chartHeight,
+        );
+        dividerRect = Rect.fromCenter(
+          center: Offset(size.width / 2, chartHeight + gap / 2),
+          width: size.width,
+          height: 48,
         );
       }
     }
@@ -918,8 +980,88 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
               ),
             ),
           ),
+        if (effective == ChartDisplayMode.split &&
+            widget.isSplitResizable &&
+            dividerRect != null)
+          Positioned.fromRect(
+            rect: dividerRect,
+            child: _WorkbenchSplitHandle(
+              axis: widget.splitAxis,
+              chartRatio: effectiveSplitRatio,
+              onDelta: (delta) => _resizeSplit(size, delta),
+              onReset: () => _resetSplitRatio(size),
+            ),
+          ),
       ],
     );
+  }
+
+  double _resolveSplitRatio(BuildContext context, Size size) {
+    final available = math.max(
+      0.0,
+      (widget.splitAxis == Axis.horizontal ? size.width : size.height) -
+          widget.splitGap,
+    );
+    if (available <= 0) return widget.splitRatio;
+    final bounds = _splitRatioBounds(available);
+    final manual = _manualSplitRatio;
+    if (manual != null) return manual.clamp(bounds.$1, bounds.$2);
+    if (!widget.autoFitTablePane || widget.splitAxis == Axis.vertical) {
+      return widget.splitRatio.clamp(bounds.$1, bounds.$2);
+    }
+
+    final tableTheme =
+        Theme.of(context).extension<ChartDataTableTheme>() ??
+        const ChartDataTableTheme();
+    final model = _workbenchController.tableModel;
+    final preferredTableWidth = math.min(
+      widget.maximumAutoTablePaneExtent,
+      model == null
+          ? 560.0
+          : ChartDataTable.preferredWidthFor(model: model, theme: tableTheme),
+    );
+    final tableWidth = preferredTableWidth.clamp(
+      widget.minimumTablePaneExtent,
+      math.max(
+        widget.minimumTablePaneExtent,
+        available - bounds.$1 * available,
+      ),
+    );
+    return ((available - tableWidth) / available).clamp(bounds.$1, bounds.$2);
+  }
+
+  (double, double) _splitRatioBounds(double available) {
+    if (available <= 0) return (widget.splitRatio, widget.splitRatio);
+    final requestedTotal =
+        widget.minimumChartPaneExtent + widget.minimumTablePaneExtent;
+    if (requestedTotal >= available && requestedTotal > 0) {
+      final fixed = widget.minimumChartPaneExtent / requestedTotal;
+      return (fixed, fixed);
+    }
+    return (
+      (widget.minimumChartPaneExtent / available).clamp(0.0, 1.0),
+      (1 - widget.minimumTablePaneExtent / available).clamp(0.0, 1.0),
+    );
+  }
+
+  void _resizeSplit(Size size, double delta) {
+    final dimension = widget.splitAxis == Axis.horizontal
+        ? size.width
+        : size.height;
+    final available = math.max(0.0, dimension - widget.splitGap);
+    if (available <= 0) return;
+    final current = _resolveSplitRatio(context, size);
+    final bounds = _splitRatioBounds(available);
+    final next = (current + delta / available).clamp(bounds.$1, bounds.$2);
+    if (next == _manualSplitRatio) return;
+    setState(() => _manualSplitRatio = next);
+    widget.onSplitRatioChanged?.call(next);
+  }
+
+  void _resetSplitRatio(Size size) {
+    if (_manualSplitRatio == null) return;
+    setState(() => _manualSplitRatio = null);
+    widget.onSplitRatioChanged?.call(_resolveSplitRatio(context, size));
   }
 
   Widget _buildTableSurface(BuildContext context) {
@@ -987,6 +1129,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
           child: ListenableBuilder(
             listenable: _chartController,
             builder: (context, child) => ChartDataTable(
+              key: const ValueKey('chart-workbench-data-table'),
               model: model,
               controller: _tableController,
               isLoading:
@@ -1003,6 +1146,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                   (widget.linkTableRowsToChart
                       ? _chartController.clearPointFocus
                       : null),
+              onRowHoverChanged:
+                  widget.onTableRowHoverChanged ??
+                  (widget.linkTableRowsToChart ? _hoverTablePoints : null),
               onRowActivated:
                   widget.onTableRowActivated ??
                   (widget.linkTableRowsToChart ? _selectTablePoints : null),
@@ -1019,6 +1165,14 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     _handlePointLinkResult(
       _chartController.focusPoints(points, revision: revision),
     );
+  }
+
+  void _hoverTablePoints(List<ChartPointRef>? points) {
+    if (points == null) {
+      _chartController.clearPointFocus();
+      return;
+    }
+    _focusTablePoints(points);
   }
 
   void _selectTablePoints(List<ChartPointRef> points) {
@@ -1073,6 +1227,136 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       _workbenchController._setEffectiveMode(mode);
       _workbenchController._ensureInitialTableIfNeeded();
     });
+  }
+}
+
+class _WorkbenchSplitHandle extends StatefulWidget {
+  const _WorkbenchSplitHandle({
+    required this.axis,
+    required this.chartRatio,
+    required this.onDelta,
+    required this.onReset,
+  });
+
+  final Axis axis;
+  final double chartRatio;
+  final ValueChanged<double> onDelta;
+  final VoidCallback onReset;
+
+  @override
+  State<_WorkbenchSplitHandle> createState() => _WorkbenchSplitHandleState();
+}
+
+class _WorkbenchSplitHandleState extends State<_WorkbenchSplitHandle> {
+  final FocusNode _focusNode = FocusNode(debugLabel: 'workbench-split-handle');
+  bool _focused = false;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final chartPercent = (widget.chartRatio * 100).round();
+    final dataPercent = 100 - chartPercent;
+    return Semantics(
+      container: true,
+      focusable: true,
+      label: 'Resize chart and data panes',
+      value: 'Chart $chartPercent percent, data $dataPercent percent',
+      increasedValue:
+          'Chart ${math.min(100, chartPercent + 2)} percent, data ${math.max(0, dataPercent - 2)} percent',
+      decreasedValue:
+          'Chart ${math.max(0, chartPercent - 2)} percent, data ${math.min(100, dataPercent + 2)} percent',
+      hint:
+          'Drag or use arrow keys to resize. Press Escape or double click to fit the table.',
+      onIncrease: () => widget.onDelta(16),
+      onDecrease: () => widget.onDelta(-16),
+      child: Focus(
+        focusNode: _focusNode,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        onKeyEvent: _handleKeyEvent,
+        child: Center(
+          child: MouseRegion(
+            cursor: widget.axis == Axis.horizontal
+                ? SystemMouseCursors.resizeColumn
+                : SystemMouseCursors.resizeRow,
+            child: GestureDetector(
+              key: const ValueKey('chart-workbench-split-handle'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _focusNode.requestFocus,
+              onDoubleTap: widget.onReset,
+              onHorizontalDragStart: widget.axis == Axis.horizontal
+                  ? (_) => _focusNode.requestFocus()
+                  : null,
+              onHorizontalDragUpdate: widget.axis == Axis.horizontal
+                  ? (details) => widget.onDelta(details.delta.dx)
+                  : null,
+              onVerticalDragStart: widget.axis == Axis.vertical
+                  ? (_) => _focusNode.requestFocus()
+                  : null,
+              onVerticalDragUpdate: widget.axis == Axis.vertical
+                  ? (details) => widget.onDelta(details.delta.dy)
+                  : null,
+              child: SizedBox(
+                width: widget.axis == Axis.horizontal ? 12 : double.infinity,
+                height: widget.axis == Axis.horizontal ? double.infinity : 12,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    width: widget.axis == Axis.horizontal ? 6 : 32,
+                    height: widget.axis == Axis.horizontal ? 32 : 6,
+                    decoration: BoxDecoration(
+                      color: _focused ? colors.primary : colors.outlineVariant,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: _focused ? colors.onPrimary : colors.outline,
+                      ),
+                      boxShadow: _focused
+                          ? [
+                              BoxShadow(
+                                color: colors.primary.withValues(alpha: 0.22),
+                                blurRadius: 6,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.escape) {
+      widget.onReset();
+      return KeyEventResult.handled;
+    }
+    final decrease = widget.axis == Axis.horizontal
+        ? key == LogicalKeyboardKey.arrowLeft
+        : key == LogicalKeyboardKey.arrowUp;
+    final increase = widget.axis == Axis.horizontal
+        ? key == LogicalKeyboardKey.arrowRight
+        : key == LogicalKeyboardKey.arrowDown;
+    if (decrease) {
+      widget.onDelta(-16);
+      return KeyEventResult.handled;
+    }
+    if (increase) {
+      widget.onDelta(16);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 }
 

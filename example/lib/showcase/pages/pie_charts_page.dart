@@ -54,7 +54,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _selectedGlowBlur = 12;
   double _selectedGlowSpread = 2;
   double _selectedGlowOpacity = 0.48;
-  bool _animateSlices = true;
+  PieAnimationMode _animationMode = PieAnimationMode.grow;
+  bool _groupSmallSlices = false;
+  double _groupingMinimumShare = 0.1;
   _PiePalette _palette = _PiePalette.theme;
   _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
   _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
@@ -100,6 +102,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _radiusValues = Map<String, num>.of(
         dataset.radiusValues ?? const <String, num>{},
       );
+      if (dataset.hasVariableSliceRadius) _groupSmallSlices = false;
       _selectedCategory = null;
       _clearPortableState();
     });
@@ -113,7 +116,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _showcasePreset = preset;
       _selectedCategory = null;
       _clearPortableState();
-      _animateSlices = true;
+      _animationMode = PieAnimationMode.grow;
+      if (_dataset.hasVariableSliceRadius) _groupSmallSlices = false;
       _showTooltips = true;
       switch (preset) {
         case _PieShowcasePreset.simple:
@@ -670,12 +674,61 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   setState(() => _selectedGlowOpacity = value / 100),
             ),
           ],
-          BoolOption(
-            label: 'Animate changes',
-            value: _animateSlices,
-            onChanged: (value) => setState(() => _animateSlices = value),
-            subtitle: 'Regenerate values to replay the radial entrance',
+        ],
+      ),
+      OptionSection(
+        title: 'Motion',
+        icon: Icons.animation_outlined,
+        children: [
+          EnumOption<PieAnimationMode>(
+            key: const ValueKey('pie-animation-mode'),
+            label: 'Entrance',
+            value: _animationMode,
+            values: PieAnimationMode.values,
+            labelBuilder: _animationModeName,
+            onChanged: _setAnimationMode,
+            subtitle: 'Grow, reveal around the pie, fade, or render instantly',
           ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('replay-pie-entrance'),
+              onPressed: _animationMode == PieAnimationMode.none
+                  ? null
+                  : _chartController.replayRadialEntrance,
+              icon: const Icon(Icons.replay_outlined, size: 18),
+              label: const Text('Replay entrance'),
+            ),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Small categories',
+        icon: Icons.call_merge_outlined,
+        children: [
+          BoolOption(
+            key: const ValueKey('pie-group-small-slices'),
+            label: 'Group small slices',
+            value: _groupSmallSlices,
+            onChanged: _dataset.hasVariableSliceRadius
+                ? (_) {}
+                : _setGroupingEnabled,
+            subtitle: _dataset.hasVariableSliceRadius
+                ? 'Variable radii need an explicit second-metric aggregation policy'
+                : 'Render one Other slice while preserving every source row',
+          ),
+          if (_groupSmallSlices)
+            SliderOption(
+              key: const ValueKey('pie-grouping-threshold'),
+              label: 'Share threshold',
+              value: _groupingMinimumShare * 100,
+              min: 1,
+              max: 15,
+              divisions: 14,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: _setGroupingThreshold,
+            ),
         ],
       ),
       OptionSection(
@@ -936,9 +989,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
         _chartController.effectiveDocumentRevision.value ?? _tableRevision;
     if (revision == null) return;
     final selectedPoints = _chartController.selectedPointRefs;
-    if (points.isNotEmpty &&
-        selectedPoints.length == points.length &&
-        selectedPoints.containsAll(points)) {
+    final targetPoints = _expandedVisibleSliceRefs(points);
+    if (targetPoints.isNotEmpty &&
+        selectedPoints.length == targetPoints.length &&
+        selectedPoints.containsAll(targetPoints)) {
       _chartController.clearPointSelection();
       setState(() => _selectedCategory = null);
       _scheduleTableRefresh();
@@ -946,19 +1000,52 @@ class _PieChartsPageState extends State<PieChartsPage> {
     }
     final result = _chartController.selectPoints(points, revision: revision);
     if (result case ChartArtifactSuccess<void>()) {
-      final selected = points.isEmpty ? null : points.first;
-      String? category;
-      if (selected != null) {
-        for (final row in _tableModel?.pieRows ?? const <ChartTablePieRow>[]) {
-          if (row.reference == selected) {
-            category = row.category;
-            break;
-          }
-        }
-      }
+      final selected = points.firstOrNull;
+      final category = selected == null
+          ? null
+          : _buildSeries(
+              _buildPieTheme(),
+            ).visibleSliceForSourcePointIndex(selected.pointIndex)?.point.label;
       setState(() => _selectedCategory = category);
       _scheduleTableRefresh();
     }
+  }
+
+  Set<ChartPointRef> _expandedVisibleSliceRefs(List<ChartPointRef> points) {
+    final series = _buildSeries(_buildPieTheme());
+    final expanded = <ChartPointRef>{};
+    for (final ref in points) {
+      final slice = series.visibleSliceForSourcePointIndex(ref.pointIndex);
+      if (slice == null) {
+        expanded.add(ref);
+        continue;
+      }
+      expanded.addAll([
+        for (final pointIndex in slice.sourcePointIndices)
+          ChartPointRef(seriesId: ref.seriesId, pointIndex: pointIndex),
+      ]);
+    }
+    return expanded;
+  }
+
+  void _setGroupingEnabled(bool value) {
+    _chartController.clearPointSelection();
+    setState(() {
+      _groupSmallSlices = value;
+      _selectedCategory = null;
+      _clearPortableState();
+    });
+    _scheduleTableRefresh();
+  }
+
+  void _setGroupingThreshold(double value) {
+    _chartController.clearPointSelection();
+    setState(() {
+      _groupingMinimumShare = value / 100;
+      _selectedCategory = null;
+      _clearPortableState();
+    });
+    _scheduleTableRefresh();
   }
 
   Widget _buildPortableWorkflow({required bool compact}) {
@@ -1267,8 +1354,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Hover for details. Select a slice or legend item to explode it. '
-                  'With chart focus, use arrow keys to move, Enter to select, and Escape to clear.',
+                  _interactionGuideText,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant,
                     height: 1.4,
@@ -1297,6 +1383,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
       ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
     );
     setState(() => _selectedCategory = isSelected ? point.label : null);
+  }
+
+  String get _interactionGuideText {
+    if (_groupSmallSlices && _selectedCategory == 'Other') {
+      final grouped = _buildSeries(
+        _buildPieTheme(),
+      ).visibleSlices.where((slice) => slice.isGrouped).firstOrNull;
+      if (grouped != null) {
+        return 'One visible Other slice now selects all ${grouped.sourcePointIndices.length} original source rows through the controller.';
+      }
+    }
+    if (_groupSmallSlices) {
+      return 'Small categories render as one Other slice while the data table keeps every original row. Select Other or any grouped row to see the shared selection.';
+    }
+    return 'Hover for details. Select a slice, legend item, or table row to explode it. With chart focus, use arrow keys to move, Enter to select, and Escape to clear.';
   }
 
   Widget _buildPresentationHeader() {
@@ -1596,9 +1697,16 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 _FeatureCard(
                   width: cardWidth,
                   icon: Icons.table_rows_outlined,
-                  title: 'Category-first data table',
+                  title: 'Source-preserving grouping',
                   description:
-                      'Switch to Data or Split for sortable Category, Value, and Share rows with native row copy, dataset copy, and CSV export.',
+                      'Combine small contributions into one visible Other slice while tables, exports, controller selection, and artifacts retain every source row.',
+                ),
+                _FeatureCard(
+                  width: cardWidth,
+                  icon: Icons.animation_outlined,
+                  title: 'Replayable entrance motion',
+                  description:
+                      'Grow from the center, reveal around the pie, fade in, or render instantly. Replay the configured entrance without remounting the chart.',
                 ),
                 _FeatureCard(
                   width: cardWidth,
@@ -1671,6 +1779,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    label: 'Market size',\n"
               "    unit: 'k users',\n"
               "  ),\n"
+              "  sliceGroupingConfig: RadialSliceGroupingConfig(\n"
+              "    minimumShare: 0.08,\n"
+              "    label: 'Other',\n"
+              "  ),\n"
               "  pieStyle: PieChartStyle(\n"
               "    gradient: PieGradientStyle(\n"
               "      type: PieGradientType.radial,\n"
@@ -1687,6 +1799,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    orientation: LegendOrientation.vertical,\n"
               "  ),\n"
               "  pieChartTheme: const PieChartTheme(\n"
+              "    animationMode: PieAnimationMode.sweep,\n"
               "    cornerRadius: 10,\n"
               "    cornerTreatment: PieCornerTreatment.circularCenter,\n"
               "    selectedElevation: PieElevationStyle(\n"
@@ -1754,6 +1867,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
               scale: _sliceRadiusScale,
               label: _dataset.radiusLabel!,
               unit: _dataset.radiusUnit,
+            )
+          : null,
+      sliceGroupingConfig: _groupSmallSlices && !_dataset.hasVariableSliceRadius
+          ? RadialSliceGroupingConfig(
+              minimumShare: _groupingMinimumShare,
+              label: 'Other',
             )
           : null,
       pieStyle: PieChartStyle(
@@ -1861,11 +1980,20 @@ class _PieChartsPageState extends State<PieChartsPage> {
               )
             : const PieElevationStyle(),
         calloutStyle: calloutStyle,
-        animationMode: _animateSlices
-            ? PieAnimationMode.grow
-            : PieAnimationMode.none,
+        animationMode: _animationMode,
       ),
     );
+  }
+
+  String _animationModeName(PieAnimationMode mode) => switch (mode) {
+    PieAnimationMode.none => 'No animation',
+    PieAnimationMode.grow => 'Grow',
+    PieAnimationMode.sweep => 'Sweep',
+    PieAnimationMode.fade => 'Fade',
+  };
+
+  void _setAnimationMode(PieAnimationMode mode) {
+    setState(() => _animationMode = mode);
   }
 
   List<Color>? get _paletteColors => switch (_palette) {

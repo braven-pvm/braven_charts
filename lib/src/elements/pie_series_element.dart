@@ -149,7 +149,9 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
   @override
   ChartDataHit? dataHitForPointIndex(int pointIndex) {
     for (final slice in geometry.slices) {
-      if (slice.pointIndex == pointIndex) return _dataHitForSlice(slice);
+      if (slice.sourcePointIndices.contains(pointIndex)) {
+        return _dataHitForSlice(slice);
+      }
     }
     return null;
   }
@@ -165,20 +167,15 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       return null;
     }
     final config = donut.centerContent;
-    final selectedIndices =
-        selectedPointIndices
-            .where(
-              (index) =>
-                  index >= 0 &&
-                  index < donut.points.length &&
-                  donut.visiblePointIndices.contains(index),
-            )
-            .toList()
-          ..sort();
-    final selectedIndex = selectedIndices.firstOrNull;
-    final selectedPoint = selectedIndex == null
-        ? null
-        : donut.points[selectedIndex];
+    PieSliceGeometry? selectedSlice;
+    for (final slice in geometry.slices) {
+      if (slice.sourcePointIndices.any(selectedPointIndices.contains)) {
+        selectedSlice = slice;
+        break;
+      }
+    }
+    final selectedIndex = selectedSlice?.pointIndex;
+    final selectedPoint = selectedSlice?.point;
     final usesSelectedValue = switch (config.valueMode) {
       DonutCenterValueMode.selectedValue => true,
       DonutCenterValueMode.selectedOrTotal => selectedPoint != null,
@@ -292,7 +289,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
     }
     for (final (index, slice) in slices.indexed) {
       final fillColor = _resolveSliceColor(slice.point, index);
-      final selected = selectedPointIndices.contains(slice.pointIndex);
+      final selected = _isSliceSelected(slice);
       final selectedElevation =
           series.radialStyle.selectedElevation ??
           theme.pieChartTheme.selectedElevation;
@@ -339,7 +336,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
             ..isAntiAlias = true,
         );
       }
-      if (focusedPointIndices.contains(slice.pointIndex)) {
+      if (_isSliceFocused(slice)) {
         canvas.drawPath(
           slice.path,
           Paint()
@@ -980,6 +977,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: slice.pointIndex,
+      sourcePointIndices: slice.sourcePointIndices,
       plotPosition: slice.tooltipAnchor,
       semanticBounds: slice.path.getBounds(),
       point: slice.point,
@@ -994,10 +992,16 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       formattedValue: '${slice.point.y.toStringAsFixed(2)}$unit',
       ordinal: visibleIndex + 1,
       count: geometry.slices.length,
-      isSelected: selectedPointIndices.contains(slice.pointIndex),
-      isFocused: focusedPointIndices.contains(slice.pointIndex),
+      isSelected: _isSliceSelected(slice),
+      isFocused: _isSliceFocused(slice),
     );
   }
+
+  bool _isSliceSelected(PieSliceGeometry slice) =>
+      slice.sourcePointIndices.every(selectedPointIndices.contains);
+
+  bool _isSliceFocused(PieSliceGeometry slice) =>
+      slice.sourcePointIndices.any(focusedPointIndices.contains);
 
   @override
   void onSelect() {}

@@ -27,6 +27,7 @@ class DonutChartSeries extends RadialCategorySeries {
     this.centerContent = DonutCenterContent.hidden,
     super.dataLabels = const PieDataLabelConfig(),
     super.sliceRadiusConfig,
+    super.sliceGroupingConfig,
   }) : super(style: SeriesStyle.donut, radialStyle: donutStyle) {
     validateRadialConfiguration(chartName: 'Donut');
     RadialCategorySeries.requireRange(
@@ -80,6 +81,7 @@ class DonutChartSeries extends RadialCategorySeries {
     Map<String, Color> sliceColors = const {},
     Map<String, num> radiusValues = const {},
     RadialSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
     Color? color,
     Map<String, dynamic>? metadata,
     String? unit,
@@ -132,6 +134,7 @@ class DonutChartSeries extends RadialCategorySeries {
       sliceRadiusConfig: radiusValues.isEmpty
           ? null
           : (sliceRadiusConfig ?? const RadialSliceRadiusConfig()),
+      sliceGroupingConfig: sliceGroupingConfig,
     );
   }
 
@@ -166,6 +169,8 @@ class DonutChartSeries extends RadialCategorySeries {
     PieDataLabelConfig? dataLabels,
     RadialSliceRadiusConfig? sliceRadiusConfig,
     bool clearSliceRadiusConfig = false,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
+    bool clearSliceGroupingConfig = false,
   }) {
     if (style != null && style != SeriesStyle.donut) {
       throw ArgumentError.value(style, 'style', 'Donut series style is fixed');
@@ -201,6 +206,9 @@ class DonutChartSeries extends RadialCategorySeries {
       sliceRadiusConfig: clearSliceRadiusConfig
           ? null
           : (sliceRadiusConfig ?? this.sliceRadiusConfig),
+      sliceGroupingConfig: clearSliceGroupingConfig
+          ? null
+          : (sliceGroupingConfig ?? this.sliceGroupingConfig),
     );
   }
 
@@ -212,7 +220,8 @@ class DonutChartSeries extends RadialCategorySeries {
           donutStyle == other.donutStyle &&
           centerContent == other.centerContent &&
           dataLabels == other.dataLabels &&
-          sliceRadiusConfig == other.sliceRadiusConfig;
+          sliceRadiusConfig == other.sliceRadiusConfig &&
+          sliceGroupingConfig == other.sliceGroupingConfig;
 
   @override
   int get hashCode => Object.hash(
@@ -221,6 +230,7 @@ class DonutChartSeries extends RadialCategorySeries {
     centerContent,
     dataLabels,
     sliceRadiusConfig,
+    sliceGroupingConfig,
   );
 
   @override

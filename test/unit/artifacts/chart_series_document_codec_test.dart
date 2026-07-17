@@ -302,6 +302,40 @@ void main() {
       expect(series.sliceRadiusConfig?.label, 'Total area');
     });
 
+    test('round-trips radial grouping without collapsing source points', () {
+      final source = DonutChartSeries.fromMap(
+        id: 'grouped-donut',
+        values: const {'Core': 80, 'Email': 8, 'Chat': 7, 'Other source': 5},
+        sliceGroupingConfig: const RadialSliceGroupingConfig(
+          minimumShare: 0.1,
+          minimumSourceCount: 2,
+          label: 'Other',
+          color: Color(0xFF6750A4),
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.radial.grouping.v1'),
+      );
+
+      final decoded =
+          ChartSeriesDocumentCodec.decode(encoded.value)
+              as ChartArtifactSuccess<ChartSeries>;
+      final restored = decoded.value as DonutChartSeries;
+      expect(restored.points, source.points);
+      expect(restored.sliceGroupingConfig, source.sliceGroupingConfig);
+      expect(restored.visibleSlices, hasLength(2));
+      expect(
+        restored.visibleSlices.last.sourcePointIndices,
+        orderedEquals(<int>[1, 2, 3]),
+      );
+      expect(restored.visibleSlices.last.point.y, 20);
+    });
+
     test('round-trips first-class Donut geometry and capabilities', () {
       final source = DonutChartSeries.fromMap(
         id: 'donut',

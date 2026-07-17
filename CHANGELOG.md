@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BravenChartController.replayRadialEntrance()` plus public Donut showcase
   controls, artifact/theme round trips, AI input, and focused geometry,
   rendering, accessibility, and lifecycle coverage for radial motion.
+- Source-preserving Pie/Donut small-slice grouping with a configurable share
+  threshold, minimum source count, label, and color. One visible aggregate
+  selects every original controller/table reference while artifacts, copy,
+  CSV, selection callbacks, and hydration retain the uncollapsed source data.
+- Content-aware, user-resizable Chart/Data Split panes in
+  `BravenChartWorkbench`, including a focused divider with a 12-pixel pointer
+  strip, keyboard resizing, Escape/double-click reset, and stable Pie/Donut legend footprints
+  when selection changes.
 
 ## 0.5.0 - 2026-07-17
 

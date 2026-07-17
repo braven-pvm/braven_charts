@@ -29,6 +29,42 @@ class ChartDataTable extends StatefulWidget {
   static const defaultClipboardRowLimit = 1000;
   static const defaultClipboardCharacterLimit = 1000000;
 
+  /// Estimates the width needed to show every native table column without a
+  /// horizontal scrollbar.
+  ///
+  /// Split-view hosts can use this as a content-aware pane-size hint. The
+  /// returned value follows the same projection widths as the table itself;
+  /// the table still remains horizontally scrollable when a host deliberately
+  /// gives it less space.
+  static double preferredWidthFor({
+    required ChartTableModel model,
+    ChartDataTableTheme theme = const ChartDataTableTheme(),
+    bool showCopyRowAction = true,
+  }) {
+    final actionWidth = showCopyRowAction ? 44.0 : 0.0;
+    return switch (model.projectionKind) {
+      ChartTableProjectionKind.cartesianLong =>
+        theme.rowNumberWidth +
+            192 +
+            theme.xColumnWidth +
+            theme.seriesColumnWidth +
+            88 +
+            144 +
+            96 +
+            actionWidth,
+      ChartTableProjectionKind.cartesianWide =>
+        theme.rowNumberWidth +
+            theme.xColumnWidth +
+            model.series.length * theme.seriesColumnWidth +
+            actionWidth,
+      ChartTableProjectionKind.pie =>
+        theme.rowNumberWidth +
+            192 +
+            theme.seriesColumnWidth * (model.hasPieRadiusValues ? 3 : 2) +
+            actionWidth,
+    };
+  }
+
   const ChartDataTable({
     super.key,
     this.model,
@@ -283,10 +319,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
     final pieRows = model.projectionKind == ChartTableProjectionKind.pie
         ? _sortedPieRows(model)
         : const <ChartTablePieRow>[];
-    final tableTheme = _ResolvedTableTheme.from(
-      context,
-      widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
-    );
+    final sourceTheme =
+        widget.theme ??
+        Theme.of(context).extension<ChartDataTableTheme>() ??
+        const ChartDataTableTheme();
+    final tableTheme = _ResolvedTableTheme.from(context, sourceTheme);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -298,28 +335,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
             : 960.0;
         final contentWidth = math.max(
           viewportWidth,
-          switch (model.projectionKind) {
-            ChartTableProjectionKind.cartesianLong =>
-              tableTheme.rowNumberWidth +
-                  192 +
-                  tableTheme.xColumnWidth +
-                  tableTheme.seriesColumnWidth +
-                  88 +
-                  144 +
-                  96 +
-                  (widget.showCopyRowAction ? 44 : 0),
-            ChartTableProjectionKind.cartesianWide =>
-              tableTheme.rowNumberWidth +
-                  tableTheme.xColumnWidth +
-                  model.series.length * tableTheme.seriesColumnWidth +
-                  (widget.showCopyRowAction ? 44 : 0),
-            ChartTableProjectionKind.pie =>
-              tableTheme.rowNumberWidth +
-                  192 +
-                  tableTheme.seriesColumnWidth *
-                      (model.hasPieRadiusValues ? 3 : 2) +
-                  (widget.showCopyRowAction ? 44 : 0),
-          },
+          ChartDataTable.preferredWidthFor(
+            model: model,
+            theme: sourceTheme,
+            showCopyRowAction: widget.showCopyRowAction,
+          ),
         );
         ChartTableCsvExport buildDatasetExport() =>
             ChartTableExporter.csvForDisplayedRows(

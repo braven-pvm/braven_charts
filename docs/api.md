@@ -66,6 +66,8 @@ accepts exactly one pie series and cannot mix with Cartesian series.
 - `PieChartSeries.fromMap`: category/value convenience constructor
 - `radiusValues` plus `sliceRadiusConfig`: optional complete second-metric map,
   `PieSliceRadiusScale` mapping, minimum factor, label, and unit
+- `sliceGroupingConfig`: optional `RadialSliceGroupingConfig` that projects
+  small positive sources into one visible slice without collapsing source data
 - `pieStyle`: `PieChartStyle` geometry, physical separation, border, solid or
   `PieGradientStyle` fill, explode, opacity, `PieCornerTreatment`, elevation,
   and animation overrides
@@ -95,6 +97,8 @@ is single-series and cannot mix with Pie or Cartesian series.
   theme defaults for measured center text
 - `sliceRadiusConfig`: optional second-metric label, unit, minimum factor, and
   area or linear scaling
+- `sliceGroupingConfig`: share threshold, minimum source count, aggregate label,
+  and optional color; grouped selection expands to the original point refs
 - `BravenChartController.replayRadialEntrance()`: replay the effective entrance
   while still honoring reduced motion, `none`, and zero-duration themes
 
@@ -199,7 +203,11 @@ direct streaming point.
 ### Chart workbench
 
 - `BravenChartWorkbench` composes one mounted chart with Chart, Data, and
-  responsive Split presentations.
+  responsive Split presentations. Horizontal Split can auto-fit the native
+  table footprint and exposes an accessible draggable/keyboard divider with
+  minimum pane extents and an explicit fixed-layout opt-out.
+- `ChartDataTable.preferredWidthFor(...)` exposes the same projection-width
+  estimate used by Split auto-fit for custom host compositions.
 - `ChartWorkbenchController` is the caller-owned imperative controller and
   stable `ChartWorkbenchHandle` supplied to host actions.
 - `ChartWorkbenchStatus`, `ChartWorkbenchTableState`, and

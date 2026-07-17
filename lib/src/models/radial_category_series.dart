@@ -1,6 +1,79 @@
+import 'dart:ui' show Color;
+
 import 'chart_data_point.dart';
 import 'chart_series.dart';
 import 'pie_chart_config.dart';
+import 'segment_style.dart';
+
+/// Deterministic small-slice grouping for Pie and Donut category series.
+///
+/// Positive source points whose contribution is smaller than [minimumShare]
+/// are projected into one visible slice when at least [minimumSourceCount]
+/// points qualify. The source points remain unchanged for artifacts, tables,
+/// copy/export, callbacks, and controller point references.
+class RadialSliceGroupingConfig {
+  /// Creates a grouping policy.
+  const RadialSliceGroupingConfig({
+    this.minimumShare = 0.05,
+    this.minimumSourceCount = 2,
+    this.label = 'Other',
+    this.color,
+  });
+
+  /// Exclusive fractional threshold below which a positive point is grouped.
+  final double minimumShare;
+
+  /// Minimum number of qualifying source points required to create a group.
+  final int minimumSourceCount;
+
+  /// Category label used by the projected aggregate slice.
+  final String label;
+
+  /// Optional fixed color for the aggregate slice.
+  final Color? color;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RadialSliceGroupingConfig &&
+          other.minimumShare == minimumShare &&
+          other.minimumSourceCount == minimumSourceCount &&
+          other.label == label &&
+          other.color == color;
+
+  @override
+  int get hashCode =>
+      Object.hash(minimumShare, minimumSourceCount, label, color);
+}
+
+/// One visible radial category and the original source points it represents.
+class RadialCategorySlice {
+  /// Creates a projected radial category.
+  RadialCategorySlice({
+    required this.point,
+    required List<int> sourcePointIndices,
+  }) : assert(sourcePointIndices.isNotEmpty),
+       sourcePointIndices = List<int>.unmodifiable(sourcePointIndices);
+
+  /// Point rendered by labels, tooltips, legends, and public tap callbacks.
+  ///
+  /// Ungrouped slices retain the original point. A grouped slice receives a
+  /// synthetic point containing the aggregate value and configured label.
+  final ChartDataPoint point;
+
+  /// Stable original point indices represented by this visible slice.
+  final List<int> sourcePointIndices;
+
+  /// Primary source index used by legacy single-index internal paths.
+  int get pointIndex => sourcePointIndices.first;
+
+  /// Whether this visible category aggregates multiple source points.
+  bool get isGrouped => sourcePointIndices.length > 1;
+
+  /// Whether [sourcePointIndex] contributes to this visible category.
+  bool containsSourcePoint(int sourcePointIndex) =>
+      sourcePointIndices.contains(sourcePointIndex);
+}
 
 /// Shared validated source contract for Pie and Donut category series.
 ///
@@ -20,6 +93,7 @@ abstract class RadialCategorySeries extends ChartSeries {
     required this.radialStyle,
     required this.dataLabels,
     required this.sliceRadiusConfig,
+    required this.sliceGroupingConfig,
   }) : super(
          points: List<ChartDataPoint>.unmodifiable(points),
          style: style,
@@ -35,6 +109,9 @@ abstract class RadialCategorySeries extends ChartSeries {
   /// Optional second-metric encoding used for variable slice radii.
   final RadialSliceRadiusConfig? sliceRadiusConfig;
 
+  /// Optional deterministic projection of small categories into one slice.
+  final RadialSliceGroupingConfig? sliceGroupingConfig;
+
   /// Radius of the shared center opening relative to the maximum outer radius.
   double get innerRadiusFactor;
 
@@ -47,11 +124,69 @@ abstract class RadialCategorySeries extends ChartSeries {
   /// Sum of all visible, positive slice contributions.
   double get total => points.fold<double>(0, (sum, point) => sum + point.y);
 
-  /// Original point indices that produce visible geometry.
+  /// Visible radial categories after the configured grouping projection.
+  late final List<RadialCategorySlice> visibleSlices = _buildVisibleSlices();
+
+  List<RadialCategorySlice> _buildVisibleSlices() {
+    final positive = <RadialCategorySlice>[
+      for (final (index, point) in points.indexed)
+        if (point.y > 0)
+          RadialCategorySlice(point: point, sourcePointIndices: [index]),
+    ];
+    final grouping = sliceGroupingConfig;
+    if (grouping == null || total <= 0) {
+      return List<RadialCategorySlice>.unmodifiable(positive);
+    }
+
+    final grouped = <RadialCategorySlice>[];
+    final retained = <RadialCategorySlice>[];
+    for (final slice in positive) {
+      if (slice.point.y / total < grouping.minimumShare) {
+        grouped.add(slice);
+      } else {
+        retained.add(slice);
+      }
+    }
+    if (grouped.length < grouping.minimumSourceCount) {
+      return List<RadialCategorySlice>.unmodifiable(positive);
+    }
+
+    final groupedIndices = <int>[
+      for (final slice in grouped) ...slice.sourcePointIndices,
+    ];
+    final groupedValue = grouped.fold<double>(
+      0,
+      (sum, slice) => sum + slice.point.y,
+    );
+    final groupPoint = ChartDataPoint(
+      x: grouped.first.point.x,
+      y: groupedValue,
+      label: grouping.label.trim(),
+      pointStyle: grouping.color == null
+          ? null
+          : PointStyle(color: grouping.color),
+    );
+    return List<RadialCategorySlice>.unmodifiable([
+      ...retained,
+      RadialCategorySlice(
+        point: groupPoint,
+        sourcePointIndices: groupedIndices,
+      ),
+    ]);
+  }
+
+  /// Primary source indices that produce visible projected geometry.
   List<int> get visiblePointIndices => List<int>.unmodifiable([
-    for (final (index, point) in points.indexed)
-      if (point.y > 0) index,
+    for (final slice in visibleSlices) slice.pointIndex,
   ]);
+
+  /// Finds the visible slice containing [sourcePointIndex].
+  RadialCategorySlice? visibleSliceForSourcePointIndex(int sourcePointIndex) {
+    for (final slice in visibleSlices) {
+      if (slice.containsSourcePoint(sourcePointIndex)) return slice;
+    }
+    return null;
+  }
 
   /// Whether this series contains data but every contribution is zero.
   bool get isAllZero =>
@@ -222,6 +357,36 @@ abstract class RadialCategorySeries extends ChartSeries {
             'Variable $chartName radius values must be finite and non-negative',
           );
         }
+      }
+    }
+    if (sliceGroupingConfig case final grouping?) {
+      requireRange(
+        grouping.minimumShare,
+        'sliceGroupingConfig.minimumShare',
+        min: 0,
+        max: 1,
+        minInclusive: false,
+        maxInclusive: false,
+      );
+      if (grouping.minimumSourceCount < 2) {
+        throw ArgumentError.value(
+          grouping.minimumSourceCount,
+          'sliceGroupingConfig.minimumSourceCount',
+          'Grouped radial slices require at least two source points',
+        );
+      }
+      if (grouping.label.trim().isEmpty) {
+        throw ArgumentError.value(
+          grouping.label,
+          'sliceGroupingConfig.label',
+          'Grouped radial slices require a visible label',
+        );
+      }
+      if (sliceRadiusConfig != null) {
+        throw ArgumentError(
+          'Radial slice grouping cannot be combined with variable slice '
+          'radii until an explicit second-metric aggregation policy is set',
+        );
       }
     }
   }

@@ -2497,7 +2497,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     return previousRadial.runtimeType != nextRadial.runtimeType ||
         previousRadial.id != nextRadial.id ||
-        !listEquals(previousRadial.points, nextRadial.points);
+        !listEquals(previousRadial.points, nextRadial.points) ||
+        previousRadial.sliceGroupingConfig != nextRadial.sliceGroupingConfig;
   }
 
   bool _radialAnimationModeChanged({
@@ -3526,7 +3527,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _commitRadialPointActivation(
       point: hit.point,
       seriesId: hit.seriesId,
-      pointIndex: hit.pointIndex,
+      sourcePointIndices: hit.effectiveSourcePointIndices,
       position: position,
     );
   }
@@ -3534,21 +3535,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _commitRadialPointActivation({
     required ChartDataPoint point,
     required String seriesId,
-    required int pointIndex,
+    required Iterable<int> sourcePointIndices,
     required Offset position,
   }) {
     final interaction = _effectiveRadialInteractionConfig();
     if (interaction.enableSelection) {
-      final pointRef = ChartPointRef(
-        seriesId: seriesId,
-        pointIndex: pointIndex,
-      );
+      final pointRefs = <ChartPointRef>{
+        for (final sourcePointIndex in sourcePointIndices)
+          ChartPointRef(seriesId: seriesId, pointIndex: sourcePointIndex),
+      };
       final alreadySelected =
-          _selectedPointRefs.length == 1 &&
-          _selectedPointRefs.contains(pointRef);
+          _selectedPointRefs.length == pointRefs.length &&
+          _selectedPointRefs.containsAll(pointRefs);
       _selectedPointRefs
         ..clear()
-        ..addAll(alreadySelected ? const <ChartPointRef>{} : {pointRef});
+        ..addAll(alreadySelected ? const <ChartPointRef>{} : pointRefs);
       if (alreadySelected) {
         _coordinator.setHoveredMarker(null);
       }
@@ -3579,13 +3580,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       );
       return;
     }
-    if (!series.visiblePointIndices.contains(pointIndex)) return;
-    _radialKeyboardFocusIndex = pointIndex;
+    final visibleSlice = series.visibleSliceForSourcePointIndex(pointIndex);
+    if (visibleSlice == null) return;
+    _radialKeyboardFocusIndex = visibleSlice.pointIndex;
     _radialFocusIndicatorVisible = showFocusIndicator;
     _commitRadialPointActivation(
-      point: series.points[pointIndex],
+      point: visibleSlice.point,
       seriesId: series.id,
-      pointIndex: pointIndex,
+      sourcePointIndices: visibleSlice.sourcePointIndices,
       position: Offset.zero,
     );
   }
@@ -3621,10 +3623,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool showFocusIndicator = true,
   }) {
     final series = _effectiveRadialSeries;
-    if (series == null || !series.visiblePointIndices.contains(pointIndex)) {
+    final visibleSlice = series?.visibleSliceForSourcePointIndex(pointIndex);
+    if (series == null || visibleSlice == null) {
       return;
     }
-    _radialKeyboardFocusIndex = pointIndex;
+    _radialKeyboardFocusIndex = visibleSlice.pointIndex;
     _radialFocusIndicatorVisible = showFocusIndicator;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -3862,11 +3865,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     final refs =
         (validation as ChartArtifactSuccess<List<ChartPointRef>>).value;
+    final expandedRefs = _expandRadialPointRefs(refs);
     final nextSelection = additive
-        ? (<ChartPointRef>{..._selectedPointRefs, ...refs})
-        : refs.toSet();
+        ? (<ChartPointRef>{..._selectedPointRefs, ...expandedRefs})
+        : expandedRefs.toSet();
     if (setEquals(nextSelection, _selectedPointRefs)) {
-      if (reveal) _revealPoints(refs);
+      if (reveal) _revealPoints(expandedRefs);
       return ChartArtifactSuccess(value: null);
     }
     _selectedPointRefs
@@ -3880,8 +3884,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _refreshLinkedPointRendering();
     _syncControllerPointState();
     _notifyPointSelectionChanged();
-    if (reveal) _revealPoints(refs);
+    if (reveal) _revealPoints(expandedRefs);
     return ChartArtifactSuccess(value: null);
+  }
+
+  List<ChartPointRef> _expandRadialPointRefs(List<ChartPointRef> refs) {
+    final series = _effectiveRadialSeries;
+    if (series == null) return refs;
+    final expanded = <ChartPointRef>{};
+    for (final ref in refs) {
+      if (ref.seriesId != series.id) {
+        expanded.add(ref);
+        continue;
+      }
+      final slice = series.visibleSliceForSourcePointIndex(ref.pointIndex);
+      if (slice == null) {
+        expanded.add(ref);
+        continue;
+      }
+      expanded.addAll([
+        for (final sourcePointIndex in slice.sourcePointIndices)
+          ChartPointRef(seriesId: series.id, pointIndex: sourcePointIndex),
+      ]);
+    }
+    return expanded.toList(growable: false);
   }
 
   ChartArtifactResult<List<ChartPointRef>> _validatePointCommand(
@@ -4755,7 +4781,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (radialSeries != null) {
       for (final pointRef in _selectedPointRefs) {
         if (pointRef.seriesId == radialSeries.id &&
-            radialSeries.visiblePointIndices.contains(pointRef.pointIndex)) {
+            radialSeries.visibleSliceForSourcePointIndex(pointRef.pointIndex) !=
+                null) {
           selectedTooltipPoint = pointRef;
           break;
         }
