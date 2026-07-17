@@ -69,6 +69,14 @@ void main() {
         pieChartTheme: const PieChartTheme(
           opacity: 0.72,
           cornerRadius: 11,
+          gradient: PieGradientStyle(
+            type: PieGradientType.linear,
+            startColor: Color(0xFFABCDEF),
+            endColor: Color(0xFF123456),
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.15,
+            angleDegrees: 25,
+          ),
           shadow: PieElevationStyle(
             color: Color(0x66000000),
             blurRadius: 8,

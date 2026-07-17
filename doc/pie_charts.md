@@ -105,6 +105,10 @@ const PieChartStyle(
   borderWidth: 1,
   borderColorMode: PieBorderColorMode.slice,
   borderLightnessShift: -0.16,
+  gradient: PieGradientStyle(
+    type: PieGradientType.linear,
+    angleDegrees: -45,
+  ),
   selectionExplodeOffset: 10,
 )
 ```
@@ -122,6 +126,8 @@ const PieChartStyle(
   `borderLightnessShift` transform slice-derived borders in HSL space. Negative
   lightness creates a darker shade; a hue shift creates a related contrasting
   border. Saturation and lightness shifts use the inclusive range -1 to 1.
+- `gradient` optionally applies one linear or radial light source across the
+  complete Pie. Null keeps the established solid palette fill.
 
 `sliceGap` preserves each category's angular sweep. It translates complete
 wedges apart and compensates each wedge radius independently, so small and
@@ -135,8 +141,9 @@ rose, and semi-circular charts are not part of this release.
 ## Theme and advanced slice styling
 
 `ChartTheme.pieChartTheme` defines reusable product-wide Pie defaults. A
-`PieChartStyle` may override opacity, corner radius, elevation, or animation
-for one series. Null series values continue to inherit the chart theme.
+`PieChartStyle` may override gradient, opacity, corner radius, elevation, or
+animation for one series. Null series values continue to inherit the chart
+theme.
 
 ```dart
 final theme = ChartTheme.light.copyWith(
@@ -149,6 +156,11 @@ final theme = ChartTheme.light.copyWith(
     ],
   ),
   pieChartTheme: const PieChartTheme(
+    gradient: PieGradientStyle(
+      type: PieGradientType.radial,
+      startLightnessShift: 0.18,
+      endLightnessShift: -0.12,
+    ),
     opacity: 0.88,
     cornerRadius: 12,
     shadow: PieElevationStyle(
@@ -169,6 +181,15 @@ final theme = ChartTheme.light.copyWith(
   ),
 );
 ```
+
+`PieGradientStyle` derives its two stops from every slice color by default, so
+category identity and legend markers remain stable. The first and final stops
+can instead use fixed `startColor` and `endColor` values. A linear gradient
+uses `angleDegrees` (`0` points right and `90` points down); a radial gradient
+blends from the shared center to the outer edge. Both lightness shifts use the
+inclusive range -1 to 1. Set `PieGradientStyle(enabled: false)` on a series to
+explicitly opt out of a theme gradient. Gradient style is included in artifact
+JSON and restored with the Pie series.
 
 `PieElevationStyle.color == null` derives the elevation color from its slice.
 Use a dark color plus a downward offset for a shadow, or a slice-derived color
@@ -193,6 +214,7 @@ const PieDataLabelConfig(
   content: PieDataLabelContent.categoryAndPercentage,
   minimumShare: 0.03,
   minimumSweepDegrees: 8,
+  outsideOffset: 0,
   connectorLength: 14,
   connectorWidth: 1,
   collisionStrategy: PieDataLabelCollisionStrategy.shiftAndHide,
@@ -201,13 +223,15 @@ const PieDataLabelConfig(
 
 Content may be category, value, percentage, or a combined variant. Inside
 labels are centered in eligible slices and omitted when the text does not fit.
-Outside labels are split into left and right lanes, shifted deterministically,
-and—under `shiftAndHide`—the lowest-priority labels are hidden when the lane
-cannot fit. The complete legend and table remain available when a label is
-hidden.
+Outside labels are split into compact left and right lanes beside the painted
+pie, shifted deterministically, and—under `shiftAndHide`—the lowest-priority
+labels are hidden when the lane cannot fit. Set `outsideOffset` to move both
+lanes outwards; `0` is tight to the pie. The renderer clamps the lanes inside
+the plot. The complete legend and table remain available when a label is hidden.
 
 `minimumShare` uses the inclusive range 0–1. `minimumSweepDegrees` uses 0–360.
-Connector length, width, and label padding must be finite and non-negative.
+Outside offset, connector length, width, and label padding must be finite and
+non-negative.
 
 ### Callout styling
 
@@ -395,8 +419,11 @@ The public tool schema accepts `chart_type: "pie"`. It requires exactly one
 series, a non-empty point label, a non-negative finite `y`, and a stable
 ordering `x`. Omit Cartesian axes, crosshair, pan, and zoom. Pie-specific style
 keys include start angle, direction, radius, gaps, fixed or slice-derived
-borders (including HSL shifts), explode offset, opacity, corner radius, shadow,
+borders (including HSL shifts), linear/radial gradient type and stops, gradient
+angle/lightness shifts, explode offset, opacity, corner radius, shadow,
 selected glow, animation mode, label position/content, and label thresholds.
+Use `pie_label_offset` to move outside-label lanes away from their compact
+zero-offset position.
 
 ## Accessibility and responsive behavior
 

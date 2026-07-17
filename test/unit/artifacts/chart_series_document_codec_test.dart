@@ -196,6 +196,14 @@ void main() {
           borderHueShiftDegrees: 24,
           borderSaturationShift: -0.1,
           borderLightnessShift: -0.18,
+          gradient: PieGradientStyle(
+            type: PieGradientType.radial,
+            startColor: Color(0xFFE8F1FF),
+            endColor: Color(0xFF123456),
+            startLightnessShift: 0.22,
+            endLightnessShift: -0.16,
+            angleDegrees: 35,
+          ),
           selectionExplodeOffset: 12,
           opacity: 0.76,
           cornerRadius: 9,
@@ -220,6 +228,7 @@ void main() {
           minimumShare: 0.05,
           minimumSweepDegrees: 12,
           padding: 8,
+          outsideOffset: 18,
           connectorLength: 16,
           connectorWidth: 2,
           connectorColor: Color(0xFF556677),
@@ -249,6 +258,35 @@ void main() {
       expect(decoded.dataLabels, source.dataLabels);
       expect(decoded.visiblePointIndices, [0]);
     });
+
+    test(
+      'defaults compact labels when an older pie document has no offset',
+      () {
+        final encoded = ChartSeriesDocumentCodec.encode(
+          PieChartSeries.fromMap(
+            id: 'legacy-pie',
+            values: const {'A': 2, 'B': 1},
+          ),
+        );
+        expect(encoded, isA<ChartArtifactSuccess<ChartSeriesDocument>>());
+        final document =
+            (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+        final json = Map<String, Object?>.from(document.toJson());
+        final style = Map<String, Object?>.from(json['style']! as Map);
+        final labels = Map<String, Object?>.from(style['dataLabels']! as Map)
+          ..remove('outsideOffset');
+        style['dataLabels'] = labels;
+        json['style'] = style;
+
+        final decoded = ChartSeriesDocumentCodec.decode(
+          ChartSeriesDocument.fromJson(json),
+        );
+
+        expect(decoded, isA<ChartArtifactSuccess<ChartSeries>>());
+        final series = (decoded as ChartArtifactSuccess<ChartSeries>).value;
+        expect((series as PieChartSeries).dataLabels.outsideOffset, 0);
+      },
+    );
 
     test('round-trips scatter, bar, and concrete base series', () {
       final scatter =

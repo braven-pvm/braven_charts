@@ -145,11 +145,17 @@ final pie = PieChartSeries.fromMap(
     radiusFactor: 0.86,
     sliceGap: 2,
     borderWidth: 1,
+    gradient: PieGradientStyle(
+      type: PieGradientType.radial,
+      startLightnessShift: 0.18,
+      endLightnessShift: -0.12,
+    ),
     selectionExplodeOffset: 10,
   ),
   dataLabels: const PieDataLabelConfig(
     position: PieDataLabelPosition.outside,
     content: PieDataLabelContent.categoryAndPercentage,
+    outsideOffset: 0,
     collisionStrategy: PieDataLabelCollisionStrategy.shiftAndHide,
   ),
 );
@@ -188,8 +194,9 @@ Pie has these enforced boundaries:
   stable identity.
 
 See the complete [Pie chart guide](../../doc/pie_charts.md) for labels,
-palettes, callouts, tooltips, legends, rounded/translucent slices, elevation,
-animation, selection, tables, artifacts, AI configuration, and accessibility.
+palettes, solid or gradient fills, callouts, tooltips, legends,
+rounded/translucent slices, elevation, animation, selection, tables,
+artifacts, AI configuration, and accessibility.
 
 ## Mixed Cartesian charts
 

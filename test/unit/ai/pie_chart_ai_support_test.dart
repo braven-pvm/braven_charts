@@ -37,6 +37,13 @@ void main() {
           'pie_border_hue_shift': 20,
           'pie_border_saturation_shift': -0.1,
           'pie_border_lightness_shift': -0.2,
+          'pie_gradient_enabled': true,
+          'pie_gradient_type': 'radial',
+          'pie_gradient_start_color': '#E8F1FF',
+          'pie_gradient_end_color': '#123456',
+          'pie_gradient_start_lightness_shift': 0.22,
+          'pie_gradient_end_lightness_shift': -0.16,
+          'pie_gradient_angle': 35,
           'pie_selection_explode_offset': 12,
           'pie_opacity': 0.78,
           'pie_corner_radius': 10,
@@ -56,6 +63,7 @@ void main() {
           'pie_label_content': 'category_value_and_percentage',
           'pie_label_minimum_share': 0.05,
           'pie_label_minimum_sweep': 10,
+          'pie_label_offset': 24,
         },
       });
 
@@ -85,6 +93,13 @@ void main() {
       expect(series.pieStyle.borderHueShiftDegrees, 20);
       expect(series.pieStyle.borderSaturationShift, -0.1);
       expect(series.pieStyle.borderLightnessShift, -0.2);
+      expect(series.pieStyle.gradient?.enabled, isTrue);
+      expect(series.pieStyle.gradient?.type, PieGradientType.radial);
+      expect(series.pieStyle.gradient?.startColor, const Color(0xFFE8F1FF));
+      expect(series.pieStyle.gradient?.endColor, const Color(0xFF123456));
+      expect(series.pieStyle.gradient?.startLightnessShift, 0.22);
+      expect(series.pieStyle.gradient?.endLightnessShift, -0.16);
+      expect(series.pieStyle.gradient?.angleDegrees, 35);
       expect(series.pieStyle.selectionExplodeOffset, 12);
       expect(series.pieStyle.opacity, 0.78);
       expect(series.pieStyle.cornerRadius, 10);
@@ -106,6 +121,7 @@ void main() {
       );
       expect(series.dataLabels.minimumShare, 0.05);
       expect(series.dataLabels.minimumSweepDegrees, 10);
+      expect(series.dataLabels.outsideOffset, 24);
     });
 
     test('rejects invalid pie cardinality, data, axes, and mixed styles', () {
@@ -233,8 +249,11 @@ void main() {
     );
     expect(styleProperties.keys, contains('pie_start_angle'));
     expect(styleProperties.keys, contains('pie_corner_radius'));
+    expect(styleProperties.keys, contains('pie_gradient_type'));
+    expect(styleProperties.keys, contains('pie_gradient_angle'));
     expect(styleProperties.keys, contains('pie_selected_glow_blur'));
     expect(styleProperties.keys, contains('pie_label_content'));
+    expect(styleProperties.keys, contains('pie_label_offset'));
     expect(
       (properties['x_axis'] as Map<String, dynamic>)['description'],
       contains('Omit when chart_type is pie'),

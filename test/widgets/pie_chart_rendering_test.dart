@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/pie_series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts/src/widgets/pie_chart_legend.dart';
 import 'package:flutter/material.dart';
@@ -205,6 +206,87 @@ void main() {
     expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'elastic Pie entrance paints outside labels only after completion',
+    (tester) async {
+      const labelSurface = Color(0xFFFF00FF);
+      const duration = Duration(milliseconds: 600);
+      final base = ChartTheme.vibrant;
+      final theme = base.copyWith(
+        animationTheme: base.animationTheme.copyWith(
+          dataUpdateDuration: duration,
+          dataUpdateCurve: Curves.elasticOut,
+        ),
+        pieChartTheme: const PieChartTheme(
+          animationMode: PieAnimationMode.grow,
+          calloutStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFF111827), fontSize: 12),
+            backgroundColor: labelSurface,
+            borderColor: Color(0x00000000),
+            borderWidth: 0,
+            borderRadius: 4,
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 640,
+            height: 420,
+            child: BravenChartPlus(
+              showLegend: false,
+              theme: theme,
+              series: [
+                PieChartSeries.fromMap(
+                  id: 'project-effort',
+                  values: const {
+                    'Build': 46,
+                    'Discovery': 18,
+                    'Design': 14,
+                    'Testing': 12,
+                    'Launch': 7,
+                    'Support': 3,
+                  },
+                  dataLabels: const PieDataLabelConfig(
+                    position: PieDataLabelPosition.outside,
+                    content: PieDataLabelContent.categoryAndPercentage,
+                    minimumShare: 0.03,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      PieSeriesElement currentPieElement() {
+        final renderBox = tester.allRenderObjects
+            .whereType<ChartRenderBox>()
+            .single;
+        return renderBox.debugElements.whereType<PieSeriesElement>().single;
+      }
+
+      for (var elapsed = 50; elapsed < duration.inMilliseconds; elapsed += 50) {
+        await tester.pump(const Duration(milliseconds: 50));
+        final element = currentPieElement();
+        expect(
+          element.shouldPaintDataLabels,
+          isFalse,
+          reason: 'outside labels must not flash at ${elapsed}ms',
+        );
+      }
+
+      await tester.pump(const Duration(milliseconds: 50));
+      final completedElement = currentPieElement();
+      expect(completedElement.isEntranceAnimationComplete, isTrue);
+      expect(completedElement.shouldPaintDataLabels, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'pointer selection has no accent outline but keyboard focus keeps a ring',

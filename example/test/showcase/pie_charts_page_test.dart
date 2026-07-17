@@ -37,6 +37,10 @@ void main() {
     final initialChart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('pie-showcase-chart')),
     );
+    expect(
+      (initialChart.series.single as PieChartSeries).pieStyle.gradient?.type,
+      PieGradientType.radial,
+    );
     expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
 
@@ -52,6 +56,7 @@ void main() {
     expect(simpleSeries.dataLabels.position, PieDataLabelPosition.inside);
     expect(simpleSeries.dataLabels.content, PieDataLabelContent.value);
     expect(simpleSeries.dataLabels.minimumShare, 0.2);
+    expect(simpleSeries.pieStyle.gradient?.type, PieGradientType.linear);
     expect(
       simpleChart.theme?.pieChartTheme.calloutStyle?.textStyle.color,
       const Color(0xFFFFFFFF),
@@ -79,6 +84,8 @@ void main() {
       highContrastSeries.dataLabels.collisionStrategy,
       PieDataLabelCollisionStrategy.shiftAndHide,
     );
+    expect(highContrastSeries.dataLabels.outsideOffset, 0);
+    expect(highContrastSeries.pieStyle.gradient, isNull);
     expect(
       highContrastCallout?.backgroundColor.toARGB32(),
       const Color(0xFFFFFFFF).toARGB32(),
@@ -99,6 +106,8 @@ void main() {
     expect(elevatedSeries.pieStyle.sliceGap, 7);
     expect(elevatedSeries.pieStyle.cornerRadius, isNull);
     expect(elevatedSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(elevatedSeries.dataLabels.outsideOffset, 12);
+    expect(elevatedSeries.pieStyle.gradient?.type, PieGradientType.radial);
     expect(elevatedChart.theme?.pieChartTheme.cornerRadius, 14);
     expect(elevatedChart.theme?.pieChartTheme.shadow.isVisible, isTrue);
     expect(elevatedChart.theme?.pieChartTheme.opacity, 0.94);

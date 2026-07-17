@@ -22,6 +22,107 @@ enum PieBorderColorMode {
   slice,
 }
 
+/// Shader geometry used to fill Pie slices.
+enum PieGradientType {
+  /// Blend along a shared directional axis across the complete Pie.
+  linear,
+
+  /// Blend from the shared Pie center towards its outer edge.
+  radial,
+}
+
+/// Immutable gradient fill shared by every slice in a Pie series.
+///
+/// When [startColor] or [endColor] is null, that stop is derived from each
+/// slice's resolved palette color using the matching lightness shift. This
+/// preserves category identity while giving the complete Pie one consistent
+/// light source.
+@immutable
+class PieGradientStyle {
+  /// Creates a Pie gradient fill.
+  const PieGradientStyle({
+    this.enabled = true,
+    this.type = PieGradientType.linear,
+    this.startColor,
+    this.endColor,
+    this.startLightnessShift = 0.16,
+    this.endLightnessShift = -0.12,
+    this.angleDegrees = -45,
+  });
+
+  /// Whether this gradient is painted.
+  ///
+  /// Use a disabled style on a series to opt out of a theme gradient.
+  final bool enabled;
+
+  /// Directional or center-to-edge shader geometry.
+  final PieGradientType type;
+
+  /// Optional fixed first stop; null derives it from each slice color.
+  final Color? startColor;
+
+  /// Optional fixed final stop; null derives it from each slice color.
+  final Color? endColor;
+
+  /// Additive HSL lightness shift for a derived first stop.
+  final double startLightnessShift;
+
+  /// Additive HSL lightness shift for a derived final stop.
+  final double endLightnessShift;
+
+  /// Linear-gradient direction in screen-space degrees.
+  ///
+  /// Zero degrees points right and 90 degrees points down. Radial gradients
+  /// ignore this value.
+  final double angleDegrees;
+
+  /// Returns a copy with selected fields replaced.
+  PieGradientStyle copyWith({
+    bool? enabled,
+    PieGradientType? type,
+    Color? startColor,
+    bool clearStartColor = false,
+    Color? endColor,
+    bool clearEndColor = false,
+    double? startLightnessShift,
+    double? endLightnessShift,
+    double? angleDegrees,
+  }) {
+    return PieGradientStyle(
+      enabled: enabled ?? this.enabled,
+      type: type ?? this.type,
+      startColor: clearStartColor ? null : (startColor ?? this.startColor),
+      endColor: clearEndColor ? null : (endColor ?? this.endColor),
+      startLightnessShift: startLightnessShift ?? this.startLightnessShift,
+      endLightnessShift: endLightnessShift ?? this.endLightnessShift,
+      angleDegrees: angleDegrees ?? this.angleDegrees,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieGradientStyle &&
+          enabled == other.enabled &&
+          type == other.type &&
+          startColor == other.startColor &&
+          endColor == other.endColor &&
+          startLightnessShift == other.startLightnessShift &&
+          endLightnessShift == other.endLightnessShift &&
+          angleDegrees == other.angleDegrees;
+
+  @override
+  int get hashCode => Object.hash(
+    enabled,
+    type,
+    startColor,
+    endColor,
+    startLightnessShift,
+    endLightnessShift,
+    angleDegrees,
+  );
+}
+
 /// A reusable blurred elevation layer for pie slices.
 ///
 /// A downward [offset] and dark [color] reads as a shadow. A zero offset with
@@ -114,6 +215,7 @@ class PieChartTheme {
     this.borderHueShiftDegrees = 0,
     this.borderSaturationShift = 0,
     this.borderLightnessShift = -0.12,
+    this.gradient,
     this.calloutStyle,
     this.animationMode = PieAnimationMode.grow,
   }) : assert(opacity >= 0 && opacity <= 1),
@@ -150,6 +252,9 @@ class PieChartTheme {
   /// Additive HSL lightness shift applied by [PieBorderColorMode.slice].
   final double borderLightnessShift;
 
+  /// Optional default slice gradient; null keeps solid palette fills.
+  final PieGradientStyle? gradient;
+
   /// Optional outside/inside data-label callout styling.
   final LabelStyle? calloutStyle;
 
@@ -166,6 +271,8 @@ class PieChartTheme {
     double? borderHueShiftDegrees,
     double? borderSaturationShift,
     double? borderLightnessShift,
+    PieGradientStyle? gradient,
+    bool clearGradient = false,
     LabelStyle? calloutStyle,
     bool clearCalloutStyle = false,
     PieAnimationMode? animationMode,
@@ -181,6 +288,7 @@ class PieChartTheme {
       borderSaturationShift:
           borderSaturationShift ?? this.borderSaturationShift,
       borderLightnessShift: borderLightnessShift ?? this.borderLightnessShift,
+      gradient: clearGradient ? null : (gradient ?? this.gradient),
       calloutStyle: clearCalloutStyle
           ? null
           : (calloutStyle ?? this.calloutStyle),
@@ -200,6 +308,7 @@ class PieChartTheme {
           borderHueShiftDegrees == other.borderHueShiftDegrees &&
           borderSaturationShift == other.borderSaturationShift &&
           borderLightnessShift == other.borderLightnessShift &&
+          gradient == other.gradient &&
           calloutStyle == other.calloutStyle &&
           animationMode == other.animationMode;
 
@@ -213,6 +322,7 @@ class PieChartTheme {
     borderHueShiftDegrees,
     borderSaturationShift,
     borderLightnessShift,
+    gradient,
     calloutStyle,
     animationMode,
   );
@@ -278,6 +388,7 @@ class PieChartStyle {
     this.borderHueShiftDegrees,
     this.borderSaturationShift,
     this.borderLightnessShift,
+    this.gradient,
     this.selectionExplodeOffset = 8,
     this.opacity,
     this.cornerRadius,
@@ -319,6 +430,11 @@ class PieChartStyle {
   /// Optional lightness shift overriding [PieChartTheme.borderLightnessShift].
   final double? borderLightnessShift;
 
+  /// Optional gradient overriding [PieChartTheme.gradient].
+  ///
+  /// A disabled gradient explicitly restores solid fills for this series.
+  final PieGradientStyle? gradient;
+
   /// Logical-pixel offset applied to a selected, exploded slice.
   final double selectionExplodeOffset;
 
@@ -354,6 +470,8 @@ class PieChartStyle {
     bool clearBorderSaturationShift = false,
     double? borderLightnessShift,
     bool clearBorderLightnessShift = false,
+    PieGradientStyle? gradient,
+    bool clearGradient = false,
     double? selectionExplodeOffset,
     double? opacity,
     bool clearOpacity = false,
@@ -385,6 +503,7 @@ class PieChartStyle {
       borderLightnessShift: clearBorderLightnessShift
           ? null
           : (borderLightnessShift ?? this.borderLightnessShift),
+      gradient: clearGradient ? null : (gradient ?? this.gradient),
       selectionExplodeOffset:
           selectionExplodeOffset ?? this.selectionExplodeOffset,
       opacity: clearOpacity ? null : (opacity ?? this.opacity),
@@ -415,6 +534,7 @@ class PieChartStyle {
           borderHueShiftDegrees == other.borderHueShiftDegrees &&
           borderSaturationShift == other.borderSaturationShift &&
           borderLightnessShift == other.borderLightnessShift &&
+          gradient == other.gradient &&
           selectionExplodeOffset == other.selectionExplodeOffset &&
           opacity == other.opacity &&
           cornerRadius == other.cornerRadius &&
@@ -434,6 +554,7 @@ class PieChartStyle {
     borderHueShiftDegrees,
     borderSaturationShift,
     borderLightnessShift,
+    gradient,
     selectionExplodeOffset,
     opacity,
     cornerRadius,
@@ -454,6 +575,7 @@ class PieDataLabelConfig {
     this.minimumShare = 0.03,
     this.minimumSweepDegrees = 8,
     this.padding = 6,
+    this.outsideOffset = 0,
     this.connectorLength = 14,
     this.connectorWidth = 1,
     this.connectorColor,
@@ -479,6 +601,12 @@ class PieDataLabelConfig {
   /// Logical-pixel padding between a label and its anchor or lane.
   final double padding;
 
+  /// Horizontal gap between the painted pie and an outside-label lane.
+  ///
+  /// A value of zero keeps the aligned label lane tight to the pie. Positive
+  /// values move it outwards while the renderer keeps labels inside the plot.
+  final double outsideOffset;
+
   /// Logical-pixel radial connector length for outside labels.
   final double connectorLength;
 
@@ -502,6 +630,7 @@ class PieDataLabelConfig {
     double? minimumShare,
     double? minimumSweepDegrees,
     double? padding,
+    double? outsideOffset,
     double? connectorLength,
     double? connectorWidth,
     Color? connectorColor,
@@ -517,6 +646,7 @@ class PieDataLabelConfig {
       minimumShare: minimumShare ?? this.minimumShare,
       minimumSweepDegrees: minimumSweepDegrees ?? this.minimumSweepDegrees,
       padding: padding ?? this.padding,
+      outsideOffset: outsideOffset ?? this.outsideOffset,
       connectorLength: connectorLength ?? this.connectorLength,
       connectorWidth: connectorWidth ?? this.connectorWidth,
       connectorColor: clearConnectorColor
@@ -539,6 +669,7 @@ class PieDataLabelConfig {
           minimumShare == other.minimumShare &&
           minimumSweepDegrees == other.minimumSweepDegrees &&
           padding == other.padding &&
+          outsideOffset == other.outsideOffset &&
           connectorLength == other.connectorLength &&
           connectorWidth == other.connectorWidth &&
           connectorColor == other.connectorColor &&
@@ -553,6 +684,7 @@ class PieDataLabelConfig {
     minimumShare,
     minimumSweepDegrees,
     padding,
+    outsideOffset,
     connectorLength,
     connectorWidth,
     connectorColor,

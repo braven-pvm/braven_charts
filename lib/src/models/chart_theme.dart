@@ -26,7 +26,7 @@ import 'pie_chart_config.dart';
 /// - [annotationTheme]: Annotation styling (point, range, text, threshold, trend)
 /// - [scrollbarConfig]: Scrollbar appearance and behavior
 /// - [legendStyle]: Legend appearance (position, fonts, colors, markers)
-/// - [pieChartTheme]: Radial slice, elevation, callout, and animation defaults
+/// - [pieChartTheme]: Radial fill, elevation, callout, and animation defaults
 ///
 /// Example:
 /// ```dart

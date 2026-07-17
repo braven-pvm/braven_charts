@@ -2189,6 +2189,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               },
               coordinator: _coordinator,
               animationProgress: _radialRevealProgress,
+              isEntranceAnimationComplete:
+                  _radialRevealAnimationController.value >= 1,
               selectionProgress: _radialSelectionProgress,
             ),
           ];

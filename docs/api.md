@@ -64,12 +64,14 @@ Represents one insertion-ordered set of category contributions. A pie chart
 accepts exactly one pie series and cannot mix with Cartesian series.
 
 - `PieChartSeries.fromMap`: category/value convenience constructor
-- `pieStyle`: `PieChartStyle` geometry, physical separation, border, explode,
-  opacity, rounded-corner, elevation, and animation overrides
-- `dataLabels`: `PieDataLabelConfig` content, position, eligibility, connector,
-  collision, and callout policy
+- `pieStyle`: `PieChartStyle` geometry, physical separation, border, solid or
+  `PieGradientStyle` fill, explode, opacity, rounded-corner, elevation, and
+  animation overrides
+- `dataLabels`: `PieDataLabelConfig` content, position, eligibility, compact
+  outside-lane offset, connector, collision, and callout policy
 - `ChartTheme.pieChartTheme`: shared `PieChartTheme` defaults, including
-  `PieElevationStyle` shadows/glows and `PieAnimationMode`
+  `PieGradientStyle` fills, `PieElevationStyle` shadows/glows, and
+  `PieAnimationMode`
 - `total` and `visiblePointIndices`: validated contribution helpers
 
 Values must be finite and non-negative, and categories must be non-empty. Zero

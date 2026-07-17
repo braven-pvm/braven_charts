@@ -163,7 +163,15 @@ void main() {
       theme: theme,
       showLegend: true,
       series: _standardSeries().copyWith(
-        pieStyle: const PieChartStyle(sliceGap: 8, selectionExplodeOffset: 12),
+        pieStyle: const PieChartStyle(
+          sliceGap: 8,
+          selectionExplodeOffset: 12,
+          gradient: PieGradientStyle(
+            type: PieGradientType.radial,
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.12,
+          ),
+        ),
       ),
     );
 

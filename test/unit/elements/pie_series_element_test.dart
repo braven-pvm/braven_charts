@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/braven_charts.dart';
@@ -137,6 +138,94 @@ void main() {
       },
     );
 
+    test('linear gradient shares one light axis across a slice', () async {
+      final series = PieChartSeries.fromMap(
+        id: 'gradient',
+        color: const Color(0xFF808080),
+        values: const {'Only': 1},
+        pieStyle: const PieChartStyle(
+          radiusFactor: 1,
+          sliceGap: 0,
+          borderWidth: 0,
+          gradient: PieGradientStyle(
+            type: PieGradientType.linear,
+            startColor: Color(0xFFFF0000),
+            endColor: Color(0xFF0000FF),
+            angleDegrees: 0,
+          ),
+        ),
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(200),
+        theme: ChartTheme.light,
+      );
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(200));
+      final image = await recorder.endRecording().toImage(200, 200);
+      addTearDown(image.dispose);
+      final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+      expect(bytes, isNotNull);
+
+      Color pixelAt(int x, int y) {
+        final offset = (y * 200 + x) * 4;
+        return Color.fromARGB(
+          bytes!.getUint8(offset + 3),
+          bytes.getUint8(offset),
+          bytes.getUint8(offset + 1),
+          bytes.getUint8(offset + 2),
+        );
+      }
+
+      final left = pixelAt(30, 100);
+      final right = pixelAt(170, 100);
+      expect(left.r, greaterThan(left.b));
+      expect(right.b, greaterThan(right.r));
+      expect(left, isNot(right));
+    });
+
+    test('a disabled series gradient opts out of a theme gradient', () async {
+      const solid = Color(0xFF336699);
+      final series = PieChartSeries.fromMap(
+        id: 'solid-override',
+        color: solid,
+        values: const {'Only': 1},
+        pieStyle: const PieChartStyle(
+          radiusFactor: 1,
+          sliceGap: 0,
+          borderWidth: 0,
+          gradient: PieGradientStyle(enabled: false),
+        ),
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+      );
+      final theme = ChartTheme.light.copyWith(
+        pieChartTheme: const PieChartTheme(
+          gradient: PieGradientStyle(type: PieGradientType.radial),
+        ),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(100),
+        theme: theme,
+      );
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(100));
+      final image = await recorder.endRecording().toImage(100, 100);
+      addTearDown(image.dispose);
+      final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+      expect(bytes, isNotNull);
+      final offset = (50 * 100 + 50) * 4;
+      final center = Color.fromARGB(
+        bytes!.getUint8(offset + 3),
+        bytes.getUint8(offset),
+        bytes.getUint8(offset + 1),
+        bytes.getUint8(offset + 2),
+      );
+
+      expect(center, solid);
+    });
+
     test('theme opacity is applied to slice pixels', () async {
       final series = PieChartSeries.fromMap(
         id: 'transparent',
@@ -204,6 +293,77 @@ void main() {
         expect(element.dataHitForPointIndex(0), isNotNull);
         expect(element.geometry.slices.first.path, isNotNull);
         recorder.endRecording().dispose();
+      },
+    );
+
+    test(
+      'outside label offset moves a compact lane away from the pie',
+      () async {
+        Future<({double labelLeft, double pieRight})> paintAt(
+          double outsideOffset,
+        ) async {
+          final series = PieChartSeries.fromMap(
+            id: 'label-offset',
+            values: const {'Right': 1, 'Left': 1},
+            pieStyle: const PieChartStyle(
+              startAngleDegrees: -90,
+              radiusFactor: 0.7,
+              sliceGap: 0,
+              borderWidth: 0,
+              animationMode: PieAnimationMode.none,
+            ),
+            dataLabels: PieDataLabelConfig(
+              content: PieDataLabelContent.category,
+              minimumShare: 0,
+              minimumSweepDegrees: 0,
+              outsideOffset: outsideOffset,
+              calloutStyle: const LabelStyle(
+                textStyle: TextStyle(color: Color(0xFF000000), fontSize: 10),
+                backgroundColor: Color(0xFFFF00FF),
+                borderColor: Color(0x00000000),
+                borderWidth: 0,
+                borderRadius: 0,
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              ),
+            ),
+          );
+          final element = PieSeriesElement(
+            series: series,
+            size: const Size(400, 240),
+            theme: ChartTheme.light,
+          );
+          final recorder = PictureRecorder();
+          element.paint(Canvas(recorder), const Size(400, 240));
+          final image = await recorder.endRecording().toImage(400, 240);
+          addTearDown(image.dispose);
+          final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+          expect(bytes, isNotNull);
+
+          var labelLeft = double.infinity;
+          for (var y = 0; y < 240; y++) {
+            for (var x = 200; x < 400; x++) {
+              final byteOffset = (y * 400 + x) * 4;
+              if (bytes!.getUint8(byteOffset) == 255 &&
+                  bytes.getUint8(byteOffset + 1) == 0 &&
+                  bytes.getUint8(byteOffset + 2) == 255 &&
+                  bytes.getUint8(byteOffset + 3) == 255) {
+                labelLeft = math.min(labelLeft, x.toDouble());
+              }
+            }
+          }
+
+          expect(labelLeft.isFinite, isTrue);
+          final pieRight = element.geometry.slices
+              .map((slice) => slice.bounds.right)
+              .reduce(math.max);
+          return (labelLeft: labelLeft, pieRight: pieRight);
+        }
+
+        final compact = await paintAt(0);
+        final offset = await paintAt(24);
+
+        expect(compact.labelLeft, closeTo(compact.pieRight, 1.5));
+        expect(offset.labelLeft - compact.labelLeft, closeTo(24, 1.5));
       },
     );
 

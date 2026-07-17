@@ -54,7 +54,8 @@ screenshots:
     path: doc/screenshots/gallery_annotated.png
   - description: >-
       Five production-shaped pie charts spanning simple inside values, outside
-      labels, dense categories, themes, rounded slices, and elevation.
+      labels, dense categories, solid and gradient fills, themes, rounded
+      slices, and elevation.
     path: doc/screenshots/gallery_pie_collection.png
 environment:
   sdk: ">=3.9.0 <4.0.0"

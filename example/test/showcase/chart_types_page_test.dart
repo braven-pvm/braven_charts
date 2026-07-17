@@ -85,8 +85,10 @@ void main() {
     expect(find.text('Pie Appearance'), findsOneWidget);
     expect(find.text('Show Data Labels'), findsOneWidget);
     expect(find.text('Label Position'), findsOneWidget);
+    expect(find.text('Label Offset'), findsOneWidget);
     expect(find.text('Slice Gap'), findsOneWidget);
     expect(find.text('Start Angle'), findsOneWidget);
+    expect(find.text('Slice Fill'), findsOneWidget);
     expect(find.text('Show Second Series'), findsNothing);
     expect(find.text('Show Grid Lines'), findsNothing);
     expect(find.text('Show Axis Lines'), findsNothing);
@@ -102,8 +104,10 @@ void main() {
         );
     final pieSeries = pieChart.series.single as PieChartSeries;
     expect(pieSeries.pieStyle.sliceGap, 3);
+    expect(pieSeries.pieStyle.gradient?.type, PieGradientType.radial);
     expect(pieSeries.dataLabels.isVisible, isTrue);
     expect(pieSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(pieSeries.dataLabels.outsideOffset, 0);
   });
 
   testWidgets('chart-defining controls precede generic display controls', (

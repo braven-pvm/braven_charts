@@ -111,7 +111,7 @@ class SimpleRevenueGalleryCard extends StatelessWidget {
     return _PieGalleryCard(
       key: const ValueKey('gallery-pie-simple-revenue'),
       title: 'Revenue by product',
-      subtitle: 'Dark canvas · inside values · no legend',
+      subtitle: 'Dark canvas · linear fill · inside values',
       theme: theme,
       showLegend: false,
       series: PieChartSeries.fromMap(
@@ -131,6 +131,12 @@ class SimpleRevenueGalleryCard extends StatelessWidget {
           borderWidth: 1.5,
           borderColorMode: PieBorderColorMode.slice,
           borderLightnessShift: -0.18,
+          gradient: PieGradientStyle(
+            type: PieGradientType.linear,
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.14,
+            angleDegrees: -50,
+          ),
         ),
         dataLabels: const PieDataLabelConfig(
           position: PieDataLabelPosition.inside,
@@ -374,7 +380,7 @@ class PortfolioAllocationGalleryCard extends StatelessWidget {
     return _PieGalleryCard(
       key: const ValueKey('gallery-pie-portfolio'),
       title: 'Portfolio allocation',
-      subtitle: 'Warm palette · transparency · elevation',
+      subtitle: 'Warm palette · radial fill · elevation',
       theme: theme,
       series: PieChartSeries.fromMap(
         id: 'gallery-pie-portfolio-series',
@@ -395,6 +401,11 @@ class PortfolioAllocationGalleryCard extends StatelessWidget {
           borderColorMode: PieBorderColorMode.slice,
           borderHueShiftDegrees: 22,
           borderLightnessShift: -0.12,
+          gradient: PieGradientStyle(
+            type: PieGradientType.radial,
+            startLightnessShift: 0.18,
+            endLightnessShift: -0.12,
+          ),
         ),
         dataLabels: const PieDataLabelConfig(
           position: PieDataLabelPosition.inside,

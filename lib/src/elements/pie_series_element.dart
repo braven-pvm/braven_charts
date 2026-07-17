@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
@@ -27,10 +28,13 @@ class PieSeriesElement implements DataHitElement {
     this.selectedPointIndices = const <int>{},
     this.coordinator,
     this.animationProgress = 1,
+    bool? isEntranceAnimationComplete,
     this.selectionProgress = 1,
     this.isSelected = false,
     this.isHovered = false,
-  }) : geometry = PieChartGeometryCalculator.calculate(
+  }) : isEntranceAnimationComplete =
+           isEntranceAnimationComplete ?? animationProgress >= 0.999,
+       geometry = PieChartGeometryCalculator.calculate(
          series: series,
          size: size,
          padding: _geometryPadding(series, size, theme, textScaleFactor),
@@ -68,6 +72,13 @@ class PieSeriesElement implements DataHitElement {
   /// Radial entrance progress in the inclusive range 0–1.
   final double animationProgress;
 
+  /// Whether the entrance animation lifecycle has reached completion.
+  ///
+  /// This is intentionally separate from [animationProgress]. Curves such as
+  /// `elasticOut` can reach the final geometry more than once before the
+  /// animation controller itself completes.
+  final bool isEntranceAnimationComplete;
+
   /// Selected explode/elevation progress in the inclusive range 0–1.
   final double selectionProgress;
 
@@ -82,6 +93,12 @@ class PieSeriesElement implements DataHitElement {
 
   @override
   int get pointCount => series.points.length;
+
+  /// Whether data labels are eligible to paint in the current frame.
+  bool get shouldPaintDataLabels =>
+      series.dataLabels.isVisible &&
+      geometry.slices.isNotEmpty &&
+      isEntranceAnimationComplete;
 
   @override
   String get id => series.id;
@@ -182,13 +199,7 @@ class PieSeriesElement implements DataHitElement {
           opacity: opacity * selectionProgress,
         );
       }
-      canvas.drawPath(
-        slice.path,
-        Paint()
-          ..style = PaintingStyle.fill
-          ..color = fillColor.withValues(alpha: fillColor.a * opacity)
-          ..isAntiAlias = true,
-      );
+      canvas.drawPath(slice.path, _sliceFillPaint(fillColor, opacity));
       if (series.pieStyle.borderWidth > 0) {
         canvas.drawPath(
           slice.path,
@@ -226,9 +237,7 @@ class PieSeriesElement implements DataHitElement {
       }
     }
 
-    if (!series.dataLabels.isVisible ||
-        slices.isEmpty ||
-        animationProgress < 0.999) {
+    if (!shouldPaintDataLabels) {
       return;
     }
     if (series.dataLabels.position == PieDataLabelPosition.inside) {
@@ -430,14 +439,24 @@ class PieSeriesElement implements DataHitElement {
   }) {
     const edgePadding = 4.0;
     final minimumGap = 4 * textScaleFactor;
+    final isLeft = lane.first.isLeft;
+    final pieBounds = geometry.slices
+        .map((slice) => slice.bounds)
+        .reduce((bounds, sliceBounds) => bounds.expandToInclude(sliceBounds));
+    final laneEdge = isLeft ? pieBounds.left : pieBounds.right;
     var nextTop = edgePadding;
     for (final candidate in lane) {
       final desiredTop =
           candidate.slice.outsideLabelAnchor.dy - candidate.size.height / 2;
       final top = allowShift ? math.max(desiredTop, nextTop) : desiredTop;
-      final x = candidate.isLeft
-          ? edgePadding
-          : size.width - edgePadding - candidate.size.width;
+      final maximumX = math.max(
+        edgePadding,
+        size.width - edgePadding - candidate.size.width,
+      );
+      final requestedX = isLeft
+          ? laneEdge - series.dataLabels.outsideOffset - candidate.size.width
+          : laneEdge + series.dataLabels.outsideOffset;
+      final x = requestedX.clamp(edgePadding, maximumX).toDouble();
       candidate.labelRect = Rect.fromLTWH(
         x,
         top,
@@ -615,6 +634,62 @@ class PieSeriesElement implements DataHitElement {
     );
   }
 
+  Paint _sliceFillPaint(Color sliceColor, double opacity) {
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+    final gradient = series.pieStyle.gradient ?? theme.pieChartTheme.gradient;
+    if (gradient == null || !gradient.enabled) {
+      return paint
+        ..color = sliceColor.withValues(alpha: sliceColor.a * opacity);
+    }
+
+    final colors = <Color>[
+      _gradientStopColor(
+        gradient.startColor,
+        sliceColor,
+        gradient.startLightnessShift,
+        opacity,
+      ),
+      _gradientStopColor(
+        gradient.endColor,
+        sliceColor,
+        gradient.endLightnessShift,
+        opacity,
+      ),
+    ];
+    final center = geometry.center;
+    final radius = geometry.outerRadius;
+    paint.shader = switch (gradient.type) {
+      PieGradientType.radial => ui.Gradient.radial(center, radius, colors),
+      PieGradientType.linear => () {
+        final radians = gradient.angleDegrees * math.pi / 180;
+        final direction = Offset(math.cos(radians), math.sin(radians));
+        return ui.Gradient.linear(
+          center - direction * radius,
+          center + direction * radius,
+          colors,
+        );
+      }(),
+    };
+    return paint;
+  }
+
+  Color _gradientStopColor(
+    Color? fixedColor,
+    Color sliceColor,
+    double lightnessShift,
+    double opacity,
+  ) {
+    final hsl = HSLColor.fromColor(sliceColor);
+    final color =
+        fixedColor ??
+        hsl
+            .withLightness((hsl.lightness + lightnessShift).clamp(0.0, 1.0))
+            .toColor();
+    return color.withValues(alpha: color.a * opacity);
+  }
+
   Color _resolveBorderColor(Color sliceColor) {
     final style = series.pieStyle;
     if (style.borderColor case final fixedColor?) return fixedColor;
@@ -690,6 +765,7 @@ class PieSeriesElement implements DataHitElement {
       selectedPointIndices: selectedPointIndices,
       coordinator: coordinator,
       animationProgress: animationProgress,
+      isEntranceAnimationComplete: isEntranceAnimationComplete,
       selectionProgress: selectionProgress,
       isHovered: isHovered ?? this.isHovered,
       isSelected: isSelected ?? this.isSelected,

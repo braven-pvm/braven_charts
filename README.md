@@ -48,7 +48,8 @@ bounded buffer continues receiving data, and resume with buffered catch-up.
 The Gallery combines curated and full-catalog views across Pie, line, area,
 bar, scatter, and mixed compositions. It covers light and dark Pie treatments,
 inside and collision-aware outside labels, dense categories, rounded and
-elevated slices, baseline fills, live data, independent axes, annotations,
+elevated slices, solid and gradient fills, baseline fills, live data,
+independent axes, annotations,
 interpolation, thresholds, and domain-shaped dashboards.
 
 [![Five themed and configured Pie chart compositions from the public Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_pie_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
@@ -63,7 +64,7 @@ The wider Cartesian catalog remains available in the current Gallery mosaic:
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
-| Data series | Line, area, bar, scatter, mixed Cartesian series, and category-based pie charts with labels, positioned legends, rounded/translucent slices, elevation, selection, and animation |
+| Data series | Line, area, bar, scatter, mixed Cartesian series, and category-based pie charts with labels, positioned legends, solid/gradient fills, rounded/translucent slices, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
@@ -203,6 +204,9 @@ BravenChartPlus(
         'Services': 31,
         'Hardware': 27,
       },
+      pieStyle: const PieChartStyle(
+        gradient: PieGradientStyle(type: PieGradientType.radial),
+      ),
       dataLabels: const PieDataLabelConfig(
         position: PieDataLabelPosition.outside,
         content: PieDataLabelContent.categoryAndPercentage,
@@ -219,7 +223,8 @@ Pie values must be finite and non-negative. Zero values remain portable and
 appear in the native table but do not paint a slice; an all-zero dataset uses
 the configured empty state. See the
 [Pie chart guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
-for labels, selection, tables, artifacts, validation, and accessibility.
+for fills, labels, selection, tables, artifacts, validation, and
+accessibility.
 
 ## Loading and empty states
 

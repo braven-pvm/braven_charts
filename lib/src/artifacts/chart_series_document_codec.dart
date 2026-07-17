@@ -486,6 +486,7 @@ Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
     'borderSaturationShift': _number(style.borderSaturationShift!),
   if (style.borderLightnessShift != null)
     'borderLightnessShift': _number(style.borderLightnessShift!),
+  if (style.gradient != null) 'gradient': _encodePieGradient(style.gradient!),
   'selectionExplodeOffset': _number(style.selectionExplodeOffset),
   if (style.opacity != null) 'opacity': _number(style.opacity!),
   if (style.cornerRadius != null) 'cornerRadius': _number(style.cornerRadius!),
@@ -513,6 +514,9 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
   borderHueShiftDegrees: _optionalDouble(value['borderHueShiftDegrees']),
   borderSaturationShift: _optionalDouble(value['borderSaturationShift']),
   borderLightnessShift: _optionalDouble(value['borderLightnessShift']),
+  gradient: _optionalMap(value, 'gradient') == null
+      ? null
+      : _decodePieGradient(_map(value, 'gradient')),
   selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
   opacity: _optionalDouble(value['opacity']),
   cornerRadius: _optionalDouble(value['cornerRadius']),
@@ -528,6 +532,33 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
     r'$.style.pieStyle.animationMode',
   ),
 );
+
+Map<String, Object?> _encodePieGradient(PieGradientStyle style) => {
+  'enabled': style.enabled,
+  'type': style.type.name,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _number(style.startLightnessShift),
+  'endLightnessShift': _number(style.endLightnessShift),
+  'angleDegrees': _number(style.angleDegrees),
+};
+
+PieGradientStyle _decodePieGradient(Map<String, Object?> value) =>
+    PieGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: _enum(value, 'type', PieGradientType.values),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.pieStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.pieStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+      angleDegrees: _double(value, 'angleDegrees'),
+    );
 
 Map<String, Object?> _encodePieElevation(PieElevationStyle style) => {
   if (style.color != null) 'color': style.color!.toARGB32(),
@@ -554,6 +585,7 @@ Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
   'minimumShare': _number(config.minimumShare),
   'minimumSweepDegrees': _number(config.minimumSweepDegrees),
   'padding': _number(config.padding),
+  'outsideOffset': _number(config.outsideOffset),
   'connectorLength': _number(config.connectorLength),
   'connectorWidth': _number(config.connectorWidth),
   if (config.connectorColor != null)
@@ -573,6 +605,7 @@ PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
       minimumShare: _double(value, 'minimumShare'),
       minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
       padding: _double(value, 'padding'),
+      outsideOffset: _optionalDouble(value['outsideOffset']) ?? 0,
       connectorLength: _double(value, 'connectorLength'),
       connectorWidth: _double(value, 'connectorWidth'),
       connectorColor: _optionalColor(

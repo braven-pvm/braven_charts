@@ -201,6 +201,21 @@ class PieChartSeries extends ChartSeries {
         max: 1,
       );
     }
+    if (pieStyle.gradient case final gradient?) {
+      _requireRange(
+        gradient.startLightnessShift,
+        'pieStyle.gradient.startLightnessShift',
+        min: -1,
+        max: 1,
+      );
+      _requireRange(
+        gradient.endLightnessShift,
+        'pieStyle.gradient.endLightnessShift',
+        min: -1,
+        max: 1,
+      );
+      _requireFinite(gradient.angleDegrees, 'pieStyle.gradient.angleDegrees');
+    }
     _requireNonNegative(
       pieStyle.selectionExplodeOffset,
       'pieStyle.selectionExplodeOffset',
@@ -233,6 +248,7 @@ class PieChartSeries extends ChartSeries {
       max: 360,
     );
     _requireNonNegative(dataLabels.padding, 'dataLabels.padding');
+    _requireNonNegative(dataLabels.outsideOffset, 'dataLabels.outsideOffset');
     _requireNonNegative(
       dataLabels.connectorLength,
       'dataLabels.connectorLength',

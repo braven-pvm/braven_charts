@@ -29,9 +29,9 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Flagship multi-axis analysis plus five Pie compositions spanning a simple value-first treatment, light/dark themes, label strategies, dense categories, rounded slices, elevation, and legends |
-| Chart Types | Switch among line, area, bar, scatter, and pie charts; tune Pie labels, slice gaps, and start angle alongside each type's basic visual parameters |
-| Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
+| Gallery | Flagship multi-axis analysis plus five Pie compositions spanning a simple value-first treatment, light/dark themes, solid and gradient fills, label strategies, dense categories, rounded slices, elevation, and legends |
+| Chart Types | Switch among line, area, bar, scatter, and pie charts; tune Pie labels, solid/linear/radial fills, slice gaps, and start angle alongside each type's basic visual parameters |
+| Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; reset the viewport |
 | Tracking Lab | Crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |

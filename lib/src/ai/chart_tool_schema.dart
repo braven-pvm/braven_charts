@@ -271,6 +271,46 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'description':
                   'Additive HSL lightness shift for slice-derived Pie borders; negative values create darker borders.',
             },
+            'pie_gradient_enabled': {
+              'type': 'boolean',
+              'description':
+                  'Whether the Pie slice gradient is enabled. A disabled series gradient can opt out of a theme gradient.',
+            },
+            'pie_gradient_type': {
+              'type': 'string',
+              'enum': ['linear', 'radial'],
+              'description':
+                  'Pie-only gradient geometry shared across all slices.',
+            },
+            'pie_gradient_start_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed first gradient-stop color. Omit to derive it from each slice color.',
+            },
+            'pie_gradient_end_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed final gradient-stop color. Omit to derive it from each slice color.',
+            },
+            'pie_gradient_start_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for a derived first gradient stop.',
+            },
+            'pie_gradient_end_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for a derived final gradient stop.',
+            },
+            'pie_gradient_angle': {
+              'type': 'number',
+              'description':
+                  'Linear Pie gradient direction in screen-space degrees; zero points right and 90 points down.',
+            },
             'pie_selection_explode_offset': {
               'type': 'number',
               'minimum': 0,
@@ -384,6 +424,12 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'maximum': 360,
               'description':
                   'Minimum pie-slice sweep in degrees eligible for a label.',
+            },
+            'pie_label_offset': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Horizontal logical-pixel gap between the pie and outside labels. Zero keeps labels tight to the chart.',
             },
           },
         },

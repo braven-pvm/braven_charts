@@ -68,7 +68,7 @@ The recommended architectural shape is:
 - Semi-circular gauges.
 - Mixed radial and Cartesian series.
 - Automatic small-slice grouping into `Other`.
-- Gradients, image shaders, and per-slice radius mapping.
+- Image shaders and per-slice radius mapping.
 - Streaming-specific pie behavior.
 
 ## Data contract
@@ -460,6 +460,19 @@ Status: **Complete locally and ready for live review.**
 The visual regression surface includes an advanced configuration with rounded
 separated slices, translucent palette colors, shadow, selected glow, raised
 callouts, and a vertical right-side legend.
+
+### Slice 7: gradient fills
+
+Status: **Complete locally and ready for live review.**
+
+- Add optional linear and radial slice gradients at theme and series level.
+- Derive light/dark stops from each resolved slice color by default, with
+  optional fixed stop colors and a configurable linear angle.
+- Keep solid fills as the backward-compatible default and allow a series to
+  explicitly opt out of a theme gradient.
+- Round-trip gradient style through artifact JSON and expose it through the AI
+  builder/tool schema.
+- Add deterministic pixel coverage and live showcase presets/controls.
 
 Slice 6 release evidence:
 

@@ -429,6 +429,7 @@ class ChartConfigBuilder {
           ?.toDouble(),
       borderLightnessShift: (json?['pie_border_lightness_shift'] as num?)
           ?.toDouble(),
+      gradient: _parsePieGradient(json),
       selectionExplodeOffset:
           (json?['pie_selection_explode_offset'] as num?)?.toDouble() ??
           defaults.selectionExplodeOffset,
@@ -444,6 +445,47 @@ class ChartConfigBuilder {
           'Unknown pie_animation_mode "$value".',
         ),
       },
+    );
+  }
+
+  static PieGradientStyle? _parsePieGradient(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final typeValue = json['pie_gradient_type'];
+    final enabledValue = json['pie_gradient_enabled'];
+    final startColorValue = json['pie_gradient_start_color'];
+    final endColorValue = json['pie_gradient_end_color'];
+    final startShiftValue = json['pie_gradient_start_lightness_shift'];
+    final endShiftValue = json['pie_gradient_end_lightness_shift'];
+    final angleValue = json['pie_gradient_angle'];
+    if (typeValue == null &&
+        enabledValue == null &&
+        startColorValue == null &&
+        endColorValue == null &&
+        startShiftValue == null &&
+        endShiftValue == null &&
+        angleValue == null) {
+      return null;
+    }
+
+    const defaults = PieGradientStyle();
+    return PieGradientStyle(
+      enabled: enabledValue as bool? ?? defaults.enabled,
+      type: switch (typeValue) {
+        null || 'linear' => PieGradientType.linear,
+        'radial' => PieGradientType.radial,
+        final value => throw FormatException(
+          'Unknown pie_gradient_type "$value".',
+        ),
+      },
+      startColor: startColorValue is String
+          ? _parseColor(startColorValue)
+          : null,
+      endColor: endColorValue is String ? _parseColor(endColorValue) : null,
+      startLightnessShift:
+          (startShiftValue as num?)?.toDouble() ?? defaults.startLightnessShift,
+      endLightnessShift:
+          (endShiftValue as num?)?.toDouble() ?? defaults.endLightnessShift,
+      angleDegrees: (angleValue as num?)?.toDouble() ?? defaults.angleDegrees,
     );
   }
 
@@ -511,6 +553,9 @@ class ChartConfigBuilder {
       minimumSweepDegrees:
           (json?['pie_label_minimum_sweep'] as num?)?.toDouble() ??
           defaults.minimumSweepDegrees,
+      outsideOffset:
+          (json?['pie_label_offset'] as num?)?.toDouble() ??
+          defaults.outsideOffset,
     );
   }
 

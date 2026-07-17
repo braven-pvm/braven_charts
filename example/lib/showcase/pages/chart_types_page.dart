@@ -38,8 +38,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   double _markerRadius = 5.0;
   bool _pieShowLabels = true;
   PieDataLabelPosition _pieLabelPosition = PieDataLabelPosition.outside;
+  double _pieLabelOffset = 0;
   double _pieSliceGap = 3;
   double _pieStartAngle = -90;
+  _ChartTypePieFill _pieFill = _ChartTypePieFill.radial;
   bool _showSecondSeries = true;
 
   late List<ChartDataPoint> _observedData;
@@ -207,6 +209,18 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                 },
                 onChanged: (value) => setState(() => _pieLabelPosition = value),
               ),
+            if (_pieShowLabels &&
+                _pieLabelPosition == PieDataLabelPosition.outside)
+              SliderOption(
+                label: 'Label Offset',
+                value: _pieLabelOffset,
+                min: 0,
+                max: 64,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _pieLabelOffset = value),
+              ),
             SliderOption(
               label: 'Slice Gap',
               value: _pieSliceGap,
@@ -226,6 +240,17 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               suffix: '°',
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _pieStartAngle = value),
+            ),
+            EnumOption<_ChartTypePieFill>(
+              label: 'Slice Fill',
+              value: _pieFill,
+              values: _ChartTypePieFill.values,
+              labelBuilder: (value) => switch (value) {
+                _ChartTypePieFill.solid => 'Solid color',
+                _ChartTypePieFill.linear => 'Linear gradient',
+                _ChartTypePieFill.radial => 'Radial gradient',
+              },
+              onChanged: (value) => setState(() => _pieFill = value),
             ),
           ],
         ),
@@ -505,11 +530,21 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               radiusFactor: preview ? 0.82 : 0.86,
               sliceGap: preview ? 1 : _pieSliceGap,
               borderWidth: preview ? 0 : 1,
+              gradient: switch (preview ? _ChartTypePieFill.radial : _pieFill) {
+                _ChartTypePieFill.solid => null,
+                _ChartTypePieFill.linear => const PieGradientStyle(
+                  type: PieGradientType.linear,
+                ),
+                _ChartTypePieFill.radial => const PieGradientStyle(
+                  type: PieGradientType.radial,
+                ),
+              },
             ),
             dataLabels: PieDataLabelConfig(
               isVisible: !preview && _pieShowLabels,
               position: _pieLabelPosition,
               content: PieDataLabelContent.categoryAndPercentage,
+              outsideOffset: _pieLabelOffset,
             ),
           ),
         ];
@@ -528,6 +563,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
       ChartType.pie =>
         '5 categories · ${_pieSliceGap.toStringAsFixed(0)}px gap · '
+            '${_pieFill.name} fill · '
             '${_pieShowLabels ? _pieLabelPosition.name : 'labels hidden'}',
     };
 
@@ -570,6 +606,8 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
     };
   }
 }
+
+enum _ChartTypePieFill { solid, linear, radial }
 
 class _ChartTypePreviewCard extends StatelessWidget {
   const _ChartTypePreviewCard({

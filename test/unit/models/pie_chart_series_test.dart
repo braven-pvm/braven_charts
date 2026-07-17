@@ -170,6 +170,22 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        () => build(
+          style: const PieChartStyle(
+            gradient: PieGradientStyle(startLightnessShift: 1.01),
+          ),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(
+          style: const PieChartStyle(
+            gradient: PieGradientStyle(angleDegrees: double.infinity),
+          ),
+        ),
+        throwsArgumentError,
+      );
+      expect(
         () => build(style: const PieChartStyle(opacity: 1.01)),
         throwsArgumentError,
       );
@@ -185,6 +201,10 @@ void main() {
         () => build(labels: const PieDataLabelConfig(connectorWidth: -0.1)),
         throwsArgumentError,
       );
+      expect(
+        () => build(labels: const PieDataLabelConfig(outsideOffset: -0.1)),
+        throwsArgumentError,
+      );
     });
 
     test('copies style and labels without weakening pie invariants', () {
@@ -196,6 +216,7 @@ void main() {
         pieStyle: original.pieStyle.copyWith(clockwise: false),
         dataLabels: original.dataLabels.copyWith(
           content: PieDataLabelContent.categoryValueAndPercentage,
+          outsideOffset: 18,
         ),
       );
 
@@ -204,6 +225,7 @@ void main() {
         copied.dataLabels.content,
         PieDataLabelContent.categoryValueAndPercentage,
       );
+      expect(copied.dataLabels.outsideOffset, 18);
       expect(copied.points, original.points);
       expect(copied.style, SeriesStyle.pie);
       expect(
@@ -211,6 +233,33 @@ void main() {
         throwsArgumentError,
       );
       expect(() => original.copyWith(isXOrdered: false), throwsArgumentError);
+    });
+
+    test('copies and compares gradient appearance independently', () {
+      const original = PieGradientStyle(
+        type: PieGradientType.radial,
+        startColor: Color(0xFFFFFFFF),
+        endLightnessShift: -0.2,
+      );
+      final copied = original.copyWith(
+        type: PieGradientType.linear,
+        angleDegrees: 30,
+        clearStartColor: true,
+      );
+
+      expect(copied.type, PieGradientType.linear);
+      expect(copied.angleDegrees, 30);
+      expect(copied.startColor, isNull);
+      expect(copied.endLightnessShift, -0.2);
+      expect(copied, isNot(original));
+      expect(
+        original,
+        const PieGradientStyle(
+          type: PieGradientType.radial,
+          startColor: Color(0xFFFFFFFF),
+          endLightnessShift: -0.2,
+        ),
+      );
     });
 
     test('equality and hashCode include pie configuration', () {

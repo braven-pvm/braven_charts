@@ -131,6 +131,7 @@ Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
   'borderHueShiftDegrees': _n(theme.borderHueShiftDegrees),
   'borderSaturationShift': _n(theme.borderSaturationShift),
   'borderLightnessShift': _n(theme.borderLightnessShift),
+  if (theme.gradient != null) 'gradient': _encodePieGradient(theme.gradient!),
   if (theme.calloutStyle != null)
     'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       theme.calloutStyle!,
@@ -151,6 +152,9 @@ PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
   borderHueShiftDegrees: _optionalDouble(map['borderHueShiftDegrees']) ?? 0,
   borderSaturationShift: _optionalDouble(map['borderSaturationShift']) ?? 0,
   borderLightnessShift: _optionalDouble(map['borderLightnessShift']) ?? -0.12,
+  gradient: map['gradient'] == null
+      ? null
+      : _decodePieGradient(_requiredMap(map, 'gradient')),
   calloutStyle: map['calloutStyle'] == null
       ? null
       : ChartStyleDocumentCodec.decodeLabelStyle(
@@ -158,6 +162,27 @@ PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
         ),
   animationMode: _enum(_string(map, 'animationMode'), PieAnimationMode.values),
 );
+
+Map<String, Object?> _encodePieGradient(PieGradientStyle style) => {
+  'enabled': style.enabled,
+  'type': style.type.name,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _n(style.startLightnessShift),
+  'endLightnessShift': _n(style.endLightnessShift),
+  'angleDegrees': _n(style.angleDegrees),
+};
+
+PieGradientStyle _decodePieGradient(Map<String, Object?> map) =>
+    PieGradientStyle(
+      enabled: _bool(map, 'enabled'),
+      type: _enum(_string(map, 'type'), PieGradientType.values),
+      startColor: _optionalColor(map['startColor']),
+      endColor: _optionalColor(map['endColor']),
+      startLightnessShift: _double(map, 'startLightnessShift'),
+      endLightnessShift: _double(map, 'endLightnessShift'),
+      angleDegrees: _double(map, 'angleDegrees'),
+    );
 
 Map<String, Object?> _encodePieElevation(PieElevationStyle style) => {
   if (style.color != null) 'color': style.color!.toARGB32(),

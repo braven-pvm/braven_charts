@@ -821,6 +821,11 @@ class ChartRenderBox extends RenderBox {
   HoveredMarkerInfo? get debugSelectedTooltipMarker =>
       _resolveSelectedTooltipMarker();
 
+  /// Current generated chart elements for lifecycle-focused widget tests.
+  @visibleForTesting
+  List<ChartElement> get debugElements =>
+      List<ChartElement>.unmodifiable(_elements);
+
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
     if (_interactionConfig == config) return;

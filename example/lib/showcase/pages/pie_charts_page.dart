@@ -33,12 +33,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
   PieDataLabelCollisionStrategy _collisionStrategy =
       PieDataLabelCollisionStrategy.shiftAndHide;
   double _minimumShare = 0.03;
+  double _outsideLabelOffset = 0;
   double _startAngle = -90;
   bool _clockwise = true;
   double _radiusFactor = 0.86;
   double _sliceGap = 4;
   double _borderWidth = 1;
   _PieBorderPreset _borderPreset = _PieBorderPreset.darkerSlice;
+  _PieGradientPreset _gradientPreset = _PieGradientPreset.radial;
   double _selectionExplodeOffset = 10;
   double _cornerRadius = 8;
   double _sliceOpacity = 1;
@@ -110,12 +112,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _labelContent = PieDataLabelContent.value;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
           _minimumShare = 0.2;
+          _outsideLabelOffset = 0;
           _startAngle = -90;
           _clockwise = true;
           _radiusFactor = 0.92;
           _sliceGap = 2;
           _borderWidth = 1.5;
           _borderPreset = _PieBorderPreset.darkerSlice;
+          _gradientPreset = _PieGradientPreset.linear;
           _selectionExplodeOffset = 8;
           _cornerRadius = 6;
           _sliceOpacity = 1;
@@ -134,12 +138,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
           _minimumShare = 0.03;
+          _outsideLabelOffset = 0;
           _startAngle = -90;
           _clockwise = true;
           _radiusFactor = 0.86;
           _sliceGap = 4;
           _borderWidth = 1;
           _borderPreset = _PieBorderPreset.darkerSlice;
+          _gradientPreset = _PieGradientPreset.radial;
           _selectionExplodeOffset = 10;
           _cornerRadius = 8;
           _sliceOpacity = 1;
@@ -162,12 +168,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _labelContent = PieDataLabelContent.percentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
           _minimumShare = 0.05;
+          _outsideLabelOffset = 0;
           _startAngle = -90;
           _clockwise = true;
           _radiusFactor = 0.9;
           _sliceGap = 2;
           _borderWidth = 0.5;
           _borderPreset = _PieBorderPreset.darkerSlice;
+          _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 8;
           _cornerRadius = 4;
           _sliceOpacity = 1;
@@ -186,12 +194,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
           _minimumShare = 0.03;
+          _outsideLabelOffset = 12;
           _startAngle = -110;
           _clockwise = true;
           _radiusFactor = 0.8;
           _sliceGap = 7;
           _borderWidth = 1.5;
           _borderPreset = _PieBorderPreset.shiftedHue;
+          _gradientPreset = _PieGradientPreset.radial;
           _selectionExplodeOffset = 14;
           _cornerRadius = 14;
           _sliceOpacity = 0.94;
@@ -214,12 +224,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
           _minimumShare = 0.04;
+          _outsideLabelOffset = 0;
           _startAngle = -90;
           _clockwise = true;
           _radiusFactor = 0.86;
           _sliceGap = 4;
           _borderWidth = 2;
           _borderPreset = _PieBorderPreset.chartTheme;
+          _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 10;
           _cornerRadius = 4;
           _sliceOpacity = 1;
@@ -405,7 +417,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               labelBuilder: _labelContentName,
               onChanged: (value) => setState(() => _labelContent = value),
             ),
-            if (_labelPosition == PieDataLabelPosition.outside)
+            if (_labelPosition == PieDataLabelPosition.outside) ...[
               EnumOption<PieDataLabelCollisionStrategy>(
                 label: 'Collision handling',
                 value: _collisionStrategy,
@@ -414,6 +426,18 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 onChanged: (value) =>
                     setState(() => _collisionStrategy = value),
               ),
+              SliderOption(
+                label: 'Label offset',
+                value: _outsideLabelOffset,
+                min: 0,
+                max: 64,
+                divisions: 16,
+                suffix: ' px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _outsideLabelOffset = value),
+              ),
+            ],
             SliderOption(
               label: 'Minimum share',
               value: _minimumShare * 100,
@@ -514,6 +538,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
             values: _PiePalette.values,
             labelBuilder: _paletteName,
             onChanged: (value) => setState(() => _palette = value),
+          ),
+          EnumOption<_PieGradientPreset>(
+            label: 'Slice fill',
+            value: _gradientPreset,
+            values: _PieGradientPreset.values,
+            labelBuilder: _gradientPresetName,
+            onChanged: (value) => setState(() => _gradientPreset = value),
           ),
           SliderOption(
             label: 'Transparency',
@@ -1571,8 +1602,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    'Services': 31,\n"
               "    'Hardware': 17,\n"
               "  },\n"
+              "  pieStyle: PieChartStyle(\n"
+              "    gradient: PieGradientStyle(\n"
+              "      type: PieGradientType.radial,\n"
+              "    ),\n"
+              "  ),\n"
               "  dataLabels: PieDataLabelConfig(\n"
               "    position: PieDataLabelPosition.outside,\n"
+              "    outsideOffset: 0, // Tight to the pie\n"
               "  ),\n"
               ");\n\n"
               "final theme = ChartTheme.light.copyWith(\n"
@@ -1650,6 +1687,20 @@ class _PieChartsPageState extends State<PieChartsPage> {
         borderColorMode: borderColorMode,
         borderHueShiftDegrees: borderHueShift,
         borderLightnessShift: borderLightnessShift,
+        gradient: switch (_gradientPreset) {
+          _PieGradientPreset.solid => null,
+          _PieGradientPreset.linear => const PieGradientStyle(
+            type: PieGradientType.linear,
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.14,
+            angleDegrees: -50,
+          ),
+          _PieGradientPreset.radial => const PieGradientStyle(
+            type: PieGradientType.radial,
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.12,
+          ),
+        },
         selectionExplodeOffset: _selectionExplodeOffset,
       ),
       dataLabels: PieDataLabelConfig(
@@ -1657,6 +1708,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
         position: _labelPosition,
         content: _labelContent,
         minimumShare: _minimumShare,
+        outsideOffset: _outsideLabelOffset,
         collisionStrategy: _collisionStrategy,
       ),
     );
@@ -1941,6 +1993,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _PieBorderPreset.fixedAccent => 'Fixed accent color',
   };
 
+  String _gradientPresetName(_PieGradientPreset value) => switch (value) {
+    _PieGradientPreset.solid => 'Solid color',
+    _PieGradientPreset.linear => 'Linear light',
+    _PieGradientPreset.radial => 'Radial light',
+  };
+
   String _glowColorName(_PieGlowColor value) => switch (value) {
     _PieGlowColor.slice => 'Selected slice color',
     _PieGlowColor.accent => 'Palette accent',
@@ -1980,6 +2038,8 @@ enum _PieCalloutPreset { none, surface, accent, highContrast, simpleValues }
 enum _PieTooltipPreset { theme, elevated, contrast }
 
 enum _PieBorderPreset { chartTheme, darkerSlice, shiftedHue, fixedAccent }
+
+enum _PieGradientPreset { solid, linear, radial }
 
 enum _PieGlowColor { slice, accent, neutral }
 

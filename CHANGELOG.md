@@ -5,13 +5,7 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.3.1 - 2026-07-17
-
-- Refine Pie selection so pointer and legend activation use slice-derived
-  offset/elevation without an intrusive global accent outline, while retaining
-  the themed keyboard and assistive focus ring.
-- Add fixed or HSL slice-derived Pie border policies, detailed selected-glow
-  controls, and showcase presets for legend, label callout, and tooltip themes.
+## Unreleased
 
 ### Added
 - First-class `PieChartSeries` rendering with deterministic radial geometry,
@@ -29,8 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   presentation presets in the Pie showcase, and deterministic pub.dev media.
 - A simple dark Pie presentation with dominant inside values and no legend,
   available both as a focused preset and a reusable Gallery composition.
+- Fixed or HSL slice-derived Pie border policies, detailed selected-glow
+  controls, and showcase presets for legend, label callout, and tooltip themes.
+- Linear and radial Pie slice gradients with per-slice derived or fixed color
+  stops, theme/series precedence, artifact hydration, AI schema support, and a
+  live showcase selector.
 
 ### Fixed
+- Refine Pie selection so pointer and legend activation use slice-derived
+  offset/elevation without an intrusive global accent outline, while retaining
+  the themed keyboard and assistive focus ring.
 - The high-contrast Pie showcase preset now uses collision-managed outside
   labels with opaque white callouts, near-black text, and a 2 px outline so
   labels remain readable across every monochrome slice.
@@ -48,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pie layout now reserves the configured explode, border/focus stroke, shadow,
   and selected elevation extents so edge-facing selections remain inside the
   plot instead of being clipped by the viewport.
+- Outside Pie labels now use compact lanes beside the painted chart by default,
+  with a configurable non-negative offset for deliberate extra spacing.
+- Pie entrance labels now follow the animation lifecycle instead of curved
+  radius thresholds, preventing elastic animations from flashing callouts on
+  and off before the chart settles.
+
+## 0.3.1 - 2026-07-17
 
 ### Fixed
 - Expand data-derived constant per-axis ranges to a stable non-zero span so
