@@ -508,6 +508,13 @@ describe only the rendered data series. Null target or interval entries appear
 as `No value`; a null floating-range start resolves to the series baseline,
 matching the renderer.
 
+The linked views are bidirectional. Table hover and keyboard focus apply the
+chart's transient point-focus treatment, while chart-controller focus reveals
+and highlights the matching virtualized row without claiming table keyboard
+focus. Durable chart selection separately reveals the row and uses selected
+styling and semantics. Either automatic reveal policy can be disabled on a
+standalone `ChartDataTable` when its host owns scrolling.
+
 ## Current boundary
 
 Horizontal orientation is a chart-level transform, so it cannot currently be

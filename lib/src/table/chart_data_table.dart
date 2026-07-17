@@ -41,7 +41,9 @@ class ChartDataTable extends StatefulWidget {
     this.onRowFocusCleared,
     this.onRowHoverChanged,
     this.onRowActivated,
+    this.focusedPointRefs = const <ChartPointRef>{},
     this.selectedPointRefs = const <ChartPointRef>{},
+    this.autoRevealFocusedPoints = true,
     this.autoRevealSelectedPoints = true,
     this.onCopyRow,
     this.onCopyDataset,
@@ -84,12 +86,27 @@ class ChartDataTable extends StatefulWidget {
   /// use the table's row or dataset copy actions for clipboard workflows.
   final ChartTableRowCallback? onRowActivated;
 
+  /// Transient chart-point focus mirrored into visible table rows.
+  ///
+  /// A long row is focused when its point is present. A wide exact-X row is
+  /// focused when any populated series point represented by that row is
+  /// present, allowing one chart-focused series point to identify its shared
+  /// category row without implying durable selection.
+  final Set<ChartPointRef> focusedPointRefs;
+
   /// Durable chart-point selection mirrored into visible table rows.
   ///
   /// A long row is selected when its point is present. A wide exact-X row is
   /// selected only when every populated series point represented by that row
   /// is present, so a partial point selection never implies whole-row state.
   final Set<ChartPointRef> selectedPointRefs;
+
+  /// Scrolls a newly focused chart point into the vertical table viewport.
+  ///
+  /// This does not request keyboard focus. Hosts that intentionally map
+  /// high-frequency pointer hover into [focusedPointRefs] can disable this to
+  /// keep hover from driving vertical navigation.
+  final bool autoRevealFocusedPoints;
 
   /// Scrolls a newly selected chart point into the vertical table viewport.
   ///
@@ -146,8 +163,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
   final _horizontalController = ScrollController();
   final _verticalController = ScrollController();
   final _rowFocusNodes = <String, FocusNode>{};
-  ChartPointRef? _pendingSelectionReveal;
-  bool _selectionRevealScheduled = false;
+  ChartPointRef? _pendingPointReveal;
+  bool _pointRevealScheduled = false;
 
   @override
   void initState() {
@@ -155,7 +172,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
     _attachController(widget.controller);
     if (widget.autoRevealSelectedPoints &&
         widget.selectedPointRefs.isNotEmpty) {
-      _scheduleSelectionReveal(widget.selectedPointRefs.last);
+      _schedulePointReveal(widget.selectedPointRefs.last);
+    } else if (widget.autoRevealFocusedPoints &&
+        widget.focusedPointRefs.isNotEmpty) {
+      _schedulePointReveal(widget.focusedPointRefs.last);
     }
   }
 
@@ -171,14 +191,28 @@ class _ChartDataTableState extends State<ChartDataTable> {
       widget.selectedPointRefs,
       oldWidget.selectedPointRefs,
     );
+    final focusChanged = !setEquals(
+      widget.focusedPointRefs,
+      oldWidget.focusedPointRefs,
+    );
     final modelChanged = !identical(widget.model, oldWidget.model);
+    if (widget.autoRevealFocusedPoints &&
+        widget.focusedPointRefs.isNotEmpty &&
+        (focusChanged || modelChanged)) {
+      final added = widget.focusedPointRefs.where(
+        (point) => !oldWidget.focusedPointRefs.contains(point),
+      );
+      _schedulePointReveal(
+        added.isEmpty ? widget.focusedPointRefs.last : added.last,
+      );
+    }
     if (widget.autoRevealSelectedPoints &&
         widget.selectedPointRefs.isNotEmpty &&
         (selectionChanged || modelChanged)) {
       final added = widget.selectedPointRefs.where(
         (point) => !oldWidget.selectedPointRefs.contains(point),
       );
-      _scheduleSelectionReveal(
+      _schedulePointReveal(
         added.isEmpty ? widget.selectedPointRefs.last : added.last,
       );
     }
@@ -192,14 +226,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
 
   void _handleControllerChanged() => setState(() {});
 
-  void _scheduleSelectionReveal(ChartPointRef point) {
-    _pendingSelectionReveal = point;
-    if (_selectionRevealScheduled) return;
-    _selectionRevealScheduled = true;
+  void _schedulePointReveal(ChartPointRef point) {
+    _pendingPointReveal = point;
+    if (_pointRevealScheduled) return;
+    _pointRevealScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _selectionRevealScheduled = false;
-      final pending = _pendingSelectionReveal;
-      _pendingSelectionReveal = null;
+      _pointRevealScheduled = false;
+      final pending = _pendingPointReveal;
+      _pendingPointReveal = null;
       if (mounted && pending != null) _revealPoint(pending);
     });
   }
@@ -673,6 +707,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
         semanticsLabel:
             'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix$radiusSemantics, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
         references: references,
+        chartFocused: _isRowFocused(references),
         selected: _isRowSelected(references),
         rowIndex: index,
         theme: theme,
@@ -745,6 +780,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
         key: ValueKey(row.rowId),
         semanticsLabel: 'Row ${index + 1}, ${_wideSemantics(row, model)}',
         references: references,
+        chartFocused: _isRowFocused(references),
         selected: _isRowSelected(references),
         rowIndex: index,
         theme: theme,
@@ -799,6 +835,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       key: ValueKey(row.rowId),
       semanticsLabel: 'Row ${index + 1}, ${_longSemantics(row, model)}',
       references: List.unmodifiable([row.reference]),
+      chartFocused: _isRowFocused([row.reference]),
       selected: _isRowSelected([row.reference]),
       rowIndex: index,
       theme: theme,
@@ -869,6 +906,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
     final points = references.toList(growable: false);
     return points.isNotEmpty && points.every(widget.selectedPointRefs.contains);
   }
+
+  bool _isRowFocused(Iterable<ChartPointRef> references) =>
+      references.any(widget.focusedPointRefs.contains);
 
   Widget _buildWideValueCell(
     ChartTableWideRow row,
@@ -1304,6 +1344,7 @@ class _FocusableTableRow extends StatefulWidget {
     super.key,
     required this.semanticsLabel,
     required this.references,
+    required this.chartFocused,
     required this.selected,
     required this.children,
     required this.rowIndex,
@@ -1319,6 +1360,7 @@ class _FocusableTableRow extends StatefulWidget {
 
   final String semanticsLabel;
   final List<ChartPointRef> references;
+  final bool chartFocused;
   final bool selected;
   final List<Widget> children;
   final int rowIndex;
@@ -1340,6 +1382,7 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
 
   @override
   Widget build(BuildContext context) {
+    final visuallyFocused = _focused || widget.chartFocused;
     return Semantics(
       label: widget.semanticsLabel,
       button: widget.onActivated != null,
@@ -1405,7 +1448,7 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
             decoration: BoxDecoration(
               color: widget.selected
                   ? widget.theme.selectedRowColor
-                  : _focused
+                  : visuallyFocused
                   ? widget.theme.focusedRowColor
                   : widget.rowIndex.isEven
                   ? widget.theme.evenRowColor
@@ -1414,7 +1457,7 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
                 bottom: BorderSide(color: widget.theme.dividerColor),
               ),
             ),
-            foregroundDecoration: _focused || widget.selected
+            foregroundDecoration: visuallyFocused || widget.selected
                 ? BoxDecoration(
                     border: Border(
                       left: BorderSide(
@@ -1423,19 +1466,19 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
                             ? math.max(4, widget.theme.focusBorderWidth)
                             : widget.theme.focusBorderWidth,
                       ),
-                      top: _focused
+                      top: visuallyFocused
                           ? BorderSide(
                               color: widget.theme.focusBorderColor,
                               width: widget.theme.focusBorderWidth,
                             )
                           : BorderSide.none,
-                      right: _focused
+                      right: visuallyFocused
                           ? BorderSide(
                               color: widget.theme.focusBorderColor,
                               width: widget.theme.focusBorderWidth,
                             )
                           : BorderSide.none,
-                      bottom: _focused
+                      bottom: visuallyFocused
                           ? BorderSide(
                               color: widget.theme.focusBorderColor,
                               width: widget.theme.focusBorderWidth,

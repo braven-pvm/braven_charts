@@ -236,6 +236,64 @@ void main() {
   });
 
   testWidgets(
+    'mirrors and reveals chart focus without claiming keyboard focus',
+    (tester) async {
+      const focusedColor = Color(0xFFDBEAFE);
+      final model = _model(
+        points: [
+          for (var index = 0; index < 1000; index++)
+            _point(index.toDouble(), index.toDouble(), label: 'Row $index'),
+        ],
+      );
+      Set<ChartPointRef> focused = const {};
+      late StateSetter update;
+
+      await tester.pumpWidget(
+        _host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return ChartDataTable(
+                model: model,
+                focusedPointRefs: focused,
+                theme: const ChartDataTableTheme(focusedRowColor: focusedColor),
+              );
+            },
+          ),
+        ),
+      );
+      final target = find.byKey(ValueKey(model.longRows.last.rowId));
+      expect(target, findsNothing);
+
+      update(() {
+        focused = {const ChartPointRef(seriesId: 'series', pointIndex: 999)};
+      });
+      await tester.pumpAndSettle();
+
+      expect(target, findsOneWidget);
+      final list = tester.widget<ListView>(find.byType(ListView));
+      expect(list.controller!.offset, greaterThan(0));
+      final surface = tester.widget<Container>(
+        find.descendant(of: target, matching: find.byType(Container)).first,
+      );
+      expect((surface.decoration! as BoxDecoration).color, focusedColor);
+      final semantics = tester.widget<Semantics>(
+        find.descendant(of: target, matching: find.byType(Semantics)).first,
+      );
+      expect(semantics.properties.focused, isFalse);
+      expect(semantics.properties.selected, isFalse);
+
+      list.controller!.jumpTo(0);
+      await tester.pump();
+      update(() {});
+      await tester.pumpAndSettle();
+
+      expect(list.controller!.offset, 0);
+      expect(target, findsNothing);
+    },
+  );
+
+  testWidgets(
     'uses compact themed rows, aligned numbers, indexes, and series colors',
     (tester) async {
       const powerColor = Color(0xFF2563EB);

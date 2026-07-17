@@ -250,6 +250,8 @@ The workbench enables safe row linking by default:
 - click or Enter replaces the durable point selection;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
+- chart-controller point focus is mirrored into the table with the focused-row
+  treatment and reveals the matching row without taking keyboard focus;
 - a newly selected chart point is scrolled into the table viewport once,
   without taking keyboard focus or overriding later manual scrolling; and
 - a wide row focuses or selects every point it represents.
@@ -271,6 +273,17 @@ selected when its point is present. A shared-X row is selected only when every
 populated series point represented by that row is present. Override the fill
 with `ChartDataTableTheme.selectedRowColor`; the leading indicator and
 accessibility semantics remain package-owned.
+
+Pass `ChartDataTable.focusedPointRefs` to mirror transient chart focus in a
+standalone table. A long row matches its point; a shared-X row matches when any
+represented point is focused. This uses the focused-row visual treatment but
+does not claim keyboard or accessibility focus for the table row.
+
+`ChartDataTable.autoRevealFocusedPoints` defaults to true and scrolls only when
+the focused point or projected model changes. Set it to false when the host
+owns vertical navigation or maps high-frequency chart hover into controller
+focus. Package-owned table hover remains stable because its row is already in
+the visible viewport.
 
 `ChartDataTable.autoRevealSelectedPoints` defaults to true. Set it to false
 when the host owns vertical table navigation. In a wide table, a partial

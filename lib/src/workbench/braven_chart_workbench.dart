@@ -1000,6 +1000,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                   (state.phase == ChartWorkbenchTablePhase.uninitialized ||
                       state.phase == ChartWorkbenchTablePhase.loading),
               errorMessage: model == null ? state.error?.message : null,
+              focusedPointRefs: _chartController.focusedPointRefs,
               selectedPointRefs: _chartController.selectedPointRefs,
               onRowFocused:
                   widget.onTableRowFocused ??
