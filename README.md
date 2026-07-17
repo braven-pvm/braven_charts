@@ -67,9 +67,9 @@ native image path available to package consumers:
 
 [![Three product-shaped Donut compositions with center content, a partial sweep, and variable radii](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_donut_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
 
-| Contribution ring | Partial progress sweep | Variable-radius contribution |
+| Subscription MRR | Release readiness | Channel efficiency |
 | --- | --- | --- |
-| [![Donut contribution chart with selection-aware center content](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_revenue_ring.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Partial Donut sweep with portable center status](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Variable-radius Donut encoding contribution and reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+| [![Subscription MRR Donut with a selection-aware center value](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_revenue_ring.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Dark release-readiness Donut with a partial sweep and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Variable-radius Donut encoding orders and audience reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
 ### Bar targets and interaction
 

@@ -56,22 +56,25 @@ void main() {
 
     for (final source in const [
       (
-        label: 'Contribution ring',
+        label: 'Subscription MRR',
         fileName: 'donut_revenue_ring.png',
         widget: RevenueRingGalleryCard(),
         accent: Color(0xFF2563EB),
+        isDark: false,
       ),
       (
-        label: 'Partial progress sweep',
+        label: 'Release readiness',
         fileName: 'donut_release_progress.png',
         widget: DeliveryProgressGalleryCard(),
-        accent: Color(0xFF8B5CF6),
+        accent: Color(0xFF34D399),
+        isDark: true,
       ),
       (
-        label: 'Contribution and reach',
+        label: 'Channel efficiency',
         fileName: 'donut_campaign_reach.png',
         widget: CampaignReachGalleryCard(),
         accent: Color(0xFF0F9F92),
+        isDark: false,
       ),
     ]) {
       final bytes = await _capturePie(
@@ -85,6 +88,7 @@ void main() {
           label: source.label,
           bytes: bytes,
           accent: source.accent,
+          isDark: source.isDark,
         ),
       );
     }
@@ -327,11 +331,13 @@ class _NativeMediaCapture {
     required this.label,
     required this.bytes,
     required this.accent,
+    this.isDark = false,
   });
 
   final String label;
   final Uint8List bytes;
   final Color accent;
+  final bool isDark;
 }
 
 class _NativeMediaTile extends StatelessWidget {
@@ -341,8 +347,22 @@ class _NativeMediaTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: Colors.white,
+    final backgroundColor = capture.isDark
+        ? const Color(0xFF111827)
+        : Colors.white;
+    final foregroundColor = capture.isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF1F2937);
+    final borderColor = capture.isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE5E7EB);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -350,8 +370,8 @@ class _NativeMediaTile extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Text(
               capture.label,
-              style: const TextStyle(
-                color: Color(0xFF1F2937),
+              style: TextStyle(
+                color: foregroundColor,
                 fontFamily: _captureFontFamily,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,

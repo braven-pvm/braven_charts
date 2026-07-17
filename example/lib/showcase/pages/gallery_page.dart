@@ -269,9 +269,9 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'DONUT COMPOSITIONS',
-              title: 'Contribution, progress, and a second metric',
+              title: 'Three measures, three radial encodings',
               subtitle:
-                  'Compare a selection-aware contribution ring, a partial progress sweep, and a variable-radius Donut with portable center content.',
+                  'Compare subscription mix, release readiness, and channel efficiency with selection-aware center content.',
               count: 3,
             ),
           ),

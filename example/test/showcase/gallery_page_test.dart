@@ -197,7 +197,7 @@ void main() {
     expect(find.byType(PortfolioAllocationGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Contribution, progress, and a second metric'),
+      find.text('Three measures, three radial encodings'),
       500,
       scrollable: galleryScrollable,
     );
@@ -247,15 +247,62 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(BravenChartPlus), findsNWidgets(3));
-    expect(find.text('Recurring revenue'), findsOneWidget);
-    expect(find.text('Release progress'), findsOneWidget);
-    expect(find.text('Campaign contribution'), findsOneWidget);
+    expect(find.text('Subscription MRR'), findsOneWidget);
+    expect(find.text('Release readiness'), findsOneWidget);
+    expect(find.text('Channel efficiency'), findsOneWidget);
     expect(
       tester
           .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
           .every((chart) => chart.series.single is DonutChartSeries),
       isTrue,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('dark radial charts use dark card chrome and compact labels', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(520, 520);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(height: 440, child: DeliveryProgressGalleryCard()),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final card = tester.widget<Card>(find.byType(Card));
+    expect(card.color, const Color(0xFF111827));
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final series = chart.series.single as DonutChartSeries;
+    expect(series.dataLabels.calloutStyle?.textStyle.fontSize, 10);
+    expect(series.dataLabels.minimumShare, 0.09);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('dark Pie themes also carry through the card chrome', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(520, 520);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(height: 440, child: ReleaseEffortGalleryCard()),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final card = tester.widget<Card>(find.byType(Card));
+    expect(card.color, const Color(0xFF111827));
     expect(tester.takeException(), isNull);
   });
 }

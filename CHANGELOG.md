@@ -57,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reworked the Gallery landing sequence to lead with six simple native chart
   previews, followed by a readable multi-axis training profile, the advanced
   analytical flagship, and focused Pie and Donut composition collections.
+- Carry dark radial themes through the complete Gallery card surface, reduce
+  compact Donut label typography, and replace the initial Donut samples with
+  distinct subscription, release-readiness, and channel-efficiency analyses.
 - Expanded the Bar guide and API documentation to cover grouped, overlaid,
   stacked, normalized, horizontal, floating/range, waterfall, capacity-track,
   target-marker, uncertainty, interaction-state, and animated-update behavior.
