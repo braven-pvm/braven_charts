@@ -37,6 +37,7 @@ import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'layout/chart_layout_kind.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
+import 'models/bar_chart_style.dart';
 import 'models/braven_chart_controller.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
@@ -3224,15 +3225,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.onAnnotationTap?.call(tappedElement.annotation);
       } else if (tappedElement is SeriesElement) {
         // Check if a specific marker was tapped
-        final marker = _coordinator.hoveredMarker;
+        final marker = _coordinator.pressedMarker ?? _coordinator.hoveredMarker;
         if (marker != null && marker.seriesId == tappedElement.series.id) {
           final point = tappedElement.series.points[marker.markerIndex];
+          if (tappedElement.series is BarChartSeries) {
+            _selectBarPointFromInteraction(marker);
+          }
           widget.onPointTap?.call(point, tappedElement.series.id);
         } else {
           _handleSeriesSelected(tappedElement.series.id);
         }
       }
     } else {
+      _clearPointSelection();
       widget.onBackgroundTap?.call(details.localPosition);
     }
 
@@ -3240,6 +3245,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
+  }
+
+  void _selectBarPointFromInteraction(HoveredMarkerInfo marker) {
+    final ref = ChartPointRef(
+      seriesId: marker.seriesId,
+      pointIndex: marker.markerIndex,
+    );
+    _selectBarPointRef(ref, additive: _coordinator.isCtrlPressed);
+  }
+
+  void _selectBarPointRef(ChartPointRef ref, {required bool additive}) {
+    final nextSelection = additive
+        ? <ChartPointRef>{..._selectedPointRefs}
+        : <ChartPointRef>{ref};
+    if (additive && !nextSelection.add(ref)) {
+      nextSelection.remove(ref);
+    }
+    if (setEquals(nextSelection, _selectedPointRefs)) return;
+    _selectedPointRefs
+      ..clear()
+      ..addAll(nextSelection);
+    _captureStateRevision++;
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -3825,6 +3854,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       if (renderBox == null) return;
 
+      if (_handleBarPointKey(event.logicalKey)) return;
+
       // Cancel range annotation creation mode
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (_coordinator.currentMode ==
@@ -3919,6 +3950,105 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
+  }
+
+  bool _handleBarPointKey(LogicalKeyboardKey key) {
+    final keyboard =
+        widget.interactionConfig?.keyboard ?? const KeyboardConfig();
+    if (!keyboard.enabled) return false;
+    final bars = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((series) => series.points.isNotEmpty)
+        .toList(growable: false);
+    if (bars.isEmpty || bars.length != _effectiveDataSeries.length) {
+      return false;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      if (_focusedPointRefs.isEmpty && _selectedPointRefs.isEmpty) return false;
+      _clearPointFocus();
+      _clearPointSelection();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current == null) return false;
+      _selectBarPointRef(
+        current,
+        additive:
+            HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed,
+      );
+      return true;
+    }
+
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+    if (!isArrow ||
+        !keyboard.enableArrowKeys ||
+        HardwareKeyboard.instance.isAltPressed) {
+      return false;
+    }
+
+    var seriesIndex = 0;
+    var pointIndex = 0;
+    final current = _focusedPointRefs.firstOrNull;
+    if (current != null) {
+      final resolvedSeriesIndex = bars.indexWhere(
+        (series) => series.id == current.seriesId,
+      );
+      if (resolvedSeriesIndex >= 0) {
+        seriesIndex = resolvedSeriesIndex;
+        pointIndex = current.pointIndex.clamp(
+          0,
+          bars[seriesIndex].points.length - 1,
+        );
+      }
+    }
+
+    final orientation = bars.first.orientation;
+    final movesCategory = orientation == BarOrientation.vertical
+        ? key == LogicalKeyboardKey.arrowLeft ||
+              key == LogicalKeyboardKey.arrowRight
+        : key == LogicalKeyboardKey.arrowUp ||
+              key == LogicalKeyboardKey.arrowDown;
+    final delta =
+        key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowUp
+        ? -1
+        : 1;
+
+    if (current == null) {
+      // The first arrow press establishes a visible focus target without
+      // skipping the first bar.
+      _setKeyboardBarFocus(bars.first, 0);
+      return true;
+    }
+    if (movesCategory) {
+      pointIndex = (pointIndex + delta).clamp(
+        0,
+        bars[seriesIndex].points.length - 1,
+      );
+    } else {
+      seriesIndex = (seriesIndex + delta).clamp(0, bars.length - 1);
+      pointIndex = pointIndex.clamp(0, bars[seriesIndex].points.length - 1);
+    }
+    _setKeyboardBarFocus(bars[seriesIndex], pointIndex);
+    return true;
+  }
+
+  void _setKeyboardBarFocus(BarChartSeries series, int pointIndex) {
+    final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
+    if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
+      return;
+    }
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   // ============================================================================
@@ -4326,6 +4456,78 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
+  ({String value, bool isSelected})? _focusedBarSemantics() {
+    final ref = _focusedPointRefs.firstOrNull;
+    if (ref == null) return null;
+    return _barSemanticsForRef(ref);
+  }
+
+  ({String value, bool isSelected})? _barSemanticsForRef(ChartPointRef ref) {
+    final series = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((candidate) => candidate.id == ref.seriesId)
+        .firstOrNull;
+    if (series == null ||
+        ref.pointIndex < 0 ||
+        ref.pointIndex >= series.points.length) {
+      return null;
+    }
+    final point = series.points[ref.pointIndex];
+    final category = point.hasLabel
+        ? point.label!
+        : 'Category ${ref.pointIndex + 1}';
+    final unit = series.unit == null || series.unit!.isEmpty
+        ? ''
+        : ' ${series.unit}';
+    final value = switch (series.layoutMode) {
+      BarLayoutMode.waterfall =>
+        series.isWaterfallTotal(ref.pointIndex)
+            ? 'total ${series.waterfallDisplayValueFor(ref.pointIndex)}$unit'
+            : 'change ${point.y}$unit',
+      _ when series.hasRangeValues =>
+        '${series.rangeStartValueFor(ref.pointIndex)} to ${point.y}$unit',
+      BarLayoutMode.normalizedStacked => '${point.y}$unit, normalized segment',
+      _ => '${point.y}$unit',
+    };
+    return (
+      value: '${series.name}, $category, $value',
+      isSelected: _selectedPointRefs.contains(ref),
+    );
+  }
+
+  String? _adjacentBarSemanticsValue(int delta) {
+    final current = _focusedPointRefs.firstOrNull;
+    if (current == null) return null;
+    final series = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((candidate) => candidate.id == current.seriesId)
+        .firstOrNull;
+    if (series == null || series.points.isEmpty) return null;
+    final nextIndex = (current.pointIndex + delta).clamp(
+      0,
+      series.points.length - 1,
+    );
+    return _barSemanticsForRef(
+      ChartPointRef(seriesId: series.id, pointIndex: nextIndex),
+    )?.value;
+  }
+
+  void _moveSemanticBarFocus(int delta) {
+    final bars = _effectiveDataSeries.whereType<BarChartSeries>();
+    if (bars.isEmpty) return;
+    final orientation = bars.first.orientation;
+    _handleBarPointKey(
+      orientation == BarOrientation.vertical
+          ? delta < 0
+                ? LogicalKeyboardKey.arrowLeft
+                : LogicalKeyboardKey.arrowRight
+          : delta < 0
+          ? LogicalKeyboardKey.arrowUp
+          : LogicalKeyboardKey.arrowDown,
+    );
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Disable browser context menu on web platform
@@ -4349,7 +4551,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
 
-    final Widget renderedChart = Focus(
+    final focusChart = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
@@ -4520,6 +4722,33 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         },
       ),
     );
+
+    final hasOnlyBars =
+        !isRadial &&
+        _effectiveDataSeries.isNotEmpty &&
+        _effectiveDataSeries.every((series) => series is BarChartSeries);
+    final focusedBar = hasOnlyBars ? _focusedBarSemantics() : null;
+    final Widget renderedChart = hasOnlyBars
+        ? Semantics(
+            container: true,
+            focusable: true,
+            label: widget.title ?? 'Interactive bar chart',
+            value: focusedBar?.value,
+            increasedValue: focusedBar == null
+                ? null
+                : _adjacentBarSemanticsValue(1) ?? focusedBar.value,
+            decreasedValue: focusedBar == null
+                ? null
+                : _adjacentBarSemanticsValue(-1) ?? focusedBar.value,
+            hint: focusedBar == null
+                ? 'Use arrow keys to move between bars. Press Enter to select.'
+                : null,
+            selected: focusedBar?.isSelected,
+            onIncrease: () => _moveSemanticBarFocus(1),
+            onDecrease: () => _moveSemanticBarFocus(-1),
+            child: focusChart,
+          )
+        : focusChart;
 
     final chartContent = _buildViewportContent(renderedChart);
 

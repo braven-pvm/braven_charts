@@ -95,6 +95,90 @@ class BarBorderStyle {
   int get hashCode => Object.hash(color, width);
 }
 
+/// Visual feedback applied to individual bars during interaction.
+///
+/// State feedback deliberately combines opacity, fill, and outlines so hover,
+/// press, focus, and selection remain distinguishable without relying on color
+/// alone. Null colors inherit from the bar or chart interaction theme.
+class BarInteractionStyle {
+  const BarInteractionStyle({
+    this.hoverColor,
+    this.hoverOpacity = 0.12,
+    this.hoverBorderWidth = 2.0,
+    this.pressedColor = const Color(0xFF000000),
+    this.pressedOpacity = 0.16,
+    this.selectionColor,
+    this.selectionOpacity = 0.14,
+    this.selectionBorderWidth = 2.5,
+    this.focusColor,
+    this.focusBorderWidth = 2.5,
+    this.focusGap = 3.0,
+    this.dimmedOpacity = 0.42,
+  }) : assert(hoverOpacity >= 0 && hoverOpacity <= 1),
+       assert(hoverBorderWidth >= 0),
+       assert(pressedOpacity >= 0 && pressedOpacity <= 1),
+       assert(selectionOpacity >= 0 && selectionOpacity <= 1),
+       assert(selectionBorderWidth >= 0),
+       assert(focusBorderWidth >= 0),
+       assert(focusGap >= 0),
+       assert(dimmedOpacity >= 0 && dimmedOpacity <= 1);
+
+  /// Hover overlay color. Null derives a contrasting tint from the bar color.
+  final Color? hoverColor;
+  final double hoverOpacity;
+  final double hoverBorderWidth;
+
+  /// Press overlay color and opacity.
+  final Color pressedColor;
+  final double pressedOpacity;
+
+  /// Durable selection overlay. Null uses the chart interaction theme.
+  final Color? selectionColor;
+  final double selectionOpacity;
+  final double selectionBorderWidth;
+
+  /// Keyboard or linked-focus outline. Null uses the chart focus color.
+  final Color? focusColor;
+  final double focusBorderWidth;
+  final double focusGap;
+
+  /// Opacity multiplier for unselected bars while any bar point is selected.
+  final double dimmedOpacity;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarInteractionStyle &&
+          other.hoverColor == hoverColor &&
+          other.hoverOpacity == hoverOpacity &&
+          other.hoverBorderWidth == hoverBorderWidth &&
+          other.pressedColor == pressedColor &&
+          other.pressedOpacity == pressedOpacity &&
+          other.selectionColor == selectionColor &&
+          other.selectionOpacity == selectionOpacity &&
+          other.selectionBorderWidth == selectionBorderWidth &&
+          other.focusColor == focusColor &&
+          other.focusBorderWidth == focusBorderWidth &&
+          other.focusGap == focusGap &&
+          other.dimmedOpacity == dimmedOpacity;
+
+  @override
+  int get hashCode => Object.hash(
+    hoverColor,
+    hoverOpacity,
+    hoverBorderWidth,
+    pressedColor,
+    pressedOpacity,
+    selectionColor,
+    selectionOpacity,
+    selectionBorderWidth,
+    focusColor,
+    focusBorderWidth,
+    focusGap,
+    dimmedOpacity,
+  );
+}
+
 /// Visual styling shared by all bars in a series.
 class BarChartStyle {
   const BarChartStyle({
@@ -103,6 +187,7 @@ class BarChartStyle {
     this.gradient,
     this.border,
     this.opacity = 1.0,
+    this.interaction = const BarInteractionStyle(),
   }) : assert(cornerRadius >= 0, 'Corner radius must be non-negative'),
        assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
 
@@ -111,6 +196,7 @@ class BarChartStyle {
   final BarGradient? gradient;
   final BarBorderStyle? border;
   final double opacity;
+  final BarInteractionStyle interaction;
 
   @override
   bool operator ==(Object other) =>
@@ -120,11 +206,18 @@ class BarChartStyle {
           other.cornerRadiusPolicy == cornerRadiusPolicy &&
           other.gradient == gradient &&
           other.border == border &&
-          other.opacity == opacity;
+          other.opacity == opacity &&
+          other.interaction == interaction;
 
   @override
-  int get hashCode =>
-      Object.hash(cornerRadius, cornerRadiusPolicy, gradient, border, opacity);
+  int get hashCode => Object.hash(
+    cornerRadius,
+    cornerRadiusPolicy,
+    gradient,
+    border,
+    opacity,
+    interaction,
+  );
 }
 
 /// A passive capacity or target track rendered behind each bar.

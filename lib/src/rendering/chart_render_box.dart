@@ -556,6 +556,10 @@ class ChartRenderBox extends RenderBox {
     markNeedsSemanticsUpdate();
   }
 
+  /// Read-only element snapshot for diagnostics and interaction tests.
+  @visibleForTesting
+  List<ChartElement> get debugElements => List.unmodifiable(_elements);
+
   /// Sets the X-axis for the chart.
   ///
   /// Triggers layout and paint when axis is changed.
@@ -823,11 +827,6 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   HoveredMarkerInfo? get debugSelectedTooltipMarker =>
       _resolveSelectedTooltipMarker();
-
-  /// Current generated chart elements for lifecycle-focused widget tests.
-  @visibleForTesting
-  List<ChartElement> get debugElements =>
-      List<ChartElement>.unmodifiable(_elements);
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
@@ -2141,6 +2140,12 @@ class ChartRenderBox extends RenderBox {
   /// (~1-3ms per call), and with 21 charts on the gallery page, skipping
   /// it for idle charts saves ~20-60ms per frame.
   bool _hasActiveOverlayContent() {
+    final hoveredMarker = coordinator.hoveredMarker;
+    final pressedMarker = coordinator.pressedMarker;
+    if (_isBarMarker(hoveredMarker) || _isBarMarker(pressedMarker)) {
+      return true;
+    }
+
     // Box selection or range creation has visible rectangle
     if (coordinator.currentMode == InteractionMode.boxSelecting ||
         coordinator.currentMode == InteractionMode.rangeAnnotationCreation) {
@@ -2185,6 +2190,8 @@ class ChartRenderBox extends RenderBox {
 
   void _paintOverlayLayer(Canvas canvas, Size size) {
     // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
+    _paintBarInteractionOverlays(canvas);
+
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
     if (coordinator.currentMode == InteractionMode.boxSelecting) {
@@ -2422,6 +2429,41 @@ class ChartRenderBox extends RenderBox {
     }
 
     // [DEBUG OUTPUT REMOVED] Overlay paint complete - was firing at 60fps
+  }
+
+  bool _isBarMarker(HoveredMarkerInfo? marker) {
+    if (marker == null) return false;
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.id == marker.seriesId) {
+        return element.series is BarChartSeries;
+      }
+    }
+    return false;
+  }
+
+  void _paintBarInteractionOverlays(Canvas canvas) {
+    final hoveredMarker = coordinator.hoveredMarker;
+    final pressedMarker = coordinator.pressedMarker;
+    if (!_isBarMarker(hoveredMarker) && !_isBarMarker(pressedMarker)) return;
+
+    canvas.save();
+    canvas.translate(_plotArea.left, _plotArea.top);
+    canvas.clipRect(Offset.zero & _plotArea.size);
+    for (final element in _elements.whereType<SeriesElement>()) {
+      final hoveredPointIndex = hoveredMarker?.seriesId == element.id
+          ? hoveredMarker!.markerIndex
+          : null;
+      final pressedPointIndex = pressedMarker?.seriesId == element.id
+          ? pressedMarker!.markerIndex
+          : null;
+      if (hoveredPointIndex == null && pressedPointIndex == null) continue;
+      element.paintBarInteractionOverlay(
+        canvas,
+        hoveredPointIndex: hoveredPointIndex,
+        pressedPointIndex: pressedPointIndex,
+      );
+    }
+    canvas.restore();
   }
 
   @override
