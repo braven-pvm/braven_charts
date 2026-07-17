@@ -4520,6 +4520,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           if (target < minY) minY = target;
           if (target > maxY) maxY = target;
         }
+        for (final lower in series.errorLowerValues.whereType<double>()) {
+          if (!lower.isFinite) continue;
+          if (lower < minY) minY = lower;
+          if (lower > maxY) maxY = lower;
+        }
+        for (final upper in series.errorUpperValues.whereType<double>()) {
+          if (!upper.isFinite) continue;
+          if (upper < minY) minY = upper;
+          if (upper > maxY) maxY = upper;
+        }
       }
 
       // Handle edge case where all Y values are identical (zero span)
@@ -4652,8 +4662,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     };
     final target = series.targetValueFor(ref.pointIndex);
     final targetDescription = target == null ? '' : ', target $target$unit';
+    final errorLower = series.errorLowerValueFor(ref.pointIndex);
+    final errorUpper = series.errorUpperValueFor(ref.pointIndex);
+    final uncertaintyDescription = errorLower == null || errorUpper == null
+        ? ''
+        : ', uncertainty $errorLower to $errorUpper$unit';
     return (
-      value: '${series.name}, $category, $value$targetDescription',
+      value:
+          '${series.name}, $category, $value$targetDescription$uncertaintyDescription',
       isSelected: _selectedPointRefs.contains(ref),
     );
   }

@@ -649,6 +649,9 @@ class BarChartSeries extends ChartSeries {
     this.trackStyle,
     this.targetValues = const [],
     this.targetMarkerStyle = const BarTargetMarkerStyle(),
+    this.errorLowerValues = const [],
+    this.errorUpperValues = const [],
+    this.errorBarStyle = const BarErrorBarStyle(),
     this.labelStyle = const BarLabelStyle(),
   }) : assert(
          barWidthPercent != null || barWidthPixels != null,
@@ -768,6 +771,41 @@ class BarChartSeries extends ChartSeries {
         'Must be empty or match the points length (${points.length})',
       );
     }
+    if (errorLowerValues.isNotEmpty &&
+        errorLowerValues.length != points.length) {
+      throw ArgumentError.value(
+        errorLowerValues.length,
+        'errorLowerValues',
+        'Must be empty or match the points length (${points.length})',
+      );
+    }
+    if (errorUpperValues.isNotEmpty &&
+        errorUpperValues.length != points.length) {
+      throw ArgumentError.value(
+        errorUpperValues.length,
+        'errorUpperValues',
+        'Must be empty or match the points length (${points.length})',
+      );
+    }
+    if (errorLowerValues.isEmpty != errorUpperValues.isEmpty) {
+      throw ArgumentError(
+        'errorLowerValues and errorUpperValues must both be empty or supplied',
+      );
+    }
+    for (var index = 0; index < errorLowerValues.length; index++) {
+      final lower = errorLowerValues[index];
+      final upper = errorUpperValues[index];
+      if ((lower == null) != (upper == null)) {
+        throw ArgumentError(
+          'Error interval at index $index must supply both endpoints or neither',
+        );
+      }
+      if (lower != null && upper != null && lower > upper) {
+        throw ArgumentError(
+          'Error interval lower value must not exceed its upper value at index $index',
+        );
+      }
+    }
     if (rangeStartValues.isNotEmpty &&
         rangeStartValues.length != points.length) {
       throw ArgumentError.value(
@@ -841,6 +879,27 @@ class BarChartSeries extends ChartSeries {
   double? targetValueFor(int pointIndex) =>
       pointIndex < targetValues.length ? targetValues[pointIndex] : null;
 
+  /// Absolute lower value-axis endpoints aligned by index with [points].
+  ///
+  /// Values are not deltas. A null pair omits the interval for that point.
+  final List<double?> errorLowerValues;
+
+  /// Absolute upper value-axis endpoints aligned by index with [points].
+  final List<double?> errorUpperValues;
+
+  /// Presentation for uncertainty stems and endpoint caps.
+  final BarErrorBarStyle errorBarStyle;
+
+  double? errorLowerValueFor(int pointIndex) =>
+      pointIndex < errorLowerValues.length
+      ? errorLowerValues[pointIndex]
+      : null;
+
+  double? errorUpperValueFor(int pointIndex) =>
+      pointIndex < errorUpperValues.length
+      ? errorUpperValues[pointIndex]
+      : null;
+
   /// Optional labels positioned using the rendered bar rectangle.
   final BarLabelStyle labelStyle;
 
@@ -881,6 +940,10 @@ class BarChartSeries extends ChartSeries {
     List<double?>? targetValues,
     bool clearTargetValues = false,
     BarTargetMarkerStyle? targetMarkerStyle,
+    List<double?>? errorLowerValues,
+    List<double?>? errorUpperValues,
+    bool clearErrorValues = false,
+    BarErrorBarStyle? errorBarStyle,
     BarLabelStyle? labelStyle,
   }) {
     return BarChartSeries(
@@ -920,6 +983,13 @@ class BarChartSeries extends ChartSeries {
           ? const []
           : (targetValues ?? this.targetValues),
       targetMarkerStyle: targetMarkerStyle ?? this.targetMarkerStyle,
+      errorLowerValues: clearErrorValues
+          ? const []
+          : (errorLowerValues ?? this.errorLowerValues),
+      errorUpperValues: clearErrorValues
+          ? const []
+          : (errorUpperValues ?? this.errorUpperValues),
+      errorBarStyle: errorBarStyle ?? this.errorBarStyle,
       labelStyle: labelStyle ?? this.labelStyle,
     );
   }
@@ -949,6 +1019,9 @@ class BarChartSeries extends ChartSeries {
           other.trackStyle == trackStyle &&
           ChartSeries._listEquals(other.targetValues, targetValues) &&
           other.targetMarkerStyle == targetMarkerStyle &&
+          ChartSeries._listEquals(other.errorLowerValues, errorLowerValues) &&
+          ChartSeries._listEquals(other.errorUpperValues, errorUpperValues) &&
+          other.errorBarStyle == errorBarStyle &&
           other.labelStyle == labelStyle;
 
   @override
@@ -973,6 +1046,9 @@ class BarChartSeries extends ChartSeries {
     trackStyle,
     Object.hashAll(targetValues),
     targetMarkerStyle,
+    Object.hashAll(errorLowerValues),
+    Object.hashAll(errorUpperValues),
+    errorBarStyle,
     labelStyle,
   ]);
 

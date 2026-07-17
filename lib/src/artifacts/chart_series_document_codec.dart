@@ -355,6 +355,15 @@ abstract final class ChartSeriesDocumentCodec {
           targetMarkerStyle: _decodeBarTargetMarker(
             _optionalMap(style, 'barTargetMarker'),
           ),
+          errorLowerValues: _decodeOptionalDoubleList(
+            style['barErrorLowerValues'],
+            r'$.style.barErrorLowerValues',
+          ),
+          errorUpperValues: _decodeOptionalDoubleList(
+            style['barErrorUpperValues'],
+            r'$.style.barErrorUpperValues',
+          ),
+          errorBarStyle: _decodeBarErrorBar(_optionalMap(style, 'barErrorBar')),
           labelStyle: _decodeBarLabels(_optionalMap(style, 'barLabels')),
         ),
         'pie' => PieChartSeries(
@@ -580,6 +589,21 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
         ..['barTargetMarker'] = series.targetValues.isEmpty
             ? null
             : _encodeBarTargetMarker(series.targetMarkerStyle)
+        ..['barErrorLowerValues'] = series.errorLowerValues.isEmpty
+            ? null
+            : [
+                for (final value in series.errorLowerValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['barErrorUpperValues'] = series.errorUpperValues.isEmpty
+            ? null
+            : [
+                for (final value in series.errorUpperValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['barErrorBar'] = series.errorLowerValues.isEmpty
+            ? null
+            : _encodeBarErrorBar(series.errorBarStyle)
         ..['barLabels'] = _encodeBarLabels(series.labelStyle);
     case PieChartSeries():
       result
@@ -808,6 +832,23 @@ BarTargetMarkerStyle _decodeBarTargetMarker(Map<String, Object?>? value) {
     color: _optionalColor(value['color'], r'$.style.barTargetMarker.color'),
     width: _optionalDouble(value['width']) ?? 2.0,
     lengthFactor: _optionalDouble(value['lengthFactor']) ?? 1.3,
+    opacity: _optionalDouble(value['opacity']) ?? 1.0,
+  );
+}
+
+Map<String, Object?> _encodeBarErrorBar(BarErrorBarStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'width': _number(style.width),
+  'capLengthFactor': _number(style.capLengthFactor),
+  'opacity': _number(style.opacity),
+};
+
+BarErrorBarStyle _decodeBarErrorBar(Map<String, Object?>? value) {
+  if (value == null) return const BarErrorBarStyle();
+  return BarErrorBarStyle(
+    color: _optionalColor(value['color'], r'$.style.barErrorBar.color'),
+    width: _optionalDouble(value['width']) ?? 1.5,
+    capLengthFactor: _optionalDouble(value['capLengthFactor']) ?? 0.6,
     opacity: _optionalDouble(value['opacity']) ?? 1.0,
   );
 }

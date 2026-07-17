@@ -178,6 +178,8 @@ void main() {
                       ],
                       barWidthPercent: 0.6,
                       targetValues: [50, 75],
+                      errorLowerValues: [38, 55],
+                      errorUpperValues: [47, 70],
                     ),
                   ],
                 ),
@@ -221,7 +223,7 @@ void main() {
         );
         expect(
           semantics.properties.value,
-          'Actual, Tuesday, 61.0 kg, target 75.0 kg',
+          'Actual, Tuesday, 61.0 kg, target 75.0 kg, uncertainty 55.0 to 70.0 kg',
         );
         expect(semantics.properties.selected, isFalse);
 

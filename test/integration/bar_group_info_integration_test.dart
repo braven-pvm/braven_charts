@@ -300,6 +300,21 @@ void main() {
       expect(bounds.yMax, closeTo(99.75, 0.001));
     });
 
+    test('DataConverter bounds include uncertainty endpoints', () {
+      final bounds = DataConverter.computeDataBounds(const [
+        BarChartSeries(
+          id: 'estimate',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.8,
+          errorLowerValues: [42],
+          errorUpperValues: [95],
+        ),
+      ]);
+
+      expect(bounds.yMin, closeTo(-4.75, 0.001));
+      expect(bounds.yMax, closeTo(99.75, 0.001));
+    });
+
     test('DataConverter bounds include cumulative waterfall geometry', () {
       final bounds = DataConverter.computeDataBounds(const [
         BarChartSeries(

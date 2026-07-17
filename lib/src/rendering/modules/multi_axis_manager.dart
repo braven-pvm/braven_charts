@@ -737,6 +737,16 @@ class MultiAxisManager {
                     if (minY == null || target < minY) minY = target;
                     if (maxY == null || target > maxY) maxY = target;
                   }
+                  final errorLower = series.errorLowerValueFor(pointIndex);
+                  final errorUpper = series.errorUpperValueFor(pointIndex);
+                  if (errorLower != null && errorLower.isFinite) {
+                    if (minY == null || errorLower < minY) minY = errorLower;
+                    if (maxY == null || errorLower > maxY) maxY = errorLower;
+                  }
+                  if (errorUpper != null && errorUpper.isFinite) {
+                    if (minY == null || errorUpper < minY) minY = errorUpper;
+                    if (maxY == null || errorUpper > maxY) maxY = errorUpper;
+                  }
                 } else {
                   if (minY == null || point.y < minY) minY = point.y;
                   if (maxY == null || point.y > maxY) maxY = point.y;
