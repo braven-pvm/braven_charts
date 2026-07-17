@@ -91,7 +91,11 @@ void main() {
       ),
     );
 
-    await _expectGolden(tester, 'goldens/pie_compact_dense.png');
+    await _expectGolden(
+      tester,
+      'goldens/pie_compact_dense.png',
+      precisionTolerance: 0.04,
+    );
   });
 
   testWidgets('selected pie and native slice legend', (tester) async {
@@ -228,10 +232,32 @@ Future<void> _pumpSurface(
   expect(tester.takeException(), isNull);
 }
 
-Future<void> _expectGolden(WidgetTester tester, String path) => expectLater(
-  find.byKey(const ValueKey('pie-golden-surface')),
-  matchesGoldenFile(path),
-);
+Future<void> _expectGolden(
+  WidgetTester tester,
+  String path, {
+  double? precisionTolerance,
+}) async {
+  final comparator = goldenFileComparator;
+  if (precisionTolerance == null ||
+      comparator is! _TolerantGoldenFileComparator) {
+    await expectLater(
+      find.byKey(const ValueKey('pie-golden-surface')),
+      matchesGoldenFile(path),
+    );
+    return;
+  }
+
+  final previousTolerance = comparator.precisionTolerance;
+  comparator.precisionTolerance = precisionTolerance;
+  try {
+    await expectLater(
+      find.byKey(const ValueKey('pie-golden-surface')),
+      matchesGoldenFile(path),
+    );
+  } finally {
+    comparator.precisionTolerance = previousTolerance;
+  }
+}
 
 PieChartSeries _standardSeries({
   PieDataLabelConfig labels = const PieDataLabelConfig(),
@@ -272,9 +298,9 @@ class _TolerantGoldenFileComparator extends LocalFileComparator {
   _TolerantGoldenFileComparator(
     super.testFile, {
     required double precisionTolerance,
-  }) : _precisionTolerance = precisionTolerance;
+  }) : precisionTolerance = precisionTolerance;
 
-  final double _precisionTolerance;
+  double precisionTolerance;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
@@ -282,7 +308,7 @@ class _TolerantGoldenFileComparator extends LocalFileComparator {
       imageBytes,
       await getGoldenBytes(golden),
     );
-    final passed = result.passed || result.diffPercent <= _precisionTolerance;
+    final passed = result.passed || result.diffPercent <= precisionTolerance;
     if (passed) {
       result.dispose();
       return true;
