@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/painting.dart'
-    show TextAlign, TextDirection, TextPainter, TextSpan, TextStyle;
+    show FontWeight, TextAlign, TextDirection, TextPainter, TextSpan, TextStyle;
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
@@ -13,10 +13,12 @@ import '../interaction/core/data_hit.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
+import '../models/bar_chart_style.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
 import '../models/series_inline_label_config.dart';
+import '../rendering/bar_geometry.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
 
@@ -243,15 +245,18 @@ class SeriesElement implements DataHitElement {
   /// IMPORTANT: If Y bounds change (perSeries normalization mode), bounds are
   /// recomputed so QuadTree hit detection works correctly.
   void updateTransform(ChartTransform newTransform) {
-    // Check if Y bounds changed - if so, recompute element bounds
-    final yBoundsChanged =
+    final transformChanged =
+        _currentTransform.dataXMin != newTransform.dataXMin ||
+        _currentTransform.dataXMax != newTransform.dataXMax ||
         _currentTransform.dataYMin != newTransform.dataYMin ||
-        _currentTransform.dataYMax != newTransform.dataYMax;
+        _currentTransform.dataYMax != newTransform.dataYMax ||
+        _currentTransform.plotWidth != newTransform.plotWidth ||
+        _currentTransform.plotHeight != newTransform.plotHeight;
 
     _currentTransform = newTransform;
 
-    // Recompute bounds if Y range changed (needed for perSeries normalization hit testing)
-    if (yBoundsChanged) {
+    if (transformChanged) {
+      _barGeometries = null;
       _computeBounds();
     }
   }
@@ -271,6 +276,7 @@ class SeriesElement implements DataHitElement {
     final pointCountChanged = newSeries.points.length != series.points.length;
 
     series = newSeries;
+    _barGeometries = null;
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -294,6 +300,7 @@ class SeriesElement implements DataHitElement {
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
+    _barGeometries = null;
     _labelPainterCache.clear();
   }
 
@@ -325,6 +332,30 @@ class SeriesElement implements DataHitElement {
 
   // TextPainter cache for data-point labels — keyed by formatted text string
   final Map<String, TextPainter> _labelPainterCache = {};
+  List<BarGeometry>? _barGeometries;
+
+  List<BarGeometry> _resolveBarGeometries() {
+    final cached = _barGeometries;
+    if (cached != null) return cached;
+    final currentSeries = series;
+    if (currentSeries is! BarChartSeries) return const [];
+    return _barGeometries = BarGeometryEngine.layout(
+      series: currentSeries,
+      transform: _currentTransform,
+      groupInfo: barGroupInfo,
+    );
+  }
+
+  /// Returns the canonical rendered geometry for a bar point, when available.
+  ///
+  /// Crosshair markers and other interaction overlays use this instead of
+  /// transforming the raw Y value, which would be incorrect for stacks.
+  BarGeometry? barGeometryForPoint(int pointIndex) {
+    if (series is! BarChartSeries || pointIndex < 0) return null;
+    final geometries = _resolveBarGeometries();
+    if (pointIndex >= geometries.length) return null;
+    return geometries[pointIndex];
+  }
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
   ///
@@ -333,6 +364,22 @@ class SeriesElement implements DataHitElement {
   void _computeBounds() {
     if (series.isEmpty) {
       _bounds = Rect.zero;
+      return;
+    }
+
+    if (series is BarChartSeries) {
+      final geometries = _resolveBarGeometries();
+      if (geometries.isEmpty) {
+        _bounds = Rect.zero;
+        return;
+      }
+      var bounds = geometries.first.paintBounds;
+      for (final geometry in geometries.skip(1)) {
+        bounds = bounds.expandToInclude(geometry.paintBounds);
+      }
+      final borderWidth =
+          (series as BarChartSeries).barStyle.border?.width ?? 0;
+      _bounds = bounds.inflate(math.max(1, borderWidth / 2));
       return;
     }
 
@@ -385,6 +432,12 @@ class SeriesElement implements DataHitElement {
   @override
   bool hitTest(Offset position) {
     if (series.isEmpty) return false;
+
+    if (series is BarChartSeries) {
+      return _resolveBarGeometries().any(
+        (geometry) => geometry.hitBounds.contains(position),
+      );
+    }
 
     // For line series: check if position is near any line segment
     // For scatter: check if near any point
@@ -509,6 +562,10 @@ class SeriesElement implements DataHitElement {
 
   void _paintLinkedPoints(Canvas canvas, Color baseColor) {
     if (focusedPointIndices.isEmpty && selectedPointIndices.isEmpty) return;
+    if (series is BarChartSeries) {
+      _paintLinkedBars(canvas, baseColor);
+      return;
+    }
     final focusPaint = Paint()
       ..color = pointFocusColor ?? const Color(0xFF616161)
       ..style = PaintingStyle.stroke
@@ -537,6 +594,30 @@ class SeriesElement implements DataHitElement {
       final point = series.points[index];
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 7, focusPaint);
+    }
+  }
+
+  void _paintLinkedBars(Canvas canvas, Color baseColor) {
+    final focusPaint = Paint()
+      ..color = pointFocusColor ?? const Color(0xFF424242)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    final selectionFill = Paint()
+      ..color = pointSelectionColor ?? const Color(0x332196F3)
+      ..style = PaintingStyle.fill;
+    final selectionBorder = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    for (final geometry in _resolveBarGeometries()) {
+      if (selectedPointIndices.contains(geometry.pointIndex)) {
+        canvas.drawRRect(geometry.rrect, selectionFill);
+        canvas.drawRRect(geometry.rrect.inflate(2), selectionBorder);
+      }
+      if (focusedPointIndices.contains(geometry.pointIndex)) {
+        canvas.drawRRect(geometry.rrect.inflate(4), focusPaint);
+      }
     }
   }
 
@@ -1276,128 +1357,431 @@ class SeriesElement implements DataHitElement {
   }
 
   void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
-    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected
+    final interactionOpacity = isSelected
         ? 1.0
         : isHovered
         ? 0.8
         : 0.7;
+    final opacity = interactionOpacity * series.barStyle.opacity;
+    final track = series.trackStyle;
+    final geometries = _resolveBarGeometries();
 
-    // Check if any point has style overrides
-    final hasOverrides = series.points.any((p) => p.pointStyle != null);
-
-    // Pre-calculate default bar width (in pixels)
-    double defaultBarWidth;
-    if (series.barWidthPixels != null) {
-      defaultBarWidth =
-          series.barWidthPixels! / _currentTransform.dataPerPixelX;
-      defaultBarWidth = defaultBarWidth.clamp(series.minWidth, series.maxWidth);
-    } else {
-      final spacingInPixels = _calculateXAxisSpacing(series.points);
-      defaultBarWidth = spacingInPixels * series.barWidthPercent!;
-      defaultBarWidth = defaultBarWidth.clamp(series.minWidth, series.maxWidth);
+    if (series.layoutMode == BarLayoutMode.waterfall) {
+      _paintWaterfallConnectors(canvas, series, geometries, opacity);
     }
 
-    // GROUPED BARS FIX: When multiple bar series share the same X-values,
-    // divide the bar width by the number of series so they fit side-by-side.
-    // The barWidthPercent represents the TOTAL percentage for all bars combined.
-    //
-    // Example: barWidthPercent=0.7, spacing=100px, 2 bar series, 2px gap
-    //   - Total group width = 70px (70% of spacing)
-    //   - Minus gaps: 70 - 2 = 68px available for bars
-    //   - Per bar: 68 / 2 = 34px each
-    //
-    // Without this fix, each bar would be 70px and they'd overlap significantly.
-    //
-    // ALGORITHM:
-    // 1. Calculate total pixel gap width: gap * (count - 1)
-    //    For 3 bars with 2px gap: 2 * (3-1) = 4px total gap
-    // 2. Subtract gaps from total group width to get available bar space
-    // 3. Divide available space by bar count to get individual bar width
-    // 4. Clamp to minimum 4px to ensure bars remain visible
-    if (barGroupInfo != null && barGroupInfo!.count > 1) {
-      // Total gaps between bars (gap is in pixels)
-      final totalGapWidth = barGroupInfo!.gap * (barGroupInfo!.count - 1);
-      // Available width for all bars (total group minus gaps)
-      final availableForBars = defaultBarWidth - totalGapWidth;
-      // Width per bar (minimum 4 pixels to ensure visibility)
-      final widthPerBar = availableForBars / barGroupInfo!.count;
-      defaultBarWidth = widthPerBar.clamp(4.0, double.infinity);
-    }
-
-    // Enforce minimum bar width (4px default per FR-012)
-    // Note: defaultBarWidth is in pixels at this point
-    const minBarWidthPixels = 4.0;
-    defaultBarWidth = defaultBarWidth.clamp(minBarWidthPixels, double.infinity);
-
-    // Calculate X-offset for bar grouping (if multiple bar series)
-    // The offset centers the group of bars around the X-coordinate.
-    // For 3 bars of 20px width with 2px gap:
-    //   - Bar 0 (index=0): offset = -22px (left side)
-    //   - Bar 1 (index=1): offset = 0px (center)
-    //   - Bar 2 (index=2): offset = +22px (right side)
-    // This ensures the entire group is visually centered on the data point's X position.
-    final xOffset = barGroupInfo?.calculateOffset(defaultBarWidth) ?? 0.0;
-
-    if (!hasOverrides) {
-      // FAST PATH: Single color for all bars
-      final barPaint = Paint()
-        ..color = baseColor.withValues(alpha: opacity)
-        ..style = PaintingStyle.fill;
-
-      for (final point in series.points) {
-        final plotPos = _currentTransform.dataToPlot(point.x, point.y);
-        final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
-
-        final rect = Rect.fromLTRB(
-          plotPos.dx + xOffset - defaultBarWidth / 2,
-          plotPos.dy,
-          plotPos.dx + xOffset + defaultBarWidth / 2,
-          zeroY,
-        );
-        canvas.drawRect(rect, barPaint);
-      }
-    } else {
-      // STYLED PATH: Per-bar coloring
-      for (final point in series.points) {
-        final plotPos = _currentTransform.dataToPlot(point.x, point.y);
-        final zeroY = _currentTransform.dataToPlot(point.x, 0).dy;
-
-        final barColor = point.pointStyle?.color ?? baseColor;
-        // PointStyle.size for bars is a width multiplier (1.0 = default width)
-        final widthMultiplier = point.pointStyle?.size ?? 1.0;
-        final barWidth = defaultBarWidth * widthMultiplier;
-
-        final barPaint = Paint()
-          ..color = barColor.withValues(alpha: opacity)
+    for (final geometry in geometries) {
+      if (track != null && geometry.trackRRect != null) {
+        final trackPaint = Paint()
+          ..color = track.color.withValues(alpha: track.opacity)
           ..style = PaintingStyle.fill;
+        canvas.drawRRect(geometry.trackRRect!, trackPaint);
+        final trackBorder = track.border;
+        if (trackBorder != null && trackBorder.width > 0) {
+          canvas.drawRRect(
+            geometry.trackRRect!,
+            Paint()
+              ..color = trackBorder.color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = trackBorder.width,
+          );
+        }
+      }
 
-        final rect = Rect.fromLTRB(
-          plotPos.dx + xOffset - barWidth / 2,
-          plotPos.dy,
-          plotPos.dx + xOffset + barWidth / 2,
-          zeroY,
+      final waterfallColor = _waterfallColor(series, geometry);
+      final barColor =
+          geometry.point.pointStyle?.color ?? waterfallColor ?? baseColor;
+      final gradient =
+          geometry.point.pointStyle?.color == null && waterfallColor == null
+          ? series.barStyle.gradient
+          : null;
+      final barPaint = Paint()..style = PaintingStyle.fill;
+      if (gradient != null &&
+          gradient.colors.length >= 2 &&
+          (gradient.stops == null ||
+              gradient.stops!.length == gradient.colors.length)) {
+        barPaint.shader = Gradient.linear(
+          geometry.orientation == BarOrientation.horizontal
+              ? Offset(geometry.baselineX, geometry.rect.center.dy)
+              : Offset(geometry.rect.center.dx, geometry.baselineY),
+          geometry.valueEndPoint,
+          [
+            for (final color in gradient.colors)
+              color.withValues(alpha: opacity),
+          ],
+          gradient.stops,
         );
-        canvas.drawRect(rect, barPaint);
+      } else {
+        barPaint.color = barColor.withValues(alpha: opacity);
+      }
+      canvas.drawRRect(geometry.rrect, barPaint);
+
+      final border = series.barStyle.border;
+      if (border != null && border.width > 0) {
+        canvas.drawRRect(
+          geometry.rrect,
+          Paint()
+            ..color = border.color.withValues(alpha: opacity)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = border.width,
+        );
+      }
+
+      if (series.labelStyle.show) {
+        _paintBarLabel(canvas, series, geometry, barColor);
       }
     }
   }
 
-  double _calculateXAxisSpacing(List<ChartDataPoint> points) {
-    if (points.length == 1) return _currentTransform.plotWidth * 0.6;
+  Color? _waterfallColor(BarChartSeries series, BarGeometry geometry) {
+    if (series.layoutMode != BarLayoutMode.waterfall) return null;
+    final style = series.waterfallStyle;
+    if (series.isWaterfallTotal(geometry.pointIndex)) {
+      return style.totalColor;
+    }
+    return geometry.endValue >= geometry.startValue
+        ? style.increaseColor
+        : style.decreaseColor;
+  }
 
-    double minXSpacing = double.infinity;
-    for (int i = 0; i < points.length - 1; i++) {
-      final xSpacing = (points[i + 1].x - points[i].x).abs();
-      if (xSpacing > 0 && xSpacing < minXSpacing) {
-        minXSpacing = xSpacing;
+  void _paintWaterfallConnectors(
+    Canvas canvas,
+    BarChartSeries series,
+    List<BarGeometry> geometries,
+    double opacity,
+  ) {
+    final connector = series.waterfallStyle.connector;
+    if (!connector.show || connector.width <= 0 || geometries.length < 2) {
+      return;
+    }
+    final paint = Paint()
+      ..color = connector.color.withValues(alpha: opacity)
+      ..strokeWidth = connector.width
+      ..style = PaintingStyle.stroke;
+    for (var index = 0; index < geometries.length - 1; index++) {
+      final current = geometries[index];
+      final next = geometries[index + 1];
+      if (series.orientation == BarOrientation.horizontal) {
+        canvas.drawLine(
+          Offset(current.valueEndX, current.rect.bottom),
+          Offset(current.valueEndX, next.rect.top),
+          paint,
+        );
+      } else {
+        canvas.drawLine(
+          Offset(current.rect.right, current.valueEndY),
+          Offset(next.rect.left, current.valueEndY),
+          paint,
+        );
       }
     }
+  }
 
-    if (minXSpacing != double.infinity) {
-      return minXSpacing / _currentTransform.dataPerPixelX;
+  void _paintBarLabel(
+    Canvas canvas,
+    BarChartSeries series,
+    BarGeometry geometry,
+    Color barColor,
+  ) {
+    final config = series.labelStyle;
+    if (config.position == BarLabelPosition.rangeEnds) {
+      _paintBarRangeEndLabels(canvas, series, geometry, barColor);
+      return;
     }
-    return 40.0;
+
+    final text =
+        config.formatter?.call(geometry.point) ??
+        switch (config.valueMode) {
+          BarLabelValueMode.value => DataPointLabelConfig.autoFormatLabelValue(
+            geometry.point.y,
+            config.showUnit ? series.unit : null,
+          ),
+          BarLabelValueMode.range =>
+            '${DataPointLabelConfig.autoFormatLabelValue(geometry.startValue, null)}–'
+                '${DataPointLabelConfig.autoFormatLabelValue(geometry.endValue, config.showUnit ? series.unit : null)}',
+          BarLabelValueMode.percentage =>
+            DataPointLabelConfig.autoFormatLabelValue(
+              geometry.percentage ?? geometry.point.y,
+              '%',
+            ),
+          BarLabelValueMode.waterfall =>
+            DataPointLabelConfig.autoFormatLabelValue(
+              series.isWaterfallTotal(geometry.pointIndex)
+                  ? geometry.endValue
+                  : geometry.endValue - geometry.startValue,
+              config.showUnit ? series.unit : null,
+            ),
+        };
+
+    var position = config.position;
+    final provisionalPainter = _barLabelPainter(
+      text,
+      config.color ?? barColor,
+      config.fontSize,
+      config.fontWeight,
+    );
+    final insideEndOffset = _barLabelInsideEndOffset(series, geometry);
+    if (position == BarLabelPosition.auto) {
+      final fitsInside = series.orientation == BarOrientation.horizontal
+          ? geometry.rect.height >= provisionalPainter.height + 4 &&
+                geometry.rect.width >=
+                    provisionalPainter.width + insideEndOffset * 2
+          : geometry.rect.height >=
+                    provisionalPainter.height + insideEndOffset * 2 &&
+                geometry.rect.width >= provisionalPainter.width + 4;
+      position = fitsInside
+          ? BarLabelPosition.insideEnd
+          : BarLabelPosition.outsideEnd;
+    }
+
+    final isInside = position != BarLabelPosition.outsideEnd;
+    final labelColor =
+        config.color ??
+        (isInside
+            ? (barColor.computeLuminance() > 0.45
+                  ? const Color(0xFF1A1A1A)
+                  : const Color(0xFFFFFFFF))
+            : barColor);
+    final painter = _barLabelPainter(
+      text,
+      labelColor,
+      config.fontSize,
+      config.fontWeight,
+    );
+    if (series.orientation == BarOrientation.horizontal) {
+      final valueEndIsRight = geometry.valueEndX >= geometry.baselineX;
+      final x = switch (position) {
+        BarLabelPosition.insideCenter =>
+          geometry.rect.center.dx - painter.width / 2,
+        BarLabelPosition.insideEnd =>
+          valueEndIsRight
+              ? geometry.rect.right - insideEndOffset - painter.width
+              : geometry.rect.left + insideEndOffset,
+        BarLabelPosition.outsideEnd =>
+          valueEndIsRight
+              ? geometry.rect.right + config.padding
+              : geometry.rect.left - config.padding - painter.width,
+        BarLabelPosition.rangeEnds => geometry.rect.left,
+        BarLabelPosition.auto => geometry.rect.left,
+      };
+      painter.paint(
+        canvas,
+        Offset(x, geometry.rect.center.dy - painter.height / 2),
+      );
+      return;
+    }
+
+    final x = geometry.rect.center.dx - painter.width / 2;
+    final valueEndIsTop = geometry.valueEndY <= geometry.baselineY;
+    final y = switch (position) {
+      BarLabelPosition.insideCenter =>
+        geometry.rect.center.dy - painter.height / 2,
+      BarLabelPosition.insideEnd =>
+        valueEndIsTop
+            ? geometry.rect.top + insideEndOffset
+            : geometry.rect.bottom - insideEndOffset - painter.height,
+      BarLabelPosition.outsideEnd =>
+        valueEndIsTop
+            ? geometry.rect.top - config.padding - painter.height
+            : geometry.rect.bottom + config.padding,
+      BarLabelPosition.rangeEnds => geometry.rect.top,
+      BarLabelPosition.auto => geometry.rect.top,
+    };
+    painter.paint(canvas, Offset(x, y));
+  }
+
+  double _barLabelInsideEndOffset(BarChartSeries series, BarGeometry geometry) {
+    final clampedRadius = math.min(
+      series.barStyle.cornerRadius,
+      math.min(geometry.rect.width, geometry.rect.height) / 2,
+    );
+    final roundedEndInset = math.min(clampedRadius, 8.0);
+    return math.max(series.labelStyle.padding, roundedEndInset);
+  }
+
+  void _paintBarRangeEndLabels(
+    Canvas canvas,
+    BarChartSeries series,
+    BarGeometry geometry,
+    Color barColor,
+  ) {
+    final config = series.labelStyle;
+    final lowerValue = math.min(geometry.startValue, geometry.endValue);
+    final upperValue = math.max(geometry.startValue, geometry.endValue);
+    final unit = config.showUnit ? series.unit : null;
+    final labelColor = config.color ?? barColor;
+
+    if (series.orientation == BarOrientation.horizontal) {
+      _paintBarHorizontalRangeEndpointLabel(
+        canvas,
+        geometry: geometry,
+        value: lowerValue,
+        unit: unit,
+        color: labelColor,
+        placeAtStart: true,
+        config: config,
+      );
+      _paintBarHorizontalRangeEndpointLabel(
+        canvas,
+        geometry: geometry,
+        value: upperValue,
+        unit: unit,
+        color: labelColor,
+        placeAtStart: false,
+        config: config,
+      );
+      return;
+    }
+
+    _paintBarRangeEndpointLabel(
+      canvas,
+      geometry: geometry,
+      value: upperValue,
+      unit: unit,
+      color: labelColor,
+      placeAbove: true,
+      config: config,
+    );
+    _paintBarRangeEndpointLabel(
+      canvas,
+      geometry: geometry,
+      value: lowerValue,
+      unit: unit,
+      color: labelColor,
+      placeAbove: false,
+      config: config,
+    );
+  }
+
+  void _paintBarHorizontalRangeEndpointLabel(
+    Canvas canvas, {
+    required BarGeometry geometry,
+    required double value,
+    required String? unit,
+    required Color color,
+    required bool placeAtStart,
+    required BarLabelStyle config,
+  }) {
+    final text =
+        config.formatter?.call(geometry.point.copyWith(y: value)) ??
+        DataPointLabelConfig.autoFormatLabelValue(value, unit);
+    final painter = _barLabelPainter(
+      text,
+      color,
+      config.fontSize,
+      config.fontWeight,
+    );
+    painter.paint(
+      canvas,
+      Offset(
+        placeAtStart
+            ? geometry.rect.left - config.padding - painter.width
+            : geometry.rect.right + config.padding,
+        geometry.rect.center.dy - painter.height / 2,
+      ),
+    );
+  }
+
+  void _paintBarRangeEndpointLabel(
+    Canvas canvas, {
+    required BarGeometry geometry,
+    required double value,
+    required String? unit,
+    required Color color,
+    required bool placeAbove,
+    required BarLabelStyle config,
+  }) {
+    final customText = config.formatter?.call(
+      geometry.point.copyWith(y: value),
+    );
+    final valueText =
+        customText ?? DataPointLabelConfig.autoFormatLabelValue(value, null);
+    final horizontalText =
+        customText ?? DataPointLabelConfig.autoFormatLabelValue(value, unit);
+    final horizontalPainter = _barLabelPainter(
+      horizontalText,
+      color,
+      config.fontSize,
+      config.fontWeight,
+      textAlign: TextAlign.center,
+    );
+    var painter = horizontalPainter;
+
+    // Adjacent grouped bars are centred one bar width plus one gap apart.
+    // Use that distance as the collision budget. A lone bar can use the wider
+    // category space and therefore does not need a compact fallback.
+    final groupInfo = barGroupInfo;
+    final availableWidth = groupInfo != null && groupInfo.count > 1
+        ? math.max(1.0, geometry.rect.width + groupInfo.gap - 2.0)
+        : double.infinity;
+
+    if (painter.width > availableWidth &&
+        customText == null &&
+        unit != null &&
+        unit.isNotEmpty) {
+      painter = _barLabelPainter(
+        '$valueText\n$unit',
+        color,
+        config.fontSize,
+        config.fontWeight,
+        textAlign: TextAlign.center,
+      );
+    }
+
+    final rotate = painter.width > availableWidth;
+    if (rotate) painter = horizontalPainter;
+    final centerX = geometry.rect.center.dx;
+    if (!rotate) {
+      painter.paint(
+        canvas,
+        Offset(
+          centerX - painter.width / 2,
+          placeAbove
+              ? geometry.rect.top - config.padding - painter.height
+              : geometry.rect.bottom + config.padding,
+        ),
+      );
+      return;
+    }
+
+    // Rotate only as the final fallback. After a clockwise quarter-turn the
+    // painter's visual width is its original height and its visual height is
+    // its original width.
+    final visualTop = placeAbove
+        ? geometry.rect.top - config.padding - painter.width
+        : geometry.rect.bottom + config.padding;
+    canvas.save();
+    canvas.translate(centerX + painter.height / 2, visualTop);
+    canvas.rotate(math.pi / 2);
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  TextPainter _barLabelPainter(
+    String text,
+    Color color,
+    double fontSize,
+    FontWeight fontWeight, {
+    TextAlign textAlign = TextAlign.left,
+  }) {
+    final key =
+        'bar:$text:${color.toARGB32()}:$fontSize:${fontWeight.index}:${textAlign.name}';
+    return _labelPainterCache.putIfAbsent(key, () {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: textAlign,
+      );
+      painter.layout();
+      return painter;
+    });
   }
 
   /// Renders a single data-point label near its marker.

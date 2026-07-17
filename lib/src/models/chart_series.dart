@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import 'chart_annotation.dart';
+import 'bar_chart_style.dart';
 import 'chart_data_point.dart';
 import 'data_point_label_config.dart';
 import 'series_inline_label_config.dart';
@@ -615,7 +616,7 @@ class AreaChartSeries extends ChartSeries {
   ]);
 }
 
-/// Bar chart series with configurable width.
+/// Bar chart series with configurable geometry and presentation.
 class BarChartSeries extends ChartSeries {
   const BarChartSeries({
     required super.id,
@@ -633,6 +634,20 @@ class BarChartSeries extends ChartSeries {
     this.barWidthPixels,
     this.minWidth = 4.0,
     this.maxWidth = 100.0,
+    this.barGap = 2.0,
+    this.orientation = BarOrientation.vertical,
+    this.layoutMode = BarLayoutMode.grouped,
+    this.groupId,
+    this.overlayWidthFactor = 1.0,
+    this.overlayOffsetFactor = 0.0,
+    this.baselineValue = 0.0,
+    this.rangeStartValues = const [],
+    this.waterfallTotalIndices = const {},
+    this.waterfallStyle = const BarWaterfallStyle(),
+    this.minBarLength = 0.0,
+    this.barStyle = const BarChartStyle(),
+    this.trackStyle,
+    this.labelStyle = const BarLabelStyle(),
   }) : assert(
          barWidthPercent != null || barWidthPixels != null,
          'Must specify either barWidthPercent or barWidthPixels',
@@ -641,13 +656,172 @@ class BarChartSeries extends ChartSeries {
          barWidthPercent == null ||
              (barWidthPercent >= 0.0 && barWidthPercent <= 1.0),
          'barWidthPercent must be between 0.0 and 1.0',
-       );
+       ),
+       assert(minWidth >= 0, 'minWidth must be non-negative'),
+       assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth'),
+       assert(barGap >= 0, 'barGap must be non-negative'),
+       assert(
+         overlayWidthFactor > 0 && overlayWidthFactor <= 1,
+         'overlayWidthFactor must be greater than 0 and at most 1',
+       ),
+       assert(
+         overlayOffsetFactor >= -1 && overlayOffsetFactor <= 1,
+         'overlayOffsetFactor must be between -1 and 1',
+       ),
+       assert(minBarLength >= 0, 'minBarLength must be non-negative');
 
   final double?
   barWidthPercent; // Percentage of spacing between points (0.0 - 1.0)
-  final double? barWidthPixels; // Fixed width in data units
-  final double minWidth; // Minimum bar width in data units
-  final double maxWidth; // Maximum bar width in data units
+  final double? barWidthPixels; // Fixed width in logical pixels
+  final double minWidth; // Minimum bar width in logical pixels
+  final double maxWidth; // Maximum bar width in logical pixels
+
+  /// Pixel spacing between adjacent series in the same category group.
+  final double barGap;
+
+  /// Whether categories are arranged horizontally or vertically on screen.
+  final BarOrientation orientation;
+
+  /// How this series shares its category slot with other bar series.
+  final BarLayoutMode layoutMode;
+
+  /// Named composition group for stacked and overlaid layouts.
+  ///
+  /// Series with the same group ID share one category slot.
+  final String? groupId;
+
+  /// Width of an overlaid bar relative to its resolved category slot.
+  ///
+  /// Use `1` for the wide back layer and progressively smaller values for
+  /// series painted later in the chart's series list. Ignored by other layout
+  /// modes.
+  final double overlayWidthFactor;
+
+  /// Category-axis offset relative to the resolved overlay slot width.
+  ///
+  /// Negative values shift a vertical bar left or a horizontal bar up;
+  /// positive values shift it right or down. A value of `0.15` moves the bar
+  /// center by 15% of the slot width. Ignored by other layout modes.
+  final double overlayOffsetFactor;
+
+  /// Value-axis baseline from which bars grow.
+  final double baselineValue;
+
+  /// Optional value-axis starts for floating or range bars.
+  ///
+  /// Values align by index with [points], whose `y` values remain the range
+  /// ends. An empty list preserves ordinary baseline bars. A null entry falls
+  /// back to [baselineValue], which allows range and baseline bars in one
+  /// series. Range values are supported by grouped and overlaid layouts; they
+  /// are intentionally incompatible with stacked layouts.
+  final List<double?> rangeStartValues;
+
+  /// Point indices that render the running waterfall total from the baseline.
+  ///
+  /// A total point's `y` value is retained as source data but ignored for
+  /// waterfall geometry. Non-total points are applied as sequential deltas in
+  /// list order, starting at [baselineValue].
+  final Set<int> waterfallTotalIndices;
+
+  /// Semantic colors and connector presentation for waterfall layout.
+  final BarWaterfallStyle waterfallStyle;
+
+  bool isWaterfallTotal(int pointIndex) =>
+      waterfallTotalIndices.contains(pointIndex);
+
+  /// Value shown for a waterfall label, crosshair, or tooltip.
+  ///
+  /// Delta points retain their source `y`; total points resolve to the running
+  /// cumulative value immediately before the total column.
+  double waterfallDisplayValueFor(int pointIndex) {
+    if (layoutMode != BarLayoutMode.waterfall ||
+        !isWaterfallTotal(pointIndex)) {
+      return points[pointIndex].y;
+    }
+    var runningTotal = baselineValue;
+    for (var index = 0; index < pointIndex; index++) {
+      if (!isWaterfallTotal(index)) runningTotal += points[index].y;
+    }
+    return runningTotal;
+  }
+
+  /// Whether at least one point has an explicit range start.
+  bool get hasRangeValues => rangeStartValues.any((value) => value != null);
+
+  /// Returns the explicit start for [pointIndex], or [baselineValue].
+  double rangeStartValueFor(int pointIndex) =>
+      pointIndex < rangeStartValues.length
+      ? rangeStartValues[pointIndex] ?? baselineValue
+      : baselineValue;
+
+  /// Validates point alignment and composition rules for range values.
+  ///
+  /// Runtime validation preserves the const constructor because Dart does not
+  /// allow list-length access in a const assertion.
+  void validateConfiguration() {
+    if (rangeStartValues.isNotEmpty &&
+        rangeStartValues.length != points.length) {
+      throw ArgumentError.value(
+        rangeStartValues.length,
+        'rangeStartValues',
+        'Must be empty or match the points length (${points.length})',
+      );
+    }
+    if (rangeStartValues.isNotEmpty &&
+        (layoutMode == BarLayoutMode.stacked ||
+            layoutMode == BarLayoutMode.normalizedStacked ||
+            layoutMode == BarLayoutMode.waterfall)) {
+      throw ArgumentError.value(
+        layoutMode,
+        'layoutMode',
+        'Range bars cannot use stacked or waterfall layout modes',
+      );
+    }
+    if (waterfallTotalIndices.isNotEmpty &&
+        layoutMode != BarLayoutMode.waterfall) {
+      throw ArgumentError.value(
+        layoutMode,
+        'layoutMode',
+        'Waterfall totals require waterfall layout mode',
+      );
+    }
+    for (final index in waterfallTotalIndices) {
+      if (index < 0 || index >= points.length) {
+        throw RangeError.range(
+          index,
+          0,
+          points.isEmpty ? 0 : points.length - 1,
+          'waterfallTotalIndices',
+        );
+      }
+    }
+    if (layoutMode == BarLayoutMode.waterfall) {
+      for (var index = 1; index < points.length; index++) {
+        if (points[index].x <= points[index - 1].x) {
+          throw ArgumentError.value(
+            points[index].x,
+            'points[$index].x',
+            'Waterfall points must use strictly increasing X values',
+          );
+        }
+      }
+    }
+  }
+
+  /// Backward-compatible validation entry point.
+  void validateRangeConfiguration() => validateConfiguration();
+
+  /// Minimum visible bar length in logical pixels.
+  final double minBarLength;
+
+  /// Fill, border, opacity, and corner presentation.
+  final BarChartStyle barStyle;
+
+  /// Optional passive capacity or target track behind each bar.
+  final BarTrackStyle? trackStyle;
+
+  /// Optional labels positioned using the rendered bar rectangle.
+  final BarLabelStyle labelStyle;
 
   @override
   BarChartSeries copyWith({
@@ -666,6 +840,24 @@ class BarChartSeries extends ChartSeries {
     double? barWidthPixels,
     double? minWidth,
     double? maxWidth,
+    double? barGap,
+    BarOrientation? orientation,
+    BarLayoutMode? layoutMode,
+    String? groupId,
+    bool clearGroupId = false,
+    double? overlayWidthFactor,
+    double? overlayOffsetFactor,
+    double? baselineValue,
+    List<double?>? rangeStartValues,
+    bool clearRangeStartValues = false,
+    Set<int>? waterfallTotalIndices,
+    bool clearWaterfallTotalIndices = false,
+    BarWaterfallStyle? waterfallStyle,
+    double? minBarLength,
+    BarChartStyle? barStyle,
+    BarTrackStyle? trackStyle,
+    bool clearTrackStyle = false,
+    BarLabelStyle? labelStyle,
   }) {
     return BarChartSeries(
       id: id ?? this.id,
@@ -683,10 +875,76 @@ class BarChartSeries extends ChartSeries {
       barWidthPixels: barWidthPixels ?? this.barWidthPixels,
       minWidth: minWidth ?? this.minWidth,
       maxWidth: maxWidth ?? this.maxWidth,
+      barGap: barGap ?? this.barGap,
+      orientation: orientation ?? this.orientation,
+      layoutMode: layoutMode ?? this.layoutMode,
+      groupId: clearGroupId ? null : (groupId ?? this.groupId),
+      overlayWidthFactor: overlayWidthFactor ?? this.overlayWidthFactor,
+      overlayOffsetFactor: overlayOffsetFactor ?? this.overlayOffsetFactor,
+      baselineValue: baselineValue ?? this.baselineValue,
+      rangeStartValues: clearRangeStartValues
+          ? const []
+          : (rangeStartValues ?? this.rangeStartValues),
+      waterfallTotalIndices: clearWaterfallTotalIndices
+          ? const {}
+          : (waterfallTotalIndices ?? this.waterfallTotalIndices),
+      waterfallStyle: waterfallStyle ?? this.waterfallStyle,
+      minBarLength: minBarLength ?? this.minBarLength,
+      barStyle: barStyle ?? this.barStyle,
+      trackStyle: clearTrackStyle ? null : (trackStyle ?? this.trackStyle),
+      labelStyle: labelStyle ?? this.labelStyle,
     );
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarChartSeries &&
+          super == other &&
+          other.barWidthPercent == barWidthPercent &&
+          other.barWidthPixels == barWidthPixels &&
+          other.minWidth == minWidth &&
+          other.maxWidth == maxWidth &&
+          other.barGap == barGap &&
+          other.orientation == orientation &&
+          other.layoutMode == layoutMode &&
+          other.groupId == groupId &&
+          other.overlayWidthFactor == overlayWidthFactor &&
+          other.overlayOffsetFactor == overlayOffsetFactor &&
+          other.baselineValue == baselineValue &&
+          ChartSeries._listEquals(other.rangeStartValues, rangeStartValues) &&
+          other.waterfallTotalIndices.length == waterfallTotalIndices.length &&
+          other.waterfallTotalIndices.containsAll(waterfallTotalIndices) &&
+          other.waterfallStyle == waterfallStyle &&
+          other.minBarLength == minBarLength &&
+          other.barStyle == barStyle &&
+          other.trackStyle == trackStyle &&
+          other.labelStyle == labelStyle;
+
+  @override
+  int get hashCode => Object.hashAll([
+    super.hashCode,
+    barWidthPercent,
+    barWidthPixels,
+    minWidth,
+    maxWidth,
+    barGap,
+    orientation,
+    layoutMode,
+    groupId,
+    overlayWidthFactor,
+    overlayOffsetFactor,
+    baselineValue,
+    Object.hashAll(rangeStartValues),
+    Object.hashAll(waterfallTotalIndices.toList()..sort()),
+    waterfallStyle,
+    minBarLength,
+    barStyle,
+    trackStyle,
+    labelStyle,
+  ]);
+
+  @override
   String toString() =>
-      'BarChartSeries(id: $id, points: ${points.length}, barWidth: ${barWidthPercent ?? barWidthPixels})';
+      'BarChartSeries(id: $id, points: ${points.length}, orientation: ${orientation.name}, barWidth: ${barWidthPercent ?? barWidthPixels})';
 }

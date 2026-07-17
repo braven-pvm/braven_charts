@@ -8,6 +8,9 @@
 /// [left...] | Chart Area | [...right]
 /// ```
 ///
+/// Horizontal bar charts transpose these semantic value-axis positions:
+/// [left] axes render below the plot and [right] axes render above it.
+///
 /// The [left] position is the standard position for the primary Y-axis.
 /// Add more axes with [right] (or additional [left] configs on separate series).
 enum YAxisPosition {
@@ -47,6 +50,8 @@ enum YAxisPosition {
   ///
   /// Previously: rightmost axis (far right of plot area).
   /// Now: treated identically to [right] at runtime.
-  @Deprecated('Use YAxisPosition.right instead. rightOuter is treated as right.')
+  @Deprecated(
+    'Use YAxisPosition.right instead. rightOuter is treated as right.',
+  )
   rightOuter,
 }

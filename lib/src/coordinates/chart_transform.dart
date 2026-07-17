@@ -55,10 +55,11 @@ class ChartTransform {
     required this.plotWidth,
     required this.plotHeight,
     this.invertY = true,
-  })  : assert(dataXMax > dataXMin, 'dataXMax must be greater than dataXMin'),
-        assert(dataYMax > dataYMin, 'dataYMax must be greater than dataYMin'),
-        assert(plotWidth > 0, 'plotWidth must be positive'),
-        assert(plotHeight > 0, 'plotHeight must be positive');
+    this.transposed = false,
+  }) : assert(dataXMax > dataXMin, 'dataXMax must be greater than dataXMin'),
+       assert(dataYMax > dataYMin, 'dataYMax must be greater than dataYMin'),
+       assert(plotWidth > 0, 'plotWidth must be positive'),
+       assert(plotHeight > 0, 'plotHeight must be positive');
 
   /// Minimum visible data value on X-axis (left edge of viewport).
   final double dataXMin;
@@ -82,6 +83,12 @@ class ChartTransform {
   /// If false, Y-axis follows canvas convention (Y=0 at top).
   final bool invertY;
 
+  /// Whether semantic X values map vertically and Y values map horizontally.
+  ///
+  /// Horizontal bar charts use this while retaining their public data model:
+  /// X remains the category and Y remains the measured value.
+  final bool transposed;
+
   // ============================================================================
   // Computed Properties
   // ============================================================================
@@ -93,24 +100,24 @@ class ChartTransform {
   double get dataYRange => dataYMax - dataYMin;
 
   /// Scale factor: data units per pixel on X-axis.
-  double get dataPerPixelX => dataXRange / plotWidth;
+  double get dataPerPixelX =>
+      dataXRange / (transposed ? plotHeight : plotWidth);
 
   /// Scale factor: data units per pixel on Y-axis.
-  double get dataPerPixelY => dataYRange / plotHeight;
+  double get dataPerPixelY =>
+      dataYRange / (transposed ? plotWidth : plotHeight);
 
   /// Scale factor: pixels per data unit on X-axis.
-  double get pixelsPerDataX => plotWidth / dataXRange;
+  double get pixelsPerDataX =>
+      (transposed ? plotHeight : plotWidth) / dataXRange;
 
   /// Scale factor: pixels per data unit on Y-axis.
-  double get pixelsPerDataY => plotHeight / dataYRange;
+  double get pixelsPerDataY =>
+      (transposed ? plotWidth : plotHeight) / dataYRange;
 
   /// Visible data bounds as a Rect (for viewport queries).
-  Rect get visibleDataBounds => Rect.fromLTRB(
-        dataXMin,
-        dataYMin,
-        dataXMax,
-        dataYMax,
-      );
+  Rect get visibleDataBounds =>
+      Rect.fromLTRB(dataXMin, dataYMin, dataXMax, dataYMax);
 
   // ============================================================================
   // Core Transformations
@@ -133,10 +140,15 @@ class ChartTransform {
     final relativeX = (dataX - dataXMin) / dataXRange;
     final relativeY = (dataY - dataYMin) / dataYRange;
 
+    if (transposed) {
+      return Offset(relativeY * plotWidth, relativeX * plotHeight);
+    }
+
     // Convert to plot pixels
     final plotX = relativeX * plotWidth;
     final plotY = invertY
-        ? (1.0 - relativeY) * plotHeight // Invert: Y=0 at bottom
+        ? (1.0 - relativeY) *
+              plotHeight // Invert: Y=0 at bottom
         : relativeY * plotHeight; // Standard: Y=0 at top
 
     return Offset(plotX, plotY);
@@ -157,10 +169,20 @@ class ChartTransform {
   ///
   /// **Use Case**: Hit testing, converting pointer position to data values.
   Offset plotToData(double plotX, double plotY) {
+    if (transposed) {
+      final relativeX = plotY / plotHeight;
+      final relativeY = plotX / plotWidth;
+      return Offset(
+        dataXMin + (relativeX * dataXRange),
+        dataYMin + (relativeY * dataYRange),
+      );
+    }
+
     // Calculate relative position in plot range [0, 1]
     final relativeX = plotX / plotWidth;
     final relativeY = invertY
-        ? 1.0 - (plotY / plotHeight) // Invert: Y=0 at bottom
+        ? 1.0 -
+              (plotY / plotHeight) // Invert: Y=0 at bottom
         : plotY / plotHeight; // Standard: Y=0 at top
 
     // Convert to data values
@@ -307,6 +329,7 @@ class ChartTransform {
       plotWidth: plotWidth,
       plotHeight: plotHeight,
       invertY: invertY,
+      transposed: transposed,
     );
   }
 
@@ -327,10 +350,26 @@ class ChartTransform {
   /// - Positive plotDx pans viewport right (data shifts left)
   /// - Positive plotDy pans viewport down (data shifts up)
   ChartTransform pan(double plotDx, double plotDy) {
+    if (transposed) {
+      final dataDx = plotDy * dataPerPixelX;
+      final dataDy = plotDx * dataPerPixelY;
+      return ChartTransform(
+        dataXMin: dataXMin + dataDx,
+        dataXMax: dataXMax + dataDx,
+        dataYMin: dataYMin + dataDy,
+        dataYMax: dataYMax + dataDy,
+        plotWidth: plotWidth,
+        plotHeight: plotHeight,
+        invertY: invertY,
+        transposed: true,
+      );
+    }
+
     // Convert plot delta to data delta
     final dataDx = plotDx * dataPerPixelX;
     final dataDy = invertY
-        ? -plotDy * dataPerPixelY // Invert Y movement
+        ? -plotDy *
+              dataPerPixelY // Invert Y movement
         : plotDy * dataPerPixelY;
 
     // Shift data bounds
@@ -347,6 +386,7 @@ class ChartTransform {
       plotWidth: plotWidth,
       plotHeight: plotHeight,
       invertY: invertY,
+      transposed: transposed,
     );
   }
 
@@ -372,6 +412,7 @@ class ChartTransform {
     double? plotWidth,
     double? plotHeight,
     bool? invertY,
+    bool? transposed,
   }) {
     return ChartTransform(
       dataXMin: dataXMin ?? this.dataXMin,
@@ -381,6 +422,7 @@ class ChartTransform {
       plotWidth: plotWidth ?? this.plotWidth,
       plotHeight: plotHeight ?? this.plotHeight,
       invertY: invertY ?? this.invertY,
+      transposed: transposed ?? this.transposed,
     );
   }
 
@@ -399,7 +441,8 @@ class ChartTransform {
         other.dataYMax == dataYMax &&
         other.plotWidth == plotWidth &&
         other.plotHeight == plotHeight &&
-        other.invertY == invertY;
+        other.invertY == invertY &&
+        other.transposed == transposed;
   }
 
   @override
@@ -412,6 +455,7 @@ class ChartTransform {
       plotWidth,
       plotHeight,
       invertY,
+      transposed,
     );
   }
 
@@ -421,6 +465,7 @@ class ChartTransform {
         'dataX: [$dataXMin, $dataXMax], '
         'dataY: [$dataYMin, $dataYMax], '
         'plot: $plotWidth×$plotHeight, '
-        'invertY: $invertY)';
+        'invertY: $invertY, '
+        'transposed: $transposed)';
   }
 }

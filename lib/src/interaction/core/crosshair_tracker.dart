@@ -15,6 +15,7 @@
 import 'dart:ui';
 
 import '../../models/chart_data_point.dart';
+import '../../models/bar_chart_style.dart';
 import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
 import '../../utils/interpolation_geometry.dart';
@@ -122,14 +123,21 @@ abstract final class CrosshairTracker {
     final points = series.points;
     if (points.isEmpty) return null;
 
+    // Bars and scatter marks represent discrete observations. Their crosshair
+    // values must snap to an actual mark rather than inventing values between
+    // categories, even when tracking interpolation is enabled globally.
+    if (series is BarChartSeries || series is ScatterChartSeries) {
+      interpolate = false;
+    }
+
     // Handle edge cases: target is outside data range
     if (targetX == points.first.x) {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
-        seriesColor: series.color ?? const Color(0xFF2196F3),
+        seriesColor: _trackedPointColor(series, 0),
         x: points.first.x,
-        y: points.first.y,
+        y: _trackedPointY(series, 0),
         dataPointIndex: 0,
         isInterpolated: false,
       );
@@ -139,9 +147,9 @@ abstract final class CrosshairTracker {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
-        seriesColor: series.color ?? const Color(0xFF2196F3),
+        seriesColor: _trackedPointColor(series, points.length - 1),
         x: points.last.x,
-        y: points.last.y,
+        y: _trackedPointY(series, points.length - 1),
         dataPointIndex: points.length - 1,
         isInterpolated: false,
       );
@@ -166,9 +174,9 @@ abstract final class CrosshairTracker {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
-        seriesColor: series.color ?? const Color(0xFF2196F3),
+        seriesColor: _trackedPointColor(series, leftIndex),
         x: leftPoint.x,
-        y: leftPoint.y,
+        y: _trackedPointY(series, leftIndex),
         dataPointIndex: leftIndex,
         isInterpolated: false,
       );
@@ -178,9 +186,9 @@ abstract final class CrosshairTracker {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
-        seriesColor: series.color ?? const Color(0xFF2196F3),
+        seriesColor: _trackedPointColor(series, rightIndex),
         x: rightPoint.x,
-        y: rightPoint.y,
+        y: _trackedPointY(series, rightIndex),
         dataPointIndex: rightIndex,
         isInterpolated: false,
       );
@@ -221,7 +229,7 @@ abstract final class CrosshairTracker {
       return CrosshairSeriesValue(
         seriesId: series.id,
         seriesName: series.displayName,
-        seriesColor: series.color ?? const Color(0xFF2196F3),
+        seriesColor: _trackedPointColor(series, leftIndex),
         x: targetX,
         y: interpolatedY,
         dataPointIndex: leftIndex, // Use left point as reference
@@ -236,9 +244,9 @@ abstract final class CrosshairTracker {
         return CrosshairSeriesValue(
           seriesId: series.id,
           seriesName: series.displayName,
-          seriesColor: series.color ?? const Color(0xFF2196F3),
+          seriesColor: _trackedPointColor(series, leftIndex),
           x: leftPoint.x,
-          y: leftPoint.y,
+          y: _trackedPointY(series, leftIndex),
           dataPointIndex: leftIndex,
           isInterpolated: false,
         );
@@ -246,14 +254,37 @@ abstract final class CrosshairTracker {
         return CrosshairSeriesValue(
           seriesId: series.id,
           seriesName: series.displayName,
-          seriesColor: series.color ?? const Color(0xFF2196F3),
+          seriesColor: _trackedPointColor(series, rightIndex),
           x: rightPoint.x,
-          y: rightPoint.y,
+          y: _trackedPointY(series, rightIndex),
           dataPointIndex: rightIndex,
           isInterpolated: false,
         );
       }
     }
+  }
+
+  static double _trackedPointY(ChartSeries series, int pointIndex) {
+    if (series case final BarChartSeries barSeries
+        when barSeries.layoutMode == BarLayoutMode.waterfall) {
+      return barSeries.waterfallDisplayValueFor(pointIndex);
+    }
+    return series.points[pointIndex].y;
+  }
+
+  static Color _trackedPointColor(ChartSeries series, int pointIndex) {
+    final pointColor = series.points[pointIndex].pointStyle?.color;
+    if (pointColor != null) return pointColor;
+    if (series case final BarChartSeries barSeries
+        when barSeries.layoutMode == BarLayoutMode.waterfall) {
+      final waterfallColor = barSeries.isWaterfallTotal(pointIndex)
+          ? barSeries.waterfallStyle.totalColor
+          : barSeries.points[pointIndex].y >= 0
+          ? barSeries.waterfallStyle.increaseColor
+          : barSeries.waterfallStyle.decreaseColor;
+      if (waterfallColor != null) return waterfallColor;
+    }
+    return series.color ?? const Color(0xFF2196F3);
   }
 
   /// Binary search to find the insertion point for targetX.
@@ -298,8 +329,7 @@ abstract final class CrosshairTracker {
         LineInterpolation.monotone => TrackingInterpolation.monotone,
       };
     }
-    // Default to linear for other series types (e.g., BarChartSeries)
-    return TrackingInterpolation.linear;
+    return TrackingInterpolation.none;
   }
 
   /// Gets the tension value for a series (used for bezier curves).

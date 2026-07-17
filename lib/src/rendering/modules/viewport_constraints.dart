@@ -103,6 +103,7 @@ class ViewportConstraints {
       plotWidth: transform.plotWidth,
       plotHeight: transform.plotHeight,
       invertY: transform.invertY,
+      transposed: transform.transposed,
     );
   }
 
@@ -138,10 +139,14 @@ class ViewportConstraints {
     // CRITICAL: Match the inversion logic in ChartTransform.pan()!
     final dataPerPixelX = currentTransform.dataPerPixelX;
     final dataPerPixelY = currentTransform.dataPerPixelY;
-    final requestedDataDx = requestedPlotDx * dataPerPixelX;
-    final requestedDataDy = currentTransform.invertY
+    final requestedDataDx = currentTransform.transposed
+        ? requestedPlotDy * dataPerPixelX
+        : requestedPlotDx * dataPerPixelX;
+    final requestedDataDy = currentTransform.transposed
+        ? requestedPlotDx * dataPerPixelY
+        : currentTransform.invertY
         ? -requestedPlotDy *
-            dataPerPixelY // Invert Y movement (match pan() logic)
+              dataPerPixelY // Invert Y movement (match pan() logic)
         : requestedPlotDy * dataPerPixelY;
 
     // 2. Calculate tentative new viewport position in data space
@@ -152,10 +157,16 @@ class ViewportConstraints {
     // At 1x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange / plotWidth) = originalRange * 0.1
     // At 2x zoom: maxWhitespace = plotWidth * 0.1 * (originalRange/2 / plotWidth) = originalRange * 0.05
     // This ensures 10% whitespace in VIEWPORT, which scales correctly with zoom
+    final dataXPixelSpan = currentTransform.transposed
+        ? currentTransform.plotHeight
+        : currentTransform.plotWidth;
+    final dataYPixelSpan = currentTransform.transposed
+        ? currentTransform.plotWidth
+        : currentTransform.plotHeight;
     final maxWhitespaceDataX =
-        currentTransform.plotWidth * maxWhitespaceFraction * dataPerPixelX;
+        dataXPixelSpan * maxWhitespaceFraction * dataPerPixelX;
     final maxWhitespaceDataY =
-        currentTransform.plotHeight * maxWhitespaceFraction * dataPerPixelY;
+        dataYPixelSpan * maxWhitespaceFraction * dataPerPixelY;
 
     // 4. Calculate allowed bounds for viewport position using constraint transform
     // Viewport left edge (dataXMin) can range from:
@@ -163,13 +174,15 @@ class ViewportConstraints {
     //   - Maximum: constraintDataXMax - currentViewportWidth + maxWhitespace (show whitespace on right)
     final minAllowedDataXMin =
         constraintTransform.dataXMin - maxWhitespaceDataX;
-    final maxAllowedDataXMin = constraintTransform.dataXMax -
+    final maxAllowedDataXMin =
+        constraintTransform.dataXMax -
         currentTransform.dataXRange +
         maxWhitespaceDataX;
 
     final minAllowedDataYMin =
         constraintTransform.dataYMin - maxWhitespaceDataY;
-    final maxAllowedDataYMin = constraintTransform.dataYMax -
+    final maxAllowedDataYMin =
+        constraintTransform.dataYMax -
         currentTransform.dataYRange +
         maxWhitespaceDataY;
 
@@ -187,9 +200,14 @@ class ViewportConstraints {
     final actualDataDx = clampedDataXMin - currentTransform.dataXMin;
     final actualDataDy = clampedDataYMin - currentTransform.dataYMin;
 
-    final actualPlotDx = actualDataDx / dataPerPixelX;
-    final actualPlotDy = currentTransform.invertY
-        ? -actualDataDy / dataPerPixelY // Reverse Y inversion
+    final actualPlotDx = currentTransform.transposed
+        ? actualDataDy / dataPerPixelY
+        : actualDataDx / dataPerPixelX;
+    final actualPlotDy = currentTransform.transposed
+        ? actualDataDx / dataPerPixelX
+        : currentTransform.invertY
+        ? -actualDataDy /
+              dataPerPixelY // Reverse Y inversion
         : actualDataDy / dataPerPixelY;
 
     return (dx: actualPlotDx, dy: actualPlotDy);

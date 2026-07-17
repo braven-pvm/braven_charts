@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:braven_charts/src/interaction/core/crosshair_tracker.dart';
+import 'package:braven_charts/src/models/bar_chart_style.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/utils/interpolation_geometry.dart';
@@ -78,6 +79,60 @@ void main() {
       expect(state!.dataX, closeTo(1.5, 1e-9));
       expect(state.seriesValues.single.y, closeTo(expectedY, 1e-9));
       expect(state.seriesValues.single.isInterpolated, isTrue);
+    });
+
+    test(
+      'bar tracking snaps to the nearest category without interpolation',
+      () {
+        const series = BarChartSeries(
+          id: 'bars',
+          points: [ChartDataPoint(x: 0, y: 10), ChartDataPoint(x: 1, y: 80)],
+          barWidthPercent: 0.7,
+        );
+
+        final state = CrosshairTracker.calculateTrackingState(
+          screenX: 120,
+          chartBounds: const Rect.fromLTWH(0, 0, 300, 200),
+          xMin: 0,
+          xMax: 1,
+          seriesList: [series],
+        );
+
+        expect(state, isNotNull);
+        expect(state!.seriesValues.single.x, 0);
+        expect(state.seriesValues.single.y, 10);
+        expect(state.seriesValues.single.dataPointIndex, 0);
+        expect(state.seriesValues.single.isInterpolated, isFalse);
+      },
+    );
+
+    test('waterfall totals expose their resolved cumulative value', () {
+      const series = BarChartSeries(
+        id: 'waterfall',
+        points: [
+          ChartDataPoint(x: 0, y: 100),
+          ChartDataPoint(x: 1, y: -30),
+          ChartDataPoint(x: 2, y: 999),
+        ],
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.waterfall,
+        waterfallTotalIndices: {2},
+        waterfallStyle: BarWaterfallStyle(totalColor: Color(0xFF5149C6)),
+      );
+
+      final state = CrosshairTracker.calculateTrackingState(
+        screenX: 300,
+        chartBounds: const Rect.fromLTWH(0, 0, 300, 200),
+        xMin: 0,
+        xMax: 2,
+        seriesList: const [series],
+      );
+
+      expect(state, isNotNull);
+      expect(state!.seriesValues.single.dataPointIndex, 2);
+      expect(state.seriesValues.single.y, 70);
+      expect(state.seriesValues.single.seriesColor, const Color(0xFF5149C6));
+      expect(state.seriesValues.single.isInterpolated, isFalse);
     });
   });
 }

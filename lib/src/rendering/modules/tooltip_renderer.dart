@@ -9,6 +9,7 @@ import '../../formatting/multi_axis_value_formatter.dart';
 import '../../interaction/core/chart_element.dart';
 import '../../interaction/core/coordinator.dart';
 import '../../models/chart_series.dart';
+import '../../models/bar_chart_style.dart';
 import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
 import '../../models/series_axis_binding.dart';
@@ -98,8 +99,14 @@ class TooltipRenderer {
     }
 
     // Format Y value with unit using MultiAxisValueFormatter (T042, T045)
+    final tooltipValue = switch (dataElement.series) {
+      final BarChartSeries barSeries
+          when barSeries.layoutMode == BarLayoutMode.waterfall =>
+        barSeries.waterfallDisplayValueFor(markerInfo.markerIndex),
+      _ => dataPoint.y,
+    };
     final formattedY = MultiAxisValueFormatter.format(
-      value: dataPoint.y,
+      value: tooltipValue,
       unit: yUnit,
     );
 

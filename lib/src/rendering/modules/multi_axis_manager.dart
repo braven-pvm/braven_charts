@@ -12,6 +12,7 @@ import '../../models/normalization_mode.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
+import '../bar_composition.dart';
 import '../multi_axis_normalizer.dart';
 import '../multi_axis_painter.dart';
 import 'crosshair_renderer.dart';
@@ -603,6 +604,9 @@ class MultiAxisManager {
 
     // Compute effective bindings from series
     final effectiveBindings = getEffectiveBindings();
+    final barComposition = BarCompositionEngine.resolve(
+      _series.whereType<BarChartSeries>().toList(),
+    );
 
     // Use local variables for null-safety promotion
     final t = transform;
@@ -707,10 +711,41 @@ class MultiAxisManager {
           // Find matching series
           for (final series in _series) {
             if (series.id == binding.seriesId) {
-              for (final point in series.points) {
+              for (
+                var pointIndex = 0;
+                pointIndex < series.points.length;
+                pointIndex++
+              ) {
+                final point = series.points[pointIndex];
                 if (!point.y.isFinite) continue;
-                if (minY == null || point.y < minY) minY = point.y;
-                if (maxY == null || point.y > maxY) maxY = point.y;
+                if (series is BarChartSeries) {
+                  final info = barComposition[series.id];
+                  final rangeStart = series.rangeStartValueFor(pointIndex);
+                  final start =
+                      info?.startValueFor(pointIndex, rangeStart) ?? rangeStart;
+                  final end = info?.endValueFor(pointIndex, point.y) ?? point.y;
+                  if (start.isFinite) {
+                    if (minY == null || start < minY) minY = start;
+                    if (maxY == null || start > maxY) maxY = start;
+                  }
+                  if (end.isFinite) {
+                    if (minY == null || end < minY) minY = end;
+                    if (maxY == null || end > maxY) maxY = end;
+                  }
+                } else {
+                  if (minY == null || point.y < minY) minY = point.y;
+                  if (maxY == null || point.y > maxY) maxY = point.y;
+                }
+              }
+              if (series is BarChartSeries) {
+                final info = barComposition[series.id];
+                final trackValue = info?.drawTrack == false
+                    ? null
+                    : series.trackStyle?.value;
+                if (trackValue != null && trackValue.isFinite) {
+                  if (minY == null || trackValue < minY) minY = trackValue;
+                  if (maxY == null || trackValue > maxY) maxY = trackValue;
+                }
               }
             }
           }

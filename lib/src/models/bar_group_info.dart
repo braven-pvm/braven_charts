@@ -1,11 +1,15 @@
 // Copyright 2025 Braven Charts
 // SPDX-License-Identifier: MIT
 
-/// Metadata for positioning a bar series within a group of bar series.
+import 'package:flutter/foundation.dart' show mapEquals, setEquals;
+
+import 'bar_chart_style.dart';
+
+/// Metadata for positioning and composing a bar series within category slots.
 ///
-/// When multiple bar series share the same X-values, they need to be positioned
-/// side-by-side rather than overlapping. BarGroupInfo provides the positioning
-/// metadata needed to calculate horizontal offsets for each bar within a group.
+/// When multiple bar slots share the same X-values, they need to be positioned
+/// side-by-side. Stacked series intentionally share a slot index while grouped
+/// series receive distinct indices.
 ///
 /// **Usage**:
 /// ```dart
@@ -27,9 +31,9 @@
 class BarGroupInfo {
   /// Creates bar group positioning metadata.
   ///
-  /// [index] is the 0-based position of this bar series among all bar series.
-  /// [count] is the total number of bar series in the chart.
-  /// [gap] is the pixel spacing between adjacent bars within a group (default 2.0).
+  /// [index] is the 0-based position of this series' category slot.
+  /// [count] is the total number of category slots in the chart.
+  /// [gap] is the pixel spacing between adjacent slots (default 2.0).
   ///
   /// Example:
   /// ```dart
@@ -43,17 +47,25 @@ class BarGroupInfo {
     required this.index,
     required this.count,
     this.gap = 2.0,
-  })  : assert(index >= 0, 'index must be non-negative'),
-        assert(count >= 1, 'count must be at least 1'),
-        assert(index < count, 'index must be less than count'),
-        assert(gap >= 0, 'gap must be non-negative');
+    this.layoutMode = BarLayoutMode.grouped,
+    this.groupId,
+    this.stackBaseline = 0.0,
+    this.startValues = const {},
+    this.endValues = const {},
+    this.percentages = const {},
+    this.outerPointIndices = const {},
+    this.drawTrack = true,
+  }) : assert(index >= 0, 'index must be non-negative'),
+       assert(count >= 1, 'count must be at least 1'),
+       assert(index < count, 'index must be less than count'),
+       assert(gap >= 0, 'gap must be non-negative');
 
-  /// 0-based index of this bar series among all bar series.
+  /// 0-based index of this series' category slot.
   ///
-  /// For example, if there are 3 bar series, valid indices are 0, 1, 2.
+  /// For example, if there are 3 slots, valid indices are 0, 1, 2.
   final int index;
 
-  /// Total number of bar series in the chart.
+  /// Total number of side-by-side category slots in the chart.
   ///
   /// Must be >= 1. For a single bar series, count is 1 and index is 0.
   final int count;
@@ -62,6 +74,49 @@ class BarGroupInfo {
   ///
   /// Defaults to 2.0 pixels per FR-003 specification.
   final double gap;
+
+  /// Composition mode resolved for this series.
+  final BarLayoutMode layoutMode;
+
+  /// Named stack ID, when supplied by the series.
+  final String? groupId;
+
+  /// Common baseline used by a stack.
+  final double stackBaseline;
+
+  /// Rendered segment start values keyed by point index.
+  final Map<int, double> startValues;
+
+  /// Rendered segment end values keyed by point index.
+  final Map<int, double> endValues;
+
+  /// Signed normalized percentages keyed by point index.
+  final Map<int, double> percentages;
+
+  /// Point indices exposed at the positive or negative end of a stack.
+  final Set<int> outerPointIndices;
+
+  /// Whether this series owns the shared track behind its composition slot.
+  final bool drawTrack;
+
+  bool get isStacked =>
+      layoutMode == BarLayoutMode.stacked ||
+      layoutMode == BarLayoutMode.normalizedStacked;
+
+  bool get isOverlaid => layoutMode == BarLayoutMode.overlaid;
+
+  bool get isWaterfall => layoutMode == BarLayoutMode.waterfall;
+
+  double startValueFor(int pointIndex, double fallback) =>
+      startValues[pointIndex] ?? fallback;
+
+  double endValueFor(int pointIndex, double fallback) =>
+      endValues[pointIndex] ?? fallback;
+
+  double? percentageFor(int pointIndex) => percentages[pointIndex];
+
+  bool isOuterPoint(int pointIndex) =>
+      !isStacked || outerPointIndices.contains(pointIndex);
 
   /// Calculate the X-offset for this bar within its group.
   ///
@@ -102,17 +157,38 @@ class BarGroupInfo {
           runtimeType == other.runtimeType &&
           index == other.index &&
           count == other.count &&
-          gap == other.gap;
+          gap == other.gap &&
+          layoutMode == other.layoutMode &&
+          groupId == other.groupId &&
+          stackBaseline == other.stackBaseline &&
+          mapEquals(startValues, other.startValues) &&
+          mapEquals(endValues, other.endValues) &&
+          mapEquals(percentages, other.percentages) &&
+          setEquals(outerPointIndices, other.outerPointIndices) &&
+          drawTrack == other.drawTrack;
 
   /// Returns a hash code based on index, count, and gap.
   @override
-  int get hashCode => Object.hash(index, count, gap);
+  int get hashCode => Object.hashAll([
+    index,
+    count,
+    gap,
+    layoutMode,
+    groupId,
+    stackBaseline,
+    _mapHash(startValues),
+    _mapHash(endValues),
+    _mapHash(percentages),
+    Object.hashAll(outerPointIndices.toList()..sort()),
+    drawTrack,
+  ]);
 
   /// Returns a string representation of this BarGroupInfo.
   ///
   /// Example: `BarGroupInfo(index: 1, count: 3, gap: 2.0)`
   @override
-  String toString() => 'BarGroupInfo(index: $index, count: $count, gap: $gap)';
+  String toString() =>
+      'BarGroupInfo(index: $index, count: $count, gap: $gap, layoutMode: $layoutMode, groupId: $groupId)';
 
   /// Creates a copy with optional field overrides.
   ///
@@ -128,11 +204,35 @@ class BarGroupInfo {
     int? index,
     int? count,
     double? gap,
+    BarLayoutMode? layoutMode,
+    String? groupId,
+    bool clearGroupId = false,
+    double? stackBaseline,
+    Map<int, double>? startValues,
+    Map<int, double>? endValues,
+    Map<int, double>? percentages,
+    Set<int>? outerPointIndices,
+    bool? drawTrack,
   }) {
     return BarGroupInfo(
       index: index ?? this.index,
       count: count ?? this.count,
       gap: gap ?? this.gap,
+      layoutMode: layoutMode ?? this.layoutMode,
+      groupId: clearGroupId ? null : (groupId ?? this.groupId),
+      stackBaseline: stackBaseline ?? this.stackBaseline,
+      startValues: startValues ?? this.startValues,
+      endValues: endValues ?? this.endValues,
+      percentages: percentages ?? this.percentages,
+      outerPointIndices: outerPointIndices ?? this.outerPointIndices,
+      drawTrack: drawTrack ?? this.drawTrack,
     );
   }
+}
+
+int _mapHash(Map<int, double> values) {
+  final keys = values.keys.toList()..sort();
+  return Object.hashAll([
+    for (final key in keys) Object.hash(key, values[key]),
+  ]);
 }
