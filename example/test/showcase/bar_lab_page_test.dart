@@ -85,6 +85,95 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('keeps the workbench attached when entering Waterfall in Split', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-horizontal')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-waterfall')));
+    await tester.pumpAndSettle();
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    expect(workbench.workbenchController!.tableState.error, isNull);
+    expect(
+      find.textContaining('not attached to a mounted chart'),
+      findsNothing,
+    );
+    expect(find.text('Cash-flow bridge'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows rendered shares for normalized stacks in Data view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-normalized')));
+    await tester.pumpAndSettle();
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(find.textContaining('share (%)'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows cumulative bounds for regular stacks in Data view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-stacked')));
+    await tester.pumpAndSettle();
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(find.textContaining('stack start'), findsWidgets);
+    expect(find.textContaining('stack end'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('changes the number of grouped bar series', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;

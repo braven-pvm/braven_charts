@@ -235,6 +235,194 @@ void main() {
       expect(model.series[1].colorValue, isNotNull);
     });
 
+    test('projects passive bar measures without creating extra series', () {
+      const bar = BarChartSeries(
+        id: 'estimate',
+        name: 'Estimate',
+        unit: '%',
+        barWidthPercent: 0.7,
+        baselineValue: 2,
+        points: [ChartDataPoint(x: 0, y: 10), ChartDataPoint(x: 1, y: 20)],
+        rangeStartValues: [null, 5],
+        targetValues: [12, null],
+        errorLowerValues: [8, null],
+        errorUpperValues: [13, null],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(bar)).value]),
+      );
+
+      expect(model.series, hasLength(1));
+      expect(model.series.single.auxiliaryFields, {
+        ChartTableAuxiliaryField.rangeStart,
+        ChartTableAuxiliaryField.target,
+        ChartTableAuxiliaryField.errorLower,
+        ChartTableAuxiliaryField.errorUpper,
+      });
+      expect(model.auxiliaryFields, model.series.single.auxiliaryFields);
+
+      final first = model.longRows.first.auxiliaryValues;
+      expect(first[ChartTableAuxiliaryField.rangeStart]?.raw, 2);
+      expect(first[ChartTableAuxiliaryField.target]?.raw, 12);
+      expect(first[ChartTableAuxiliaryField.errorLower]?.raw, 8);
+      expect(first[ChartTableAuxiliaryField.errorUpper]?.raw, 13);
+
+      final second = model.wideRows.last.cells['estimate']!.auxiliaryValues;
+      expect(second[ChartTableAuxiliaryField.rangeStart]?.raw, 5);
+      expect(second[ChartTableAuxiliaryField.target], isNull);
+      expect(second[ChartTableAuxiliaryField.errorLower], isNull);
+      expect(second[ChartTableAuxiliaryField.errorUpper], isNull);
+    });
+
+    test('projects Waterfall source steps beside their running totals', () {
+      const bar = BarChartSeries(
+        id: 'cash-flow',
+        name: 'Cash flow',
+        unit: 'k',
+        barWidthPercent: 0.62,
+        layoutMode: BarLayoutMode.waterfall,
+        points: [
+          ChartDataPoint(x: 0, y: 82),
+          ChartDataPoint(x: 1, y: 28),
+          ChartDataPoint(x: 2, y: 16),
+          ChartDataPoint(x: 3, y: -18),
+          ChartDataPoint(x: 4, y: -24),
+          ChartDataPoint(x: 5, y: 7),
+          ChartDataPoint(x: 6, y: 0),
+        ],
+        waterfallTotalIndices: {6},
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(bar)).value]),
+      );
+
+      expect(model.series.single.auxiliaryFields, {
+        ChartTableAuxiliaryField.waterfallCumulative,
+      });
+      expect(model.longRows.map((row) => row.yRaw), [
+        82,
+        28,
+        16,
+        -18,
+        -24,
+        7,
+        0,
+      ]);
+      expect(
+        model.longRows.map(
+          (row) => row
+              .auxiliaryValues[ChartTableAuxiliaryField.waterfallCumulative]!
+              .raw,
+        ),
+        [82, 110, 126, 108, 84, 91, 91],
+      );
+      final total = model.wideRows.last.cells['cash-flow']!;
+      expect(total.yRaw, 0);
+      expect(
+        total
+            .auxiliaryValues[ChartTableAuxiliaryField.waterfallCumulative]
+            ?.raw,
+        91,
+      );
+    });
+
+    test('projects normalized stack shares beside raw source values', () {
+      const actual = BarChartSeries(
+        id: 'actual',
+        name: 'Actual',
+        unit: 'hours',
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.normalizedStacked,
+        groupId: 'work',
+        points: [ChartDataPoint(x: 0, y: 30), ChartDataPoint(x: 1, y: -20)],
+      );
+      const planned = BarChartSeries(
+        id: 'planned',
+        name: 'Planned',
+        unit: 'hours',
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.normalizedStacked,
+        groupId: 'work',
+        points: [ChartDataPoint(x: 0, y: 70), ChartDataPoint(x: 1, y: -30)],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(actual)).value,
+          _success(ChartSeriesDocumentCodec.encode(planned)).value,
+        ]),
+      );
+
+      expect(model.series.first.auxiliaryFields, {
+        ChartTableAuxiliaryField.normalizedShare,
+      });
+      expect(model.longRows.map((row) => row.yRaw), [30, -20, 70, -30]);
+      expect(
+        model.longRows.map(
+          (row) => row
+              .auxiliaryValues[ChartTableAuxiliaryField.normalizedShare]!
+              .raw,
+        ),
+        [30, -40, 70, -60],
+      );
+      expect(
+        model
+            .wideRows
+            .first
+            .cells['planned']!
+            .auxiliaryValues[ChartTableAuxiliaryField.normalizedShare]
+            ?.display,
+        '70',
+      );
+    });
+
+    test('projects signed stack bounds beside raw source values', () {
+      const first = BarChartSeries(
+        id: 'first',
+        name: 'First',
+        unit: 'hours',
+        barWidthPercent: 0.7,
+        baselineValue: 10,
+        layoutMode: BarLayoutMode.stacked,
+        groupId: 'work',
+        points: [ChartDataPoint(x: 0, y: 40), ChartDataPoint(x: 1, y: -10)],
+      );
+      const second = BarChartSeries(
+        id: 'second',
+        name: 'Second',
+        unit: 'hours',
+        barWidthPercent: 0.7,
+        baselineValue: 10,
+        layoutMode: BarLayoutMode.stacked,
+        groupId: 'work',
+        points: [ChartDataPoint(x: 0, y: 80), ChartDataPoint(x: 1, y: -20)],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(first)).value,
+          _success(ChartSeriesDocumentCodec.encode(second)).value,
+        ]),
+      );
+
+      expect(model.series.first.auxiliaryFields, {
+        ChartTableAuxiliaryField.stackStart,
+        ChartTableAuxiliaryField.stackEnd,
+      });
+      expect(model.longRows.map((row) => row.yRaw), [40, -10, 80, -20]);
+      expect(
+        model.longRows.map(
+          (row) =>
+              row.auxiliaryValues[ChartTableAuxiliaryField.stackStart]!.raw,
+        ),
+        [10, 10, 40, -10],
+      );
+      expect(
+        model.longRows.map(
+          (row) => row.auxiliaryValues[ChartTableAuxiliaryField.stackEnd]!.raw,
+        ),
+        [40, -10, 110, -40],
+      );
+    });
+
     test('projects pie documents as category, value, and share rows', () {
       final pie = PieChartSeries(
         id: 'revenue',

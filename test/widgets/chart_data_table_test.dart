@@ -101,6 +101,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('renders and sorts passive bar measure columns', (tester) async {
+    final controller = ChartTableController();
+    addTearDown(controller.dispose);
+    final model = _barTableModel();
+
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, controller: controller), width: 1400),
+    );
+
+    expect(find.text('Estimate (%)'), findsOneWidget);
+    expect(find.text('Estimate start (%)'), findsOneWidget);
+    expect(find.text('Estimate target (%)'), findsOneWidget);
+    expect(find.text('Estimate lower (%)'), findsOneWidget);
+    expect(find.text('Estimate upper (%)'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.text('8'), findsOneWidget);
+    expect(find.text('13'), findsOneWidget);
+
+    await tester.tap(find.text('Estimate target (%)'));
+    await tester.pump();
+
+    expect(controller.sortColumnId, 'series:estimate:aux:target');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('wide row activation reports every populated point reference', (
     tester,
   ) async {
@@ -165,6 +190,49 @@ void main() {
       find.descendant(of: row, matching: find.byType(Semantics)).first,
     );
     expect(semantics.properties.selected, isTrue);
+  });
+
+  testWidgets('reveals a newly selected point without taking over scrolling', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble(), label: 'Row $index'),
+      ],
+    );
+    Set<ChartPointRef> selected = const {};
+    late StateSetter update;
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            return ChartDataTable(model: model, selectedPointRefs: selected);
+          },
+        ),
+      ),
+    );
+    final target = find.byKey(ValueKey(model.longRows.last.rowId));
+    expect(target, findsNothing);
+
+    update(() {
+      selected = {const ChartPointRef(seriesId: 'series', pointIndex: 999)};
+    });
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.controller!.offset, greaterThan(0));
+
+    list.controller!.jumpTo(0);
+    await tester.pump();
+    update(() {});
+    await tester.pumpAndSettle();
+
+    expect(list.controller!.offset, 0);
+    expect(target, findsNothing);
   });
 
   testWidgets(
@@ -570,6 +638,24 @@ ChartTableModel _model({
   _document([_series('series', points)], xFormatter: xFormatter),
   options: const ChartTableOptions(rowLayout: ChartTableRowLayout.long),
 );
+
+ChartTableModel _barTableModel() {
+  const bar = BarChartSeries(
+    id: 'estimate',
+    name: 'Estimate',
+    unit: '%',
+    barWidthPercent: 0.7,
+    baselineValue: 2,
+    points: [ChartDataPoint(x: 0, y: 10)],
+    rangeStartValues: [null],
+    targetValues: [12],
+    errorLowerValues: [8],
+    errorUpperValues: [13],
+  );
+  return ChartTableModel.fromDocument(
+    _document([_success(ChartSeriesDocumentCodec.encode(bar)).value]),
+  );
+}
 
 ChartSeriesDocument _series(
   String id,

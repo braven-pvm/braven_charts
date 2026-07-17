@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -711,6 +712,116 @@ void main() {
     await tester.pump();
     expect(chartController.focusedPointRefs, isEmpty);
   });
+
+  testWidgets('row hover temporarily overrides and restores keyboard focus', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final model = workbenchController.tableModel!;
+    final firstRow = find.byKey(ValueKey(model.wideRows.first.rowId));
+    final secondRow = find.byKey(ValueKey(model.wideRows[1].rowId));
+    final firstDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    firstDetector.focusNode!.requestFocus();
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(secondRow));
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+    });
+
+    await mouse.moveTo(
+      tester.getCenter(
+        find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      ),
+    );
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+
+    firstDetector.focusNode!.unfocus();
+    await tester.pump();
+    expect(chartController.focusedPointRefs, isEmpty);
+  });
+
+  testWidgets(
+    'reveals a point selected directly through the chart controller',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          height: 360,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.data,
+          chartBuilder: (context, controller) => BravenChartPlus(
+            bravenChartController: controller,
+            showLegend: false,
+            series: [
+              LineChartSeries(
+                id: 'signal',
+                points: [
+                  for (var index = 0; index < 100; index++)
+                    ChartDataPoint(x: index.toDouble(), y: index.toDouble()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final model = workbenchController.tableModel!;
+      final targetRow = find.byKey(ValueKey(model.wideRows[90].rowId));
+      expect(targetRow, findsNothing);
+      final result = chartController.selectPoint(
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+        revision: workbenchController.tableSnapshot!.revision,
+      );
+      expect(result, isA<ChartArtifactSuccess<void>>());
+      await tester.pumpAndSettle();
+
+      final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+      expect(table.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+      });
+      final list = tester.widget<ListView>(find.byType(ListView));
+      expect(list.controller!.offset, greaterThan(3000));
+      expect(targetRow, findsOneWidget);
+      expect(chartController.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+      });
+    },
+  );
 
   testWidgets('links one long table row to exactly one chart point', (
     tester,

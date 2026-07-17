@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -40,6 +42,7 @@ class ChartDataTable extends StatefulWidget {
     this.onRowHoverChanged,
     this.onRowActivated,
     this.selectedPointRefs = const <ChartPointRef>{},
+    this.autoRevealSelectedPoints = true,
     this.onCopyRow,
     this.onCopyDataset,
     this.onExportCsv,
@@ -87,6 +90,12 @@ class ChartDataTable extends StatefulWidget {
   /// selected only when every populated series point represented by that row
   /// is present, so a partial point selection never implies whole-row state.
   final Set<ChartPointRef> selectedPointRefs;
+
+  /// Scrolls a newly selected chart point into the vertical table viewport.
+  ///
+  /// The reveal runs only when selection or the projected model changes, so
+  /// subsequent manual table scrolling is left untouched.
+  final bool autoRevealSelectedPoints;
 
   /// Overrides the default clipboard delivery for one requested visible row.
   ///
@@ -137,11 +146,17 @@ class _ChartDataTableState extends State<ChartDataTable> {
   final _horizontalController = ScrollController();
   final _verticalController = ScrollController();
   final _rowFocusNodes = <String, FocusNode>{};
+  ChartPointRef? _pendingSelectionReveal;
+  bool _selectionRevealScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _attachController(widget.controller);
+    if (widget.autoRevealSelectedPoints &&
+        widget.selectedPointRefs.isNotEmpty) {
+      _scheduleSelectionReveal(widget.selectedPointRefs.last);
+    }
   }
 
   @override
@@ -152,6 +167,21 @@ class _ChartDataTableState extends State<ChartDataTable> {
       if (_ownsController) _controller.dispose();
       _attachController(widget.controller);
     }
+    final selectionChanged = !setEquals(
+      widget.selectedPointRefs,
+      oldWidget.selectedPointRefs,
+    );
+    final modelChanged = !identical(widget.model, oldWidget.model);
+    if (widget.autoRevealSelectedPoints &&
+        widget.selectedPointRefs.isNotEmpty &&
+        (selectionChanged || modelChanged)) {
+      final added = widget.selectedPointRefs.where(
+        (point) => !oldWidget.selectedPointRefs.contains(point),
+      );
+      _scheduleSelectionReveal(
+        added.isEmpty ? widget.selectedPointRefs.last : added.last,
+      );
+    }
   }
 
   void _attachController(ChartTableController? controller) {
@@ -161,6 +191,55 @@ class _ChartDataTableState extends State<ChartDataTable> {
   }
 
   void _handleControllerChanged() => setState(() {});
+
+  void _scheduleSelectionReveal(ChartPointRef point) {
+    _pendingSelectionReveal = point;
+    if (_selectionRevealScheduled) return;
+    _selectionRevealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _selectionRevealScheduled = false;
+      final pending = _pendingSelectionReveal;
+      _pendingSelectionReveal = null;
+      if (mounted && pending != null) _revealPoint(pending);
+    });
+  }
+
+  void _revealPoint(ChartPointRef point) {
+    final model = widget.model;
+    if (model == null || !_verticalController.hasClients) return;
+    final index = switch (model.projectionKind) {
+      ChartTableProjectionKind.cartesianLong => _sortedLongRows(
+        model,
+      ).indexWhere((row) => row.reference == point),
+      ChartTableProjectionKind.cartesianWide =>
+        _sortedWideRows(model).indexWhere(
+          (row) => row.cells.values.any((cell) => cell.reference == point),
+        ),
+      ChartTableProjectionKind.pie => _sortedPieRows(
+        model,
+      ).indexWhere((row) => row.reference == point),
+    };
+    if (index < 0) return;
+    final tableTheme = _ResolvedTableTheme.from(
+      context,
+      widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
+    );
+    final position = _verticalController.position;
+    final rowTop = index * tableTheme.rowHeight;
+    final rowBottom = rowTop + tableTheme.rowHeight;
+    final viewportTop = position.pixels;
+    final viewportBottom = viewportTop + position.viewportDimension;
+    if (rowTop >= viewportTop && rowBottom <= viewportBottom) return;
+    final target =
+        rowTop + tableTheme.rowHeight / 2 - position.viewportDimension / 2;
+    unawaited(
+      _verticalController.animateTo(
+        target.clamp(0, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      ),
+    );
+  }
 
   Future<void> _copyDataset(ChartTableCsvExport export) async {
     if (export.rows.length > widget.clipboardRowLimit) {
@@ -303,7 +382,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
               tableTheme.rowNumberWidth +
                   192 +
                   tableTheme.xColumnWidth +
-                  tableTheme.seriesColumnWidth +
+                  tableTheme.seriesColumnWidth *
+                      (1 + model.auxiliaryFields.length) +
                   88 +
                   144 +
                   96 +
@@ -311,7 +391,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
             ChartTableProjectionKind.cartesianWide =>
               tableTheme.rowNumberWidth +
                   tableTheme.xColumnWidth +
-                  model.series.length * tableTheme.seriesColumnWidth +
+                  (model.series.length +
+                          model.series.fold<int>(
+                            0,
+                            (count, column) =>
+                                count + column.auxiliaryFields.length,
+                          )) *
+                      tableTheme.seriesColumnWidth +
                   (widget.showCopyRowAction ? 44 : 0),
             ChartTableProjectionKind.pie =>
               tableTheme.rowNumberWidth +
@@ -481,7 +567,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
             theme: tableTheme,
             numeric: true,
           ),
-          for (final column in model.series)
+          for (final column in model.series) ...[
             _SortHeader(
               label: column.unit == null
                   ? column.seriesName
@@ -496,6 +582,17 @@ class _ChartDataTableState extends State<ChartDataTable> {
                   ? null
                   : Color(column.colorValue!),
             ),
+            for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+              _SortHeader(
+                label: _auxiliaryColumnLabel(column, field),
+                columnId: 'series:${column.seriesId}:aux:${field.name}',
+                width: tableTheme.seriesColumnWidth,
+                controller: _controller,
+                theme: tableTheme,
+                hidden: column.hidden,
+                numeric: true,
+              ),
+          ],
         ],
       );
     }
@@ -540,6 +637,15 @@ class _ChartDataTableState extends State<ChartDataTable> {
           theme: tableTheme,
           numeric: true,
         ),
+        for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+          _SortHeader(
+            label: field.label,
+            columnId: 'aux:${field.name}',
+            width: tableTheme.seriesColumnWidth,
+            controller: _controller,
+            theme: tableTheme,
+            numeric: true,
+          ),
         _StaticHeader(label: 'Unit', width: 88, theme: tableTheme),
         _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
         _StaticHeader(label: 'Status', width: 96, theme: tableTheme),
@@ -680,16 +786,18 @@ class _ChartDataTableState extends State<ChartDataTable> {
             numeric: true,
             theme: theme,
           ),
-          for (final column in model.series)
+          for (final column in model.series) ...[
             _buildWideValueCell(row, column, theme),
+            for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+              _buildWideAuxiliaryCell(row, column, field, theme),
+          ],
         ],
       );
     }
     final row = longRows[index];
     return _FocusableTableRow(
       key: ValueKey(row.rowId),
-      semanticsLabel:
-          'Row ${index + 1}, ${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}${row.unit == null ? '' : ' ${row.unit}'}, ${row.isValid ? 'valid point' : 'invalid point'}',
+      semanticsLabel: 'Row ${index + 1}, ${_longSemantics(row, model)}',
       references: List.unmodifiable([row.reference]),
       selected: _isRowSelected([row.reference]),
       rowIndex: index,
@@ -743,6 +851,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
           color: _seriesColor(model, row.reference.seriesId),
           theme: theme,
         ),
+        for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+          _buildAuxiliaryCell(row.auxiliaryValues[field], theme),
         _TableCell(text: row.unit ?? 'No unit', width: 88, theme: theme),
         _TableCell(text: row.label ?? 'No label', width: 144, theme: theme),
         _TableCell(
@@ -777,6 +887,27 @@ class _ChartDataTableState extends State<ChartDataTable> {
       theme: theme,
     );
   }
+
+  Widget _buildWideAuxiliaryCell(
+    ChartTableWideRow row,
+    ChartTableSeriesColumn column,
+    ChartTableAuxiliaryField field,
+    _ResolvedTableTheme theme,
+  ) => _buildAuxiliaryCell(
+    row.cells[column.seriesId]?.auxiliaryValues[field],
+    theme,
+  );
+
+  Widget _buildAuxiliaryCell(
+    ChartTableAuxiliaryValue? value,
+    _ResolvedTableTheme theme,
+  ) => _TableCell(
+    text: value?.display ?? 'No value',
+    width: theme.seriesColumnWidth,
+    numeric: true,
+    invalid: value?.isValid == false,
+    theme: theme,
+  );
 
   FocusNode _focusNodeFor(String rowId) =>
       _rowFocusNodes.putIfAbsent(rowId, () => FocusNode(debugLabel: rowId));
@@ -835,6 +966,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
         'series' => left.seriesName.compareTo(right.seriesName),
         'x' => _compareNumbers(left.xRaw, right.xRaw),
         'y' => _compareNumbers(left.yRaw, right.yRaw),
+        _ when column.startsWith('aux:') => _compareNullableNumbers(
+          _auxiliaryRaw(left.auxiliaryValues, column.substring(4)),
+          _auxiliaryRaw(right.auxiliaryValues, column.substring(4)),
+        ),
         _ => 0,
       };
       return _controller.sortAscending ? result : -result;
@@ -850,10 +985,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       final result = column == 'x'
           ? _compareNumbers(left.xRaw, right.xRaw)
           : column.startsWith('series:')
-          ? _compareNullableNumbers(
-              left.cells[column.substring(7)]?.yRaw,
-              right.cells[column.substring(7)]?.yRaw,
-            )
+          ? _compareWideColumn(left, right, column.substring(7))
           : 0;
       return _controller.sortAscending ? result : -result;
     });
@@ -1650,10 +1782,74 @@ int _compareNullableNumbers(double? left, double? right) {
   return _compareNumbers(left, right);
 }
 
+Iterable<ChartTableAuxiliaryField> _orderedAuxiliaryFields(
+  Set<ChartTableAuxiliaryField> fields,
+) => ChartTableAuxiliaryField.values.where(fields.contains);
+
+String _auxiliaryColumnLabel(
+  ChartTableSeriesColumn column,
+  ChartTableAuxiliaryField field,
+) {
+  final label = '${column.seriesName} ${field.label.toLowerCase()}';
+  final unit = field.unitOverride ?? column.unit;
+  return unit == null ? label : '$label ($unit)';
+}
+
+double? _auxiliaryRaw(
+  Map<ChartTableAuxiliaryField, ChartTableAuxiliaryValue> values,
+  String fieldName,
+) {
+  for (final field in ChartTableAuxiliaryField.values) {
+    if (field.name == fieldName) return values[field]?.raw;
+  }
+  return null;
+}
+
+int _compareWideColumn(
+  ChartTableWideRow left,
+  ChartTableWideRow right,
+  String columnId,
+) {
+  const marker = ':aux:';
+  final markerIndex = columnId.lastIndexOf(marker);
+  if (markerIndex < 0) {
+    return _compareNullableNumbers(
+      left.cells[columnId]?.yRaw,
+      right.cells[columnId]?.yRaw,
+    );
+  }
+  final seriesId = columnId.substring(0, markerIndex);
+  final fieldName = columnId.substring(markerIndex + marker.length);
+  return _compareNullableNumbers(
+    _auxiliaryRaw(left.cells[seriesId]?.auxiliaryValues ?? const {}, fieldName),
+    _auxiliaryRaw(
+      right.cells[seriesId]?.auxiliaryValues ?? const {},
+      fieldName,
+    ),
+  );
+}
+
 String _wideSemantics(ChartTableWideRow row, ChartTableModel model) {
   final values = [
-    for (final column in model.series)
+    for (final column in model.series) ...[
       '${column.seriesName} ${row.cells[column.seriesId]?.yDisplay ?? 'No value'}',
+      for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+        '${column.seriesName} ${field.label.toLowerCase()} '
+            '${row.cells[column.seriesId]?.auxiliaryValues[field]?.display ?? 'No value'}',
+    ],
   ];
   return 'X ${row.xDisplay}, ${values.join(', ')}';
+}
+
+String _longSemantics(ChartTableLongRow row, ChartTableModel model) {
+  final unit = row.unit == null ? '' : ' ${row.unit}';
+  final auxiliary = [
+    for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+      '${field.label.toLowerCase()} '
+          '${row.auxiliaryValues[field]?.display ?? 'No value'}'
+          '${field.unitOverride == null ? unit : ' ${field.unitOverride}'}',
+  ];
+  return '${row.seriesName}, X ${row.xDisplay}, Y ${row.yDisplay}$unit'
+      '${auxiliary.isEmpty ? '' : ', ${auxiliary.join(', ')}'}, '
+      '${row.isValid ? 'valid point' : 'invalid point'}';
 }

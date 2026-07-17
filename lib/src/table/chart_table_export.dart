@@ -105,13 +105,21 @@ abstract final class ChartTableExporter {
     rawValues: [
       displayIndex + 1,
       row.xRaw,
-      for (final column in model.series) row.cells[column.seriesId]?.yRaw,
+      for (final column in model.series) ...[
+        row.cells[column.seriesId]?.yRaw,
+        for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+          row.cells[column.seriesId]?.auxiliaryValues[field]?.raw,
+      ],
     ],
     displayValues: [
       '${displayIndex + 1}',
       row.xDisplay,
-      for (final column in model.series)
+      for (final column in model.series) ...[
         row.cells[column.seriesId]?.yDisplay ?? 'No value',
+        for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+          row.cells[column.seriesId]?.auxiliaryValues[field]?.display ??
+              'No value',
+      ],
     ],
     references: [
       for (final column in model.series)
@@ -131,6 +139,8 @@ abstract final class ChartTableExporter {
       row.seriesName,
       row.xRaw,
       row.yRaw,
+      for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+        row.auxiliaryValues[field]?.raw,
       row.unit,
       row.label,
       row.isValid ? 'Valid' : 'No value',
@@ -140,6 +150,8 @@ abstract final class ChartTableExporter {
       row.seriesName,
       row.xDisplay,
       row.yDisplay,
+      for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+        row.auxiliaryValues[field]?.display ?? 'No value',
       row.unit ?? 'No unit',
       row.label ?? 'No label',
       row.isValid ? 'Valid' : 'No value',
@@ -176,16 +188,26 @@ abstract final class ChartTableExporter {
         ChartTableProjectionKind.cartesianWide => [
           '#',
           model.xColumnLabel,
-          for (final column in model.series)
+          for (final column in model.series) ...[
             column.unit == null
                 ? column.seriesName
                 : '${column.seriesName} (${column.unit})',
+            for (final field in _orderedAuxiliaryFields(column.auxiliaryFields))
+              (field.unitOverride ?? column.unit) == null
+                  ? '${column.seriesName} ${field.label.toLowerCase()}'
+                  : '${column.seriesName} ${field.label.toLowerCase()} '
+                        '(${field.unitOverride ?? column.unit})',
+          ],
         ],
         ChartTableProjectionKind.cartesianLong => [
           '#',
           'Series',
           model.xColumnLabel,
           'Y value',
+          for (final field in _orderedAuxiliaryFields(model.auxiliaryFields))
+            field.unitOverride == null
+                ? field.label
+                : '${field.label} (${field.unitOverride})',
           'Unit',
           'Label',
           'Status',
@@ -201,6 +223,10 @@ abstract final class ChartTableExporter {
         ],
       };
 }
+
+Iterable<ChartTableAuxiliaryField> _orderedAuxiliaryFields(
+  Set<ChartTableAuxiliaryField> fields,
+) => ChartTableAuxiliaryField.values.where(fields.contains);
 
 String _escapeCsvCell(Object? value) {
   final text = value?.toString() ?? '';

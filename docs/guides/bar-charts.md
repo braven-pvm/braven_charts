@@ -273,6 +273,10 @@ value, while ordinary steps retain their source delta. Connector lines render
 behind columns and can be hidden or restyled. Waterfall points must have
 strictly increasing X values because list order defines the bridge.
 
+In Chart/Data/Split presentations, the primary value column preserves each
+source delta or total placeholder and an adjacent `Running total` column shows
+the cumulative value used by the rendered bridge.
+
 Use `groupId` to create several named stacks side-by-side:
 
 ```dart
@@ -309,10 +313,16 @@ continuous. With `BarCornerRadiusPolicy.all`, every segment receives four
 rounded corners. Series with different axes or baselines are intentionally
 placed in separate stacks.
 
+Chart/Data/Split tables retain each regular stack contribution as the primary
+value and add `Stack start` and `Stack end` columns for the cumulative segment
+bounds rendered by the chart.
+
 For normalized stacks, use
 `BarLabelStyle(valueMode: BarLabelValueMode.percentage)` to show the resolved
 segment share. Tooltips, crosshairs, data tables, and portable artifacts retain
-the original source value.
+the original source value. Chart/Data/Split tables add an adjacent `Share (%)`
+column so the normalized value rendered by the chart remains visible without
+replacing that source value.
 
 ## Width and spacing
 
@@ -479,6 +489,25 @@ All declarative bar options round-trip through `ChartSeriesDocumentCodec`.
 Runtime label formatter callbacks require a runtime binding and intentionally
 fail closed during portable artifact extraction.
 
+### Chart, Data, and Split views
+
+`BravenChartWorkbench` keeps the mounted bar chart linked to its native data
+table. The table preserves one canonical row reference per chart point while
+exposing passive bar measures as adjacent sortable columns:
+
+- floating bars add `Start`;
+- benchmark markers add `Target`;
+- uncertainty intervals add `Lower bound` and `Upper bound`.
+- regular stacks add `Stack start` and `Stack end`.
+- normalized stacks add `Share (%)`.
+- waterfalls add `Running total`.
+
+These fields flow through row copy and CSV export without creating synthetic
+chart series, so legends, selection, focus, and series counts continue to
+describe only the rendered data series. Null target or interval entries appear
+as `No value`; a null floating-range start resolves to the series baseline,
+matching the renderer.
+
 ## Current boundary
 
 Horizontal orientation is a chart-level transform, so it cannot currently be
@@ -498,3 +527,5 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=targets`, `?page=bar-lab&preset=uncertainty`,
 `?page=bar-lab&preset=motion`, `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.
+Append `&view=data` or `&view=split` to open the corresponding workbench
+presentation directly.

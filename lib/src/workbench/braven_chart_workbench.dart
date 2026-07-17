@@ -547,6 +547,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
     this.onTableRowFocusCleared,
+    this.onTableRowHoverChanged,
     this.onTableRowActivated,
     this.onPointLinkError,
     this.showModeSwitcher = true,
@@ -597,6 +598,9 @@ class BravenChartWorkbench extends StatefulWidget {
   /// Overrides the default focus-clear behavior when supplied.
   final VoidCallback? onTableRowFocusCleared;
 
+  /// Overrides the default transient pointer-hover linking when supplied.
+  final ChartTableRowHoverCallback? onTableRowHoverChanged;
+
   /// Overrides the default durable point-selection behavior when supplied.
   final ChartTableRowCallback? onTableRowActivated;
 
@@ -632,6 +636,8 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   ChartDisplayMode _compactSplitPane = ChartDisplayMode.chart;
   ChartDisplayMode? _scheduledEffectiveMode;
   ChartArtifactError? _pointLinkError;
+  _TablePointFocus? _keyboardTableFocus;
+  _TablePointFocus? _hoveredTableFocus;
 
   @override
   void initState() {
@@ -1001,8 +1007,11 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
               onRowFocusCleared:
                   widget.onTableRowFocusCleared ??
                   (widget.linkTableRowsToChart
-                      ? _chartController.clearPointFocus
+                      ? _clearKeyboardTableFocus
                       : null),
+              onRowHoverChanged:
+                  widget.onTableRowHoverChanged ??
+                  (widget.linkTableRowsToChart ? _hoverTablePoints : null),
               onRowActivated:
                   widget.onTableRowActivated ??
                   (widget.linkTableRowsToChart ? _selectTablePoints : null),
@@ -1016,8 +1025,38 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   void _focusTablePoints(List<ChartPointRef> points) {
     final revision = _workbenchController.tableSnapshot?.revision;
     if (revision == null) return;
+    _keyboardTableFocus = _TablePointFocus(points, revision);
+    _applyTablePointFocus();
+  }
+
+  void _clearKeyboardTableFocus() {
+    _keyboardTableFocus = null;
+    _applyTablePointFocus();
+  }
+
+  void _hoverTablePoints(List<ChartPointRef>? points) {
+    final revision = _workbenchController.tableSnapshot?.revision;
+    _hoveredTableFocus = points == null || revision == null
+        ? null
+        : _TablePointFocus(points, revision);
+    _applyTablePointFocus();
+  }
+
+  void _applyTablePointFocus() {
+    final revision = _workbenchController.tableSnapshot?.revision;
+    final hovered = _hoveredTableFocus;
+    final keyboard = _keyboardTableFocus;
+    final focus = hovered?.revision == revision
+        ? hovered
+        : keyboard?.revision == revision
+        ? keyboard
+        : null;
+    if (focus == null || revision == null) {
+      _chartController.clearPointFocus();
+      return;
+    }
     _handlePointLinkResult(
-      _chartController.focusPoints(points, revision: revision),
+      _chartController.focusPoints(focus.points, revision: revision),
     );
   }
 
@@ -1174,6 +1213,14 @@ class _WorkbenchTableMessage extends StatelessWidget {
 }
 
 enum _WorkbenchMessageTone { error, warning, info }
+
+class _TablePointFocus {
+  _TablePointFocus(Iterable<ChartPointRef> points, this.revision)
+    : points = List.unmodifiable(points);
+
+  final List<ChartPointRef> points;
+  final ChartDocumentRevision revision;
+}
 
 ChartDisplayMode _firstAvailableMode(Set<ChartDisplayMode> modes) {
   for (final mode in ChartDisplayMode.values) {

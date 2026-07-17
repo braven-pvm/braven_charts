@@ -243,11 +243,15 @@ row collection or null independently for standalone table experiences.
 
 The workbench enables safe row linking by default:
 
+- pointer hover temporarily applies the row's chart focus ring;
 - keyboard focus applies a transient chart focus ring;
-- focus loss clears it;
+- pointer exit restores keyboard-driven focus when present;
+- focus loss clears the ring when no row remains hovered;
 - click or Enter replaces the durable point selection;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
+- a newly selected chart point is scrolled into the table viewport once,
+  without taking keyboard focus or overriding later manual scrolling; and
 - a wide row focuses or selects every point it represents.
 
 Because durable selection is captured document state, it advances the mounted
@@ -267,6 +271,11 @@ selected when its point is present. A shared-X row is selected only when every
 populated series point represented by that row is present. Override the fill
 with `ChartDataTableTheme.selectedRowColor`; the leading indicator and
 accessibility semantics remain package-owned.
+
+`ChartDataTable.autoRevealSelectedPoints` defaults to true. Set it to false
+when the host owns vertical table navigation. In a wide table, a partial
+series selection still reveals its shared-X row, but the row receives complete
+selection styling only when all populated points in that row are selected.
 
 Hosts can drive the same behavior directly, but must supply the revision that
 issued the references:
@@ -303,8 +312,9 @@ If chart data changes, refresh the table and use references from the new
 snapshot instead of retrying an old reference against a new revision.
 
 Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
-`onTableRowFocused`, `onTableRowFocusCleared`, or `onTableRowActivated` to
-replace individual defaults with product-specific behavior. Use
+`onTableRowFocused`, `onTableRowFocusCleared`, `onTableRowHoverChanged`, or
+`onTableRowActivated` to replace individual defaults with product-specific
+behavior. Use
 `onPointLinkError` to observe the same structured error shown by the workbench.
 
 ## Configure the data table

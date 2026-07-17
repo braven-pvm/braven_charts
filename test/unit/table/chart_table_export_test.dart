@@ -103,6 +103,259 @@ void main() {
     ]);
     expect(export.csv, contains('Subscriptions,42.0,120.0,0.42'));
   });
+
+  test('bar export includes range, target, and uncertainty fields', () {
+    final model = _barModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      wideRows: model.wideRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'X value',
+      'Estimate (%)',
+      'Estimate start (%)',
+      'Estimate target (%)',
+      'Estimate lower (%)',
+      'Estimate upper (%)',
+    ]);
+    expect(export.rows.first.rawValues, [1, 0, 10, 2, 12, 8, 13]);
+    expect(export.rows.first.references, [
+      const ChartPointRef(seriesId: 'estimate', pointIndex: 0),
+    ]);
+    expect(export.csv, contains('1,0.0,10.0,2.0,12.0,8.0,13.0'));
+  });
+
+  test('Waterfall export preserves source steps and adds running totals', () {
+    final model = _waterfallModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      wideRows: model.wideRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'X value',
+      'Cash flow (k)',
+      'Cash flow running total (k)',
+    ]);
+    expect(export.rows.last.rawValues, [7, 6, 0, 91]);
+    expect(export.csv, contains('7,6.0,0.0,91.0'));
+  });
+
+  test('normalized stack export includes rendered percentage shares', () {
+    final model = _normalizedStackModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      wideRows: model.wideRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'X value',
+      'Actual (hours)',
+      'Actual share (%)',
+      'Planned (hours)',
+      'Planned share (%)',
+    ]);
+    expect(export.rows.first.rawValues, [1, 0, 30, 30, 70, 70]);
+    expect(export.csv, contains('1,0.0,30.0,30.0,70.0,70.0'));
+  });
+
+  test('regular stack export includes cumulative segment bounds', () {
+    final model = _stackModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      wideRows: model.wideRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'X value',
+      'Actual (hours)',
+      'Actual stack start (hours)',
+      'Actual stack end (hours)',
+      'Planned (hours)',
+      'Planned stack start (hours)',
+      'Planned stack end (hours)',
+    ]);
+    expect(export.rows.first.rawValues, [1, 0, 40, 10, 40, 80, 40, 110]);
+    expect(export.csv, contains('1,0.0,40.0,10.0,40.0,80.0,40.0,110.0'));
+  });
+}
+
+ChartTableModel _barModel() {
+  final series =
+      (ChartSeriesDocumentCodec.encode(
+                const BarChartSeries(
+                  id: 'estimate',
+                  name: 'Estimate',
+                  unit: '%',
+                  barWidthPercent: 0.7,
+                  baselineValue: 2,
+                  points: [ChartDataPoint(x: 0, y: 10)],
+                  rangeStartValues: [null],
+                  targetValues: [12],
+                  errorLowerValues: [8],
+                  errorUpperValues: [13],
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value;
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'bar-export',
+      revision: 1,
+      series: [series],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _waterfallModel() {
+  final series =
+      (ChartSeriesDocumentCodec.encode(
+                const BarChartSeries(
+                  id: 'cash-flow',
+                  name: 'Cash flow',
+                  unit: 'k',
+                  barWidthPercent: 0.62,
+                  layoutMode: BarLayoutMode.waterfall,
+                  points: [
+                    ChartDataPoint(x: 0, y: 82),
+                    ChartDataPoint(x: 1, y: 28),
+                    ChartDataPoint(x: 2, y: 16),
+                    ChartDataPoint(x: 3, y: -18),
+                    ChartDataPoint(x: 4, y: -24),
+                    ChartDataPoint(x: 5, y: 7),
+                    ChartDataPoint(x: 6, y: 0),
+                  ],
+                  waterfallTotalIndices: {6},
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value;
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'waterfall-export',
+      revision: 1,
+      series: [series],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _normalizedStackModel() {
+  const bars = [
+    BarChartSeries(
+      id: 'actual',
+      name: 'Actual',
+      unit: 'hours',
+      barWidthPercent: 0.7,
+      layoutMode: BarLayoutMode.normalizedStacked,
+      groupId: 'work',
+      points: [ChartDataPoint(x: 0, y: 30)],
+    ),
+    BarChartSeries(
+      id: 'planned',
+      name: 'Planned',
+      unit: 'hours',
+      barWidthPercent: 0.7,
+      layoutMode: BarLayoutMode.normalizedStacked,
+      groupId: 'work',
+      points: [ChartDataPoint(x: 0, y: 70)],
+    ),
+  ];
+  final series = [
+    for (final bar in bars)
+      (ChartSeriesDocumentCodec.encode(bar)
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value,
+  ];
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'normalized-export',
+      revision: 1,
+      series: series,
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _stackModel() {
+  const bars = [
+    BarChartSeries(
+      id: 'actual',
+      name: 'Actual',
+      unit: 'hours',
+      barWidthPercent: 0.7,
+      baselineValue: 10,
+      layoutMode: BarLayoutMode.stacked,
+      groupId: 'work',
+      points: [ChartDataPoint(x: 0, y: 40)],
+    ),
+    BarChartSeries(
+      id: 'planned',
+      name: 'Planned',
+      unit: 'hours',
+      barWidthPercent: 0.7,
+      baselineValue: 10,
+      layoutMode: BarLayoutMode.stacked,
+      groupId: 'work',
+      points: [ChartDataPoint(x: 0, y: 80)],
+    ),
+  ];
+  final series = [
+    for (final bar in bars)
+      (ChartSeriesDocumentCodec.encode(bar)
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value,
+  ];
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'stack-export',
+      revision: 1,
+      series: series,
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
 }
 
 ChartTableModel _pieModel({bool variableRadius = false}) {
