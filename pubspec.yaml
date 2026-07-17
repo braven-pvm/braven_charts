@@ -18,9 +18,9 @@ topics:
 
 screenshots:
   - description: >-
-      Five-axis endurance analysis with seven signals, stage annotations,
-      tracking tooltip, trend, thresholds, glow, and a synchronized scrollbar.
-    path: doc/screenshots/native_multi_axis_interaction.png
+      Compact comparison of line, area, scatter, bar, and pie charts with
+      distinct native Flutter rendering and theme treatments.
+    path: doc/screenshots/chart_type_strip.png
   - description: >-
       Mixed interval chart with threshold-styled bars, cardiac drift, multiple
       axes, tracking, LT1 annotations, and a polynomial trend.

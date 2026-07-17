@@ -27,17 +27,17 @@ streaming path so each sample does not require a widget-tree rebuild.
 | --- | --- |
 | [![Threshold exposure chart with styled bars, cardiac drift, LT1 annotations, and a trend line](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
 
+### Core chart types
+
+Line, area, scatter, bar, and pie charts share the same native Flutter
+rendering pipeline while retaining independent series and theme treatments.
+
+[![Line, area, scatter, bar, and pie charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/)
+
 ### Multi-axis interaction
 
-The example below combines seven signals across five independently scaled axes
-with per-series normalization, stage ranges, thresholds, a trend line, tracking
-markers and tooltip, glow, pointer zoom, drag-to-pan, and a synchronized X
-scrollbar. The PNG is exported by the chart's native preview API with transient
-interaction state included.
-
-[![Five-axis chart with seven tracked signals, stage annotations, threshold, trend, glow, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/native_multi_axis_interaction.png)](https://braven-pvm.github.io/braven_charts/)
-
-The animated example shows zooming and panning in the same interaction model:
+The animated example combines independently scaled axes, normalization,
+annotations, tracking, pointer zoom, drag-to-pan, and a synchronized scrollbar:
 
 [![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 

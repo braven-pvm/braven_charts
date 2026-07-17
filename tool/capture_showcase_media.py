@@ -478,6 +478,8 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command.extend(["--plain-name", "capture pub.dev Pie media"])
     elif group == "interaction":
         command.extend(["--plain-name", "capture pub.dev interaction media"])
+    elif group == "type-strip":
+        command.extend(["--plain-name", "capture pub.dev chart type strip"])
     subprocess.run(
         command,
         cwd=repository,
@@ -746,6 +748,7 @@ def main() -> None:
             "hero",
             "pie",
             "interaction-still",
+            "type-strip",
         ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
@@ -758,6 +761,9 @@ def main() -> None:
         return
     if args.capture == "interaction-still":
         _native_stills(args.output_dir, "interaction")
+        return
+    if args.capture == "type-strip":
+        _native_stills(args.output_dir, "type-strip")
         return
 
     driver = _driver()
