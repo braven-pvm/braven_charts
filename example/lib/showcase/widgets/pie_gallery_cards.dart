@@ -376,7 +376,19 @@ class _PieGalleryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark =
+        ThemeData.estimateBrightnessForColor(theme.backgroundColor) ==
+        Brightness.dark;
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : Theme.of(context).colorScheme.onSurface;
+    final subtitleColor = isDark
+        ? const Color(0xFF94A3B8)
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+
     return Card(
+      color: isDark ? theme.backgroundColor : null,
+      surfaceTintColor: Colors.transparent,
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
@@ -385,18 +397,19 @@ class _PieGalleryCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: titleColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: subtitleColor),
             ),
             const SizedBox(height: 8),
             Expanded(

@@ -20,7 +20,7 @@ void main() {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    expect(find.text('Bar Lab'), findsOneWidget);
+    expect(find.text('Bar Charts'), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(find.text('Progress against capacity'), findsOneWidget);
     expect(find.text('Series count'), findsOneWidget);

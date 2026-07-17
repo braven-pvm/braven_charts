@@ -1,8 +1,7 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter Cartesian, Pie, and Donut charts with custom rendering,
-  multi-axis interaction, live streaming, editable annotations, data tables,
-  and portable artifacts.
+  Pure Dart Flutter line, area, bar, scatter, Pie, and Donut charts with custom
+  rendering, multi-axis interaction, streaming, annotations, tables, and artifacts.
 version: 0.5.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
@@ -22,8 +21,8 @@ screenshots:
       with distinct native Flutter rendering and theme treatments.
     path: doc/screenshots/chart_type_strip.png
   - description: >-
-      Mixed interval chart with threshold-styled bars, cardiac drift, multiple
-      axes, tracking, LT1 annotations, and a polynomial trend.
+      Multi-axis training profile with a power area, heart-rate response,
+      stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
       Dark power-duration model with six curves, positive and negative
@@ -54,8 +53,9 @@ screenshots:
       scrollbar.
     path: doc/screenshots/gallery_live_sensor.png
   - description: >-
-      Point, range, and threshold annotations combined in one analytical chart.
-    path: doc/screenshots/gallery_annotated.png
+      Grouped Bar chart with gradients, targets, uncertainty intervals,
+      tracking tooltip, and durable point interaction.
+    path: doc/screenshots/bar_targets_interaction.png
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"
