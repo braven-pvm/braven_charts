@@ -60,7 +60,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Grouped, stacked, range, and waterfall data',
     icon: Icons.bar_chart,
     accent: Color(0xFF10B981),
-    highlights: ['12+ layouts', 'Interactive states', 'Targets + motion'],
+    highlights: ['16 presets', 'Targets + uncertainty', 'Interaction + motion'],
   ),
   ShowcaseChartType(
     type: ChartType.scatter,
@@ -403,6 +403,19 @@ List<ChartSeries> _previewSeries(ChartType type) {
         color: Color(0xFF3B82F6),
         barWidthPercent: 0.72,
         barStyle: BarChartStyle(cornerRadius: 5),
+        targetValues: [30, 34, 39, 45, 52, 49, 57, 61],
+        targetMarkerStyle: BarTargetMarkerStyle(
+          color: Color(0xFFF97316),
+          width: 1.5,
+          lengthFactor: 1.35,
+        ),
+        errorLowerValues: [15, 20, 25, 31, 36, 31, 48, 53],
+        errorUpperValues: [23, 29, 34, 39, 46, 45, 58, 65],
+        errorBarStyle: BarErrorBarStyle(
+          color: Color(0xFF334155),
+          width: 1,
+          capLengthFactor: 0.55,
+        ),
       ),
     ],
     ChartType.scatter => const [

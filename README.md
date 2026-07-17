@@ -74,9 +74,10 @@ native image path available to package consumers:
 ### Bar targets and interaction
 
 Grouped Bar series support keyed data-update animation, durable point
-selection, gradients, and per-category benchmark markers.
+selection, gradients, per-category benchmark markers, and absolute
+uncertainty intervals with styled stems and caps.
 
-[![Grouped Bar chart with gradients, target markers, and a tracking tooltip](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts)
+[![Grouped Bar chart with gradients, target markers, uncertainty intervals, and a tracking tooltip](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts)
 
 The wider Cartesian catalog remains available in the current Gallery mosaic:
 

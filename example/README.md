@@ -37,7 +37,7 @@ flutter build web --release --base-href /braven_charts/
 | Chart Types | Choose between line, area, bar, scatter, Pie, and Donut from a concise visual overview; each family links to its own runnable guide |
 | Line Charts | Compare the workhorse composition, four interpolation modes, and independently scaled multi-axis signals; tune stroke, glow, markers, labels, tracking, zoom, and pan |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, and observed-versus-forecast compositions; tune opacity and baseline behavior |
-| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, animated, and precision-styled bars through the complete Bar API |
+| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API |
 | Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split views; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |

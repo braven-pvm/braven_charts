@@ -53,8 +53,8 @@ screenshots:
       scrollbar.
     path: doc/screenshots/gallery_live_sensor.png
   - description: >-
-      Grouped Bar chart with gradients, per-category target
-      markers, tracking tooltip, and durable point interaction.
+      Grouped Bar chart with gradients, targets, uncertainty intervals,
+      tracking tooltip, and durable point interaction.
     path: doc/screenshots/bar_targets_interaction.png
 environment:
   sdk: ">=3.9.0 <4.0.0"

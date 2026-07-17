@@ -47,6 +47,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('gallery Bar card carries targets and uncertainty', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(height: 620, child: BarTargetsGalleryCard()),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final actual = chart.series.whereType<BarChartSeries>().last;
+    expect(actual.targetValues, hasLength(actual.points.length));
+    expect(actual.errorLowerValues, hasLength(actual.points.length));
+    expect(actual.errorUpperValues, hasLength(actual.points.length));
+    expect(actual.errorBarStyle.width, 1.75);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'gallery leads with chart families and mounts flagship analysis',
     (tester) async {

@@ -76,6 +76,13 @@ class BarTargetsGalleryCard extends StatelessWidget {
                       width: 2.5,
                       lengthFactor: 1.45,
                     ),
+                    errorLowerValues: [64, 77, 70, 86, 51, 82],
+                    errorUpperValues: [75, 90, 83, 97, 66, 94],
+                    errorBarStyle: BarErrorBarStyle(
+                      color: Color(0xFF334155),
+                      width: 1.75,
+                      capLengthFactor: 0.65,
+                    ),
                     barStyle: BarChartStyle(
                       cornerRadius: 6,
                       gradient: BarGradient(

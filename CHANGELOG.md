@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BarTargetMarkerStyle`, including configurable line length, width, color,
   dash pattern, bounds participation, tooltips, semantics, animation, and
   canonical artifact round-tripping.
+- Per-point Bar uncertainty intervals through `errorLowerValues` and
+  `errorUpperValues`, with `BarErrorBarStyle` control over stem/cap color,
+  width, opacity, and cap length. Error ranges participate in automatic axis
+  bounds, keyed data-update animation, Cartesian and transposed geometry,
+  tooltips, semantics, and canonical artifact round-tripping.
 - Public Donut, Bar, and chart-family showcase coverage with dedicated deep
   routes, a six-family overview and Gallery sampler, Donut Chart/Data/Split
   workflows, Bar interaction/motion/target presets, and native pub.dev media.
@@ -54,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   analytical flagship, and focused Pie and Donut composition collections.
 - Expanded the Bar guide and API documentation to cover grouped, overlaid,
   stacked, normalized, horizontal, floating/range, waterfall, capacity-track,
-  target-marker, interaction-state, and animated-update behavior.
+  target-marker, uncertainty, interaction-state, and animated-update behavior.
 - Updated package metadata, README feature coverage, API references, release
   checklist, and screenshot descriptions to enumerate every public chart
   family and the new radial and Bar capabilities.
