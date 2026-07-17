@@ -599,6 +599,7 @@ Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {
     },
   if (style.border != null) 'border': _encodeBarBorder(style.border!),
   'interaction': _encodeBarInteraction(style.interaction),
+  'animationMode': style.animationMode.name,
 };
 
 BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
@@ -616,6 +617,13 @@ BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
     gradient: _decodeBarGradient(_optionalMap(value, 'gradient')),
     border: _decodeBarBorder(_optionalMap(value, 'border')),
     interaction: _decodeBarInteraction(_optionalMap(value, 'interaction')),
+    animationMode:
+        _optionalEnum(
+          value['animationMode'],
+          BarAnimationMode.values,
+          r'$.style.barStyle.animationMode',
+        ) ??
+        BarAnimationMode.grow,
   );
 }
 

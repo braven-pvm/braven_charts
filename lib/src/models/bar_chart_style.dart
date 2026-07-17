@@ -57,6 +57,15 @@ enum BarCornerRadiusPolicy {
   valueEnd,
 }
 
+/// Controls how a bar series enters and responds to data updates.
+enum BarAnimationMode {
+  /// Render the latest geometry immediately.
+  none,
+
+  /// Grow new bars from their baseline and interpolate existing values.
+  grow,
+}
+
 /// A serializable linear gradient used to fill bars.
 ///
 /// The gradient follows the value axis: baseline to value end for each bar.
@@ -188,6 +197,7 @@ class BarChartStyle {
     this.border,
     this.opacity = 1.0,
     this.interaction = const BarInteractionStyle(),
+    this.animationMode = BarAnimationMode.grow,
   }) : assert(cornerRadius >= 0, 'Corner radius must be non-negative'),
        assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
 
@@ -198,6 +208,12 @@ class BarChartStyle {
   final double opacity;
   final BarInteractionStyle interaction;
 
+  /// Entrance and data-update behavior for this series.
+  ///
+  /// Duration and easing resolve from the chart theme's animation settings.
+  /// Reduced motion preferences always render the final geometry immediately.
+  final BarAnimationMode animationMode;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -207,7 +223,8 @@ class BarChartStyle {
           other.gradient == gradient &&
           other.border == border &&
           other.opacity == opacity &&
-          other.interaction == interaction;
+          other.interaction == interaction &&
+          other.animationMode == animationMode;
 
   @override
   int get hashCode => Object.hash(
@@ -217,6 +234,7 @@ class BarChartStyle {
     border,
     opacity,
     interaction,
+    animationMode,
   );
 }
 

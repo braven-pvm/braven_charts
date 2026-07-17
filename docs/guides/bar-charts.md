@@ -360,6 +360,33 @@ unless an explicit label color is supplied. `BarLabelStyle.padding` controls
 the edge offset for end labels. For `insideEnd`, this is a minimum: rounded
 value ends automatically add enough inset to keep text clear of the curve.
 
+## Motion
+
+Bars grow from their baseline on first render and interpolate value changes
+through the same canonical geometry used by paint, labels, tooltips, and hit
+testing. The duration and easing come from the chart theme:
+
+```dart
+final baseTheme = ChartTheme.light;
+
+BravenChartPlus(
+  theme: baseTheme.copyWith(
+    animationTheme: baseTheme.animationTheme.copyWith(
+      dataUpdateDuration: const Duration(milliseconds: 650),
+      dataUpdateCurve: Curves.easeInOutCubic,
+    ),
+  ),
+  series: series,
+)
+```
+
+Set `BarChartStyle.animationMode` to `BarAnimationMode.none` for a series that
+must update immediately. New points grow from their target baseline; removed
+points leave immediately. Structural changes such as orientation or layout
+mode replay in their new geometry instead of morphing between incompatible
+coordinate systems. Flutter's reduced-motion setting always renders the final
+geometry immediately.
+
 ## Interaction and artifacts
 
 Hit testing, focus outlines, durable selection, tooltips, and bounds all use
@@ -415,5 +442,5 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=overlay`, `?page=bar-lab&preset=offset`,
 `?page=bar-lab&preset=range`, `?page=bar-lab&preset=waterfall`,
 `?page=bar-lab&preset=horizontal`, `?page=bar-lab&preset=axes`,
-`?page=bar-lab&preset=states`,
+`?page=bar-lab&preset=motion`, `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

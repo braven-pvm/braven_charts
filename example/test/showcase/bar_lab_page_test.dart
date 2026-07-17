@@ -334,6 +334,7 @@ void main() {
       'Waterfall',
       'Horizontal',
       'Axes',
+      'Motion',
       'States',
       'Stacked',
       '100%',
@@ -573,6 +574,53 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('replays bar values from the Motion preset', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-motion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Animated value updates'), findsOneWidget);
+    expect(find.text('Duration', skipOffstage: false), findsOneWidget);
+    expect(find.text('Animate bars', skipOffstage: false), findsOneWidget);
+
+    final replay = find.byKey(
+      const ValueKey('bar-lab-replay-motion'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(replay);
+    await tester.pumpAndSettle();
+    await tester.tap(replay);
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pump(const Duration(milliseconds: 325));
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final animatedValue =
+        (renderBox.debugElements.whereType<SeriesElement>().first.series
+                as BarChartSeries)
+            .points
+            .first
+            .y;
+    expect(animatedValue, greaterThan(54));
+    expect(animatedValue, lessThan(82));
+
+    await tester.pumpAndSettle();
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect((chart.series.first as BarChartSeries).points.first.y, 82);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('keeps chart options reachable on a compact viewport', (

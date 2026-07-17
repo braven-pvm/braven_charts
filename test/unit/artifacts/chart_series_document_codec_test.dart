@@ -464,6 +464,7 @@ void main() {
                     cornerRadius: 7,
                     cornerRadiusPolicy: BarCornerRadiusPolicy.all,
                     opacity: 0.85,
+                    animationMode: BarAnimationMode.none,
                     gradient: BarGradient(
                       colors: [Color(0xFF123456), Color(0xFF65AADD)],
                       stops: [0, 1],
@@ -519,6 +520,7 @@ void main() {
       expect(bar.barStyle.cornerRadius, 7);
       expect(bar.barStyle.cornerRadiusPolicy, BarCornerRadiusPolicy.all);
       expect(bar.barStyle.opacity, 0.85);
+      expect(bar.barStyle.animationMode, BarAnimationMode.none);
       expect(bar.barStyle.gradient?.colors, const [
         Color(0xFF123456),
         Color(0xFF65AADD),

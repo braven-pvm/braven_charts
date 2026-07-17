@@ -18,6 +18,7 @@ enum _BarLabPreset {
   waterfall,
   horizontal,
   axes,
+  motion,
   states,
   stacked,
   normalized,
@@ -35,6 +36,7 @@ extension on _BarLabPreset {
     _BarLabPreset.waterfall => 'Waterfall',
     _BarLabPreset.horizontal => 'Horizontal',
     _BarLabPreset.axes => 'Axes',
+    _BarLabPreset.motion => 'Motion',
     _BarLabPreset.states => 'States',
     _BarLabPreset.stacked => 'Stacked',
     _BarLabPreset.normalized => '100%',
@@ -51,6 +53,7 @@ extension on _BarLabPreset {
     _BarLabPreset.waterfall => Icons.waterfall_chart,
     _BarLabPreset.horizontal => Icons.align_horizontal_left,
     _BarLabPreset.axes => Icons.straighten,
+    _BarLabPreset.motion => Icons.animation,
     _BarLabPreset.states => Icons.touch_app_outlined,
     _BarLabPreset.stacked => Icons.stacked_bar_chart,
     _BarLabPreset.normalized => Icons.percent,
@@ -135,6 +138,9 @@ class _BarLabPageState extends State<BarLabPage> {
   BarLabelPosition _labelPosition = BarLabelPosition.auto;
   double _labelEdgeOffset = 8;
   double _dimmedOpacity = 0.42;
+  int _motionRevision = 0;
+  double _motionDurationMs = 650;
+  bool _animateBars = true;
 
   @override
   void initState() {
@@ -274,8 +280,15 @@ class _BarLabPageState extends State<BarLabPage> {
 
   Widget _buildChartCard() {
     final lastCategory = _categories.length - 1;
+    final baseTheme = ChartTheme.light;
     final chart = BravenChartPlus(
       bravenChartController: _chartController,
+      theme: baseTheme.copyWith(
+        animationTheme: baseTheme.animationTheme.copyWith(
+          dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
+          dataUpdateCurve: Curves.easeInOutCubic,
+        ),
+      ),
       series: _buildSeries(),
       showLegend: _preset != _BarLabPreset.waterfall,
       normalizationMode: _preset == _BarLabPreset.axes
@@ -562,6 +575,41 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
+    if (_preset == _BarLabPreset.motion)
+      OptionSection(
+        title: 'Motion',
+        icon: Icons.animation,
+        children: [
+          SliderOption(
+            label: 'Duration',
+            value: _motionDurationMs,
+            min: 150,
+            max: 1200,
+            divisions: 21,
+            suffix: 'ms',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _motionDurationMs = value),
+          ),
+          BoolOption(
+            label: 'Animate bars',
+            value: _animateBars,
+            subtitle: 'Reduced-motion settings still take priority',
+            onChanged: (value) => setState(() => _animateBars = value),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('bar-lab-replay-motion'),
+              onPressed: _animateBars
+                  ? () => setState(() => _motionRevision++)
+                  : null,
+              icon: const Icon(Icons.replay, size: 18),
+              label: const Text('Replay values'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+            ),
+          ),
+        ],
+      ),
   ];
 
   List<ChartSeries> _buildSeries() {
@@ -576,6 +624,10 @@ class _BarLabPageState extends State<BarLabPage> {
       _BarLabPreset.waterfall => const <double>[82, 28, 16, -18, -24, 7, 0],
       _BarLabPreset.horizontal => const <double>[96, 84, 73, 61, 49, 36],
       _BarLabPreset.axes => const <double>[96, 84, 73, 61, 49, 36],
+      _BarLabPreset.motion =>
+        _motionRevision.isEven
+            ? const <double>[54, 72, 61, 88, 69, 94, 76]
+            : const <double>[82, 48, 91, 63, 86, 57, 96],
       _BarLabPreset.states => const <double>[54, 72, 61, 88, 69, 94, 76],
       _BarLabPreset.stacked => const <double>[18, 24, 31, 22, 28, 35, 26],
       _BarLabPreset.normalized => const <double>[18, 24, 31, 22, 28, 35, 26],
@@ -591,6 +643,10 @@ class _BarLabPageState extends State<BarLabPage> {
       _BarLabPreset.waterfall => const <double>[76, 22, 12, -15, -20, 5, 0],
       _BarLabPreset.horizontal => const <double>[88, 79, 68, 57, 44, 31],
       _BarLabPreset.axes => const <double>[420, 385, 352, 316, 274, 230],
+      _BarLabPreset.motion =>
+        _motionRevision.isEven
+            ? const <double>[42, 64, 79, 58, 83, 71, 91]
+            : const <double>[68, 84, 55, 92, 61, 88, 73],
       _BarLabPreset.states => const <double>[42, 64, 79, 58, 83, 71, 91],
       _BarLabPreset.stacked => const <double>[14, 19, 26, 18, 24, 29, 21],
       _BarLabPreset.normalized => const <double>[14, 19, 26, 18, 24, 29, 21],
@@ -610,6 +666,8 @@ class _BarLabPageState extends State<BarLabPage> {
             (_BarLabPreset.horizontal, 0) => 'Current',
             (_BarLabPreset.horizontal, 1) => 'Target',
             (_BarLabPreset.axes, _) => _axisMetric(index).name,
+            (_BarLabPreset.motion, 0) => 'Actual',
+            (_BarLabPreset.motion, 1) => 'Forecast',
             (_BarLabPreset.states, 0) => 'Actual',
             (_BarLabPreset.states, 1) => 'Plan',
             (_, 0) => 'Current',
@@ -804,6 +862,9 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
       minBarLength: 4,
       barStyle: BarChartStyle(
+        animationMode: _animateBars
+            ? BarAnimationMode.grow
+            : BarAnimationMode.none,
         cornerRadius: _cornerRadius,
         cornerRadiusPolicy: _cornerPolicy,
         gradient: _showGradient ? BarGradient(colors: gradientColors) : null,
@@ -900,6 +961,9 @@ class _BarLabPageState extends State<BarLabPage> {
     _labelPosition = BarLabelPosition.auto;
     _labelEdgeOffset = 8;
     _orientation = BarOrientation.vertical;
+    _motionRevision = 0;
+    _motionDurationMs = 650;
+    _animateBars = true;
     switch (preset) {
       case _BarLabPreset.capacity:
         _seriesCount = 2;
@@ -1029,6 +1093,19 @@ class _BarLabPageState extends State<BarLabPage> {
         _showLabels = true;
         _labelPosition = BarLabelPosition.insideEnd;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.motion:
+        _seriesCount = 2;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _barWidth = 0.7;
+        _barGap = 6;
+        _cornerRadius = 6;
+        _showTracks = false;
+        _showGradient = false;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.states:
         _seriesCount = 3;
         _stackGroupCount = 1;
@@ -1091,6 +1168,7 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.waterfall => 'Cash-flow bridge',
     _BarLabPreset.horizontal => 'Revenue by channel',
     _BarLabPreset.axes => 'Independent channel metrics',
+    _BarLabPreset.motion => 'Animated value updates',
     _BarLabPreset.states => 'Interactive bar states',
     _BarLabPreset.stacked => 'Named stacked totals',
     _BarLabPreset.normalized => '100% stacked composition',
@@ -1117,6 +1195,8 @@ class _BarLabPageState extends State<BarLabPage> {
       'Horizontal ranking gives category names room while values remain easy to compare.',
     _BarLabPreset.axes =>
       'Independent value axes stack above and below one shared category plot.',
+    _BarLabPreset.motion =>
+      'Replay value changes through the same geometry used for labels and interaction.',
     _BarLabPreset.states =>
       'Hover, press, click, or use the arrow keys and Enter to inspect every state.',
     _BarLabPreset.stacked =>
@@ -1143,6 +1223,8 @@ class _BarLabPageState extends State<BarLabPage> {
       if (_preset == _BarLabPreset.waterfall) 'cumulative bridge',
       if (_preset == _BarLabPreset.waterfall && _showConnectors) 'connectors',
       if (_preset == _BarLabPreset.axes) 'independent value axes',
+      if (_preset == _BarLabPreset.motion && _animateBars)
+        '${_motionDurationMs.round()}ms updates',
       if (_preset == _BarLabPreset.states)
         '${_chartController.selectedPointRefs.length} selected',
       if (_showLabels)
