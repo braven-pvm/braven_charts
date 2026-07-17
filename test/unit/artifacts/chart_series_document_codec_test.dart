@@ -168,6 +168,126 @@ void main() {
       expect(decoded.belowBaselineFillColor, const Color(0xFFAA0000));
     });
 
+    test('round-trips every pie-series field', () {
+      final source = PieChartSeries(
+        id: 'revenue-mix',
+        name: 'Revenue mix',
+        points: const [
+          ChartDataPoint(
+            x: 0,
+            y: 42,
+            label: 'Subscriptions',
+            metadata: {'channel': 'recurring'},
+            pointStyle: PointStyle(color: Color(0xFF6750A4)),
+          ),
+          ChartDataPoint(x: 1, y: 0, label: 'Services'),
+        ],
+        color: const Color(0xFF123456),
+        metadata: const {'source': 'ledger'},
+        unit: 'USD',
+        pieStyle: const PieChartStyle(
+          startAngleDegrees: 25,
+          clockwise: false,
+          radiusFactor: 0.75,
+          sliceGap: 4,
+          borderWidth: 2,
+          borderColor: Color(0xFF223344),
+          borderColorMode: PieBorderColorMode.slice,
+          borderHueShiftDegrees: 24,
+          borderSaturationShift: -0.1,
+          borderLightnessShift: -0.18,
+          gradient: PieGradientStyle(
+            type: PieGradientType.radial,
+            startColor: Color(0xFFE8F1FF),
+            endColor: Color(0xFF123456),
+            startLightnessShift: 0.22,
+            endLightnessShift: -0.16,
+            angleDegrees: 35,
+          ),
+          selectionExplodeOffset: 12,
+          opacity: 0.76,
+          cornerRadius: 9,
+          shadow: PieElevationStyle(
+            color: Color(0x55000000),
+            blurRadius: 7,
+            spreadRadius: 1,
+            offset: Offset(0, 3),
+            opacity: 0.8,
+          ),
+          selectedElevation: PieElevationStyle(
+            blurRadius: 12,
+            spreadRadius: 2,
+            opacity: 0.45,
+          ),
+          animationMode: PieAnimationMode.none,
+        ),
+        dataLabels: const PieDataLabelConfig(
+          isVisible: false,
+          position: PieDataLabelPosition.inside,
+          content: PieDataLabelContent.categoryValueAndPercentage,
+          minimumShare: 0.05,
+          minimumSweepDegrees: 12,
+          padding: 8,
+          outsideOffset: 18,
+          connectorLength: 16,
+          connectorWidth: 2,
+          connectorColor: Color(0xFF556677),
+          collisionStrategy: PieDataLabelCollisionStrategy.shift,
+          calloutStyle: LabelStyle(
+            textStyle: TextStyle(color: Colors.white, fontSize: 12),
+            backgroundColor: Color(0xDD223344),
+            borderColor: Color(0xFF556677),
+            borderWidth: 1,
+            borderRadius: 6,
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            shadowColor: Color(0x44000000),
+            shadowBlurRadius: 4,
+          ),
+        ),
+      );
+
+      final decoded = _roundTrip(source) as PieChartSeries;
+
+      expect(decoded.id, source.id);
+      expect(decoded.name, source.name);
+      expect(decoded.points, source.points);
+      expect(decoded.color, source.color);
+      expect(decoded.metadata, source.metadata);
+      expect(decoded.unit, source.unit);
+      expect(decoded.pieStyle, source.pieStyle);
+      expect(decoded.dataLabels, source.dataLabels);
+      expect(decoded.visiblePointIndices, [0]);
+    });
+
+    test(
+      'defaults compact labels when an older pie document has no offset',
+      () {
+        final encoded = ChartSeriesDocumentCodec.encode(
+          PieChartSeries.fromMap(
+            id: 'legacy-pie',
+            values: const {'A': 2, 'B': 1},
+          ),
+        );
+        expect(encoded, isA<ChartArtifactSuccess<ChartSeriesDocument>>());
+        final document =
+            (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+        final json = Map<String, Object?>.from(document.toJson());
+        final style = Map<String, Object?>.from(json['style']! as Map);
+        final labels = Map<String, Object?>.from(style['dataLabels']! as Map)
+          ..remove('outsideOffset');
+        style['dataLabels'] = labels;
+        json['style'] = style;
+
+        final decoded = ChartSeriesDocumentCodec.decode(
+          ChartSeriesDocument.fromJson(json),
+        );
+
+        expect(decoded, isA<ChartArtifactSuccess<ChartSeries>>());
+        final series = (decoded as ChartArtifactSuccess<ChartSeries>).value;
+        expect((series as PieChartSeries).dataLabels.outsideOffset, 0);
+      },
+    );
+
     test('round-trips scatter, bar, and concrete base series', () {
       final scatter =
           _roundTrip(
@@ -365,6 +485,7 @@ void main() {
           const BarChartSeries(id: 'bar', points: [], barWidthPercent: 0.5),
           ('bar', 'series.bar'),
         ),
+        (PieChartSeries(id: 'pie', points: const []), ('pie', 'series.pie')),
         (const ChartSeries(id: 'base', points: []), ('base', 'series.base')),
       ];
 
@@ -374,7 +495,10 @@ void main() {
         final document =
             (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
         expect(document.type, expected.$1);
-        expect(document.requiredCapabilities, {expected.$2});
+        expect(document.requiredCapabilities, {
+          expected.$2,
+          if (series is PieChartSeries) 'series.pie.style.v2',
+        });
       }
     });
 

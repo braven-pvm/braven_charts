@@ -16,6 +16,7 @@ import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
+import 'pages/pie_charts_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
@@ -136,6 +137,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       selectedIcon: Icons.bar_chart,
       page: BarLabPage(),
       routeSlug: 'bar-lab',
+    ),
+    const NavDestination(
+      label: 'Pie Charts',
+      icon: Icons.pie_chart_outline,
+      selectedIcon: Icons.pie_chart,
+      page: PieChartsPage(),
+      routeSlug: 'pie-charts',
     ),
     const NavDestination(
       label: 'Interaction',
@@ -260,7 +268,6 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
         panel: PerformanceIntelligenceHeroPanel.powerDuration,
       );
     }
-
     final width = MediaQuery.of(context).size.width;
 
     // Adaptive layout breakpoints

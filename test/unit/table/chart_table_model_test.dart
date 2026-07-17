@@ -1,4 +1,5 @@
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -232,6 +233,73 @@ void main() {
 
       expect(model.series[0].colorValue, 0xFF2563EB);
       expect(model.series[1].colorValue, isNotNull);
+    });
+
+    test('projects pie documents as category, value, and share rows', () {
+      final pie = PieChartSeries(
+        id: 'revenue',
+        name: 'Revenue',
+        unit: 'USD',
+        points: const [
+          ChartDataPoint(
+            x: 0,
+            y: 42,
+            label: 'Subscriptions',
+            pointStyle: PointStyle(color: Color(0xFF6750A4)),
+          ),
+          ChartDataPoint(x: 1, y: 31, label: 'Services'),
+          ChartDataPoint(x: 2, y: 27, label: 'Hardware'),
+          ChartDataPoint(x: 3, y: 0, label: 'Deferred'),
+        ],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(pie)).value]),
+      );
+
+      expect(model.options.rowLayout, ChartTableRowLayout.wide);
+      expect(model.projectionKind, ChartTableProjectionKind.pie);
+      expect(model.xColumnLabel, 'Category');
+      expect(model.pieRows, hasLength(4));
+      expect(model.longRows, hasLength(4));
+      expect(model.pieRows.first.category, 'Subscriptions');
+      expect(model.pieRows.first.valueDisplay, '42.00');
+      expect(model.pieRows.first.shareRaw, 0.42);
+      expect(model.pieRows.first.shareDisplay, '42.00%');
+      expect(model.pieRows.first.unit, 'USD');
+      expect(model.pieRows.first.colorValue, 0xFF6750A4);
+      expect(model.pieRows.last.shareDisplay, '0.00%');
+      expect(model.pieRows.last.colorValue, isNull);
+      expect(
+        model.pieRows.first.reference,
+        const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+      );
+    });
+
+    test('keeps all-zero pie categories visible with zero shares', () {
+      final pie = PieChartSeries.fromMap(
+        id: 'zero',
+        values: const {'A': 0, 'B': 0},
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(pie)).value]),
+      );
+
+      expect(model.projectionKind, ChartTableProjectionKind.pie);
+      expect(model.pieRows.map((row) => row.shareDisplay), ['0.00%', '0.00%']);
+      expect(model.pieRows.every((row) => row.isValid), isTrue);
+    });
+
+    test('rejects mixed pie and Cartesian table projections', () {
+      final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
+      final document = _document([
+        _success(ChartSeriesDocumentCodec.encode(pie)).value,
+        _series(id: 'line', points: [_point(0, 1)]),
+      ]);
+
+      expect(
+        () => ChartTableModel.fromDocument(document),
+        throwsUnsupportedError,
+      );
     });
   });
 }

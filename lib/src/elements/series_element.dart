@@ -9,6 +9,7 @@ import 'package:flutter/painting.dart'
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
+import '../interaction/core/data_hit.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
@@ -130,7 +131,7 @@ List<_StyleRegion> _analyzeStyleRegions(
 /// - Selectable: Click to select entire series
 /// - Hoverable: Hover to highlight series
 /// - Not draggable: Series lines are stationary (datapoints can be dragged separately)
-class SeriesElement implements ChartElement {
+class SeriesElement implements DataHitElement {
   SeriesElement({
     required this.series,
     required this.transform,
@@ -144,6 +145,7 @@ class SeriesElement implements ChartElement {
     this.selectedPointIndices = const {},
     this.pointFocusColor,
     this.pointSelectionColor,
+    this.fontFamily,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -152,11 +154,16 @@ class SeriesElement implements ChartElement {
     _computeBounds();
   }
 
+  @override
   ChartSeries series; // Made mutable for updateSeries()
   final ChartTransform transform; // Initial transform for bounds computation
   ChartTransform _currentTransform; // Current transform for painting
   final SeriesTheme? seriesTheme;
+  @override
   final int seriesIndex;
+
+  @override
+  int get pointCount => series.points.length;
   final ChartInteractionCoordinator? coordinator;
 
   /// Point indices receiving transient linked focus from another surface.
@@ -167,6 +174,9 @@ class SeriesElement implements ChartElement {
 
   final Color? pointFocusColor;
   final Color? pointSelectionColor;
+
+  /// Font family inherited from the chart typography theme.
+  final String? fontFamily;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -454,6 +464,50 @@ class SeriesElement implements ChartElement {
 
     return false;
   }
+
+  @override
+  ChartDataHit? dataHitAt(Offset position, {double maxDistance = 20}) {
+    final source = series;
+    if (source is LineChartSeries && !source.showDataPointMarkers) return null;
+    if (source is AreaChartSeries && !source.showDataPointMarkers) return null;
+
+    ChartDataHit? nearest;
+    var nearestDistance = maxDistance;
+    for (var index = 0; index < source.points.length; index++) {
+      final hit = dataHitForPointIndex(index);
+      if (hit == null) continue;
+      final distance = (position - hit.plotPosition).distance;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = hit;
+      }
+    }
+    return nearest;
+  }
+
+  @override
+  ChartDataHit? dataHitForPointIndex(int pointIndex) {
+    if (pointIndex < 0 || pointIndex >= series.points.length) return null;
+    final point = series.points[pointIndex];
+    if (!point.isValid) return null;
+    final position = _currentTransform.dataToPlot(point.x, point.y);
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: pointIndex,
+      plotPosition: position,
+      semanticBounds: Rect.fromCircle(center: position, radius: 24),
+      point: point,
+      formattedValue:
+          '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      ordinal: pointIndex + 1,
+      count: series.points.length,
+      isSelected: selectedPointIndices.contains(pointIndex),
+      isFocused: focusedPointIndices.contains(pointIndex),
+    );
+  }
+
+  @override
+  Iterable<ChartDataHit> get semanticDataHits => const <ChartDataHit>[];
 
   /// Calculate distance from point to line segment.
   double _distanceToLineSegment(Offset point, Offset segStart, Offset segEnd) {
@@ -1763,6 +1817,7 @@ class SeriesElement implements ChartElement {
             color: config.labelColor ?? seriesColor,
             fontSize: config.fontSize,
             fontWeight: config.fontWeight,
+            fontFamily: fontFamily,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -2007,6 +2062,7 @@ class SeriesElement implements ChartElement {
           color: effectiveColor,
           fontSize: config.fontSize,
           fontWeight: config.fontWeight,
+          fontFamily: fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -2084,6 +2140,7 @@ class SeriesElement implements ChartElement {
       selectedPointIndices: selectedPointIndices,
       pointFocusColor: pointFocusColor,
       pointSelectionColor: pointSelectionColor,
+      fontFamily: fontFamily,
     );
   }
 }

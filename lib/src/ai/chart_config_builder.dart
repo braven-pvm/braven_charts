@@ -8,6 +8,9 @@ import '../models/chart_series.dart';
 import '../models/chart_type.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
+import '../models/pie_chart_config.dart';
+import '../models/pie_chart_series.dart';
+import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
@@ -100,6 +103,7 @@ class ChartConfigBuilder {
     final chartTypeStr = json['chart_type'] as String?;
     final chartType = _parseChartType(chartTypeStr);
     final defaultStyle = _chartTypeToSeriesStyle(chartTypeStr);
+    final styleJson = json['style'] as Map<String, dynamic>?;
 
     // Parse series (required)
     final seriesList = json['series'] as List<dynamic>?;
@@ -108,14 +112,40 @@ class ChartConfigBuilder {
     }
 
     final series = seriesList
-        .map((s) => _parseSeries(s as Map<String, dynamic>, defaultStyle))
+        .map(
+          (s) => _parseSeries(
+            s as Map<String, dynamic>,
+            defaultStyle,
+            chartStyle: styleJson,
+          ),
+        )
         .toList();
 
+    final isPie = chartType == ChartType.pie;
+    if (isPie) {
+      if (series.length != 1 || series.single is! PieChartSeries) {
+        throw const FormatException(
+          'Pie charts require exactly one pie series and cannot mix series types.',
+        );
+      }
+      if (json.containsKey('x_axis') || json.containsKey('y_axis')) {
+        throw const FormatException(
+          'Pie charts do not use x_axis or y_axis configuration.',
+        );
+      }
+    } else if (series.any((value) => value is PieChartSeries)) {
+      throw const FormatException(
+        'Pie series require chart_type "pie" and cannot mix with Cartesian series.',
+      );
+    }
+
     // Parse axes
-    final xAxisConfig =
-        _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
-    final yAxisConfig =
-        _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
+    final xAxisConfig = isPie
+        ? null
+        : _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
+    final yAxisConfig = isPie
+        ? null
+        : _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
 
     // Check for multi-axis mode (series have different units)
     final units = series
@@ -124,7 +154,7 @@ class ChartConfigBuilder {
         .toSet();
 
     List<YAxisConfig>? yAxes;
-    if (units.length > 1) {
+    if (!isPie && units.length > 1) {
       // Multi-axis mode: create Y-axes from series configurations
       yAxes = series
           .where((s) => s.yAxisConfig != null)
@@ -135,11 +165,13 @@ class ChartConfigBuilder {
     // Parse interactions
     final interactionConfig = _parseInteractionConfig(
       json['interactions'] as Map<String, dynamic>?,
+      isPie: isPie,
     );
 
     // Parse style
-    final styleJson = json['style'] as Map<String, dynamic>?;
-    final gridConfig = _parseGridConfig(styleJson);
+    final gridConfig = isPie
+        ? const GridConfig(horizontal: false, vertical: false)
+        : _parseGridConfig(styleJson);
     final showLegend = _parseShowLegend(styleJson);
     final height = (styleJson?['height'] as num?)?.toDouble();
 
@@ -159,8 +191,12 @@ class ChartConfigBuilder {
   }
 
   static ChartSeries _parseSeries(
-      Map<String, dynamic> json, SeriesStyle? defaultStyle) {
-    final id = json['id'] as String? ??
+    Map<String, dynamic> json,
+    SeriesStyle? defaultStyle, {
+    Map<String, dynamic>? chartStyle,
+  }) {
+    final id =
+        json['id'] as String? ??
         'series_${DateTime.now().millisecondsSinceEpoch}';
     final name = json['name'] as String?;
     final colorStr = json['color'] as String?;
@@ -170,13 +206,24 @@ class ChartConfigBuilder {
 
     final points = dataList.map((d) {
       final pointJson = d as Map<String, dynamic>;
+      final x = pointJson['x'];
+      final y = pointJson['y'];
+      if (x is! num || y is! num) {
+        throw const FormatException(
+          'Every data point requires numeric x and y values.',
+        );
+      }
+      final pointColor = pointJson['color'] is String
+          ? _parseColor(pointJson['color'] as String)
+          : null;
       return ChartDataPoint(
-        x: (pointJson['x'] as num).toDouble(),
-        y: (pointJson['y'] as num).toDouble(),
+        x: x.toDouble(),
+        y: y.toDouble(),
         label: pointJson['label'] as String?,
         timestamp: pointJson['timestamp'] != null
             ? DateTime.tryParse(pointJson['timestamp'] as String)
             : null,
+        pointStyle: pointColor == null ? null : PointStyle.color(pointColor),
       );
     }).toList();
 
@@ -200,44 +247,75 @@ class ChartConfigBuilder {
     final effectiveStyle = style ?? SeriesStyle.line;
     return switch (effectiveStyle) {
       SeriesStyle.line => LineChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          interpolation: LineInterpolation.linear,
-          strokeWidth: 2.0,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        interpolation: LineInterpolation.linear,
+        strokeWidth: 2.0,
+      ),
       SeriesStyle.area => AreaChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          interpolation: LineInterpolation.linear,
-          fillOpacity: 0.3,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        interpolation: LineInterpolation.linear,
+        fillOpacity: 0.3,
+      ),
       SeriesStyle.bar => BarChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          barWidthPercent: 0.8,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        barWidthPercent: 0.8,
+      ),
       SeriesStyle.scatter => ScatterChartSeries(
-          id: id,
-          name: name ?? id,
-          points: points,
-          color: color,
-          unit: unit,
-          yAxisConfig: yAxisConfig,
-          markerRadius: 5.0,
-        ),
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        markerRadius: 5.0,
+      ),
+      SeriesStyle.pie => _buildPieSeries(
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        chartStyle: chartStyle,
+      ),
     };
+  }
+
+  static PieChartSeries _buildPieSeries({
+    required String id,
+    required String name,
+    required List<ChartDataPoint> points,
+    required Color? color,
+    required String? unit,
+    required Map<String, dynamic>? chartStyle,
+  }) {
+    try {
+      return PieChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        unit: unit,
+        pieStyle: _parsePieChartStyle(chartStyle),
+        dataLabels: _parsePieDataLabels(chartStyle),
+      );
+    } on ArgumentError catch (error) {
+      throw FormatException('Invalid pie series "$id": ${error.message}');
+    }
   }
 
   static ChartType? _parseChartType(String? type) {
@@ -246,6 +324,7 @@ class ChartConfigBuilder {
       'area' => ChartType.area,
       'bar' => ChartType.bar,
       'scatter' => ChartType.scatter,
+      'pie' => ChartType.pie,
       _ => null,
     };
   }
@@ -256,6 +335,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'pie' => SeriesStyle.pie,
       _ => SeriesStyle.line, // Default to line
     };
   }
@@ -266,6 +346,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'pie' => SeriesStyle.pie,
       _ => null,
     };
   }
@@ -300,17 +381,181 @@ class ChartConfigBuilder {
   }
 
   static InteractionConfig? _parseInteractionConfig(
-      Map<String, dynamic>? json) {
-    if (json == null) return null;
+    Map<String, dynamic>? json, {
+    required bool isPie,
+  }) {
+    if (json == null && !isPie) return null;
 
-    final showCrosshair = json['show_crosshair'] as bool? ?? true;
-    final showTooltip = json['show_tooltip'] as bool? ?? true;
+    final showCrosshair = json?['show_crosshair'] as bool? ?? true;
+    final showTooltip = json?['show_tooltip'] as bool? ?? true;
 
     return InteractionConfig(
-      enablePan: json['enable_pan'] as bool? ?? true,
-      enableZoom: json['enable_zoom'] as bool? ?? true,
-      crosshair: CrosshairConfig(enabled: showCrosshair),
+      enablePan: isPie ? false : (json?['enable_pan'] as bool? ?? true),
+      enableZoom: isPie ? false : (json?['enable_zoom'] as bool? ?? true),
+      crosshair: CrosshairConfig(enabled: isPie ? false : showCrosshair),
       tooltip: TooltipConfig(enabled: showTooltip),
+    );
+  }
+
+  static PieChartStyle _parsePieChartStyle(Map<String, dynamic>? json) {
+    const defaults = PieChartStyle();
+    return PieChartStyle(
+      startAngleDegrees:
+          (json?['pie_start_angle'] as num?)?.toDouble() ??
+          defaults.startAngleDegrees,
+      clockwise: json?['pie_clockwise'] as bool? ?? defaults.clockwise,
+      radiusFactor:
+          (json?['pie_radius_factor'] as num?)?.toDouble() ??
+          defaults.radiusFactor,
+      sliceGap:
+          (json?['pie_slice_gap'] as num?)?.toDouble() ?? defaults.sliceGap,
+      borderWidth:
+          (json?['pie_border_width'] as num?)?.toDouble() ??
+          defaults.borderWidth,
+      borderColor: json?['pie_border_color'] is String
+          ? _parseColor(json!['pie_border_color'] as String)
+          : null,
+      borderColorMode: switch (json?['pie_border_color_mode']) {
+        null => null,
+        'chart_theme' => PieBorderColorMode.chartTheme,
+        'slice' => PieBorderColorMode.slice,
+        final value => throw FormatException(
+          'Unknown pie_border_color_mode "$value".',
+        ),
+      },
+      borderHueShiftDegrees: (json?['pie_border_hue_shift'] as num?)
+          ?.toDouble(),
+      borderSaturationShift: (json?['pie_border_saturation_shift'] as num?)
+          ?.toDouble(),
+      borderLightnessShift: (json?['pie_border_lightness_shift'] as num?)
+          ?.toDouble(),
+      gradient: _parsePieGradient(json),
+      selectionExplodeOffset:
+          (json?['pie_selection_explode_offset'] as num?)?.toDouble() ??
+          defaults.selectionExplodeOffset,
+      opacity: (json?['pie_opacity'] as num?)?.toDouble(),
+      cornerRadius: (json?['pie_corner_radius'] as num?)?.toDouble(),
+      shadow: _parsePieElevation(json, prefix: 'pie_shadow'),
+      selectedElevation: _parsePieElevation(json, prefix: 'pie_selected_glow'),
+      animationMode: switch (json?['pie_animation_mode']) {
+        null => null,
+        'none' => PieAnimationMode.none,
+        'grow' => PieAnimationMode.grow,
+        final value => throw FormatException(
+          'Unknown pie_animation_mode "$value".',
+        ),
+      },
+    );
+  }
+
+  static PieGradientStyle? _parsePieGradient(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final typeValue = json['pie_gradient_type'];
+    final enabledValue = json['pie_gradient_enabled'];
+    final startColorValue = json['pie_gradient_start_color'];
+    final endColorValue = json['pie_gradient_end_color'];
+    final startShiftValue = json['pie_gradient_start_lightness_shift'];
+    final endShiftValue = json['pie_gradient_end_lightness_shift'];
+    final angleValue = json['pie_gradient_angle'];
+    if (typeValue == null &&
+        enabledValue == null &&
+        startColorValue == null &&
+        endColorValue == null &&
+        startShiftValue == null &&
+        endShiftValue == null &&
+        angleValue == null) {
+      return null;
+    }
+
+    const defaults = PieGradientStyle();
+    return PieGradientStyle(
+      enabled: enabledValue as bool? ?? defaults.enabled,
+      type: switch (typeValue) {
+        null || 'linear' => PieGradientType.linear,
+        'radial' => PieGradientType.radial,
+        final value => throw FormatException(
+          'Unknown pie_gradient_type "$value".',
+        ),
+      },
+      startColor: startColorValue is String
+          ? _parseColor(startColorValue)
+          : null,
+      endColor: endColorValue is String ? _parseColor(endColorValue) : null,
+      startLightnessShift:
+          (startShiftValue as num?)?.toDouble() ?? defaults.startLightnessShift,
+      endLightnessShift:
+          (endShiftValue as num?)?.toDouble() ?? defaults.endLightnessShift,
+      angleDegrees: (angleValue as num?)?.toDouble() ?? defaults.angleDegrees,
+    );
+  }
+
+  static PieElevationStyle? _parsePieElevation(
+    Map<String, dynamic>? json, {
+    required String prefix,
+  }) {
+    if (json == null) return null;
+    final colorValue = json['${prefix}_color'];
+    final blurValue = json['${prefix}_blur'];
+    final spreadValue = json['${prefix}_spread'];
+    final offsetXValue = json['${prefix}_offset_x'];
+    final offsetYValue = json['${prefix}_offset_y'];
+    final opacityValue = json['${prefix}_opacity'];
+    if (colorValue == null &&
+        blurValue == null &&
+        spreadValue == null &&
+        offsetXValue == null &&
+        offsetYValue == null &&
+        opacityValue == null) {
+      return null;
+    }
+    return PieElevationStyle(
+      color: colorValue is String ? _parseColor(colorValue) : null,
+      blurRadius: (blurValue as num?)?.toDouble() ?? 0,
+      spreadRadius: (spreadValue as num?)?.toDouble() ?? 0,
+      offset: Offset(
+        (offsetXValue as num?)?.toDouble() ?? 0,
+        (offsetYValue as num?)?.toDouble() ?? 0,
+      ),
+      opacity:
+          (opacityValue as num?)?.toDouble() ??
+          (prefix == 'pie_selected_glow' ? 0.45 : 0.65),
+    );
+  }
+
+  static PieDataLabelConfig _parsePieDataLabels(Map<String, dynamic>? json) {
+    const defaults = PieDataLabelConfig();
+    return PieDataLabelConfig(
+      isVisible: json?['show_data_labels'] as bool? ?? defaults.isVisible,
+      position: switch (json?['pie_label_position']) {
+        'inside' => PieDataLabelPosition.inside,
+        'outside' || null => PieDataLabelPosition.outside,
+        final value => throw FormatException(
+          'Unknown pie_label_position "$value".',
+        ),
+      },
+      content: switch (json?['pie_label_content']) {
+        'category' => PieDataLabelContent.category,
+        'value' => PieDataLabelContent.value,
+        'percentage' => PieDataLabelContent.percentage,
+        'category_and_value' => PieDataLabelContent.categoryAndValue,
+        'category_and_percentage' ||
+        null => PieDataLabelContent.categoryAndPercentage,
+        'value_and_percentage' => PieDataLabelContent.valueAndPercentage,
+        'category_value_and_percentage' =>
+          PieDataLabelContent.categoryValueAndPercentage,
+        final value => throw FormatException(
+          'Unknown pie_label_content "$value".',
+        ),
+      },
+      minimumShare:
+          (json?['pie_label_minimum_share'] as num?)?.toDouble() ??
+          defaults.minimumShare,
+      minimumSweepDegrees:
+          (json?['pie_label_minimum_sweep'] as num?)?.toDouble() ??
+          defaults.minimumSweepDegrees,
+      outsideOffset:
+          (json?['pie_label_offset'] as num?)?.toDouble() ??
+          defaults.outsideOffset,
     );
   }
 

@@ -1078,7 +1078,8 @@ class InteractionConfig {
 
   /// Called when the selected data points change.
   ///
-  /// Receives list of currently selected points.
+  /// Receives the currently selected points after direct chart interaction or
+  /// a controller point-selection command.
   ///
   /// Example:
   /// ```dart

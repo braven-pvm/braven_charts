@@ -9,6 +9,14 @@ import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/standard_options.dart';
 
+const _availableChartTypes = <ChartType>[
+  ChartType.line,
+  ChartType.area,
+  ChartType.bar,
+  ChartType.scatter,
+  ChartType.pie,
+];
+
 /// A browse-then-configure showcase for every primary chart type.
 class ChartTypesPage extends StatefulWidget {
   const ChartTypesPage({super.key});
@@ -28,6 +36,12 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   double _fillOpacity = 0.28;
   double _barWidthPercent = 0.64;
   double _markerRadius = 5.0;
+  bool _pieShowLabels = true;
+  PieDataLabelPosition _pieLabelPosition = PieDataLabelPosition.outside;
+  double _pieLabelOffset = 0;
+  double _pieSliceGap = 3;
+  double _pieStartAngle = -90;
+  _ChartTypePieFill _pieFill = _ChartTypePieFill.radial;
   bool _showSecondSeries = true;
 
   late List<ChartDataPoint> _observedData;
@@ -88,16 +102,17 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
           EnumOption<ChartType>(
             label: 'Type',
             value: _chartType,
-            values: ChartType.values,
+            values: _availableChartTypes,
             labelBuilder: (value) => _chartTypeLabel(value),
             onChanged: _selectChartType,
           ),
-          BoolOption(
-            label: 'Show Second Series',
-            value: _showSecondSeries,
-            onChanged: (value) => setState(() => _showSecondSeries = value),
-            subtitle: 'Compare observed data with a benchmark',
-          ),
+          if (_chartType != ChartType.pie)
+            BoolOption(
+              label: 'Show Second Series',
+              value: _showSecondSeries,
+              onChanged: (value) => setState(() => _showSecondSeries = value),
+              subtitle: 'Compare observed data with a benchmark',
+            ),
         ],
       ),
       if (_chartType == ChartType.line || _chartType == ChartType.area)
@@ -172,9 +187,81 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             ),
           ],
         ),
+      if (_chartType == ChartType.pie)
+        OptionSection(
+          title: 'Pie Appearance',
+          icon: Icons.pie_chart_outline,
+          children: [
+            BoolOption(
+              label: 'Show Data Labels',
+              value: _pieShowLabels,
+              onChanged: (value) => setState(() => _pieShowLabels = value),
+              subtitle: 'Keep category meaning beside each contribution',
+            ),
+            if (_pieShowLabels)
+              EnumOption<PieDataLabelPosition>(
+                label: 'Label Position',
+                value: _pieLabelPosition,
+                values: PieDataLabelPosition.values,
+                labelBuilder: (value) => switch (value) {
+                  PieDataLabelPosition.inside => 'Inside slices',
+                  PieDataLabelPosition.outside => 'Outside with connectors',
+                },
+                onChanged: (value) => setState(() => _pieLabelPosition = value),
+              ),
+            if (_pieShowLabels &&
+                _pieLabelPosition == PieDataLabelPosition.outside)
+              SliderOption(
+                label: 'Label Offset',
+                value: _pieLabelOffset,
+                min: 0,
+                max: 64,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _pieLabelOffset = value),
+              ),
+            SliderOption(
+              label: 'Slice Gap',
+              value: _pieSliceGap,
+              min: 0,
+              max: 8,
+              divisions: 8,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _pieSliceGap = value),
+            ),
+            SliderOption(
+              label: 'Start Angle',
+              value: _pieStartAngle,
+              min: -180,
+              max: 180,
+              divisions: 24,
+              suffix: '°',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _pieStartAngle = value),
+            ),
+            EnumOption<_ChartTypePieFill>(
+              label: 'Slice Fill',
+              value: _pieFill,
+              values: _ChartTypePieFill.values,
+              labelBuilder: (value) => switch (value) {
+                _ChartTypePieFill.solid => 'Solid color',
+                _ChartTypePieFill.linear => 'Linear gradient',
+                _ChartTypePieFill.radial => 'Radial gradient',
+              },
+              onChanged: (value) => setState(() => _pieFill = value),
+            ),
+          ],
+        ),
       StandardChartOptions(
         controller: _optionsController,
+        showGridOption: _chartType != ChartType.pie,
+        showAxisOption: _chartType != ChartType.pie,
+        showMarkerOption: _chartType != ChartType.pie,
+        showScrollbarOptions: _chartType != ChartType.pie,
         showLineStyleOption: false,
+        showInteractionOptions: _chartType != ChartType.pie,
       ),
       OptionSection(
         title: 'Dataset',
@@ -218,7 +305,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       builder: (context, constraints) {
         const spacing = 12.0;
         const minimumCardWidth = 168.0;
-        final fitWidth = (constraints.maxWidth - spacing * 3) / 4;
+        final chartTypeCount = _availableChartTypes.length;
+        final fitWidth =
+            (constraints.maxWidth - spacing * (chartTypeCount - 1)) /
+            chartTypeCount;
         final cardWidth = fitWidth >= minimumCardWidth
             ? fitWidth
             : minimumCardWidth;
@@ -226,10 +316,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         return ListView.separated(
           key: const ValueKey('chart-type-ribbon'),
           scrollDirection: Axis.horizontal,
-          itemCount: ChartType.values.length,
+          itemCount: _availableChartTypes.length,
           separatorBuilder: (_, _) => const SizedBox(width: spacing),
           itemBuilder: (context, index) {
-            final chartType = ChartType.values[index];
+            final chartType = _availableChartTypes[index];
             return SizedBox(
               width: cardWidth,
               child: _ChartTypePreviewCard(
@@ -269,6 +359,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   }
 
   Widget _buildMainChart() {
+    final isPie = _chartType == ChartType.pie;
     return ChartCard(
       title: '${_chartTypeLabel(_chartType)} chart playground',
       subtitle: _mainChartSummary(),
@@ -277,33 +368,46 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         series: _buildSeries(_chartType),
         theme: _optionsController.theme,
         showLegend: _optionsController.showLegend,
-        showXScrollbar: _optionsController.showXScrollbar,
-        showYScrollbar: _optionsController.showYScrollbar,
+        showXScrollbar: !isPie && _optionsController.showXScrollbar,
+        showYScrollbar: !isPie && _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        grid: GridConfig(
-          horizontal: _optionsController.showGrid,
-          vertical: _optionsController.showGrid,
-        ),
-        xAxisConfig: XAxisConfig(
-          label: 'Interval',
-          min: 0,
-          max: 17,
-          renderMin: 1,
-          renderMax: 16,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        yAxis: YAxisConfig(
-          position: YAxisPosition.left,
-          label: 'Value',
-          min: 0,
-          max: 110,
-          showAxisLine: _optionsController.showAxisLines,
-        ),
-        interactionConfig: InteractionConfig(
-          enableZoom: _optionsController.enableZoom,
-          enablePan: _optionsController.enablePan,
-          tooltip: const TooltipConfig(),
-        ),
+        grid: isPie
+            ? const GridConfig(horizontal: false, vertical: false)
+            : GridConfig(
+                horizontal: _optionsController.showGrid,
+                vertical: _optionsController.showGrid,
+              ),
+        xAxisConfig: isPie
+            ? null
+            : XAxisConfig(
+                label: 'Interval',
+                min: 0,
+                max: 17,
+                renderMin: 1,
+                renderMax: 16,
+                showAxisLine: _optionsController.showAxisLines,
+              ),
+        yAxis: isPie
+            ? null
+            : YAxisConfig(
+                position: YAxisPosition.left,
+                label: 'Value',
+                min: 0,
+                max: 110,
+                showAxisLine: _optionsController.showAxisLines,
+              ),
+        interactionConfig: isPie
+            ? const InteractionConfig(
+                crosshair: CrosshairConfig(enabled: false),
+                tooltip: TooltipConfig(enabled: true),
+                enableZoom: false,
+                enablePan: false,
+              )
+            : InteractionConfig(
+                enableZoom: _optionsController.enableZoom,
+                enablePan: _optionsController.enablePan,
+                tooltip: const TooltipConfig(),
+              ),
       ),
     );
   }
@@ -403,21 +507,73 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               markerRadius: preview ? 2.2 : _markerRadius * 0.72,
             ),
         ];
+      case ChartType.pie:
+        const categories = [
+          'Subscriptions',
+          'Services',
+          'Hardware',
+          'Training',
+          'Other',
+        ];
+        final categoryCount = preview ? 4 : categories.length;
+        return [
+          PieChartSeries.fromMap(
+            id: preview ? 'preview-pie' : 'pie-contributions',
+            name: 'Contribution',
+            unit: 'units',
+            values: {
+              for (var index = 0; index < categoryCount; index++)
+                categories[index]: _observedData[index].y.clamp(
+                  1,
+                  double.infinity,
+                ),
+            },
+            pieStyle: PieChartStyle(
+              startAngleDegrees: preview ? -90 : _pieStartAngle,
+              radiusFactor: preview ? 0.82 : 0.86,
+              sliceGap: preview ? 1 : _pieSliceGap,
+              borderWidth: preview ? 0 : 1,
+              gradient: switch (preview ? _ChartTypePieFill.radial : _pieFill) {
+                _ChartTypePieFill.solid => null,
+                _ChartTypePieFill.linear => const PieGradientStyle(
+                  type: PieGradientType.linear,
+                ),
+                _ChartTypePieFill.radial => const PieGradientStyle(
+                  type: PieGradientType.radial,
+                ),
+              },
+            ),
+            dataLabels: PieDataLabelConfig(
+              isVisible: !preview && _pieShowLabels,
+              position: _pieLabelPosition,
+              content: PieDataLabelContent.categoryAndPercentage,
+              outsideOffset: _pieLabelOffset,
+            ),
+          ),
+        ];
     }
   }
 
   String _mainChartSummary() {
-    final seriesCount = _showSecondSeries ? 2 : 1;
+    final seriesCount = _chartType == ChartType.pie
+        ? 1
+        : (_showSecondSeries ? 2 : 1);
     final configuration = switch (_chartType) {
       ChartType.line => '${_interpolation.name} interpolation',
       ChartType.area =>
         '${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill',
       ChartType.bar => '${(_barWidthPercent * 100).round()}% bar width',
       ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
+      ChartType.pie =>
+        '5 categories · ${_pieSliceGap.toStringAsFixed(0)}px gap · '
+            '${_pieFill.name} fill · '
+            '${_pieShowLabels ? _pieLabelPosition.name : 'labels hidden'}',
     };
 
-    return '$seriesCount ${seriesCount == 1 ? 'series' : 'series'} · '
-        '${_observedData.length} points each · $configuration · '
+    final dataSummary = _chartType == ChartType.pie
+        ? '1 series'
+        : '$seriesCount series · ${_observedData.length} points each';
+    return '$dataSummary · $configuration · '
         '${_themeName()} theme';
   }
 
@@ -439,6 +595,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.area => 'Area',
       ChartType.bar => 'Bar',
       ChartType.scatter => 'Scatter',
+      ChartType.pie => 'Pie',
     };
   }
 
@@ -448,9 +605,12 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.area => 'Layered fills',
       ChartType.bar => 'Multi-series columns',
       ChartType.scatter => 'Distinct marker sets',
+      ChartType.pie => 'Category contributions',
     };
   }
 }
+
+enum _ChartTypePieFill { solid, linear, radial }
 
 class _ChartTypePreviewCard extends StatelessWidget {
   const _ChartTypePreviewCard({

@@ -1,8 +1,9 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter charts with custom rendering, multi-axis interaction, live
-  streaming, editable annotations, data tables, and portable artifacts.
-version: 0.3.0
+  Pure Dart Flutter Cartesian and pie charts with custom rendering, multi-axis
+  interaction, live streaming, editable annotations, data tables, and portable
+  artifacts.
+version: 0.4.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -17,6 +18,10 @@ topics:
 
 screenshots:
   - description: >-
+      Compact comparison of line, area, scatter, bar, and pie charts with
+      distinct native Flutter rendering and theme treatments.
+    path: doc/screenshots/chart_type_strip.png
+  - description: >-
       Mixed interval chart with threshold-styled bars, cardiac drift, multiple
       axes, tracking, LT1 annotations, and a polynomial trend.
     path: doc/screenshots/hero_threshold.png
@@ -24,6 +29,14 @@ screenshots:
       Dark power-duration model with six curves, positive and negative
       baseline fills, range sections, glow, annotations, and a scrollbar.
     path: doc/screenshots/hero_power_duration.png
+  - description: >-
+      Pie contribution chart with collision-managed outside labels,
+      slice-derived borders, and category percentages.
+    path: doc/screenshots/pie_revenue_contribution.png
+  - description: >-
+      Pie allocation chart with radial gradients, rounded separated slices,
+      elevation, inside percentages, and a positioned legend.
+    path: doc/screenshots/pie_portfolio_allocation.png
   - description: >-
       Positive and negative baseline fill across three independently scaled
       signals with inline labels.
@@ -33,10 +46,6 @@ screenshots:
       highlighted VO2max event.
     path: doc/screenshots/gallery_vo2_stage.png
   - description: >-
-      Dark themed signal chart with line glow, area context, inline labels, and
-      a highlighted threshold.
-    path: doc/screenshots/gallery_glow.png
-  - description: >-
       Reusable lactate chart configuration presented as comparable reference
       and current-session small multiples.
     path: doc/screenshots/gallery_lactate.png
@@ -45,16 +54,8 @@ screenshots:
       scrollbar.
     path: doc/screenshots/gallery_live_sensor.png
   - description: >-
-      Dense normalized pressure and temperature signals on independent axes
-      with crosshair tracking.
-    path: doc/screenshots/gallery_multi_sensor.png
-  - description: >-
       Point, range, and threshold annotations combined in one analytical chart.
     path: doc/screenshots/gallery_annotated.png
-  - description: >-
-      Mixed revenue line and forecast area series with markers, independent
-      styling, and a shared viewport.
-    path: doc/screenshots/gallery_revenue_forecast.png
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

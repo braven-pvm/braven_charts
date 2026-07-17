@@ -5,6 +5,68 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 - 2026-07-17
+
+### Added
+- First-class `PieChartSeries` rendering with deterministic radial geometry,
+  inside or collision-managed outside labels, slice legends, tooltips,
+  keyboard navigation, accessible slice semantics, and selectable explode
+  state.
+- Pie artifact capability (`series.pie`), canonical JSON hydration, preview
+  capture, category/value/share table projection, native copy/CSV actions,
+  and tool-schema support.
+- Dedicated Pie Charts showcase and Pie option in the Chart Types comparison.
+- Theme-level Pie palettes, opacity, rounded corners, shadows, selected glow,
+  styled label callouts, tooltip presets, positioned/oriented slice legends,
+  and reduced-motion-aware radial animations.
+- Public Gallery Pie compositions, basic Pie controls in Chart Types, complete
+  presentation presets in the Pie showcase, and deterministic pub.dev media.
+- A simple dark Pie presentation with dominant inside values and no legend,
+  available both as a focused preset and a reusable Gallery composition.
+- Fixed or HSL slice-derived Pie border policies, detailed selected-glow
+  controls, and showcase presets for legend, label callout, and tooltip themes.
+- Linear and radial Pie slice gradients with per-slice derived or fixed color
+  stops, theme/series precedence, artifact hydration, AI schema support, and a
+  live showcase selector.
+
+### Fixed
+- Refine Pie selection so pointer and legend activation use slice-derived
+  offset/elevation without an intrusive global accent outline, while retaining
+  the themed keyboard and assistive focus ring.
+- The high-contrast Pie showcase preset now uses collision-managed outside
+  labels with opaque white callouts, near-black text, and a 2 px outline so
+  labels remain readable across every monochrome slice.
+- The Pie showcase no longer draws a chart-wide focus box during hover or
+  pointer interaction; keyboard focus remains visible on the active slice.
+- Pie legends now measure compactly at their requested edge instead of
+  reserving a fixed 40% band or rail, leaving the bulk of the viewport to the
+  chart while bounded overflow remains scrollable.
+- Pie slice gaps now preserve category angles and separate complete wedges like
+  physical padding, while per-slice radius compensation keeps uneven wedges on
+  one outer ring instead of shrinking the largest slice inward.
+- Pie tooltips now inherit the interaction theme when no explicit non-default
+  style is supplied, follow durable selection from slices, legends, and linked
+  tables, clear on deselection, and re-anchor after geometry or size changes.
+- Pie layout now reserves the configured explode, border/focus stroke, shadow,
+  and selected elevation extents so edge-facing selections remain inside the
+  plot instead of being clipped by the viewport.
+- Outside Pie labels now use compact lanes beside the painted chart by default,
+  with a configurable non-negative offset for deliberate extra spacing.
+- Pie entrance labels now follow the animation lifecycle instead of curved
+  radius thresholds, preventing elastic animations from flashing callouts on
+  and off before the chart settles.
+- Native PNG previews now paint the chart theme background across the complete
+  capture boundary, including positioned Pie legend space.
+- Canvas-rendered multi-axis titles, series labels, point labels, and tracking
+  tooltips now preserve the chart typography theme's font family.
+
+## 0.3.1 - 2026-07-17
+
+### Fixed
+- Expand data-derived constant per-axis ranges to a stable non-zero span so
+  single-point and constant-valued series render safely with per-series
+  normalization.
+
 ## 0.3.0 - 2026-07-16
 
 ### Added

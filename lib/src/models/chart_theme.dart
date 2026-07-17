@@ -12,6 +12,7 @@ import '../theming/components/scrollbar_config.dart';
 import '../theming/components/series_theme.dart';
 import '../theming/components/typography_theme.dart';
 import 'legend_style.dart';
+import 'pie_chart_config.dart';
 
 /// Comprehensive chart theme with component-based styling.
 ///
@@ -25,6 +26,7 @@ import 'legend_style.dart';
 /// - [annotationTheme]: Annotation styling (point, range, text, threshold, trend)
 /// - [scrollbarConfig]: Scrollbar appearance and behavior
 /// - [legendStyle]: Legend appearance (position, fonts, colors, markers)
+/// - [pieChartTheme]: Radial fill, elevation, callout, and animation defaults
 ///
 /// Example:
 /// ```dart
@@ -52,6 +54,7 @@ class ChartTheme {
     required this.annotationTheme,
     required this.scrollbarConfig,
     required this.legendStyle,
+    this.pieChartTheme = const PieChartTheme(),
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
     this.focusBorderRadius = 0.0,
@@ -61,10 +64,10 @@ class ChartTheme {
     @Deprecated('Use typographyTheme or axisStyle.labelStyle.color instead')
     Color? textColor,
     @Deprecated('Use seriesTheme.colors instead') List<Color>? seriesColors,
-  })  : _gridColor = gridColor,
-        _axisColor = axisColor,
-        _textColor = textColor,
-        _seriesColors = seriesColors;
+  }) : _gridColor = gridColor,
+       _axisColor = axisColor,
+       _textColor = textColor,
+       _seriesColors = seriesColors;
 
   /// Chart background color.
   final Color backgroundColor;
@@ -95,6 +98,9 @@ class ChartTheme {
 
   /// Legend styling (position, fonts, colors, markers).
   final LegendStyle legendStyle;
+
+  /// Pie-specific defaults resolved beneath per-series overrides.
+  final PieChartTheme pieChartTheme;
 
   /// Focus border color when chart has keyboard focus.
   final Color focusBorderColor;
@@ -231,6 +237,7 @@ class ChartTheme {
     AnnotationTheme? annotationTheme,
     ScrollbarConfig? scrollbarConfig,
     LegendStyle? legendStyle,
+    PieChartTheme? pieChartTheme,
     Color? focusBorderColor,
     double? focusBorderWidth,
     double? focusBorderRadius,
@@ -246,6 +253,7 @@ class ChartTheme {
       annotationTheme: annotationTheme ?? this.annotationTheme,
       scrollbarConfig: scrollbarConfig ?? this.scrollbarConfig,
       legendStyle: legendStyle ?? this.legendStyle,
+      pieChartTheme: pieChartTheme ?? this.pieChartTheme,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
       focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
       focusBorderRadius: focusBorderRadius ?? this.focusBorderRadius,
@@ -271,6 +279,7 @@ class ChartTheme {
         annotationTheme == other.annotationTheme &&
         scrollbarConfig == other.scrollbarConfig &&
         legendStyle == other.legendStyle &&
+        pieChartTheme == other.pieChartTheme &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
         focusBorderRadius == other.focusBorderRadius;
@@ -278,18 +287,19 @@ class ChartTheme {
 
   @override
   int get hashCode => Object.hash(
-        backgroundColor,
-        gridStyle,
-        axisStyle,
-        seriesTheme,
-        interactionTheme,
-        typographyTheme,
-        animationTheme,
-        annotationTheme,
-        scrollbarConfig,
-        legendStyle,
-        focusBorderColor,
-        focusBorderWidth,
-        focusBorderRadius,
-      );
+    backgroundColor,
+    gridStyle,
+    axisStyle,
+    seriesTheme,
+    interactionTheme,
+    typographyTheme,
+    animationTheme,
+    annotationTheme,
+    scrollbarConfig,
+    legendStyle,
+    pieChartTheme,
+    focusBorderColor,
+    focusBorderWidth,
+    focusBorderRadius,
+  );
 }

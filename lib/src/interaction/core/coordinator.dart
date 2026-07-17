@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'chart_element.dart';
+import 'data_hit.dart';
 import 'interaction_mode.dart';
 
 /// Information about a hovered marker within a series.
@@ -16,6 +17,7 @@ class HoveredMarkerInfo {
     required this.seriesId,
     required this.markerIndex,
     required this.plotPosition,
+    this.dataHit,
   });
 
   /// ID of the series containing the hovered marker.
@@ -26,6 +28,9 @@ class HoveredMarkerInfo {
 
   /// Position of the marker in plot coordinates.
   final Offset plotPosition;
+
+  /// Renderer-neutral data payload for tooltip and callbacks.
+  final ChartDataHit? dataHit;
 
   /// Checks if this marker refers to the same data point as [other].
   ///

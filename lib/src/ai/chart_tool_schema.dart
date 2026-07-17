@@ -38,11 +38,10 @@ abstract final class ChartToolSchema {
     'description': '''
 Creates an interactive BravenChartPlus chart from provided data.
 Use this tool when the user wants to visualize data as a chart.
-The chart will be rendered as a Flutter widget that supports:
-- Pan and zoom interactions
-- Crosshair with value tooltips
-- Multiple series overlay
-- Annotations and markers
+Cartesian charts support multiple overlaid series, axes, pan, zoom, and crosshair.
+Pie charts support one categorical series, slice tooltips, selection, labels,
+legend entries, and a Category / Value / Share data-table alternative.
+Pie charts do not use axes, crosshair, pan, or zoom.
 ''',
     'input_schema': {
       'type': 'object',
@@ -53,13 +52,14 @@ The chart will be rendered as a Flutter widget that supports:
         },
         'chart_type': {
           'type': 'string',
-          'enum': ['line', 'area', 'bar', 'scatter'],
+          'enum': ['line', 'area', 'bar', 'scatter', 'pie'],
           'description':
-              'Type of chart to render. Line is best for trends, bar for comparisons, scatter for correlations.',
+              'Type of chart to render. Use pie for part-to-whole category contributions; pie requires exactly one series.',
         },
         'series': {
           'type': 'array',
-          'description': 'One or more data series to plot',
+          'description':
+              'One or more Cartesian series, or exactly one series when chart_type is pie.',
           'items': {
             'type': 'object',
             'properties': {
@@ -91,15 +91,23 @@ The chart will be rendered as a Flutter widget that supports:
                   'properties': {
                     'x': {
                       'type': 'number',
-                      'description': 'X-axis value (numeric)',
+                      'description':
+                          'X-axis value for Cartesian charts. For pie, this is only a stable finite ordering index.',
                     },
                     'y': {
                       'type': 'number',
-                      'description': 'Y-axis value',
+                      'description':
+                          'Y-axis value for Cartesian charts. For pie, this is a finite non-negative contribution.',
                     },
                     'label': {
                       'type': 'string',
-                      'description': 'Optional label for this point',
+                      'description':
+                          'Optional Cartesian point label. Required and non-empty for every pie category.',
+                    },
+                    'color': {
+                      'type': 'string',
+                      'description':
+                          'Optional pie-slice color as a hex code or named color.',
                     },
                     'timestamp': {
                       'type': 'string',
@@ -116,7 +124,8 @@ The chart will be rendered as a Flutter widget that supports:
         },
         'x_axis': {
           'type': 'object',
-          'description': 'X-axis configuration',
+          'description':
+              'Cartesian X-axis configuration. Omit when chart_type is pie.',
           'properties': {
             'label': {
               'type': 'string',
@@ -141,7 +150,7 @@ The chart will be rendered as a Flutter widget that supports:
         'y_axis': {
           'type': 'object',
           'description':
-              'Y-axis configuration (for single axis; use series.unit for multi-axis)',
+              'Cartesian Y-axis configuration. Omit when chart_type is pie; use series.unit for Cartesian multi-axis charts.',
           'properties': {
             'label': {
               'type': 'string',
@@ -151,14 +160,8 @@ The chart will be rendered as a Flutter widget that supports:
               'type': 'string',
               'description': 'Unit suffix (e.g., "W", "°C")',
             },
-            'min': {
-              'type': 'number',
-              'description': 'Explicit minimum value',
-            },
-            'max': {
-              'type': 'number',
-              'description': 'Explicit maximum value',
-            },
+            'min': {'type': 'number', 'description': 'Explicit minimum value'},
+            'max': {'type': 'number', 'description': 'Explicit maximum value'},
             'position': {
               'type': 'string',
               'enum': ['left', 'right'],
@@ -172,15 +175,18 @@ The chart will be rendered as a Flutter widget that supports:
           'properties': {
             'enable_pan': {
               'type': 'boolean',
-              'description': 'Allow horizontal panning (default: true)',
+              'description':
+                  'Allow horizontal panning for Cartesian charts. Always false for pie.',
             },
             'enable_zoom': {
               'type': 'boolean',
-              'description': 'Allow pinch/scroll zoom (default: true)',
+              'description':
+                  'Allow pinch/scroll zoom for Cartesian charts. Always false for pie.',
             },
             'show_crosshair': {
               'type': 'boolean',
-              'description': 'Show crosshair on hover (default: true)',
+              'description':
+                  'Show a Cartesian crosshair on hover. Always false for pie.',
             },
             'show_tooltip': {
               'type': 'boolean',
@@ -209,6 +215,221 @@ The chart will be rendered as a Flutter widget that supports:
             'height': {
               'type': 'number',
               'description': 'Chart height in pixels (default: 300)',
+            },
+            'pie_start_angle': {
+              'type': 'number',
+              'description':
+                  'Pie-only starting angle in degrees (default: -90).',
+            },
+            'pie_clockwise': {
+              'type': 'boolean',
+              'description': 'Pie-only slice direction (default: clockwise).',
+            },
+            'pie_radius_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 1,
+              'description': 'Pie-only radius factor in the range (0, 1].',
+            },
+            'pie_slice_gap': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie-only logical-pixel gap between slices.',
+            },
+            'pie_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie-only slice-border width.',
+            },
+            'pie_border_color': {
+              'type': 'string',
+              'description':
+                  'Pie-only fixed shared slice-border color. When supplied, this overrides the border color mode.',
+            },
+            'pie_border_color_mode': {
+              'type': 'string',
+              'enum': ['chart_theme', 'slice'],
+              'description':
+                  'Pie-only fallback border policy: chart axis color or a color derived independently from each slice.',
+            },
+            'pie_border_hue_shift': {
+              'type': 'number',
+              'description':
+                  'Hue rotation in degrees for slice-derived Pie borders.',
+            },
+            'pie_border_saturation_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL saturation shift for slice-derived Pie borders.',
+            },
+            'pie_border_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for slice-derived Pie borders; negative values create darker borders.',
+            },
+            'pie_gradient_enabled': {
+              'type': 'boolean',
+              'description':
+                  'Whether the Pie slice gradient is enabled. A disabled series gradient can opt out of a theme gradient.',
+            },
+            'pie_gradient_type': {
+              'type': 'string',
+              'enum': ['linear', 'radial'],
+              'description':
+                  'Pie-only gradient geometry shared across all slices.',
+            },
+            'pie_gradient_start_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed first gradient-stop color. Omit to derive it from each slice color.',
+            },
+            'pie_gradient_end_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed final gradient-stop color. Omit to derive it from each slice color.',
+            },
+            'pie_gradient_start_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for a derived first gradient stop.',
+            },
+            'pie_gradient_end_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for a derived final gradient stop.',
+            },
+            'pie_gradient_angle': {
+              'type': 'number',
+              'description':
+                  'Linear Pie gradient direction in screen-space degrees; zero points right and 90 points down.',
+            },
+            'pie_selection_explode_offset': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie-only offset applied to a selected slice.',
+            },
+            'pie_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pie-only slice opacity in the range [0, 1].',
+            },
+            'pie_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Pie-only rounded-corner radius in logical pixels.',
+            },
+            'pie_shadow_color': {
+              'type': 'string',
+              'description': 'Optional Pie slice shadow color.',
+            },
+            'pie_shadow_blur': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie slice shadow blur radius.',
+            },
+            'pie_shadow_spread': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie slice shadow spread radius.',
+            },
+            'pie_shadow_offset_x': {
+              'type': 'number',
+              'description': 'Horizontal Pie slice shadow offset.',
+            },
+            'pie_shadow_offset_y': {
+              'type': 'number',
+              'description': 'Vertical Pie slice shadow offset.',
+            },
+            'pie_shadow_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pie slice shadow opacity.',
+            },
+            'pie_selected_glow_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed selected-slice glow color; omit to derive it from each slice.',
+            },
+            'pie_selected_glow_blur': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Blur radius for selected-slice elevation.',
+            },
+            'pie_selected_glow_spread': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Spread radius for selected-slice elevation.',
+            },
+            'pie_selected_glow_offset_x': {
+              'type': 'number',
+              'description': 'Horizontal selected-slice elevation offset.',
+            },
+            'pie_selected_glow_offset_y': {
+              'type': 'number',
+              'description': 'Vertical selected-slice elevation offset.',
+            },
+            'pie_selected_glow_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Selected-slice elevation opacity.',
+            },
+            'pie_animation_mode': {
+              'type': 'string',
+              'enum': ['none', 'grow'],
+              'description': 'Pie entrance animation mode.',
+            },
+            'show_data_labels': {
+              'type': 'boolean',
+              'description': 'Show labels on eligible pie slices.',
+            },
+            'pie_label_position': {
+              'type': 'string',
+              'enum': ['inside', 'outside'],
+              'description': 'Pie-only data-label placement.',
+            },
+            'pie_label_content': {
+              'type': 'string',
+              'enum': [
+                'category',
+                'value',
+                'percentage',
+                'category_and_value',
+                'category_and_percentage',
+                'value_and_percentage',
+                'category_value_and_percentage',
+              ],
+              'description': 'Pie-only label content.',
+            },
+            'pie_label_minimum_share': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Minimum pie share eligible for a label.',
+            },
+            'pie_label_minimum_sweep': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 360,
+              'description':
+                  'Minimum pie-slice sweep in degrees eligible for a label.',
+            },
+            'pie_label_offset': {
+              'type': 'number',
+              'minimum': 0,
+              'description':
+                  'Horizontal logical-pixel gap between the pie and outside labels. Zero keeps labels tight to the chart.',
             },
           },
         },

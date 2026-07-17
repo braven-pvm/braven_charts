@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _previewSize = Size(720, 420);
 const _crossPlatformPixelTolerance = 0.025;
+const _highContrastCrossPlatformPixelTolerance = 0.035;
 
 void main() {
   final variants = <String, ChartTheme>{
@@ -25,7 +26,13 @@ void main() {
         localComparator.basedir.resolve(
           'chart_artifact_preview_golden_test.dart',
         ),
-        precisionTolerance: _crossPlatformPixelTolerance,
+        // Flutter's Linux raster backend shifts some hard high-contrast axis
+        // and Ahem glyph edges by a pixel between stable patch releases. Keep
+        // the wider allowance isolated to this variant; light and dark retain
+        // the stricter cross-platform threshold.
+        precisionTolerance: variant.key == 'high_contrast'
+            ? _highContrastCrossPlatformPixelTolerance
+            : _crossPlatformPixelTolerance,
       );
       addTearDown(() => goldenFileComparator = previousGoldenFileComparator);
       tester.view.devicePixelRatio = 1;

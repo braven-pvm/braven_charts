@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart' show Size, Offset;
 
 import '../../coordinates/chart_transform.dart';
-import '../../elements/series_element.dart';
 import '../../interaction/core/chart_element.dart';
 
 /// Callback type for painting series elements.
@@ -148,8 +147,8 @@ class SeriesCacheManager {
     int hash = elements.length;
     for (final element in elements) {
       hash = hash * 31 + element.id.hashCode;
-      if (element is SeriesElement) {
-        hash = hash * 31 + element.series.points.length;
+      if (element is DataSeriesElement) {
+        hash = hash * 31 + element.pointCount;
       }
     }
     return hash;

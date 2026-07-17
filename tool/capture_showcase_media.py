@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import argparse
 import io
+import shutil
+import subprocess
 import time
 from pathlib import Path
 from typing import Iterable
@@ -238,7 +240,7 @@ def _save_png(
     max_left_dark_fraction: float | None = None,
 ) -> None:
     image: Image.Image | None = None
-    for attempt in range(3):
+    for attempt in range(5):
         candidate = Image.open(
             io.BytesIO(driver.get_screenshot_as_png())
         ).convert("RGB")
@@ -261,7 +263,7 @@ def _save_png(
             f"({dark_fraction:.1%} dark pixels on attempt {attempt + 1})"
         )
         driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
-        time.sleep(1)
+        time.sleep(2)
 
     if image is None:
         raise RuntimeError(f"Could not capture a complete canvas for {output}")
@@ -456,6 +458,33 @@ def _gallery_stills(
     _hero_still(driver, base_url, output_dir)
     _gallery_stills_intro(driver, base_url, output_dir)
     _gallery_stills_remainder(driver, base_url, output_dir)
+
+
+def _native_stills(output_dir: Path, group: str | None = None) -> None:
+    """Capture static PNGs through BravenChartController.capturePreview()."""
+    repository = Path(__file__).resolve().parent.parent
+    output = output_dir.resolve()
+    flutter = shutil.which("flutter")
+    if flutter is None:
+        raise RuntimeError("Flutter is required to capture native Pie media.")
+    command = [
+        flutter,
+        "test",
+        "--no-pub",
+        f"--dart-define=PUBDEV_MEDIA_OUTPUT_DIR={output}",
+        "tool/capture_pubdev_static_media_test.dart",
+    ]
+    if group == "pie":
+        command.extend(["--plain-name", "capture pub.dev Pie media"])
+    elif group == "interaction":
+        command.extend(["--plain-name", "capture pub.dev interaction media"])
+    elif group == "type-strip":
+        command.extend(["--plain-name", "capture pub.dev chart type strip"])
+    subprocess.run(
+        command,
+        cwd=repository,
+        check=True,
+    )
 
 
 def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
@@ -711,12 +740,31 @@ def main() -> None:
     )
     parser.add_argument(
         "--capture",
-        choices=("all", "interaction", "live-stream", "stills", "hero"),
+        choices=(
+            "all",
+            "interaction",
+            "live-stream",
+            "stills",
+            "hero",
+            "pie",
+            "interaction-still",
+            "type-strip",
+        ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
     )
     args = parser.parse_args()
     base_url = args.url.rstrip("/") + "/"
+
+    if args.capture == "pie":
+        _native_stills(args.output_dir, "pie")
+        return
+    if args.capture == "interaction-still":
+        _native_stills(args.output_dir, "interaction")
+        return
+    if args.capture == "type-strip":
+        _native_stills(args.output_dir, "type-strip")
+        return
 
     driver = _driver()
     try:
@@ -739,6 +787,9 @@ def main() -> None:
             _hero_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()
+
+    if args.capture in ("all", "stills"):
+        _native_stills(args.output_dir)
 
 
 if __name__ == "__main__":

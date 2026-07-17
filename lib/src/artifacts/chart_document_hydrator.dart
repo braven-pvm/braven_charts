@@ -235,6 +235,8 @@ abstract final class ChartDocumentHydrator {
     'series.scatter',
     'series.area',
     'series.bar',
+    'series.pie',
+    'series.pie.style.v2',
     'annotation.point',
     'annotation.range',
     'annotation.text',
@@ -250,6 +252,7 @@ abstract final class ChartDocumentHydrator {
     'scatter',
     'area',
     'bar',
+    'pie',
   };
   static const _builtInAnnotationTypes = <String>{
     'point',

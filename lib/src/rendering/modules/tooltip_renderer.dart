@@ -57,21 +57,26 @@ class TooltipRenderer {
     required List<SeriesAxisBinding> effectiveBindings,
     required String Function(double) formatDataValue,
     required Offset Function(Offset) plotToWidget,
+    double textScaleFactor = 1,
   }) {
     // Get tooltip configuration (use default if not provided)
     final config = interactionConfig?.tooltip ?? const TooltipConfig();
 
     // Get effective tooltip style (uses theme defaults when config doesn't specify)
-    final style = _getEffectiveTooltipStyle(interactionConfig, theme);
+    final style = resolveStyle(interactionConfig, theme);
 
-    // Find the series element containing this marker
-    final seriesElement = elements.whereType<SeriesElement>().firstWhere(
+    // Find the renderer-neutral data element containing this marker.
+    final dataElement = elements.whereType<DataHitElement>().firstWhere(
       (e) => e.id == markerInfo.seriesId,
       orElse: () => throw StateError('Series ${markerInfo.seriesId} not found'),
     );
 
     // Get the exact data point
-    final dataPoint = seriesElement.series.points[markerInfo.markerIndex];
+    final dataHit =
+        markerInfo.dataHit ??
+        dataElement.dataHitForPointIndex(markerInfo.markerIndex);
+    if (dataHit == null) return;
+    final dataPoint = dataHit.point;
 
     // Convert data point to screen coordinates for tooltip anchor
     // If followCursor is enabled, use current cursor position instead of marker position
@@ -80,7 +85,7 @@ class TooltipRenderer {
         : plotToWidget(markerInfo.plotPosition);
 
     // Build tooltip text with Y-value formatting including units (T023)
-    final seriesName = seriesElement.series.name ?? seriesElement.id;
+    final seriesName = dataElement.series.name ?? dataElement.id;
 
     // Get the axis config for this series to retrieve unit (T023, T042)
     String? yUnit;
@@ -94,7 +99,7 @@ class TooltipRenderer {
     }
 
     // Format Y value with unit using MultiAxisValueFormatter (T042, T045)
-    final tooltipValue = switch (seriesElement.series) {
+    final tooltipValue = switch (dataElement.series) {
       final BarChartSeries barSeries
           when barSeries.layoutMode == BarLayoutMode.waterfall =>
         barSeries.waterfallDisplayValueFor(markerInfo.markerIndex),
@@ -105,13 +110,15 @@ class TooltipRenderer {
       unit: yUnit,
     );
 
-    final tooltipText =
-        '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY';
+    final tooltipText = dataHit.category == null || dataHit.share == null
+        ? '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY'
+        : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
+              'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%';
 
     // Create text painter with configured style
     final textStyle = TextStyle(
       color: style.textColor,
-      fontSize: style.fontSize,
+      fontSize: style.fontSize * textScaleFactor,
       fontWeight: FontWeight.w500,
     );
 
@@ -128,14 +135,16 @@ class TooltipRenderer {
 
     // Get marker radius to offset tooltip position
     double markerRadius = 0.0;
-    if (seriesElement.series is LineChartSeries) {
+    if (dataElement is SeriesElement && dataElement.series is LineChartSeries) {
       markerRadius =
-          (seriesElement.series as LineChartSeries).dataPointMarkerRadius;
-    } else if (seriesElement.series is ScatterChartSeries) {
-      markerRadius = (seriesElement.series as ScatterChartSeries).markerRadius;
-    } else if (seriesElement.series is AreaChartSeries) {
+          (dataElement.series as LineChartSeries).dataPointMarkerRadius;
+    } else if (dataElement is SeriesElement &&
+        dataElement.series is ScatterChartSeries) {
+      markerRadius = (dataElement.series as ScatterChartSeries).markerRadius;
+    } else if (dataElement is SeriesElement &&
+        dataElement.series is AreaChartSeries) {
       markerRadius =
-          (seriesElement.series as AreaChartSeries).dataPointMarkerRadius;
+          (dataElement.series as AreaChartSeries).dataPointMarkerRadius;
     }
 
     // Smart positioning: Respect preferredPosition, but auto-adjust to avoid clipping
@@ -271,16 +280,21 @@ class TooltipRenderer {
     );
   }
 
-  /// Gets the effective tooltip style, using theme defaults when config is not provided.
-  TooltipStyle _getEffectiveTooltipStyle(
+  /// Resolves an explicit tooltip style before the chart-theme fallback.
+  ///
+  /// [TooltipConfig] predates theme-level tooltip styling and therefore owns a
+  /// non-null default style. Treat that exact default value as unspecified so
+  /// [ChartTheme.interactionTheme] can style tooltips without requiring every
+  /// chart to duplicate the same configuration.
+  TooltipStyle resolveStyle(
     InteractionConfig? interactionConfig,
     ChartTheme? theme,
   ) {
     final configStyle = interactionConfig?.tooltip.style;
     final themeTooltipStyle = theme?.interactionTheme.tooltipStyle;
 
-    // If user provided a config, use it as-is
-    if (configStyle != null) {
+    // A non-default per-chart value is an explicit override.
+    if (configStyle != null && configStyle != const TooltipStyle()) {
       return configStyle;
     }
 

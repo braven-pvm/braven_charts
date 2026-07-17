@@ -45,6 +45,8 @@ class MultiAxisManager {
   /// Creates a MultiAxisManager instance.
   MultiAxisManager();
 
+  static const double _minimumDegenerateHalfSpan = 0.5;
+
   // ============================================================================
   // State
   // ============================================================================
@@ -715,16 +717,21 @@ class MultiAxisManager {
                 pointIndex++
               ) {
                 final point = series.points[pointIndex];
+                if (!point.y.isFinite) continue;
                 if (series is BarChartSeries) {
                   final info = barComposition[series.id];
                   final rangeStart = series.rangeStartValueFor(pointIndex);
                   final start =
                       info?.startValueFor(pointIndex, rangeStart) ?? rangeStart;
                   final end = info?.endValueFor(pointIndex, point.y) ?? point.y;
-                  if (minY == null || start < minY) minY = start;
-                  if (maxY == null || start > maxY) maxY = start;
-                  if (end < minY) minY = end;
-                  if (end > maxY) maxY = end;
+                  if (start.isFinite) {
+                    if (minY == null || start < minY) minY = start;
+                    if (maxY == null || start > maxY) maxY = start;
+                  }
+                  if (end.isFinite) {
+                    if (minY == null || end < minY) minY = end;
+                    if (maxY == null || end > maxY) maxY = end;
+                  }
                 } else {
                   if (minY == null || point.y < minY) minY = point.y;
                   if (maxY == null || point.y > maxY) maxY = point.y;
@@ -735,7 +742,7 @@ class MultiAxisManager {
                 final trackValue = info?.drawTrack == false
                     ? null
                     : series.trackStyle?.value;
-                if (trackValue != null) {
+                if (trackValue != null && trackValue.isFinite) {
                   if (minY == null || trackValue < minY) minY = trackValue;
                   if (maxY == null || trackValue > maxY) maxY = trackValue;
                 }
@@ -751,10 +758,9 @@ class MultiAxisManager {
 
       // Add 5% padding buffer to prevent data points from being cut off at edges
       // This matches the padding used in DataConverter.computeBounds()
-      final range = fullMax - fullMin;
-      final paddingAmount = range * 0.05;
-      final paddedMin = fullMin - paddingAmount;
-      final paddedMax = fullMax + paddingAmount;
+      final paddedRange = _paddedDataRange(fullMin, fullMax);
+      final paddedMin = paddedRange.min;
+      final paddedMax = paddedRange.max;
 
       if (usePaintingBounds) {
         // Transform computed bounds based on viewport (zoom/pan)
@@ -773,6 +779,37 @@ class MultiAxisManager {
     }
 
     return bounds;
+  }
+
+  /// Adds the normal five-percent axis padding while ensuring data-derived
+  /// constant ranges remain valid for [ChartTransform].
+  ///
+  /// A relative half-span keeps non-zero constants visually proportional. The
+  /// absolute floor gives zero and near-zero constants a stable finite range.
+  /// Explicit axis limits do not use this fallback and remain governed by
+  /// [YAxisConfig]'s `min < max` validation contract.
+  DataRange _paddedDataRange(double min, double max) {
+    if (min == max && min.isFinite) {
+      final relativeHalfSpan = min.abs() * 0.05;
+      final halfSpan = relativeHalfSpan > _minimumDegenerateHalfSpan
+          ? relativeHalfSpan
+          : _minimumDegenerateHalfSpan;
+      var expandedMin = min - halfSpan;
+      var expandedMax = max + halfSpan;
+
+      // Preserve a valid one-sided span at the finite double limits instead
+      // of allowing the relative expansion to overflow to infinity.
+      if (!expandedMin.isFinite) expandedMin = min;
+      if (!expandedMax.isFinite) expandedMax = max;
+
+      if (expandedMax > expandedMin) {
+        return DataRange(min: expandedMin, max: expandedMax);
+      }
+    }
+
+    final range = max - min;
+    final paddingAmount = range * 0.05;
+    return DataRange(min: min - paddingAmount, max: max + paddingAmount);
   }
 
   /// Computes rendered Y-axis bounds for each series by series ID.
@@ -861,6 +898,7 @@ class MultiAxisManager {
     required Canvas canvas,
     required Size size,
     required Rect plotArea,
+    TextStyle? labelStyle,
     ChartTransform? transform,
     ChartTransform? originalTransform,
   }) {
@@ -883,6 +921,7 @@ class MultiAxisManager {
       axisBounds: axisBounds,
       bindings: effectiveBindings,
       series: _series,
+      labelStyle: labelStyle,
     );
 
     // Paint axes - chartArea is full size, plotArea is content area

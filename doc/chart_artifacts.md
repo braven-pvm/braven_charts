@@ -115,6 +115,14 @@ The envelope has `artifactType: "braven.chartArtifact"` and currently uses
 schema version `1`. Store the JSON string as UTF-8; do not depend on the
 private files under `lib/src` or on the order of Dart object fields.
 
+Built-in series capabilities are explicit. A pie document declares
+`series.pie` and `series.pie.style.v2`; a reader that does not support those
+capabilities rejects the document instead of interpreting or silently
+degrading radial data. Capability negotiation adds the advanced style payload
+without changing schema version 1. Pie series and theme payloads preserve
+physical separation, corners, opacity, elevation, callout styling, and
+animation mode alongside the original geometry.
+
 ## Hydrate a fresh chart
 
 Hydration validates and decodes JSON before constructing public chart models.
@@ -179,6 +187,20 @@ silently interpolated. `longRows` remains available as the canonical one-point
 per-row representation. `ChartDataTable` virtualizes rows, keeps raw values
 for export, and derives its colors and typography from `ChartDataTableTheme`
 and `ThemeData` unless overridden.
+
+A document containing one `PieChartSeries` automatically uses the native pie
+projection instead of exposing its ordering ordinals as an X axis:
+
+```text
+# │ Category      │ Value (USD) │ Share
+1 │ Subscriptions │ 42.00       │ 42.00%
+```
+
+Pie rows preserve the original `ChartPointRef`, raw contribution, calculated
+share, category, unit, and resolved slice color. Pass `selectedPointRefs` to
+mirror durable slice selection into the row. Row activation can send the same
+reference back through `BravenChartController.selectPoints` using the
+snapshot revision.
 
 ### Built-in copy and export actions
 

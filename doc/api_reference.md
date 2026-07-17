@@ -16,10 +16,37 @@ types and where to begin.
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
 - `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
-  `ScatterChartSeries` — concrete renderable series.
+  `ScatterChartSeries`, and `PieChartSeries` — concrete renderable series.
 - `ChartDataPoint`, `DataRange`, `ChartType` — core data types.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
+
+### Pie charts
+
+- `PieChartSeries.fromMap` converts insertion-ordered category/value pairs into
+  stable slices; the explicit constructor preserves source point metadata and
+  optional per-point colors.
+- `PieChartStyle` controls start angle, direction, radius, physical slice
+  separation, fixed or `PieBorderColorMode` slice-derived borders, selection
+  explode offset, and optional per-series
+  opacity, corner, elevation, and animation overrides.
+- `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
+  theme-level radial styling, independently configurable shadows/glows,
+  callouts, and motion defaults.
+- `PieDataLabelConfig`, `PieDataLabelPosition`, `PieDataLabelContent`, and
+  `PieDataLabelCollisionStrategy` control label eligibility, placement, and
+  optional shared-`LabelStyle` callouts.
+
+A chart accepts exactly one pie series and cannot mix radial and Cartesian
+series. Pie charts do not use axes, crosshairs, scrollbars, pan, zoom, or
+Cartesian annotations. Contributions must be finite and non-negative; zero
+values remain portable but do not paint a slice.
+
+Pie label callouts use `LabelStyle`; legends use the shared `LegendStyle`; and
+tooltips use either an explicit non-default `TooltipConfig.style` or
+`ChartTheme.interactionTheme.tooltipStyle`. Slice, legend, and linked table
+selection resolve the same durable tooltip, which clears with selection and
+re-anchors after geometry or responsive layout changes.
 
 ## Axes, normalization, and layout
 
@@ -113,10 +140,11 @@ types and where to begin.
 - `ChartDataScope` and `ChartDataStorage` — choose the effective data
   projection and inline point/column storage strategy.
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` — exact-X wide
-  rows (one X value with one column per series), lossless long rows, sorting,
-  virtualization, theming, bounded dataset/row clipboard copy, and raw-value
-  CSV export with automatic web download or host delivery callbacks. Pass
-  `selectedPointRefs` to mirror durable chart selection into rows.
+  rows (one X value with one column per series), lossless long rows, or native
+  pie `Category | Value | Share` rows; plus sorting, virtualization, theming,
+  bounded dataset/row clipboard copy, and raw-value CSV export with automatic
+  web download or host delivery callbacks. Pass `selectedPointRefs` to mirror
+  durable chart or slice selection into rows.
 - `ChartDataBlobCodec`, `ReferencedPayload`, and `ChartDataResolver` — host
   controlled external payload persistence and checksum-verified resolution.
 - `ChartRuntimeBindings` and its formatter, callback, tooltip, and extension
@@ -136,6 +164,9 @@ See [Portable chart artifacts](chart_artifacts.md) for the end-to-end guide and
 copyable examples, [Chart Workbench](chart_workbench.md) for the reusable
 single-chart surface, and [Chart Document Comparison](chart_comparison.md) for
 multi-document alignment and export.
+
+See [Pie charts](pie_charts.md) for the radial data contract, labels,
+interaction, table projection, artifacts, and accessibility behavior.
 
 ## Export policy
 

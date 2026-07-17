@@ -24,7 +24,7 @@ enum DataPointMarkerStyle {
 enum LineInterpolation { linear, bezier, stepped, monotone }
 
 /// Rendering style hints for series visualization.
-enum SeriesStyle { line, bar, scatter, area }
+enum SeriesStyle { line, bar, scatter, area, pie }
 
 /// Base class for chart series.
 ///

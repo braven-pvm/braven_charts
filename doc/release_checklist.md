@@ -5,9 +5,8 @@ Charts release.
 
 ## Package identity and ownership
 
-- [ ] Confirm `braven_charts` is still available on pub.dev immediately before
-  the first publish.
-- [ ] Confirm the publishing Google account and intended verified publisher.
+- [ ] Confirm the publishing account still has access to the verified
+  publisher that owns `braven_charts`.
 - [ ] Confirm the MIT license and copyright holder text.
 - [ ] Confirm version, changelog date, repository, issue tracker, description,
   and topics in `pubspec.yaml`.
@@ -39,13 +38,14 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 
 ## Package page
 
-- [ ] README installation and examples compile against 0.1.0.
+- [ ] README installation and examples compile against the release version.
 - [ ] `example/lib/main.dart` is concise enough for pub.dev's Example tab.
 - [ ] The public API has useful `///` documentation.
 - [ ] Screenshot 1 is a chart-only flagship hero and works as the package
   thumbnail without relying on showcase application chrome.
-- [ ] The remaining screenshot slots show varied chart-only Gallery examples,
-  including multi-axis, annotations, live data, themes, and baseline fills.
+- [ ] The remaining screenshot slots show varied chart-only examples,
+  including pie, multi-axis, annotations, live data, themes, and baseline
+  fills.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
 - [ ] The interaction and live-stream animations show real behavior from the
   deployed showcase, remain below 4 MB each, and render from package-local
@@ -61,9 +61,18 @@ python -m pip install selenium Pillow
 python tool/capture_showcase_media.py
 ```
 
-Use `--capture interaction`, `--capture live-stream`, or `--capture stills`
-when only one media group changed. Capture from a local release build with
+Use `--capture interaction`, `--capture interaction-still`,
+`--capture live-stream`, `--capture stills`, or `--capture pie` when only one
+media group changed. Capture browser media from a local release build with
 `--url http://127.0.0.1:<port>/` before the public site has the change.
+
+`--capture pie` and `--capture interaction-still` do not take browser
+screenshots. They mount the same Gallery configurations in Flutter's
+deterministic test renderer, call
+`BravenChartController.capturePreview()`, load Flutter's bundled Roboto font,
+and write the returned PNG bytes. The interaction still preserves transient
+tracking state. Browser recording remains appropriate for the animated
+interaction and live-stream GIFs.
 
 ## Public showcase
 
@@ -71,6 +80,7 @@ when only one media group changed. Capture from a local release build with
   `example/`.
 - [ ] GitHub Pages is configured to use GitHub Actions as its source.
 - [ ] The deployed Gallery route loads directly and after a browser refresh.
+- [ ] The deployed Pie Charts route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.

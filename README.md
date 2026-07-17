@@ -8,12 +8,12 @@ Braven Charts is a pure Dart charting library for Flutter applications. Chart
 rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
-`BravenChartPlus` supports line, area, bar, scatter, and mixed-series charts;
-multiple independent axes and normalization; zoom, pan, scrollbars, tracking,
-tooltips, and editable annotations; frame-coalesced live data; configurable
-themes and state views; chart/table display modes; and portable chart
-artifacts. Rendering, input handling, and streaming updates remain inside the
-Flutter rendering pipeline.
+`BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
+and single-series pie charts; multiple independent axes and normalization;
+zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
+frame-coalesced live data; configurable themes and state views; chart/table
+display modes; and portable chart artifacts. Rendering, input handling, and
+streaming updates remain inside the Flutter rendering pipeline.
 
 For update-heavy charts, the implementation uses cached series layers, a
 spatial hit-test index, frame-coalesced point delivery, and a direct render-box
@@ -27,11 +27,17 @@ streaming path so each sample does not require a widget-tree rebuild.
 | --- | --- |
 | [![Threshold exposure chart with styled bars, cardiac drift, LT1 annotations, and a trend line](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
 
+### Core chart types
+
+Line, area, scatter, bar, and pie charts share the same native Flutter
+rendering pipeline while retaining independent series and theme treatments.
+
+[![Line, area, scatter, bar, and pie charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/)
+
 ### Multi-axis interaction
 
-The example below combines four independently scaled series with per-series
-normalization, range and threshold annotations, tracking tooltips, pointer
-zoom, drag-to-pan, and a synchronized X scrollbar.
+The animated example combines independently scaled axes, normalization,
+annotations, tracking, pointer zoom, drag-to-pan, and a synchronized scrollbar:
 
 [![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 
@@ -45,12 +51,23 @@ bounded buffer continues receiving data, and resume with buffered catch-up.
 
 ## Gallery
 
-These 15 examples cover baseline fills, stage summaries, line glow, small
-multiples, live data, independent axes, annotations, mixed series, grouped
-bars, scatter plots, interpolation modes, threshold styling, and positive or
-negative area segments.
+The Gallery combines curated and full-catalog views across Pie, line, area,
+bar, scatter, and mixed compositions. It covers light and dark Pie treatments,
+inside and collision-aware outside labels, dense categories, rounded and
+elevated slices, solid and gradient fills, baseline fills, live data,
+independent axes, annotations,
+interpolation, thresholds, and domain-shaped dashboards.
 
-[![Fifteen varied Braven Charts examples from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
+These PNGs are exported by `BravenChartController.capturePreview()`, the same
+native image path available to package consumers:
+
+| Collision-managed outside labels | Gradient, elevation, and positioned legend |
+| --- | --- |
+| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
+
+The wider Cartesian catalog remains available in the current Gallery mosaic:
+
+[![Varied Braven Charts compositions from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Feature coverage
 
@@ -58,13 +75,13 @@ negative area segments.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
-| Data series | Line, area, bar, scatter, mixed-series charts, markers, interpolation, segment styling, and baseline fills |
+| Data series | Line, area, bar, scatter, mixed Cartesian series, and category-based pie charts with labels, positioned legends, solid/gradient fills, rounded/translucent slices, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
 | Display | Light/dark and custom themes, legends, labels, package-owned Chart/Data/Split workbenches, loading skeletons, progress indicators, and empty states |
 | Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
-| Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
+| Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X or category/share data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 | Document comparison | Explicit semantic series mapping, exact-X or timestamp alignment, safe units, missing values, deltas, and source-preserving CSV export |
 
 The [live showcase](https://braven-pvm.github.io/braven_charts/) provides
@@ -74,6 +91,9 @@ for the feature-to-page map and local run instructions.
 [Open Chart Workbench directly](https://braven-pvm.github.io/braven_charts/?page=chart-workbench)
 to try the package-owned Chart/Data/Split workflow, linked point selection,
 artifact capture, deliberate table freshness, and document comparison.
+[Open Pie Charts directly](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
+to try category datasets, inside/outside labels, slice selection, native data
+tables, artifact capture, previews, and restored charts.
 
 ## Install
 
@@ -81,7 +101,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.3.0
+  braven_charts: ^0.4.0
 ```
 
 Then fetch dependencies:
@@ -90,7 +110,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.3.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.4.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
@@ -175,6 +195,47 @@ BravenChartPlus(
   ],
 )
 ```
+
+## Pie charts
+
+Pie charts use one `PieChartSeries`; they do not mix with Cartesian series or
+use axes, crosshairs, pan, or zoom. Map insertion order becomes stable slice
+order, while the category string becomes the visible and accessible label.
+
+```dart
+BravenChartPlus(
+  title: 'Revenue contribution',
+  series: [
+    PieChartSeries.fromMap(
+      id: 'revenue-share',
+      name: 'Revenue share',
+      unit: 'USD',
+      values: const {
+        'Subscriptions': 42,
+        'Services': 31,
+        'Hardware': 27,
+      },
+      pieStyle: const PieChartStyle(
+        gradient: PieGradientStyle(type: PieGradientType.radial),
+      ),
+      dataLabels: const PieDataLabelConfig(
+        position: PieDataLabelPosition.outside,
+        content: PieDataLabelContent.categoryAndPercentage,
+      ),
+    ),
+  ],
+  interactionConfig: const InteractionConfig(
+    tooltip: TooltipConfig(enabled: true),
+  ),
+)
+```
+
+Pie values must be finite and non-negative. Zero values remain portable and
+appear in the native table but do not paint a slice; an all-zero dataset uses
+the configured empty state. See the
+[Pie chart guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
+for fills, labels, selection, tables, artifacts, validation, and
+accessibility.
 
 ## Loading and empty states
 
@@ -293,14 +354,15 @@ the next row remains usable. The host owns action policy, artifact IDs,
 persistence, and navigation. Initial and refresh failures retain explicit
 recovery actions, and manual refresh is the recommended policy when a bounded
 live stream should not rewrite a visible table at sample cadence. See the
-[Chart Workbench guide](doc/chart_workbench.md) for refresh policies,
-point identity, responsive semantics, status, and controller ownership.
+[Chart Workbench guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
+for refresh policies, point identity, responsive semantics, status, and
+controller ownership.
 
 For two or more saved documents, `ChartComparisonBuilder` provides explicit
 series mapping, exact-X or timestamp alignment, missing-value state, safe unit
 conversion, optional deltas, and source-preserving CSV export. It never infers
 identity from display names or owns a comparison repository/screen. See the
-[Chart Document Comparison guide](doc/chart_comparison.md).
+[Chart Document Comparison guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_comparison.md).
 
 ### Capture and transport
 
@@ -330,7 +392,8 @@ and raw-value CSV export. Web builds download CSV directly; non-web hosts can
 provide delivery callbacks for their file or share-sheet workflow.
 
 For the complete capture, table, transport, hydration, resolver, migration,
-and runtime-binding contracts, read the [portable chart artifact guide](doc/chart_artifacts.md).
+and runtime-binding contracts, read the
+[portable chart artifact guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md).
 
 ## Run the showcase
 
@@ -345,15 +408,16 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused labs for chart types, interaction, tracking, annotations, streaming,
-theming, performance, multi-axis layouts, scientific data, baseline fills, and
-state UX.
+focused pages for chart types, pie charts, interaction, tracking, annotations,
+streaming, theming, performance, multi-axis layouts, scientific data, baseline
+fills, and state UX.
 
 ## Documentation
 
 - [Live interactive showcase](https://braven-pvm.github.io/braven_charts/)
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
+- [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)
 - [Chart Workbench](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
 - [Chart Document Comparison](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_comparison.md)

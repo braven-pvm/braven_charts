@@ -1,6 +1,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/gallery_page.dart';
 import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
+import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -102,7 +103,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.byKey(const ValueKey('gallery-mode-control')), findsOneWidget);
-    expect(find.text('17 representative compositions'), findsOneWidget);
+    expect(find.text('22 representative compositions'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('gallery-advanced-curated')),
       findsOneWidget,
@@ -114,11 +115,28 @@ void main() {
     expect(_gridCount(tester, 'gallery-advanced-curated'), 8);
     expect(_gridCount(tester, 'gallery-building-blocks-curated'), 8);
 
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -8000));
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(
+      find.byKey(const ValueKey('gallery-pie-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-pie-compositions'), 5);
+    expect(find.byType(SimpleRevenueGalleryCard), findsOneWidget);
+    expect(find.byType(RevenueContributionGalleryCard), findsOneWidget);
+    expect(find.byType(ReleaseEffortGalleryCard), findsOneWidget);
+    expect(find.byType(SupportMixGalleryCard), findsOneWidget);
+    expect(find.byType(PortfolioAllocationGalleryCard), findsOneWidget);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 8000));
+    await tester.pump(const Duration(milliseconds: 600));
+
     await tester.tap(find.text('Full catalog'));
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(
-      find.text('30 examples across the complete catalog'),
+      find.text('35 examples across the complete catalog'),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('gallery-advanced-full')), findsOneWidget);

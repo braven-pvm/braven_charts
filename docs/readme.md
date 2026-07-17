@@ -15,6 +15,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
 - [guides/bar-charts.md](guides/bar-charts.md) - Bar orientation, composition, floating ranges, styling, labels, and interaction
+- [guides/pie-charts.md](guides/pie-charts.md) - Pie data, advanced theming, labels, legends, selection, motion, tables, artifacts, and accessibility
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system
@@ -30,6 +31,10 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 
 - [development.md](development.md) - Local development setup
 - [technical_debt.md](technical_debt.md) - Known debt and cleanup targets
+
+## Parked Feature Investigations
+
+- [pie_chart_implementation_investigation.md](pie_chart_implementation_investigation.md) - Approved product contract, radial architecture, completed slices, and release gates for first-class pie charts
 
 ## Archived Materials
 
