@@ -305,7 +305,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       builder: (context, constraints) {
         const spacing = 12.0;
         const minimumCardWidth = 168.0;
-        final fitWidth = (constraints.maxWidth - spacing * 3) / 4;
+        final chartTypeCount = _availableChartTypes.length;
+        final fitWidth =
+            (constraints.maxWidth - spacing * (chartTypeCount - 1)) /
+            chartTypeCount;
         final cardWidth = fitWidth >= minimumCardWidth
             ? fitWidth
             : minimumCardWidth;

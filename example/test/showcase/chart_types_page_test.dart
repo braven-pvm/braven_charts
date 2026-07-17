@@ -36,6 +36,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey('chart-type-preview-pie')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey('selected-chart-type-line')),
       findsOneWidget,
     );
@@ -64,15 +68,6 @@ void main() {
     expect(find.text('Scatter chart playground'), findsOneWidget);
     expect(find.text('Marker Appearance'), findsOneWidget);
 
-    await tester.drag(
-      find.byKey(const ValueKey('chart-type-ribbon')),
-      const Offset(-360, 0),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('chart-type-preview-pie')),
-      findsOneWidget,
-    );
     await tester.tap(find.byKey(const ValueKey('chart-type-preview-pie')));
     await tester.pump(const Duration(milliseconds: 200));
 
