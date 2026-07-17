@@ -98,6 +98,60 @@ void main() {
       expect(geometry.paintBounds.contains(geometry.rect.topCenter), isTrue);
     });
 
+    test('lays out a vertical target marker across the bar', () {
+      const series = BarChartSeries(
+        id: 'target',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 20,
+        targetValues: [70],
+        targetMarkerStyle: BarTargetMarkerStyle(width: 2, lengthFactor: 1.4),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: transform,
+      ).single;
+
+      expect(geometry.targetValue, 70);
+      expect(geometry.targetStart!.dx, closeTo(86, 0.001));
+      expect(geometry.targetStart!.dy, closeTo(30, 0.001));
+      expect(geometry.targetEnd!.dx, closeTo(114, 0.001));
+      expect(geometry.targetEnd!.dy, closeTo(30, 0.001));
+      expect(geometry.targetBounds!.left, closeTo(85, 0.001));
+      expect(geometry.targetBounds!.top, closeTo(29, 0.001));
+      expect(geometry.targetBounds!.right, closeTo(115, 0.001));
+      expect(geometry.targetBounds!.bottom, closeTo(31, 0.001));
+      expect(geometry.paintBounds.contains(const Offset(114, 30)), isTrue);
+    });
+
+    test('transposes target markers with horizontal bars', () {
+      const horizontalTransform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 4,
+        dataYMin: -100,
+        dataYMax: 100,
+        plotWidth: 400,
+        plotHeight: 200,
+        transposed: true,
+      );
+      const series = BarChartSeries(
+        id: 'horizontal-target',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 20,
+        orientation: BarOrientation.horizontal,
+        targetValues: [40],
+        targetMarkerStyle: BarTargetMarkerStyle(lengthFactor: 1.4),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: horizontalTransform,
+      ).single;
+
+      expect(geometry.targetStart, const Offset(280, 36));
+      expect(geometry.targetEnd, const Offset(280, 64));
+    });
+
     test('provides an accessible hit width for thin rods', () {
       const series = BarChartSeries(
         id: 'rod',
@@ -318,6 +372,20 @@ void main() {
         );
       },
     );
+
+    test('target values validate their point alignment', () {
+      const mismatch = BarChartSeries(
+        id: 'target-mismatch',
+        points: [ChartDataPoint(x: 1, y: 60)],
+        barWidthPixels: 20,
+        targetValues: [60, 70],
+      );
+
+      expect(
+        () => BarGeometryEngine.layout(series: mismatch, transform: transform),
+        throwsArgumentError,
+      );
+    });
 
     test('value-end rounding only affects the outer stacked segment', () {
       const series = BarChartSeries(

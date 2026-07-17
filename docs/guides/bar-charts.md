@@ -344,6 +344,31 @@ value-axis boundary in the direction of the bar.
 Tracks participate in bar bounds and rendering but not in value hit testing:
 the interactive mark remains the actual data bar.
 
+## Benchmark and target markers
+
+Use `targetValues` for a distinct benchmark at each category without modelling
+the benchmark as another data series. The marker crosses the actual bar and
+automatically transposes with horizontal orientation:
+
+```dart
+BarChartSeries(
+  id: 'actual',
+  name: 'Actual',
+  points: actual,
+  targetValues: const [72, 78, 85, 68, 84, 95, 76],
+  targetMarkerStyle: const BarTargetMarkerStyle(
+    width: 2,
+    lengthFactor: 1.3,
+  ),
+)
+```
+
+Targets participate in value-axis bounds, artifact round-tripping, tooltips,
+keyboard semantics, and animated data updates. They remain passive reference
+marks: hit testing, focus, selection, and series counts continue to describe
+the actual bar. Set a marker color explicitly or leave it null to derive a
+high-contrast color from each bar.
+
 ## Labels
 
 Bar labels use rendered rectangle geometry rather than marker geometry:
@@ -442,5 +467,6 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=overlay`, `?page=bar-lab&preset=offset`,
 `?page=bar-lab&preset=range`, `?page=bar-lab&preset=waterfall`,
 `?page=bar-lab&preset=horizontal`, `?page=bar-lab&preset=axes`,
-`?page=bar-lab&preset=motion`, `?page=bar-lab&preset=states`,
+`?page=bar-lab&preset=targets`, `?page=bar-lab&preset=motion`,
+`?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

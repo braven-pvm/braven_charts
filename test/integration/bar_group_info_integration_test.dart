@@ -286,6 +286,20 @@ void main() {
       expect(bounds.yMax, closeTo(76.75, 0.001));
     });
 
+    test('DataConverter bounds include benchmark targets', () {
+      final bounds = DataConverter.computeDataBounds(const [
+        BarChartSeries(
+          id: 'bullet',
+          points: [ChartDataPoint(x: 0, y: 60), ChartDataPoint(x: 1, y: 75)],
+          barWidthPercent: 0.8,
+          targetValues: [95, null],
+        ),
+      ]);
+
+      expect(bounds.yMin, closeTo(-4.75, 0.001));
+      expect(bounds.yMax, closeTo(99.75, 0.001));
+    });
+
     test('DataConverter bounds include cumulative waterfall geometry', () {
       final bounds = DataConverter.computeDataBounds(const [
         BarChartSeries(

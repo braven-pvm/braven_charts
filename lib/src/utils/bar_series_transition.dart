@@ -42,6 +42,7 @@ abstract final class BarSeriesTransition {
 
     final animatedPoints = <ChartDataPoint>[];
     final animatedStarts = <double?>[];
+    final animatedTargets = <double?>[];
     for (var index = 0; index < to.points.length; index++) {
       final targetPoint = to.points[index];
       final sourceIndex = _sourceIndexFor(
@@ -70,12 +71,25 @@ abstract final class BarSeriesTransition {
             : from.rangeStartValueFor(sourceIndex);
         animatedStarts.add(_lerp(sourceStart, targetStart, t));
       }
+      if (to.targetValues.isNotEmpty) {
+        final targetValue = to.targetValueFor(index);
+        if (targetValue == null) {
+          animatedTargets.add(null);
+        } else {
+          final sourceTarget = sourceIndex == null
+              ? targetValue
+              : from.targetValueFor(sourceIndex) ?? targetValue;
+          animatedTargets.add(_lerp(sourceTarget, targetValue, t));
+        }
+      }
     }
 
     return to.copyWith(
       points: animatedPoints,
       rangeStartValues: animatedStarts,
       clearRangeStartValues: to.rangeStartValues.isEmpty,
+      targetValues: animatedTargets,
+      clearTargetValues: to.targetValues.isEmpty,
     );
   }
 

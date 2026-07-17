@@ -492,6 +492,13 @@ void main() {
                     cornerRadius: 9,
                     border: BarBorderStyle(color: Color(0xFFB0B0B0)),
                   ),
+                  targetValues: [8],
+                  targetMarkerStyle: BarTargetMarkerStyle(
+                    color: Color(0xFF334155),
+                    width: 3,
+                    lengthFactor: 1.4,
+                    opacity: 0.8,
+                  ),
                   labelStyle: BarLabelStyle(
                     show: true,
                     position: BarLabelPosition.insideEnd,
@@ -546,6 +553,16 @@ void main() {
       );
       expect(bar.trackStyle?.value, 10);
       expect(bar.trackStyle?.border?.color, const Color(0xFFB0B0B0));
+      expect(bar.targetValues, const [8]);
+      expect(
+        bar.targetMarkerStyle,
+        const BarTargetMarkerStyle(
+          color: Color(0xFF334155),
+          width: 3,
+          lengthFactor: 1.4,
+          opacity: 0.8,
+        ),
+      );
       expect(bar.labelStyle.show, isTrue);
       expect(bar.labelStyle.position, BarLabelPosition.insideEnd);
       expect(bar.labelStyle.valueMode, BarLabelValueMode.percentage);

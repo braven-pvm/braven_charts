@@ -1506,6 +1506,24 @@ class SeriesElement implements DataHitElement {
         );
       }
 
+      if (geometry.targetStart != null && geometry.targetEnd != null) {
+        final targetStyle = series.targetMarkerStyle;
+        final targetColor =
+            targetStyle.color ??
+            (barColor.computeLuminance() > 0.45
+                ? const Color(0xFF111827)
+                : const Color(0xFFFFFFFF));
+        canvas.drawLine(
+          geometry.targetStart!,
+          geometry.targetEnd!,
+          Paint()
+            ..color = targetColor.withValues(alpha: targetStyle.opacity)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = targetStyle.width
+            ..strokeCap = StrokeCap.square,
+        );
+      }
+
       if (series.labelStyle.show) {
         _paintBarLabel(canvas, series, geometry, barColor);
       }

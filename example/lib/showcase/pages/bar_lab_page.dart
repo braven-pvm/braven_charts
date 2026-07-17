@@ -9,6 +9,7 @@ import '../widgets/standard_options.dart';
 
 enum _BarLabPreset {
   capacity,
+  targets,
   rods,
   gradient,
   signed,
@@ -27,6 +28,7 @@ enum _BarLabPreset {
 extension on _BarLabPreset {
   String get label => switch (this) {
     _BarLabPreset.capacity => 'Capacity',
+    _BarLabPreset.targets => 'Targets',
     _BarLabPreset.rods => 'Rods',
     _BarLabPreset.gradient => 'Gradient',
     _BarLabPreset.signed => 'Signed',
@@ -44,6 +46,7 @@ extension on _BarLabPreset {
 
   IconData get icon => switch (this) {
     _BarLabPreset.capacity => Icons.stacked_bar_chart,
+    _BarLabPreset.targets => Icons.flag_outlined,
     _BarLabPreset.rods => Icons.equalizer,
     _BarLabPreset.gradient => Icons.gradient,
     _BarLabPreset.signed => Icons.swap_vert,
@@ -141,6 +144,9 @@ class _BarLabPageState extends State<BarLabPage> {
   int _motionRevision = 0;
   double _motionDurationMs = 650;
   bool _animateBars = true;
+  bool _showTargets = false;
+  double _targetMarkerWidth = 2;
+  double _targetMarkerLength = 1.3;
 
   @override
   void initState() {
@@ -321,6 +327,8 @@ class _BarLabPageState extends State<BarLabPage> {
         position: YAxisPosition.left,
         label: _preset == _BarLabPreset.offset
             ? 'Gold medals'
+            : _preset == _BarLabPreset.targets
+            ? 'Completion (%)'
             : _preset == _BarLabPreset.range
             ? 'Temperature (°C)'
             : _preset == _BarLabPreset.waterfall
@@ -559,6 +567,40 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
       ],
     ),
+    if (_preset == _BarLabPreset.targets)
+      OptionSection(
+        title: 'Benchmarks',
+        icon: Icons.flag_outlined,
+        children: [
+          BoolOption(
+            label: 'Target markers',
+            value: _showTargets,
+            subtitle: 'Show one benchmark across each bar',
+            onChanged: (value) => setState(() => _showTargets = value),
+          ),
+          if (_showTargets)
+            SliderOption(
+              label: 'Marker width',
+              value: _targetMarkerWidth,
+              min: 1,
+              max: 6,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _targetMarkerWidth = value),
+            ),
+          if (_showTargets)
+            SliderOption(
+              label: 'Marker span',
+              value: _targetMarkerLength,
+              min: 0.8,
+              max: 1.8,
+              divisions: 10,
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _targetMarkerLength = value),
+            ),
+        ],
+      ),
     if (_preset == _BarLabPreset.states)
       OptionSection(
         title: 'Interaction',
@@ -615,6 +657,7 @@ class _BarLabPageState extends State<BarLabPage> {
   List<ChartSeries> _buildSeries() {
     final values = switch (_preset) {
       _BarLabPreset.capacity => const <double>[42, 61, 88, 35, 70, 94, 55],
+      _BarLabPreset.targets => const <double>[68, 74, 81, 57, 88, 92, 70],
       _BarLabPreset.rods => const <double>[34, 57, 46, 69, 81, 96, 62],
       _BarLabPreset.gradient => const <double>[28, 49, 64, 91, 73, 84, 58],
       _BarLabPreset.signed => const <double>[38, -24, 52, -38, 71, 26, -18],
@@ -634,6 +677,7 @@ class _BarLabPageState extends State<BarLabPage> {
     };
     final comparison = switch (_preset) {
       _BarLabPreset.capacity => const <double>[31, 69, 81, 52, 64, 86, 72],
+      _BarLabPreset.targets => const <double>[61, 82, 76, 69, 79, 86, 73],
       _BarLabPreset.rods => const <double>[46, 39, 71, 53, 88, 72, 90],
       _BarLabPreset.gradient => const <double>[41, 58, 51, 76, 89, 65, 78],
       _BarLabPreset.signed => const <double>[21, -39, 34, -14, 48, -28, 32],
@@ -657,6 +701,7 @@ class _BarLabPageState extends State<BarLabPage> {
         _series(
           id: 'series-${index + 1}',
           name: switch ((_preset, index)) {
+            (_BarLabPreset.targets, 0) => 'Actual',
             (_BarLabPreset.offset, 0) => 'Summer 2020',
             (_BarLabPreset.offset, 1) => 'Current result',
             (_BarLabPreset.range, 0) => 'Observed',
@@ -820,7 +865,9 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
       ],
       color: color,
-      unit: _preset == _BarLabPreset.signed
+      unit: _preset == _BarLabPreset.targets
+          ? '%'
+          : _preset == _BarLabPreset.signed
           ? '%'
           : _preset == _BarLabPreset.range
           ? '°C'
@@ -884,6 +931,13 @@ class _BarLabPageState extends State<BarLabPage> {
               cornerRadius: _cornerRadius,
             )
           : null,
+      targetValues: _showTargets
+          ? _targetValuesForSeries(seriesIndex)
+          : const [],
+      targetMarkerStyle: BarTargetMarkerStyle(
+        width: _targetMarkerWidth,
+        lengthFactor: _targetMarkerLength,
+      ),
       labelStyle: BarLabelStyle(
         show:
             _showLabels &&
@@ -919,6 +973,14 @@ class _BarLabPageState extends State<BarLabPage> {
     return [
       for (var index = 0; index < values.length; index++)
         values[index] - 8 - ((seriesIndex + index) % 4),
+    ];
+  }
+
+  List<double?> _targetValuesForSeries(int seriesIndex) {
+    const baseTargets = <double>[72, 78, 85, 68, 84, 95, 76];
+    return [
+      for (var index = 0; index < _categories.length; index++)
+        (baseTargets[index] + seriesIndex * 3).clamp(0, 100).toDouble(),
     ];
   }
 
@@ -964,6 +1026,9 @@ class _BarLabPageState extends State<BarLabPage> {
     _motionRevision = 0;
     _motionDurationMs = 650;
     _animateBars = true;
+    _showTargets = false;
+    _targetMarkerWidth = 2;
+    _targetMarkerLength = 1.3;
     switch (preset) {
       case _BarLabPreset.capacity:
         _seriesCount = 2;
@@ -975,6 +1040,19 @@ class _BarLabPageState extends State<BarLabPage> {
         _showTracks = true;
         _showGradient = false;
         _showLabels = true;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.targets:
+        _seriesCount = 1;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _barWidth = 0.52;
+        _barGap = 6;
+        _cornerRadius = 5;
+        _showTracks = true;
+        _showTargets = true;
+        _showGradient = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.rods:
         _seriesCount = 3;
@@ -1159,6 +1237,7 @@ class _BarLabPageState extends State<BarLabPage> {
 
   String _presetTitle() => switch (_preset) {
     _BarLabPreset.capacity => 'Progress against capacity',
+    _BarLabPreset.targets => 'Actual against target',
     _BarLabPreset.rods => 'Compact rounded rods',
     _BarLabPreset.gradient => 'Value-axis gradients',
     _BarLabPreset.signed => 'Positive and negative values',
@@ -1177,6 +1256,8 @@ class _BarLabPageState extends State<BarLabPage> {
   String _presetDescription() => switch (_preset) {
     _BarLabPreset.capacity =>
       'Tracks reveal remaining capacity without adding another data series.',
+    _BarLabPreset.targets =>
+      'Benchmarks remain distinct from actual values without becoming another series.',
     _BarLabPreset.rods =>
       'Narrow bars and full rounding create a compact dashboard treatment.',
     _BarLabPreset.gradient =>
@@ -1218,6 +1299,7 @@ class _BarLabPageState extends State<BarLabPage> {
           : '${_layoutLabel(_layoutMode).toLowerCase()} · $_effectiveGroupCount ${_effectiveGroupCount == 1 ? 'stack' : 'stacks'}',
       '${(_barWidth * 100).round()}% category fill',
       if (_showTracks) 'capacity tracks',
+      if (_showTargets) 'benchmark markers',
       if (_showGradient) 'gradient fill',
       if (_preset == _BarLabPreset.range) 'floating ranges',
       if (_preset == _BarLabPreset.waterfall) 'cumulative bridge',

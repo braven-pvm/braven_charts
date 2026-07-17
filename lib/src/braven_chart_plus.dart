@@ -4514,6 +4514,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         if (point.y < minY) minY = point.y;
         if (point.y > maxY) maxY = point.y;
       }
+      if (series is BarChartSeries) {
+        for (final target in series.targetValues.whereType<double>()) {
+          if (!target.isFinite) continue;
+          if (target < minY) minY = target;
+          if (target > maxY) maxY = target;
+        }
+      }
 
       // Handle edge case where all Y values are identical (zero span)
       if (minY == maxY) {
@@ -4643,8 +4650,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BarLayoutMode.normalizedStacked => '${point.y}$unit, normalized segment',
       _ => '${point.y}$unit',
     };
+    final target = series.targetValueFor(ref.pointIndex);
+    final targetDescription = target == null ? '' : ', target $target$unit';
     return (
-      value: '${series.name}, $category, $value',
+      value: '${series.name}, $category, $value$targetDescription',
       isSelected: _selectedPointRefs.contains(ref),
     );
   }

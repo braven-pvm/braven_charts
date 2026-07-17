@@ -279,6 +279,44 @@ class BarTrackStyle {
   int get hashCode => Object.hash(color, value, opacity, cornerRadius, border);
 }
 
+/// A benchmark marker drawn across a bar at a target value.
+///
+/// The marker is intentionally a passive reference: the bar remains the
+/// interactive data mark, while tooltips and semantics expose the target.
+class BarTargetMarkerStyle {
+  const BarTargetMarkerStyle({
+    this.color,
+    this.width = 2.0,
+    this.lengthFactor = 1.3,
+    this.opacity = 1.0,
+  }) : assert(width >= 0, 'Marker width must be non-negative'),
+       assert(lengthFactor > 0, 'Marker length factor must be positive'),
+       assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
+
+  /// Marker color. Null selects a contrasting color from the rendered bar.
+  final Color? color;
+
+  /// Logical-pixel stroke width.
+  final double width;
+
+  /// Marker length relative to the rendered bar thickness.
+  final double lengthFactor;
+
+  final double opacity;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarTargetMarkerStyle &&
+          other.color == color &&
+          other.width == width &&
+          other.lengthFactor == lengthFactor &&
+          other.opacity == opacity;
+
+  @override
+  int get hashCode => Object.hash(color, width, lengthFactor, opacity);
+}
+
 /// Connector line drawn between sequential waterfall columns.
 class BarWaterfallConnectorStyle {
   const BarWaterfallConnectorStyle({

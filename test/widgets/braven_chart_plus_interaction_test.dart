@@ -177,6 +177,7 @@ void main() {
                         ChartDataPoint(x: 1, y: 61, label: 'Tuesday'),
                       ],
                       barWidthPercent: 0.6,
+                      targetValues: [50, 75],
                     ),
                   ],
                 ),
@@ -218,7 +219,10 @@ void main() {
                 widget.properties.label == 'Interactive bar chart',
           ),
         );
-        expect(semantics.properties.value, 'Actual, Tuesday, 61.0 kg');
+        expect(
+          semantics.properties.value,
+          'Actual, Tuesday, 61.0 kg, target 75.0 kg',
+        );
         expect(semantics.properties.selected, isFalse);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);

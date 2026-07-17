@@ -647,6 +647,8 @@ class BarChartSeries extends ChartSeries {
     this.minBarLength = 0.0,
     this.barStyle = const BarChartStyle(),
     this.trackStyle,
+    this.targetValues = const [],
+    this.targetMarkerStyle = const BarTargetMarkerStyle(),
     this.labelStyle = const BarLabelStyle(),
   }) : assert(
          barWidthPercent != null || barWidthPixels != null,
@@ -759,6 +761,13 @@ class BarChartSeries extends ChartSeries {
   /// Runtime validation preserves the const constructor because Dart does not
   /// allow list-length access in a const assertion.
   void validateConfiguration() {
+    if (targetValues.isNotEmpty && targetValues.length != points.length) {
+      throw ArgumentError.value(
+        targetValues.length,
+        'targetValues',
+        'Must be empty or match the points length (${points.length})',
+      );
+    }
     if (rangeStartValues.isNotEmpty &&
         rangeStartValues.length != points.length) {
       throw ArgumentError.value(
@@ -820,6 +829,18 @@ class BarChartSeries extends ChartSeries {
   /// Optional passive capacity or target track behind each bar.
   final BarTrackStyle? trackStyle;
 
+  /// Optional benchmark values aligned by index with [points].
+  ///
+  /// Null entries omit the marker for that point. An empty list disables
+  /// target markers for the series.
+  final List<double?> targetValues;
+
+  /// Presentation for benchmark markers drawn across the bars.
+  final BarTargetMarkerStyle targetMarkerStyle;
+
+  double? targetValueFor(int pointIndex) =>
+      pointIndex < targetValues.length ? targetValues[pointIndex] : null;
+
   /// Optional labels positioned using the rendered bar rectangle.
   final BarLabelStyle labelStyle;
 
@@ -857,6 +878,9 @@ class BarChartSeries extends ChartSeries {
     BarChartStyle? barStyle,
     BarTrackStyle? trackStyle,
     bool clearTrackStyle = false,
+    List<double?>? targetValues,
+    bool clearTargetValues = false,
+    BarTargetMarkerStyle? targetMarkerStyle,
     BarLabelStyle? labelStyle,
   }) {
     return BarChartSeries(
@@ -892,6 +916,10 @@ class BarChartSeries extends ChartSeries {
       minBarLength: minBarLength ?? this.minBarLength,
       barStyle: barStyle ?? this.barStyle,
       trackStyle: clearTrackStyle ? null : (trackStyle ?? this.trackStyle),
+      targetValues: clearTargetValues
+          ? const []
+          : (targetValues ?? this.targetValues),
+      targetMarkerStyle: targetMarkerStyle ?? this.targetMarkerStyle,
       labelStyle: labelStyle ?? this.labelStyle,
     );
   }
@@ -919,6 +947,8 @@ class BarChartSeries extends ChartSeries {
           other.minBarLength == minBarLength &&
           other.barStyle == barStyle &&
           other.trackStyle == trackStyle &&
+          ChartSeries._listEquals(other.targetValues, targetValues) &&
+          other.targetMarkerStyle == targetMarkerStyle &&
           other.labelStyle == labelStyle;
 
   @override
@@ -941,6 +971,8 @@ class BarChartSeries extends ChartSeries {
     minBarLength,
     barStyle,
     trackStyle,
+    Object.hashAll(targetValues),
+    targetMarkerStyle,
     labelStyle,
   ]);
 

@@ -31,12 +31,14 @@ void main() {
           points: [ChartDataPoint(x: 0, y: 20, pointStyle: style)],
           barWidthPercent: 0.7,
           rangeStartValues: [10],
+          targetValues: [24],
         );
         const to = BarChartSeries(
           id: 'ranges',
           points: [ChartDataPoint(x: 0, y: 32, pointStyle: style)],
           barWidthPercent: 0.7,
           rangeStartValues: [14],
+          targetValues: [30],
         );
 
         final midpoint = BarSeriesTransition.interpolate(
@@ -47,6 +49,7 @@ void main() {
 
         expect(midpoint.points.single.y, 26);
         expect(midpoint.rangeStartValues.single, 12);
+        expect(midpoint.targetValues.single, 27);
         expect(midpoint.points.single.pointStyle, style);
       },
     );
