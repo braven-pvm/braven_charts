@@ -16,7 +16,7 @@ const _emerald = Color(0xFF10B981);
 const _cadenceTeal = Color(0xFF0F9F8F);
 
 /// Selects which analytical composition the package hero renders.
-enum PerformanceIntelligenceHeroPanel { both, thresholdExposure, powerDuration }
+enum PerformanceIntelligenceHeroPanel { both, sessionProfile, powerDuration }
 
 /// Two visually distinct analytical compositions for the package hero.
 class PerformanceIntelligenceGalleryHero extends StatelessWidget {
@@ -27,11 +27,6 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
 
   final PerformanceIntelligenceHeroPanel panel;
 
-  static const _belowThreshold = Color(0xFF22C55E);
-  static const _nearThreshold = Color(0xFF3B82F6);
-  static const _aboveThreshold = Color(0xFFF59E0B);
-  static const _highExposure = Color(0xFFFB7185);
-  static const _driftCoral = Color(0xFFEA580C);
   static const _nightCyan = Color(0xFF22D3EE);
   static const _nightMint = Color(0xFF34D399);
   static const _nightViolet = Color(0xFFA78BFA);
@@ -48,66 +43,32 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
     padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
   );
 
-  static const _intervalPower = [
-    ChartDataPoint(x: 1, y: 168, pointStyle: PointStyle.color(_belowThreshold)),
-    ChartDataPoint(x: 2, y: 181, pointStyle: PointStyle.color(_belowThreshold)),
-    ChartDataPoint(x: 3, y: 194, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(x: 4, y: 201, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(x: 5, y: 215, pointStyle: PointStyle.color(_aboveThreshold)),
-    ChartDataPoint(x: 6, y: 228, pointStyle: PointStyle.color(_aboveThreshold)),
-    ChartDataPoint(x: 7, y: 198, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(x: 8, y: 187, pointStyle: PointStyle.color(_belowThreshold)),
-    ChartDataPoint(x: 9, y: 209, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(
-      x: 10,
-      y: 238,
-      pointStyle: PointStyle.color(_aboveThreshold),
-    ),
-    ChartDataPoint(x: 11, y: 252, pointStyle: PointStyle.color(_highExposure)),
-    ChartDataPoint(x: 12, y: 268, pointStyle: PointStyle.color(_highExposure)),
-    ChartDataPoint(
-      x: 13,
-      y: 221,
-      pointStyle: PointStyle.color(_aboveThreshold),
-    ),
-    ChartDataPoint(x: 14, y: 205, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(
-      x: 15,
-      y: 183,
-      pointStyle: PointStyle.color(_belowThreshold),
-    ),
-    ChartDataPoint(x: 16, y: 196, pointStyle: PointStyle.color(_nearThreshold)),
-    ChartDataPoint(
-      x: 17,
-      y: 212,
-      pointStyle: PointStyle.color(_aboveThreshold),
-    ),
-    ChartDataPoint(
-      x: 18,
-      y: 189,
-      pointStyle: PointStyle.color(_belowThreshold),
-    ),
+  static const _sessionPower = [
+    ChartDataPoint(x: 0, y: 126),
+    ChartDataPoint(x: 1, y: 142),
+    ChartDataPoint(x: 2, y: 158),
+    ChartDataPoint(x: 3, y: 184),
+    ChartDataPoint(x: 4, y: 208),
+    ChartDataPoint(x: 5, y: 226),
+    ChartDataPoint(x: 6, y: 214),
+    ChartDataPoint(x: 7, y: 192),
+    ChartDataPoint(x: 8, y: 168),
+    ChartDataPoint(x: 9, y: 146),
+    ChartDataPoint(x: 10, y: 132),
   ];
 
-  static const _cardiacDrift = [
-    ChartDataPoint(x: 1, y: 1.8),
-    ChartDataPoint(x: 2, y: 2.1),
-    ChartDataPoint(x: 3, y: 3.0),
-    ChartDataPoint(x: 4, y: 3.6),
-    ChartDataPoint(x: 5, y: 4.4),
-    ChartDataPoint(x: 6, y: 5.1),
-    ChartDataPoint(x: 7, y: 4.8),
-    ChartDataPoint(x: 8, y: 4.3),
-    ChartDataPoint(x: 9, y: 5.8),
-    ChartDataPoint(x: 10, y: 7.1),
-    ChartDataPoint(x: 11, y: 8.9),
-    ChartDataPoint(x: 12, y: 10.6),
-    ChartDataPoint(x: 13, y: 9.8),
-    ChartDataPoint(x: 14, y: 8.2),
-    ChartDataPoint(x: 15, y: 6.6),
-    ChartDataPoint(x: 16, y: 7.4),
-    ChartDataPoint(x: 17, y: 8.0),
-    ChartDataPoint(x: 18, y: 6.9),
+  static const _sessionHeartRate = [
+    ChartDataPoint(x: 0, y: 104),
+    ChartDataPoint(x: 1, y: 112),
+    ChartDataPoint(x: 2, y: 124),
+    ChartDataPoint(x: 3, y: 139),
+    ChartDataPoint(x: 4, y: 151),
+    ChartDataPoint(x: 5, y: 162),
+    ChartDataPoint(x: 6, y: 168),
+    ChartDataPoint(x: 7, y: 164),
+    ChartDataPoint(x: 8, y: 152),
+    ChartDataPoint(x: 9, y: 136),
+    ChartDataPoint(x: 10, y: 120),
   ];
 
   static final _shortDuration = _distributionCurve(
@@ -168,8 +129,8 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (panel == PerformanceIntelligenceHeroPanel.thresholdExposure) {
-      return _buildThresholdExposureChart();
+    if (panel == PerformanceIntelligenceHeroPanel.sessionProfile) {
+      return _buildSessionProfileChart();
     }
     if (panel == PerformanceIntelligenceHeroPanel.powerDuration) {
       return _buildDurationModelChart();
@@ -179,7 +140,7 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 960;
         final charts = [
-          Expanded(child: _buildThresholdExposureChart()),
+          Expanded(child: _buildSessionProfileChart()),
           Expanded(child: _buildDurationModelChart()),
         ];
         if (compact) {
@@ -195,154 +156,130 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
     );
   }
 
-  Widget _buildThresholdExposureChart() {
+  Widget _buildSessionProfileChart() {
     return _FlagshipCard(
-      icon: Icons.view_week_outlined,
-      title: 'Threshold exposure by interval',
+      icon: Icons.monitor_heart_outlined,
+      title: 'Training load and response',
       subtitle:
-          'Point-styled power bars, cardiac drift, LT1 band, trend, and peak event',
-      badges: const ['Mixed series', 'Point styling', 'LT1 band', 'Tracking'],
-      interactionHint: 'Hover for exact interval values · wheel to zoom',
-      surfaceColor: const Color(0xFFFFFBEB),
+          'Power area, heart-rate response, stage bands, threshold, and tracking',
+      badges: const ['Line + area', '2 axes', 'Stages', 'Tracking'],
+      interactionHint: 'Hover to compare both signals · drag to pan',
+      surfaceColor: const Color(0xFFF8FAFC),
       child: BravenChartPlus(
         series: [
-          BarChartSeries(
-            id: 'interval-power',
-            name: 'Interval power',
+          AreaChartSeries(
+            id: 'session-power',
+            name: 'Power',
             unit: 'W',
-            points: _intervalPower,
-            color: _nearThreshold,
-            barWidthPercent: 0.72,
-            minWidth: 5,
-            maxWidth: 22,
+            points: _sessionPower,
+            color: _powerOrange,
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 2.25,
+            fillOpacity: 0.13,
             yAxisConfig: YAxisConfig(
               position: YAxisPosition.left,
               label: 'Power',
               unit: 'W',
-              color: _aboveThreshold,
-              min: 120,
-              max: 285,
+              color: _powerOrange,
+              min: 110,
+              max: 240,
             ),
           ),
           LineChartSeries(
-            id: 'cardiac-drift',
-            name: 'Cardiac drift',
-            unit: '%',
-            points: _cardiacDrift,
-            color: _driftCoral,
+            id: 'session-heart-rate',
+            name: 'Heart rate',
+            unit: 'bpm',
+            points: _sessionHeartRate,
+            color: _heartRateBlue,
             interpolation: LineInterpolation.monotone,
-            strokeWidth: 2.25,
+            strokeWidth: 2.5,
             showDataPointMarkers: true,
-            dataPointMarkerRadius: 2.5,
-            lineGlow: 2.5,
+            dataPointMarkerRadius: 2.75,
+            lineGlow: 1.5,
             inlineLabel: const SeriesInlineLabelConfig(
-              text: 'Cardiac drift',
+              text: 'Heart rate',
               position: SeriesLabelPosition.right,
               offsetY: -8,
-              color: _driftCoral,
+              color: _heartRateBlue,
             ),
             yAxisConfig: YAxisConfig(
               position: YAxisPosition.right,
-              label: 'Cardiac drift',
-              unit: '%',
-              color: _driftCoral,
-              min: 0,
-              max: 12,
+              label: 'Heart rate',
+              unit: 'bpm',
+              color: _heartRateBlue,
+              min: 95,
+              max: 175,
             ),
           ),
         ],
         annotations: [
           RangeAnnotation(
-            id: 'interval-build',
-            startX: 0.5,
-            endX: 6.5,
-            label: 'Build',
-            fillColor: const Color(0x0FF59E0B),
-            borderColor: const Color(0x22F59E0B),
+            id: 'session-warm-up',
+            startX: 0,
+            endX: 2.5,
+            label: 'Warm-up',
+            fillColor: const Color(0x103B82F6),
+            borderColor: const Color(0x223B82F6),
             allowDragging: false,
             allowEditing: false,
           ),
           RangeAnnotation(
-            id: 'interval-threshold-set',
-            startX: 6.5,
-            endX: 13.5,
-            label: 'Threshold set',
-            fillColor: const Color(0x0FFB7185),
-            borderColor: const Color(0x22FB7185),
+            id: 'session-work',
+            startX: 2.5,
+            endX: 7.5,
+            label: 'Work block',
+            fillColor: const Color(0x10F97316),
+            borderColor: const Color(0x22F97316),
             allowDragging: false,
             allowEditing: false,
           ),
           RangeAnnotation(
-            id: 'interval-finish',
-            startX: 13.5,
-            endX: 18.5,
-            label: 'Finish',
-            fillColor: const Color(0x0F22C55E),
-            borderColor: const Color(0x2222C55E),
-            allowDragging: false,
-            allowEditing: false,
-          ),
-          RangeAnnotation(
-            id: 'interval-lt1-band',
-            startY: 189,
-            endY: 209,
-            seriesId: 'interval-power',
-            label: 'LT1 ±5%',
-            labelPosition: AnnotationLabelPosition.bottomLeft,
-            fillColor: const Color(0x163B82F6),
-            borderColor: const Color(0x553B82F6),
+            id: 'session-recovery',
+            startX: 7.5,
+            endX: 10,
+            label: 'Recovery',
+            fillColor: const Color(0x1010B981),
+            borderColor: const Color(0x2210B981),
             allowDragging: false,
             allowEditing: false,
           ),
           ThresholdAnnotation(
-            id: 'interval-lt1',
+            id: 'session-threshold',
             axis: AnnotationAxis.y,
-            value: 199,
-            seriesId: 'interval-power',
-            label: 'LT1 · 199 W',
-            lineColor: const Color(0xFF475569),
+            value: 200,
+            seriesId: 'session-power',
+            label: 'Target · 200 W',
+            lineColor: _powerOrange,
             lineWidth: 1.2,
             dashPattern: const [5, 4],
             allowDragging: false,
             allowEditing: false,
           ),
-          TrendAnnotation(
-            id: 'interval-trend',
-            seriesId: 'interval-power',
-            trendType: TrendType.polynomial,
-            degree: 2,
-            label: 'Load trend',
-            lineColor: _aboveThreshold,
-            lineWidth: 1.4,
-            dashPattern: const [6, 4],
-            allowDragging: false,
-            allowEditing: false,
-          ),
           PointAnnotation(
-            id: 'interval-peak',
-            seriesId: 'interval-power',
-            dataPointIndex: 11,
-            label: 'Peak · 268 W',
+            id: 'session-peak',
+            seriesId: 'session-heart-rate',
+            dataPointIndex: 6,
+            label: 'Peak · 168 bpm',
             markerShape: MarkerShape.star,
             markerSize: 8,
-            markerColor: _highExposure,
+            markerColor: _heartRateBlue,
             allowDragging: false,
             allowEditing: false,
           ),
         ],
-        theme: ChartTheme.vibrant,
+        theme: ChartTheme.light,
         showLegend: true,
         legendStyle: const LegendStyle(
           position: LegendPosition.topRight,
-          orientation: LegendOrientation.vertical,
+          orientation: LegendOrientation.horizontal,
           textStyle: TextStyle(fontSize: 9, color: Color(0xFF475569)),
-          backgroundColor: Color(0xEFFFFFFF),
+          backgroundColor: Color(0xDFFFFFFF),
           markerSize: 11,
-          itemSpacing: 4,
+          itemSpacing: 8,
           allowDragging: false,
         ),
         normalizationMode: NormalizationMode.perSeries,
-        xAxisConfig: const XAxisConfig(label: 'Interval', min: 0.5, max: 18.5),
+        xAxisConfig: const XAxisConfig(label: 'Session time', min: 0, max: 10),
         yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
         interactionConfig: const InteractionConfig(
           enableZoom: true,

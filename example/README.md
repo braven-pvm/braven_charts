@@ -9,6 +9,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Pie Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 
+[**Open the chart-family overview →**](https://braven-pvm.github.io/braven_charts/?page=chart-types)
+
 ## Run locally
 
 From the repository root:
@@ -29,26 +31,30 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Flagship multi-axis analysis plus five Pie compositions spanning a simple value-first treatment, light/dark themes, solid and gradient fills, label strategies, dense categories, rounded slices, elevation, and legends |
-| Chart Types | Switch among line, area, bar, scatter, and pie charts; tune Pie labels, solid/linear/radial fills, slice gaps, and start angle alongside each type's basic visual parameters |
+| Gallery | Start with a native-rendered five-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped examples across the package |
+| Chart Types | Choose between line, area, bar, scatter, and pie from a concise visual overview; each family links to its own runnable guide |
+| Line Charts | Compare the workhorse composition, four interpolation modes, and independently scaled multi-axis signals; tune stroke, glow, markers, labels, tracking, zoom, and pan |
+| Area Charts | Compare layered magnitude, positive and negative baseline fills, and observed-versus-forecast compositions; tune opacity and baseline behavior |
+| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, and precision-styled bars through the complete Bar API |
+| Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
-| Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; reset the viewport |
-| Tracking Lab | Crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
+| Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
-| Segment Styling | Conditional colors, per-segment styles, gradients, and alert thresholds |
-| Streaming / Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
+| Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
 | Theming | Light, dark, accessible, and custom chart themes |
-| Multi-Axis / Axis Slots | Independent Y units, shared axes, normalization, visible slots, overflow, and runtime series selection |
+| Axes | Labels, formatting, minor ticks, explicit ranges, spacing, and render bounds |
+| Multi-Axis | Independent Y units, shared axes, normalization, visible slots, overflow, and runtime series selection |
 | Scientific | Dense measurement data and scientific formatting |
+| Series Styling | Conditional colors, per-segment styles, gradients, markers, point labels, glow, and alert thresholds |
 | Baseline Fill | Positive/negative and above/below-target area fills |
 | Loading States | Animated chart skeleton, circular/linear progress, empty results, and custom state content |
 | Performance | Large data sets and rendering diagnostics |
 | Chart Artifacts | Capture effective chart state, switch between chart/table/restored views, inspect canonical JSON, and restore an independent chart |
 | Chart Workbench | Keep one chart mounted across Chart/Data/Split views, link rows to points, inspect captured JSON and diagnostics, recover table failures, refresh a bounded-stream snapshot deliberately, and prove three hydrated charts remain independent |
 
-Additional focused pages cover minor ticks, explicit render ranges, point
-labels, series styling, power/lactate analysis, and lactate-threshold chord
-annotations.
+The chart-family hierarchy is intentionally extensible. A future family such
+as Donut joins the overview and nested navigation only when its package API and
+full runnable guide are ready, avoiding placeholder public pages.
 
 ## Interaction shortcuts
 

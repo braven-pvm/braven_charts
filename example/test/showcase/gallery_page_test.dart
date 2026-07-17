@@ -17,14 +17,14 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: PerformanceIntelligenceGalleryHero(
-            panel: PerformanceIntelligenceHeroPanel.thresholdExposure,
+            panel: PerformanceIntelligenceHeroPanel.sessionProfile,
           ),
         ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Threshold exposure by interval'), findsOneWidget);
+    expect(find.text('Training load and response'), findsOneWidget);
     expect(find.text('Adaptive power-duration model'), findsNothing);
     expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -39,58 +39,74 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Threshold exposure by interval'), findsNothing);
+    expect(find.text('Training load and response'), findsNothing);
     expect(find.text('Adaptive power-duration model'), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('gallery leads with flagship analysis and mounts live data', (
-    tester,
-  ) async {
-    final pixelRatio = tester.view.devicePixelRatio;
-    tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
+  testWidgets(
+    'gallery leads with chart families and mounts flagship analysis',
+    (tester) async {
+      final pixelRatio = tester.view.devicePixelRatio;
+      tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const MaterialApp(home: GalleryPage()));
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpWidget(const MaterialApp(home: GalleryPage()));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(
-      find.text('Two analytical viewpoints, one rendering engine'),
-      findsOneWidget,
-    );
-    expect(find.text('Threshold exposure by interval'), findsOneWidget);
-    expect(find.text('Adaptive power-duration model'), findsOneWidget);
-    expect(find.text('Mixed series'), findsOneWidget);
-    expect(find.text('Baseline fill'), findsOneWidget);
-    expect(
-      find.text('Hover for exact interval values · wheel to zoom'),
-      findsOneWidget,
-    );
-    final flagshipCharts = tester
-        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
-        .take(2)
-        .toList();
-    expect(flagshipCharts, hasLength(2));
-    expect(flagshipCharts.first.series, hasLength(2));
-    expect(flagshipCharts.first.annotations, hasLength(7));
-    expect(flagshipCharts.first.showXScrollbar, isFalse);
-    expect(flagshipCharts.last.series, hasLength(6));
-    expect(flagshipCharts.last.annotations, hasLength(5));
-    expect(flagshipCharts.last.showXScrollbar, isTrue);
+      expect(
+        find.text('Five chart families, one native renderer'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-line')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('chart-type-card-pie')), findsOneWidget);
 
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1900));
-    await tester.pump(const Duration(milliseconds: 600));
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Live sensor stream'), findsOneWidget);
-    expect(find.text('LIVE'), findsOneWidget);
-    expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(1));
+      expect(
+        find.text('A workhorse profile and a deeper analytical model'),
+        findsOneWidget,
+      );
+      expect(find.text('Training load and response'), findsOneWidget);
+      expect(find.text('Adaptive power-duration model'), findsOneWidget);
+      expect(find.text('Line + area'), findsOneWidget);
+      expect(find.text('Baseline fill'), findsOneWidget);
+      expect(
+        find.text('Hover to compare both signals · drag to pan'),
+        findsOneWidget,
+      );
+      final hero = find.byType(PerformanceIntelligenceGalleryHero);
+      final flagshipCharts = tester
+          .widgetList<BravenChartPlus>(
+            find.descendant(of: hero, matching: find.byType(BravenChartPlus)),
+          )
+          .toList();
+      expect(flagshipCharts, hasLength(2));
+      expect(flagshipCharts.first.series, hasLength(2));
+      expect(flagshipCharts.first.annotations, hasLength(5));
+      expect(flagshipCharts.first.showXScrollbar, isFalse);
+      expect(flagshipCharts.last.series, hasLength(6));
+      expect(flagshipCharts.last.annotations, hasLength(5));
+      expect(flagshipCharts.last.showXScrollbar, isTrue);
 
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -4300));
-    await tester.pump(const Duration(milliseconds: 600));
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1900));
+      await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('The building blocks'), findsOneWidget);
-  });
+      expect(find.text('Live sensor stream'), findsOneWidget);
+      expect(find.text('LIVE'), findsOneWidget);
+      expect(find.byType(BravenChartPlus), findsAtLeastNWidgets(1));
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -4300));
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.text('The building blocks'), findsOneWidget);
+    },
+  );
 
   testWidgets('gallery separates curated highlights from the full catalog', (
     tester,
@@ -103,7 +119,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.byKey(const ValueKey('gallery-mode-control')), findsOneWidget);
-    expect(find.text('22 representative compositions'), findsOneWidget);
+    expect(
+      find.text('Focused tour of the representative compositions'),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('gallery-advanced-curated')),
       findsOneWidget,
@@ -136,7 +155,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(
-      find.text('35 examples across the complete catalog'),
+      find.text('Every maintained example in the showcase catalog'),
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('gallery-advanced-full')), findsOneWidget);

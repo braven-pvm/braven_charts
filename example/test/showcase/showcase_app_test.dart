@@ -48,6 +48,10 @@ void main() {
     expect(find.byType(BravenBrand), findsOneWidget);
     expect(find.text('Tracking Lab'), findsNothing);
     expect(find.text('Interaction'), findsOneWidget);
+    expect(find.text('Line Charts'), findsOneWidget);
+    expect(find.text('Area Charts'), findsOneWidget);
+    expect(find.text('Bar Charts'), findsOneWidget);
+    expect(find.text('Scatter Charts'), findsOneWidget);
     expect(find.text('Pie Charts'), findsOneWidget);
     expect(find.text('Power + Lactate'), findsNothing);
     expect(find.text('Lactate Threshold'), findsNothing);
@@ -59,6 +63,24 @@ void main() {
     expect(find.text('Segment Styling'), findsNothing);
     expect(find.text('Point Labels'), findsNothing);
     expect(find.text('Series Styling'), findsOneWidget);
+
+    await tester.tap(find.text('Line Charts'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Choose a line charts example'), findsOneWidget);
+    expect(find.text('Workhorse'), findsWidgets);
+    final selectedRailItem = tester.widget<AnimatedContainer>(
+      find
+          .ancestor(
+            of: find.text('Line Charts'),
+            matching: find.byType(AnimatedContainer),
+          )
+          .first,
+    );
+    final selectedDecoration = selectedRailItem.decoration! as BoxDecoration;
+    expect(selectedDecoration.borderRadius, isNull);
+    expect(selectedDecoration.boxShadow, isNull);
+    expect(selectedDecoration.color, Colors.transparent);
 
     await tester.tap(find.text('Pie Charts'));
     await tester.pump(const Duration(milliseconds: 300));

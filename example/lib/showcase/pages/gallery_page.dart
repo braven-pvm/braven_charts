@@ -9,6 +9,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 import '../data/ecg_generator.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
+import '../widgets/chart_type_catalog.dart';
 
 const _capabilities = <(IconData, String)>[
   (Icons.open_with, 'Zoom, pan & scroll'),
@@ -24,7 +25,9 @@ enum _GalleryMode { curated, full }
 
 /// Gallery page showcasing multiple charts with different themes and complexities.
 class GalleryPage extends StatefulWidget {
-  const GalleryPage({super.key});
+  const GalleryPage({super.key, this.onOpenChartType});
+
+  final ValueChanged<String>? onOpenChartType;
 
   @override
   State<GalleryPage> createState() => _GalleryPageState();
@@ -160,10 +163,30 @@ class _GalleryPageState extends State<GalleryPage> {
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
-              eyebrow: 'FLAGSHIP COMPOSITION',
-              title: 'Two analytical viewpoints, one rendering engine',
+              eyebrow: 'CHART TYPE SAMPLER',
+              title: 'Five chart families, one native renderer',
               subtitle:
-                  'Mixed interval thresholds and continuous power-duration modelling show how one API supports radically different analytical layouts.',
+                  'Start with the shape of the data, then open a focused guide for the complete feature set.',
+              count: 5,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+              child: SizedBox(
+                height: 310,
+                child: ChartTypeCatalogStrip(
+                  onOpenChartType: widget.onOpenChartType,
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'FLAGSHIP COMPOSITION',
+              title: 'A workhorse profile and a deeper analytical model',
+              subtitle:
+                  'A readable multi-axis session profile sits beside a dense power-duration analysis to show the package range without turning every chart into a dashboard.',
             ),
           ),
           const SliverToBoxAdapter(
@@ -2662,8 +2685,8 @@ class _GalleryModeControl extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             mode == _GalleryMode.curated
-                ? '22 representative compositions'
-                : '35 examples across the complete catalog',
+                ? 'Focused tour of the representative compositions'
+                : 'Every maintained example in the showcase catalog',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
