@@ -39,7 +39,7 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 
 ## Package page
 
-- [ ] README installation and examples compile against 0.1.0.
+- [ ] README installation and examples compile against the release version.
 - [ ] `example/lib/main.dart` is concise enough for pub.dev's Example tab.
 - [ ] The public API has useful `///` documentation.
 - [ ] Screenshot 1 is a chart-only flagship hero and works as the package
