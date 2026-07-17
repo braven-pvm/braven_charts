@@ -54,6 +54,7 @@ class BravenChartController extends ChangeNotifier {
   ChartPointCommandHandler? _selectPointsHandler;
   void Function()? _clearPointFocusHandler;
   void Function()? _clearPointSelectionHandler;
+  void Function()? _replayRadialEntranceHandler;
   final ValueNotifier<ChartDocumentRevision?> _effectiveDocumentRevision =
       ValueNotifier(null);
   bool _disposed = false;
@@ -180,6 +181,14 @@ class BravenChartController extends ChangeNotifier {
   /// Clears durable point selection.
   void clearPointSelection() => _clearPointSelectionHandler?.call();
 
+  /// Replays the configured Pie or Donut entrance animation.
+  ///
+  /// Reduced-motion preferences, `PieAnimationMode.none`, and zero-duration
+  /// animation themes still render the final frame immediately. This is a
+  /// no-op when the controller is detached or the attached chart is not
+  /// radial.
+  void replayRadialEntrance() => _replayRadialEntranceHandler?.call();
+
   /// Captures the chart's effective document and optional current view state.
   ChartArtifactResult<ChartDocumentSnapshot> extractDocument([
     ChartDocumentExtractOptions options = const ChartDocumentExtractOptions(),
@@ -261,6 +270,7 @@ class BravenChartController extends ChangeNotifier {
     ChartPointCommandHandler? onSelectPoints,
     void Function()? onClearPointFocus,
     void Function()? onClearPointSelection,
+    void Function()? onReplayRadialEntrance,
     ChartDocumentRevision? effectiveDocumentRevision,
   }) {
     _selectHandler = onSelect;
@@ -274,6 +284,7 @@ class BravenChartController extends ChangeNotifier {
     _selectPointsHandler = onSelectPoints;
     _clearPointFocusHandler = onClearPointFocus;
     _clearPointSelectionHandler = onClearPointSelection;
+    _replayRadialEntranceHandler = onReplayRadialEntrance;
     if (!_disposed) {
       _effectiveDocumentRevision.value = effectiveDocumentRevision;
     }
@@ -292,6 +303,7 @@ class BravenChartController extends ChangeNotifier {
     _selectPointsHandler = null;
     _clearPointFocusHandler = null;
     _clearPointSelectionHandler = null;
+    _replayRadialEntranceHandler = null;
     if (!_disposed) _effectiveDocumentRevision.value = null;
   }
 

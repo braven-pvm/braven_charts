@@ -5,6 +5,16 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Angular `sweep` and geometry-preserving `fade` Pie/Donut entrance modes,
+  retaining radial `grow` as the default and honoring reduced motion across
+  initial mounts, data changes, and explicit controller replays.
+- `BravenChartController.replayRadialEntrance()` plus public Donut showcase
+  controls, artifact/theme round trips, AI input, and focused geometry,
+  rendering, accessibility, and lifecycle coverage for radial motion.
+
 ## 0.5.0 - 2026-07-17
 
 ### Added

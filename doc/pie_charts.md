@@ -260,8 +260,11 @@ JSON and restored with the Pie series.
 Use a dark color plus a downward offset for a shadow, or a slice-derived color
 with zero offset for a glow. Blur radius, spread radius, offset, opacity, and
 an optional fixed color are all configurable independently for base shadow and
-selected elevation. `MediaQuery.disableAnimationsOf` and a zero theme duration
-always win over `PieAnimationMode.grow`.
+selected elevation. `PieAnimationMode` supports `none`, radial `grow`, angular
+`sweep`, and geometry-preserving `fade`. `MediaQuery.disableAnimationsOf` and
+a zero theme duration always win over every entrance mode. A mounted chart can
+replay its configured radial entrance through
+`BravenChartController.replayRadialEntrance()`.
 
 The renderer reserves the maximum configured explode distance, border and
 focus stroke, base shadow, and selected elevation before calculating the Pie

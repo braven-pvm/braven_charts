@@ -468,7 +468,7 @@ same radial interaction contract.
             },
             'pie_animation_mode': {
               'type': 'string',
-              'enum': ['none', 'grow'],
+              'enum': ['none', 'grow', 'sweep', 'fade'],
               'description': 'Radial Pie/Donut entrance animation mode.',
             },
             'show_data_labels': {

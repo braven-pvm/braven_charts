@@ -245,7 +245,10 @@ void main() {
   testWidgets('Donut entrance animation respects reduced motion', (
     tester,
   ) async {
-    Widget build({required bool disableAnimations}) {
+    Widget build({
+      required bool disableAnimations,
+      required PieAnimationMode animationMode,
+    }) {
       return MaterialApp(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
@@ -257,12 +260,16 @@ void main() {
           width: 360,
           height: 280,
           child: BravenChartPlus(
+            key: ValueKey(
+              'animated-donut-${animationMode.name}-$disableAnimations',
+            ),
             showLegend: false,
             theme: ChartTheme.light,
             series: [
               DonutChartSeries.fromMap(
-                id: 'animated-donut',
+                id: 'animated-donut-${animationMode.name}',
                 values: const {'A': 2, 'B': 1},
+                donutStyle: DonutChartStyle(animationMode: animationMode),
                 centerContent: const DonutCenterContent(
                   valueMode: DonutCenterValueMode.total,
                 ),
@@ -273,16 +280,108 @@ void main() {
       );
     }
 
-    await tester.pumpWidget(build(disableAnimations: false));
+    for (final mode in const [
+      PieAnimationMode.grow,
+      PieAnimationMode.sweep,
+      PieAnimationMode.fade,
+    ]) {
+      await tester.pumpWidget(
+        build(disableAnimations: false, animationMode: mode),
+      );
+      await tester.pump();
+      expect(tester.hasRunningAnimations, isTrue, reason: mode.name);
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(
+        build(disableAnimations: true, animationMode: mode),
+      );
+      await tester.pump();
+      expect(tester.hasRunningAnimations, isFalse, reason: mode.name);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('controller replays the configured Donut sweep entrance', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    Widget build({bool disableAnimations = false}) => MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(disableAnimations: disableAnimations),
+        child: child!,
+      ),
+      home: SizedBox(
+        width: 360,
+        height: 280,
+        child: BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: [
+            DonutChartSeries.fromMap(
+              id: 'replay-sweep',
+              values: const {'A': 2, 'B': 1},
+              donutStyle: const DonutChartStyle(
+                innerRadiusFactor: 0.55,
+                animationMode: PieAnimationMode.sweep,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpWidget(build());
+    await tester.pumpAndSettle();
+
+    controller.replayRadialEntrance();
     await tester.pump();
+
     expect(tester.hasRunningAnimations, isTrue);
     await tester.pumpAndSettle();
 
     await tester.pumpWidget(build(disableAnimations: true));
     await tester.pump();
+    controller.replayRadialEntrance();
+    await tester.pump();
     expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'changing only the radial animation mode starts the new entrance',
+    (tester) async {
+      Widget build(PieAnimationMode mode) => MaterialApp(
+        home: SizedBox(
+          width: 360,
+          height: 280,
+          child: BravenChartPlus(
+            showLegend: false,
+            series: [
+              DonutChartSeries.fromMap(
+                id: 'mode-change',
+                values: const {'A': 2, 'B': 1},
+                donutStyle: DonutChartStyle(
+                  innerRadiusFactor: 0.55,
+                  animationMode: mode,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(build(PieAnimationMode.grow));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(build(PieAnimationMode.fade));
+      await tester.pump();
+
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('native Donut table selection updates the same center summary', (
     tester,

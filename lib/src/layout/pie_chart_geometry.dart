@@ -43,7 +43,10 @@ class PieSliceGeometry {
   /// Unmodified source start angle in radians.
   final double startAngle;
 
-  /// Signed source sweep angle in radians.
+  /// Signed rendered sweep angle in radians.
+  ///
+  /// During a [PieAnimationMode.sweep] entrance, the active edge slice can be
+  /// smaller than its final source share until the reveal completes.
   final double sweepAngle;
 
   /// Angular center in radians.
@@ -144,6 +147,7 @@ class PieChartGeometryCalculator {
     double? innerRadiusFactor,
     double? cornerRadius,
     PieCornerTreatment? cornerTreatment,
+    PieAnimationMode animationMode = PieAnimationMode.grow,
     double animationProgress = 1,
     double selectionProgress = 1,
   }) {
@@ -213,6 +217,12 @@ class PieChartGeometryCalculator {
       );
     }
 
+    final geometryProgress = animationMode == PieAnimationMode.grow
+        ? animationProgress
+        : 1.0;
+    final sweepRevealProgress = animationMode == PieAnimationMode.sweep
+        ? animationProgress
+        : 1.0;
     final contentRect = Rect.fromLTRB(
       padding.left,
       padding.top,
@@ -223,11 +233,11 @@ class PieChartGeometryCalculator {
     final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
     final visibleSliceCount = series.visiblePointIndices.length;
     final fullOuterRadius = availableRadius * series.radialStyle.radiusFactor;
-    final outerRadius = fullOuterRadius * animationProgress;
+    final outerRadius = fullOuterRadius * geometryProgress;
     final configuredInnerRadius = outerRadius * effectiveInnerRadiusFactor;
     final total = series.total;
     final sliceRadiusFactors = _sliceRadiusFactors(series);
-    final effectiveCornerRadius = requestedCornerRadius * animationProgress;
+    final effectiveCornerRadius = requestedCornerRadius * geometryProgress;
     final circularCenterRadius =
         effectiveCornerTreatment == PieCornerTreatment.circularCenter &&
             configuredInnerRadius <= _angleEpsilon
@@ -237,7 +247,7 @@ class PieChartGeometryCalculator {
             outerRadius: outerRadius,
             sliceRadiusFactors: sliceRadiusFactors,
             cornerRadius: effectiveCornerRadius,
-            animationProgress: animationProgress,
+            animationProgress: geometryProgress,
           )
         : 0.0;
     final innerRadius = math.max(configuredInnerRadius, circularCenterRadius);
@@ -254,6 +264,8 @@ class PieChartGeometryCalculator {
 
     final direction = series.radialStyle.clockwise ? 1.0 : -1.0;
     final configuredSweep = _degreesToRadians(series.sweepAngleDegrees);
+    final revealBudget = configuredSweep * sweepRevealProgress;
+    var consumedSweep = 0.0;
     var cursor = _degreesToRadians(series.radialStyle.startAngleDegrees);
     final slices = <PieSliceGeometry>[];
     for (final (pointIndex, point) in series.points.indexed) {
@@ -267,30 +279,42 @@ class PieChartGeometryCalculator {
           configuredInnerRadius +
           (outerRadius - configuredInnerRadius) * sliceRadiusFactor;
       final rawSweepMagnitude = configuredSweep * share;
+      final revealedSweepMagnitude = math.min(
+        rawSweepMagnitude,
+        math.max(0.0, revealBudget - consumedSweep),
+      );
+      consumedSweep += rawSweepMagnitude;
       final startAngle = cursor;
-      final sweepAngle = direction * rawSweepMagnitude;
-      final midAngle = cursor + direction * rawSweepMagnitude / 2;
+      cursor += direction * rawSweepMagnitude;
+      if (revealedSweepMagnitude <= _angleEpsilon) {
+        continue;
+      }
+      final sliceRevealProgress = rawSweepMagnitude <= _angleEpsilon
+          ? 1.0
+          : (revealedSweepMagnitude / rawSweepMagnitude).clamp(0.0, 1.0);
+      final sweepAngle = direction * revealedSweepMagnitude;
+      final midAngle = startAngle + direction * revealedSweepMagnitude / 2;
       final isAnnular = configuredInnerRadius > _angleEpsilon;
       final angularGap = isAnnular
           ? _annularSliceGapAngle(
               sliceGap: series.radialStyle.sliceGap,
-              animationProgress: animationProgress,
+              animationProgress: geometryProgress * sliceRevealProgress,
               visibleSliceCount: visibleSliceCount,
-              sweepMagnitude: rawSweepMagnitude,
+              sweepMagnitude: revealedSweepMagnitude,
               innerRadius: configuredInnerRadius,
               outerRadius: sliceFullOuterRadius,
             )
           : 0.0;
       final pathStartAngle = startAngle + direction * angularGap / 2;
       final pathSweepAngle =
-          direction * math.max(0, rawSweepMagnitude - angularGap);
+          direction * math.max(0, revealedSweepMagnitude - angularGap);
       final spacingDistance = isAnnular
           ? 0.0
           : _sliceSpacingDistance(
               sliceGap: series.radialStyle.sliceGap,
-              animationProgress: animationProgress,
+              animationProgress: geometryProgress * sliceRevealProgress,
               visibleSliceCount: visibleSliceCount,
-              sweepMagnitude: rawSweepMagnitude,
+              sweepMagnitude: revealedSweepMagnitude,
               sliceOuterRadius: sliceFullOuterRadius,
             );
       final spacingOffset = Offset.fromDirection(midAngle, spacingDistance);
@@ -311,6 +335,7 @@ class PieChartGeometryCalculator {
       final usesCircularCenter = circularCenterRadius > _angleEpsilon;
       final roundsInnerCorners =
           effectiveCornerTreatment == PieCornerTreatment.roundAll;
+      final sliceCornerRadius = effectiveCornerRadius * sliceRevealProgress;
       final basePath =
           spacingDistance > _angleEpsilon &&
               configuredInnerRadius <= _angleEpsilon
@@ -320,7 +345,7 @@ class PieChartGeometryCalculator {
               outerRadius: sliceFullOuterRadius,
               startAngle: pathStartAngle,
               sweepAngle: pathSweepAngle,
-              cornerRadius: effectiveCornerRadius,
+              cornerRadius: sliceCornerRadius,
               roundInnerCorners: roundsInnerCorners,
             )
           : _sectorPath(
@@ -329,7 +354,7 @@ class PieChartGeometryCalculator {
               outerRadius: sliceOuterRadius,
               startAngle: pathStartAngle,
               sweepAngle: pathSweepAngle,
-              cornerRadius: effectiveCornerRadius,
+              cornerRadius: sliceCornerRadius,
               roundInnerCorners: roundsInnerCorners,
             );
       final path = usesCircularCenter
@@ -374,7 +399,6 @@ class PieChartGeometryCalculator {
               sliceCenter + Offset.fromDirection(midAngle, outsideRadius),
         ),
       );
-      cursor += direction * rawSweepMagnitude;
     }
 
     return PieChartGeometry(

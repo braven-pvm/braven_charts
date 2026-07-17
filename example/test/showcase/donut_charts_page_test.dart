@@ -25,6 +25,8 @@ void main() {
     expect(find.text('Partial sweep'), findsOneWidget);
     expect(find.text('Variable radius'), findsOneWidget);
     expect(find.text('Center content'), findsOneWidget);
+    expect(find.text('Motion'), findsOneWidget);
+    expect(find.text('Grow in'), findsOneWidget);
     expect(find.text('Selected or total'), findsWidgets);
     expect(find.byKey(const ValueKey('donut-display-mode')), findsOneWidget);
     expect(find.byKey(const ValueKey('donut-showcase-chart')), findsOneWidget);
@@ -50,12 +52,35 @@ void main() {
 
     expect(find.text('Delivery mix'), findsWidgets);
     expect(find.text('280° sweep'), findsOneWidget);
+    expect(find.text('Sweep in'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('donut-story-reach')));
     await tester.pumpAndSettle();
 
     expect(find.text('Campaign contribution and reach'), findsWidgets);
     expect(find.text('30% center'), findsOneWidget);
+    expect(find.text('Fade in'), findsOneWidget);
+  });
+
+  testWidgets('replays the selected Donut entrance without remounting', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: DonutChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('replay-donut-entrance')));
+    await tester.pump();
+
+    expect(tester.hasRunningAnimations, isTrue);
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('selects native Donut data and restores a portable artifact', (

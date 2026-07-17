@@ -1223,6 +1223,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onSelectPoints: _selectPoints,
       onClearPointFocus: _clearPointFocus,
       onClearPointSelection: _clearPointSelection,
+      onReplayRadialEntrance: _startRadialRevealAnimation,
       effectiveDocumentRevision: _effectiveDocumentRevision,
       onClear: () {
         _captureStateRevision++;
@@ -1349,6 +1350,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onSelectPoints: _selectPoints,
         onClearPointFocus: _clearPointFocus,
         onClearPointSelection: _clearPointSelection,
+        onReplayRadialEntrance: _startRadialRevealAnimation,
         effectiveDocumentRevision: _effectiveDocumentRevision,
         onClear: () {
           _captureStateRevision++;
@@ -1368,12 +1370,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       oldWidget.series,
       widget.series,
     );
+    final radialAnimationModeChanged = _radialAnimationModeChanged(
+      previous: oldWidget.series,
+      next: widget.series,
+      previousTheme: oldWidget.theme ?? ChartTheme.light,
+      nextTheme: widget.theme ?? ChartTheme.light,
+    );
     if (seriesChanged ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(detectBarAnimations: seriesChanged);
-      if (radialDataChanged) _startRadialRevealAnimation();
+      if (radialDataChanged || radialAnimationModeChanged) {
+        _startRadialRevealAnimation();
+      }
       // Focus will be acquired on next mouse enter — no need to grab it here.
       // Previously this called requestFocus() which caused 21 charts to fight
       // for focus on gallery page load, contributing to startup lag.
@@ -2488,6 +2498,28 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     return previousRadial.runtimeType != nextRadial.runtimeType ||
         previousRadial.id != nextRadial.id ||
         !listEquals(previousRadial.points, nextRadial.points);
+  }
+
+  bool _radialAnimationModeChanged({
+    required List<ChartSeries> previous,
+    required List<ChartSeries> next,
+    required ChartTheme previousTheme,
+    required ChartTheme nextTheme,
+  }) {
+    if (previous.length != 1 || next.length != 1) return false;
+    final previousSeries = previous.single;
+    final nextSeries = next.single;
+    if (previousSeries is! RadialCategorySeries ||
+        nextSeries is! RadialCategorySeries) {
+      return false;
+    }
+    final previousMode =
+        previousSeries.radialStyle.animationMode ??
+        previousTheme.pieChartTheme.animationMode;
+    final nextMode =
+        nextSeries.radialStyle.animationMode ??
+        nextTheme.pieChartTheme.animationMode;
+    return previousMode != nextMode;
   }
 
   PieAnimationMode _effectiveRadialAnimationMode(RadialCategorySeries series) =>

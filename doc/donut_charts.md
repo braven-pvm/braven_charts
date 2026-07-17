@@ -93,6 +93,46 @@ Use `PieCornerTreatment.circularCenter` when rounded outer slices must retain a
 perfect circular opening. `outerOnly` keeps inner corners sharp, while
 `roundAll` preserves independent rounding on every corner.
 
+## Entrance motion
+
+`DonutChartStyle.animationMode` overrides the shared
+`ChartTheme.pieChartTheme.animationMode` for one series. The available
+`PieAnimationMode` values are:
+
+| Mode | Behavior |
+| --- | --- |
+| `none` | Render the final ring immediately |
+| `grow` | Grow the ring radially from its shared center; this remains the compatibility default |
+| `sweep` | Reveal categories in source order from `startAngleDegrees`, following `clockwise` and the configured sweep span |
+| `fade` | Fade the complete final geometry into view without changing its radii |
+
+```dart
+final controller = BravenChartController();
+
+BravenChartPlus(
+  bravenChartController: controller,
+  series: [
+    DonutChartSeries.fromMap(
+      id: 'delivery-mix',
+      values: const {'Build': 46, 'Discovery': 18, 'Design': 14},
+      donutStyle: const DonutChartStyle(
+        innerRadiusFactor: 0.62,
+        animationMode: PieAnimationMode.sweep,
+      ),
+    ),
+  ],
+);
+
+controller.replayRadialEntrance();
+```
+
+The data-update duration and curve come from `ChartTheme.animationTheme`.
+`MediaQuery.disableAnimationsOf`, `PieAnimationMode.none`, and a zero duration
+always render the final frame immediately, including controller-triggered
+replays. Labels wait until the entrance lifecycle completes so elastic curves
+cannot flash them on and off. Entrance modes do not change source data,
+selection identity, artifact content, or the native table.
+
 ## Center content
 
 Center content is text-first and portable. It is painted into the measured
@@ -302,6 +342,7 @@ the shared `LegendStyle` and `InteractionTheme` contracts.
 - The center accepts portable text configuration, not an arbitrary Widget or
   builder.
 - Multiple concentric rings, grouping into “Other”, drill-down, center actions,
-  3D effects, and image shaders are not V1 features.
+  data-to-data morphing, per-slice staggering, spring choreography, 3D effects,
+  and image shaders are not V1 features.
 - Prefer bars when precise comparison matters more than part-to-whole meaning
   or when categories are too dense for readable slices.

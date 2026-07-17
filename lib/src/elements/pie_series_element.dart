@@ -49,6 +49,9 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
          cornerTreatment:
              series.radialStyle.cornerTreatment ??
              theme.pieChartTheme.cornerTreatment,
+         animationMode:
+             series.radialStyle.animationMode ??
+             theme.pieChartTheme.animationMode,
          animationProgress: animationProgress,
          selectionProgress: selectionProgress,
        );
@@ -256,6 +259,20 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final animationMode =
+        series.radialStyle.animationMode ?? theme.pieChartTheme.animationMode;
+    final fadeProgress = animationMode == PieAnimationMode.fade
+        ? animationProgress
+        : 1.0;
+    if (fadeProgress <= 0) return;
+    final usesFadeLayer = fadeProgress < 1;
+    if (usesFadeLayer) {
+      canvas.saveLayer(
+        Offset.zero & size,
+        Paint()
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: fadeProgress),
+      );
+    }
     final slices = geometry.slices;
     final opacity = series.radialStyle.opacity ?? theme.pieChartTheme.opacity;
     final shadow = series.radialStyle.shadow ?? theme.pieChartTheme.shadow;
@@ -343,6 +360,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       }
     }
     _paintCenterContent(canvas);
+    if (usesFadeLayer) canvas.restore();
   }
 
   void _paintCenterContent(Canvas canvas) {

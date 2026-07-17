@@ -84,6 +84,110 @@ void main() {
       );
     });
 
+    test('sweep reveal follows the configured clockwise angular order', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'sweep-reveal',
+        values: const {'A': 2, 'B': 1, 'C': 1},
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.5,
+          startAngleDegrees: -90,
+          sweepAngleDegrees: 180,
+          radiusFactor: 1,
+          sliceGap: 0,
+          animationMode: PieAnimationMode.sweep,
+        ),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+        animationMode: PieAnimationMode.sweep,
+        animationProgress: 0.75,
+      );
+
+      expect(geometry.outerRadius, 100);
+      expect(geometry.innerRadius, 50);
+      expect(geometry.slices.map((slice) => slice.pointIndex), [0, 1]);
+      expect(geometry.slices.map((slice) => slice.sweepAngle), [
+        closeTo(math.pi / 2, 1e-9),
+        closeTo(math.pi / 4, 1e-9),
+      ]);
+      expect(geometry.sliceAt(const Offset(150, 150))?.pointIndex, 1);
+      expect(geometry.sliceAt(const Offset(50, 100)), isNull);
+    });
+
+    test(
+      'sweep reveal follows counter-clockwise order and configured span',
+      () {
+        final series = DonutChartSeries.fromMap(
+          id: 'counter-sweep-reveal',
+          values: const {'A': 1, 'B': 1},
+          donutStyle: const DonutChartStyle(
+            innerRadiusFactor: 0.45,
+            startAngleDegrees: 0,
+            clockwise: false,
+            sweepAngleDegrees: 240,
+            radiusFactor: 1,
+            sliceGap: 0,
+          ),
+        );
+
+        final geometry = PieChartGeometryCalculator.calculate(
+          series: series,
+          size: const Size.square(200),
+          animationMode: PieAnimationMode.sweep,
+          animationProgress: 0.25,
+        );
+
+        expect(geometry.slices, hasLength(1));
+        expect(geometry.slices.single.pointIndex, 0);
+        expect(geometry.slices.single.startAngle, 0);
+        expect(geometry.slices.single.sweepAngle, closeTo(-math.pi / 3, 1e-9));
+      },
+    );
+
+    test('sweep reveal at zero and one has stable endpoint geometry', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'sweep-endpoints',
+        values: const {'A': 1, 'B': 2},
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.6,
+          sweepAngleDegrees: 270,
+          radiusFactor: 1,
+          sliceGap: 0,
+        ),
+      );
+
+      final hidden = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+        animationMode: PieAnimationMode.sweep,
+        animationProgress: 0,
+      );
+      final revealed = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+        animationMode: PieAnimationMode.sweep,
+        animationProgress: 1,
+      );
+      final finalGeometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+      );
+
+      expect(hidden.slices, isEmpty);
+      expect(hidden.outerRadius, 100);
+      expect(hidden.innerRadius, 60);
+      expect(
+        revealed.slices.map((slice) => slice.sweepAngle),
+        finalGeometry.slices.map((slice) => slice.sweepAngle),
+      );
+      expect(
+        revealed.slices.map((slice) => slice.bounds),
+        finalGeometry.slices.map((slice) => slice.bounds),
+      );
+    });
+
     test('maps variable radius across available ring thickness', () {
       final series = DonutChartSeries.fromMap(
         id: 'variable-ring',

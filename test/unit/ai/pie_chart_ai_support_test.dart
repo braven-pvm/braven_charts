@@ -68,7 +68,7 @@ void main() {
           'pie_selected_glow_spread': 2,
           'pie_selected_glow_offset_x': 1,
           'pie_selected_glow_opacity': 0.6,
-          'pie_animation_mode': 'grow',
+          'pie_animation_mode': 'sweep',
           'show_data_labels': true,
           'pie_label_position': 'inside',
           'pie_label_content': 'category_value_and_percentage',
@@ -133,7 +133,7 @@ void main() {
       expect(series.pieStyle.selectedElevation?.spreadRadius, 2);
       expect(series.pieStyle.selectedElevation?.offset, const Offset(1, 0));
       expect(series.pieStyle.selectedElevation?.opacity, 0.6);
-      expect(series.pieStyle.animationMode, PieAnimationMode.grow);
+      expect(series.pieStyle.animationMode, PieAnimationMode.sweep);
       expect(series.dataLabels.position, PieDataLabelPosition.inside);
       expect(
         series.dataLabels.content,

@@ -27,6 +27,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   double _radiusFactor = 0.86;
   double _sliceGap = 3;
   double _cornerRadius = 8;
+  PieAnimationMode _animationMode = PieAnimationMode.grow;
   bool _clockwise = true;
   bool _showLabels = true;
   bool _showLegend = true;
@@ -242,6 +243,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 _MetricPill(label: '${_sweepAngleDegrees.round()}° sweep'),
                 const SizedBox(width: 6),
                 _MetricPill(label: _centerModeName(_centerValueMode)),
+                const SizedBox(width: 6),
+                _MetricPill(label: '${_animationModeName(_animationMode)} in'),
               ],
             ),
             const SizedBox(height: 8),
@@ -390,6 +393,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         selectionExplodeOffset: 10,
         cornerRadius: _cornerRadius,
         cornerTreatment: PieCornerTreatment.roundAll,
+        animationMode: _animationMode,
         gradient: const PieGradientStyle(
           type: PieGradientType.radial,
           startLightnessShift: 0.14,
@@ -639,6 +643,32 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             suffix: 'px',
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _cornerRadius = value),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Motion',
+        icon: Icons.animation_outlined,
+        children: [
+          EnumOption<PieAnimationMode>(
+            key: const ValueKey('donut-animation-mode'),
+            label: 'Entrance',
+            value: _animationMode,
+            values: PieAnimationMode.values,
+            labelBuilder: _animationModeName,
+            onChanged: _setAnimationMode,
+            subtitle: 'Grow, reveal around the ring, fade, or render instantly',
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('replay-donut-entrance'),
+              onPressed: _animationMode == PieAnimationMode.none
+                  ? null
+                  : _chartController.replayRadialEntrance,
+              icon: const Icon(Icons.replay_outlined, size: 18),
+              label: const Text('Replay entrance'),
+            ),
           ),
         ],
       ),
@@ -1093,6 +1123,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.86;
           _sliceGap = 3;
           _cornerRadius = 8;
+          _animationMode = PieAnimationMode.grow;
           _centerValueMode = DonutCenterValueMode.selectedOrTotal;
           _centerStyle = _DonutCenterStyle.theme;
         case _DonutStory.progress:
@@ -1102,6 +1133,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.9;
           _sliceGap = 2;
           _cornerRadius = 12;
+          _animationMode = PieAnimationMode.sweep;
           _centerValueMode = DonutCenterValueMode.custom;
           _centerStyle = _DonutCenterStyle.accent;
         case _DonutStory.reach:
@@ -1111,6 +1143,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.88;
           _sliceGap = 4;
           _cornerRadius = 10;
+          _animationMode = PieAnimationMode.fade;
           _centerValueMode = DonutCenterValueMode.total;
           _centerStyle = _DonutCenterStyle.compact;
       }
@@ -1124,6 +1157,17 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     DonutCenterValueMode.selectedOrTotal => 'Selected or total',
     DonutCenterValueMode.custom => 'Custom text',
   };
+
+  String _animationModeName(PieAnimationMode mode) => switch (mode) {
+    PieAnimationMode.none => 'No animation',
+    PieAnimationMode.grow => 'Grow',
+    PieAnimationMode.sweep => 'Sweep',
+    PieAnimationMode.fade => 'Fade',
+  };
+
+  void _setAnimationMode(PieAnimationMode mode) {
+    setState(() => _animationMode = mode);
+  }
 
   LabelStyle? get _centerLabelStyle => switch (_centerStyle) {
     _DonutCenterStyle.theme => null,

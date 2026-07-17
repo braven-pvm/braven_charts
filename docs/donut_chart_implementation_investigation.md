@@ -287,6 +287,17 @@ fields. The one-series/no-Cartesian-axis boundary remains explicit.
    Full test/analyze, benchmarks, direct-route debug and release web checks,
    narrow/large-text/high-contrast/reduced-motion review, dartdoc, package
    dry-run, and local user approval before PR.
+6. **V1.1 radial entrance motion — implemented locally**
+   Preserve `grow` as the compatibility default; add deterministic angular
+   `sweep` and geometry-preserving `fade`; serialize theme/series overrides;
+   expose the modes to AI input; add a controller replay command; honor reduced
+   motion; and make all three modes directly testable in the public Donut
+   showcase.
+
+The motion slice deliberately excludes interpolation between old and new data,
+per-slice delay/stagger controls, spring physics, selection-motion redesign,
+and multi-ring sequencing. Those require separate lifecycle and identity
+contracts rather than additional enum values in this slice.
 
 Release evidence on the current `origin/master` baseline:
 

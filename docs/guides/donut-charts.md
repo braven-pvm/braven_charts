@@ -29,7 +29,8 @@ The public contract covers:
 - complete or partial annular geometry;
 - clockwise/counter-clockwise ordering and configurable start angle;
 - solid or gradient fills, physical gaps, three corner treatments, opacity,
-  borders, shadows, selected elevation, and reduced-motion-aware animation;
+  borders, shadows, selected elevation, and `none`, `grow`, `sweep`, or `fade`
+  reduced-motion-aware entrance animation;
 - inside or collision-managed outside labels and positioned legends;
 - total, selected, selected-or-total, or custom portable center text;
 - optional complete second-metric values for variable outer radii;
@@ -43,3 +44,5 @@ artifact capabilities, AI tool input, theming, and accessibility.
 
 Try the [live Donut showcase](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
 to compare Chart, Data, and Split modes and capture a restorable artifact.
+Use the Motion controls to compare modes and replay the entrance without
+changing the chart data.

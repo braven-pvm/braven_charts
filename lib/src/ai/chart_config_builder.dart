@@ -571,6 +571,8 @@ class ChartConfigBuilder {
         null => null,
         'none' => PieAnimationMode.none,
         'grow' => PieAnimationMode.grow,
+        'sweep' => PieAnimationMode.sweep,
+        'fade' => PieAnimationMode.fade,
         final value => throw FormatException(
           'Unknown pie_animation_mode "$value".',
         ),

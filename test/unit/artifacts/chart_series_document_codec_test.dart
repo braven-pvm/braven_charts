@@ -321,6 +321,7 @@ void main() {
           sliceGap: 4,
           cornerRadius: 6,
           cornerTreatment: PieCornerTreatment.roundAll,
+          animationMode: PieAnimationMode.sweep,
         ),
         centerContent: const DonutCenterContent(
           label: 'Total vehicles',

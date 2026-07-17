@@ -73,7 +73,7 @@ accepts exactly one pie series and cannot mix with Cartesian series.
   outside-lane offset, connector, collision, and callout policy
 - `ChartTheme.pieChartTheme`: shared `PieChartTheme` defaults, including
   `PieGradientStyle` fills, `PieCornerTreatment`, `PieElevationStyle`
-  shadows/glows, and `PieAnimationMode`
+  shadows/glows, and `PieAnimationMode.none`, `grow`, `sweep`, or `fade`
 - `total`, `visiblePointIndices`, and `hasVariableSliceRadius`: validated
   contribution and radius helpers
 
@@ -95,6 +95,8 @@ is single-series and cannot mix with Pie or Cartesian series.
   theme defaults for measured center text
 - `sliceRadiusConfig`: optional second-metric label, unit, minimum factor, and
   area or linear scaling
+- `BravenChartController.replayRadialEntrance()`: replay the effective entrance
+  while still honoring reduced motion, `none`, and zero-duration themes
 
 The center can show total, selected value, selected-or-total fallback, or
 custom text. It follows the same `ChartPointRef` selection used by slices,
