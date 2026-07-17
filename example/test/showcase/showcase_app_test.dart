@@ -64,6 +64,10 @@ void main() {
     expect(find.text('Segment Styling'), findsNothing);
     expect(find.text('Point Labels'), findsNothing);
     expect(find.text('Series Styling'), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const ValueKey('chart-type-card-donut'))).right,
+      lessThanOrEqualTo(1440),
+    );
 
     await tester.tap(find.text('Line Charts'));
     await tester.pump(const Duration(milliseconds: 300));

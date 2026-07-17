@@ -299,7 +299,7 @@ class ChartTypeCatalogStrip extends StatelessWidget {
         final fittedWidth =
             (constraints.maxWidth - (gap * (showcaseChartTypes.length - 1))) /
             showcaseChartTypes.length;
-        final fitAll = fittedWidth >= 176;
+        final fitAll = fittedWidth >= 170;
         final cardWidth = fitAll ? fittedWidth : 236.0;
         final row = Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
