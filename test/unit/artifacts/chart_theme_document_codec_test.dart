@@ -82,6 +82,10 @@ void main() {
             spreadRadius: 2,
             opacity: 0.5,
           ),
+          borderColorMode: PieBorderColorMode.slice,
+          borderHueShiftDegrees: 18,
+          borderSaturationShift: -0.08,
+          borderLightnessShift: -0.2,
           calloutStyle: LabelStyle(
             textStyle: TextStyle(color: Colors.white, fontSize: 13),
             backgroundColor: Color(0xE6212121),

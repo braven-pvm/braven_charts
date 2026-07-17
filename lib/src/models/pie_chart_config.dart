@@ -13,6 +13,15 @@ enum PieAnimationMode {
   grow,
 }
 
+/// Policy used when a Pie slice does not provide an explicit border color.
+enum PieBorderColorMode {
+  /// Use the chart theme's axis-line color for every slice.
+  chartTheme,
+
+  /// Derive each border from its slice color using the configured HSL shifts.
+  slice,
+}
+
 /// A reusable blurred elevation layer for pie slices.
 ///
 /// A downward [offset] and dark [color] reads as a shadow. A zero offset with
@@ -101,10 +110,20 @@ class PieChartTheme {
       spreadRadius: 1,
       opacity: 0.38,
     ),
+    this.borderColorMode = PieBorderColorMode.chartTheme,
+    this.borderHueShiftDegrees = 0,
+    this.borderSaturationShift = 0,
+    this.borderLightnessShift = -0.12,
     this.calloutStyle,
     this.animationMode = PieAnimationMode.grow,
   }) : assert(opacity >= 0 && opacity <= 1),
-       assert(cornerRadius >= 0);
+       assert(cornerRadius >= 0),
+       assert(
+         borderHueShiftDegrees > double.negativeInfinity &&
+             borderHueShiftDegrees < double.infinity,
+       ),
+       assert(borderSaturationShift >= -1 && borderSaturationShift <= 1),
+       assert(borderLightnessShift >= -1 && borderLightnessShift <= 1);
 
   /// Default slice opacity in the inclusive range 0–1.
   final double opacity;
@@ -118,6 +137,19 @@ class PieChartTheme {
   /// Additional elevation applied to selected slices.
   final PieElevationStyle selectedElevation;
 
+  /// Default border-color policy when a series has no fixed
+  /// [PieChartStyle.borderColor].
+  final PieBorderColorMode borderColorMode;
+
+  /// Hue rotation applied by [PieBorderColorMode.slice].
+  final double borderHueShiftDegrees;
+
+  /// Additive HSL saturation shift applied by [PieBorderColorMode.slice].
+  final double borderSaturationShift;
+
+  /// Additive HSL lightness shift applied by [PieBorderColorMode.slice].
+  final double borderLightnessShift;
+
   /// Optional outside/inside data-label callout styling.
   final LabelStyle? calloutStyle;
 
@@ -130,6 +162,10 @@ class PieChartTheme {
     double? cornerRadius,
     PieElevationStyle? shadow,
     PieElevationStyle? selectedElevation,
+    PieBorderColorMode? borderColorMode,
+    double? borderHueShiftDegrees,
+    double? borderSaturationShift,
+    double? borderLightnessShift,
     LabelStyle? calloutStyle,
     bool clearCalloutStyle = false,
     PieAnimationMode? animationMode,
@@ -139,6 +175,12 @@ class PieChartTheme {
       cornerRadius: cornerRadius ?? this.cornerRadius,
       shadow: shadow ?? this.shadow,
       selectedElevation: selectedElevation ?? this.selectedElevation,
+      borderColorMode: borderColorMode ?? this.borderColorMode,
+      borderHueShiftDegrees:
+          borderHueShiftDegrees ?? this.borderHueShiftDegrees,
+      borderSaturationShift:
+          borderSaturationShift ?? this.borderSaturationShift,
+      borderLightnessShift: borderLightnessShift ?? this.borderLightnessShift,
       calloutStyle: clearCalloutStyle
           ? null
           : (calloutStyle ?? this.calloutStyle),
@@ -154,6 +196,10 @@ class PieChartTheme {
           cornerRadius == other.cornerRadius &&
           shadow == other.shadow &&
           selectedElevation == other.selectedElevation &&
+          borderColorMode == other.borderColorMode &&
+          borderHueShiftDegrees == other.borderHueShiftDegrees &&
+          borderSaturationShift == other.borderSaturationShift &&
+          borderLightnessShift == other.borderLightnessShift &&
           calloutStyle == other.calloutStyle &&
           animationMode == other.animationMode;
 
@@ -163,6 +209,10 @@ class PieChartTheme {
     cornerRadius,
     shadow,
     selectedElevation,
+    borderColorMode,
+    borderHueShiftDegrees,
+    borderSaturationShift,
+    borderLightnessShift,
     calloutStyle,
     animationMode,
   );
@@ -224,6 +274,10 @@ class PieChartStyle {
     this.sliceGap = 2,
     this.borderWidth = 1,
     this.borderColor,
+    this.borderColorMode,
+    this.borderHueShiftDegrees,
+    this.borderSaturationShift,
+    this.borderLightnessShift,
     this.selectionExplodeOffset = 8,
     this.opacity,
     this.cornerRadius,
@@ -249,6 +303,21 @@ class PieChartStyle {
 
   /// Optional shared slice-border color.
   final Color? borderColor;
+
+  /// Optional border policy overriding [PieChartTheme.borderColorMode].
+  ///
+  /// A non-null [borderColor] always wins and produces a fixed shared color.
+  final PieBorderColorMode? borderColorMode;
+
+  /// Optional hue rotation overriding [PieChartTheme.borderHueShiftDegrees].
+  final double? borderHueShiftDegrees;
+
+  /// Optional saturation shift overriding
+  /// [PieChartTheme.borderSaturationShift].
+  final double? borderSaturationShift;
+
+  /// Optional lightness shift overriding [PieChartTheme.borderLightnessShift].
+  final double? borderLightnessShift;
 
   /// Logical-pixel offset applied to a selected, exploded slice.
   final double selectionExplodeOffset;
@@ -277,6 +346,14 @@ class PieChartStyle {
     double? borderWidth,
     Color? borderColor,
     bool clearBorderColor = false,
+    PieBorderColorMode? borderColorMode,
+    bool clearBorderColorMode = false,
+    double? borderHueShiftDegrees,
+    bool clearBorderHueShiftDegrees = false,
+    double? borderSaturationShift,
+    bool clearBorderSaturationShift = false,
+    double? borderLightnessShift,
+    bool clearBorderLightnessShift = false,
     double? selectionExplodeOffset,
     double? opacity,
     bool clearOpacity = false,
@@ -296,6 +373,18 @@ class PieChartStyle {
       sliceGap: sliceGap ?? this.sliceGap,
       borderWidth: borderWidth ?? this.borderWidth,
       borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
+      borderColorMode: clearBorderColorMode
+          ? null
+          : (borderColorMode ?? this.borderColorMode),
+      borderHueShiftDegrees: clearBorderHueShiftDegrees
+          ? null
+          : (borderHueShiftDegrees ?? this.borderHueShiftDegrees),
+      borderSaturationShift: clearBorderSaturationShift
+          ? null
+          : (borderSaturationShift ?? this.borderSaturationShift),
+      borderLightnessShift: clearBorderLightnessShift
+          ? null
+          : (borderLightnessShift ?? this.borderLightnessShift),
       selectionExplodeOffset:
           selectionExplodeOffset ?? this.selectionExplodeOffset,
       opacity: clearOpacity ? null : (opacity ?? this.opacity),
@@ -322,6 +411,10 @@ class PieChartStyle {
           sliceGap == other.sliceGap &&
           borderWidth == other.borderWidth &&
           borderColor == other.borderColor &&
+          borderColorMode == other.borderColorMode &&
+          borderHueShiftDegrees == other.borderHueShiftDegrees &&
+          borderSaturationShift == other.borderSaturationShift &&
+          borderLightnessShift == other.borderLightnessShift &&
           selectionExplodeOffset == other.selectionExplodeOffset &&
           opacity == other.opacity &&
           cornerRadius == other.cornerRadius &&
@@ -337,6 +430,10 @@ class PieChartStyle {
     sliceGap,
     borderWidth,
     borderColor,
+    borderColorMode,
+    borderHueShiftDegrees,
+    borderSaturationShift,
+    borderLightnessShift,
     selectionExplodeOffset,
     opacity,
     cornerRadius,

@@ -156,6 +156,20 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        () => build(
+          style: const PieChartStyle(borderHueShiftDegrees: double.infinity),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(style: const PieChartStyle(borderSaturationShift: 1.01)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(style: const PieChartStyle(borderLightnessShift: -1.01)),
+        throwsArgumentError,
+      );
+      expect(
         () => build(style: const PieChartStyle(opacity: 1.01)),
         throwsArgumentError,
       );

@@ -40,8 +40,10 @@ BravenChartPlus(
 ```
 
 The automatic slice legend shows category, formatted value, and share. Hover
-or tap a slice for its tooltip. Tap a slice or legend item to select and
-optionally explode it; tap again or press Escape to clear.
+or tap a slice for its tooltip. Tap a slice, legend item, or linked data-table
+row to select and optionally explode it. Durable selection owns the tooltip:
+it appears for all three selection paths, follows the slice when geometry or
+layout changes, and hides when the selection is cleared.
 
 ## Data contract
 
@@ -101,7 +103,8 @@ const PieChartStyle(
   radiusFactor: 0.86,
   sliceGap: 2,
   borderWidth: 1,
-  borderColor: Color(0xFF374151),
+  borderColorMode: PieBorderColorMode.slice,
+  borderLightnessShift: -0.16,
   selectionExplodeOffset: 10,
 )
 ```
@@ -111,11 +114,20 @@ const PieChartStyle(
 - `radiusFactor` is a value greater than 0 and at most 1;
 - `sliceGap`, `borderWidth`, and `selectionExplodeOffset` are non-negative
   logical pixels;
-- `borderColor` is optional and otherwise derives from the chart theme.
+- a non-null `borderColor` is a fixed color shared by every slice and always
+  takes precedence;
+- `borderColorMode` chooses the chart-theme outline or a border derived from
+  each slice;
+- `borderHueShiftDegrees`, `borderSaturationShift`, and
+  `borderLightnessShift` transform slice-derived borders in HSL space. Negative
+  lightness creates a darker shade; a hue shift creates a related contrasting
+  border. Saturation and lightness shifts use the inclusive range -1 to 1.
 
 `sliceGap` preserves each category's angular sweep. It translates complete
-wedges apart and reserves enough radius for the separation, so increasing the
-gap behaves like padding rather than sharpening the wedge at the center.
+wedges apart and compensates each wedge radius independently, so small and
+large slices terminate on the same outer ring. Increasing the gap therefore
+behaves like padding rather than sharpening the center or shrinking the
+largest category inward.
 
 The geometry preserves an internal inner-radius seam, but doughnut, nested,
 rose, and semi-circular charts are not part of this release.
@@ -146,10 +158,13 @@ final theme = ChartTheme.light.copyWith(
       opacity: 0.7,
     ),
     selectedElevation: PieElevationStyle(
+      // Null color derives a glow independently from each selected slice.
       blurRadius: 12,
       spreadRadius: 2,
       opacity: 0.5,
     ),
+    borderColorMode: PieBorderColorMode.slice,
+    borderLightnessShift: -0.16,
     animationMode: PieAnimationMode.grow,
   ),
 );
@@ -157,8 +172,15 @@ final theme = ChartTheme.light.copyWith(
 
 `PieElevationStyle.color == null` derives the elevation color from its slice.
 Use a dark color plus a downward offset for a shadow, or a slice-derived color
-with zero offset for a glow. `MediaQuery.disableAnimationsOf` and a zero theme
-duration always win over `PieAnimationMode.grow`.
+with zero offset for a glow. Blur radius, spread radius, offset, opacity, and
+an optional fixed color are all configurable independently for base shadow and
+selected elevation. `MediaQuery.disableAnimationsOf` and a zero theme duration
+always win over `PieAnimationMode.grow`.
+
+The renderer reserves the maximum configured explode distance, border and
+focus stroke, base shadow, and selected elevation before calculating the Pie
+radius. Selection therefore does not reflow the chart, and an edge-facing
+slice remains inside the plot even with a large offset or glow.
 
 ## Data labels
 
@@ -195,8 +217,10 @@ shared `LabelStyle` model, including text, surface, border, radius, padding,
 and shadow. A null callout style preserves plain label text.
 
 Tooltips remain part of the shared interaction system. Configure one chart
-with `TooltipConfig.style`, or theme every chart through
-`ChartTheme.interactionTheme.tooltipStyle`.
+with a non-default `TooltipConfig.style`, or theme every chart through
+`ChartTheme.interactionTheme.tooltipStyle`. The per-chart style wins when both
+are set. Otherwise the interaction theme controls tooltip text, surface,
+border, radius, padding, and shadow.
 
 ## Per-slice colors
 
@@ -234,9 +258,12 @@ final theme = ChartTheme.light.copyWith(
 );
 ```
 
-Top and bottom anchors reserve vertical space. Center-left and center-right
-anchors place the legend beside the plot. `LegendPosition.center` overlays the
-legend and should be reserved for charts with deliberate empty center space.
+Top and bottom anchors reserve only the legend's compact measured height and
+stay aligned to the requested edge. Center-left and center-right anchors use a
+compact, bounded side rail and give the remaining width to the plot. Oversized
+legends scroll inside their safety bound instead of claiming a fixed fraction
+of the chart. `LegendPosition.center` overlays the legend and should be
+reserved for charts with deliberate empty center space.
 
 ## Interaction and callbacks
 
@@ -264,6 +291,17 @@ Keyboard behavior:
 - arrow keys move between visible slices;
 - Enter or Space selects the focused slice;
 - Escape clears selection.
+
+Pointer and legend selection use the slice offset plus its slice-derived
+elevation/glow; they do not add a global accent outline that can compete with
+the category color. The themed focus ring remains reserved for keyboard and
+assistive focus, so focus and durable selection stay visually distinct.
+
+Selection is renderer-neutral. Direct slice activation, a legend item, and a
+revision-safe table/controller command all update the same `ChartPointRef`.
+The selected tooltip anchor is recalculated from current slice geometry on
+every paint, so radius, start-angle, direction, gap, responsive size, and
+restored document changes cannot leave it behind.
 
 For a host-owned table or list, capture a `ChartDocumentSnapshot`, retain its
 opaque revision, and select with the same stable point reference:
@@ -356,9 +394,9 @@ dropping advanced appearance values.
 The public tool schema accepts `chart_type: "pie"`. It requires exactly one
 series, a non-empty point label, a non-negative finite `y`, and a stable
 ordering `x`. Omit Cartesian axes, crosshair, pan, and zoom. Pie-specific style
-keys include start angle, direction, radius, gaps, borders, explode offset,
-opacity, corner radius, shadow, selected glow, animation mode, label
-position/content, and label thresholds.
+keys include start angle, direction, radius, gaps, fixed or slice-derived
+borders (including HSL shifts), explode offset, opacity, corner radius, shadow,
+selected glow, animation mode, label position/content, and label thresholds.
 
 ## Accessibility and responsive behavior
 

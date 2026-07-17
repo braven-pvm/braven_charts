@@ -1,7 +1,8 @@
 import 'dart:ui' show PointerDeviceKind, SemanticsAction, Tristate;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:flutter/material.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
+import 'package:flutter/material.dart' hide TooltipTriggerMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -141,6 +142,10 @@ void main() {
         const ChartPointRef(seriesId: 'revenue', pointIndex: 1),
       });
       expect(selected?.single.label, 'Services');
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      expect(renderBox.debugSelectedTooltipMarker?.markerIndex, 1);
       expect(
         find.semantics.byLabel(
           'Services, 31.00 USD, 31.0 percent, slice 2 of 3, selected',
@@ -151,6 +156,7 @@ void main() {
       controller.clearPointSelection();
       await tester.pumpAndSettle();
       expect(controller.selectedPointRefs, isEmpty);
+      expect(renderBox.debugSelectedTooltipMarker, isNull);
       expect(selected, isEmpty);
       semantics.dispose();
     },
@@ -259,7 +265,93 @@ void main() {
     expect(controller.selectedPointRefs, {
       const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
     });
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    expect(renderBox.debugSelectedTooltipMarker?.markerIndex, 0);
     expect(controller.hiddenSeriesIds, isEmpty);
+
+    await tester.tap(firstItem);
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedPointRefs, isEmpty);
+    expect(renderBox.debugSelectedTooltipMarker, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selected tooltip anchor follows current pie geometry', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    late StateSetter updateHost;
+    var width = 300.0;
+    var startAngle = -90.0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateHost = setState;
+            return Center(
+              child: SizedBox(
+                width: width,
+                height: 300,
+                child: BravenChartPlus(
+                  key: const ValueKey('moving-tooltip-pie'),
+                  bravenChartController: controller,
+                  theme: ChartTheme.light.copyWith(
+                    pieChartTheme: const PieChartTheme(
+                      animationMode: PieAnimationMode.none,
+                    ),
+                  ),
+                  interactionConfig: const InteractionConfig(
+                    tooltip: TooltipConfig(
+                      triggerMode: TooltipTriggerMode.both,
+                      showDelay: Duration.zero,
+                      hideDelay: Duration.zero,
+                    ),
+                  ),
+                  series: [
+                    PieChartSeries.fromMap(
+                      id: 'moving',
+                      values: const {'A': 3, 'B': 2, 'C': 1},
+                      pieStyle: PieChartStyle(
+                        startAngleDegrees: startAngle,
+                        animationMode: PieAnimationMode.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final revision = controller.effectiveDocumentRevision.value!;
+    controller.selectPoint(
+      const ChartPointRef(seriesId: 'moving', pointIndex: 0),
+      revision: revision,
+    );
+    await tester.pumpAndSettle();
+    var renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    final before = renderBox.debugSelectedTooltipMarker!.plotPosition;
+
+    updateHost(() {
+      width = 420;
+      startAngle = 15;
+    });
+    await tester.pumpAndSettle();
+
+    renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    final after = renderBox.debugSelectedTooltipMarker!.plotPosition;
+    expect(after, isNot(before));
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'moving', pointIndex: 0),
+    });
     expect(tester.takeException(), isNull);
   });
 }

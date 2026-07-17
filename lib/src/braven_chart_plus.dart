@@ -916,6 +916,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   double _textScaleFactor = 1;
   bool _disableAnimations = false;
   int? _radialKeyboardFocusIndex;
+  bool _radialFocusIndicatorVisible = false;
 
   // Element generator function for pan/zoom regeneration
   List<ChartElement> Function(ChartTransform)? _elementGenerator;
@@ -1339,11 +1340,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   /// Called when focus state changes.
   void _onFocusChanged() {
+    final hideRadialFocus =
+        !_focusNode.hasFocus && _radialFocusIndicatorVisible;
     // Only trigger rebuild when focus border is actually displayed.
     // Without this guard, every focus change triggers setState on ALL charts,
     // causing cascading rebuilds with 21+ charts on the gallery page.
-    if (widget.interactionConfig?.showFocusBorder ?? false) {
-      setState(() {});
+    if ((widget.interactionConfig?.showFocusBorder ?? false) ||
+        hideRadialFocus) {
+      setState(() {
+        if (hideRadialFocus) {
+          _radialFocusIndicatorVisible = false;
+          _elementGeneratorVersion++;
+        }
+      });
     }
   }
 
@@ -1977,9 +1986,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (_radialKeyboardFocusIndex != null &&
           !visibleIndices.contains(_radialKeyboardFocusIndex)) {
         _radialKeyboardFocusIndex = null;
+        _radialFocusIndicatorVisible = false;
       }
     } else {
       _radialKeyboardFocusIndex = null;
+      _radialFocusIndicatorVisible = false;
     }
     if (_layoutKind == ChartLayoutKind.radial &&
         _resolveEffectiveAnnotations().isNotEmpty) {
@@ -2170,7 +2181,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               focusedPointIndices: {
                 for (final ref in _focusedPointRefs)
                   if (ref.seriesId == pieSeries.id) ref.pointIndex,
-                ?_radialKeyboardFocusIndex,
+                if (_radialFocusIndicatorVisible) ?_radialKeyboardFocusIndex,
               },
               selectedPointIndices: {
                 for (final ref in _selectedPointRefs)
@@ -3285,8 +3296,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
-  void _activateRadialDataHit(ChartDataHit hit, {required Offset position}) {
-    _focusRadialPoint(hit.pointIndex, announceHover: false);
+  void _activateRadialDataHit(
+    ChartDataHit hit, {
+    required Offset position,
+    bool showFocusIndicator = false,
+  }) {
+    _focusRadialPoint(
+      hit.pointIndex,
+      announceHover: false,
+      showFocusIndicator: showFocusIndicator,
+    );
     _commitRadialPointActivation(
       point: hit.point,
       seriesId: hit.seriesId,
@@ -3313,6 +3332,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _selectedPointRefs
         ..clear()
         ..addAll(alreadySelected ? const <ChartPointRef>{} : {pointRef});
+      if (alreadySelected) {
+        _coordinator.setHoveredMarker(null);
+      }
       _captureStateRevision++;
       _startRadialSelectionAnimation();
       _refreshLinkedPointRendering();
@@ -3323,18 +3345,26 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     interaction.onDataPointTap?.call(point, position);
   }
 
-  void _activateRadialPointIndex(int pointIndex) {
+  void _activateRadialPointIndex(
+    int pointIndex, {
+    bool showFocusIndicator = false,
+  }) {
     final series = _effectivePieSeries;
     if (series == null) return;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     final hit = renderBox?.dataHitForPointIndex(series.id, pointIndex);
     if (hit != null) {
-      _activateRadialDataHit(hit, position: _widgetPositionForDataHit(hit));
+      _activateRadialDataHit(
+        hit,
+        position: _widgetPositionForDataHit(hit),
+        showFocusIndicator: showFocusIndicator,
+      );
       return;
     }
     if (!series.visiblePointIndices.contains(pointIndex)) return;
     _radialKeyboardFocusIndex = pointIndex;
+    _radialFocusIndicatorVisible = showFocusIndicator;
     _commitRadialPointActivation(
       point: series.points[pointIndex],
       seriesId: series.id,
@@ -3346,6 +3376,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _clearRadialPointSelection() {
     if (_selectedPointRefs.isEmpty) return;
     _selectedPointRefs.clear();
+    _coordinator.setHoveredMarker(null);
     _captureStateRevision++;
     _startRadialSelectionAnimation();
     _refreshLinkedPointRendering();
@@ -3367,12 +3398,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     widget.interactionConfig?.onSelectionChanged?.call(selectedPoints);
   }
 
-  void _focusRadialPoint(int pointIndex, {bool announceHover = true}) {
+  void _focusRadialPoint(
+    int pointIndex, {
+    bool announceHover = true,
+    bool showFocusIndicator = true,
+  }) {
     final series = _effectivePieSeries;
     if (series == null || !series.visiblePointIndices.contains(pointIndex)) {
       return;
     }
     _radialKeyboardFocusIndex = pointIndex;
+    _radialFocusIndicatorVisible = showFocusIndicator;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     final hit = renderBox?.dataHitForPointIndex(series.id, pointIndex);
@@ -3427,7 +3463,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.space) {
       final pointIndex = _radialKeyboardFocusIndex ?? visible.first;
-      _activateRadialPointIndex(pointIndex);
+      _activateRadialPointIndex(pointIndex, showFocusIndicator: true);
       interaction.onKeyboardAction?.call(
         'select_slice',
         series.points[pointIndex],
@@ -3437,6 +3473,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       _radialKeyboardFocusIndex = null;
+      _radialFocusIndicatorVisible = false;
       _coordinator.setHoveredMarker(null);
       _clearRadialPointSelection();
       _refreshLinkedPointRendering();
@@ -3618,6 +3655,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _selectedPointRefs
       ..clear()
       ..addAll(nextSelection);
+    if (_layoutKind == ChartLayoutKind.radial && nextSelection.isEmpty) {
+      _coordinator.setHoveredMarker(null);
+    }
     _captureStateRevision++;
     _startRadialSelectionAnimation();
     _refreshLinkedPointRendering();
@@ -3699,6 +3739,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _clearPointSelection() {
     if (_selectedPointRefs.isEmpty) return;
     _selectedPointRefs.clear();
+    if (_layoutKind == ChartLayoutKind.radial) {
+      _coordinator.setHoveredMarker(null);
+    }
     _captureStateRevision++;
     _startRadialSelectionAnimation();
     _refreshLinkedPointRendering();
@@ -4292,6 +4335,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final effectiveInteractionConfig = isRadial
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
+    ChartPointRef? selectedTooltipPoint;
+    final pieSeries = isRadial ? _effectivePieSeries : null;
+    if (pieSeries != null) {
+      for (final pointRef in _selectedPointRefs) {
+        if (pointRef.seriesId == pieSeries.id &&
+            pieSeries.visiblePointIndices.contains(pointRef.pointIndex)) {
+          selectedTooltipPoint = pointRef;
+          break;
+        }
+      }
+    }
 
     final Widget renderedChart = Focus(
       focusNode: _focusNode,
@@ -4381,6 +4435,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                             (effectiveInteractionConfig?.enabled ?? true) &&
                             (effectiveInteractionConfig?.tooltip.enabled ??
                                 true),
+                        selectedTooltipSeriesId: selectedTooltipPoint?.seriesId,
+                        selectedTooltipPointIndex:
+                            selectedTooltipPoint?.pointIndex,
                         // Prioritize widget's direct showXScrollbar/showYScrollbar properties
                         // InteractionConfig's defaults are false, so ?? doesn't work correctly
                         showXScrollbar: !isRadial && widget.showXScrollbar,
@@ -4394,6 +4451,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         onDataHitActivate: (hit) => _activateRadialDataHit(
                           hit,
                           position: _widgetPositionForDataHit(hit),
+                          showFocusIndicator: true,
                         ),
                         onDataHitFocus: (hit) =>
                             _focusRadialPoint(hit.pointIndex),
@@ -4542,83 +4600,96 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required LegendStyle style,
   }) {
     const gap = 8.0;
-    final positionedLegend = Padding(
-      padding: const EdgeInsets.all(gap),
-      child: legend,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final positionedLegend = Padding(
+          padding: const EdgeInsets.all(gap),
+          child: legend,
+        );
+        final maximumBandHeight = math.min(160.0, constraints.maxHeight * 0.36);
+        final maximumRailWidth = math.min(
+          constraints.maxWidth,
+          math.min(200.0, math.max(120.0, constraints.maxWidth * 0.28)),
+        );
+
+        Widget horizontalBand(Alignment alignment) {
+          return Align(
+            alignment: alignment,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maximumBandHeight),
+              child: SingleChildScrollView(child: positionedLegend),
+            ),
+          );
+        }
+
+        Widget verticalRail(Alignment alignment) {
+          return Align(
+            alignment: alignment,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maximumRailWidth,
+                maxHeight: math.max(0, constraints.maxHeight - gap * 2),
+              ),
+              child: IntrinsicWidth(
+                child: SingleChildScrollView(child: positionedLegend),
+              ),
+            ),
+          );
+        }
+
+        return switch (style.position) {
+          LegendPosition.topLeft ||
+          LegendPosition.topCenter ||
+          LegendPosition.topRight => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              horizontalBand(switch (style.position) {
+                LegendPosition.topLeft => Alignment.topLeft,
+                LegendPosition.topRight => Alignment.topRight,
+                _ => Alignment.topCenter,
+              }),
+              Expanded(child: chartContent),
+            ],
+          ),
+          LegendPosition.bottomLeft ||
+          LegendPosition.bottomCenter ||
+          LegendPosition.bottomRight => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: chartContent),
+              horizontalBand(switch (style.position) {
+                LegendPosition.bottomLeft => Alignment.bottomLeft,
+                LegendPosition.bottomRight => Alignment.bottomRight,
+                _ => Alignment.bottomCenter,
+              }),
+            ],
+          ),
+          LegendPosition.centerLeft => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              verticalRail(Alignment.centerLeft),
+              const SizedBox(width: gap),
+              Expanded(child: chartContent),
+            ],
+          ),
+          LegendPosition.centerRight => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: chartContent),
+              const SizedBox(width: gap),
+              verticalRail(Alignment.centerRight),
+            ],
+          ),
+          LegendPosition.center => Stack(
+            fit: StackFit.expand,
+            children: [
+              chartContent,
+              Align(child: positionedLegend),
+            ],
+          ),
+        };
+      },
     );
-    return switch (style.position) {
-      LegendPosition.topLeft ||
-      LegendPosition.topCenter ||
-      LegendPosition.topRight => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Flexible(
-            flex: 2,
-            child: SingleChildScrollView(
-              child: Align(
-                alignment: switch (style.position) {
-                  LegendPosition.topLeft => Alignment.topLeft,
-                  LegendPosition.topRight => Alignment.topRight,
-                  _ => Alignment.topCenter,
-                },
-                child: positionedLegend,
-              ),
-            ),
-          ),
-          Expanded(flex: 3, child: chartContent),
-        ],
-      ),
-      LegendPosition.bottomLeft ||
-      LegendPosition.bottomCenter ||
-      LegendPosition.bottomRight => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(flex: 3, child: chartContent),
-          Flexible(
-            flex: 2,
-            child: SingleChildScrollView(
-              child: Align(
-                alignment: switch (style.position) {
-                  LegendPosition.bottomLeft => Alignment.bottomLeft,
-                  LegendPosition.bottomRight => Alignment.bottomRight,
-                  _ => Alignment.bottomCenter,
-                },
-                child: positionedLegend,
-              ),
-            ),
-          ),
-        ],
-      ),
-      LegendPosition.centerLeft => Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Flexible(
-            flex: 2,
-            child: SingleChildScrollView(child: positionedLegend),
-          ),
-          const SizedBox(width: gap),
-          Expanded(flex: 3, child: chartContent),
-        ],
-      ),
-      LegendPosition.centerRight => Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(flex: 3, child: chartContent),
-          const SizedBox(width: gap),
-          Flexible(
-            flex: 2,
-            child: SingleChildScrollView(child: positionedLegend),
-          ),
-        ],
-      ),
-      LegendPosition.center => Stack(
-        fit: StackFit.expand,
-        children: [
-          chartContent,
-          Align(child: positionedLegend),
-        ],
-      ),
-    };
   }
 }
 
@@ -4635,6 +4706,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.primaryYAxisConfig,
     this.theme,
     required this.tooltipsEnabled,
+    this.selectedTooltipSeriesId,
+    this.selectedTooltipPointIndex,
     required this.showXScrollbar,
     required this.showYScrollbar,
     this.scrollbarTheme,
@@ -4676,6 +4749,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   /// Grid configuration for controlling grid line visibility and styling.
   final GridConfig? gridConfig;
   final bool tooltipsEnabled;
+  final String? selectedTooltipSeriesId;
+  final int? selectedTooltipPointIndex;
   final bool showXScrollbar;
   final bool showYScrollbar;
   final ScrollbarConfig? scrollbarTheme;
@@ -4703,6 +4778,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         elementGenerator: elementGenerator,
         theme: theme,
         tooltipsEnabled: tooltipsEnabled,
+        selectedTooltipSeriesId: selectedTooltipSeriesId,
+        selectedTooltipPointIndex: selectedTooltipPointIndex,
         showXScrollbar: showXScrollbar,
         showYScrollbar: showYScrollbar,
         scrollbarTheme: scrollbarTheme,
@@ -4744,6 +4821,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setPrimaryYAxisConfig(primaryYAxisConfig)
       ..setTheme(theme)
       ..setTooltipsEnabled(tooltipsEnabled)
+      ..setSelectedTooltipPoint(
+        seriesId: selectedTooltipSeriesId,
+        pointIndex: selectedTooltipPointIndex,
+      )
       ..setShowXScrollbar(showXScrollbar)
       ..setShowYScrollbar(showYScrollbar)
       ..setScrollbarTheme(scrollbarTheme)

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.3.1 - 2026-07-17
 
+- Refine Pie selection so pointer and legend activation use slice-derived
+  offset/elevation without an intrusive global accent outline, while retaining
+  the themed keyboard and assistive focus ring.
+- Add fixed or HSL slice-derived Pie border policies, detailed selected-glow
+  controls, and showcase presets for legend, label callout, and tooltip themes.
+
 ### Added
 - First-class `PieChartSeries` rendering with deterministic radial geometry,
   inside or collision-managed outside labels, slice legends, tooltips,
@@ -19,10 +25,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Theme-level Pie palettes, opacity, rounded corners, shadows, selected glow,
   styled label callouts, tooltip presets, positioned/oriented slice legends,
   and reduced-motion-aware radial animations.
+- Public Gallery Pie compositions, basic Pie controls in Chart Types, complete
+  presentation presets in the Pie showcase, and deterministic pub.dev media.
+- A simple dark Pie presentation with dominant inside values and no legend,
+  available both as a focused preset and a reusable Gallery composition.
 
 ### Fixed
+- The high-contrast Pie showcase preset now uses collision-managed outside
+  labels with opaque white callouts, near-black text, and a 2 px outline so
+  labels remain readable across every monochrome slice.
+- The Pie showcase no longer draws a chart-wide focus box during hover or
+  pointer interaction; keyboard focus remains visible on the active slice.
+- Pie legends now measure compactly at their requested edge instead of
+  reserving a fixed 40% band or rail, leaving the bulk of the viewport to the
+  chart while bounded overflow remains scrollable.
 - Pie slice gaps now preserve category angles and separate complete wedges like
-  physical padding instead of narrowing wedges into sharp center spikes.
+  physical padding, while per-slice radius compensation keeps uneven wedges on
+  one outer ring instead of shrinking the largest slice inward.
+- Pie tooltips now inherit the interaction theme when no explicit non-default
+  style is supplied, follow durable selection from slices, legends, and linked
+  tables, clear on deselection, and re-anchor after geometry or size changes.
+- Pie layout now reserves the configured explode, border/focus stroke, shadow,
+  and selected elevation extents so edge-facing selections remain inside the
+  plot instead of being clipped by the viewport.
 
 ### Fixed
 - Expand data-derived constant per-axis ranges to a stable non-zero span so

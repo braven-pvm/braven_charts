@@ -62,7 +62,7 @@ class TooltipRenderer {
     final config = interactionConfig?.tooltip ?? const TooltipConfig();
 
     // Get effective tooltip style (uses theme defaults when config doesn't specify)
-    final style = _getEffectiveTooltipStyle(interactionConfig, theme);
+    final style = resolveStyle(interactionConfig, theme);
 
     // Find the renderer-neutral data element containing this marker.
     final dataElement = elements.whereType<DataHitElement>().firstWhere(
@@ -273,16 +273,21 @@ class TooltipRenderer {
     );
   }
 
-  /// Gets the effective tooltip style, using theme defaults when config is not provided.
-  TooltipStyle _getEffectiveTooltipStyle(
+  /// Resolves an explicit tooltip style before the chart-theme fallback.
+  ///
+  /// [TooltipConfig] predates theme-level tooltip styling and therefore owns a
+  /// non-null default style. Treat that exact default value as unspecified so
+  /// [ChartTheme.interactionTheme] can style tooltips without requiring every
+  /// chart to duplicate the same configuration.
+  TooltipStyle resolveStyle(
     InteractionConfig? interactionConfig,
     ChartTheme? theme,
   ) {
     final configStyle = interactionConfig?.tooltip.style;
     final themeTooltipStyle = theme?.interactionTheme.tooltipStyle;
 
-    // If user provided a config, use it as-is
-    if (configStyle != null) {
+    // A non-default per-chart value is an explicit override.
+    if (configStyle != null && configStyle != const TooltipStyle()) {
       return configStyle;
     }
 

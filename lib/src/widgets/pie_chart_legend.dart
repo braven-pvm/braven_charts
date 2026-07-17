@@ -74,7 +74,7 @@ class PieChartLegend extends StatelessWidget {
     final itemLayout = style.orientation == LegendOrientation.vertical
         ? Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final (index, item) in items.indexed) ...[
                 if (index > 0) SizedBox(height: math.max(8, style.itemSpacing)),

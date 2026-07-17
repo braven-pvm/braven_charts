@@ -415,6 +415,20 @@ class ChartConfigBuilder {
       borderColor: json?['pie_border_color'] is String
           ? _parseColor(json!['pie_border_color'] as String)
           : null,
+      borderColorMode: switch (json?['pie_border_color_mode']) {
+        null => null,
+        'chart_theme' => PieBorderColorMode.chartTheme,
+        'slice' => PieBorderColorMode.slice,
+        final value => throw FormatException(
+          'Unknown pie_border_color_mode "$value".',
+        ),
+      },
+      borderHueShiftDegrees: (json?['pie_border_hue_shift'] as num?)
+          ?.toDouble(),
+      borderSaturationShift: (json?['pie_border_saturation_shift'] as num?)
+          ?.toDouble(),
+      borderLightnessShift: (json?['pie_border_lightness_shift'] as num?)
+          ?.toDouble(),
       selectionExplodeOffset:
           (json?['pie_selection_explode_offset'] as num?)?.toDouble() ??
           defaults.selectionExplodeOffset,
@@ -443,11 +457,13 @@ class ChartConfigBuilder {
     final spreadValue = json['${prefix}_spread'];
     final offsetXValue = json['${prefix}_offset_x'];
     final offsetYValue = json['${prefix}_offset_y'];
+    final opacityValue = json['${prefix}_opacity'];
     if (colorValue == null &&
         blurValue == null &&
         spreadValue == null &&
         offsetXValue == null &&
-        offsetYValue == null) {
+        offsetYValue == null &&
+        opacityValue == null) {
       return null;
     }
     return PieElevationStyle(
@@ -458,7 +474,9 @@ class ChartConfigBuilder {
         (offsetXValue as num?)?.toDouble() ?? 0,
         (offsetYValue as num?)?.toDouble() ?? 0,
       ),
-      opacity: prefix == 'pie_selected_glow' ? 0.45 : 0.65,
+      opacity:
+          (opacityValue as num?)?.toDouble() ??
+          (prefix == 'pie_selected_glow' ? 0.45 : 0.65),
     );
   }
 

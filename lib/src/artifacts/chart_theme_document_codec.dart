@@ -127,6 +127,10 @@ Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
   'cornerRadius': _n(theme.cornerRadius),
   'shadow': _encodePieElevation(theme.shadow),
   'selectedElevation': _encodePieElevation(theme.selectedElevation),
+  'borderColorMode': theme.borderColorMode.name,
+  'borderHueShiftDegrees': _n(theme.borderHueShiftDegrees),
+  'borderSaturationShift': _n(theme.borderSaturationShift),
+  'borderLightnessShift': _n(theme.borderLightnessShift),
   if (theme.calloutStyle != null)
     'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       theme.calloutStyle!,
@@ -141,6 +145,12 @@ PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
   selectedElevation: _decodePieElevation(
     _requiredMap(map, 'selectedElevation'),
   ),
+  borderColorMode: map['borderColorMode'] == null
+      ? PieBorderColorMode.chartTheme
+      : _enum(_string(map, 'borderColorMode'), PieBorderColorMode.values),
+  borderHueShiftDegrees: _optionalDouble(map['borderHueShiftDegrees']) ?? 0,
+  borderSaturationShift: _optionalDouble(map['borderSaturationShift']) ?? 0,
+  borderLightnessShift: _optionalDouble(map['borderLightnessShift']) ?? -0.12,
   calloutStyle: map['calloutStyle'] == null
       ? null
       : ChartStyleDocumentCodec.decodeLabelStyle(

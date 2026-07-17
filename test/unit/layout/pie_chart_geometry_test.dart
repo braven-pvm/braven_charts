@@ -117,6 +117,42 @@ void main() {
       expect(geometry.sliceAt(const Offset(100, 180))?.pointIndex, 0);
     });
 
+    test('uneven gapped slices terminate on one shared outer ring', () {
+      final series = PieChartSeries.fromMap(
+        id: 'uneven-gaps',
+        values: const {'Largest': 55, 'Medium': 25, 'Small': 12, 'Tiny': 8},
+        pieStyle: const PieChartStyle(radiusFactor: 1, sliceGap: 16),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(240),
+      );
+
+      expect(
+        geometry.slices.map((slice) => slice.outerRadius).toSet().length,
+        greaterThan(1),
+      );
+      for (final slice in geometry.slices) {
+        expect(
+          (slice.connectorOrigin - geometry.center).distance,
+          closeTo(geometry.outerRadius, 1e-7),
+          reason: slice.point.label,
+        );
+        for (final fraction in const [0.25, 0.5, 0.75]) {
+          final angle = slice.startAngle + slice.sweepAngle * fraction;
+          final nearOuterRing =
+              geometry.center +
+              Offset.fromDirection(angle, geometry.outerRadius - 0.5);
+          expect(
+            slice.contains(nearOuterRing),
+            isTrue,
+            reason: '${slice.point.label} at sweep fraction $fraction',
+          );
+        }
+      }
+    });
+
     test('rounded corners retain the slice centerline and trim sharp tips', () {
       final series = PieChartSeries.fromMap(
         id: 'rounded',

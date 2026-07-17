@@ -17,6 +17,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Pie Charts'), findsOneWidget);
+    expect(find.text('Choose a presentation'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-preset-simple')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-preset-editorial')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-preset-compact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-preset-elevated')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('pie-preset-highContrast')),
+      findsOneWidget,
+    );
     expect(find.text('Choose a category story'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsOneWidget);
@@ -25,7 +34,74 @@ void main() {
     expect(find.byKey(const ValueKey('pie-dataset-support')), findsOneWidget);
     expect(find.text('Try slice interaction'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-legend-item-0')), findsOneWidget);
+    final initialChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('pie-preset-simple')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final simpleChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    final simpleSeries = simpleChart.series.single as PieChartSeries;
+    expect(simpleChart.showLegend, isFalse);
+    expect(simpleChart.theme?.backgroundColor, const Color(0xFF1F1F1F));
+    expect(simpleSeries.dataLabels.position, PieDataLabelPosition.inside);
+    expect(simpleSeries.dataLabels.content, PieDataLabelContent.value);
+    expect(simpleSeries.dataLabels.minimumShare, 0.2);
+    expect(
+      simpleChart.theme?.pieChartTheme.calloutStyle?.textStyle.color,
+      const Color(0xFFFFFFFF),
+    );
+    expect(
+      simpleChart.theme?.pieChartTheme.calloutStyle?.backgroundColor,
+      const Color(0x00000000),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-preset-highContrast')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final highContrastChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    final highContrastSeries =
+        highContrastChart.series.single as PieChartSeries;
+    final highContrastCallout =
+        highContrastChart.theme?.pieChartTheme.calloutStyle;
+    expect(
+      highContrastSeries.dataLabels.position,
+      PieDataLabelPosition.outside,
+    );
+    expect(
+      highContrastSeries.dataLabels.collisionStrategy,
+      PieDataLabelCollisionStrategy.shiftAndHide,
+    );
+    expect(
+      highContrastCallout?.backgroundColor.toARGB32(),
+      const Color(0xFFFFFFFF).toARGB32(),
+    );
+    expect(
+      highContrastCallout?.textStyle.color?.toARGB32(),
+      const Color(0xFF1A1A1A).toARGB32(),
+    );
+    expect(highContrastCallout?.borderWidth, 2);
+
+    await tester.tap(find.byKey(const ValueKey('pie-preset-elevated')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final elevatedChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    final elevatedSeries = elevatedChart.series.single as PieChartSeries;
+    expect(elevatedSeries.pieStyle.sliceGap, 7);
+    expect(elevatedSeries.pieStyle.cornerRadius, isNull);
+    expect(elevatedSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(elevatedChart.theme?.pieChartTheme.cornerRadius, 14);
+    expect(elevatedChart.theme?.pieChartTheme.shadow.isVisible, isTrue);
+    expect(elevatedChart.theme?.pieChartTheme.opacity, 0.94);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('pie-legend-item-0')),
@@ -86,6 +162,10 @@ void main() {
     expect(find.text('Options'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-scroll')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('pie-presentation-selector')),
+      findsOneWidget,
+    );
     expect(
       tester
           .getRect(find.byKey(const ValueKey('chart-page-options-button')))

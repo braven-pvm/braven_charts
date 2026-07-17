@@ -3,7 +3,7 @@
 
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show ValueKey;
+import 'package:flutter/foundation.dart' show ValueKey, visibleForTesting;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -76,6 +76,8 @@ class ChartRenderBox extends RenderBox {
     ElementGenerator? elementGenerator,
     ChartTheme? theme,
     bool tooltipsEnabled = true,
+    String? selectedTooltipSeriesId,
+    int? selectedTooltipPointIndex,
     bool showXScrollbar = false,
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
@@ -95,6 +97,8 @@ class ChartRenderBox extends RenderBox {
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
+       _selectedTooltipSeriesId = selectedTooltipSeriesId,
+       _selectedTooltipPointIndex = selectedTooltipPointIndex,
        _interactionConfig = interactionConfig,
        _textScaleFactor = textScaleFactor,
        assert(
@@ -259,6 +263,10 @@ class ChartRenderBox extends RenderBox {
 
   /// Whether tooltips are enabled.
   bool _tooltipsEnabled;
+
+  /// Durable selected datum whose tooltip is independent of pointer hover.
+  String? _selectedTooltipSeriesId;
+  int? _selectedTooltipPointIndex;
 
   /// Manages tooltip show/hide animations with configurable delays.
   ///
@@ -772,6 +780,46 @@ class ChartRenderBox extends RenderBox {
     _tooltipsEnabled = enabled;
     markNeedsPaint();
   }
+
+  /// Updates the datum whose tooltip follows durable chart selection.
+  void setSelectedTooltipPoint({String? seriesId, int? pointIndex}) {
+    if (_selectedTooltipSeriesId == seriesId &&
+        _selectedTooltipPointIndex == pointIndex) {
+      return;
+    }
+    final removedSelection =
+        _selectedTooltipSeriesId != null && seriesId == null;
+    _selectedTooltipSeriesId = seriesId;
+    _selectedTooltipPointIndex = pointIndex;
+    if (removedSelection) {
+      _eventHandlerManager.clearTappedMarker();
+      _tooltipAnimator.hideImmediately();
+    }
+    markNeedsPaint();
+  }
+
+  HoveredMarkerInfo? _resolveSelectedTooltipMarker() {
+    final seriesId = _selectedTooltipSeriesId;
+    final pointIndex = _selectedTooltipPointIndex;
+    if (seriesId == null || pointIndex == null) return null;
+    for (final element in _elements.whereType<DataHitElement>()) {
+      if (element.id != seriesId) continue;
+      final hit = element.dataHitForPointIndex(pointIndex);
+      if (hit == null) return null;
+      return HoveredMarkerInfo(
+        seriesId: hit.seriesId,
+        markerIndex: hit.pointIndex,
+        plotPosition: hit.plotPosition,
+        dataHit: hit,
+      );
+    }
+    return null;
+  }
+
+  /// Current geometry-resolved selected tooltip marker for widget tests.
+  @visibleForTesting
+  HoveredMarkerInfo? get debugSelectedTooltipMarker =>
+      _resolveSelectedTooltipMarker();
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
@@ -2072,6 +2120,7 @@ class ChartRenderBox extends RenderBox {
       if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) {
         return true;
       }
+      if (_resolveSelectedTooltipMarker() != null) return true;
       // Check if there's a marker that would trigger a tooltip
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
       final hasHoveredMarker = coordinator.hoveredMarker != null;
@@ -2272,22 +2321,24 @@ class ChartRenderBox extends RenderBox {
     // Show based on tooltip trigger mode configuration with animations
     if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-      HoveredMarkerInfo? markerToShow;
+      HoveredMarkerInfo? markerToShow = _resolveSelectedTooltipMarker();
 
-      switch (config.triggerMode) {
-        case TooltipTriggerMode.hover:
-          // Show tooltip only when hovering
-          markerToShow = coordinator.hoveredMarker;
-          break;
-        case TooltipTriggerMode.tap:
-          // Show tooltip only for tapped marker
-          markerToShow = _eventHandlerManager.tappedMarker;
-          break;
-        case TooltipTriggerMode.both:
-          // Show tooltip for either hover or tap (prefer tapped if both exist)
-          markerToShow =
-              _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
-          break;
+      if (markerToShow == null) {
+        switch (config.triggerMode) {
+          case TooltipTriggerMode.hover:
+            // Show tooltip only when hovering
+            markerToShow = coordinator.hoveredMarker;
+            break;
+          case TooltipTriggerMode.tap:
+            // Show tooltip only for tapped marker
+            markerToShow = _eventHandlerManager.tappedMarker;
+            break;
+          case TooltipTriggerMode.both:
+            // Show tooltip for either hover or tap (prefer tapped if both exist)
+            markerToShow =
+                _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
+            break;
+        }
       }
 
       // Handle show/hide animations based on marker presence

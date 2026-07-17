@@ -25,6 +25,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
   final math.Random _random = math.Random();
 
   _PieDataset _dataset = _PieDataset.revenue;
+  _PieShowcasePreset _showcasePreset = _PieShowcasePreset.editorial;
   late Map<String, num> _values;
   bool _showLabels = true;
   PieDataLabelPosition _labelPosition = PieDataLabelPosition.outside;
@@ -37,15 +38,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _radiusFactor = 0.86;
   double _sliceGap = 4;
   double _borderWidth = 1;
+  _PieBorderPreset _borderPreset = _PieBorderPreset.darkerSlice;
   double _selectionExplodeOffset = 10;
   double _cornerRadius = 8;
   double _sliceOpacity = 1;
   bool _showShadow = false;
   bool _showSelectedGlow = true;
+  _PieGlowColor _selectedGlowColor = _PieGlowColor.slice;
+  double _selectedGlowBlur = 12;
+  double _selectedGlowSpread = 2;
+  double _selectedGlowOpacity = 0.48;
   bool _animateSlices = true;
   _PiePalette _palette = _PiePalette.theme;
   _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
   _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
+  _PieLegendPreset _legendPreset = _PieLegendPreset.theme;
   bool _showLegend = true;
   LegendPosition _legendPosition = LegendPosition.bottomCenter;
   LegendOrientation _legendOrientation = LegendOrientation.horizontal;
@@ -85,6 +92,161 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _clearPortableState();
     });
     _chartController.clearPointSelection();
+    _scheduleTableRefresh();
+  }
+
+  void _applyShowcasePreset(_PieShowcasePreset preset) {
+    _chartController.clearPointSelection();
+    setState(() {
+      _showcasePreset = preset;
+      _selectedCategory = null;
+      _clearPortableState();
+      _animateSlices = true;
+      _showTooltips = true;
+      switch (preset) {
+        case _PieShowcasePreset.simple:
+          _showLabels = true;
+          _labelPosition = PieDataLabelPosition.inside;
+          _labelContent = PieDataLabelContent.value;
+          _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+          _minimumShare = 0.2;
+          _startAngle = -90;
+          _clockwise = true;
+          _radiusFactor = 0.92;
+          _sliceGap = 2;
+          _borderWidth = 1.5;
+          _borderPreset = _PieBorderPreset.darkerSlice;
+          _selectionExplodeOffset = 8;
+          _cornerRadius = 6;
+          _sliceOpacity = 1;
+          _showShadow = false;
+          _showSelectedGlow = false;
+          _palette = _PiePalette.sunset;
+          _calloutPreset = _PieCalloutPreset.simpleValues;
+          _tooltipPreset = _PieTooltipPreset.contrast;
+          _legendPreset = _PieLegendPreset.compact;
+          _showLegend = false;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+        case _PieShowcasePreset.editorial:
+          _showLabels = true;
+          _labelPosition = PieDataLabelPosition.outside;
+          _labelContent = PieDataLabelContent.categoryAndPercentage;
+          _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+          _minimumShare = 0.03;
+          _startAngle = -90;
+          _clockwise = true;
+          _radiusFactor = 0.86;
+          _sliceGap = 4;
+          _borderWidth = 1;
+          _borderPreset = _PieBorderPreset.darkerSlice;
+          _selectionExplodeOffset = 10;
+          _cornerRadius = 8;
+          _sliceOpacity = 1;
+          _showShadow = false;
+          _showSelectedGlow = true;
+          _selectedGlowColor = _PieGlowColor.slice;
+          _selectedGlowBlur = 12;
+          _selectedGlowSpread = 2;
+          _selectedGlowOpacity = 0.48;
+          _palette = _PiePalette.theme;
+          _calloutPreset = _PieCalloutPreset.none;
+          _tooltipPreset = _PieTooltipPreset.theme;
+          _legendPreset = _PieLegendPreset.theme;
+          _showLegend = true;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+        case _PieShowcasePreset.compact:
+          _showLabels = true;
+          _labelPosition = PieDataLabelPosition.inside;
+          _labelContent = PieDataLabelContent.percentage;
+          _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+          _minimumShare = 0.05;
+          _startAngle = -90;
+          _clockwise = true;
+          _radiusFactor = 0.9;
+          _sliceGap = 2;
+          _borderWidth = 0.5;
+          _borderPreset = _PieBorderPreset.darkerSlice;
+          _selectionExplodeOffset = 8;
+          _cornerRadius = 4;
+          _sliceOpacity = 1;
+          _showShadow = false;
+          _showSelectedGlow = false;
+          _palette = _PiePalette.ocean;
+          _calloutPreset = _PieCalloutPreset.none;
+          _tooltipPreset = _PieTooltipPreset.contrast;
+          _legendPreset = _PieLegendPreset.compact;
+          _showLegend = true;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+        case _PieShowcasePreset.elevated:
+          _showLabels = true;
+          _labelPosition = PieDataLabelPosition.outside;
+          _labelContent = PieDataLabelContent.categoryAndPercentage;
+          _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+          _minimumShare = 0.03;
+          _startAngle = -110;
+          _clockwise = true;
+          _radiusFactor = 0.8;
+          _sliceGap = 7;
+          _borderWidth = 1.5;
+          _borderPreset = _PieBorderPreset.shiftedHue;
+          _selectionExplodeOffset = 14;
+          _cornerRadius = 14;
+          _sliceOpacity = 0.94;
+          _showShadow = true;
+          _showSelectedGlow = true;
+          _selectedGlowColor = _PieGlowColor.accent;
+          _selectedGlowBlur = 18;
+          _selectedGlowSpread = 3;
+          _selectedGlowOpacity = 0.45;
+          _palette = _PiePalette.sunset;
+          _calloutPreset = _PieCalloutPreset.surface;
+          _tooltipPreset = _PieTooltipPreset.elevated;
+          _legendPreset = _PieLegendPreset.surface;
+          _showLegend = true;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+        case _PieShowcasePreset.highContrast:
+          _showLabels = true;
+          _labelPosition = PieDataLabelPosition.outside;
+          _labelContent = PieDataLabelContent.categoryAndPercentage;
+          _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+          _minimumShare = 0.04;
+          _startAngle = -90;
+          _clockwise = true;
+          _radiusFactor = 0.86;
+          _sliceGap = 4;
+          _borderWidth = 2;
+          _borderPreset = _PieBorderPreset.chartTheme;
+          _selectionExplodeOffset = 10;
+          _cornerRadius = 4;
+          _sliceOpacity = 1;
+          _showShadow = false;
+          _showSelectedGlow = true;
+          _selectedGlowColor = _PieGlowColor.neutral;
+          _selectedGlowBlur = 10;
+          _selectedGlowSpread = 1;
+          _selectedGlowOpacity = 0.45;
+          _palette = _PiePalette.monochrome;
+          _calloutPreset = _PieCalloutPreset.highContrast;
+          _tooltipPreset = _PieTooltipPreset.contrast;
+          _legendPreset = _PieLegendPreset.surface;
+          _showLegend = true;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+      }
+    });
+    _optionsController.theme = switch (preset) {
+      _PieShowcasePreset.simple => ChartTheme.dark.copyWith(
+        backgroundColor: const Color(0xFF1F1F1F),
+      ),
+      _PieShowcasePreset.editorial => ChartTheme.light,
+      _PieShowcasePreset.compact => ChartTheme.corporateBlue,
+      _PieShowcasePreset.elevated => ChartTheme.vibrant,
+      _PieShowcasePreset.highContrast => ChartTheme.highContrast,
+    };
     _scheduleTableRefresh();
   }
 
@@ -321,6 +483,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
             decimalPlaces: 1,
             onChanged: (value) => setState(() => _borderWidth = value),
           ),
+          if (_borderWidth > 0)
+            EnumOption<_PieBorderPreset>(
+              label: 'Border color',
+              value: _borderPreset,
+              values: _PieBorderPreset.values,
+              labelBuilder: _borderPresetName,
+              onChanged: (value) => setState(() => _borderPreset = value),
+            ),
           SliderOption(
             label: 'Selected slice offset',
             value: _selectionExplodeOffset,
@@ -375,6 +545,46 @@ class _PieChartsPageState extends State<PieChartsPage> {
             value: _showSelectedGlow,
             onChanged: (value) => setState(() => _showSelectedGlow = value),
           ),
+          if (_showSelectedGlow) ...[
+            EnumOption<_PieGlowColor>(
+              label: 'Glow color',
+              value: _selectedGlowColor,
+              values: _PieGlowColor.values,
+              labelBuilder: _glowColorName,
+              onChanged: (value) => setState(() => _selectedGlowColor = value),
+            ),
+            SliderOption(
+              label: 'Glow blur',
+              value: _selectedGlowBlur,
+              min: 0,
+              max: 24,
+              divisions: 12,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _selectedGlowBlur = value),
+            ),
+            SliderOption(
+              label: 'Glow spread',
+              value: _selectedGlowSpread,
+              min: 0,
+              max: 6,
+              divisions: 12,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _selectedGlowSpread = value),
+            ),
+            SliderOption(
+              label: 'Glow opacity',
+              value: _selectedGlowOpacity * 100,
+              min: 0,
+              max: 100,
+              divisions: 20,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _selectedGlowOpacity = value / 100),
+            ),
+          ],
           BoolOption(
             label: 'Animate changes',
             value: _animateSlices,
@@ -394,6 +604,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
             subtitle: 'Legend items select slices; they do not hide data',
           ),
           if (_showLegend) ...[
+            EnumOption<_PieLegendPreset>(
+              label: 'Legend style',
+              value: _legendPreset,
+              values: _PieLegendPreset.values,
+              labelBuilder: _legendPresetName,
+              onChanged: (value) => setState(() => _legendPreset = value),
+            ),
             EnumOption<LegendPosition>(
               label: 'Position',
               value: _legendPosition,
@@ -419,7 +636,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
             label: 'Show tooltips',
             value: _showTooltips,
             onChanged: (value) => setState(() => _showTooltips = value),
-            subtitle: 'Hover or tap a slice for category, value, and share',
+            subtitle:
+                'Hover, tap, or select from the legend or table; deselect to hide',
           ),
           if (_showTooltips)
             EnumOption<_PieTooltipPreset>(
@@ -467,6 +685,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildPresentationHeader(),
+                  const SizedBox(height: 8),
+                  _buildPresentationSelector(compact: compact),
+                  const SizedBox(height: 20),
                   _buildDatasetHeader(compact: compact),
                   const SizedBox(height: 8),
                   _buildDatasetSelector(compact: compact),
@@ -591,10 +813,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
         enableZoom: false,
         enablePan: false,
         enableSelection: true,
-        showFocusBorder: true,
+        showFocusBorder: false,
       ),
       onPointTap: _handlePointActivation,
-      series: [_buildSeries()],
+      series: [_buildSeries(theme)],
     );
   }
 
@@ -987,6 +1209,126 @@ class _PieChartsPageState extends State<PieChartsPage> {
     setState(() => _selectedCategory = isSelected ? point.label : null);
   }
 
+  Widget _buildPresentationHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose a presentation',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'Apply a complete, production-shaped configuration, then refine every detail in Options.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPresentationSelector({required bool compact}) {
+    const spacing = 12.0;
+    if (compact) {
+      return SizedBox(
+        height: 132,
+        child: ListView.separated(
+          key: const ValueKey('pie-presentation-selector'),
+          scrollDirection: Axis.horizontal,
+          itemCount: _PieShowcasePreset.values.length,
+          separatorBuilder: (_, _) => const SizedBox(width: spacing),
+          itemBuilder: (context, index) => SizedBox(
+            width: 220,
+            child: _presentationCard(_PieShowcasePreset.values[index]),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      key: const ValueKey('pie-presentation-selector'),
+      children: [
+        for (final (index, preset) in _PieShowcasePreset.values.indexed) ...[
+          if (index > 0) const SizedBox(width: spacing),
+          Expanded(child: _presentationCard(preset)),
+        ],
+      ],
+    );
+  }
+
+  Widget _presentationCard(_PieShowcasePreset preset) {
+    final colors = Theme.of(context).colorScheme;
+    final selected = preset == _showcasePreset;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Apply ${_presentationName(preset)} pie presentation',
+      child: Material(
+        color: selected
+            ? colors.primaryContainer.withValues(alpha: 0.42)
+            : colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey('pie-preset-${preset.name}'),
+          onTap: () => _applyShowcasePreset(preset),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      _presentationIcon(preset),
+                      size: 19,
+                      color: selected
+                          ? colors.primary
+                          : colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _presentationName(preset),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (selected)
+                      Icon(Icons.check_circle, size: 18, color: colors.primary),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _presentationDescription(preset),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDatasetHeader({required bool compact}) {
     final title = Text(
       'Choose a category story',
@@ -1278,7 +1620,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
     );
   }
 
-  PieChartSeries _buildSeries() {
+  PieChartSeries _buildSeries(ChartTheme theme) {
+    final borderColor = _borderPreset == _PieBorderPreset.fixedAccent
+        ? theme.focusBorderColor
+        : null;
+    final borderColorMode = _borderPreset == _PieBorderPreset.chartTheme
+        ? PieBorderColorMode.chartTheme
+        : PieBorderColorMode.slice;
+    final borderHueShift = _borderPreset == _PieBorderPreset.shiftedHue
+        ? 28.0
+        : 0.0;
+    final borderLightnessShift = switch (_borderPreset) {
+      _PieBorderPreset.darkerSlice => -0.18,
+      _PieBorderPreset.shiftedHue => -0.08,
+      _ => 0.0,
+    };
     return PieChartSeries.fromMap(
       id: 'pie-showcase-${_dataset.name}',
       name: _dataset.title,
@@ -1290,6 +1646,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
         radiusFactor: _radiusFactor,
         sliceGap: _sliceGap,
         borderWidth: _borderWidth,
+        borderColor: borderColor,
+        borderColorMode: borderColorMode,
+        borderHueShiftDegrees: borderHueShift,
+        borderLightnessShift: borderLightnessShift,
         selectionExplodeOffset: _selectionExplodeOffset,
       ),
       dataLabels: PieDataLabelConfig(
@@ -1310,15 +1670,41 @@ class _PieChartsPageState extends State<PieChartsPage> {
         : base.seriesTheme.copyWith(colors: palette);
     final calloutStyle = _calloutStyle(base);
     final tooltipStyle = _tooltipStyle(base);
+    final legendBase = base.legendStyle.copyWith(
+      position: _legendPosition,
+      orientation: _legendOrientation,
+      markerShape: LegendMarkerShape.circle,
+      markerSize: 14,
+      markerLabelSpacing: 8,
+    );
+    final legendStyle = switch (_legendPreset) {
+      _PieLegendPreset.theme => legendBase,
+      _PieLegendPreset.compact => legendBase.copyWith(
+        textStyle: legendBase.textStyle.copyWith(fontSize: 10),
+        markerSize: 10,
+        markerLabelSpacing: 5,
+        itemSpacing: 3,
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+      ),
+      _PieLegendPreset.surface => legendBase.copyWith(
+        textStyle: legendBase.textStyle.copyWith(fontWeight: FontWeight.w600),
+        backgroundColor: base.backgroundColor.withValues(alpha: 0.94),
+        borderColor: base.axisStyle.lineColor.withValues(alpha: 0.42),
+        borderWidth: 1,
+        borderRadius: BorderRadius.circular(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        itemSpacing: 8,
+      ),
+    };
+    final selectedGlowColor = switch (_selectedGlowColor) {
+      _PieGlowColor.slice => null,
+      _PieGlowColor.accent => seriesTheme.colorAt(0),
+      _PieGlowColor.neutral =>
+        base.axisStyle.labelStyle.color ?? const Color(0xFF1A1A1A),
+    };
     return base.copyWith(
       seriesTheme: seriesTheme,
-      legendStyle: base.legendStyle.copyWith(
-        position: _legendPosition,
-        orientation: _legendOrientation,
-        markerShape: LegendMarkerShape.circle,
-        markerSize: 14,
-        markerLabelSpacing: 8,
-      ),
+      legendStyle: legendStyle,
       interactionTheme: base.interactionTheme.copyWith(
         tooltipStyle: tooltipStyle,
       ),
@@ -1334,10 +1720,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
               )
             : const PieElevationStyle(),
         selectedElevation: _showSelectedGlow
-            ? const PieElevationStyle(
-                blurRadius: 12,
-                spreadRadius: 2,
-                opacity: 0.48,
+            ? PieElevationStyle(
+                color: selectedGlowColor,
+                blurRadius: _selectedGlowBlur,
+                spreadRadius: _selectedGlowSpread,
+                opacity: _selectedGlowOpacity,
               )
             : const PieElevationStyle(),
         calloutStyle: calloutStyle,
@@ -1410,6 +1797,30 @@ class _PieChartsPageState extends State<PieChartsPage> {
       shadowColor: theme.seriesTheme.colorAt(0).withValues(alpha: 0.18),
       shadowBlurRadius: 8,
     ),
+    _PieCalloutPreset.highContrast => const LabelStyle(
+      textStyle: TextStyle(
+        color: Color(0xFF1A1A1A),
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: Color(0xFFFFFFFF),
+      borderColor: Color(0xFF1A1A1A),
+      borderWidth: 2,
+      borderRadius: 4,
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    ),
+    _PieCalloutPreset.simpleValues => const LabelStyle(
+      textStyle: TextStyle(
+        color: Color(0xFFFFFFFF),
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: Color(0x00000000),
+      borderColor: Color(0x00000000),
+      borderWidth: 0,
+      borderRadius: 0,
+      padding: EdgeInsets.zero,
+    ),
   };
 
   LabelStyle _tooltipStyle(ChartTheme theme) => switch (_tooltipPreset) {
@@ -1480,16 +1891,66 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _PiePalette.monochrome => 'Monochrome',
   };
 
+  String _presentationName(_PieShowcasePreset value) => switch (value) {
+    _PieShowcasePreset.simple => 'Simple values',
+    _PieShowcasePreset.editorial => 'Editorial labels',
+    _PieShowcasePreset.compact => 'Compact dashboard',
+    _PieShowcasePreset.elevated => 'Elevated radial',
+    _PieShowcasePreset.highContrast => 'High contrast',
+  };
+
+  String _presentationDescription(_PieShowcasePreset value) => switch (value) {
+    _PieShowcasePreset.simple =>
+      'Dark canvas, warm slices, dominant values, and no legend',
+    _PieShowcasePreset.editorial =>
+      'Readable outside callouts with restrained spacing and borders',
+    _PieShowcasePreset.compact =>
+      'Inside percentages, compact legend, and space-efficient geometry',
+    _PieShowcasePreset.elevated =>
+      'Rounded translucent slices, shadow, glow, and raised surfaces',
+    _PieShowcasePreset.highContrast =>
+      'Opaque outside labels, monochrome slices, and strong borders',
+  };
+
+  IconData _presentationIcon(_PieShowcasePreset value) => switch (value) {
+    _PieShowcasePreset.simple => Icons.pie_chart_outline,
+    _PieShowcasePreset.editorial => Icons.article_outlined,
+    _PieShowcasePreset.compact => Icons.dashboard_outlined,
+    _PieShowcasePreset.elevated => Icons.auto_awesome_outlined,
+    _PieShowcasePreset.highContrast => Icons.contrast_outlined,
+  };
+
   String _calloutPresetName(_PieCalloutPreset value) => switch (value) {
     _PieCalloutPreset.none => 'Plain text',
     _PieCalloutPreset.surface => 'Raised surface',
     _PieCalloutPreset.accent => 'Palette accent',
+    _PieCalloutPreset.highContrast => 'High contrast',
+    _PieCalloutPreset.simpleValues => 'Simple values',
   };
 
   String _tooltipPresetName(_PieTooltipPreset value) => switch (value) {
     _PieTooltipPreset.theme => 'Chart theme',
     _PieTooltipPreset.elevated => 'Elevated surface',
     _PieTooltipPreset.contrast => 'High contrast',
+  };
+
+  String _borderPresetName(_PieBorderPreset value) => switch (value) {
+    _PieBorderPreset.chartTheme => 'Chart theme outline',
+    _PieBorderPreset.darkerSlice => 'Darker slice shade',
+    _PieBorderPreset.shiftedHue => 'Shifted slice hue',
+    _PieBorderPreset.fixedAccent => 'Fixed accent color',
+  };
+
+  String _glowColorName(_PieGlowColor value) => switch (value) {
+    _PieGlowColor.slice => 'Selected slice color',
+    _PieGlowColor.accent => 'Palette accent',
+    _PieGlowColor.neutral => 'Theme foreground',
+  };
+
+  String _legendPresetName(_PieLegendPreset value) => switch (value) {
+    _PieLegendPreset.theme => 'Chart theme',
+    _PieLegendPreset.compact => 'Compact',
+    _PieLegendPreset.surface => 'Raised surface',
   };
 
   String _legendPositionName(LegendPosition value) => switch (value) {
@@ -1510,11 +1971,19 @@ class _PieChartsPageState extends State<PieChartsPage> {
   };
 }
 
+enum _PieShowcasePreset { simple, editorial, compact, elevated, highContrast }
+
 enum _PiePalette { theme, ocean, sunset, earth, monochrome }
 
-enum _PieCalloutPreset { none, surface, accent }
+enum _PieCalloutPreset { none, surface, accent, highContrast, simpleValues }
 
 enum _PieTooltipPreset { theme, elevated, contrast }
+
+enum _PieBorderPreset { chartTheme, darkerSlice, shiftedHue, fixedAccent }
+
+enum _PieGlowColor { slice, accent, neutral }
+
+enum _PieLegendPreset { theme, compact, surface }
 
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({

@@ -179,6 +179,28 @@ class PieChartSeries extends ChartSeries {
     );
     _requireNonNegative(pieStyle.sliceGap, 'pieStyle.sliceGap');
     _requireNonNegative(pieStyle.borderWidth, 'pieStyle.borderWidth');
+    if (pieStyle.borderHueShiftDegrees != null) {
+      _requireFinite(
+        pieStyle.borderHueShiftDegrees!,
+        'pieStyle.borderHueShiftDegrees',
+      );
+    }
+    if (pieStyle.borderSaturationShift != null) {
+      _requireRange(
+        pieStyle.borderSaturationShift!,
+        'pieStyle.borderSaturationShift',
+        min: -1,
+        max: 1,
+      );
+    }
+    if (pieStyle.borderLightnessShift != null) {
+      _requireRange(
+        pieStyle.borderLightnessShift!,
+        'pieStyle.borderLightnessShift',
+        min: -1,
+        max: 1,
+      );
+    }
     _requireNonNegative(
       pieStyle.selectionExplodeOffset,
       'pieStyle.selectionExplodeOffset',

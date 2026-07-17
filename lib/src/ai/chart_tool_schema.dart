@@ -243,7 +243,33 @@ Pie charts do not use axes, crosshair, pan, or zoom.
             },
             'pie_border_color': {
               'type': 'string',
-              'description': 'Pie-only shared slice-border color.',
+              'description':
+                  'Pie-only fixed shared slice-border color. When supplied, this overrides the border color mode.',
+            },
+            'pie_border_color_mode': {
+              'type': 'string',
+              'enum': ['chart_theme', 'slice'],
+              'description':
+                  'Pie-only fallback border policy: chart axis color or a color derived independently from each slice.',
+            },
+            'pie_border_hue_shift': {
+              'type': 'number',
+              'description':
+                  'Hue rotation in degrees for slice-derived Pie borders.',
+            },
+            'pie_border_saturation_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL saturation shift for slice-derived Pie borders.',
+            },
+            'pie_border_lightness_shift': {
+              'type': 'number',
+              'minimum': -1,
+              'maximum': 1,
+              'description':
+                  'Additive HSL lightness shift for slice-derived Pie borders; negative values create darker borders.',
             },
             'pie_selection_explode_offset': {
               'type': 'number',
@@ -271,6 +297,11 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'minimum': 0,
               'description': 'Pie slice shadow blur radius.',
             },
+            'pie_shadow_spread': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Pie slice shadow spread radius.',
+            },
             'pie_shadow_offset_x': {
               'type': 'number',
               'description': 'Horizontal Pie slice shadow offset.',
@@ -278,6 +309,17 @@ Pie charts do not use axes, crosshair, pan, or zoom.
             'pie_shadow_offset_y': {
               'type': 'number',
               'description': 'Vertical Pie slice shadow offset.',
+            },
+            'pie_shadow_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pie slice shadow opacity.',
+            },
+            'pie_selected_glow_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed selected-slice glow color; omit to derive it from each slice.',
             },
             'pie_selected_glow_blur': {
               'type': 'number',
@@ -288,6 +330,20 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'type': 'number',
               'minimum': 0,
               'description': 'Spread radius for selected-slice elevation.',
+            },
+            'pie_selected_glow_offset_x': {
+              'type': 'number',
+              'description': 'Horizontal selected-slice elevation offset.',
+            },
+            'pie_selected_glow_offset_y': {
+              'type': 'number',
+              'description': 'Vertical selected-slice elevation offset.',
+            },
+            'pie_selected_glow_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Selected-slice elevation opacity.',
             },
             'pie_animation_mode': {
               'type': 'string',

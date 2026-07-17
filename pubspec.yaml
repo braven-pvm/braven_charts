@@ -1,7 +1,8 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter charts with custom rendering, multi-axis interaction, live
-  streaming, editable annotations, data tables, and portable artifacts.
+  Pure Dart Flutter Cartesian and pie charts with custom rendering, multi-axis
+  interaction, live streaming, editable annotations, data tables, and portable
+  artifacts.
 version: 0.3.1
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
@@ -52,9 +53,9 @@ screenshots:
       Point, range, and threshold annotations combined in one analytical chart.
     path: doc/screenshots/gallery_annotated.png
   - description: >-
-      Mixed revenue line and forecast area series with markers, independent
-      styling, and a shared viewport.
-    path: doc/screenshots/gallery_revenue_forecast.png
+      Five production-shaped pie charts spanning simple inside values, outside
+      labels, dense categories, themes, rounded slices, and elevation.
+    path: doc/screenshots/gallery_pie_collection.png
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

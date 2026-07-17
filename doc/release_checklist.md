@@ -61,8 +61,8 @@ python -m pip install selenium Pillow
 python tool/capture_showcase_media.py
 ```
 
-Use `--capture interaction`, `--capture live-stream`, or `--capture stills`
-when only one media group changed. Capture from a local release build with
+Use `--capture interaction`, `--capture live-stream`, `--capture stills`, or
+`--capture pie` when only one media group changed. Capture from a local release build with
 `--url http://127.0.0.1:<port>/` before the public site has the change.
 
 ## Public showcase

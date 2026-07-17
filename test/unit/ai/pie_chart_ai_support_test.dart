@@ -33,14 +33,23 @@ void main() {
           'pie_slice_gap': 4,
           'pie_border_width': 2,
           'pie_border_color': '#223344',
+          'pie_border_color_mode': 'slice',
+          'pie_border_hue_shift': 20,
+          'pie_border_saturation_shift': -0.1,
+          'pie_border_lightness_shift': -0.2,
           'pie_selection_explode_offset': 12,
           'pie_opacity': 0.78,
           'pie_corner_radius': 10,
           'pie_shadow_color': '#33000000',
           'pie_shadow_blur': 8,
+          'pie_shadow_spread': 1,
           'pie_shadow_offset_y': 3,
+          'pie_shadow_opacity': 0.7,
+          'pie_selected_glow_color': '#556677',
           'pie_selected_glow_blur': 12,
           'pie_selected_glow_spread': 2,
+          'pie_selected_glow_offset_x': 1,
+          'pie_selected_glow_opacity': 0.6,
           'pie_animation_mode': 'grow',
           'show_data_labels': true,
           'pie_label_position': 'inside',
@@ -72,14 +81,23 @@ void main() {
       expect(series.pieStyle.sliceGap, 4);
       expect(series.pieStyle.borderWidth, 2);
       expect(series.pieStyle.borderColor, const Color(0xFF223344));
+      expect(series.pieStyle.borderColorMode, PieBorderColorMode.slice);
+      expect(series.pieStyle.borderHueShiftDegrees, 20);
+      expect(series.pieStyle.borderSaturationShift, -0.1);
+      expect(series.pieStyle.borderLightnessShift, -0.2);
       expect(series.pieStyle.selectionExplodeOffset, 12);
       expect(series.pieStyle.opacity, 0.78);
       expect(series.pieStyle.cornerRadius, 10);
       expect(series.pieStyle.shadow?.color, const Color(0x33000000));
       expect(series.pieStyle.shadow?.blurRadius, 8);
+      expect(series.pieStyle.shadow?.spreadRadius, 1);
       expect(series.pieStyle.shadow?.offset, const Offset(0, 3));
+      expect(series.pieStyle.shadow?.opacity, 0.7);
+      expect(series.pieStyle.selectedElevation?.color, const Color(0xFF556677));
       expect(series.pieStyle.selectedElevation?.blurRadius, 12);
       expect(series.pieStyle.selectedElevation?.spreadRadius, 2);
+      expect(series.pieStyle.selectedElevation?.offset, const Offset(1, 0));
+      expect(series.pieStyle.selectedElevation?.opacity, 0.6);
       expect(series.pieStyle.animationMode, PieAnimationMode.grow);
       expect(series.dataLabels.position, PieDataLabelPosition.inside);
       expect(

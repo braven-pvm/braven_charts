@@ -374,6 +374,13 @@ class EventHandlerManager {
   /// Gets the tapped marker for tooltip rendering.
   HoveredMarkerInfo? get tappedMarker => _tappedMarker;
 
+  /// Clears a tap-pinned tooltip without disturbing cursor or hover state.
+  void clearTappedMarker() {
+    if (_tappedMarker == null) return;
+    _tappedMarker = null;
+    _delegate.markNeedsPaint();
+  }
+
   // ==========================================================================
   // Hit Test Throttling
   // ==========================================================================

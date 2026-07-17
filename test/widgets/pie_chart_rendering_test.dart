@@ -1,6 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts/src/widgets/pie_chart_legend.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -102,7 +106,64 @@ void main() {
 
     final chartRect = tester.getRect(find.byType(BravenChartPlus));
     final legendRect = tester.getRect(find.byType(PieChartLegend));
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final plotRect = renderBox.localToGlobal(Offset.zero) & renderBox.size;
     expect(legendRect.center.dx, greaterThan(chartRect.center.dx));
+    expect(legendRect.width, lessThan(chartRect.width * 0.36));
+    expect(plotRect.width, greaterThan(chartRect.width * 0.64));
+    expect(chartRect.right - legendRect.right, lessThanOrEqualTo(16));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bottom legend uses intrinsic height and leaves the chart bulk', (
+    tester,
+  ) async {
+    final theme = ChartTheme.light.copyWith(
+      legendStyle: ChartTheme.light.legendStyle.copyWith(
+        position: LegendPosition.bottomCenter,
+        orientation: LegendOrientation.horizontal,
+        markerShape: LegendMarkerShape.circle,
+      ),
+      pieChartTheme: const PieChartTheme(animationMode: PieAnimationMode.none),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 800,
+          height: 420,
+          child: BravenChartPlus(
+            showLegend: true,
+            theme: theme,
+            series: [
+              PieChartSeries.fromMap(
+                id: 'bottom-legend',
+                values: const {
+                  'Subscriptions': 42,
+                  'Services': 28,
+                  'Hardware': 16,
+                  'Training': 9,
+                  'Other': 5,
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chartRect = tester.getRect(find.byType(BravenChartPlus));
+    final legendRect = tester.getRect(find.byType(PieChartLegend));
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final plotRect = renderBox.localToGlobal(Offset.zero) & renderBox.size;
+
+    expect(legendRect.height, lessThan(chartRect.height * 0.25));
+    expect(plotRect.height, greaterThan(chartRect.height * 0.70));
+    expect(chartRect.bottom - legendRect.bottom, lessThanOrEqualTo(16));
     expect(tester.takeException(), isNull);
   });
 
@@ -144,6 +205,104 @@ void main() {
     expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'pointer selection has no accent outline but keyboard focus keeps a ring',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      final base = ChartTheme.light;
+      final theme = base.copyWith(
+        animationTheme: base.animationTheme.copyWith(
+          dataUpdateDuration: Duration.zero,
+          themeChangeDuration: Duration.zero,
+          interactionDuration: Duration.zero,
+        ),
+        pieChartTheme: const PieChartTheme(
+          selectedElevation: PieElevationStyle(),
+          animationMode: PieAnimationMode.none,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox.square(
+                dimension: 300,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  theme: theme,
+                  interactionConfig: const InteractionConfig(
+                    showFocusBorder: false,
+                    tooltip: TooltipConfig(enabled: false),
+                  ),
+                  series: [
+                    PieChartSeries.fromMap(
+                      id: 'pointer-selection',
+                      values: const {'A': 2, 'B': 1},
+                      pieStyle: const PieChartStyle(
+                        radiusFactor: 0.8,
+                        sliceGap: 0,
+                        borderWidth: 0,
+                        selectionExplodeOffset: 0,
+                        selectedElevation: PieElevationStyle(),
+                        animationMode: PieAnimationMode.none,
+                      ),
+                      dataLabels: const PieDataLabelConfig(isVisible: false),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      final firstHit = renderBox.dataHitForPointIndex('pointer-selection', 0)!;
+      await tester.tapAt(
+        renderBox.localToGlobal(renderBox.plotToWidget(firstHit.plotPosition)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'pointer-selection', pointIndex: 0),
+      });
+      expect(
+        find.semantics
+            .byLabel(RegExp(r'^A,'))
+            .evaluate()
+            .every(
+              (node) =>
+                  node.getSemanticsData().flagsCollection.isFocused !=
+                  ui.Tristate.isTrue,
+            ),
+        isTrue,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics
+            .byLabel(RegExp(r'^B,'))
+            .evaluate()
+            .any(
+              (node) =>
+                  node.getSemanticsData().flagsCollection.isFocused ==
+                  ui.Tristate.isTrue,
+            ),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
 
   testWidgets('all Pie legend anchors remain bounded', (tester) async {
     for (final position in LegendPosition.values) {
@@ -193,6 +352,44 @@ void main() {
         findsOneWidget,
         reason: position.name,
       );
+      final chartRect = tester.getRect(find.byType(BravenChartPlus));
+      final legendRect = tester.getRect(find.byType(PieChartLegend));
+      expect(
+        chartRect.inflate(0.1).contains(legendRect.topLeft),
+        isTrue,
+        reason: '${position.name} top-left',
+      );
+      expect(
+        chartRect.inflate(0.1).contains(legendRect.bottomRight),
+        isTrue,
+        reason: '${position.name} bottom-right',
+      );
+      switch (position) {
+        case LegendPosition.topLeft:
+        case LegendPosition.bottomLeft:
+        case LegendPosition.centerLeft:
+          expect(
+            legendRect.left - chartRect.left,
+            lessThanOrEqualTo(16),
+            reason: position.name,
+          );
+        case LegendPosition.topRight:
+        case LegendPosition.bottomRight:
+        case LegendPosition.centerRight:
+          expect(
+            chartRect.right - legendRect.right,
+            lessThanOrEqualTo(16),
+            reason: position.name,
+          );
+        case LegendPosition.topCenter:
+        case LegendPosition.center:
+        case LegendPosition.bottomCenter:
+          expect(
+            (legendRect.center.dx - chartRect.center.dx).abs(),
+            lessThanOrEqualTo(1),
+            reason: position.name,
+          );
+      }
       expect(tester.takeException(), isNull, reason: position.name);
     }
   });

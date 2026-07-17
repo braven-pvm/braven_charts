@@ -45,12 +45,17 @@ bounded buffer continues receiving data, and resume with buffered catch-up.
 
 ## Gallery
 
-These 15 examples cover baseline fills, stage summaries, line glow, small
-multiples, live data, independent axes, annotations, mixed series, grouped
-bars, scatter plots, interpolation modes, threshold styling, and positive or
-negative area segments.
+The Gallery combines curated and full-catalog views across Pie, line, area,
+bar, scatter, and mixed compositions. It covers light and dark Pie treatments,
+inside and collision-aware outside labels, dense categories, rounded and
+elevated slices, baseline fills, live data, independent axes, annotations,
+interpolation, thresholds, and domain-shaped dashboards.
 
-[![Fifteen varied Braven Charts examples from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
+[![Five themed and configured Pie chart compositions from the public Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_pie_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
+
+The wider Cartesian catalog remains available in the current Gallery mosaic:
+
+[![Varied Braven Charts compositions from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
 
 ## Feature coverage
 

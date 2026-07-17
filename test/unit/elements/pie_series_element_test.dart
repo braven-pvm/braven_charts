@@ -57,6 +57,44 @@ void main() {
       ]);
     });
 
+    test('resolves fixed and slice-derived border colors', () {
+      const fixed = Color(0xFF102030);
+      final fixedElement = PieSeriesElement(
+        series: PieChartSeries.fromMap(
+          id: 'fixed-border',
+          values: const {'A': 2, 'B': 1},
+          pieStyle: const PieChartStyle(borderColor: fixed),
+        ),
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      expect(fixedElement.resolvedBorderColors, everyElement(fixed));
+
+      const sliceColor = Color(0xFF6699CC);
+      final derivedElement = PieSeriesElement(
+        series: PieChartSeries.fromMap(
+          id: 'derived-border',
+          color: sliceColor,
+          values: const {'A': 1},
+          pieStyle: const PieChartStyle(
+            borderColorMode: PieBorderColorMode.slice,
+            borderHueShiftDegrees: 30,
+            borderSaturationShift: -0.1,
+            borderLightnessShift: -0.2,
+          ),
+        ),
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      final source = HSLColor.fromColor(sliceColor);
+      final expected = source
+          .withHue((source.hue + 30) % 360)
+          .withSaturation(source.saturation - 0.1)
+          .withLightness(source.lightness - 0.2)
+          .toColor();
+      expect(derivedElement.resolvedBorderColors, [expected]);
+    });
+
     test(
       'paint writes the expected theme colors into opposite slices',
       () async {
@@ -166,6 +204,137 @@ void main() {
         expect(element.dataHitForPointIndex(0), isNotNull);
         expect(element.geometry.slices.first.path, isNotNull);
         recorder.endRecording().dispose();
+      },
+    );
+
+    test(
+      'selected explode, border, focus, and glow stay inside the canvas',
+      () {
+        const glow = PieElevationStyle(
+          blurRadius: 24,
+          spreadRadius: 6,
+          offset: Offset(-3, -5),
+          opacity: 0.8,
+        );
+        final series = PieChartSeries.fromMap(
+          id: 'contained-selection',
+          values: const {'Top': 1, 'Right': 1, 'Bottom': 1, 'Left': 1},
+          pieStyle: const PieChartStyle(
+            startAngleDegrees: -135,
+            radiusFactor: 1,
+            sliceGap: 8,
+            borderWidth: 4,
+            selectionExplodeOffset: 24,
+            selectedElevation: glow,
+            animationMode: PieAnimationMode.none,
+          ),
+          dataLabels: const PieDataLabelConfig(
+            isVisible: true,
+            position: PieDataLabelPosition.inside,
+          ),
+        );
+        final glowExtent = glow.spreadRadius + glow.blurRadius * 0.65;
+        for (final selectedIndex in List<int>.generate(4, (index) => index)) {
+          final element = PieSeriesElement(
+            series: series,
+            size: const Size.square(260),
+            theme: ChartTheme.light.copyWith(focusBorderWidth: 6),
+            selectedPointIndices: {selectedIndex},
+          );
+          final selectedSlice = element.geometry.slices[selectedIndex];
+          final outerArcCenter =
+              selectedSlice.connectorOrigin -
+              Offset.fromDirection(
+                selectedSlice.midAngle,
+                element.geometry.outerRadius,
+              );
+          final paintedBounds = Rect.fromCircle(
+            center: outerArcCenter,
+            radius: element.geometry.outerRadius,
+          ).shift(glow.offset).inflate(glowExtent);
+
+          expect(
+            paintedBounds.left,
+            greaterThanOrEqualTo(0),
+            reason: selectedSlice.point.label,
+          );
+          expect(
+            paintedBounds.top,
+            greaterThanOrEqualTo(0),
+            reason: selectedSlice.point.label,
+          );
+          expect(
+            paintedBounds.right,
+            lessThanOrEqualTo(element.size.width),
+            reason: selectedSlice.point.label,
+          );
+          expect(
+            paintedBounds.bottom,
+            lessThanOrEqualTo(element.size.height),
+            reason: selectedSlice.point.label,
+          );
+        }
+      },
+    );
+
+    test(
+      'selection adds no global outline while explicit focus keeps its ring',
+      () async {
+        final series = PieChartSeries.fromMap(
+          id: 'selection-treatment',
+          values: const {'A': 2, 'B': 1},
+          pieStyle: const PieChartStyle(
+            radiusFactor: 0.8,
+            sliceGap: 0,
+            borderWidth: 0,
+            selectionExplodeOffset: 0,
+            selectedElevation: PieElevationStyle(),
+            animationMode: PieAnimationMode.none,
+          ),
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+        );
+        final theme = ChartTheme.light.copyWith(
+          focusBorderColor: const Color(0xFF00FFFF),
+          interactionTheme: ChartTheme.light.interactionTheme.copyWith(
+            selectionColor: const Color(0xFFFF00FF),
+          ),
+        );
+
+        Future<List<int>> paint(PieSeriesElement element) async {
+          final recorder = PictureRecorder();
+          element.paint(Canvas(recorder), const Size.square(200));
+          final image = await recorder.endRecording().toImage(200, 200);
+          final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+          image.dispose();
+          return List<int>.of(data!.buffer.asUint8List());
+        }
+
+        final base = await paint(
+          PieSeriesElement(
+            series: series,
+            size: const Size.square(200),
+            theme: theme,
+          ),
+        );
+        final selected = await paint(
+          PieSeriesElement(
+            series: series,
+            size: const Size.square(200),
+            theme: theme,
+            selectedPointIndices: const {0},
+          ),
+        );
+        final focused = await paint(
+          PieSeriesElement(
+            series: series,
+            size: const Size.square(200),
+            theme: theme,
+            focusedPointIndices: const {0},
+          ),
+        );
+
+        expect(selected, base);
+        expect(focused, isNot(base));
       },
     );
 

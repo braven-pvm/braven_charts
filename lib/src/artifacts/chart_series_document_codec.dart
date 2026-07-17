@@ -478,6 +478,14 @@ Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
   'sliceGap': _number(style.sliceGap),
   'borderWidth': _number(style.borderWidth),
   if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  if (style.borderColorMode != null)
+    'borderColorMode': style.borderColorMode!.name,
+  if (style.borderHueShiftDegrees != null)
+    'borderHueShiftDegrees': _number(style.borderHueShiftDegrees!),
+  if (style.borderSaturationShift != null)
+    'borderSaturationShift': _number(style.borderSaturationShift!),
+  if (style.borderLightnessShift != null)
+    'borderLightnessShift': _number(style.borderLightnessShift!),
   'selectionExplodeOffset': _number(style.selectionExplodeOffset),
   if (style.opacity != null) 'opacity': _number(style.opacity!),
   if (style.cornerRadius != null) 'cornerRadius': _number(style.cornerRadius!),
@@ -497,6 +505,14 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
     value['borderColor'],
     r'$.style.pieStyle.borderColor',
   ),
+  borderColorMode: _optionalEnum(
+    value['borderColorMode'],
+    PieBorderColorMode.values,
+    r'$.style.pieStyle.borderColorMode',
+  ),
+  borderHueShiftDegrees: _optionalDouble(value['borderHueShiftDegrees']),
+  borderSaturationShift: _optionalDouble(value['borderSaturationShift']),
+  borderLightnessShift: _optionalDouble(value['borderLightnessShift']),
   selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
   opacity: _optionalDouble(value['opacity']),
   cornerRadius: _optionalDouble(value['cornerRadius']),

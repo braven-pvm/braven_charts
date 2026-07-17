@@ -27,10 +27,12 @@ types and where to begin.
   stable slices; the explicit constructor preserves source point metadata and
   optional per-point colors.
 - `PieChartStyle` controls start angle, direction, radius, physical slice
-  separation, borders, selection explode offset, and optional per-series
+  separation, fixed or `PieBorderColorMode` slice-derived borders, selection
+  explode offset, and optional per-series
   opacity, corner, elevation, and animation overrides.
 - `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
-  theme-level radial styling, shadows/glows, callouts, and motion defaults.
+  theme-level radial styling, independently configurable shadows/glows,
+  callouts, and motion defaults.
 - `PieDataLabelConfig`, `PieDataLabelPosition`, `PieDataLabelContent`, and
   `PieDataLabelCollisionStrategy` control label eligibility, placement, and
   optional shared-`LabelStyle` callouts.
@@ -39,6 +41,12 @@ A chart accepts exactly one pie series and cannot mix radial and Cartesian
 series. Pie charts do not use axes, crosshairs, scrollbars, pan, zoom, or
 Cartesian annotations. Contributions must be finite and non-negative; zero
 values remain portable but do not paint a slice.
+
+Pie label callouts use `LabelStyle`; legends use the shared `LegendStyle`; and
+tooltips use either an explicit non-default `TooltipConfig.style` or
+`ChartTheme.interactionTheme.tooltipStyle`. Slice, legend, and linked table
+selection resolve the same durable tooltip, which clears with selection and
+re-anchors after geometry or responsive layout changes.
 
 ## Axes, normalization, and layout
 

@@ -33,7 +33,7 @@ class PieSeriesElement implements DataHitElement {
   }) : geometry = PieChartGeometryCalculator.calculate(
          series: series,
          size: size,
-         padding: _geometryPadding(series, size, textScaleFactor),
+         padding: _geometryPadding(series, size, theme, textScaleFactor),
          explodedPointIndices: selectedPointIndices,
          cornerRadius:
              series.pieStyle.cornerRadius ?? theme.pieChartTheme.cornerRadius,
@@ -102,6 +102,11 @@ class PieSeriesElement implements DataHitElement {
   List<Color> get resolvedSliceColors => List<Color>.unmodifiable([
     for (final (visibleIndex, slice) in geometry.slices.indexed)
       _resolveSliceColor(slice.point, visibleIndex),
+  ]);
+
+  /// Border colors after fixed, series, and theme policies are resolved.
+  List<Color> get resolvedBorderColors => List<Color>.unmodifiable([
+    for (final color in resolvedSliceColors) _resolveBorderColor(color),
   ]);
 
   /// Returns the visible slice at [position], if any.
@@ -191,7 +196,7 @@ class PieSeriesElement implements DataHitElement {
             ..style = PaintingStyle.stroke
             ..strokeWidth = series.pieStyle.borderWidth
             ..strokeJoin = StrokeJoin.round
-            ..color = series.pieStyle.borderColor ?? theme.axisStyle.lineColor
+            ..color = _resolveBorderColor(fillColor)
             ..isAntiAlias = true,
         );
       }
@@ -208,19 +213,14 @@ class PieSeriesElement implements DataHitElement {
             ..isAntiAlias = true,
         );
       }
-      if (selected || focusedPointIndices.contains(slice.pointIndex)) {
-        final isFocused = focusedPointIndices.contains(slice.pointIndex);
+      if (focusedPointIndices.contains(slice.pointIndex)) {
         canvas.drawPath(
           slice.path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = isFocused
-                ? math.max(3, theme.focusBorderWidth)
-                : math.max(2, series.pieStyle.borderWidth + 1)
+            ..strokeWidth = math.max(3, theme.focusBorderWidth)
             ..strokeJoin = StrokeJoin.round
-            ..color = isFocused
-                ? theme.focusBorderColor
-                : theme.interactionTheme.selectionColor.withValues(alpha: 1)
+            ..color = theme.focusBorderColor
             ..isAntiAlias = true,
         );
       }
@@ -615,6 +615,35 @@ class PieSeriesElement implements DataHitElement {
     );
   }
 
+  Color _resolveBorderColor(Color sliceColor) {
+    final style = series.pieStyle;
+    if (style.borderColor case final fixedColor?) return fixedColor;
+
+    final pieTheme = theme.pieChartTheme;
+    final mode = style.borderColorMode ?? pieTheme.borderColorMode;
+    if (mode == PieBorderColorMode.chartTheme) {
+      return theme.axisStyle.lineColor;
+    }
+
+    final hueShift =
+        style.borderHueShiftDegrees ?? pieTheme.borderHueShiftDegrees;
+    final saturationShift =
+        style.borderSaturationShift ?? pieTheme.borderSaturationShift;
+    final lightnessShift =
+        style.borderLightnessShift ?? pieTheme.borderLightnessShift;
+    final hsl = HSLColor.fromColor(sliceColor);
+    final shiftedHue = (hsl.hue + hueShift) % 360;
+    return hsl
+        .withHue(shiftedHue < 0 ? shiftedHue + 360 : shiftedHue)
+        .withSaturation(
+          (hsl.saturation + saturationShift).clamp(0.0, 1.0).toDouble(),
+        )
+        .withLightness(
+          (hsl.lightness + lightnessShift).clamp(0.0, 1.0).toDouble(),
+        )
+        .toColor();
+  }
+
   ChartDataHit _dataHitForSlice(PieSliceGeometry slice) {
     final visibleIndex = geometry.slices.indexOf(slice);
     final unit = series.unit == null || series.unit!.isEmpty
@@ -623,7 +652,7 @@ class PieSeriesElement implements DataHitElement {
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: slice.pointIndex,
-      plotPosition: slice.insideLabelAnchor,
+      plotPosition: slice.tooltipAnchor,
       semanticBounds: slice.path.getBounds(),
       point: slice.point,
       category: slice.point.label!.trim(),
@@ -670,18 +699,75 @@ class PieSeriesElement implements DataHitElement {
   static EdgeInsets _geometryPadding(
     PieChartSeries series,
     Size size,
+    ChartTheme theme,
     double textScaleFactor,
   ) {
+    final EdgeInsets labelPadding;
     if (!series.dataLabels.isVisible ||
         series.dataLabels.position == PieDataLabelPosition.inside) {
-      return const EdgeInsets.all(12);
+      labelPadding = const EdgeInsets.all(12);
+    } else {
+      final horizontal = math.min(
+        math.max(36.0, size.width * 0.22 * textScaleFactor),
+        size.width * 0.34,
+      );
+      final vertical = math.min(28 * textScaleFactor, size.height * 0.18);
+      labelPadding = EdgeInsets.symmetric(
+        horizontal: horizontal,
+        vertical: vertical,
+      );
     }
-    final horizontal = math.min(
-      math.max(36.0, size.width * 0.22 * textScaleFactor),
-      size.width * 0.34,
+
+    final strokeOverflow = math.max(
+      series.pieStyle.borderWidth / 2,
+      math.max(3, theme.focusBorderWidth) / 2,
     );
-    final vertical = math.min(28 * textScaleFactor, size.height * 0.18);
-    return EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical);
+    final shadow = series.pieStyle.shadow ?? theme.pieChartTheme.shadow;
+    final selectedElevation =
+        series.pieStyle.selectedElevation ??
+        theme.pieChartTheme.selectedElevation;
+    final shadowOverflow = _paintOverflowInsets(
+      shadow,
+      radialOffset: strokeOverflow,
+    );
+    final selectedOverflow = _paintOverflowInsets(
+      selectedElevation,
+      radialOffset: strokeOverflow + series.pieStyle.selectionExplodeOffset,
+    );
+
+    return EdgeInsets.fromLTRB(
+      math.max(
+        labelPadding.left,
+        math.max(shadowOverflow.left, selectedOverflow.left),
+      ),
+      math.max(
+        labelPadding.top,
+        math.max(shadowOverflow.top, selectedOverflow.top),
+      ),
+      math.max(
+        labelPadding.right,
+        math.max(shadowOverflow.right, selectedOverflow.right),
+      ),
+      math.max(
+        labelPadding.bottom,
+        math.max(shadowOverflow.bottom, selectedOverflow.bottom),
+      ),
+    );
+  }
+
+  static EdgeInsets _paintOverflowInsets(
+    PieElevationStyle style, {
+    required double radialOffset,
+  }) {
+    final elevationExtent = style.isVisible
+        ? style.spreadRadius + style.blurRadius * 0.65
+        : 0.0;
+    return EdgeInsets.fromLTRB(
+      radialOffset + elevationExtent + math.max(0, -style.offset.dx),
+      radialOffset + elevationExtent + math.max(0, -style.offset.dy),
+      radialOffset + elevationExtent + math.max(0, style.offset.dx),
+      radialOffset + elevationExtent + math.max(0, style.offset.dy),
+    );
   }
 }
 

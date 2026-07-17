@@ -22,6 +22,7 @@ import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/gallery_flagships.dart';
+import 'widgets/pie_gallery_cards.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -259,6 +260,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       return const _HeroMediaCapture(
         panel: PerformanceIntelligenceHeroPanel.powerDuration,
       );
+    }
+    if (capture == 'pie-gallery') {
+      return const PieGalleryMediaPanel();
     }
 
     final width = MediaQuery.of(context).size.width;

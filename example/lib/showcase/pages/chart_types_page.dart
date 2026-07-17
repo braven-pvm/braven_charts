@@ -36,6 +36,10 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   double _fillOpacity = 0.28;
   double _barWidthPercent = 0.64;
   double _markerRadius = 5.0;
+  bool _pieShowLabels = true;
+  PieDataLabelPosition _pieLabelPosition = PieDataLabelPosition.outside;
+  double _pieSliceGap = 3;
+  double _pieStartAngle = -90;
   bool _showSecondSeries = true;
 
   late List<ChartDataPoint> _observedData;
@@ -178,6 +182,50 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               suffix: 'px',
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _markerRadius = value),
+            ),
+          ],
+        ),
+      if (_chartType == ChartType.pie)
+        OptionSection(
+          title: 'Pie Appearance',
+          icon: Icons.pie_chart_outline,
+          children: [
+            BoolOption(
+              label: 'Show Data Labels',
+              value: _pieShowLabels,
+              onChanged: (value) => setState(() => _pieShowLabels = value),
+              subtitle: 'Keep category meaning beside each contribution',
+            ),
+            if (_pieShowLabels)
+              EnumOption<PieDataLabelPosition>(
+                label: 'Label Position',
+                value: _pieLabelPosition,
+                values: PieDataLabelPosition.values,
+                labelBuilder: (value) => switch (value) {
+                  PieDataLabelPosition.inside => 'Inside slices',
+                  PieDataLabelPosition.outside => 'Outside with connectors',
+                },
+                onChanged: (value) => setState(() => _pieLabelPosition = value),
+              ),
+            SliderOption(
+              label: 'Slice Gap',
+              value: _pieSliceGap,
+              min: 0,
+              max: 8,
+              divisions: 8,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _pieSliceGap = value),
+            ),
+            SliderOption(
+              label: 'Start Angle',
+              value: _pieStartAngle,
+              min: -180,
+              max: 180,
+              divisions: 24,
+              suffix: '°',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _pieStartAngle = value),
             ),
           ],
         ),
@@ -453,13 +501,14 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                 ),
             },
             pieStyle: PieChartStyle(
+              startAngleDegrees: preview ? -90 : _pieStartAngle,
               radiusFactor: preview ? 0.82 : 0.86,
-              sliceGap: preview ? 1 : 2,
+              sliceGap: preview ? 1 : _pieSliceGap,
               borderWidth: preview ? 0 : 1,
             ),
             dataLabels: PieDataLabelConfig(
-              isVisible: !preview,
-              position: PieDataLabelPosition.outside,
+              isVisible: !preview && _pieShowLabels,
+              position: _pieLabelPosition,
               content: PieDataLabelContent.categoryAndPercentage,
             ),
           ),
@@ -477,7 +526,9 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         '${_interpolation.name} · ${(_fillOpacity * 100).round()}% fill',
       ChartType.bar => '${(_barWidthPercent * 100).round()}% bar width',
       ChartType.scatter => '${_markerRadius.toStringAsFixed(0)}px markers',
-      ChartType.pie => '5 categories · collision-aware outside labels',
+      ChartType.pie =>
+        '5 categories · ${_pieSliceGap.toStringAsFixed(0)}px gap · '
+            '${_pieShowLabels ? _pieLabelPosition.name : 'labels hidden'}',
     };
 
     final dataSummary = _chartType == ChartType.pie
