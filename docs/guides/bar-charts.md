@@ -369,6 +369,34 @@ marks: hit testing, focus, selection, and series counts continue to describe
 the actual bar. Set a marker color explicitly or leave it null to derive a
 high-contrast color from each bar.
 
+## Uncertainty and error bars
+
+Use `errorLowerValues` and `errorUpperValues` for absolute value-axis
+endpoints around each estimate. Both lists align with `points`; a null pair
+omits the interval for that category:
+
+```dart
+BarChartSeries(
+  id: 'estimate',
+  name: 'Estimate',
+  points: estimates,
+  errorLowerValues: const [58, 65, 71, 52],
+  errorUpperValues: const [70, 80, 86, 65],
+  errorBarStyle: const BarErrorBarStyle(
+    width: 1.5,
+    capLengthFactor: 0.6,
+  ),
+)
+```
+
+The stem follows the value axis and its caps cross the bar, so the geometry
+automatically transposes in horizontal charts. Endpoints expand axis bounds,
+round-trip through artifacts, animate with data updates, and appear in
+tooltips and keyboard semantics. Whiskers remain passive: the estimate is the
+only hit-tested and selectable data mark. When `color` is omitted, the default
+dark line receives a light halo so it remains visible across bars and light or
+dark plot backgrounds.
+
 ## Labels
 
 Bar labels use rendered rectangle geometry rather than marker geometry:
@@ -467,6 +495,6 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=overlay`, `?page=bar-lab&preset=offset`,
 `?page=bar-lab&preset=range`, `?page=bar-lab&preset=waterfall`,
 `?page=bar-lab&preset=horizontal`, `?page=bar-lab&preset=axes`,
-`?page=bar-lab&preset=targets`, `?page=bar-lab&preset=motion`,
-`?page=bar-lab&preset=states`,
+`?page=bar-lab&preset=targets`, `?page=bar-lab&preset=uncertainty`,
+`?page=bar-lab&preset=motion`, `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

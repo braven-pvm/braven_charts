@@ -499,6 +499,14 @@ void main() {
                     lengthFactor: 1.4,
                     opacity: 0.8,
                   ),
+                  errorLowerValues: [1],
+                  errorUpperValues: [6],
+                  errorBarStyle: BarErrorBarStyle(
+                    color: Color(0xFF475569),
+                    width: 2.5,
+                    capLengthFactor: 0.75,
+                    opacity: 0.7,
+                  ),
                   labelStyle: BarLabelStyle(
                     show: true,
                     position: BarLabelPosition.insideEnd,
@@ -561,6 +569,17 @@ void main() {
           width: 3,
           lengthFactor: 1.4,
           opacity: 0.8,
+        ),
+      );
+      expect(bar.errorLowerValues, const [1]);
+      expect(bar.errorUpperValues, const [6]);
+      expect(
+        bar.errorBarStyle,
+        const BarErrorBarStyle(
+          color: Color(0xFF475569),
+          width: 2.5,
+          capLengthFactor: 0.75,
+          opacity: 0.7,
         ),
       );
       expect(bar.labelStyle.show, isTrue);

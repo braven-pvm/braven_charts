@@ -33,6 +33,15 @@ class BarGeometry {
     this.targetStart,
     this.targetEnd,
     this.targetBounds,
+    this.errorLowerValue,
+    this.errorUpperValue,
+    this.errorStemStart,
+    this.errorStemEnd,
+    this.errorLowerCapStart,
+    this.errorLowerCapEnd,
+    this.errorUpperCapStart,
+    this.errorUpperCapEnd,
+    this.errorBounds,
   });
 
   final int pointIndex;
@@ -74,11 +83,21 @@ class BarGeometry {
   final Offset? targetStart;
   final Offset? targetEnd;
   final Rect? targetBounds;
+  final double? errorLowerValue;
+  final double? errorUpperValue;
+  final Offset? errorStemStart;
+  final Offset? errorStemEnd;
+  final Offset? errorLowerCapStart;
+  final Offset? errorLowerCapEnd;
+  final Offset? errorUpperCapStart;
+  final Offset? errorUpperCapEnd;
+  final Rect? errorBounds;
 
-  /// The bar body plus its optional background track and target marker.
+  /// The bar body plus its passive tracks, markers, and uncertainty interval.
   Rect get paintBounds {
     var result = trackRect == null ? rect : rect.expandToInclude(trackRect!);
     if (targetBounds != null) result = result.expandToInclude(targetBounds!);
+    if (errorBounds != null) result = result.expandToInclude(errorBounds!);
     return result;
   }
 
@@ -361,6 +380,88 @@ abstract final class BarGeometryEngine {
       ).inflate(targetStyle.width / 2);
     }
 
+    final errorLowerValue = series.errorLowerValueFor(pointIndex);
+    final errorUpperValue = series.errorUpperValueFor(pointIndex);
+    Offset? errorStemStart;
+    Offset? errorStemEnd;
+    Offset? errorLowerCapStart;
+    Offset? errorLowerCapEnd;
+    Offset? errorUpperCapStart;
+    Offset? errorUpperCapEnd;
+    Rect? errorBounds;
+    final errorStyle = series.errorBarStyle;
+    if (errorLowerValue != null &&
+        errorUpperValue != null &&
+        errorLowerValue.isFinite &&
+        errorUpperValue.isFinite &&
+        errorStyle.width > 0) {
+      final lowerPosition = transform.dataToPlot(point.x, errorLowerValue);
+      final upperPosition = transform.dataToPlot(point.x, errorUpperValue);
+      final halfCapLength =
+          (series.orientation == BarOrientation.horizontal
+              ? rect.height
+              : rect.width) *
+          errorStyle.capLengthFactor /
+          2;
+      if (series.orientation == BarOrientation.horizontal) {
+        errorStemStart = Offset(lowerPosition.dx, rect.center.dy);
+        errorStemEnd = Offset(upperPosition.dx, rect.center.dy);
+        errorLowerCapStart = Offset(
+          lowerPosition.dx,
+          rect.center.dy - halfCapLength,
+        );
+        errorLowerCapEnd = Offset(
+          lowerPosition.dx,
+          rect.center.dy + halfCapLength,
+        );
+        errorUpperCapStart = Offset(
+          upperPosition.dx,
+          rect.center.dy - halfCapLength,
+        );
+        errorUpperCapEnd = Offset(
+          upperPosition.dx,
+          rect.center.dy + halfCapLength,
+        );
+      } else {
+        errorStemStart = Offset(rect.center.dx, lowerPosition.dy);
+        errorStemEnd = Offset(rect.center.dx, upperPosition.dy);
+        errorLowerCapStart = Offset(
+          rect.center.dx - halfCapLength,
+          lowerPosition.dy,
+        );
+        errorLowerCapEnd = Offset(
+          rect.center.dx + halfCapLength,
+          lowerPosition.dy,
+        );
+        errorUpperCapStart = Offset(
+          rect.center.dx - halfCapLength,
+          upperPosition.dy,
+        );
+        errorUpperCapEnd = Offset(
+          rect.center.dx + halfCapLength,
+          upperPosition.dy,
+        );
+      }
+      final errorPoints = <Offset>[
+        errorStemStart,
+        errorStemEnd,
+        errorLowerCapStart,
+        errorLowerCapEnd,
+        errorUpperCapStart,
+        errorUpperCapEnd,
+      ];
+      final minX = errorPoints.map((point) => point.dx).reduce(math.min);
+      final maxX = errorPoints.map((point) => point.dx).reduce(math.max);
+      final minY = errorPoints.map((point) => point.dy).reduce(math.min);
+      final maxY = errorPoints.map((point) => point.dy).reduce(math.max);
+      errorBounds = Rect.fromLTRB(
+        minX,
+        minY,
+        maxX,
+        maxY,
+      ).inflate(errorStyle.width / 2);
+    }
+
     return BarGeometry(
       pointIndex: pointIndex,
       point: point,
@@ -379,6 +480,15 @@ abstract final class BarGeometryEngine {
       targetStart: targetStart,
       targetEnd: targetEnd,
       targetBounds: targetBounds,
+      errorLowerValue: errorLowerValue,
+      errorUpperValue: errorUpperValue,
+      errorStemStart: errorStemStart,
+      errorStemEnd: errorStemEnd,
+      errorLowerCapStart: errorLowerCapStart,
+      errorLowerCapEnd: errorLowerCapEnd,
+      errorUpperCapStart: errorUpperCapStart,
+      errorUpperCapEnd: errorUpperCapEnd,
+      errorBounds: errorBounds,
     );
   }
 

@@ -115,14 +115,26 @@ class TooltipRenderer {
         : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
               'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%'
               '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
-    final targetValue = dataElement.series is BarChartSeries
-        ? (dataElement.series as BarChartSeries).targetValueFor(
-            markerInfo.markerIndex,
-          )
+    final barSeries = dataElement.series is BarChartSeries
+        ? dataElement.series as BarChartSeries
         : null;
-    final tooltipText = targetValue == null
-        ? baseTooltipText
-        : '$baseTooltipText\nTarget: ${MultiAxisValueFormatter.format(value: targetValue, unit: yUnit)}';
+    final targetValue = barSeries?.targetValueFor(markerInfo.markerIndex);
+    final errorLower = barSeries?.errorLowerValueFor(markerInfo.markerIndex);
+    final errorUpper = barSeries?.errorUpperValueFor(markerInfo.markerIndex);
+    final tooltipBuffer = StringBuffer(baseTooltipText);
+    if (targetValue != null) {
+      tooltipBuffer.write(
+        '\nTarget: ${MultiAxisValueFormatter.format(value: targetValue, unit: yUnit)}',
+      );
+    }
+    if (errorLower != null && errorUpper != null) {
+      tooltipBuffer.write(
+        '\nUncertainty: '
+        '${MultiAxisValueFormatter.format(value: errorLower, unit: yUnit)} – '
+        '${MultiAxisValueFormatter.format(value: errorUpper, unit: yUnit)}',
+      );
+    }
+    final tooltipText = tooltipBuffer.toString();
 
     // Create text painter with configured style
     final textStyle = TextStyle(

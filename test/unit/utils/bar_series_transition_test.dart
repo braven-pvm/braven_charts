@@ -32,6 +32,8 @@ void main() {
           barWidthPercent: 0.7,
           rangeStartValues: [10],
           targetValues: [24],
+          errorLowerValues: [16],
+          errorUpperValues: [25],
         );
         const to = BarChartSeries(
           id: 'ranges',
@@ -39,6 +41,8 @@ void main() {
           barWidthPercent: 0.7,
           rangeStartValues: [14],
           targetValues: [30],
+          errorLowerValues: [22],
+          errorUpperValues: [38],
         );
 
         final midpoint = BarSeriesTransition.interpolate(
@@ -50,9 +54,27 @@ void main() {
         expect(midpoint.points.single.y, 26);
         expect(midpoint.rangeStartValues.single, 12);
         expect(midpoint.targetValues.single, 27);
+        expect(midpoint.errorLowerValues.single, 19);
+        expect(midpoint.errorUpperValues.single, 31.5);
         expect(midpoint.points.single.pointStyle, style);
       },
     );
+
+    test('collapses uncertainty intervals to the bar baseline', () {
+      const source = BarChartSeries(
+        id: 'uncertainty',
+        points: [ChartDataPoint(x: 0, y: 30)],
+        barWidthPercent: 0.7,
+        baselineValue: 5,
+        errorLowerValues: [24],
+        errorUpperValues: [38],
+      );
+
+      final collapsed = BarSeriesTransition.collapsed(source);
+
+      expect(collapsed.errorLowerValues, const [5]);
+      expect(collapsed.errorUpperValues, const [5]);
+    });
 
     test('grows new points from the target baseline', () {
       const from = BarChartSeries(

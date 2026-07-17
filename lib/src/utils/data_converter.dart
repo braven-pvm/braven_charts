@@ -131,6 +131,16 @@ class DataConverter {
             if (target < yMin) yMin = target;
             if (target > yMax) yMax = target;
           }
+          final errorLower = s.errorLowerValueFor(pointIndex);
+          final errorUpper = s.errorUpperValueFor(pointIndex);
+          if (errorLower != null && errorLower.isFinite) {
+            if (errorLower < yMin) yMin = errorLower;
+            if (errorLower > yMax) yMax = errorLower;
+          }
+          if (errorUpper != null && errorUpper.isFinite) {
+            if (errorUpper < yMin) yMin = errorUpper;
+            if (errorUpper > yMax) yMax = errorUpper;
+          }
         } else {
           if (point.y < yMin) yMin = point.y;
           if (point.y > yMax) yMax = point.y;
