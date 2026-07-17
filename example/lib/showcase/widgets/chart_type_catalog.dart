@@ -80,7 +80,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Small categorical share datasets',
     icon: Icons.pie_chart_outline,
     accent: Color(0xFFE11D48),
-    highlights: ['Labels', 'Gradients', 'Selection'],
+    highlights: ['Labels', 'Motion', 'Grouping'],
   ),
   ShowcaseChartType(
     type: ChartType.donut,
@@ -90,7 +90,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Part-to-whole data that benefits from a central value',
     icon: Icons.donut_large_outlined,
     accent: Color(0xFF0F766E),
-    highlights: ['Center content', 'Partial sweeps', 'Variable radii'],
+    highlights: ['Center', 'Variable radius', 'Motion'],
   ),
 ];
 

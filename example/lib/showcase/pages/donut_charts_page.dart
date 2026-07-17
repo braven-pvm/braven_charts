@@ -1085,7 +1085,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           crossAxisCount: columns,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: compact ? 2.6 : 3.4,
+          mainAxisExtent: 128,
           children: [for (final feature in features) _FeatureTile(feature)],
         ),
       ],
