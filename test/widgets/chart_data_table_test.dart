@@ -262,6 +262,113 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Ctrl+A selects sorted displayed points and Escape clears them', (
+    tester,
+  ) async {
+    final controller = ChartTableController()
+      ..sortBy('x')
+      ..sortBy('x');
+    addTearDown(controller.dispose);
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(0, 220), _point(1, 240)]),
+        _series('heart-rate', [_point(0, 130), _point(1, 135)]),
+      ]),
+    );
+    var selected = <ChartPointRef>{};
+    List<ChartPointRef>? selectedInOrder;
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return ChartDataTable(
+              model: model,
+              controller: controller,
+              selectedPointRefs: selected,
+              onSelectAllPoints: (points) {
+                selectedInOrder = points;
+                setState(() => selected = points.toSet());
+              },
+              onClearSelection: () => setState(selected.clear),
+            );
+          },
+        ),
+      ),
+    );
+
+    final firstDisplayedRow = find.byKey(ValueKey(model.wideRows[1].rowId));
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstDisplayedRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+
+    expect(selectedInOrder, const [
+      ChartPointRef(seriesId: 'power', pointIndex: 1),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+      ChartPointRef(seriesId: 'power', pointIndex: 0),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    ]);
+    expect(find.textContaining('4 selected'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(selected, isEmpty);
+    expect(find.textContaining('selected'), findsNothing);
+  });
+
+  testWidgets('selecting all virtualized rows keeps the viewport in place', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble()),
+      ],
+    );
+    var selected = <ChartPointRef>{};
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) => ChartDataTable(
+            model: model,
+            selectedPointRefs: selected,
+            onSelectAllPoints: (points) =>
+                setState(() => selected = points.toSet()),
+          ),
+        ),
+      ),
+    );
+    final firstRow = find.byKey(ValueKey(model.longRows.first.rowId));
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.controller!.offset, 0);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(selected, hasLength(1000));
+    expect(list.controller!.offset, 0);
+  });
+
   testWidgets('reveals a newly selected point without taking over scrolling', (
     tester,
   ) async {

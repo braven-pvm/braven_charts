@@ -550,6 +550,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.onTableRowHoverChanged,
     this.onTableRowActivation,
     this.onTableRowActivated,
+    this.onTableSelectAllPoints,
     this.onTableSelectionCleared,
     this.onPointLinkError,
     this.showModeSwitcher = true,
@@ -610,6 +611,9 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Legacy durable-selection override used when [onTableRowActivation] is null.
   final ChartTableRowCallback? onTableRowActivated;
+
+  /// Overrides Ctrl/Command+A selection of the displayed table dataset.
+  final ChartTableRowCallback? onTableSelectAllPoints;
 
   /// Overrides the package-owned table action that clears point selection.
   final VoidCallback? onTableSelectionCleared;
@@ -1019,6 +1023,11 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                 errorMessage: model == null ? state.error?.message : null,
                 focusedPointRefs: _chartController.focusedPointRefs,
                 selectedPointRefs: _chartController.selectedPointRefs,
+                onSelectAllPoints:
+                    widget.onTableSelectAllPoints ??
+                    (widget.linkTableRowsToChart
+                        ? _selectAllTablePoints
+                        : null),
                 onClearSelection:
                     widget.onTableSelectionCleared ??
                     (widget.linkTableRowsToChart
@@ -1123,6 +1132,10 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     // Durable selection advances the effective document revision. Refresh the
     // package-owned snapshot so subsequent row references remain current.
     unawaited(_workbenchController.refreshTable());
+  }
+
+  void _selectAllTablePoints(List<ChartPointRef> points) {
+    _activateTablePoints(ChartTableRowActivationDetails(points: points));
   }
 
   void _handlePointLinkResult(ChartArtifactResult<void> result) {

@@ -521,6 +521,8 @@ selection, and repeating the modified activation removes the complete row.
 For shared-X rows this toggles every populated series point together.
 The table summary reports the selected point count and keeps a compact Clear
 selection action beside Copy and Export, including at narrow Split widths.
+With a row focused, Ctrl/Command+A selects every point in the current sorted
+table projection and Escape clears selection without moving keyboard focus.
 
 ## Current boundary
 

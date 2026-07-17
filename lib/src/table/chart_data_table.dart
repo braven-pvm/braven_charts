@@ -65,6 +65,7 @@ class ChartDataTable extends StatefulWidget {
     this.selectedPointRefs = const <ChartPointRef>{},
     this.autoRevealFocusedPoints = true,
     this.autoRevealSelectedPoints = true,
+    this.onSelectAllPoints,
     this.onClearSelection,
     this.onCopyRow,
     this.onCopyDataset,
@@ -140,6 +141,12 @@ class ChartDataTable extends StatefulWidget {
   /// The reveal runs only when selection or the projected model changes, so
   /// subsequent manual table scrolling is left untouched.
   final bool autoRevealSelectedPoints;
+
+  /// Selects every point in the table's current projected and sorted dataset.
+  ///
+  /// When supplied, Ctrl/Command+A is handled while a table row has keyboard
+  /// focus. Shared-X rows contribute every populated series point.
+  final ChartTableRowCallback? onSelectAllPoints;
 
   /// Clears the durable selection mirrored by [selectedPointRefs].
   ///
@@ -242,13 +249,52 @@ class _ChartDataTableState extends State<ChartDataTable> {
     if (widget.autoRevealSelectedPoints &&
         widget.selectedPointRefs.isNotEmpty &&
         (selectionChanged || modelChanged)) {
-      final added = widget.selectedPointRefs.where(
-        (point) => !oldWidget.selectedPointRefs.contains(point),
-      );
-      _schedulePointReveal(
-        added.isEmpty ? widget.selectedPointRefs.last : added.last,
-      );
+      final added = widget.selectedPointRefs
+          .where((point) => !oldWidget.selectedPointRefs.contains(point))
+          .toList(growable: false);
+      final revealPoint = _singleProjectedRowCandidate(widget.model, added);
+      if (revealPoint != null) {
+        _schedulePointReveal(revealPoint);
+      } else if (!selectionChanged && modelChanged) {
+        _schedulePointReveal(widget.selectedPointRefs.last);
+      }
     }
+  }
+
+  ChartPointRef? _singleProjectedRowCandidate(
+    ChartTableModel? model,
+    List<ChartPointRef> points,
+  ) {
+    if (model == null || points.isEmpty) return null;
+    final rowByPoint = <ChartPointRef, int>{};
+    switch (model.projectionKind) {
+      case ChartTableProjectionKind.cartesianLong:
+        final rows = _sortedLongRows(model);
+        for (var index = 0; index < rows.length; index++) {
+          rowByPoint[rows[index].reference] = index;
+        }
+        break;
+      case ChartTableProjectionKind.cartesianWide:
+        final rows = _sortedWideRows(model);
+        for (var index = 0; index < rows.length; index++) {
+          for (final cell in rows[index].cells.values) {
+            rowByPoint[cell.reference] = index;
+          }
+        }
+        break;
+      case ChartTableProjectionKind.pie:
+        final rows = _sortedPieRows(model);
+        for (var index = 0; index < rows.length; index++) {
+          rowByPoint[rows[index].reference] = index;
+        }
+        break;
+    }
+    final firstRow = rowByPoint[points.first];
+    if (firstRow == null ||
+        points.skip(1).any((point) => rowByPoint[point] != firstRow)) {
+      return null;
+    }
+    return points.last;
   }
 
   void _attachController(ChartTableController? controller) {
@@ -433,6 +479,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
       context,
       widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
     );
+    final displayedPoints = _displayedPoints(
+      model,
+      longRows: longRows,
+      wideRows: wideRows,
+      pieRows: pieRows,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -533,6 +585,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                                     longRows: longRows,
                                     wideRows: wideRows,
                                     pieRows: pieRows,
+                                    displayedPoints: displayedPoints,
                                     theme: tableTheme,
                                   ),
                                 ),
@@ -551,6 +604,22 @@ class _ChartDataTableState extends State<ChartDataTable> {
       },
     );
   }
+
+  List<ChartPointRef> _displayedPoints(
+    ChartTableModel model, {
+    required List<ChartTableLongRow> longRows,
+    required List<ChartTableWideRow> wideRows,
+    required List<ChartTablePieRow> pieRows,
+  }) => List.unmodifiable(switch (model.projectionKind) {
+    ChartTableProjectionKind.cartesianLong => [
+      for (final row in longRows) row.reference,
+    ],
+    ChartTableProjectionKind.cartesianWide => [
+      for (final row in wideRows)
+        for (final cell in row.cells.values) cell.reference,
+    ],
+    ChartTableProjectionKind.pie => [for (final row in pieRows) row.reference],
+  });
 
   Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
     if (model.projectionKind == ChartTableProjectionKind.pie) {
@@ -732,6 +801,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableLongRow> longRows,
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
+    required List<ChartPointRef> displayedPoints,
     required _ResolvedTableTheme theme,
   }) {
     if (model.projectionKind == ChartTableProjectionKind.pie) {
@@ -746,6 +816,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
         semanticsLabel:
             'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix$radiusSemantics, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
         references: references,
+        displayedPoints: displayedPoints,
+        onSelectAllPoints: widget.onSelectAllPoints,
+        onClearSelection: widget.selectedPointRefs.isEmpty
+            ? null
+            : widget.onClearSelection,
         chartFocused: _isRowFocused(references),
         selected: _isRowSelected(references),
         rowIndex: index,
@@ -820,6 +895,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
         key: ValueKey(row.rowId),
         semanticsLabel: 'Row ${index + 1}, ${_wideSemantics(row, model)}',
         references: references,
+        displayedPoints: displayedPoints,
+        onSelectAllPoints: widget.onSelectAllPoints,
+        onClearSelection: widget.selectedPointRefs.isEmpty
+            ? null
+            : widget.onClearSelection,
         chartFocused: _isRowFocused(references),
         selected: _isRowSelected(references),
         rowIndex: index,
@@ -876,6 +956,11 @@ class _ChartDataTableState extends State<ChartDataTable> {
       key: ValueKey(row.rowId),
       semanticsLabel: 'Row ${index + 1}, ${_longSemantics(row, model)}',
       references: List.unmodifiable([row.reference]),
+      displayedPoints: displayedPoints,
+      onSelectAllPoints: widget.onSelectAllPoints,
+      onClearSelection: widget.selectedPointRefs.isEmpty
+          ? null
+          : widget.onClearSelection,
       chartFocused: _isRowFocused([row.reference]),
       selected: _isRowSelected([row.reference]),
       rowIndex: index,
@@ -1394,11 +1479,20 @@ class _MoveTableFocusIntent extends Intent {
   final int horizontal;
 }
 
+class _SelectAllTablePointsIntent extends Intent {
+  const _SelectAllTablePointsIntent();
+}
+
+class _ClearTableSelectionIntent extends Intent {
+  const _ClearTableSelectionIntent();
+}
+
 class _FocusableTableRow extends StatefulWidget {
   const _FocusableTableRow({
     super.key,
     required this.semanticsLabel,
     required this.references,
+    required this.displayedPoints,
     required this.chartFocused,
     required this.selected,
     required this.children,
@@ -1412,10 +1506,13 @@ class _FocusableTableRow extends StatefulWidget {
     this.onHoverChanged,
     this.onActivation,
     this.onActivated,
+    this.onSelectAllPoints,
+    this.onClearSelection,
   });
 
   final String semanticsLabel;
   final List<ChartPointRef> references;
+  final List<ChartPointRef> displayedPoints;
   final bool chartFocused;
   final bool selected;
   final List<Widget> children;
@@ -1429,6 +1526,8 @@ class _FocusableTableRow extends StatefulWidget {
   final ChartTableRowHoverCallback? onHoverChanged;
   final ChartTableRowActivationCallback? onActivation;
   final ChartTableRowCallback? onActivated;
+  final ChartTableRowCallback? onSelectAllPoints;
+  final VoidCallback? onClearSelection;
 
   @override
   State<_FocusableTableRow> createState() => _FocusableTableRowState();
@@ -1463,24 +1562,30 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
       selected: widget.selected,
       child: FocusableActionDetector(
         focusNode: widget.focusNode,
-        shortcuts: const {
-          SingleActivator(LogicalKeyboardKey.arrowUp): _MoveTableFocusIntent(
-            vertical: -1,
-          ),
-          SingleActivator(LogicalKeyboardKey.arrowDown): _MoveTableFocusIntent(
-            vertical: 1,
-          ),
-          SingleActivator(LogicalKeyboardKey.arrowLeft): _MoveTableFocusIntent(
-            horizontal: -1,
-          ),
-          SingleActivator(LogicalKeyboardKey.arrowRight): _MoveTableFocusIntent(
-            horizontal: 1,
-          ),
-          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.enter, control: true):
-              ActivateIntent(),
-          SingleActivator(LogicalKeyboardKey.enter, meta: true):
-              ActivateIntent(),
+        shortcuts: {
+          const SingleActivator(LogicalKeyboardKey.arrowUp):
+              const _MoveTableFocusIntent(vertical: -1),
+          const SingleActivator(LogicalKeyboardKey.arrowDown):
+              const _MoveTableFocusIntent(vertical: 1),
+          const SingleActivator(LogicalKeyboardKey.arrowLeft):
+              const _MoveTableFocusIntent(horizontal: -1),
+          const SingleActivator(LogicalKeyboardKey.arrowRight):
+              const _MoveTableFocusIntent(horizontal: 1),
+          const SingleActivator(LogicalKeyboardKey.enter):
+              const ActivateIntent(),
+          const SingleActivator(LogicalKeyboardKey.enter, control: true):
+              const ActivateIntent(),
+          const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+              const ActivateIntent(),
+          if (widget.onSelectAllPoints != null)
+            const SingleActivator(LogicalKeyboardKey.keyA, control: true):
+                const _SelectAllTablePointsIntent(),
+          if (widget.onSelectAllPoints != null)
+            const SingleActivator(LogicalKeyboardKey.keyA, meta: true):
+                const _SelectAllTablePointsIntent(),
+          if (widget.onClearSelection != null)
+            const SingleActivator(LogicalKeyboardKey.escape):
+                const _ClearTableSelectionIntent(),
         },
         actions: {
           _MoveTableFocusIntent: CallbackAction<_MoveTableFocusIntent>(
@@ -1500,6 +1605,20 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
               return null;
             },
           ),
+          _SelectAllTablePointsIntent:
+              CallbackAction<_SelectAllTablePointsIntent>(
+                onInvoke: (_) {
+                  widget.onSelectAllPoints?.call(widget.displayedPoints);
+                  return null;
+                },
+              ),
+          _ClearTableSelectionIntent:
+              CallbackAction<_ClearTableSelectionIntent>(
+                onInvoke: (_) {
+                  widget.onClearSelection?.call();
+                  return null;
+                },
+              ),
         },
         onFocusChange: (focused) {
           if (_focused != focused) setState(() => _focused = focused);

@@ -250,6 +250,8 @@ The workbench enables safe row linking by default:
 - click or Enter replaces the durable point selection;
 - Ctrl/Command-click or Ctrl/Command-Enter additively selects an unselected
   row and removes every point represented by an already selected row;
+- Ctrl/Command+A selects every point in the current sorted table projection,
+  while Escape clears durable selection and keeps row focus in place;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
 - the table summary reports the selected point count and exposes a compact
@@ -338,7 +340,8 @@ Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
 behavior. `onTableRowActivation` receives modifier-aware
 `ChartTableRowActivationDetails` and takes precedence over the legacy
 `onTableRowActivated` callback when both are supplied. Override
-`onTableSelectionCleared` when the host owns selection cleanup. Use
+`onTableSelectAllPoints` or `onTableSelectionCleared` when the host owns those
+keyboard selection commands. Use
 `onPointLinkError` to observe the same structured error shown by the workbench.
 
 ## Configure the data table
