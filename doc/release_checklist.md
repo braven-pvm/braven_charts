@@ -65,6 +65,12 @@ Use `--capture interaction`, `--capture live-stream`, `--capture stills`, or
 `--capture pie` when only one media group changed. Capture from a local release build with
 `--url http://127.0.0.1:<port>/` before the public site has the change.
 
+`--capture pie` does not take a browser screenshot. It mounts the same Gallery
+configurations in Flutter's deterministic test renderer, calls
+`BravenChartController.capturePreview()`, loads Flutter's bundled Roboto font,
+and writes the returned PNG bytes. Browser recording remains appropriate for
+the animated interaction and live-stream GIFs.
+
 ## Public showcase
 
 - [ ] `flutter build web --release --base-href /braven_charts/` succeeds from

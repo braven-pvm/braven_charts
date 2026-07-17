@@ -52,7 +52,12 @@ elevated slices, solid and gradient fills, baseline fills, live data,
 independent axes, annotations,
 interpolation, thresholds, and domain-shaped dashboards.
 
-[![Five themed and configured Pie chart compositions from the public Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_pie_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
+These PNGs are exported by `BravenChartController.capturePreview()`, the same
+native image path available to package consumers:
+
+| Collision-managed outside labels | Gradient, elevation, and positioned legend |
+| --- | --- |
+| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
 
 The wider Cartesian catalog remains available in the current Gallery mosaic:
 

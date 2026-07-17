@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +62,40 @@ void main() {
     );
   });
 
+  testWidgets('pie preview with a positioned legend is fully opaque', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.binding.setSurfaceSize(const Size(400, 300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_pieHost(controller));
+    await tester.pumpAndSettle();
+
+    final result = await _capture(tester, controller.capturePreview());
+    final preview = (result as ChartArtifactSuccess<ChartPreview>).value;
+    final isOpaque = await tester.runAsync(() async {
+      final codec = await ui.instantiateImageCodec(preview.bytes!);
+      final frame = await codec.getNextFrame();
+      final pixels = await frame.image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
+      var opaque = pixels != null;
+      for (var alpha = 3; opaque && alpha < pixels!.lengthInBytes; alpha += 4) {
+        opaque = pixels.getUint8(alpha) == 255;
+      }
+      frame.image.dispose();
+      codec.dispose();
+      return opaque;
+    });
+
+    expect(
+      isOpaque,
+      isTrue,
+      reason: 'Native previews must paint the chart theme background.',
+    );
+  });
+
   testWidgets('rejects concurrent preview captures with a structured result', (
     tester,
   ) async {
@@ -108,6 +144,27 @@ Widget _host(BravenChartController controller) => MaterialApp(
           LineChartSeries(
             id: 'series',
             points: [ChartDataPoint(x: 1, y: 10), ChartDataPoint(x: 2, y: 20)],
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
+Widget _pieHost(BravenChartController controller) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: 400,
+      height: 300,
+      child: BravenChartPlus(
+        bravenChartController: controller,
+        showLegend: true,
+        theme: ChartTheme.vibrant,
+        series: [
+          PieChartSeries.fromMap(
+            id: 'pie',
+            name: 'Allocation',
+            values: const {'Core': 60, 'Growth': 25, 'Cash': 15},
           ),
         ],
       ),

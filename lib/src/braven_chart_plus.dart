@@ -4585,15 +4585,24 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       return RepaintBoundary(
         key: _previewBoundaryKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
+        child: ColoredBox(
+          color: (widget.theme ?? ChartTheme.light).backgroundColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
         ),
       );
     }
 
-    return RepaintBoundary(key: _previewBoundaryKey, child: chartContent);
+    return RepaintBoundary(
+      key: _previewBoundaryKey,
+      child: ColoredBox(
+        color: (widget.theme ?? ChartTheme.light).backgroundColor,
+        child: chartContent,
+      ),
+    );
   }
 
   Widget _buildPieLegendLayout({
