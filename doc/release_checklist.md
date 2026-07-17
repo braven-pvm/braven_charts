@@ -61,9 +61,18 @@ python -m pip install selenium Pillow
 python tool/capture_showcase_media.py
 ```
 
-Use `--capture interaction`, `--capture live-stream`, `--capture stills`, or
-`--capture pie` when only one media group changed. Capture from a local release build with
+Use `--capture interaction`, `--capture interaction-still`,
+`--capture live-stream`, `--capture stills`, or `--capture pie` when only one
+media group changed. Capture browser media from a local release build with
 `--url http://127.0.0.1:<port>/` before the public site has the change.
+
+`--capture pie` and `--capture interaction-still` do not take browser
+screenshots. They mount the same Gallery configurations in Flutter's
+deterministic test renderer, call
+`BravenChartController.capturePreview()`, load Flutter's bundled Roboto font,
+and write the returned PNG bytes. The interaction still preserves transient
+tracking state. Browser recording remains appropriate for the animated
+interaction and live-stream GIFs.
 
 ## Public showcase
 

@@ -863,6 +863,7 @@ class MultiAxisManager {
     required Canvas canvas,
     required Size size,
     required Rect plotArea,
+    TextStyle? labelStyle,
     ChartTransform? transform,
     ChartTransform? originalTransform,
   }) {
@@ -885,6 +886,7 @@ class MultiAxisManager {
       axisBounds: axisBounds,
       bindings: effectiveBindings,
       series: _series,
+      labelStyle: labelStyle,
     );
 
     // Paint axes - chartArea is full size, plotArea is content area

@@ -147,43 +147,6 @@ void main() {
     expect(_gridCount(tester, 'gallery-advanced-full'), 11);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 18);
   });
-
-  testWidgets('pie media panel reuses five themed gallery compositions', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: PieGalleryMediaPanel())),
-    );
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.byType(BravenChartPlus), findsNWidgets(5));
-    expect(find.text('Revenue by product'), findsOneWidget);
-    expect(find.text('Revenue contribution'), findsOneWidget);
-    expect(find.text('Release effort'), findsOneWidget);
-    expect(find.text('Support request mix'), findsOneWidget);
-    expect(find.text('Portfolio allocation'), findsOneWidget);
-
-    final charts = tester
-        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
-        .toList();
-    expect(charts, hasLength(5));
-    expect(
-      charts.every((chart) => chart.series.single is PieChartSeries),
-      isTrue,
-    );
-    expect(
-      charts
-          .map((chart) => (chart.series.single as PieChartSeries).pieStyle)
-          .map((style) => style.sliceGap)
-          .toSet(),
-      hasLength(4),
-    );
-    expect(tester.takeException(), isNull);
-  });
 }
 
 int? _gridCount(WidgetTester tester, String key) {

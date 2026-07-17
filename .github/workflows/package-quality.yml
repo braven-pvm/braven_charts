@@ -30,6 +30,14 @@ jobs:
       - name: Run package tests
         run: flutter test
 
+      - name: Upload golden failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-test-failures
+          path: test/golden/**/failures/**
+          if-no-files-found: ignore
+
       - name: Analyze showcase
         working-directory: example
         run: flutter analyze

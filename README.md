@@ -27,11 +27,17 @@ streaming path so each sample does not require a widget-tree rebuild.
 | --- | --- |
 | [![Threshold exposure chart with styled bars, cardiac drift, LT1 annotations, and a trend line](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
 
+### Core chart types
+
+Line, area, scatter, bar, and pie charts share the same native Flutter
+rendering pipeline while retaining independent series and theme treatments.
+
+[![Line, area, scatter, bar, and pie charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/)
+
 ### Multi-axis interaction
 
-The example below combines four independently scaled series with per-series
-normalization, range and threshold annotations, tracking tooltips, pointer
-zoom, drag-to-pan, and a synchronized X scrollbar.
+The animated example combines independently scaled axes, normalization,
+annotations, tracking, pointer zoom, drag-to-pan, and a synchronized scrollbar:
 
 [![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
 
@@ -52,7 +58,12 @@ elevated slices, solid and gradient fills, baseline fills, live data,
 independent axes, annotations,
 interpolation, thresholds, and domain-shaped dashboards.
 
-[![Five themed and configured Pie chart compositions from the public Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_pie_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
+These PNGs are exported by `BravenChartController.capturePreview()`, the same
+native image path available to package consumers:
+
+| Collision-managed outside labels | Gradient, elevation, and positioned legend |
+| --- | --- |
+| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
 
 The wider Cartesian catalog remains available in the current Gallery mosaic:
 
@@ -90,7 +101,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.3.1
+  braven_charts: ^0.4.0
 ```
 
 Then fetch dependencies:
@@ -99,7 +110,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.3.1 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.4.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

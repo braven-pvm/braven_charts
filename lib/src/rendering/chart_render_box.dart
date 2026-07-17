@@ -885,6 +885,7 @@ class ChartRenderBox extends RenderBox {
       canvas: canvas,
       size: size,
       plotArea: _plotArea,
+      labelStyle: _theme?.axisStyle.labelStyle,
       transform: _transform,
       originalTransform: _originalTransform,
     );

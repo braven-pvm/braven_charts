@@ -316,7 +316,7 @@ class MultiAxisPainter {
       textPainter = TextPainter(
         text: TextSpan(
           text: labelText,
-          style: TextStyle(
+          style: labelStyle.copyWith(
             color: axisColor,
             fontSize: 12,
             fontWeight: FontWeight.w500,

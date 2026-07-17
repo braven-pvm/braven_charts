@@ -13,65 +13,6 @@ const pieGalleryCards = <Widget>[
   PortfolioAllocationGalleryCard(),
 ];
 
-/// A capture-friendly rendering of the same Pie cards used by the Gallery.
-class PieGalleryMediaPanel extends StatelessWidget {
-  const PieGalleryMediaPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth >= 1200) {
-              final cardWidth = (constraints.maxWidth - 32) / 3;
-              return Column(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        for (final (index, card)
-                            in pieGalleryCards.take(3).indexed) ...[
-                          if (index > 0) const SizedBox(width: 16),
-                          Expanded(child: card),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (final (index, card)
-                            in pieGalleryCards.skip(3).indexed) ...[
-                          if (index > 0) const SizedBox(width: 16),
-                          SizedBox(width: cardWidth, child: card),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-            final columns = constraints.maxWidth >= 900 ? 2 : 1;
-            return GridView.count(
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: columns,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: columns == 2 ? 1.62 : 1.36,
-              children: pieGalleryCards,
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
 /// A deliberately simple dark Pie with only dominant values labelled.
 class SimpleRevenueGalleryCard extends StatelessWidget {
   const SimpleRevenueGalleryCard({super.key});

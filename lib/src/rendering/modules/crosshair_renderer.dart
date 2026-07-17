@@ -884,6 +884,9 @@ class CrosshairRenderer {
     final backgroundColor = style.backgroundColor;
     final textColor = style.textColor;
     final fontSize = style.fontSize;
+    final fontFamily =
+        theme?.interactionTheme.tooltipStyle.textStyle.fontFamily ??
+        theme?.typographyTheme.fontFamily;
     final borderColor = style.borderColor;
     final borderWidth = style.borderWidth;
     final borderRadius = style.borderRadius;
@@ -918,7 +921,11 @@ class CrosshairRenderer {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: TextStyle(color: textColor, fontSize: fontSize),
+          style: TextStyle(
+            color: textColor,
+            fontSize: fontSize,
+            fontFamily: fontFamily,
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -945,6 +952,7 @@ class CrosshairRenderer {
             fontSize: fontSize - 1,
             fontWeight: FontWeight.w600,
             fontStyle: FontStyle.italic,
+            fontFamily: fontFamily,
           ),
         ),
         textDirection: TextDirection.ltr,

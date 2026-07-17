@@ -5,7 +5,7 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.4.0 - 2026-07-17
 
 ### Added
 - First-class `PieChartSeries` rendering with deterministic radial geometry,
@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pie entrance labels now follow the animation lifecycle instead of curved
   radius thresholds, preventing elastic animations from flashing callouts on
   and off before the chart settles.
+- Native PNG previews now paint the chart theme background across the complete
+  capture boundary, including positioned Pie legend space.
+- Canvas-rendered multi-axis titles, series labels, point labels, and tracking
+  tooltips now preserve the chart typography theme's font family.
 
 ## 0.3.1 - 2026-07-17
 

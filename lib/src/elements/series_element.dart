@@ -143,6 +143,7 @@ class SeriesElement implements DataHitElement {
     this.selectedPointIndices = const {},
     this.pointFocusColor,
     this.pointSelectionColor,
+    this.fontFamily,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -171,6 +172,9 @@ class SeriesElement implements DataHitElement {
 
   final Color? pointFocusColor;
   final Color? pointSelectionColor;
+
+  /// Font family inherited from the chart typography theme.
+  final String? fontFamily;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -1429,6 +1433,7 @@ class SeriesElement implements DataHitElement {
             color: config.labelColor ?? seriesColor,
             fontSize: config.fontSize,
             fontWeight: config.fontWeight,
+            fontFamily: fontFamily,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1673,6 +1678,7 @@ class SeriesElement implements DataHitElement {
           color: effectiveColor,
           fontSize: config.fontSize,
           fontWeight: config.fontWeight,
+          fontFamily: fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -1750,6 +1756,7 @@ class SeriesElement implements DataHitElement {
       selectedPointIndices: selectedPointIndices,
       pointFocusColor: pointFocusColor,
       pointSelectionColor: pointSelectionColor,
+      fontFamily: fontFamily,
     );
   }
 }
