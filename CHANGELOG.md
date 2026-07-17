@@ -8,23 +8,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 0.5.0 - 2026-07-17
 
 ### Added
-- Variable-radius Pie slices with a complete labeled second-metric contract,
-  perceptual area or linear scaling, configurable minimum radius, tooltip and
-  native table/CSV exposure, AI input, artifact capability, and a live
-  density-versus-area showcase.
-- Configurable Pie corner treatments that preserve the original all-corner
-  rounding, round only the outer perimeter, or subtract a uniform circular
-  center gap across variable-radius slices.
-- First-class `DonutChartSeries` with a validated shared inner radius, full or
-  partial sweeps, clockwise or counter-clockwise layout, variable outer radii,
-  annular hit testing, labels, tooltips, legends, keyboard access, and durable
-  selection.
-- Portable Donut center content with total, selected, selected-or-total, and
-  custom modes; series/theme styling; accessible summary semantics; artifact,
-  preview, hydration, table, controller, and AI tool-schema support.
-- Public Donut showcase with Chart/Data/Split views, table-linked selection,
-  JSON/PNG capture and restoration, Gallery compositions, Chart Types controls,
-  documentation, and deterministic pub.dev media.
+- First-class `DonutChartSeries` for single-ring categorical charts, including
+  validated inner and outer radii, full or partial sweeps, clockwise or
+  counter-clockwise layout, slice gaps, gradients, borders, corner policies,
+  elevation, animation, variable outer radii, and stable category order.
+- Donut-native annular hit testing, hover and durable selection, keyboard
+  navigation, focus semantics, tooltips, inside or collision-managed outside
+  labels, positioned legends, and controller-linked slice identity.
+- Portable `DonutCenterContent` with total, selected, selected-or-total, and
+  custom value modes; independent label/value styling; accessible summary
+  semantics; and selection-aware updates from slices, legends, and tables.
+- Complete Donut artifact support: capability metadata, canonical JSON codecs,
+  hydration, previews, Chart/Data/Split projection, native copy/CSV output,
+  controller state, AI builder input, and tool-schema generation.
+- Variable-radius Pie and Donut slices with labeled secondary metrics,
+  perceptual-area or linear scaling, configurable minimum radius, tooltip and
+  table/CSV exposure, artifact persistence, and AI input.
+- Configurable radial corner treatments for all-corner rounding, outer-edge
+  rounding, or a uniform circular center gap across variable-radius slices.
+- Bar point interaction states through `BarInteractionStyle`, covering hover,
+  press, keyboard focus, durable selection, selected emphasis, and dimming of
+  non-selected bars without losing category identity.
+- Persistent bar-point selection through pointer, keyboard, controller, view
+  state, callbacks, semantics, tooltip anchoring, and artifact restoration.
+- Keyed bar data-update animation for grouped, overlaid, stacked, normalized,
+  range, horizontal, and waterfall layouts. Updates interpolate category
+  values and geometry using the chart animation theme, honor reduced motion,
+  grow inserted points from their baseline, and allow per-series opt-out with
+  `BarAnimationMode.none`.
+- Per-category bar benchmarks through `BarChartSeries.targetValues` and
+  `BarTargetMarkerStyle`, including configurable line length, width, color,
+  dash pattern, bounds participation, tooltips, semantics, animation, and
+  canonical artifact round-tripping.
+- Per-point Bar uncertainty intervals through `errorLowerValues` and
+  `errorUpperValues`, with `BarErrorBarStyle` control over stem/cap color,
+  width, opacity, and cap length. Error ranges participate in automatic axis
+  bounds, keyed data-update animation, Cartesian and transposed geometry,
+  tooltips, semantics, and canonical artifact round-tripping.
+- Public Donut, Bar, and chart-family showcase coverage with dedicated deep
+  routes, a six-family overview and Gallery sampler, Donut Chart/Data/Split
+  workflows, Bar interaction/motion/target presets, and native pub.dev media.
+
+### Changed
+- Reorganized the public showcase around a concise Chart Types overview with
+  nested Line, Area, Bar, Scatter, Pie, and Donut guides while retaining the
+  cross-cutting interaction, annotation, theming, performance, axis,
+  scientific, styling, baseline, loading, artifact, and workbench pages.
+- Reworked the Gallery landing sequence to lead with six simple native chart
+  previews, followed by a readable multi-axis training profile, the advanced
+  analytical flagship, and focused Pie and Donut composition collections.
+- Carry dark radial themes through the complete Gallery card surface, reduce
+  compact Donut label typography, and replace the initial Donut samples with
+  distinct subscription, release-readiness, and channel-efficiency analyses.
+- Expanded the Bar guide and API documentation to cover grouped, overlaid,
+  stacked, normalized, horizontal, floating/range, waterfall, capacity-track,
+  target-marker, uncertainty, interaction-state, and animated-update behavior.
+- Updated package metadata, README feature coverage, API references, release
+  checklist, and screenshot descriptions to enumerate every public chart
+  family and the new radial and Bar capabilities.
+
+### Fixed
+- Keep Cartesian axes out of Pie and Donut layout and capture paths so radial
+  charts retain the full intended viewport.
+- Preserve Bar tooltip, crosshair, semantics, bounds, labels, selection, and
+  target-marker identity across transposed, stacked, overlaid, range, and
+  animated geometry.
 
 ## 0.4.0 - 2026-07-17
 

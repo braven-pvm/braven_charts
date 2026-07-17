@@ -23,16 +23,16 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 ## Rendered examples
 
-| Mixed series, tracking, and annotations | Dark baseline fill, glow, and sections |
+| Multi-axis training profile | Dark baseline fill, glow, and sections |
 | --- | --- |
-| [![Threshold exposure chart with styled bars, cardiac drift, LT1 annotations, and a trend line](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.1.4/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
+| [![Power area and heart-rate response with two axes, stage bands, a target threshold, tracking, and a peak marker](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
 
 ### Core chart types
 
-Line, area, scatter, bar, and pie charts share the same native Flutter
+Line, area, scatter, bar, Pie, and Donut charts share the same native Flutter
 rendering pipeline while retaining independent series and theme treatments.
 
-[![Line, area, scatter, bar, and pie charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/)
+[![Line, area, scatter, bar, Pie, and Donut charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
 
 ### Multi-axis interaction
 
@@ -63,9 +63,21 @@ native image path available to package consumers:
 
 | Collision-managed outside labels | Gradient, elevation, and positioned legend |
 | --- | --- |
-| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
+| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
 
 [![Three product-shaped Donut compositions with center content, a partial sweep, and variable radii](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_donut_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
+
+| Subscription MRR | Release readiness | Channel efficiency |
+| --- | --- | --- |
+| [![Subscription MRR Donut with a selection-aware center value](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_revenue_ring.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Dark release-readiness Donut with a partial sweep and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Variable-radius Donut encoding orders and audience reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+
+### Bar targets and interaction
+
+Grouped Bar series support keyed data-update animation, durable point
+selection, gradients, per-category benchmark markers, and absolute
+uncertainty intervals with styled stems and caps.
+
+[![Grouped Bar chart with gradients, target markers, uncertainty intervals, and a tracking tooltip](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts)
 
 The wider Cartesian catalog remains available in the current Gallery mosaic:
 
@@ -106,7 +118,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.4.0
+  braven_charts: ^0.5.0
 ```
 
 Then fetch dependencies:
@@ -115,7 +127,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.4.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.5.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

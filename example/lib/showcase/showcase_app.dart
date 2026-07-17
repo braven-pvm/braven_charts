@@ -10,6 +10,7 @@ import 'pages/artifact_showcase_page.dart';
 import 'pages/bar_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/chart_workbench_page.dart';
+import 'pages/cartesian_chart_type_pages.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -23,6 +24,7 @@ import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
+import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
 import 'widgets/gallery_flagships.dart';
 
@@ -66,6 +68,10 @@ class ShowcaseApp extends StatelessWidget {
           side: BorderSide(color: scheme.outlineVariant),
         ),
       ),
+      navigationDrawerTheme: const NavigationDrawerThemeData(
+        indicatorColor: Colors.transparent,
+        indicatorShape: RoundedRectangleBorder(),
+      ),
     );
   }
 }
@@ -78,6 +84,8 @@ class NavDestination {
     required this.selectedIcon,
     required this.page,
     this.routeSlug,
+    this.routeAliases = const [],
+    this.parentSlug,
     this.reviewProposal,
   });
 
@@ -86,7 +94,14 @@ class NavDestination {
   final IconData selectedIcon;
   final Widget page;
   final String? routeSlug;
+  final List<String> routeAliases;
+  final String? parentSlug;
   final ShowcaseReviewProposal? reviewProposal;
+
+  bool get isNested => parentSlug != null;
+
+  bool matchesSlug(String? requestedSlug) =>
+      slug == requestedSlug || routeAliases.contains(requestedSlug);
 
   String get slug =>
       routeSlug ??
@@ -118,41 +133,34 @@ class ShowcaseHome extends StatefulWidget {
 
 class _ShowcaseHomeState extends State<ShowcaseHome> {
   late int _selectedIndex;
+  late final List<NavDestination> _destinations;
 
   /// All navigation destinations in the showcase.
-  static final List<NavDestination> _destinations = [
-    const NavDestination(
+  List<NavDestination> _buildDestinations() => [
+    NavDestination(
       label: 'Gallery',
       icon: Icons.dashboard_outlined,
       selectedIcon: Icons.dashboard,
-      page: GalleryPage(),
+      page: GalleryPage(onOpenChartType: _selectSlug),
     ),
-    const NavDestination(
+    NavDestination(
       label: 'Chart Types',
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
-      page: ChartTypesPage(),
+      page: ChartTypesPage(onOpenChartType: _selectSlug),
     ),
-    const NavDestination(
-      label: 'Bar Lab',
-      icon: Icons.bar_chart_outlined,
-      selectedIcon: Icons.bar_chart,
-      page: BarLabPage(),
-      routeSlug: 'bar-lab',
-    ),
-    const NavDestination(
-      label: 'Pie Charts',
-      icon: Icons.pie_chart_outline,
-      selectedIcon: Icons.pie_chart,
-      page: PieChartsPage(),
-      routeSlug: 'pie-charts',
-    ),
-    const NavDestination(
-      label: 'Donut Charts',
-      icon: Icons.donut_large_outlined,
-      selectedIcon: Icons.donut_large,
-      page: DonutChartsPage(),
-      routeSlug: 'donut-charts',
+    ...showcaseChartTypes.map(
+      (chartType) => NavDestination(
+        label: '${chartType.label} Charts',
+        icon: chartType.icon,
+        selectedIcon: chartType.icon,
+        page: _pageForChartType(chartType.slug),
+        routeSlug: chartType.slug,
+        routeAliases: chartType.slug == 'bar-charts'
+            ? const ['bar-lab']
+            : const [],
+        parentSlug: 'chart-types',
+      ),
     ),
     const NavDestination(
       label: 'Interaction',
@@ -242,12 +250,23 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     ),
   ];
 
+  Widget _pageForChartType(String slug) => switch (slug) {
+    'line-charts' => const LineChartsPage(),
+    'area-charts' => const AreaChartsPage(),
+    'bar-charts' => const BarLabPage(),
+    'scatter-charts' => const ScatterChartsPage(),
+    'pie-charts' => const PieChartsPage(),
+    'donut-charts' => const DonutChartsPage(),
+    _ => throw StateError('No showcase page is registered for $slug'),
+  };
+
   @override
   void initState() {
     super.initState();
+    _destinations = _buildDestinations();
     final requestedPage = Uri.base.queryParameters['page'];
     final requestedIndex = _destinations.indexWhere(
-      (destination) => destination.slug == requestedPage,
+      (destination) => destination.matchesSlug(requestedPage),
     );
     _selectedIndex = requestedIndex < 0 ? 0 : requestedIndex;
   }
@@ -264,12 +283,19 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     );
   }
 
+  void _selectSlug(String slug) {
+    final index = _destinations.indexWhere(
+      (destination) => destination.matchesSlug(slug),
+    );
+    if (index >= 0) _selectDestination(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final capture = Uri.base.queryParameters['capture'];
-    if (capture == 'hero-threshold') {
+    if (capture == 'hero-threshold' || capture == 'hero-session') {
       return const _HeroMediaCapture(
-        panel: PerformanceIntelligenceHeroPanel.thresholdExposure,
+        panel: PerformanceIntelligenceHeroPanel.sessionProfile,
       );
     }
     if (capture == 'hero-duration') {
@@ -320,22 +346,43 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
             child: BravenBrand(),
           ),
           const Divider(),
-          ..._destinations.map(
-            (dest) => NavigationDrawerDestination(
-              icon: Icon(dest.icon),
-              selectedIcon: Icon(dest.selectedIcon),
+          for (var index = 0; index < _destinations.length; index++) ...[
+            if (index > 0 &&
+                _destinations[index].isNested &&
+                !_destinations[index - 1].isNested)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(28, 14, 16, 4),
+                child: Text('CHART TYPE GUIDES'),
+              ),
+            if (index > 0 &&
+                !_destinations[index].isNested &&
+                _destinations[index - 1].isNested)
+              const Divider(indent: 20, endIndent: 20),
+            NavigationDrawerDestination(
+              icon: Padding(
+                padding: EdgeInsets.only(
+                  left: _destinations[index].isNested ? 16 : 0,
+                ),
+                child: Icon(_destinations[index].icon),
+              ),
+              selectedIcon: Padding(
+                padding: EdgeInsets.only(
+                  left: _destinations[index].isNested ? 16 : 0,
+                ),
+                child: Icon(_destinations[index].selectedIcon),
+              ),
               label: SizedBox(
                 width: 190,
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
-                        dest.label,
+                        _destinations[index].label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (dest.reviewProposal != null) ...[
+                    if (_destinations[index].reviewProposal != null) ...[
                       const SizedBox(width: 6),
                       const _ReviewBadge(compact: true),
                     ],
@@ -343,7 +390,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
                 ),
               ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
         ],
       ),
@@ -449,27 +496,41 @@ class _ScrollableNav extends StatelessWidget {
                   final icon = Icon(
                     isSelected ? dest.selectedIcon : dest.icon,
                     color: isSelected
-                        ? colorScheme.onSecondaryContainer
+                        ? colorScheme.primary
                         : colorScheme.onSurfaceVariant,
                     size: 22,
                   );
-                  return InkWell(
+                  final destinationTile = InkWell(
                     onTap: () => onDestinationSelected(i),
+                    hoverColor: colorScheme.primary.withValues(alpha: 0.05),
+                    highlightColor: colorScheme.primary.withValues(alpha: 0.08),
+                    splashColor: colorScheme.primary.withValues(alpha: 0.08),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
+                      margin: EdgeInsets.fromLTRB(
+                        dest.isNested && extended ? 16 : 0,
+                        0,
+                        8,
+                        0,
                       ),
                       padding: EdgeInsets.symmetric(
                         horizontal: extended ? 12 : 0,
-                        vertical: 10,
+                        vertical: 13,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? colorScheme.secondaryContainer
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(28),
+                        color: Colors.transparent,
+                        border: extended
+                            ? Border(
+                                left: BorderSide(
+                                  color: isSelected
+                                      ? colorScheme.primary
+                                      : dest.isNested
+                                      ? colorScheme.outlineVariant
+                                      : Colors.transparent,
+                                  width: isSelected ? 3 : 1,
+                                ),
+                              )
+                            : null,
                       ),
                       child: extended
                           ? Row(
@@ -482,10 +543,10 @@ class _ScrollableNav extends StatelessWidget {
                                     dest.label,
                                     style: theme.textTheme.labelLarge?.copyWith(
                                       color: isSelected
-                                          ? colorScheme.onSecondaryContainer
+                                          ? colorScheme.primary
                                           : colorScheme.onSurfaceVariant,
                                       fontWeight: isSelected
-                                          ? FontWeight.w600
+                                          ? FontWeight.w700
                                           : FontWeight.normal,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -512,6 +573,33 @@ class _ScrollableNav extends StatelessWidget {
                               ),
                             ),
                     ),
+                  );
+                  final tile = extended
+                      ? destinationTile
+                      : Tooltip(message: dest.label, child: destinationTile);
+                  final startsNestedGroup =
+                      i > 0 && dest.isNested && !destinations[i - 1].isNested;
+                  final endsNestedGroup =
+                      i > 0 && !dest.isNested && destinations[i - 1].isNested;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (startsNestedGroup && extended)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 14, 12, 4),
+                          child: Text(
+                            'CHART TYPE GUIDES',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      if (endsNestedGroup)
+                        const Divider(indent: 16, endIndent: 16),
+                      tile,
+                    ],
                   );
                 }),
               ),

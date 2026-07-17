@@ -4,6 +4,15 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
+const _compactDonutCalloutStyle = LabelStyle(
+  textStyle: TextStyle(fontSize: 10),
+  backgroundColor: Colors.transparent,
+  borderColor: Colors.transparent,
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: EdgeInsets.zero,
+);
+
 /// Reusable Donut compositions shown in the public Gallery and package media.
 const donutGalleryCards = <Widget>[
   RevenueRingGalleryCard(),
@@ -34,7 +43,7 @@ class DonutGalleryMediaPanel extends StatelessWidget {
   }
 }
 
-/// A balanced contribution ring whose center follows durable selection.
+/// A subscription mix whose center follows durable selection.
 class RevenueRingGalleryCard extends StatelessWidget {
   const RevenueRingGalleryCard({super.key});
 
@@ -43,8 +52,9 @@ class RevenueRingGalleryCard extends StatelessWidget {
     final base = ChartTheme.corporateBlue;
     return _DonutGalleryCard(
       key: const ValueKey('gallery-donut-revenue'),
-      title: 'Recurring revenue',
-      subtitle: 'Selection-aware center · outside labels',
+      title: 'Subscription MRR',
+      subtitle: 'Plan mix · selection-aware center',
+      showLegend: false,
       theme: base.copyWith(
         seriesTheme: base.seriesTheme.copyWith(
           colors: const [
@@ -58,17 +68,16 @@ class RevenueRingGalleryCard extends StatelessWidget {
       ),
       series: DonutChartSeries.fromMap(
         id: 'gallery-donut-revenue-series',
-        name: 'Revenue',
-        unit: 'k',
+        name: 'Monthly recurring revenue',
+        unit: 'k USD',
         values: const {
-          'Subscriptions': 42,
-          'Services': 28,
-          'Hardware': 16,
-          'Training': 9,
-          'Other': 5,
+          'Starter': 18,
+          'Teams': 29,
+          'Business': 43,
+          'Enterprise': 38,
         },
         donutStyle: const DonutChartStyle(
-          innerRadiusFactor: 0.66,
+          innerRadiusFactor: 0.7,
           radiusFactor: 0.82,
           sliceGap: 2,
           cornerRadius: 7,
@@ -77,20 +86,41 @@ class RevenueRingGalleryCard extends StatelessWidget {
           gradient: PieGradientStyle(type: PieGradientType.radial),
         ),
         centerContent: const DonutCenterContent(
-          label: 'Revenue',
+          label: 'MRR',
           valueMode: DonutCenterValueMode.selectedOrTotal,
+          labelStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            backgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
+          valueStyle: LabelStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF1F2937),
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+            backgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
         ),
         dataLabels: const PieDataLabelConfig(
           position: PieDataLabelPosition.outside,
           content: PieDataLabelContent.categoryAndPercentage,
-          minimumShare: 0.08,
+          minimumShare: 0.1,
+          calloutStyle: _compactDonutCalloutStyle,
         ),
       ),
     );
   }
 }
 
-/// A partial Donut that uses the center as a portable status summary.
+/// A partial Donut that uses the center as a portable readiness summary.
 class DeliveryProgressGalleryCard extends StatelessWidget {
   const DeliveryProgressGalleryCard({super.key});
 
@@ -101,9 +131,8 @@ class DeliveryProgressGalleryCard extends StatelessWidget {
       backgroundColor: const Color(0xFF111827),
       seriesTheme: base.seriesTheme.copyWith(
         colors: const [
-          Color(0xFF38BDF8),
-          Color(0xFFA78BFA),
           Color(0xFF34D399),
+          Color(0xFF38BDF8),
           Color(0xFFFBBF24),
           Color(0xFFFB7185),
         ],
@@ -111,28 +140,26 @@ class DeliveryProgressGalleryCard extends StatelessWidget {
     );
     return _DonutGalleryCard(
       key: const ValueKey('gallery-donut-progress'),
-      title: 'Release progress',
-      subtitle: '280° sweep · portable center status',
+      title: 'Release readiness',
+      subtitle: '270° status sweep · compact callouts',
       theme: theme,
       showLegend: false,
       series: DonutChartSeries.fromMap(
         id: 'gallery-donut-progress-series',
-        name: 'Delivery',
-        unit: 'hours',
+        name: 'Release checks',
+        unit: '%',
         values: const {
-          'Build': 46,
-          'Discovery': 18,
-          'Design': 14,
-          'Testing': 12,
-          'Launch': 7,
-          'Support': 3,
+          'Ready': 68,
+          'In review': 17,
+          'At risk': 10,
+          'Blocked': 5,
         },
         donutStyle: const DonutChartStyle(
           innerRadiusFactor: 0.66,
-          startAngleDegrees: 130,
-          sweepAngleDegrees: 280,
-          radiusFactor: 0.88,
-          sliceGap: 2,
+          startAngleDegrees: 135,
+          sweepAngleDegrees: 270,
+          radiusFactor: 0.84,
+          sliceGap: 3,
           cornerRadius: 10,
           gradient: PieGradientStyle(
             type: PieGradientType.linear,
@@ -140,9 +167,9 @@ class DeliveryProgressGalleryCard extends StatelessWidget {
           ),
         ),
         centerContent: const DonutCenterContent(
-          label: 'Status',
+          label: 'Release',
           valueMode: DonutCenterValueMode.custom,
-          customValue: 'On track',
+          customValue: '85% ready',
           labelStyle: LabelStyle(
             textStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
             backgroundColor: Color(0x00000000),
@@ -154,7 +181,7 @@ class DeliveryProgressGalleryCard extends StatelessWidget {
           valueStyle: LabelStyle(
             textStyle: TextStyle(
               color: Color(0xFFFFFFFF),
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
             backgroundColor: Color(0x00000000),
@@ -167,14 +194,15 @@ class DeliveryProgressGalleryCard extends StatelessWidget {
         dataLabels: const PieDataLabelConfig(
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.percentage,
-          minimumShare: 0.1,
+          minimumShare: 0.09,
+          calloutStyle: _compactDonutCalloutStyle,
         ),
       ),
     );
   }
 }
 
-/// Angle communicates contribution while radius communicates audience reach.
+/// Angle communicates conversions while radius communicates audience reach.
 class CampaignReachGalleryCard extends StatelessWidget {
   const CampaignReachGalleryCard({super.key});
 
@@ -183,8 +211,9 @@ class CampaignReachGalleryCard extends StatelessWidget {
     final base = ChartTheme.light;
     return _DonutGalleryCard(
       key: const ValueKey('gallery-donut-reach'),
-      title: 'Campaign contribution',
-      subtitle: 'Variable radius · compact inside labels',
+      title: 'Channel efficiency',
+      subtitle: 'Angle = orders · radius = audience reach',
+      showLegend: false,
       theme: base.copyWith(
         seriesTheme: base.seriesTheme.copyWith(
           colors: const [
@@ -198,21 +227,21 @@ class CampaignReachGalleryCard extends StatelessWidget {
       ),
       series: DonutChartSeries.fromMap(
         id: 'gallery-donut-reach-series',
-        name: 'Campaigns',
-        unit: 'leads',
+        name: 'Channels',
+        unit: 'orders',
         values: const {
-          'Search': 31,
-          'Social': 24,
-          'Partners': 19,
-          'Events': 15,
-          'Email': 11,
+          'Search': 816,
+          'Partners': 600,
+          'Events': 432,
+          'Social': 360,
+          'Email': 192,
         },
         radiusValues: const {
-          'Search': 82,
-          'Social': 54,
-          'Partners': 68,
-          'Events': 37,
-          'Email': 46,
+          'Search': 78,
+          'Partners': 92,
+          'Events': 52,
+          'Social': 66,
+          'Email': 44,
         },
         sliceRadiusConfig: const RadialSliceRadiusConfig(
           minimumFactor: 0.42,
@@ -228,14 +257,35 @@ class CampaignReachGalleryCard extends StatelessWidget {
           gradient: PieGradientStyle(type: PieGradientType.radial),
         ),
         centerContent: const DonutCenterContent(
-          label: 'Leads',
+          label: 'Orders',
           valueMode: DonutCenterValueMode.custom,
-          customValue: '100',
+          customValue: '2.4k',
+          labelStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            backgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
+          valueStyle: LabelStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF1F2937),
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+            backgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
         ),
         dataLabels: const PieDataLabelConfig(
           position: PieDataLabelPosition.inside,
-          content: PieDataLabelContent.percentage,
-          minimumShare: 0.1,
+          content: PieDataLabelContent.category,
+          minimumShare: 0.07,
+          calloutStyle: _compactDonutCalloutStyle,
         ),
       ),
     );
@@ -260,7 +310,19 @@ class _DonutGalleryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark =
+        ThemeData.estimateBrightnessForColor(theme.backgroundColor) ==
+        Brightness.dark;
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : Theme.of(context).colorScheme.onSurface;
+    final subtitleColor = isDark
+        ? const Color(0xFF94A3B8)
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+
     return Card(
+      color: isDark ? theme.backgroundColor : null,
+      surfaceTintColor: Colors.transparent,
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
@@ -269,18 +331,19 @@ class _DonutGalleryCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: titleColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: subtitleColor),
             ),
             const SizedBox(height: 8),
             Expanded(

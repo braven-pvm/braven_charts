@@ -7,9 +7,11 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
+import '../widgets/bar_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
+import '../widgets/chart_type_catalog.dart';
 
 const _capabilities = <(IconData, String)>[
   (Icons.open_with, 'Zoom, pan & scroll'),
@@ -25,7 +27,9 @@ enum _GalleryMode { curated, full }
 
 /// Gallery page showcasing multiple charts with different themes and complexities.
 class GalleryPage extends StatefulWidget {
-  const GalleryPage({super.key});
+  const GalleryPage({super.key, this.onOpenChartType});
+
+  final ValueChanged<String>? onOpenChartType;
 
   @override
   State<GalleryPage> createState() => _GalleryPageState();
@@ -56,7 +60,7 @@ class _GalleryPageState extends State<GalleryPage> {
     final buildingBlockCards = <Widget>[
       _buildMonthlyRevenueChart(isDark),
       _buildTemperatureTrendChart(isDark),
-      _buildQuarterlySalesBarChart(isDark),
+      const BarTargetsGalleryCard(),
       _buildExperimentScatterChart(isDark),
       _buildMixedSeriesTypeChart(isDark),
       _buildMixedInterpolationChart(isDark),
@@ -161,10 +165,30 @@ class _GalleryPageState extends State<GalleryPage> {
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
-              eyebrow: 'FLAGSHIP COMPOSITION',
-              title: 'Two analytical viewpoints, one rendering engine',
+              eyebrow: 'CHART TYPE SAMPLER',
+              title: 'Six chart families, one native renderer',
               subtitle:
-                  'Mixed interval thresholds and continuous power-duration modelling show how one API supports radically different analytical layouts.',
+                  'Start with the shape of the data, then open a focused guide for the complete feature set.',
+              count: 6,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+              child: SizedBox(
+                height: 310,
+                child: ChartTypeCatalogStrip(
+                  onOpenChartType: widget.onOpenChartType,
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'FLAGSHIP COMPOSITION',
+              title: 'A workhorse profile and a deeper analytical model',
+              subtitle:
+                  'A readable multi-axis session profile sits beside a dense power-duration analysis to show the package range without turning every chart into a dashboard.',
             ),
           ),
           const SliverToBoxAdapter(
@@ -245,9 +269,9 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'DONUT COMPOSITIONS',
-              title: 'Contribution, progress, and a second metric',
+              title: 'Three measures, three radial encodings',
               subtitle:
-                  'Compare a selection-aware contribution ring, a partial progress sweep, and a variable-radius Donut with portable center content.',
+                  'Compare subscription mix, release readiness, and channel efficiency with selection-aware center content.',
               count: 3,
             ),
           ),
@@ -265,76 +289,6 @@ class _GalleryPageState extends State<GalleryPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuarterlySalesBarChart(bool isDark) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Quarterly Pipeline',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Grouped bars with hover detail',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: BravenChartPlus(
-                series: const [
-                  BarChartSeries(
-                    id: 'pipeline',
-                    name: 'Pipeline',
-                    unit: 'k',
-                    points: [
-                      ChartDataPoint(x: 1, y: 48),
-                      ChartDataPoint(x: 2, y: 64),
-                      ChartDataPoint(x: 3, y: 58),
-                      ChartDataPoint(x: 4, y: 76),
-                    ],
-                    color: Color(0xFF6366F1),
-                    barWidthPercent: 0.34,
-                  ),
-                  BarChartSeries(
-                    id: 'closed',
-                    name: 'Closed',
-                    unit: 'k',
-                    points: [
-                      ChartDataPoint(x: 1, y: 31),
-                      ChartDataPoint(x: 2, y: 45),
-                      ChartDataPoint(x: 3, y: 49),
-                      ChartDataPoint(x: 4, y: 62),
-                    ],
-                    color: Color(0xFF14B8A6),
-                    barWidthPercent: 0.34,
-                  ),
-                ],
-                theme: isDark ? ChartTheme.dark : ChartTheme.light,
-                showLegend: true,
-                xAxisConfig: const XAxisConfig(label: 'Quarter'),
-                yAxis: YAxisConfig(
-                  position: YAxisPosition.left,
-                  label: 'Revenue (USD k)',
-                ),
-                interactionConfig: const InteractionConfig(
-                  tooltip: TooltipConfig(
-                    enabled: true,
-                    triggerMode: TooltipTriggerMode.hover,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -2685,8 +2639,8 @@ class _GalleryModeControl extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             mode == _GalleryMode.curated
-                ? '25 representative compositions'
-                : '38 examples across the complete catalog',
+                ? 'Focused tour of the representative compositions'
+                : 'Every maintained example in the showcase catalog',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

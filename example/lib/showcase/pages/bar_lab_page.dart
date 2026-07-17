@@ -256,8 +256,9 @@ class _BarLabPageState extends State<BarLabPage> {
   @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
-      title: 'Bar Lab',
-      subtitle: 'Build expressive bars from shared, precise geometry',
+      title: 'Bar Charts',
+      subtitle:
+          'Grouped, stacked, horizontal, range, waterfall, and precision styling',
       actions: [
         OutlinedButton.icon(
           onPressed: _resetPreset,

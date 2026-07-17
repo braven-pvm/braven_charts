@@ -12,6 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/gallery_flagships.dart';
 // ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/bar_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/donut_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
 
 const _outputDirectory = String.fromEnvironment(
@@ -41,6 +45,101 @@ void main() {
       source: const PortfolioAllocationGalleryCard(),
     );
   });
+
+  testWidgets('capture pub.dev Donut media through the public preview API', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+    final captures = <_NativeMediaCapture>[];
+
+    for (final source in const [
+      (
+        label: 'Subscription MRR',
+        fileName: 'donut_revenue_ring.png',
+        widget: RevenueRingGalleryCard(),
+        accent: Color(0xFF2563EB),
+        isDark: false,
+      ),
+      (
+        label: 'Release readiness',
+        fileName: 'donut_release_progress.png',
+        widget: DeliveryProgressGalleryCard(),
+        accent: Color(0xFF34D399),
+        isDark: true,
+      ),
+      (
+        label: 'Channel efficiency',
+        fileName: 'donut_campaign_reach.png',
+        widget: CampaignReachGalleryCard(),
+        accent: Color(0xFF0F9F92),
+        isDark: false,
+      ),
+    ]) {
+      final bytes = await _capturePie(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: source.fileName,
+        source: source.widget,
+      );
+      captures.add(
+        _NativeMediaCapture(
+          label: source.label,
+          bytes: bytes,
+          accent: source.accent,
+          isDark: source.isDark,
+        ),
+      );
+    }
+
+    await _captureDonutCollection(
+      tester,
+      outputDirectory: outputDirectory,
+      captures: captures,
+    );
+  });
+
+  testWidgets('capture pub.dev Bar media through the public preview API', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    await _captureInteraction(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'bar_targets_interaction.png',
+      source: const BarTargetsGalleryCard(),
+    );
+  });
+
+  testWidgets(
+    'capture pub.dev flagship hero media through the public preview API',
+    (tester) async {
+      await tester.runAsync(_loadCaptureFont);
+      final outputDirectory = Directory(_outputDirectory)
+        ..createSync(recursive: true);
+
+      await _captureInteraction(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: 'hero_threshold.png',
+        source: const PerformanceIntelligenceGalleryHero(
+          panel: PerformanceIntelligenceHeroPanel.sessionProfile,
+        ),
+      );
+      await _captureInteraction(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: 'hero_power_duration.png',
+        source: const PerformanceIntelligenceGalleryHero(
+          panel: PerformanceIntelligenceHeroPanel.powerDuration,
+        ),
+      );
+    },
+  );
 
   testWidgets(
     'capture pub.dev interaction media through the public preview API',
@@ -82,7 +181,7 @@ void main() {
   });
 }
 
-Future<void> _capturePie(
+Future<Uint8List> _capturePie(
   WidgetTester tester, {
   required Directory outputDirectory,
   required String fileName,
@@ -114,9 +213,19 @@ Future<void> _capturePie(
           child: BravenChartPlus(
             bravenChartController: controller,
             series: galleryChart.series,
+            annotations: galleryChart.annotations
+                .map(_withCaptureAnnotationFont)
+                .toList(),
             theme: captureTheme,
             showLegend: galleryChart.showLegend,
+            legendStyle: _withCaptureLegendFont(galleryChart.legendStyle),
             grid: galleryChart.grid,
+            showXScrollbar: galleryChart.showXScrollbar,
+            showYScrollbar: galleryChart.showYScrollbar,
+            scrollbarTheme: galleryChart.scrollbarTheme,
+            normalizationMode: galleryChart.normalizationMode,
+            xAxisConfig: galleryChart.xAxisConfig,
+            yAxis: galleryChart.yAxis,
             interactionConfig: galleryChart.interactionConfig,
           ),
         ),
@@ -141,10 +250,11 @@ Future<void> _capturePie(
   expect(preview.heightPixels, 880);
   expect(preview.bytes, isNotEmpty);
 
+  final bytes = preview.bytes!;
   final output = File(
     '${outputDirectory.path}${Platform.pathSeparator}$fileName',
   );
-  await tester.runAsync(() => output.writeAsBytes(preview.bytes!, flush: true));
+  await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
   // ignore: avoid_print
   print(
     'Wrote ${output.path} (${preview.widthPixels}x${preview.heightPixels})',
@@ -152,6 +262,138 @@ Future<void> _capturePie(
 
   await tester.pumpWidget(const SizedBox.shrink());
   controller.dispose();
+  return bytes;
+}
+
+Future<void> _captureDonutCollection(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+  required List<_NativeMediaCapture> captures,
+}) async {
+  const logicalSize = Size(1800, 560);
+  final boundaryKey = GlobalKey();
+  await tester.binding.setSurfaceSize(logicalSize);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: _captureFontFamily),
+      home: RepaintBoundary(
+        key: boundaryKey,
+        child: Material(
+          color: const Color(0xFFF7F5FA),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, capture) in captures.indexed) ...[
+                  if (index > 0) const SizedBox(width: 16),
+                  Expanded(child: _NativeMediaTile(capture: capture)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  final boundaryContext = boundaryKey.currentContext!;
+  await tester.runAsync(() async {
+    for (final capture in captures) {
+      await precacheImage(MemoryImage(capture.bytes), boundaryContext);
+    }
+  });
+  await tester.pump();
+
+  final boundary =
+      boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final byteData = await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data;
+  });
+  expect(byteData, isNotNull);
+  final output = File(
+    '${outputDirectory.path}${Platform.pathSeparator}gallery_donut_collection.png',
+  );
+  await tester.runAsync(
+    () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
+  );
+  // ignore: avoid_print
+  print('Wrote ${output.path} (1800x560)');
+  await tester.pumpWidget(const SizedBox.shrink());
+}
+
+class _NativeMediaCapture {
+  const _NativeMediaCapture({
+    required this.label,
+    required this.bytes,
+    required this.accent,
+    this.isDark = false,
+  });
+
+  final String label;
+  final Uint8List bytes;
+  final Color accent;
+  final bool isDark;
+}
+
+class _NativeMediaTile extends StatelessWidget {
+  const _NativeMediaTile({required this.capture});
+
+  final _NativeMediaCapture capture;
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = capture.isDark
+        ? const Color(0xFF111827)
+        : Colors.white;
+    final foregroundColor = capture.isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF1F2937);
+    final borderColor = capture.isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE5E7EB);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            child: Text(
+              capture.label,
+              style: TextStyle(
+                color: foregroundColor,
+                fontFamily: _captureFontFamily,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(width: 72, height: 3, color: capture.accent),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Image.memory(
+              capture.bytes,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 Future<void> _captureInteraction(
@@ -192,9 +434,10 @@ Future<void> _captureInteraction(
                 .toList(),
             theme: captureTheme,
             showLegend: galleryChart.showLegend,
-            legendStyle: galleryChart.legendStyle,
+            legendStyle: _withCaptureLegendFont(galleryChart.legendStyle),
             grid: galleryChart.grid,
             showXScrollbar: galleryChart.showXScrollbar,
+            showYScrollbar: galleryChart.showYScrollbar,
             scrollbarTheme: galleryChart.scrollbarTheme,
             normalizationMode: galleryChart.normalizationMode,
             xAxisConfig: galleryChart.xAxisConfig,
@@ -657,6 +900,19 @@ List<_ChartTypeAsset> _chartTypeAssets() {
           ],
           color: Color(0xFF2563EB),
           barWidthPercent: 0.72,
+          targetValues: [28, 42, 44, 50, 60],
+          targetMarkerStyle: BarTargetMarkerStyle(
+            color: Color(0xFFF97316),
+            width: 1.5,
+            lengthFactor: 1.35,
+          ),
+          errorLowerValues: [19, 32, 41, 37, 57],
+          errorUpperValues: [30, 44, 53, 49, 70],
+          errorBarStyle: BarErrorBarStyle(
+            color: Color(0xFF334155),
+            width: 1,
+            capLengthFactor: 0.55,
+          ),
         ),
       ],
     ),
@@ -848,6 +1104,13 @@ ChartTheme _withCaptureFont(ChartTheme theme) {
               ),
             ),
           ),
+  );
+}
+
+LegendStyle? _withCaptureLegendFont(LegendStyle? style) {
+  if (style == null) return null;
+  return style.copyWith(
+    textStyle: style.textStyle.copyWith(fontFamily: _captureFontFamily),
   );
 }
 
