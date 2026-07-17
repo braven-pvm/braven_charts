@@ -1,6 +1,22 @@
 # Pie chart implementation investigation
 
-Status: **Slices 1–6 complete locally and ready for live review**
+Status: **Pie V1 complete; variable-radius extension implemented as Donut Slice 1**
+
+## July 17, 2026 addendum: variable slice radius
+
+The first Donut lane slice closes one deliberately deferred Pie capability:
+an optional, labeled second metric controls slice radius while the original
+contribution continues to control angle.
+
+- `PieChartSeries.fromMap` accepts an exact-key `radiusValues` map and
+  `PieSliceRadiusConfig`.
+- `PieSliceRadiusScale.area` is the perceptual default; `linear` is explicit.
+- The second metric is present in hits, tooltips, semantics, the native table,
+  copy/CSV, AI input, and artifacts.
+- Variable documents require `series.pie.variable-radius.v1`; uniform Pie
+  documents keep their established capability set.
+- The public Pie page exposes a two-metric country dataset and live radius
+  controls before Donut introduces an inner radius.
 
 This note preserves the July 2026 investigation into adding pie charts as the
 first new radial chart type in Braven Charts. It records the recommended
@@ -36,7 +52,8 @@ The recommended architectural shape is:
 - generalized data-element contracts for cache, hit testing, tooltip,
   selection, and semantics;
 - slice-aware legend and table projections; and
-- built-in artifact capabilities `series.pie` and `series.pie.style.v2`.
+- built-in artifact capabilities `series.pie`, `series.pie.style.v2`, and
+  `series.pie.corner-treatment.v1`.
 
 ## Recommended first-release boundary
 
@@ -68,7 +85,7 @@ The recommended architectural shape is:
 - Semi-circular gauges.
 - Mixed radial and Cartesian series.
 - Automatic small-slice grouping into `Other`.
-- Image shaders and per-slice radius mapping.
+- Image shaders.
 - Streaming-specific pie behavior.
 
 ## Data contract
@@ -449,6 +466,8 @@ Status: **Complete locally and ready for live review.**
   wedges apart instead of subtracting angular sweep.
 - Add theme and per-series opacity, rounded corners, base shadow, selected
   glow/elevation, and reduced-motion-aware radial grow/selection animations.
+- Split rounded-corner behavior into the compatibility `roundAll`, sharp-apex
+  `outerOnly`, and uniform-cutout `circularCenter` geometry policies.
 - Add shared-`LabelStyle` callouts and retain the existing interaction-theme
   tooltip precedence.
 - Honor `LegendStyle` position, orientation, marker, background, border,

@@ -32,6 +32,7 @@ void main() {
     expect(find.byKey(const ValueKey('pie-dataset-revenue')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-dataset-effort')), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-dataset-support')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pie-dataset-countries')), findsOneWidget);
     expect(find.text('Try slice interaction'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-legend-item-0')), findsOneWidget);
     final initialChart = tester.widget<BravenChartPlus>(
@@ -40,6 +41,10 @@ void main() {
     expect(
       (initialChart.series.single as PieChartSeries).pieStyle.gradient?.type,
       PieGradientType.radial,
+    );
+    expect(
+      (initialChart.series.single as PieChartSeries).pieStyle.cornerTreatment,
+      PieCornerTreatment.roundAll,
     );
     expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
@@ -57,6 +62,7 @@ void main() {
     expect(simpleSeries.dataLabels.content, PieDataLabelContent.value);
     expect(simpleSeries.dataLabels.minimumShare, 0.2);
     expect(simpleSeries.pieStyle.gradient?.type, PieGradientType.linear);
+    expect(simpleSeries.pieStyle.cornerTreatment, PieCornerTreatment.outerOnly);
     expect(
       simpleChart.theme?.pieChartTheme.calloutStyle?.textStyle.color,
       const Color(0xFFFFFFFF),
@@ -87,6 +93,10 @@ void main() {
     expect(highContrastSeries.dataLabels.outsideOffset, 0);
     expect(highContrastSeries.pieStyle.gradient, isNull);
     expect(
+      highContrastSeries.pieStyle.cornerTreatment,
+      PieCornerTreatment.circularCenter,
+    );
+    expect(
       highContrastCallout?.backgroundColor.toARGB32(),
       const Color(0xFFFFFFFF).toARGB32(),
     );
@@ -109,6 +119,10 @@ void main() {
     expect(elevatedSeries.dataLabels.outsideOffset, 12);
     expect(elevatedSeries.pieStyle.gradient?.type, PieGradientType.radial);
     expect(elevatedChart.theme?.pieChartTheme.cornerRadius, 14);
+    expect(
+      elevatedChart.theme?.pieChartTheme.cornerTreatment,
+      PieCornerTreatment.circularCenter,
+    );
     expect(elevatedChart.theme?.pieChartTheme.shadow.isVisible, isTrue);
     expect(elevatedChart.theme?.pieChartTheme.opacity, 0.94);
 
@@ -153,6 +167,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.textContaining('tickets total'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('pie-dataset-countries')));
+    await _settleCapture(tester);
+
+    final variableChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    final variableSeries = variableChart.series.single as PieChartSeries;
+    expect(variableSeries.hasVariableSliceRadius, isTrue);
+    expect(variableSeries.sliceRadiusConfig?.label, 'Total area');
+    expect(variableSeries.sliceRadiusConfig?.unit, 'km²');
+    expect(variableSeries.points.first.pointStyle?.size, isNotNull);
+    expect(find.text('Smallest slice radius'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('pie-display-mode')),
+        matching: find.text('Split'),
+      ),
+    );
+    await _settleCapture(tester);
+    final variableTable = tester.widget<ChartDataTable>(
+      find.byKey(const ValueKey('pie-showcase-table')),
+    );
+    expect(variableTable.model?.pieRadiusColumnLabel, 'Total area (km²)');
+    expect(find.text('Total area (km²)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -271,6 +312,7 @@ void main() {
 
     expect(find.text('series.pie'), findsOneWidget);
     expect(find.text('series.pie.style.v2'), findsOneWidget);
+    expect(find.text('series.pie.corner-treatment.v1'), findsOneWidget);
     expect(find.text('Schema 1'), findsOneWidget);
     expect(find.bySemanticsLabel('Captured pie chart preview'), findsOneWidget);
     expect(find.text('Restore captured chart'), findsOneWidget);

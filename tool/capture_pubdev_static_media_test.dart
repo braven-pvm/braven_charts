@@ -316,7 +316,7 @@ Future<void> _captureChartTypeStrip(
   required Directory outputDirectory,
   required List<_ChartTypeCapture> captures,
 }) async {
-  const logicalSize = Size(1840, 400);
+  const logicalSize = Size(2180, 400);
   final boundaryKey = GlobalKey();
   await tester.binding.setSurfaceSize(logicalSize);
   await tester.pumpWidget(
@@ -369,7 +369,7 @@ Future<void> _captureChartTypeStrip(
     () => output.writeAsBytes(byteData!.buffer.asUint8List(), flush: true),
   );
   // ignore: avoid_print
-  print('Wrote ${output.path} (1840x400)');
+  print('Wrote ${output.path} (2180x400)');
   await tester.pumpWidget(const SizedBox.shrink());
 }
 
@@ -494,6 +494,23 @@ List<_ChartTypeAsset> _chartTypeAssets() {
         borderRadius: 0,
         padding: EdgeInsets.zero,
       ),
+    ),
+  );
+  final donutBase = ChartTheme.dark;
+  final donutTheme = donutBase.copyWith(
+    backgroundColor: const Color(0xFF101827),
+    seriesTheme: donutBase.seriesTheme.copyWith(
+      colors: const [
+        Color(0xFF38BDF8),
+        Color(0xFF22C55E),
+        Color(0xFFF59E0B),
+        Color(0xFFA78BFA),
+      ],
+    ),
+    pieChartTheme: const PieChartTheme(
+      cornerRadius: 8,
+      borderColorMode: PieBorderColorMode.slice,
+      borderLightnessShift: 0.18,
     ),
   );
 
@@ -662,6 +679,64 @@ List<_ChartTypeAsset> _chartTypeAssets() {
             cornerRadius: 8,
             borderWidth: 1,
             borderColorMode: PieBorderColorMode.slice,
+          ),
+          dataLabels: const PieDataLabelConfig(
+            position: PieDataLabelPosition.inside,
+            content: PieDataLabelContent.percentage,
+            minimumShare: 0.12,
+          ),
+        ),
+      ],
+    ),
+    _ChartTypeAsset(
+      label: 'Donut',
+      fileName: 'chart_type_donut.png',
+      theme: donutTheme,
+      headerColor: const Color(0xFFDBEAFE),
+      headerTextColor: const Color(0xFF1E3A8A),
+      grid: const GridConfig(horizontal: false, vertical: false),
+      series: [
+        DonutChartSeries.fromMap(
+          id: 'donut',
+          name: 'Progress',
+          values: const {
+            'Complete': 46,
+            'Review': 24,
+            'Active': 18,
+            'Queued': 12,
+          },
+          donutStyle: const DonutChartStyle(
+            innerRadiusFactor: 0.58,
+            startAngleDegrees: -90,
+            radiusFactor: 0.82,
+            sliceGap: 3,
+            cornerRadius: 8,
+            borderWidth: 1,
+            borderColorMode: PieBorderColorMode.slice,
+          ),
+          centerContent: const DonutCenterContent(
+            label: 'Total',
+            valueMode: DonutCenterValueMode.total,
+            labelStyle: LabelStyle(
+              textStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+              backgroundColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              borderWidth: 0,
+              borderRadius: 0,
+              padding: EdgeInsets.zero,
+            ),
+            valueStyle: LabelStyle(
+              textStyle: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              backgroundColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              borderWidth: 0,
+              borderRadius: 0,
+              padding: EdgeInsets.zero,
+            ),
           ),
           dataLabels: const PieDataLabelConfig(
             position: PieDataLabelPosition.inside,

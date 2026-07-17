@@ -109,7 +109,7 @@ class ChartTableWideRow {
   final Map<String, ChartTableWideCell> cells;
 }
 
-/// Native categorical projection for one transported pie slice.
+/// Native categorical projection for one transported radial category slice.
 @immutable
 class ChartTablePieRow {
   const ChartTablePieRow({
@@ -122,6 +122,10 @@ class ChartTablePieRow {
     required this.shareDisplay,
     required this.isValid,
     this.unit,
+    this.radiusRaw,
+    this.radiusDisplay,
+    this.radiusLabel,
+    this.radiusUnit,
     this.colorValue,
   });
 
@@ -131,12 +135,25 @@ class ChartTablePieRow {
   final double valueRaw;
   final String valueDisplay;
 
-  /// Fractional share in the inclusive range 0–1 for valid pie documents.
+  /// Fractional share in the inclusive range 0–1 for valid radial documents.
   final double shareRaw;
 
   /// Percentage display with two fractional digits.
   final String shareDisplay;
   final String? unit;
+
+  /// Optional raw second metric used to encode this slice's outer radius.
+  final double? radiusRaw;
+
+  /// Two-decimal display value for [radiusRaw].
+  final String? radiusDisplay;
+
+  /// Human-readable name for the radius metric.
+  final String? radiusLabel;
+
+  /// Optional unit for the radius metric.
+  final String? radiusUnit;
+
   final bool isValid;
 
   /// Effective ARGB slice color, when the point produces visible geometry.
@@ -151,7 +168,7 @@ enum ChartTableProjectionKind {
   /// Exact-X Cartesian projection with one value column per series.
   cartesianWide,
 
-  /// Category, value, and share projection for one pie series.
+  /// Category, value, and share projection for one radial category series.
   pie,
 }
 
@@ -186,15 +203,17 @@ class ChartTableModel {
     final warnings = <ChartArtifactWarning>[];
     final hiddenIds = viewState?.hiddenSeriesIds ?? const <String>{};
     final selected = _selectSeries(document, viewState, options);
-    final pieSeries = selected.where((series) => series.type == 'pie').toList();
-    if (pieSeries.isNotEmpty &&
-        (pieSeries.length != 1 || selected.length != 1)) {
+    final radialSeries = selected
+        .where((series) => series.type == 'pie' || series.type == 'donut')
+        .toList();
+    if (radialSeries.isNotEmpty &&
+        (radialSeries.length != 1 || selected.length != 1)) {
       throw UnsupportedError(
-        'Pie table projection requires exactly one pie series and cannot mix '
-        'pie with Cartesian series.',
+        'Radial table projection requires exactly one Pie or Donut series and '
+        'cannot mix radial and Cartesian series.',
       );
     }
-    final projectionKind = pieSeries.isNotEmpty
+    final projectionKind = radialSeries.isNotEmpty
         ? ChartTableProjectionKind.pie
         : options.rowLayout == ChartTableRowLayout.long
         ? ChartTableProjectionKind.cartesianLong
@@ -256,7 +275,7 @@ class ChartTableModel {
           'Table generation does not support ${payload.storage} payloads.',
         );
       }
-      if (series.type == 'pie') {
+      if (series.type == 'pie' || series.type == 'donut') {
         pieRows.addAll(
           _projectPieRows(
             series,
@@ -341,6 +360,20 @@ class ChartTableModel {
 
   bool get isEmpty => rowCount == 0;
 
+  /// Whether this Pie projection carries a variable-radius metric.
+  bool get hasPieRadiusValues => pieRadiusColumnLabel != null;
+
+  /// Radius column heading, including its unit when one was captured.
+  String? get pieRadiusColumnLabel {
+    if (projectionKind != ChartTableProjectionKind.pie || pieRows.isEmpty) {
+      return null;
+    }
+    final row = pieRows.first;
+    final label = row.radiusLabel;
+    if (label == null) return null;
+    return row.radiusUnit == null ? label : '$label (${row.radiusUnit})';
+  }
+
   String get scopeLabel => switch (options.dataScope) {
     ChartTableDataScope.allSeries => 'All series',
     ChartTableDataScope.visibleSeries => 'Visible series',
@@ -364,6 +397,14 @@ List<ChartTablePieRow> _projectPieRows(
   final explicitSeriesColor = _validColorValue(
     series.style?.values['color']?.toJson(),
   );
+  final radiusConfig = series.style?.values['sliceRadiusConfig'];
+  final radiusConfigValues = radiusConfig is JsonObjectValue
+      ? radiusConfig.values
+      : null;
+  final radiusLabelValue = radiusConfigValues?['label']?.toJson();
+  final radiusUnitValue = radiusConfigValues?['unit']?.toJson();
+  final radiusLabel = radiusLabelValue is String ? radiusLabelValue : null;
+  final radiusUnit = radiusUnitValue is String ? radiusUnitValue : null;
   final rows = <ChartTablePieRow>[];
   var visibleIndex = 0;
   for (final (pointIndex, point) in points.indexed) {
@@ -382,6 +423,11 @@ List<ChartTablePieRow> _projectPieRows(
     final pointColor = _validColorValue(
       point.pointStyle?.values['color']?.toJson(),
     );
+    final rawRadiusValue = point.pointStyle?.values['size']?.toJson();
+    final radius = rawRadiusValue is num ? rawRadiusValue.toDouble() : null;
+    final radiusIsValid =
+        radiusConfigValues == null ||
+        (radius != null && radius.isFinite && radius >= 0);
     final colorValue = contributesSlice
         ? pointColor ??
               (visibleIndex == 0 ? explicitSeriesColor : null) ??
@@ -405,7 +451,13 @@ List<ChartTablePieRow> _projectPieRows(
         shareRaw: share,
         shareDisplay: '${(share * 100).toStringAsFixed(2)}%',
         unit: unit,
-        isValid: valid,
+        radiusRaw: radius,
+        radiusDisplay: radius == null
+            ? null
+            : (radius.isFinite ? radius.toStringAsFixed(2) : 'No value'),
+        radiusLabel: radiusLabel,
+        radiusUnit: radiusUnit,
+        isValid: valid && radiusIsValid,
         colorValue: colorValue,
       ),
     );

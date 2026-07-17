@@ -487,6 +487,24 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
     )
 
 
+def _donut_gallery_still(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture three reusable Donut compositions without app chrome."""
+    _load(driver, f"{base_url}?capture=donut-gallery")
+    time.sleep(6)
+    driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
+    time.sleep(1)
+    _save_png(
+        driver,
+        output_dir / "gallery_donut_collection.png",
+        (16, 16, VIEWPORT[0] - 16, VIEWPORT[1] - 16),
+        max_left_dark_fraction=0.45,
+    )
+
+
 def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
     _load(driver, base_url)
     _mouse(
@@ -749,6 +767,7 @@ def main() -> None:
             "pie",
             "interaction-still",
             "type-strip",
+            "donut",
         ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
@@ -782,9 +801,12 @@ def main() -> None:
             )
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
+            _donut_gallery_still(driver, base_url, args.output_dir)
         elif args.capture == "hero":
             _hero_panel_stills(driver, base_url, args.output_dir)
             _hero_still(driver, base_url, args.output_dir)
+        elif args.capture == "donut":
+            _donut_gallery_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()
 

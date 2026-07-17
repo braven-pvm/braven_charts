@@ -125,6 +125,7 @@ ChartTheme _decodeTheme(Map<String, Object?> map) => ChartTheme(
 Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
   'opacity': _n(theme.opacity),
   'cornerRadius': _n(theme.cornerRadius),
+  'cornerTreatment': theme.cornerTreatment.name,
   'shadow': _encodePieElevation(theme.shadow),
   'selectedElevation': _encodePieElevation(theme.selectedElevation),
   'borderColorMode': theme.borderColorMode.name,
@@ -136,12 +137,23 @@ Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
     'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       theme.calloutStyle!,
     ).toJson(),
+  if (theme.centerLabelStyle != null)
+    'centerLabelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      theme.centerLabelStyle!,
+    ).toJson(),
+  if (theme.centerValueStyle != null)
+    'centerValueStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      theme.centerValueStyle!,
+    ).toJson(),
   'animationMode': theme.animationMode.name,
 };
 
 PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
   opacity: _double(map, 'opacity'),
   cornerRadius: _double(map, 'cornerRadius'),
+  cornerTreatment: map['cornerTreatment'] == null
+      ? PieCornerTreatment.roundAll
+      : _enum(_string(map, 'cornerTreatment'), PieCornerTreatment.values),
   shadow: _decodePieElevation(_requiredMap(map, 'shadow')),
   selectedElevation: _decodePieElevation(
     _requiredMap(map, 'selectedElevation'),
@@ -159,6 +171,16 @@ PieChartTheme _decodePieChartTheme(Map<String, Object?> map) => PieChartTheme(
       ? null
       : ChartStyleDocumentCodec.decodeLabelStyle(
           _object(_requiredMap(map, 'calloutStyle')),
+        ),
+  centerLabelStyle: map['centerLabelStyle'] == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _object(_requiredMap(map, 'centerLabelStyle')),
+        ),
+  centerValueStyle: map['centerValueStyle'] == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _object(_requiredMap(map, 'centerValueStyle')),
         ),
   animationMode: _enum(_string(map, 'animationMode'), PieAnimationMode.values),
 );

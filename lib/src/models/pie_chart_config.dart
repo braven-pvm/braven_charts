@@ -194,6 +194,25 @@ class PieElevationStyle {
       Object.hash(color, blurRadius, spreadRadius, offset, opacity);
 }
 
+/// Controls how a Pie slice's inner and outer corners are resolved.
+enum PieCornerTreatment {
+  /// Round both outer corners and each slice's independent center tip.
+  ///
+  /// This preserves the original Braven Charts Pie rendering.
+  roundAll,
+
+  /// Round only the two corners on the outer circumference.
+  ///
+  /// Radial edges meet at a sharp slice apex.
+  outerOnly,
+
+  /// Round the outer corners and subtract one uniform circular center gap.
+  ///
+  /// The gap is shared by every non-exploded slice, so variable-radius slices
+  /// retain a visually circular center instead of forming uneven rounded tips.
+  circularCenter,
+}
+
 /// Theme defaults shared by radial Pie charts.
 ///
 /// Per-series values in [PieChartStyle] and [PieDataLabelConfig] take
@@ -205,6 +224,7 @@ class PieChartTheme {
   const PieChartTheme({
     this.opacity = 1,
     this.cornerRadius = 0,
+    this.cornerTreatment = PieCornerTreatment.roundAll,
     this.shadow = const PieElevationStyle(),
     this.selectedElevation = const PieElevationStyle(
       blurRadius: 10,
@@ -217,6 +237,8 @@ class PieChartTheme {
     this.borderLightnessShift = -0.12,
     this.gradient,
     this.calloutStyle,
+    this.centerLabelStyle,
+    this.centerValueStyle,
     this.animationMode = PieAnimationMode.grow,
   }) : assert(opacity >= 0 && opacity <= 1),
        assert(cornerRadius >= 0),
@@ -232,6 +254,9 @@ class PieChartTheme {
 
   /// Default corner radius in logical pixels.
   final double cornerRadius;
+
+  /// Default policy for applying [cornerRadius] to Pie slice paths.
+  final PieCornerTreatment cornerTreatment;
 
   /// Default elevation applied to every slice.
   final PieElevationStyle shadow;
@@ -258,6 +283,12 @@ class PieChartTheme {
   /// Optional outside/inside data-label callout styling.
   final LabelStyle? calloutStyle;
 
+  /// Optional theme-level appearance for a Donut center label.
+  final LabelStyle? centerLabelStyle;
+
+  /// Optional theme-level appearance for a Donut center value.
+  final LabelStyle? centerValueStyle;
+
   /// Default Pie entrance animation.
   final PieAnimationMode animationMode;
 
@@ -265,6 +296,7 @@ class PieChartTheme {
   PieChartTheme copyWith({
     double? opacity,
     double? cornerRadius,
+    PieCornerTreatment? cornerTreatment,
     PieElevationStyle? shadow,
     PieElevationStyle? selectedElevation,
     PieBorderColorMode? borderColorMode,
@@ -275,11 +307,16 @@ class PieChartTheme {
     bool clearGradient = false,
     LabelStyle? calloutStyle,
     bool clearCalloutStyle = false,
+    LabelStyle? centerLabelStyle,
+    bool clearCenterLabelStyle = false,
+    LabelStyle? centerValueStyle,
+    bool clearCenterValueStyle = false,
     PieAnimationMode? animationMode,
   }) {
     return PieChartTheme(
       opacity: opacity ?? this.opacity,
       cornerRadius: cornerRadius ?? this.cornerRadius,
+      cornerTreatment: cornerTreatment ?? this.cornerTreatment,
       shadow: shadow ?? this.shadow,
       selectedElevation: selectedElevation ?? this.selectedElevation,
       borderColorMode: borderColorMode ?? this.borderColorMode,
@@ -292,6 +329,12 @@ class PieChartTheme {
       calloutStyle: clearCalloutStyle
           ? null
           : (calloutStyle ?? this.calloutStyle),
+      centerLabelStyle: clearCenterLabelStyle
+          ? null
+          : (centerLabelStyle ?? this.centerLabelStyle),
+      centerValueStyle: clearCenterValueStyle
+          ? null
+          : (centerValueStyle ?? this.centerValueStyle),
       animationMode: animationMode ?? this.animationMode,
     );
   }
@@ -302,6 +345,7 @@ class PieChartTheme {
       other is PieChartTheme &&
           opacity == other.opacity &&
           cornerRadius == other.cornerRadius &&
+          cornerTreatment == other.cornerTreatment &&
           shadow == other.shadow &&
           selectedElevation == other.selectedElevation &&
           borderColorMode == other.borderColorMode &&
@@ -310,12 +354,15 @@ class PieChartTheme {
           borderLightnessShift == other.borderLightnessShift &&
           gradient == other.gradient &&
           calloutStyle == other.calloutStyle &&
+          centerLabelStyle == other.centerLabelStyle &&
+          centerValueStyle == other.centerValueStyle &&
           animationMode == other.animationMode;
 
   @override
   int get hashCode => Object.hash(
     opacity,
     cornerRadius,
+    cornerTreatment,
     shadow,
     selectedElevation,
     borderColorMode,
@@ -324,6 +371,8 @@ class PieChartTheme {
     borderLightnessShift,
     gradient,
     calloutStyle,
+    centerLabelStyle,
+    centerValueStyle,
     animationMode,
   );
 }
@@ -373,9 +422,105 @@ enum PieDataLabelCollisionStrategy {
   shiftAndHide,
 }
 
+/// Mapping used to turn raw per-slice radius values into visible radii.
+enum PieSliceRadiusScale {
+  /// Interpolate the visible radius directly from the normalized value.
+  linear,
+
+  /// Interpolate squared radius so equal value changes produce equal area
+  /// changes. This is the default because area is the perceived quantity.
+  area,
+}
+
+/// Immutable encoding policy for an optional second Pie value dimension.
+///
+/// Angular share continues to come from `ChartDataPoint.y`. When this config
+/// is attached to a `PieChartSeries`, every point supplies its raw radius
+/// value through `PointStyle.size`. The values are normalized across visible
+/// slices and mapped between [minimumFactor] and the series' outer radius.
+@immutable
+class PieSliceRadiusConfig {
+  /// Creates a variable slice-radius encoding.
+  const PieSliceRadiusConfig({
+    this.minimumFactor = 0.35,
+    this.scale = PieSliceRadiusScale.area,
+    this.label = 'Radius',
+    this.unit,
+  });
+
+  /// Smallest radius as a fraction of the maximum Pie radius.
+  final double minimumFactor;
+
+  /// Perceptual mapping applied after values are normalized.
+  final PieSliceRadiusScale scale;
+
+  /// Human-readable name for the radius metric in tables and tooltips.
+  final String label;
+
+  /// Optional unit for the radius metric.
+  final String? unit;
+
+  /// Returns a copy with selected fields replaced.
+  PieSliceRadiusConfig copyWith({
+    double? minimumFactor,
+    PieSliceRadiusScale? scale,
+    String? label,
+    String? unit,
+    bool clearUnit = false,
+  }) => PieSliceRadiusConfig(
+    minimumFactor: minimumFactor ?? this.minimumFactor,
+    scale: scale ?? this.scale,
+    label: label ?? this.label,
+    unit: clearUnit ? null : (unit ?? this.unit),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieSliceRadiusConfig &&
+          minimumFactor == other.minimumFactor &&
+          scale == other.scale &&
+          label == other.label &&
+          unit == other.unit;
+
+  @override
+  int get hashCode => Object.hash(minimumFactor, scale, label, unit);
+}
+
+/// Shared name for the optional second-metric radius encoding used by radial
+/// category charts.
+///
+/// [PieSliceRadiusConfig] remains the source-compatible Pie API name.
+typedef RadialSliceRadiusConfig = PieSliceRadiusConfig;
+
+/// Common geometry and appearance contract implemented by radial chart styles.
+///
+/// Pie and Donut keep distinct public style models while the renderer consumes
+/// this stable shared surface.
+abstract interface class RadialChartStyle {
+  double get startAngleDegrees;
+  bool get clockwise;
+  double get radiusFactor;
+  double get sliceGap;
+  double get borderWidth;
+  Color? get borderColor;
+  PieBorderColorMode? get borderColorMode;
+  double? get borderHueShiftDegrees;
+  double? get borderSaturationShift;
+  double? get borderLightnessShift;
+  PieGradientStyle? get gradient;
+  double get selectionExplodeOffset;
+  double? get opacity;
+  double? get cornerRadius;
+  PieCornerTreatment? get cornerTreatment;
+  PieElevationStyle? get shadow;
+  PieElevationStyle? get selectedElevation;
+  PieAnimationMode? get animationMode;
+}
+
 /// Immutable per-series Pie geometry and appearance overrides.
 @immutable
-class PieChartStyle {
+class PieChartStyle implements RadialChartStyle {
   /// Creates Pie geometry and optional theme overrides.
   const PieChartStyle({
     this.startAngleDegrees = -90,
@@ -392,65 +537,87 @@ class PieChartStyle {
     this.selectionExplodeOffset = 8,
     this.opacity,
     this.cornerRadius,
+    this.cornerTreatment,
     this.shadow,
     this.selectedElevation,
     this.animationMode,
   });
 
   /// Angle in degrees at which the first slice begins.
+  @override
   final double startAngleDegrees;
 
   /// Whether slices advance clockwise in screen coordinates.
+  @override
   final bool clockwise;
 
   /// Fraction of the available half-size used as the outer radius.
+  @override
   final double radiusFactor;
 
   /// Logical-pixel gap measured along the outer circumference.
+  @override
   final double sliceGap;
 
   /// Logical-pixel slice-border width.
+  @override
   final double borderWidth;
 
   /// Optional shared slice-border color.
+  @override
   final Color? borderColor;
 
   /// Optional border policy overriding [PieChartTheme.borderColorMode].
   ///
   /// A non-null [borderColor] always wins and produces a fixed shared color.
+  @override
   final PieBorderColorMode? borderColorMode;
 
   /// Optional hue rotation overriding [PieChartTheme.borderHueShiftDegrees].
+  @override
   final double? borderHueShiftDegrees;
 
   /// Optional saturation shift overriding
   /// [PieChartTheme.borderSaturationShift].
+  @override
   final double? borderSaturationShift;
 
   /// Optional lightness shift overriding [PieChartTheme.borderLightnessShift].
+  @override
   final double? borderLightnessShift;
 
   /// Optional gradient overriding [PieChartTheme.gradient].
   ///
   /// A disabled gradient explicitly restores solid fills for this series.
+  @override
   final PieGradientStyle? gradient;
 
   /// Logical-pixel offset applied to a selected, exploded slice.
+  @override
   final double selectionExplodeOffset;
 
   /// Optional slice opacity overriding [PieChartTheme.opacity].
+  @override
   final double? opacity;
 
   /// Optional corner radius overriding [PieChartTheme.cornerRadius].
+  @override
   final double? cornerRadius;
 
+  /// Optional corner policy overriding [PieChartTheme.cornerTreatment].
+  @override
+  final PieCornerTreatment? cornerTreatment;
+
   /// Optional base elevation overriding [PieChartTheme.shadow].
+  @override
   final PieElevationStyle? shadow;
 
   /// Optional selected elevation overriding [PieChartTheme.selectedElevation].
+  @override
   final PieElevationStyle? selectedElevation;
 
   /// Optional entrance animation overriding [PieChartTheme.animationMode].
+  @override
   final PieAnimationMode? animationMode;
 
   /// Returns a copy with selected fields replaced.
@@ -477,6 +644,8 @@ class PieChartStyle {
     bool clearOpacity = false,
     double? cornerRadius,
     bool clearCornerRadius = false,
+    PieCornerTreatment? cornerTreatment,
+    bool clearCornerTreatment = false,
     PieElevationStyle? shadow,
     bool clearShadow = false,
     PieElevationStyle? selectedElevation,
@@ -510,6 +679,9 @@ class PieChartStyle {
       cornerRadius: clearCornerRadius
           ? null
           : (cornerRadius ?? this.cornerRadius),
+      cornerTreatment: clearCornerTreatment
+          ? null
+          : (cornerTreatment ?? this.cornerTreatment),
       shadow: clearShadow ? null : (shadow ?? this.shadow),
       selectedElevation: clearSelectedElevation
           ? null
@@ -538,6 +710,7 @@ class PieChartStyle {
           selectionExplodeOffset == other.selectionExplodeOffset &&
           opacity == other.opacity &&
           cornerRadius == other.cornerRadius &&
+          cornerTreatment == other.cornerTreatment &&
           shadow == other.shadow &&
           selectedElevation == other.selectedElevation &&
           animationMode == other.animationMode;
@@ -558,6 +731,7 @@ class PieChartStyle {
     selectionExplodeOffset,
     opacity,
     cornerRadius,
+    cornerTreatment,
     shadow,
     selectedElevation,
     animationMode,

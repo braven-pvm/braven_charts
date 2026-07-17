@@ -16,7 +16,8 @@ types and where to begin.
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
 - `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
-  `ScatterChartSeries`, and `PieChartSeries` — concrete renderable series.
+  `ScatterChartSeries`, `PieChartSeries`, and `DonutChartSeries` — concrete
+  renderable series.
 - `ChartDataPoint`, `DataRange`, `ChartType` — core data types.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
@@ -26,10 +27,13 @@ types and where to begin.
 - `PieChartSeries.fromMap` converts insertion-ordered category/value pairs into
   stable slices; the explicit constructor preserves source point metadata and
   optional per-point colors.
+- `radiusValues`, `PieSliceRadiusConfig`, and `PieSliceRadiusScale` optionally
+  encode one complete labeled second metric as slice radius. The default area
+  scale is perceptual; linear radius mapping is opt-in.
 - `PieChartStyle` controls start angle, direction, radius, physical slice
   separation, fixed or `PieBorderColorMode` slice-derived borders, selection
-  explode offset, and optional per-series
-  opacity, corner, elevation, and animation overrides.
+  explode offset, and optional per-series opacity, `PieCornerTreatment`,
+  elevation, and animation overrides.
 - `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
   theme-level radial styling, independently configurable shadows/glows,
   callouts, and motion defaults.
@@ -47,6 +51,26 @@ tooltips use either an explicit non-default `TooltipConfig.style` or
 `ChartTheme.interactionTheme.tooltipStyle`. Slice, legend, and linked table
 selection resolve the same durable tooltip, which clears with selection and
 re-anchors after geometry or responsive layout changes.
+
+### Donut charts
+
+- `DonutChartSeries.fromMap` creates one insertion-ordered category whole with
+  a required non-zero center opening.
+- `DonutChartStyle` adds validated `innerRadiusFactor` and
+  `sweepAngleDegrees` values to the shared radial style used for start angle,
+  direction, outer radius, gaps, borders, gradients, corners, elevation,
+  selection, and animation.
+- `DonutCenterContent` supplies optional portable label and value text through
+  `DonutCenterValueMode.total`, `selectedValue`, `selectedOrTotal`, or
+  `custom`, with series-level `LabelStyle` overrides.
+- `PieChartTheme.centerLabelStyle` and `centerValueStyle` provide theme
+  defaults for measured center text.
+- Optional radius values use `RadialSliceRadiusConfig` and never cross the
+  shared circular opening.
+
+Donut is single-series, has no Cartesian axes/pan/zoom/crosshair, and shares
+the Pie category table, CSV, tooltip, legend, selection, controller, artifact,
+and accessibility contracts. See [Donut charts](donut_charts.md).
 
 ## Axes, normalization, and layout
 

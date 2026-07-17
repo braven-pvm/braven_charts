@@ -49,6 +49,85 @@ void main() {
       ]);
     });
 
+    test('maps a second metric to independent perceptual slice radii', () {
+      final series = PieChartSeries.fromMap(
+        id: 'variable-radius',
+        values: const {'Small': 1, 'Medium': 1, 'Large': 1},
+        radiusValues: const {'Small': 1, 'Medium': 4, 'Large': 9},
+        sliceRadiusConfig: const PieSliceRadiusConfig(minimumFactor: 0.25),
+        pieStyle: const PieChartStyle(sliceGap: 0, radiusFactor: 1),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+      );
+
+      expect(geometry.outerRadius, 100);
+      expect(geometry.slices.map((slice) => slice.radiusFactor), [
+        closeTo(0.25, 1e-9),
+        closeTo(math.sqrt(0.4140625), 1e-9),
+        closeTo(1, 1e-9),
+      ]);
+      expect(geometry.slices.map((slice) => slice.outerRadius), [
+        closeTo(25, 1e-9),
+        closeTo(math.sqrt(0.4140625) * 100, 1e-9),
+        closeTo(100, 1e-9),
+      ]);
+
+      final smallMidAngle = geometry.slices.first.midAngle;
+      expect(
+        geometry
+            .sliceAt(geometry.center + Offset.fromDirection(smallMidAngle, 20))
+            ?.pointIndex,
+        0,
+      );
+      expect(
+        geometry.sliceAt(
+          geometry.center + Offset.fromDirection(smallMidAngle, 50),
+        ),
+        isNull,
+      );
+    });
+
+    test(
+      'supports linear scaling and treats an equal radius domain uniformly',
+      () {
+        final linear = PieChartSeries.fromMap(
+          id: 'linear-radius',
+          values: const {'A': 1, 'B': 1, 'C': 1},
+          radiusValues: const {'A': 1, 'B': 4, 'C': 9},
+          sliceRadiusConfig: const PieSliceRadiusConfig(
+            minimumFactor: 0.25,
+            scale: PieSliceRadiusScale.linear,
+          ),
+          pieStyle: const PieChartStyle(sliceGap: 0, radiusFactor: 1),
+        );
+        final equal = PieChartSeries.fromMap(
+          id: 'equal-radius',
+          values: const {'A': 1, 'B': 1},
+          radiusValues: const {'A': 5, 'B': 5},
+          pieStyle: const PieChartStyle(sliceGap: 0, radiusFactor: 1),
+        );
+
+        final linearGeometry = PieChartGeometryCalculator.calculate(
+          series: linear,
+          size: const Size.square(200),
+        );
+        final equalGeometry = PieChartGeometryCalculator.calculate(
+          series: equal,
+          size: const Size.square(200),
+        );
+
+        expect(linearGeometry.slices[1].radiusFactor, closeTo(0.53125, 1e-9));
+        expect(equalGeometry.slices.map((slice) => slice.radiusFactor), [1, 1]);
+        expect(equalGeometry.slices.map((slice) => slice.outerRadius), [
+          100,
+          100,
+        ]);
+      },
+    );
+
     test('counter-clockwise configuration produces signed negative sweeps', () {
       final series = PieChartSeries.fromMap(
         id: 'counter',
@@ -175,6 +254,80 @@ void main() {
       expect(first.contains(first.insideLabelAnchor), isTrue);
       expect(first.path.contains(first.center), isFalse);
       expect(first.path.getBounds(), isNot(Rect.zero));
+    });
+
+    test('outer-only rounding preserves a sharp center apex', () {
+      final series = PieChartSeries.fromMap(
+        id: 'outer-only',
+        values: const {'A': 1, 'B': 1, 'C': 1, 'D': 1},
+        pieStyle: const PieChartStyle(
+          startAngleDegrees: 0,
+          radiusFactor: 1,
+          sliceGap: 4,
+          cornerRadius: 12,
+          cornerTreatment: PieCornerTreatment.outerOnly,
+        ),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(200),
+      );
+      final first = geometry.slices.first;
+      final nearApex = first.center + Offset.fromDirection(first.midAngle, 0.5);
+
+      expect(geometry.innerRadius, 0);
+      expect(first.path.contains(nearApex), isTrue);
+      expect(first.path.contains(first.insideLabelAnchor), isTrue);
+    });
+
+    test('circular-center rounding cuts one uniform variable-radius gap', () {
+      final series = PieChartSeries.fromMap(
+        id: 'circular-center',
+        values: const {'A': 8, 'B': 6, 'C': 5, 'D': 4},
+        radiusValues: const {'A': 100, 'B': 72, 'C': 45, 'D': 20},
+        sliceRadiusConfig: const PieSliceRadiusConfig(minimumFactor: 0.35),
+        pieStyle: const PieChartStyle(
+          startAngleDegrees: 0,
+          radiusFactor: 1,
+          sliceGap: 7,
+          cornerRadius: 14,
+          cornerTreatment: PieCornerTreatment.circularCenter,
+        ),
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size.square(240),
+      );
+
+      expect(geometry.innerRadius, greaterThan(0));
+      expect(
+        geometry.innerRadius,
+        lessThan(
+          geometry.slices.map((slice) => slice.outerRadius).reduce(math.min),
+        ),
+      );
+      for (final slice in geometry.slices) {
+        expect(slice.innerRadius, geometry.innerRadius);
+        expect(
+          slice.path.contains(
+            geometry.center +
+                Offset.fromDirection(
+                  slice.midAngle,
+                  geometry.innerRadius * 0.75,
+                ),
+          ),
+          isFalse,
+        );
+        expect(
+          slice.path.contains(
+            geometry.center +
+                Offset.fromDirection(slice.midAngle, geometry.innerRadius + 2),
+          ),
+          isTrue,
+        );
+      }
     });
 
     test('grow progress scales radius without changing category shares', () {

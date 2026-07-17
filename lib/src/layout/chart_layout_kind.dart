@@ -1,5 +1,7 @@
 import '../models/chart_series.dart';
+import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
+import '../models/radial_category_series.dart';
 
 /// Internal chart-coordinate family selected for a series composition.
 enum ChartLayoutKind { cartesian, radial }
@@ -11,34 +13,41 @@ class ChartLayoutResolver {
   /// Returns the required layout and rejects unsupported mixed compositions.
   static ChartLayoutKind resolve(Iterable<ChartSeries> series) {
     final allSeries = List<ChartSeries>.unmodifiable(series);
-    final pieSeries = allSeries.whereType<PieChartSeries>().toList();
-    final invalidPieHints = allSeries.where(
-      (candidate) =>
-          candidate.style == SeriesStyle.pie && candidate is! PieChartSeries,
+    final radialSeries = allSeries.whereType<RadialCategorySeries>().toList();
+    final invalidRadialHints = allSeries.where(
+      (candidate) => switch (candidate.style) {
+        SeriesStyle.pie => candidate is! PieChartSeries,
+        SeriesStyle.donut => candidate is! DonutChartSeries,
+        _ => false,
+      },
     );
 
-    if (invalidPieHints.isNotEmpty) {
+    if (invalidRadialHints.isNotEmpty) {
+      final invalid = invalidRadialHints.first;
       throw ArgumentError.value(
-        invalidPieHints.first.runtimeType,
+        invalid.runtimeType,
         'series',
-        'SeriesStyle.pie requires a PieChartSeries',
+        invalid.style == SeriesStyle.pie
+            ? 'SeriesStyle.pie requires a PieChartSeries'
+            : 'SeriesStyle.donut requires a DonutChartSeries',
       );
     }
-    if (pieSeries.length > 1) {
+    if (radialSeries.length > 1) {
       throw ArgumentError.value(
-        pieSeries.length,
+        radialSeries.length,
         'series',
-        'A pie chart accepts exactly one PieChartSeries',
+        'A radial chart accepts exactly one PieChartSeries or '
+            'DonutChartSeries',
       );
     }
-    if (pieSeries.isNotEmpty && allSeries.length != 1) {
+    if (radialSeries.isNotEmpty && allSeries.length != 1) {
       throw ArgumentError.value(
         allSeries.length,
         'series',
-        'Pie and Cartesian series cannot be mixed in one chart',
+        'Pie, Donut, and Cartesian series cannot be mixed in one chart',
       );
     }
-    return pieSeries.isEmpty
+    return radialSeries.isEmpty
         ? ChartLayoutKind.cartesian
         : ChartLayoutKind.radial;
   }

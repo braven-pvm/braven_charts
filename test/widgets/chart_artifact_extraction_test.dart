@@ -96,6 +96,7 @@ void main() {
       expect(source.document.requiredCapabilities, {
         'series.pie',
         'series.pie.style.v2',
+        'series.pie.corner-treatment.v1',
       });
       expect(source.preview?.bytes, isNotEmpty);
 

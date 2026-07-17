@@ -5,6 +5,27 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 - 2026-07-17
+
+### Added
+- Variable-radius Pie slices with a complete labeled second-metric contract,
+  perceptual area or linear scaling, configurable minimum radius, tooltip and
+  native table/CSV exposure, AI input, artifact capability, and a live
+  density-versus-area showcase.
+- Configurable Pie corner treatments that preserve the original all-corner
+  rounding, round only the outer perimeter, or subtract a uniform circular
+  center gap across variable-radius slices.
+- First-class `DonutChartSeries` with a validated shared inner radius, full or
+  partial sweeps, clockwise or counter-clockwise layout, variable outer radii,
+  annular hit testing, labels, tooltips, legends, keyboard access, and durable
+  selection.
+- Portable Donut center content with total, selected, selected-or-total, and
+  custom modes; series/theme styling; accessible summary semantics; artifact,
+  preview, hydration, table, controller, and AI tool-schema support.
+- Public Donut showcase with Chart/Data/Split views, table-linked selection,
+  JSON/PNG capture and restoration, Gallery compositions, Chart Types controls,
+  documentation, and deterministic pub.dev media.
+
 ## 0.4.0 - 2026-07-17
 
 ### Added
@@ -28,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linear and radial Pie slice gradients with per-slice derived or fixed color
   stops, theme/series precedence, artifact hydration, AI schema support, and a
   live showcase selector.
-
 ### Fixed
 - Refine Pie selection so pointer and legend activation use slice-derived
   offset/elevation without an intrusive global accent outline, while retaining

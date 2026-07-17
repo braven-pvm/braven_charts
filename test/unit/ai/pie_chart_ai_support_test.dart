@@ -13,9 +13,17 @@ void main() {
             'id': 'revenue',
             'name': 'Revenue',
             'unit': 'USD',
+            'radius_label': 'Total area',
+            'radius_unit': 'km²',
             'data': [
-              {'x': 0, 'y': 42, 'label': 'Subscriptions', 'color': '#6750A4'},
-              {'x': 1, 'y': 58, 'label': 'Services'},
+              {
+                'x': 0,
+                'y': 42,
+                'label': 'Subscriptions',
+                'color': '#6750A4',
+                'radius': 120,
+              },
+              {'x': 1, 'y': 58, 'label': 'Services', 'radius': 80},
             ],
           },
         ],
@@ -30,6 +38,8 @@ void main() {
           'pie_start_angle': 25,
           'pie_clockwise': false,
           'pie_radius_factor': 0.8,
+          'pie_radius_minimum_factor': 0.4,
+          'pie_radius_scale': 'linear',
           'pie_slice_gap': 4,
           'pie_border_width': 2,
           'pie_border_color': '#223344',
@@ -47,6 +57,7 @@ void main() {
           'pie_selection_explode_offset': 12,
           'pie_opacity': 0.78,
           'pie_corner_radius': 10,
+          'pie_corner_treatment': 'circular_center',
           'pie_shadow_color': '#33000000',
           'pie_shadow_blur': 8,
           'pie_shadow_spread': 1,
@@ -83,6 +94,11 @@ void main() {
       expect(series.unit, 'USD');
       expect(series.points.first.label, 'Subscriptions');
       expect(series.points.first.pointStyle?.color, const Color(0xFF6750A4));
+      expect(series.points.first.pointStyle?.size, 120);
+      expect(series.sliceRadiusConfig?.minimumFactor, 0.4);
+      expect(series.sliceRadiusConfig?.scale, PieSliceRadiusScale.linear);
+      expect(series.sliceRadiusConfig?.label, 'Total area');
+      expect(series.sliceRadiusConfig?.unit, 'km²');
       expect(series.pieStyle.startAngleDegrees, 25);
       expect(series.pieStyle.clockwise, isFalse);
       expect(series.pieStyle.radiusFactor, 0.8);
@@ -103,6 +119,10 @@ void main() {
       expect(series.pieStyle.selectionExplodeOffset, 12);
       expect(series.pieStyle.opacity, 0.78);
       expect(series.pieStyle.cornerRadius, 10);
+      expect(
+        series.pieStyle.cornerTreatment,
+        PieCornerTreatment.circularCenter,
+      );
       expect(series.pieStyle.shadow?.color, const Color(0x33000000));
       expect(series.pieStyle.shadow?.blurRadius, 8);
       expect(series.pieStyle.shadow?.spreadRadius, 1);
@@ -140,6 +160,23 @@ void main() {
           {'x': 0, 'y': 1, 'label': 'A'},
         ],
       };
+
+      expect(
+        () => ChartConfigBuilder.fromJson(
+          config(
+            series: [
+              {
+                'id': 'pie',
+                'data': [
+                  {'x': 0, 'y': 1, 'label': 'A', 'radius': 10},
+                  {'x': 1, 'y': 2, 'label': 'B'},
+                ],
+              },
+            ],
+          ),
+        ),
+        throwsFormatException,
+      );
 
       expect(
         () => ChartConfigBuilder.fromJson(
@@ -219,6 +256,49 @@ void main() {
     });
   });
 
+  group('Donut AI builder', () {
+    test('builds first-class Donut geometry from the radial schema', () {
+      final result = ChartConfigBuilder.fromJson({
+        'chart_type': 'donut',
+        'series': [
+          {
+            'id': 'registrations',
+            'data': [
+              {'x': 0, 'y': 24, 'label': 'EV'},
+              {'x': 1, 'y': 76, 'label': 'Other'},
+            ],
+          },
+        ],
+        'style': {
+          'donut_inner_radius_factor': 0.64,
+          'donut_sweep_angle': 270,
+          'pie_start_angle': -135,
+          'pie_slice_gap': 4,
+          'pie_corner_radius': 6,
+          'donut_center_visible': true,
+          'donut_center_value_mode': 'selected_or_total',
+          'donut_center_label': 'Registrations',
+        },
+      });
+
+      expect(result.chartType, ChartType.donut);
+      expect(result.xAxisConfig, isNull);
+      expect(result.yAxisConfig, isNull);
+      final series = result.series.single as DonutChartSeries;
+      expect(series.donutStyle.innerRadiusFactor, 0.64);
+      expect(series.donutStyle.sweepAngleDegrees, 270);
+      expect(series.donutStyle.startAngleDegrees, -135);
+      expect(series.donutStyle.sliceGap, 4);
+      expect(series.donutStyle.cornerRadius, 6);
+      expect(series.centerContent.isVisible, isTrue);
+      expect(series.centerContent.label, 'Registrations');
+      expect(
+        series.centerContent.valueMode,
+        DonutCenterValueMode.selectedOrTotal,
+      );
+    });
+  });
+
   test('tool schema advertises the renderer-aware pie contract', () {
     final tool = ChartToolSchema.createChartTool;
     final input = tool['input_schema'] as Map<String, dynamic>;
@@ -236,6 +316,7 @@ void main() {
             as Map<String, dynamic>);
 
     expect(chartType['enum'], contains('pie'));
+    expect(chartType['enum'], contains('donut'));
     expect(input['required'], contains('series'));
     expect(tool['description'], contains('Pie charts do not use axes'));
     expect(
@@ -244,11 +325,29 @@ void main() {
     );
     expect(pointProperties, containsPair('color', isA<Map<String, dynamic>>()));
     expect(
+      pointProperties,
+      containsPair('radius', isA<Map<String, dynamic>>()),
+    );
+    expect(
+      ((properties['series'] as Map<String, dynamic>)['items']
+          as Map<String, dynamic>)['properties'],
+      containsPair('radius_label', isA<Map<String, dynamic>>()),
+    );
+    expect(
       (pointProperties['label'] as Map<String, dynamic>)['description'],
       contains('Required'),
     );
     expect(styleProperties.keys, contains('pie_start_angle'));
+    expect(styleProperties.keys, contains('donut_inner_radius_factor'));
+    expect(styleProperties.keys, contains('donut_sweep_angle'));
+    expect(styleProperties.keys, contains('donut_center_visible'));
+    expect(styleProperties.keys, contains('donut_center_value_mode'));
+    expect(styleProperties.keys, contains('donut_center_label'));
+    expect(styleProperties.keys, contains('donut_center_custom_value'));
+    expect(styleProperties.keys, contains('pie_radius_minimum_factor'));
+    expect(styleProperties.keys, contains('pie_radius_scale'));
     expect(styleProperties.keys, contains('pie_corner_radius'));
+    expect(styleProperties.keys, contains('pie_corner_treatment'));
     expect(styleProperties.keys, contains('pie_gradient_type'));
     expect(styleProperties.keys, contains('pie_gradient_angle'));
     expect(styleProperties.keys, contains('pie_selected_glow_blur'));

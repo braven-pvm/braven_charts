@@ -178,9 +178,14 @@ void main() {
             y: 42,
             label: 'Subscriptions',
             metadata: {'channel': 'recurring'},
-            pointStyle: PointStyle(color: Color(0xFF6750A4)),
+            pointStyle: PointStyle(color: Color(0xFF6750A4), size: 357022),
           ),
-          ChartDataPoint(x: 1, y: 0, label: 'Services'),
+          ChartDataPoint(
+            x: 1,
+            y: 0,
+            label: 'Services',
+            pointStyle: PointStyle(size: 505990),
+          ),
         ],
         color: const Color(0xFF123456),
         metadata: const {'source': 'ledger'},
@@ -207,6 +212,7 @@ void main() {
           selectionExplodeOffset: 12,
           opacity: 0.76,
           cornerRadius: 9,
+          cornerTreatment: PieCornerTreatment.outerOnly,
           shadow: PieElevationStyle(
             color: Color(0x55000000),
             blurRadius: 7,
@@ -244,6 +250,12 @@ void main() {
             shadowBlurRadius: 4,
           ),
         ),
+        sliceRadiusConfig: const PieSliceRadiusConfig(
+          minimumFactor: 0.4,
+          scale: PieSliceRadiusScale.linear,
+          label: 'Total area',
+          unit: 'km²',
+        ),
       );
 
       final decoded = _roundTrip(source) as PieChartSeries;
@@ -256,7 +268,137 @@ void main() {
       expect(decoded.unit, source.unit);
       expect(decoded.pieStyle, source.pieStyle);
       expect(decoded.dataLabels, source.dataLabels);
+      expect(decoded.sliceRadiusConfig, source.sliceRadiusConfig);
       expect(decoded.visiblePointIndices, [0]);
+    });
+
+    test('variable-radius pie documents advertise their capability', () {
+      final encoded = ChartSeriesDocumentCodec.encode(
+        PieChartSeries.fromMap(
+          id: 'countries',
+          values: const {'Germany': 233, 'Spain': 96},
+          radiusValues: const {'Germany': 357022, 'Spain': 505990},
+          sliceRadiusConfig: const PieSliceRadiusConfig(
+            label: 'Total area',
+            unit: 'km²',
+          ),
+        ),
+      );
+
+      expect(encoded, isA<ChartArtifactSuccess<ChartSeriesDocument>>());
+      final document =
+          (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+      expect(
+        document.requiredCapabilities,
+        contains('series.pie.variable-radius.v1'),
+      );
+
+      final decoded = ChartSeriesDocumentCodec.decode(document);
+      expect(decoded, isA<ChartArtifactSuccess<ChartSeries>>());
+      final series =
+          (decoded as ChartArtifactSuccess<ChartSeries>).value
+              as PieChartSeries;
+      expect(series.points.first.pointStyle?.size, 357022);
+      expect(series.sliceRadiusConfig?.label, 'Total area');
+    });
+
+    test('round-trips first-class Donut geometry and capabilities', () {
+      final source = DonutChartSeries.fromMap(
+        id: 'donut',
+        name: 'Registrations',
+        unit: 'vehicles',
+        values: const {'EV': 24, 'Hybrid': 13, 'Diesel': 37, 'Petrol': 26},
+        radiusValues: const {'EV': 4, 'Hybrid': 2, 'Diesel': 5, 'Petrol': 3},
+        sliceRadiusConfig: const RadialSliceRadiusConfig(
+          minimumFactor: 0.3,
+          scale: PieSliceRadiusScale.linear,
+          label: 'Fleet size',
+        ),
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.62,
+          sweepAngleDegrees: 270,
+          startAngleDegrees: -135,
+          sliceGap: 4,
+          cornerRadius: 6,
+          cornerTreatment: PieCornerTreatment.roundAll,
+        ),
+        centerContent: const DonutCenterContent(
+          label: 'Total vehicles',
+          valueMode: DonutCenterValueMode.selectedOrTotal,
+          labelStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFF445566), fontSize: 12),
+            backgroundColor: Color(0x00000000),
+            borderColor: Color(0x00000000),
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
+          valueStyle: LabelStyle(
+            textStyle: TextStyle(
+              color: Color(0xFF112233),
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+            backgroundColor: Color(0xFFF5F7FA),
+            borderColor: Color(0xFFCCDDEE),
+            borderWidth: 1,
+            borderRadius: 8,
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
+        ),
+      );
+
+      final encoded = ChartSeriesDocumentCodec.encode(source);
+      expect(encoded, isA<ChartArtifactSuccess<ChartSeriesDocument>>());
+      final document =
+          (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+      expect(document.type, 'donut');
+      expect(document.requiredCapabilities, {
+        'series.donut',
+        'series.donut.style.v1',
+        'series.donut.center-content.v1',
+        'series.donut.variable-radius.v1',
+      });
+
+      final decoded = ChartSeriesDocumentCodec.decode(document);
+      expect(decoded, isA<ChartArtifactSuccess<ChartSeries>>());
+      final restored =
+          (decoded as ChartArtifactSuccess<ChartSeries>).value
+              as DonutChartSeries;
+      expect(restored.points, source.points);
+      expect(restored.donutStyle, source.donutStyle);
+      expect(restored.centerContent, source.centerContent);
+      expect(restored.dataLabels, source.dataLabels);
+      expect(restored.sliceRadiusConfig, source.sliceRadiusConfig);
+    });
+
+    test('defaults older Donut documents to hidden center content', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                DonutChartSeries.fromMap(
+                  id: 'legacy-donut',
+                  values: const {'A': 2, 'B': 1},
+                  centerContent: const DonutCenterContent(
+                    label: 'Total',
+                    valueMode: DonutCenterValueMode.total,
+                  ),
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = Map<String, Object?>.from(encoded.value.toJson());
+      final style = Map<String, Object?>.from(json['style']! as Map)
+        ..remove('centerContent');
+      json['style'] = style;
+      json['requiredCapabilities'] = ['series.donut', 'series.donut.style.v1'];
+
+      final decoded =
+          ChartSeriesDocumentCodec.decode(ChartSeriesDocument.fromJson(json))
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(
+        (decoded.value as DonutChartSeries).centerContent,
+        DonutCenterContent.hidden,
+      );
     });
 
     test(
@@ -517,6 +659,10 @@ void main() {
           ('bar', 'series.bar'),
         ),
         (PieChartSeries(id: 'pie', points: const []), ('pie', 'series.pie')),
+        (
+          DonutChartSeries(id: 'donut', points: const []),
+          ('donut', 'series.donut'),
+        ),
         (const ChartSeries(id: 'base', points: []), ('base', 'series.base')),
       ];
 
@@ -529,6 +675,8 @@ void main() {
         expect(document.requiredCapabilities, {
           expected.$2,
           if (series is PieChartSeries) 'series.pie.style.v2',
+          if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
+          if (series is DonutChartSeries) 'series.donut.style.v1',
         });
       }
     });

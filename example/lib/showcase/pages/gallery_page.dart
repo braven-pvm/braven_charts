@@ -7,6 +7,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
+import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
 
@@ -239,6 +240,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(pieGalleryCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'DONUT COMPOSITIONS',
+              title: 'Contribution, progress, and a second metric',
+              subtitle:
+                  'Compare a selection-aware contribution ring, a partial progress sweep, and a variable-radius Donut with portable center content.',
+              count: 3,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-donut-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 420,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(donutGalleryCards),
             ),
           ),
         ],
@@ -2662,8 +2685,8 @@ class _GalleryModeControl extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             mode == _GalleryMode.curated
-                ? '22 representative compositions'
-                : '35 examples across the complete catalog',
+                ? '25 representative compositions'
+                : '38 examples across the complete catalog',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

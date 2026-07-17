@@ -1,0 +1,396 @@
+import 'dart:ui' show SemanticsAction;
+
+import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/pie_series_element.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('renders a first-class Donut through BravenChartPlus', (
+    tester,
+  ) async {
+    ChartDataPoint? tapped;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 360,
+            child: BravenChartPlus(
+              key: const ValueKey('donut-chart'),
+              showLegend: false,
+              theme: ChartTheme.light.copyWith(
+                pieChartTheme: const PieChartTheme(
+                  animationMode: PieAnimationMode.none,
+                ),
+              ),
+              onPointTap: (point, _) => tapped = point,
+              series: [
+                DonutChartSeries.fromMap(
+                  id: 'registrations',
+                  values: const {
+                    'EV': 24,
+                    'Hybrid': 13,
+                    'Diesel': 37,
+                    'Petrol': 26,
+                  },
+                  donutStyle: const DonutChartStyle(
+                    innerRadiusFactor: 0.58,
+                    sweepAngleDegrees: 360,
+                    sliceGap: 0,
+                    cornerRadius: 6,
+                  ),
+                  dataLabels: const PieDataLabelConfig(isVisible: false),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final chart = find.byKey(const ValueKey('donut-chart'));
+    final rect = tester.getRect(chart);
+    await tester.tapAt(rect.center);
+    await tester.pump();
+    expect(tapped, isNull);
+
+    await tester.tapAt(rect.center + const Offset(120, 0));
+    await tester.pump();
+    expect(tapped?.label, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('Donut geometry uses the radial element contract', () {
+    final element = PieSeriesElement(
+      series: DonutChartSeries.fromMap(id: 'ring', values: const {'A': 1}),
+      size: const Size.square(200),
+      theme: ChartTheme.light,
+    );
+
+    expect(element.geometry.innerRadius, greaterThan(0));
+    expect(element.dataHitAt(element.geometry.center), isNull);
+    expect(
+      element.dataHitAt(element.geometry.slices.single.tooltipAnchor),
+      isNotNull,
+    );
+  });
+
+  testWidgets(
+    'center content follows legend and controller selection with one summary node',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox.square(
+              dimension: 420,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: true,
+                theme: ChartTheme.light.copyWith(
+                  pieChartTheme: const PieChartTheme(
+                    animationMode: PieAnimationMode.none,
+                  ),
+                ),
+                series: [
+                  DonutChartSeries.fromMap(
+                    id: 'center-selection',
+                    unit: 'USD',
+                    values: const {'Subscriptions': 42, 'Services': 58},
+                    centerContent: const DonutCenterContent(
+                      label: 'Current',
+                      valueMode: DonutCenterValueMode.selectedOrTotal,
+                    ),
+                    donutStyle: const DonutChartStyle(
+                      innerRadiusFactor: 0.62,
+                      sliceGap: 0,
+                      animationMode: PieAnimationMode.none,
+                    ),
+                    dataLabels: const PieDataLabelConfig(isVisible: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics.byLabel(
+          'Donut center, Current, 100 USD, total fallback',
+        ),
+        findsOne,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+      await tester.pumpAndSettle();
+
+      expect(controller.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'center-selection', pointIndex: 0),
+      });
+      final legendSelectedSummary = find.semantics.byLabel(
+        'Donut center, Current, 42 USD, selected slice Subscriptions',
+      );
+      expect(legendSelectedSummary, findsOne);
+      expect(
+        legendSelectedSummary.evaluate().single.getSemanticsData().hasAction(
+          SemanticsAction.tap,
+        ),
+        isFalse,
+      );
+
+      final revision = controller.effectiveDocumentRevision.value!;
+      final result = controller.selectPoint(
+        const ChartPointRef(seriesId: 'center-selection', pointIndex: 1),
+        revision: revision,
+      );
+      expect(result, isA<ChartArtifactSuccess<void>>());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics.byLabel(
+          'Donut center, Current, 58 USD, selected slice Services',
+        ),
+        findsOne,
+      );
+      expect(find.semantics.byLabel(RegExp(r'^Donut center,')), findsOne);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    'large-text high-contrast Donut stays bounded and keeps semantic meaning',
+    (tester) async {
+      tester.view.physicalSize = const Size(520, 420);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.8),
+              highContrast: true,
+              disableAnimations: true,
+            ),
+            child: child!,
+          ),
+          home: SizedBox(
+            width: 520,
+            height: 420,
+            child: BravenChartPlus(
+              showLegend: false,
+              theme: ChartTheme.highContrast,
+              series: [
+                DonutChartSeries.fromMap(
+                  id: 'accessible-donut',
+                  unit: 'requests',
+                  values: const {
+                    'Subscriptions': 42,
+                    'Professional services': 28,
+                    'Hardware integrations': 16,
+                    'Training': 9,
+                    'Other': 5,
+                  },
+                  donutStyle: const DonutChartStyle(
+                    innerRadiusFactor: 0.62,
+                    sliceGap: 2,
+                    cornerRadius: 6,
+                  ),
+                  centerContent: const DonutCenterContent(
+                    label: 'Total requests',
+                    valueMode: DonutCenterValueMode.total,
+                  ),
+                  dataLabels: const PieDataLabelConfig(
+                    position: PieDataLabelPosition.outside,
+                    content: PieDataLabelContent.categoryAndPercentage,
+                    minimumShare: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics.byLabel('Donut center, Total requests, 100 requests'),
+        findsOne,
+      );
+      expect(
+        find.semantics.byLabel(
+          'Subscriptions, 42.00 requests, 42.0 percent, slice 1 of 5, '
+          'not selected',
+        ),
+        findsOne,
+      );
+      expect(
+        tester.getSize(find.byType(BravenChartPlus)),
+        const Size(520, 420),
+      );
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
+
+  testWidgets('Donut entrance animation respects reduced motion', (
+    tester,
+  ) async {
+    Widget build({required bool disableAnimations}) {
+      return MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: disableAnimations),
+          child: child!,
+        ),
+        home: SizedBox(
+          width: 360,
+          height: 280,
+          child: BravenChartPlus(
+            showLegend: false,
+            theme: ChartTheme.light,
+            series: [
+              DonutChartSeries.fromMap(
+                id: 'animated-donut',
+                values: const {'A': 2, 'B': 1},
+                centerContent: const DonutCenterContent(
+                  valueMode: DonutCenterValueMode.total,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(build(disableAnimations: false));
+    await tester.pump();
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(build(disableAnimations: true));
+    await tester.pump();
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('native Donut table selection updates the same center summary', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(960, 560);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: _DonutTableSelectionHost(controller: controller)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Services'));
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'table-donut', pointIndex: 1),
+    });
+    expect(
+      find.semantics.byLabel(
+        'Donut center, Services, 58 USD, selected slice Services',
+      ),
+      findsOne,
+    );
+    expect(find.byKey(const ValueKey('table-donut:1')), findsOneWidget);
+    semantics.dispose();
+  });
+}
+
+class _DonutTableSelectionHost extends StatelessWidget {
+  const _DonutTableSelectionHost({required this.controller});
+
+  final BravenChartController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final series = DonutChartSeries.fromMap(
+      id: 'table-donut',
+      unit: 'USD',
+      values: const {'Subscriptions': 42, 'Services': 58},
+      centerContent: const DonutCenterContent(
+        valueMode: DonutCenterValueMode.selectedOrTotal,
+      ),
+      donutStyle: const DonutChartStyle(
+        innerRadiusFactor: 0.62,
+        sliceGap: 0,
+        animationMode: PieAnimationMode.none,
+      ),
+      dataLabels: const PieDataLabelConfig(isVisible: false),
+    );
+    final seriesDocument =
+        (ChartSeriesDocumentCodec.encode(series)
+                as ChartArtifactSuccess<ChartSeriesDocument>)
+            .value;
+    final model = ChartTableModel.fromDocument(
+      ChartDocument(
+        documentId: 'donut-table-selection',
+        revision: 1,
+        series: [seriesDocument],
+        xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+        axes: const [],
+        theme:
+            (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                    as ChartArtifactSuccess<ChartThemeDocument>)
+                .value,
+        interaction:
+            (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                    as ChartArtifactSuccess<ChartInteractionDocument>)
+                .value,
+      ),
+    );
+
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => Row(
+        children: [
+          Expanded(
+            child: BravenChartPlus(
+              bravenChartController: controller,
+              showLegend: false,
+              theme: ChartTheme.light.copyWith(
+                pieChartTheme: const PieChartTheme(
+                  animationMode: PieAnimationMode.none,
+                ),
+              ),
+              series: [series],
+            ),
+          ),
+          Expanded(
+            child: ChartDataTable(
+              model: model,
+              selectedPointRefs: controller.selectedPointRefs,
+              onRowActivated: (points) {
+                final revision = controller.effectiveDocumentRevision.value;
+                if (revision == null) return;
+                controller.selectPoints(points, revision: revision);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

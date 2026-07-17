@@ -75,6 +75,21 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('shows and sorts the variable-radius metric', (tester) async {
+    final model = _pieModel(variableRadius: true);
+    await tester.pumpWidget(_host(ChartDataTable(model: model)));
+
+    expect(find.text('Total area (km²)'), findsOneWidget);
+    expect(find.text('120.00'), findsOneWidget);
+
+    await tester.tap(find.text('Total area (km²)'));
+    await tester.pump();
+    expect(
+      tester.getTopLeft(find.text('Hardware')).dy,
+      lessThan(tester.getTopLeft(find.text('Subscriptions')).dy),
+    );
+  });
 }
 
 Widget _host(Widget child) => MaterialApp(
@@ -83,7 +98,7 @@ Widget _host(Widget child) => MaterialApp(
   ),
 );
 
-ChartTableModel _pieModel() {
+ChartTableModel _pieModel({bool variableRadius = false}) {
   final series =
       (ChartSeriesDocumentCodec.encode(
                 PieChartSeries.fromMap(
@@ -94,6 +109,19 @@ ChartTableModel _pieModel() {
                     'Services': 31,
                     'Hardware': 27,
                   },
+                  radiusValues: variableRadius
+                      ? const {
+                          'Subscriptions': 120,
+                          'Services': 100,
+                          'Hardware': 80,
+                        }
+                      : const {},
+                  sliceRadiusConfig: variableRadius
+                      ? const PieSliceRadiusConfig(
+                          label: 'Total area',
+                          unit: 'km²',
+                        )
+                      : null,
                 ),
               )
               as ChartArtifactSuccess<ChartSeriesDocument>)

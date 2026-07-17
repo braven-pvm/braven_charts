@@ -51,10 +51,7 @@ class SegmentStyle {
   /// Creates a segment style with optional color and stroke width overrides.
   ///
   /// Both parameters are optional. Null values mean "use series default".
-  const SegmentStyle({
-    this.color,
-    this.strokeWidth,
-  });
+  const SegmentStyle({this.color, this.strokeWidth});
 
   /// Creates a segment style with only a color override.
   ///
@@ -120,11 +117,13 @@ class SegmentStyle {
 /// which affects the segment between points, [PointStyle] affects the
 /// visual representation of the point itself.
 ///
-/// **Applies to**: [ScatterChartSeries], [BarChartSeries]
+/// **Applies to**: [ScatterChartSeries], [BarChartSeries], and Pie slices.
 ///
 /// **Rendering behavior**:
 /// - For scatter: Affects the marker color and size at this point
 /// - For bar: Affects the bar color and width for this data point
+/// - For Pie: Color overrides the slice fill. Size supplies the raw radius
+///   metric when variable slice radii are configured
 /// - Null values inherit from series/theme defaults
 ///
 /// Example:
@@ -150,10 +149,7 @@ class PointStyle {
   /// Creates a point style with optional color and size overrides.
   ///
   /// Both parameters are optional. Null values mean "use series default".
-  const PointStyle({
-    this.color,
-    this.size,
-  });
+  const PointStyle({this.color, this.size});
 
   /// Creates a point style with only a color override.
   ///
@@ -169,6 +165,7 @@ class PointStyle {
   ///
   /// For scatter: The marker fill color.
   /// For bar: The bar fill color.
+  /// For Pie: The slice fill color.
   /// If null, uses the series color or theme default.
   final Color? color;
 
@@ -176,6 +173,7 @@ class PointStyle {
   ///
   /// For scatter: The marker radius.
   /// For bar: The bar width (as a multiplier of default width).
+  /// For Pie: The raw second metric used by variable slice radii.
   /// If null, uses the series default size.
   final double? size;
 
@@ -300,7 +298,10 @@ extension SegmentColorExtensions on LineChartSeries {
   /// series.withStyleInRange(10.0, 20.0, SegmentStyle.color(Colors.red));
   /// ```
   LineChartSeries withStyleInRange(
-      double xStart, double xEnd, SegmentStyle style) {
+    double xStart,
+    double xEnd,
+    SegmentStyle style,
+  ) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -379,8 +380,9 @@ extension SegmentColorExtensions on LineChartSeries {
   ///
   /// Returns a copy with all points having null segmentStyle.
   LineChartSeries clearSegmentStyles() {
-    final newPoints =
-        points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
+    final newPoints = points
+        .map((p) => p.copyWith(clearSegmentStyle: true))
+        .toList();
     return copyWith(points: newPoints);
   }
 }
@@ -420,7 +422,10 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
 
   /// Creates a copy with all segments in X-range styled.
   AreaChartSeries withStyleInRange(
-      double xStart, double xEnd, SegmentStyle style) {
+    double xStart,
+    double xEnd,
+    SegmentStyle style,
+  ) {
     final newPoints = <ChartDataPoint>[];
     for (int i = 0; i < points.length; i++) {
       final point = points[i];
@@ -453,8 +458,9 @@ extension AreaSegmentColorExtensions on AreaChartSeries {
 
   /// Clears all segment style overrides from the series.
   AreaChartSeries clearSegmentStyles() {
-    final newPoints =
-        points.map((p) => p.copyWith(clearSegmentStyle: true)).toList();
+    final newPoints = points
+        .map((p) => p.copyWith(clearSegmentStyle: true))
+        .toList();
     return copyWith(points: newPoints);
   }
 }
@@ -502,7 +508,10 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
 
   /// Creates a copy with all points in X-range styled.
   ScatterChartSeries withStyleInRange(
-      double xStart, double xEnd, PointStyle style) {
+    double xStart,
+    double xEnd,
+    PointStyle style,
+  ) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -531,8 +540,9 @@ extension ScatterPointStyleExtensions on ScatterChartSeries {
 
   /// Clears all point style overrides from the series.
   ScatterChartSeries clearPointStyles() {
-    final newPoints =
-        points.map((p) => p.copyWith(clearPointStyle: true)).toList();
+    final newPoints = points
+        .map((p) => p.copyWith(clearPointStyle: true))
+        .toList();
     return copyWith(points: newPoints);
   }
 }
@@ -580,7 +590,10 @@ extension BarPointStyleExtensions on BarChartSeries {
 
   /// Creates a copy with all bars in X-range styled.
   BarChartSeries withStyleInRange(
-      double xStart, double xEnd, PointStyle style) {
+    double xStart,
+    double xEnd,
+    PointStyle style,
+  ) {
     final newPoints = <ChartDataPoint>[];
     for (final point in points) {
       final inRange = point.x >= xStart && point.x < xEnd;
@@ -615,8 +628,9 @@ extension BarPointStyleExtensions on BarChartSeries {
 
   /// Clears all point style overrides from the series.
   BarChartSeries clearPointStyles() {
-    final newPoints =
-        points.map((p) => p.copyWith(clearPointStyle: true)).toList();
+    final newPoints = points
+        .map((p) => p.copyWith(clearPointStyle: true))
+        .toList();
     return copyWith(points: newPoints);
   }
 }

@@ -1,9 +1,9 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter Cartesian and pie charts with custom rendering, multi-axis
-  interaction, live streaming, editable annotations, data tables, and portable
-  artifacts.
-version: 0.4.0
+  Pure Dart Flutter Cartesian, Pie, and Donut charts with custom rendering,
+  multi-axis interaction, live streaming, editable annotations, data tables,
+  and portable artifacts.
+version: 0.5.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -18,8 +18,8 @@ topics:
 
 screenshots:
   - description: >-
-      Compact comparison of line, area, scatter, bar, and pie charts with
-      distinct native Flutter rendering and theme treatments.
+      Compact comparison of line, area, scatter, bar, pie, and Donut charts
+      with distinct native Flutter rendering and theme treatments.
     path: doc/screenshots/chart_type_strip.png
   - description: >-
       Mixed interval chart with threshold-styled bars, cardiac drift, multiple
@@ -46,9 +46,9 @@ screenshots:
       highlighted VO2max event.
     path: doc/screenshots/gallery_vo2_stage.png
   - description: >-
-      Reusable lactate chart configuration presented as comparable reference
-      and current-session small multiples.
-    path: doc/screenshots/gallery_lactate.png
+      Three Donut compositions with selection-aware center content, a partial
+      sweep, variable radii, compact labels, and light and dark themes.
+    path: doc/screenshots/gallery_donut_collection.png
   - description: >-
       Live sensor data in a follow-latest viewport with a visible synchronized
       scrollbar.

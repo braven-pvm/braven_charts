@@ -56,7 +56,7 @@ Defines a series of data points with optional styling and axis configuration.
 - `unit` (value suffix)
 
 Concrete series are `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
-`ScatterChartSeries`, and `PieChartSeries`.
+`ScatterChartSeries`, `PieChartSeries`, and `DonutChartSeries`.
 
 ### `PieChartSeries`
 
@@ -64,18 +64,42 @@ Represents one insertion-ordered set of category contributions. A pie chart
 accepts exactly one pie series and cannot mix with Cartesian series.
 
 - `PieChartSeries.fromMap`: category/value convenience constructor
+- `radiusValues` plus `sliceRadiusConfig`: optional complete second-metric map,
+  `PieSliceRadiusScale` mapping, minimum factor, label, and unit
 - `pieStyle`: `PieChartStyle` geometry, physical separation, border, solid or
-  `PieGradientStyle` fill, explode, opacity, rounded-corner, elevation, and
-  animation overrides
+  `PieGradientStyle` fill, explode, opacity, `PieCornerTreatment`, elevation,
+  and animation overrides
 - `dataLabels`: `PieDataLabelConfig` content, position, eligibility, compact
   outside-lane offset, connector, collision, and callout policy
 - `ChartTheme.pieChartTheme`: shared `PieChartTheme` defaults, including
-  `PieGradientStyle` fills, `PieElevationStyle` shadows/glows, and
-  `PieAnimationMode`
-- `total` and `visiblePointIndices`: validated contribution helpers
+  `PieGradientStyle` fills, `PieCornerTreatment`, `PieElevationStyle`
+  shadows/glows, and `PieAnimationMode`
+- `total`, `visiblePointIndices`, and `hasVariableSliceRadius`: validated
+  contribution and radius helpers
 
 Values must be finite and non-negative, and categories must be non-empty. Zero
 values remain in transport and tables but do not paint a slice.
+
+### `DonutChartSeries`
+
+Represents one ordered category whole around a shared circular opening. Donut
+is single-series and cannot mix with Pie or Cartesian series.
+
+- `DonutChartSeries.fromMap`: category/value constructor with optional complete
+  `radiusValues`
+- `donutStyle`: `DonutChartStyle` adds `innerRadiusFactor` and
+  `sweepAngleDegrees` to the shared radial geometry and appearance contract
+- `centerContent`: `DonutCenterContent` controls portable label/value text,
+  `DonutCenterValueMode`, and series-level `LabelStyle` overrides
+- `ChartTheme.pieChartTheme.centerLabelStyle` and `centerValueStyle`: shared
+  theme defaults for measured center text
+- `sliceRadiusConfig`: optional second-metric label, unit, minimum factor, and
+  area or linear scaling
+
+The center can show total, selected value, selected-or-total fallback, or
+custom text. It follows the same `ChartPointRef` selection used by slices,
+legends, tables, keyboard navigation, controllers, and restored runtimes.
+See the [Donut guide](../doc/donut_charts.md).
 
 ### `ChartDataPoint`
 
@@ -244,7 +268,7 @@ alignment, unit/domain safety, diagnostics, and independent hydration.
 ### Tables, identity, and migration
 
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` derive an
-  accessible long, exact-X wide, or pie `Category | Value | Share` table from
+  accessible long, exact-X wide, or radial `Category | Value | Radius? | Share` table from
   the portable document. The widget
   natively provides bounded dataset clipboard copy, per-row copy, and raw CSV
   export; web downloads directly and non-web hosts can override delivery. Row
