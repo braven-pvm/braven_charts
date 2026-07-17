@@ -1524,6 +1524,41 @@ class SeriesElement implements DataHitElement {
         );
       }
 
+      if (geometry.errorStemStart != null &&
+          geometry.errorStemEnd != null &&
+          geometry.errorLowerCapStart != null &&
+          geometry.errorLowerCapEnd != null &&
+          geometry.errorUpperCapStart != null &&
+          geometry.errorUpperCapEnd != null) {
+        final errorStyle = series.errorBarStyle;
+        final errorColor = errorStyle.color ?? const Color(0xFF111827);
+        final errorPaint = Paint()
+          ..color = errorColor.withValues(alpha: errorStyle.opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = errorStyle.width
+          ..strokeCap = StrokeCap.square;
+        final segments = <(Offset, Offset)>[
+          (geometry.errorStemStart!, geometry.errorStemEnd!),
+          (geometry.errorLowerCapStart!, geometry.errorLowerCapEnd!),
+          (geometry.errorUpperCapStart!, geometry.errorUpperCapEnd!),
+        ];
+        if (errorStyle.color == null) {
+          final haloPaint = Paint()
+            ..color = const Color(
+              0xFFFFFFFF,
+            ).withValues(alpha: errorStyle.opacity * 0.9)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = errorStyle.width + 2
+            ..strokeCap = StrokeCap.square;
+          for (final (start, end) in segments) {
+            canvas.drawLine(start, end, haloPaint);
+          }
+        }
+        for (final (start, end) in segments) {
+          canvas.drawLine(start, end, errorPaint);
+        }
+      }
+
       if (series.labelStyle.show) {
         _paintBarLabel(canvas, series, geometry, barColor);
       }

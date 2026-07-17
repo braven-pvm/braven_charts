@@ -655,6 +655,26 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(99.75, 0.001));
       });
 
+      test('computeAxisBounds includes bar uncertainty endpoints', () {
+        manager.setSeries([
+          BarChartSeries(
+            id: 'estimate',
+            points: const [ChartDataPoint(x: 0, y: 60)],
+            barWidthPercent: 0.8,
+            errorLowerValues: const [42],
+            errorUpperValues: const [95],
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+            ),
+          ),
+        ]);
+
+        final bounds = manager.computeAxisBounds();
+        expect(bounds['axis1']!.min, closeTo(-4.75, 0.001));
+        expect(bounds['axis1']!.max, closeTo(99.75, 0.001));
+      });
+
       for (final testCase in <({String name, double value})>[
         (name: 'positive', value: 180),
         (name: 'zero', value: 0),

@@ -152,6 +152,66 @@ void main() {
       expect(geometry.targetEnd, const Offset(280, 64));
     });
 
+    test('lays out a vertical uncertainty stem and endpoint caps', () {
+      const series = BarChartSeries(
+        id: 'uncertainty',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 20,
+        errorLowerValues: [40],
+        errorUpperValues: [70],
+        errorBarStyle: BarErrorBarStyle(width: 2, capLengthFactor: 0.6),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: transform,
+      ).single;
+
+      _expectOffsetClose(geometry.errorStemStart!, const Offset(100, 60));
+      _expectOffsetClose(geometry.errorStemEnd!, const Offset(100, 30));
+      _expectOffsetClose(geometry.errorLowerCapStart!, const Offset(94, 60));
+      _expectOffsetClose(geometry.errorLowerCapEnd!, const Offset(106, 60));
+      _expectOffsetClose(geometry.errorUpperCapStart!, const Offset(94, 30));
+      _expectOffsetClose(geometry.errorUpperCapEnd!, const Offset(106, 30));
+      expect(geometry.errorBounds!.left, closeTo(93, 0.001));
+      expect(geometry.errorBounds!.top, closeTo(29, 0.001));
+      expect(geometry.errorBounds!.right, closeTo(107, 0.001));
+      expect(geometry.errorBounds!.bottom, closeTo(61, 0.001));
+      expect(geometry.paintBounds.contains(const Offset(100, 30)), isTrue);
+    });
+
+    test('transposes uncertainty whiskers with horizontal bars', () {
+      const horizontalTransform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 4,
+        dataYMin: -100,
+        dataYMax: 100,
+        plotWidth: 400,
+        plotHeight: 200,
+        transposed: true,
+      );
+      const series = BarChartSeries(
+        id: 'horizontal-uncertainty',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 20,
+        orientation: BarOrientation.horizontal,
+        errorLowerValues: [40],
+        errorUpperValues: [70],
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: horizontalTransform,
+      ).single;
+
+      _expectOffsetClose(geometry.errorStemStart!, const Offset(280, 50));
+      _expectOffsetClose(geometry.errorStemEnd!, const Offset(340, 50));
+      _expectOffsetClose(geometry.errorLowerCapStart!, const Offset(280, 44));
+      _expectOffsetClose(geometry.errorLowerCapEnd!, const Offset(280, 56));
+      _expectOffsetClose(geometry.errorUpperCapStart!, const Offset(340, 44));
+      _expectOffsetClose(geometry.errorUpperCapEnd!, const Offset(340, 56));
+    });
+
     test('provides an accessible hit width for thin rods', () {
       const series = BarChartSeries(
         id: 'rod',
@@ -387,6 +447,32 @@ void main() {
       );
     });
 
+    test('uncertainty intervals validate alignment and endpoint order', () {
+      const incomplete = BarChartSeries(
+        id: 'incomplete-error',
+        points: [ChartDataPoint(x: 1, y: 60)],
+        barWidthPixels: 20,
+        errorLowerValues: [50],
+      );
+      const reversed = BarChartSeries(
+        id: 'reversed-error',
+        points: [ChartDataPoint(x: 1, y: 60)],
+        barWidthPixels: 20,
+        errorLowerValues: [70],
+        errorUpperValues: [50],
+      );
+
+      expect(
+        () =>
+            BarGeometryEngine.layout(series: incomplete, transform: transform),
+        throwsArgumentError,
+      );
+      expect(
+        () => BarGeometryEngine.layout(series: reversed, transform: transform),
+        throwsArgumentError,
+      );
+    });
+
     test('value-end rounding only affects the outer stacked segment', () {
       const series = BarChartSeries(
         id: 'stacked',
@@ -475,4 +561,9 @@ void main() {
       }
     });
   });
+}
+
+void _expectOffsetClose(Offset actual, Offset expected) {
+  expect(actual.dx, closeTo(expected.dx, 0.001));
+  expect(actual.dy, closeTo(expected.dy, 0.001));
 }

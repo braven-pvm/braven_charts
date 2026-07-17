@@ -38,6 +38,53 @@ void main() {
     );
   });
 
+  testWidgets('switches between chart, data, and split presentations', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    expect(switcher, findsOneWidget);
+    expect(
+      find.descendant(of: switcher, matching: find.text('Chart')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: switcher, matching: find.text('Data')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: switcher, matching: find.text('Split')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+
+    final table = find.byType(ChartDataTable);
+    expect(table, findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('changes the number of grouped bar series', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
@@ -326,6 +373,7 @@ void main() {
     for (final label in [
       'Capacity',
       'Targets',
+      'Uncertainty',
       'Rods',
       'Gradient',
       'Signed',
@@ -628,6 +676,67 @@ void main() {
     element = renderBox.debugElements.whereType<SeriesElement>().single;
     geometry = element.barGeometryForPoint(0)!;
     expect(geometry.targetStart!.dx, closeTo(geometry.targetEnd!.dx, 0.001));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows uncertainty whiskers and transposes them with the chart', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-uncertainty')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Estimate with uncertainty'), findsOneWidget);
+    expect(find.text('Error bars', skipOffstage: false), findsOneWidget);
+    expect(find.text('Line width', skipOffstage: false), findsOneWidget);
+    expect(find.text('Cap span', skipOffstage: false), findsOneWidget);
+
+    var bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars, hasLength(1));
+    expect(bars.single.name, 'Estimate');
+    expect(bars.single.errorLowerValues, isNotEmpty);
+    expect(bars.single.errorUpperValues, isNotEmpty);
+    expect(bars.single.errorBarStyle.width, 1.5);
+
+    var renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    var element = renderBox.debugElements.whereType<SeriesElement>().single;
+    var geometry = element.barGeometryForPoint(0)!;
+    expect(geometry.errorStemStart, isNotNull);
+    expect(geometry.errorStemEnd, isNotNull);
+    expect(
+      geometry.errorStemStart!.dx,
+      closeTo(geometry.errorStemEnd!.dx, 0.001),
+    );
+
+    await tester.tap(find.byType(DropdownButtonFormField<BarOrientation>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Horizontal').last);
+    await tester.pumpAndSettle();
+
+    bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars.single.orientation, BarOrientation.horizontal);
+    renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    element = renderBox.debugElements.whereType<SeriesElement>().single;
+    geometry = element.barGeometryForPoint(0)!;
+    expect(
+      geometry.errorStemStart!.dy,
+      closeTo(geometry.errorStemEnd!.dy, 0.001),
+    );
     expect(tester.takeException(), isNull);
   });
 

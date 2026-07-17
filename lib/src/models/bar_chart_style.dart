@@ -317,6 +317,44 @@ class BarTargetMarkerStyle {
   int get hashCode => Object.hash(color, width, lengthFactor, opacity);
 }
 
+/// Presentation for a per-point uncertainty or error interval.
+///
+/// The interval is a passive analytical reference. Its stem follows the value
+/// axis and its caps cross the rendered bar at the lower and upper endpoints.
+class BarErrorBarStyle {
+  const BarErrorBarStyle({
+    this.color,
+    this.width = 1.5,
+    this.capLengthFactor = 0.6,
+    this.opacity = 1.0,
+  }) : assert(width >= 0, 'Error-bar width must be non-negative'),
+       assert(capLengthFactor > 0, 'Cap length factor must be positive'),
+       assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
+
+  /// Line color. Null uses a dark core with a light contrast halo.
+  final Color? color;
+
+  /// Logical-pixel width of the stem and endpoint caps.
+  final double width;
+
+  /// Total cap length relative to the rendered bar thickness.
+  final double capLengthFactor;
+
+  final double opacity;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarErrorBarStyle &&
+          other.color == color &&
+          other.width == width &&
+          other.capLengthFactor == capLengthFactor &&
+          other.opacity == opacity;
+
+  @override
+  int get hashCode => Object.hash(color, width, capLengthFactor, opacity);
+}
+
 /// Connector line drawn between sequential waterfall columns.
 class BarWaterfallConnectorStyle {
   const BarWaterfallConnectorStyle({

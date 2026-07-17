@@ -24,7 +24,27 @@ abstract final class BarSeriesTransition {
               : target.rangeStartValueFor(index),
         ),
     ];
-    return target.copyWith(points: points);
+    final collapsedErrorLower = target.errorLowerValues.isEmpty
+        ? const <double?>[]
+        : <double?>[
+            for (var index = 0; index < target.points.length; index++)
+              target.errorLowerValueFor(index) == null
+                  ? null
+                  : target.rangeStartValueFor(index),
+          ];
+    final collapsedErrorUpper = target.errorUpperValues.isEmpty
+        ? const <double?>[]
+        : <double?>[
+            for (var index = 0; index < target.points.length; index++)
+              target.errorUpperValueFor(index) == null
+                  ? null
+                  : target.rangeStartValueFor(index),
+          ];
+    return target.copyWith(
+      points: points,
+      errorLowerValues: collapsedErrorLower,
+      errorUpperValues: collapsedErrorUpper,
+    );
   }
 
   /// Interpolates bar data from [from] to [to].
@@ -43,6 +63,8 @@ abstract final class BarSeriesTransition {
     final animatedPoints = <ChartDataPoint>[];
     final animatedStarts = <double?>[];
     final animatedTargets = <double?>[];
+    final animatedErrorLower = <double?>[];
+    final animatedErrorUpper = <double?>[];
     for (var index = 0; index < to.points.length; index++) {
       final targetPoint = to.points[index];
       final sourceIndex = _sourceIndexFor(
@@ -82,6 +104,23 @@ abstract final class BarSeriesTransition {
           animatedTargets.add(_lerp(sourceTarget, targetValue, t));
         }
       }
+      if (to.errorLowerValues.isNotEmpty) {
+        final targetLower = to.errorLowerValueFor(index);
+        final targetUpper = to.errorUpperValueFor(index);
+        if (targetLower == null || targetUpper == null) {
+          animatedErrorLower.add(null);
+          animatedErrorUpper.add(null);
+        } else {
+          final sourceLower = sourceIndex == null
+              ? to.rangeStartValueFor(index)
+              : from.errorLowerValueFor(sourceIndex) ?? targetLower;
+          final sourceUpper = sourceIndex == null
+              ? to.rangeStartValueFor(index)
+              : from.errorUpperValueFor(sourceIndex) ?? targetUpper;
+          animatedErrorLower.add(_lerp(sourceLower, targetLower, t));
+          animatedErrorUpper.add(_lerp(sourceUpper, targetUpper, t));
+        }
+      }
     }
 
     return to.copyWith(
@@ -90,6 +129,9 @@ abstract final class BarSeriesTransition {
       clearRangeStartValues: to.rangeStartValues.isEmpty,
       targetValues: animatedTargets,
       clearTargetValues: to.targetValues.isEmpty,
+      errorLowerValues: animatedErrorLower,
+      errorUpperValues: animatedErrorUpper,
+      clearErrorValues: to.errorLowerValues.isEmpty,
     );
   }
 
