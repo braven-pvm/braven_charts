@@ -170,6 +170,7 @@ class ZoomAnimator {
       plotWidth: to.plotWidth,
       plotHeight: to.plotHeight,
       invertY: to.invertY,
+      transposed: to.transposed,
     );
   }
 

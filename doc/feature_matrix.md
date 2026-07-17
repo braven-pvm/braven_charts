@@ -13,7 +13,7 @@ is added to package marketing.
 | Annotations | `ChartAnnotation` subtypes, `AnnotationController`, editing dialogs | Annotations, Lactate Threshold, Gallery |
 | Line charts | `LineChartSeries`, `LineInterpolation` | Chart Types, Gallery |
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties | Baseline Fill, Gallery |
-| Bar charts | `BarChartSeries`, `BarGroupInfo` | Chart Types, Gallery |
+| Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, `rangeStartValues`, `BarLayoutMode`, `BarChartStyle`, `BarTrackStyle`, `BarLabelStyle`, `BarGroupInfo` | Bar Lab, Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |

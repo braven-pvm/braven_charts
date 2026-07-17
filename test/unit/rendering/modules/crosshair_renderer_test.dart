@@ -1,6 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Unit tests for CrosshairRenderer module
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
@@ -69,56 +70,67 @@ void main() {
       });
 
       test(
-          'isMultiAxisMode returns true for multiple axes with perSeries normalization',
-          () {
-        final info = MultiAxisInfo(
-          effectiveAxes: [
-            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
-          ],
-          axisBounds: const {
-            'axis1': DataRange(min: 0, max: 100),
-            'axis2': DataRange(min: 0, max: 1000),
-          },
-          axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
-          effectiveBindings: const [],
-          normalizationMode: NormalizationMode.perSeries,
-          series: const [],
-        );
+        'isMultiAxisMode returns true for multiple axes with perSeries normalization',
+        () {
+          final info = MultiAxisInfo(
+            effectiveAxes: [
+              YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+              YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            ],
+            axisBounds: const {
+              'axis1': DataRange(min: 0, max: 100),
+              'axis2': DataRange(min: 0, max: 1000),
+            },
+            axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
+            effectiveBindings: const [],
+            normalizationMode: NormalizationMode.perSeries,
+            series: const [],
+          );
 
-        expect(info.isMultiAxisMode, isTrue);
-      });
+          expect(info.isMultiAxisMode, isTrue);
+        },
+      );
 
       test(
-          'isMultiAxisMode returns false for multiple axes without perSeries normalization',
-          () {
-        final info = MultiAxisInfo(
-          effectiveAxes: [
-            YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
-            YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
-          ],
-          axisBounds: const {
-            'axis1': DataRange(min: 0, max: 100),
-            'axis2': DataRange(min: 0, max: 1000),
-          },
-          axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
-          effectiveBindings: const [],
-          normalizationMode: null,
-          series: const [],
-        );
+        'isMultiAxisMode returns false for multiple axes without perSeries normalization',
+        () {
+          final info = MultiAxisInfo(
+            effectiveAxes: [
+              YAxisConfig.withId(id: 'axis1', position: YAxisPosition.left),
+              YAxisConfig.withId(id: 'axis2', position: YAxisPosition.right),
+            ],
+            axisBounds: const {
+              'axis1': DataRange(min: 0, max: 100),
+              'axis2': DataRange(min: 0, max: 1000),
+            },
+            axisWidths: const {'axis1': 50.0, 'axis2': 50.0},
+            effectiveBindings: const [],
+            normalizationMode: null,
+            series: const [],
+          );
 
-        expect(info.isMultiAxisMode, isFalse);
-      });
+          expect(info.isMultiAxisMode, isFalse);
+        },
+      );
 
       test('getPositionWidth returns total width for position', () {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, visible: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2', position: YAxisPosition.left, visible: true),
+              id: 'axis2',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis3', position: YAxisPosition.right, visible: true),
+              id: 'axis3',
+              position: YAxisPosition.right,
+              visible: true,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -139,9 +151,15 @@ void main() {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, visible: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              visible: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2', position: YAxisPosition.left, visible: false),
+              id: 'axis2',
+              position: YAxisPosition.left,
+              visible: false,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),
@@ -161,7 +179,10 @@ void main() {
         final info = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1', position: YAxisPosition.left, color: axisColor),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              color: axisColor,
+            ),
           ],
           axisBounds: const {'axis1': DataRange(min: 0, max: 100)},
           axisWidths: const {'axis1': 50.0},
@@ -190,10 +211,11 @@ void main() {
           normalizationMode: null,
           series: [
             const ChartSeries(
-                id: 'series1',
-                name: 'Series 1',
-                points: [],
-                color: seriesColor),
+              id: 'series1',
+              name: 'Series 1',
+              points: [],
+              color: seriesColor,
+            ),
           ],
         );
 
@@ -305,6 +327,126 @@ void main() {
     });
 
     group('Paint Method', () {
+      test('tracking both paints both cursor lines when transposed', () async {
+        const cursor = Offset(250, 180);
+        const transposedPlotArea = Rect.fromLTWH(80, 90, 400, 220);
+        const transposed = ChartTransform(
+          dataXMin: -1,
+          dataXMax: 6,
+          dataYMin: 0,
+          dataYMax: 100,
+          plotWidth: 400,
+          plotHeight: 220,
+          invertY: true,
+          transposed: true,
+        );
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        renderer.paint(
+          canvas: canvas,
+          size: const Size(520, 400),
+          cursorPosition: cursor,
+          plotArea: transposedPlotArea,
+          transform: transposed,
+          theme: ChartTheme.light,
+          crosshairConfig: const CrosshairConfig(
+            mode: CrosshairMode.both,
+            displayMode: CrosshairDisplayMode.tracking,
+          ),
+          multiAxisInfo: multiAxisInfo,
+          seriesElements: const [],
+          isRangeCreationMode: false,
+        );
+
+        final image = await recorder.endRecording().toImage(520, 400);
+        final pixels = await image.toByteData(format: ImageByteFormat.rawRgba);
+        addTearDown(image.dispose);
+        expect(pixels, isNotNull);
+
+        int strongestAlphaNear(int x, int y) {
+          var strongest = 0;
+          for (var sampleY = y - 1; sampleY <= y + 1; sampleY++) {
+            for (var sampleX = x - 1; sampleX <= x + 1; sampleX++) {
+              final offset = (sampleY * 520 + sampleX) * 4 + 3;
+              strongest = math.max(strongest, pixels!.getUint8(offset));
+            }
+          }
+          return strongest;
+        }
+
+        expect(strongestAlphaNear(cursor.dx.round(), 120), greaterThan(0));
+        expect(strongestAlphaNear(120, cursor.dy.round()), greaterThan(0));
+      });
+
+      test('paints transposed labels for independent value axes', () {
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+        final axes = [
+          YAxisConfig.withId(
+            id: 'revenue',
+            position: YAxisPosition.left,
+            label: 'Revenue',
+            unit: r'$k',
+            showCrosshairLabel: true,
+          ),
+          YAxisConfig.withId(
+            id: 'orders',
+            position: YAxisPosition.right,
+            label: 'Orders',
+            unit: 'orders',
+            showCrosshairLabel: true,
+          ),
+          YAxisConfig.withId(
+            id: 'conversion',
+            position: YAxisPosition.right,
+            label: 'Conversion',
+            unit: '%',
+            showCrosshairLabel: true,
+          ),
+        ];
+        final info = MultiAxisInfo(
+          effectiveAxes: axes,
+          axisBounds: const {
+            'revenue': DataRange(min: 0, max: 100),
+            'orders': DataRange(min: 0, max: 500),
+            'conversion': DataRange(min: 0, max: 100),
+          },
+          axisWidths: const {'revenue': 50, 'orders': 50, 'conversion': 50},
+          effectiveBindings: const [],
+          normalizationMode: NormalizationMode.perSeries,
+          series: const [],
+        );
+        const transposed = ChartTransform(
+          dataXMin: -1,
+          dataXMax: 6,
+          dataYMin: -0.05,
+          dataYMax: 1.05,
+          plotWidth: 400,
+          plotHeight: 220,
+          invertY: true,
+          transposed: true,
+        );
+
+        expect(
+          () => renderer.paint(
+            canvas: canvas,
+            size: const Size(520, 400),
+            cursorPosition: const Offset(250, 180),
+            plotArea: const Rect.fromLTWH(80, 90, 400, 220),
+            transform: transposed,
+            theme: ChartTheme.light,
+            crosshairConfig: const CrosshairConfig(mode: CrosshairMode.both),
+            multiAxisInfo: info,
+            seriesElements: const [],
+            isRangeCreationMode: false,
+          ),
+          returnsNormally,
+        );
+
+        recorder.endRecording();
+      });
+
       test('paint executes without errors for standard mode', () {
         final recorder = PictureRecorder();
         final canvas = Canvas(recorder);
@@ -359,13 +501,15 @@ void main() {
         final multiAxisInfoWithMultiple = MultiAxisInfo(
           effectiveAxes: [
             YAxisConfig.withId(
-                id: 'axis1',
-                position: YAxisPosition.left,
-                showCrosshairLabel: true),
+              id: 'axis1',
+              position: YAxisPosition.left,
+              showCrosshairLabel: true,
+            ),
             YAxisConfig.withId(
-                id: 'axis2',
-                position: YAxisPosition.right,
-                showCrosshairLabel: true),
+              id: 'axis2',
+              position: YAxisPosition.right,
+              showCrosshairLabel: true,
+            ),
           ],
           axisBounds: const {
             'axis1': DataRange(min: 0, max: 100),

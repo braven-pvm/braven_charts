@@ -1,6 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Phase 0 Prototype - Interaction Architecture
 
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -17,6 +18,7 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/axis_swap_mode.dart';
+import '../models/bar_chart_style.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
@@ -43,6 +45,7 @@ import 'modules/zoom_animator.dart';
 import 'multi_axis_normalizer.dart';
 import 'multi_axis_painter.dart';
 import 'spatial_index.dart';
+import 'transposed_bar_axes_painter.dart';
 import 'x_axis_painter.dart';
 
 /// Callback for generating chart elements based on current transform.
@@ -797,6 +800,38 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
+  bool get _isHorizontalBarChart {
+    final series = _multiAxisManager.series;
+    return series.isNotEmpty &&
+        series.every(
+          (current) =>
+              current is BarChartSeries &&
+              current.orientation == BarOrientation.horizontal,
+        );
+  }
+
+  TransposedBarAxesPainter _buildTransposedAxesPainter() {
+    final categoryConfig = _xAxisConfig ?? const XAxisConfig();
+    final valueAxes = _multiAxisManager.getVisibleAxes();
+    final axisBounds = _computeAxisBounds(forPainting: true);
+    final labelStyle =
+        _theme?.axisStyle.labelStyle ??
+        const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
+    return TransposedBarAxesPainter(
+      categoryConfig: categoryConfig,
+      categoryBounds: DataRange(
+        min: _transform?.dataXMin ?? _xAxis?.dataMin ?? 0,
+        max: _transform?.dataXMax ?? _xAxis?.dataMax ?? 1,
+      ),
+      valueAxes: valueAxes,
+      valueBounds: axisBounds,
+      labelStyle: labelStyle,
+      bindings: _getEffectiveBindings(),
+      series: _multiAxisManager.series,
+      categoryTickValues: _xAxis?.ticks.map((tick) => tick.value).toList(),
+    );
+  }
+
   /// Paints multiple Y-axes using [MultiAxisPainter].
   ///
   /// Delegates to [MultiAxisManager.paintMultipleYAxes].
@@ -1087,6 +1122,7 @@ class ChartRenderBox extends RenderBox {
       dataYMin: dataYMin,
       dataYMax: dataYMax,
       invertY: _transform?.invertY ?? false,
+      transposed: _transform?.transposed ?? _isHorizontalBarChart,
     );
 
     _updateAxesFromTransform();
@@ -1416,47 +1452,45 @@ class ChartRenderBox extends RenderBox {
     // Default margins if no axes
     double leftMargin = 10;
     double rightMargin = 10 + rightReserved; // Add scrollbar space
-    const double topMargin = 10;
+    double topMargin = 10;
     double bottomMargin = 10 + bottomReserved; // Add scrollbar space
 
     // Track right axis width separately for scrollbar positioning
     double rightAxisWidth = 0;
 
-    // Reserve space for X-axis (bottom) - only if axis is visible
-    if (_xAxis != null && _xAxis!.config.showAxisLine) {
+    if (_isHorizontalBarChart) {
+      final axesPainter = _buildTransposedAxesPainter();
+      leftMargin = axesPainter.measureCategoryAxisWidth();
+      topMargin = math.max(10, axesPainter.measureTopAxesHeight());
       bottomMargin =
-          50 +
-          bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
-    }
-
-    // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
-    // This ensures consistent layout whether using single or multiple axes.
-    // Previously, single-axis mode used hardcoded 60px margin which caused gaps.
-    final effectiveAxes = _getEffectiveYAxes();
-    if (effectiveAxes.isNotEmpty) {
-      final axisBounds = _computeAxisBounds();
-      final axisWidths = _multiAxisManager.computeAxisWidths(
-        axisBounds: axisBounds,
-      );
-
-      // Get total width needed for left and right axes
-      final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(
-        axisWidths,
-      );
-      rightAxisWidth = _multiAxisManager.getTotalRightAxisWidth(axisWidths);
-
-      // Use the computed axis widths directly so that the plot area aligns
-      // exactly with where MultiAxisPainter draws the axis lines.
-      // This prevents gaps between Y-axis lines and X-axis lines.
-      leftMargin = totalLeftWidth > 0 ? totalLeftWidth : leftMargin;
-
-      // Add right axis width to right margin (in addition to scrollbar space)
-      if (rightAxisWidth > 0) {
-        rightMargin = rightAxisWidth + rightReserved;
+          math.max(10, axesPainter.measureBottomAxesHeight()) + bottomReserved;
+    } else {
+      // Reserve space for X-axis (bottom) - only if axis is visible
+      if (_xAxis != null && _xAxis!.config.showAxisLine) {
+        bottomMargin =
+            50 +
+            bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
       }
-    } else if (_yAxis != null && _yAxis!.config.showAxisLine) {
-      // Fallback for legacy mode (no multi-axis config at all)
-      leftMargin = 60; // Space for Y-axis labels + axis label + padding
+
+      // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
+      // This ensures consistent layout whether using single or multiple axes.
+      final effectiveAxes = _getEffectiveYAxes();
+      if (effectiveAxes.isNotEmpty) {
+        final axisBounds = _computeAxisBounds();
+        final axisWidths = _multiAxisManager.computeAxisWidths(
+          axisBounds: axisBounds,
+        );
+        final totalLeftWidth = _multiAxisManager.getTotalLeftAxisWidth(
+          axisWidths,
+        );
+        rightAxisWidth = _multiAxisManager.getTotalRightAxisWidth(axisWidths);
+        leftMargin = totalLeftWidth > 0 ? totalLeftWidth : leftMargin;
+        if (rightAxisWidth > 0) {
+          rightMargin = rightAxisWidth + rightReserved;
+        }
+      } else if (_yAxis != null && _yAxis!.config.showAxisLine) {
+        leftMargin = 60;
+      }
     }
 
     // Calculate plot area (chart canvas excluding axes and scrollbars)
@@ -1527,7 +1561,9 @@ class ChartRenderBox extends RenderBox {
               (currentBaseXMax - _layoutBaseXMax!).abs() > 10);
 
       // Create initial transform if none exists OR if data range has significantly changed
-      if (_transform == null || rangeChanged) {
+      if (_transform == null ||
+          rangeChanged ||
+          _transform!.transposed != _isHorizontalBarChart) {
         // First time OR range changed: create transform from the widget-provided
         // baseline viewport when available. Axis instances may already have been
         // synchronized to a transient viewport, but reset/original state must stay
@@ -1540,6 +1576,7 @@ class ChartRenderBox extends RenderBox {
           plotWidth: _plotArea.width,
           plotHeight: _plotArea.height,
           invertY: true, // Standard chart convention (Y=0 at bottom)
+          transposed: _isHorizontalBarChart,
         );
 
         // Capture original transform for reset and constraint calculations
@@ -2271,40 +2308,62 @@ class ChartRenderBox extends RenderBox {
     if (_xAxis != null && _yAxis != null) {
       final gridRenderer = GridRenderer(theme: _theme, config: _gridConfig);
 
-      // Get tick positions for grid lines
-      final xTicks = _xAxis!.ticks
-          .map((t) => _xAxis!.scale.dataToPixel(t.value))
-          .toList();
-      final yTicks = _yAxis!.ticks
-          .map((t) => _yAxis!.scale.dataToPixel(t.value))
-          .toList();
+      final List<double> xTicks;
+      final List<double> yTicks;
+      if (_isHorizontalBarChart && _transform != null) {
+        xTicks = _buildTransposedAxesPainter().valueGridPositions(_plotArea);
+        yTicks = _xAxis!.ticks
+            .map(
+              (tick) =>
+                  _plotArea.top +
+                  (tick.value - _transform!.dataXMin) /
+                      _transform!.dataXRange *
+                      _plotArea.height,
+            )
+            .toList();
+      } else {
+        xTicks = _xAxis!.ticks
+            .map((t) => _xAxis!.scale.dataToPixel(t.value))
+            .toList();
+        yTicks = _yAxis!.ticks
+            .map((t) => _yAxis!.scale.dataToPixel(t.value))
+            .toList();
+      }
 
       gridRenderer.paintVerticalGrid(canvas, _plotArea, xTicks);
       gridRenderer.paintHorizontalGrid(canvas, _plotArea, yTicks);
     }
 
-    // Paint axes (behind all chart elements)
-    // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
-    _paintMultipleYAxes(canvas);
-
-    // Paint X-axis using XAxisPainter (unified approach)
-    if (_xAxis != null) {
-      final effectiveXAxisConfig = _xAxisConfig ?? const XAxisConfig();
-      final TextStyle labelStyle =
-          _theme?.axisStyle.labelStyle ??
-          const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
-      final xAxisPainter = XAxisPainter(
-        config: effectiveXAxisConfig,
-        axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
-        labelStyle: labelStyle,
-        series: _multiAxisManager.series,
-        tickValues: _xAxis!.ticks.map((t) => t.value).toList(),
-      );
-      xAxisPainter.paint(
+    // Paint axes (behind all chart elements).
+    if (_isHorizontalBarChart && _xAxis != null && _yAxis != null) {
+      _buildTransposedAxesPainter().paint(
         canvas,
         Rect.fromLTWH(0, 0, size.width, size.height),
         _plotArea,
       );
+    } else {
+      // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
+      _paintMultipleYAxes(canvas);
+
+      // Paint X-axis using XAxisPainter (unified approach)
+      if (_xAxis != null) {
+        final effectiveXAxisConfig = _xAxisConfig ?? const XAxisConfig();
+        final TextStyle labelStyle =
+            _theme?.axisStyle.labelStyle ??
+            const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
+        final xAxisPainter = XAxisPainter(
+          config: effectiveXAxisConfig,
+          axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+          labelStyle: labelStyle,
+          series: _multiAxisManager.series,
+          tickValues: _xAxis!.ticks.map((t) => t.value).toList(),
+        );
+        xAxisPainter.paint(
+          canvas,
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          _plotArea,
+        );
+      }
     }
 
     // ==========================================================================

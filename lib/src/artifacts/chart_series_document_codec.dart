@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show internal;
 import 'package:flutter/material.dart';
 
 import '../models/chart_annotation.dart';
+import '../models/bar_chart_style.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
@@ -62,6 +63,12 @@ abstract final class ChartSeriesDocumentCodec {
         throw const _RuntimeBindingException(
           'Data-point label formatters must be represented by a runtime binding descriptor.',
           r'$.style.dataPointLabels.formatter',
+        );
+      }
+      if (series is BarChartSeries && series.labelStyle.formatter != null) {
+        throw const _RuntimeBindingException(
+          'Bar label formatters must be represented by a runtime binding descriptor.',
+          r'$.style.barLabels.formatter',
         );
       }
 
@@ -290,12 +297,52 @@ abstract final class ChartSeriesDocumentCodec {
           barWidthPixels: _optionalDouble(style['barWidthPixels']),
           minWidth: _double(style, 'minWidth'),
           maxWidth: _double(style, 'maxWidth'),
+          barGap: _optionalDouble(style['barGap']) ?? 2.0,
+          orientation:
+              _optionalEnum(
+                style['barOrientation'],
+                BarOrientation.values,
+                r'$.style.barOrientation',
+              ) ??
+              BarOrientation.vertical,
+          layoutMode:
+              _optionalEnum(
+                style['barLayoutMode'],
+                BarLayoutMode.values,
+                r'$.style.barLayoutMode',
+              ) ??
+              BarLayoutMode.grouped,
+          groupId: _optionalString(style['barGroupId']),
+          overlayWidthFactor:
+              _optionalDouble(style['barOverlayWidthFactor']) ?? 1.0,
+          overlayOffsetFactor:
+              _optionalDouble(style['barOverlayOffsetFactor']) ?? 0.0,
+          baselineValue: _optionalDouble(style['baselineValue']) ?? 0.0,
+          rangeStartValues: _decodeOptionalDoubleList(
+            style['barRangeStartValues'],
+            r'$.style.barRangeStartValues',
+          ),
+          waterfallTotalIndices: _decodeIntSet(
+            style['barWaterfallTotalIndices'],
+            r'$.style.barWaterfallTotalIndices',
+          ),
+          waterfallStyle: _decodeBarWaterfallStyle(
+            _optionalMap(style, 'barWaterfallStyle'),
+          ),
+          minBarLength: _optionalDouble(style['minBarLength']) ?? 0.0,
+          barStyle: _decodeBarStyle(_optionalMap(style, 'barStyle')),
+          trackStyle: _decodeBarTrack(_optionalMap(style, 'barTrack')),
+          labelStyle: _decodeBarLabels(_optionalMap(style, 'barLabels')),
         ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
         ),
       };
+
+      if (series case final BarChartSeries barSeries) {
+        barSeries.validateConfiguration();
+      }
 
       return ChartArtifactSuccess(value: series);
     } on _UnsupportedModelException catch (error) {
@@ -387,6 +434,9 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
 }
 
 Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
+  if (series case final BarChartSeries barSeries) {
+    barSeries.validateRangeConfiguration();
+  }
   final result = <String, Object?>{
     if (series.color != null) 'color': series.color!.toARGB32(),
     if (series.style != null) 'seriesStyle': series.style!.name,
@@ -442,12 +492,210 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
             ? null
             : _number(series.barWidthPixels!)
         ..['minWidth'] = _number(series.minWidth)
-        ..['maxWidth'] = _number(series.maxWidth);
+        ..['maxWidth'] = _number(series.maxWidth)
+        ..['barGap'] = _number(series.barGap)
+        ..['barOrientation'] = series.orientation.name
+        ..['barLayoutMode'] = series.layoutMode.name
+        ..['barGroupId'] = series.groupId
+        ..['barOverlayWidthFactor'] = _number(series.overlayWidthFactor)
+        ..['barOverlayOffsetFactor'] = _number(series.overlayOffsetFactor)
+        ..['baselineValue'] = _number(series.baselineValue)
+        ..['barRangeStartValues'] = series.rangeStartValues.isEmpty
+            ? null
+            : [
+                for (final value in series.rangeStartValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['barWaterfallTotalIndices'] = series.waterfallTotalIndices.isEmpty
+            ? null
+            : (series.waterfallTotalIndices.toList()..sort())
+        ..['barWaterfallStyle'] = series.layoutMode == BarLayoutMode.waterfall
+            ? _encodeBarWaterfallStyle(series.waterfallStyle)
+            : null
+        ..['minBarLength'] = _number(series.minBarLength)
+        ..['barStyle'] = _encodeBarStyle(series.barStyle)
+        ..['barTrack'] = series.trackStyle == null
+            ? null
+            : _encodeBarTrack(series.trackStyle!)
+        ..['barLabels'] = _encodeBarLabels(series.labelStyle);
     case ChartSeries():
       break;
   }
   result.removeWhere((_, value) => value == null);
   return result;
+}
+
+Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {
+  'cornerRadius': _number(style.cornerRadius),
+  'cornerRadiusPolicy': style.cornerRadiusPolicy.name,
+  'opacity': _number(style.opacity),
+  if (style.gradient != null)
+    'gradient': {
+      'colors': [for (final color in style.gradient!.colors) color.toARGB32()],
+      if (style.gradient!.stops != null)
+        'stops': [for (final stop in style.gradient!.stops!) _number(stop)],
+    },
+  if (style.border != null) 'border': _encodeBarBorder(style.border!),
+};
+
+BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
+  if (value == null) return const BarChartStyle();
+  return BarChartStyle(
+    cornerRadius: _optionalDouble(value['cornerRadius']) ?? 0.0,
+    cornerRadiusPolicy:
+        _optionalEnum(
+          value['cornerRadiusPolicy'],
+          BarCornerRadiusPolicy.values,
+          r'$.style.barStyle.cornerRadiusPolicy',
+        ) ??
+        BarCornerRadiusPolicy.valueEnd,
+    opacity: _optionalDouble(value['opacity']) ?? 1.0,
+    gradient: _decodeBarGradient(_optionalMap(value, 'gradient')),
+    border: _decodeBarBorder(_optionalMap(value, 'border')),
+  );
+}
+
+Map<String, Object?> _encodeBarWaterfallStyle(BarWaterfallStyle style) => {
+  if (style.increaseColor != null)
+    'increaseColor': style.increaseColor!.toARGB32(),
+  if (style.decreaseColor != null)
+    'decreaseColor': style.decreaseColor!.toARGB32(),
+  if (style.totalColor != null) 'totalColor': style.totalColor!.toARGB32(),
+  'connector': {
+    'show': style.connector.show,
+    'color': style.connector.color.toARGB32(),
+    'width': _number(style.connector.width),
+  },
+};
+
+BarWaterfallStyle _decodeBarWaterfallStyle(Map<String, Object?>? value) {
+  if (value == null) return const BarWaterfallStyle();
+  final connector = _optionalMap(value, 'connector');
+  return BarWaterfallStyle(
+    increaseColor: _optionalColor(
+      value['increaseColor'],
+      r'$.style.barWaterfallStyle.increaseColor',
+    ),
+    decreaseColor: _optionalColor(
+      value['decreaseColor'],
+      r'$.style.barWaterfallStyle.decreaseColor',
+    ),
+    totalColor: _optionalColor(
+      value['totalColor'],
+      r'$.style.barWaterfallStyle.totalColor',
+    ),
+    connector: connector == null
+        ? const BarWaterfallConnectorStyle()
+        : BarWaterfallConnectorStyle(
+            show: _bool(connector, 'show', fallback: true),
+            color:
+                _optionalColor(
+                  connector['color'],
+                  r'$.style.barWaterfallStyle.connector.color',
+                ) ??
+                const Color(0xFF9CA3AF),
+            width: _optionalDouble(connector['width']) ?? 1.0,
+          ),
+  );
+}
+
+BarGradient? _decodeBarGradient(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final colorsValue = value['colors'];
+  if (colorsValue is! List) {
+    throw const FormatException('Expected gradient colors list.');
+  }
+  final colors = [
+    for (var index = 0; index < colorsValue.length; index++)
+      _optionalColor(colorsValue[index], r'$.style.barStyle.gradient.colors') ??
+          (throw const FormatException('Expected gradient color.')),
+  ];
+  final stopsValue = value['stops'];
+  final stops = stopsValue == null
+      ? null
+      : stopsValue is List
+      ? [for (final stop in stopsValue) _optionalDouble(stop)!]
+      : throw const FormatException('Expected gradient stops list.');
+  if (colors.length < 2) {
+    throw const FormatException('A bar gradient requires at least two colors.');
+  }
+  if (stops != null && stops.length != colors.length) {
+    throw const FormatException(
+      'Bar gradient stops must match the number of colors.',
+    );
+  }
+  return BarGradient(colors: colors, stops: stops);
+}
+
+Map<String, Object?> _encodeBarBorder(BarBorderStyle border) => {
+  'color': border.color.toARGB32(),
+  'width': _number(border.width),
+};
+
+BarBorderStyle? _decodeBarBorder(Map<String, Object?>? value) {
+  if (value == null) return null;
+  return BarBorderStyle(
+    color: _color(value, 'color'),
+    width: _optionalDouble(value['width']) ?? 1.0,
+  );
+}
+
+Map<String, Object?> _encodeBarTrack(BarTrackStyle track) => {
+  'color': track.color.toARGB32(),
+  if (track.value != null) 'value': _number(track.value!),
+  'opacity': _number(track.opacity),
+  if (track.cornerRadius != null) 'cornerRadius': _number(track.cornerRadius!),
+  if (track.border != null) 'border': _encodeBarBorder(track.border!),
+};
+
+BarTrackStyle? _decodeBarTrack(Map<String, Object?>? value) {
+  if (value == null) return null;
+  return BarTrackStyle(
+    color: _color(value, 'color'),
+    value: _optionalDouble(value['value']),
+    opacity: _optionalDouble(value['opacity']) ?? 1.0,
+    cornerRadius: _optionalDouble(value['cornerRadius']),
+    border: _decodeBarBorder(_optionalMap(value, 'border')),
+  );
+}
+
+Map<String, Object?> _encodeBarLabels(BarLabelStyle labels) => {
+  'show': labels.show,
+  'position': labels.position.name,
+  'valueMode': labels.valueMode.name,
+  if (labels.color != null) 'color': labels.color!.toARGB32(),
+  'fontSize': _number(labels.fontSize),
+  'fontWeightIndex': FontWeight.values.indexOf(labels.fontWeight),
+  'showUnit': labels.showUnit,
+  'padding': _number(labels.padding),
+};
+
+BarLabelStyle _decodeBarLabels(Map<String, Object?>? value) {
+  if (value == null) return const BarLabelStyle();
+  return BarLabelStyle(
+    show: _bool(value, 'show', fallback: false),
+    position:
+        _optionalEnum(
+          value['position'],
+          BarLabelPosition.values,
+          r'$.style.barLabels.position',
+        ) ??
+        BarLabelPosition.auto,
+    valueMode:
+        _optionalEnum(
+          value['valueMode'],
+          BarLabelValueMode.values,
+          r'$.style.barLabels.valueMode',
+        ) ??
+        BarLabelValueMode.value,
+    color: _optionalColor(value['color'], r'$.style.barLabels.color'),
+    fontSize: _optionalDouble(value['fontSize']) ?? 10.0,
+    fontWeight: value['fontWeightIndex'] == null
+        ? FontWeight.w600
+        : _fontWeight(value, 'fontWeightIndex'),
+    showUnit: _bool(value, 'showUnit', fallback: false),
+    padding: _optionalDouble(value['padding']) ?? 4.0,
+  );
 }
 
 Map<String, Object?> _encodeLineStyle({
@@ -717,6 +965,31 @@ double _double(Map<String, Object?> map, String key) =>
 
 double? _optionalDouble(Object? value) =>
     value == null ? null : ChartNumberDocument.fromJson(value).asDouble;
+
+List<double?> _decodeOptionalDoubleList(Object? value, String path) {
+  if (value == null) return const [];
+  if (value is! List) {
+    throw FormatException('Expected number list at $path.');
+  }
+  return [
+    for (var index = 0; index < value.length; index++)
+      switch (value[index]) {
+        null => null,
+        final item => ChartNumberDocument.fromJson(item).asDouble,
+      },
+  ];
+}
+
+Set<int> _decodeIntSet(Object? value, String path) {
+  if (value == null) return const {};
+  if (value is! List) throw FormatException('Expected integer list at $path.');
+  return {
+    for (var index = 0; index < value.length; index++)
+      value[index] is int
+          ? value[index] as int
+          : throw FormatException('Expected integer at $path[$index].'),
+  };
+}
 
 Color _color(Map<String, Object?> map, String key) =>
     _optionalColor(map[key], r'$.style.' + key) ??

@@ -6,8 +6,10 @@ import '../artifacts/chart_view_state.dart';
 import '../elements/series_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../models/bar_group_info.dart';
+import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../rendering/bar_composition.dart';
 
 /// Converts ChartSeries data to SeriesElements for rendering.
 ///
@@ -49,27 +51,18 @@ class DataConverter {
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
-    // First pass: Count total bar series for grouping
-    final barSeriesCount = series.whereType<BarChartSeries>().length;
-
-    // Track bar series index for grouping
-    int barSeriesIndex = 0;
+    _validateHorizontalBarChart(series);
+    final barSeries = series.whereType<BarChartSeries>().toList();
+    final barComposition = BarCompositionEngine.resolve(barSeries);
 
     // Use theme.seriesTheme if available, otherwise backward compatibility mode
     return series.asMap().entries.map((entry) {
       final index = entry.key;
       final s = entry.value;
 
-      // Compute BarGroupInfo for bar series (needed for grouped rendering)
-      BarGroupInfo? barGroupInfo;
-      if (s is BarChartSeries && barSeriesCount > 0) {
-        barGroupInfo = BarGroupInfo(
-          index: barSeriesIndex,
-          count: barSeriesCount,
-          gap: 2.0, // Default 2px gap per FR-003 specification
-        );
-        barSeriesIndex++;
-      }
+      final BarGroupInfo? barGroupInfo = s is BarChartSeries
+          ? barComposition[s.id]
+          : null;
 
       return SeriesElement(
         series: s,
@@ -106,17 +99,42 @@ class DataConverter {
       return const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
     }
 
+    _validateHorizontalBarChart(series);
+
     double xMin = double.infinity;
     double xMax = double.negativeInfinity;
     double yMin = double.infinity;
     double yMax = double.negativeInfinity;
 
+    final barSeries = series.whereType<BarChartSeries>().toList();
+    final barComposition = BarCompositionEngine.resolve(barSeries);
+
     for (final s in series) {
-      for (final point in s.points) {
+      for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
+        final point = s.points[pointIndex];
         if (point.x < xMin) xMin = point.x;
         if (point.x > xMax) xMax = point.x;
-        if (point.y < yMin) yMin = point.y;
-        if (point.y > yMax) yMax = point.y;
+        if (s is BarChartSeries) {
+          final info = barComposition[s.id];
+          final rangeStart = s.rangeStartValueFor(pointIndex);
+          final start =
+              info?.startValueFor(pointIndex, rangeStart) ?? rangeStart;
+          final end = info?.endValueFor(pointIndex, point.y) ?? point.y;
+          if (start < yMin) yMin = start;
+          if (start > yMax) yMax = start;
+          if (end < yMin) yMin = end;
+          if (end > yMax) yMax = end;
+        } else {
+          if (point.y < yMin) yMin = point.y;
+          if (point.y > yMax) yMax = point.y;
+        }
+      }
+      if (s is! BarChartSeries) continue;
+      final info = barComposition[s.id];
+      final trackValue = info?.drawTrack == false ? null : s.trackStyle?.value;
+      if (trackValue != null) {
+        if (trackValue < yMin) yMin = trackValue;
+        if (trackValue > yMax) yMax = trackValue;
       }
     }
 
@@ -161,6 +179,24 @@ class DataConverter {
       yMin: yMin - yPadding,
       yMax: yMax + yPadding,
     );
+  }
+
+  static void _validateHorizontalBarChart(List<ChartSeries> series) {
+    final hasHorizontalBars = series.any(
+      (current) =>
+          current is BarChartSeries &&
+          current.orientation == BarOrientation.horizontal,
+    );
+    if (!hasHorizontalBars) return;
+    if (series.any(
+      (current) =>
+          current is! BarChartSeries ||
+          current.orientation != BarOrientation.horizontal,
+    )) {
+      throw ArgumentError(
+        'Horizontal bars require every series in the chart to be a horizontal BarChartSeries',
+      );
+    }
   }
 }
 

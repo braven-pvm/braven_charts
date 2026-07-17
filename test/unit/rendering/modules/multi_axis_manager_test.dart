@@ -2,6 +2,7 @@
 // Multi-Axis Manager Tests
 
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
+import 'package:braven_charts/src/models/bar_chart_style.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/normalization_mode.dart';
@@ -582,6 +583,57 @@ void main() {
         // Data range: 10-90. With 5% padding of 80 = 4: 10-4=6, 90+4=94
         expect(bounds['axis1']!.min, closeTo(6.0, 0.001));
         expect(bounds['axis1']!.max, closeTo(94.0, 0.001));
+      });
+
+      test('computeAxisBounds includes stacked totals on a shared axis', () {
+        manager.setSeries([
+          BarChartSeries(
+            id: 'first',
+            points: const [ChartDataPoint(x: 0, y: 40)],
+            barWidthPercent: 0.8,
+            layoutMode: BarLayoutMode.stacked,
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+            ),
+          ),
+          BarChartSeries(
+            id: 'second',
+            points: const [ChartDataPoint(x: 0, y: 70)],
+            barWidthPercent: 0.8,
+            layoutMode: BarLayoutMode.stacked,
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+            ),
+          ),
+        ]);
+
+        final bounds = manager.computeAxisBounds();
+        expect(bounds['axis1']!.min, closeTo(-5.5, 0.001));
+        expect(bounds['axis1']!.max, closeTo(115.5, 0.001));
+      });
+
+      test('computeAxisBounds includes floating bar starts and ends', () {
+        manager.setSeries([
+          BarChartSeries(
+            id: 'range',
+            points: const [
+              ChartDataPoint(x: 0, y: 60),
+              ChartDataPoint(x: 1, y: 75),
+            ],
+            barWidthPercent: 0.8,
+            rangeStartValues: const [40, 55],
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+            ),
+          ),
+        ]);
+
+        final bounds = manager.computeAxisBounds();
+        expect(bounds['axis1']!.min, closeTo(38.25, 0.001));
+        expect(bounds['axis1']!.max, closeTo(76.75, 0.001));
       });
 
       test('computeAxisBounds uses default 0-100 when no data', () {

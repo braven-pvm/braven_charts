@@ -191,6 +191,40 @@ void main() {
                   barWidthPixels: 14,
                   minWidth: 5,
                   maxWidth: 42,
+                  barGap: 6,
+                  layoutMode: BarLayoutMode.normalizedStacked,
+                  groupId: 'actual',
+                  overlayWidthFactor: 0.62,
+                  overlayOffsetFactor: 0.14,
+                  baselineValue: -2,
+                  minBarLength: 4,
+                  barStyle: BarChartStyle(
+                    cornerRadius: 7,
+                    cornerRadiusPolicy: BarCornerRadiusPolicy.all,
+                    opacity: 0.85,
+                    gradient: BarGradient(
+                      colors: [Color(0xFF123456), Color(0xFF65AADD)],
+                      stops: [0, 1],
+                    ),
+                    border: BarBorderStyle(color: Color(0xFF0A0A0A), width: 2),
+                  ),
+                  trackStyle: BarTrackStyle(
+                    color: Color(0xFFE0E0E0),
+                    value: 10,
+                    opacity: 0.6,
+                    cornerRadius: 9,
+                    border: BarBorderStyle(color: Color(0xFFB0B0B0)),
+                  ),
+                  labelStyle: BarLabelStyle(
+                    show: true,
+                    position: BarLabelPosition.insideEnd,
+                    valueMode: BarLabelValueMode.percentage,
+                    color: Color(0xFFFFFFFF),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    showUnit: true,
+                    padding: 5,
+                  ),
                 ),
               )
               as BarChartSeries;
@@ -199,6 +233,29 @@ void main() {
       expect(bar.barWidthPixels, 14);
       expect(bar.minWidth, 5);
       expect(bar.maxWidth, 42);
+      expect(bar.barGap, 6);
+      expect(bar.layoutMode, BarLayoutMode.normalizedStacked);
+      expect(bar.groupId, 'actual');
+      expect(bar.overlayWidthFactor, 0.62);
+      expect(bar.overlayOffsetFactor, 0.14);
+      expect(bar.baselineValue, -2);
+      expect(bar.minBarLength, 4);
+      expect(bar.barStyle.cornerRadius, 7);
+      expect(bar.barStyle.cornerRadiusPolicy, BarCornerRadiusPolicy.all);
+      expect(bar.barStyle.opacity, 0.85);
+      expect(bar.barStyle.gradient?.colors, const [
+        Color(0xFF123456),
+        Color(0xFF65AADD),
+      ]);
+      expect(bar.barStyle.gradient?.stops, const [0, 1]);
+      expect(bar.barStyle.border?.width, 2);
+      expect(bar.trackStyle?.value, 10);
+      expect(bar.trackStyle?.border?.color, const Color(0xFFB0B0B0));
+      expect(bar.labelStyle.show, isTrue);
+      expect(bar.labelStyle.position, BarLabelPosition.insideEnd);
+      expect(bar.labelStyle.valueMode, BarLabelValueMode.percentage);
+      expect(bar.labelStyle.fontWeight, FontWeight.w700);
+      expect(bar.labelStyle.padding, 5);
 
       final base = _roundTrip(
         const ChartSeries(
@@ -209,6 +266,85 @@ void main() {
       );
       expect(base.runtimeType, ChartSeries);
       expect(base.style, SeriesStyle.line);
+    });
+
+    test('round-trips floating range bars and range labels', () {
+      final source = const BarChartSeries(
+        id: 'temperature-range',
+        points: [
+          ChartDataPoint(x: 0, y: 25),
+          ChartDataPoint(x: 1, y: 29),
+          ChartDataPoint(x: 2, y: 27),
+        ],
+        barWidthPercent: 0.7,
+        rangeStartValues: [14, null, 15],
+        labelStyle: BarLabelStyle(
+          show: true,
+          position: BarLabelPosition.rangeEnds,
+          valueMode: BarLabelValueMode.range,
+          showUnit: true,
+        ),
+      );
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+
+      expect(decoded.rangeStartValues, const [14, null, 15]);
+      expect(decoded.rangeStartValueFor(0), 14);
+      expect(decoded.rangeStartValueFor(1), decoded.baselineValue);
+      expect(decoded.labelStyle.position, BarLabelPosition.rangeEnds);
+      expect(decoded.labelStyle.valueMode, BarLabelValueMode.range);
+    });
+
+    test('round-trips waterfall totals, semantic colors, and connectors', () {
+      const source = BarChartSeries(
+        id: 'profit-bridge',
+        points: [
+          ChartDataPoint(x: 0, y: 120),
+          ChartDataPoint(x: 1, y: -35),
+          ChartDataPoint(x: 2, y: 0),
+        ],
+        barWidthPercent: 0.72,
+        layoutMode: BarLayoutMode.waterfall,
+        waterfallTotalIndices: {2},
+        waterfallStyle: BarWaterfallStyle(
+          increaseColor: Color(0xFF168AAD),
+          decreaseColor: Color(0xFFF9735B),
+          totalColor: Color(0xFF3D3560),
+          connector: BarWaterfallConnectorStyle(
+            color: Color(0xFF737373),
+            width: 1.5,
+          ),
+        ),
+        labelStyle: BarLabelStyle(
+          show: true,
+          valueMode: BarLabelValueMode.waterfall,
+        ),
+      );
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+
+      expect(decoded.layoutMode, BarLayoutMode.waterfall);
+      expect(decoded.waterfallTotalIndices, const {2});
+      expect(decoded.waterfallStyle.increaseColor, const Color(0xFF168AAD));
+      expect(decoded.waterfallStyle.decreaseColor, const Color(0xFFF9735B));
+      expect(decoded.waterfallStyle.totalColor, const Color(0xFF3D3560));
+      expect(decoded.waterfallStyle.connector.color, const Color(0xFF737373));
+      expect(decoded.waterfallStyle.connector.width, 1.5);
+      expect(decoded.labelStyle.valueMode, BarLabelValueMode.waterfall);
+    });
+
+    test('round-trips horizontal bar orientation', () {
+      const source = BarChartSeries(
+        id: 'ranked',
+        points: [ChartDataPoint(x: 0, y: 96), ChartDataPoint(x: 1, y: 84)],
+        barWidthPercent: 0.72,
+        orientation: BarOrientation.horizontal,
+      );
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+
+      expect(decoded.orientation, BarOrientation.horizontal);
+      expect(decoded, source);
     });
 
     test('uses stable built-in type and capability identifiers', () {
@@ -309,6 +445,24 @@ void main() {
         axisFormatter.error.code,
         ChartArtifactDiagnosticCodes.runtimeBindingRequired,
       );
+
+      final barFormatter =
+          ChartSeriesDocumentCodec.encode(
+                BarChartSeries(
+                  id: 'bar-callback',
+                  points: const [],
+                  barWidthPercent: 0.7,
+                  labelStyle: BarLabelStyle(
+                    formatter: (point) => point.y.toString(),
+                  ),
+                ),
+              )
+              as ChartArtifactFailure<ChartSeriesDocument>;
+      expect(
+        barFormatter.error.code,
+        ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+      );
+      expect(barFormatter.error.path, contains('barLabels.formatter'));
     });
 
     test('round-trips series-level annotations', () {

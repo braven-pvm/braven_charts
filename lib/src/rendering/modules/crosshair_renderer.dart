@@ -21,6 +21,7 @@ import '../../models/x_axis_config.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
 import '../multi_axis_normalizer.dart';
+import '../transposed_bar_axis_layout.dart';
 
 // Re-export DataRange for use by callers
 export '../../models/data_range.dart' show DataRange;
@@ -398,9 +399,15 @@ class CrosshairRenderer {
 
     // Calculate tracking state
     final seriesList = seriesElements.map((e) => e.series).toList();
+    final categoryScreenPosition = transform.transposed
+        ? cursorPosition.dy
+        : cursorPosition.dx;
+    final trackingBounds = transform.transposed
+        ? Rect.fromLTWH(plotArea.top, 0, plotArea.height, 1)
+        : plotArea;
     final trackingState = CrosshairTracker.calculateTrackingState(
-      screenX: cursorPosition.dx,
-      chartBounds: plotArea,
+      screenX: categoryScreenPosition,
+      chartBounds: trackingBounds,
       xMin: transform.dataXMin,
       xMax: transform.dataXMax,
       seriesList: seriesList,
@@ -444,6 +451,7 @@ class CrosshairRenderer {
         trackingState: trackingState,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
+        seriesElements: seriesElements,
       );
     }
 
@@ -459,6 +467,39 @@ class CrosshairRenderer {
         trackingState: trackingState,
         multiAxisInfo: multiAxisInfo,
       );
+    }
+
+    if (transform.transposed) {
+      _paintTransposedTrackingCategoryLabel(
+        canvas: canvas,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        theme: theme,
+        dataX: trackingState.dataX,
+        seriesElements: seriesElements,
+        xAxisConfig: xAxisConfig,
+      );
+      final isPerSeries =
+          multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+      final value = isPerSeries
+          ? (cursorPosition.dx - plotArea.left) / plotArea.width
+          : transform
+                .plotToData(
+                  cursorPosition.dx - plotArea.left,
+                  cursorPosition.dy - plotArea.top,
+                )
+                .dy;
+      _paintTransposedValueLabels(
+        canvas: canvas,
+        size: size,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        theme: theme,
+        value: value,
+        isNormalized: isPerSeries,
+        multiAxisInfo: multiAxisInfo,
+      );
+      return;
     }
 
     // Draw X label
@@ -531,6 +572,64 @@ class CrosshairRenderer {
     }
   }
 
+  void _paintTransposedTrackingCategoryLabel({
+    required Canvas canvas,
+    required Offset cursorPosition,
+    required Rect plotArea,
+    required ChartTheme? theme,
+    required double dataX,
+    required List<SeriesElement> seriesElements,
+    XAxisConfig? xAxisConfig,
+  }) {
+    if (xAxisConfig?.visible == false ||
+        xAxisConfig?.showCrosshairLabel == false) {
+      return;
+    }
+    final labelStyle = theme?.interactionTheme.crosshairLabelStyle;
+    final textStyle =
+        labelStyle?.textStyle ??
+        const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final padding = labelStyle?.padding.left ?? 4.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
+    final displayValue =
+        xAxisConfig?.labelFormatter?.call(dataX) ?? _formatDataValue(dataX);
+    final painter = TextPainter(
+      text: TextSpan(text: displayValue, style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
+    final inside =
+        xAxisConfig?.crosshairLabelPosition ==
+        CrosshairLabelPosition.insidePlot;
+    final x = inside
+        ? plotArea.left + padding * 2
+        : plotArea.left - painter.width - padding * 2;
+    final y = (cursorPosition.dy - painter.height / 2).clamp(
+      plotArea.top + padding,
+      plotArea.bottom - painter.height - padding,
+    );
+    final background = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        x - padding,
+        y - padding,
+        painter.width + padding * 2,
+        painter.height + padding * 2,
+      ),
+      Radius.circular(borderRadius),
+    );
+    canvas.drawRRect(
+      background,
+      Paint()..color = axisColor.withValues(alpha: 0.15),
+    );
+    canvas.drawRRect(
+      background,
+      Paint()
+        ..color = axisColor.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke,
+    );
+    painter.paint(canvas, Offset(x, y));
+  }
+
   /// Paints coordinate labels (X and Y values).
   void _paintCrosshairLabels({
     required Canvas canvas,
@@ -550,6 +649,33 @@ class CrosshairRenderer {
     final dataPos = transform.plotToData(plotX, plotY);
     final dataX = dataPos.dx;
     final dataY = dataPos.dy;
+
+    if (transform.transposed) {
+      final isPerSeries =
+          multiAxisInfo.normalizationMode == NormalizationMode.perSeries;
+      _paintTransposedTrackingCategoryLabel(
+        canvas: canvas,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        theme: theme,
+        dataX: dataX,
+        seriesElements: seriesElements,
+        xAxisConfig: xAxisConfig,
+      );
+      _paintTransposedValueLabels(
+        canvas: canvas,
+        size: size,
+        cursorPosition: cursorPosition,
+        plotArea: plotArea,
+        theme: theme,
+        value: isPerSeries
+            ? (cursorPosition.dx - plotArea.left) / plotArea.width
+            : dataY,
+        isNormalized: isPerSeries,
+        multiAxisInfo: multiAxisInfo,
+      );
+      return;
+    }
 
     final interactionTheme = theme?.interactionTheme;
     final labelStyle = interactionTheme?.crosshairLabelStyle;
@@ -665,6 +791,97 @@ class CrosshairRenderer {
     // This respects the axis configuration intent
   }
 
+  void _paintTransposedValueLabels({
+    required Canvas canvas,
+    required Size size,
+    required Offset cursorPosition,
+    required Rect plotArea,
+    required ChartTheme? theme,
+    required double value,
+    required bool isNormalized,
+    required MultiAxisInfo multiAxisInfo,
+  }) {
+    final axes = multiAxisInfo.effectiveAxes
+        .where((axis) => axis.visible && axis.showCrosshairLabel)
+        .toList(growable: false);
+    if (axes.isEmpty) return;
+    final labelStyle = theme?.interactionTheme.crosshairLabelStyle;
+    final textStyle =
+        labelStyle?.textStyle ??
+        const TextStyle(color: Color(0xFF000000), fontSize: 10);
+    final padding = labelStyle?.padding.left ?? 4.0;
+    final borderRadius = labelStyle?.borderRadius ?? 3.0;
+    final axisLabelStyle =
+        theme?.axisStyle.labelStyle ??
+        const TextStyle(color: Color(0xFF000000), fontSize: 12);
+    final layout = TransposedBarAxisLayout(
+      axes: multiAxisInfo.effectiveAxes,
+      labelStyle: axisLabelStyle,
+    );
+    final axisRects = layout.axisRects(plotArea);
+    final bottomAxes = layout.bottomAxes;
+    final topAxes = layout.topAxes;
+
+    for (final axis in axes) {
+      final bounds = multiAxisInfo.axisBounds[axis.id];
+      final axisRect = axisRects[axis.id];
+      if (bounds == null || axisRect == null) continue;
+      final displayY = isNormalized
+          ? MultiAxisNormalizer.denormalize(value, bounds.min, bounds.max)
+          : value;
+      final displayValue =
+          axis.labelFormatter?.call(displayY) ??
+          '${_formatDataValue(displayY)}${axis.unit == null ? '' : ' ${axis.unit}'}';
+      final painter = TextPainter(
+        text: TextSpan(text: displayValue, style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final axisColor = multiAxisInfo.resolveAxisColor(axis);
+      final isBottom = TransposedBarAxisLayout.isBottom(axis);
+      final inside =
+          axis.crosshairLabelPosition == CrosshairLabelPosition.insidePlot;
+      final x = (cursorPosition.dx - painter.width / 2).clamp(
+        plotArea.left + padding,
+        plotArea.right - painter.width - padding,
+      );
+      final double y;
+      if (inside) {
+        final sideAxes = isBottom ? bottomAxes : topAxes;
+        final index = sideAxes.indexWhere(
+          (candidate) => candidate.id == axis.id,
+        );
+        final offset = (index + 1) * (painter.height + padding * 2);
+        y = isBottom
+            ? plotArea.bottom - offset
+            : plotArea.top + offset - painter.height;
+      } else {
+        y = isBottom
+            ? axisRect.top + padding * 2
+            : axisRect.bottom - painter.height - padding * 2;
+      }
+      final background = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          x - padding,
+          y - padding,
+          painter.width + padding * 2,
+          painter.height + padding * 2,
+        ),
+        Radius.circular(borderRadius),
+      );
+      canvas.drawRRect(
+        background,
+        Paint()..color = axisColor.withValues(alpha: 0.15),
+      );
+      canvas.drawRRect(
+        background,
+        Paint()
+          ..color = axisColor.withValues(alpha: 0.6)
+          ..style = PaintingStyle.stroke,
+      );
+      painter.paint(canvas, Offset(x, y));
+    }
+  }
+
   /// Paints per-axis crosshair labels.
   ///
   /// When [isNormalized] is true, [yValue] is in 0-1 range and will be
@@ -764,6 +981,7 @@ class CrosshairRenderer {
     required CrosshairTrackingState trackingState,
     required CrosshairConfig crosshairConfig,
     required MultiAxisInfo multiAxisInfo,
+    required List<SeriesElement> seriesElements,
   }) {
     // Save canvas state and clip to plot area to prevent markers from
     // rendering outside the plot boundaries
@@ -771,9 +989,26 @@ class CrosshairRenderer {
     canvas.clipRect(plotArea);
 
     for (final value in trackingState.seriesValues) {
+      var screenX = cursorPosition.dx;
       double screenY;
 
-      if (multiAxisInfo.effectiveAxes.length > 1) {
+      SeriesElement? seriesElement;
+      if (!value.isTrend) {
+        for (final candidate in seriesElements) {
+          if (candidate.id == value.seriesId) {
+            seriesElement = candidate;
+            break;
+          }
+        }
+      }
+      final barGeometry = seriesElement?.barGeometryForPoint(
+        value.dataPointIndex,
+      );
+
+      if (barGeometry != null) {
+        screenX = plotArea.left + barGeometry.valueEndX;
+        screenY = plotArea.top + barGeometry.valueEndY;
+      } else if (multiAxisInfo.effectiveAxes.length > 1) {
         // Look up the axis for this series (use linked series ID for trends)
         final axisConfig = SeriesAxisResolver.resolveAxis(
           value.axisSeriesId,
@@ -813,7 +1048,7 @@ class CrosshairRenderer {
         ..color = value.seriesColor
         ..style = PaintingStyle.fill;
       canvas.drawCircle(
-        Offset(cursorPosition.dx, screenY),
+        Offset(screenX, screenY),
         crosshairConfig.intersectionMarkerRadius,
         markerPaint,
       );
@@ -824,7 +1059,7 @@ class CrosshairRenderer {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
       canvas.drawCircle(
-        Offset(cursorPosition.dx, screenY),
+        Offset(screenX, screenY),
         crosshairConfig.intersectionMarkerRadius,
         borderPaint,
       );

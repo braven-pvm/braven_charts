@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'pages/annotations_page.dart';
 import 'pages/axes_page.dart';
 import 'pages/artifact_showcase_page.dart';
+import 'pages/bar_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/chart_workbench_page.dart';
 import 'pages/gallery_page.dart';
@@ -128,6 +129,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
       page: ChartTypesPage(),
+    ),
+    const NavDestination(
+      label: 'Bar Lab',
+      icon: Icons.bar_chart_outlined,
+      selectedIcon: Icons.bar_chart,
+      page: BarLabPage(),
+      routeSlug: 'bar-lab',
     ),
     const NavDestination(
       label: 'Interaction',

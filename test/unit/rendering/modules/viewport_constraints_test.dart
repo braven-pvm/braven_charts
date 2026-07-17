@@ -154,10 +154,7 @@ void main() {
       }
 
       test('allows pan within bounds', () {
-        final currentTransform = createTransform(
-          dataXMin: 25,
-          dataXMax: 75,
-        );
+        final currentTransform = createTransform(dataXMin: 25, dataXMax: 75);
         final constraintTransform = createTransform();
 
         // Small pan that stays within bounds
@@ -245,10 +242,7 @@ void main() {
 
       test('allows full movement when viewport larger than data', () {
         // Zoomed out so viewport is larger than data
-        final currentTransform = createTransform(
-          dataXMin: -50,
-          dataXMax: 150,
-        );
+        final currentTransform = createTransform(dataXMin: -50, dataXMax: 150);
         final constraintTransform = createTransform();
 
         // Large pan request
@@ -261,6 +255,76 @@ void main() {
 
         // Should allow full movement (defensive case)
         expect(result.dx, equals(200));
+      });
+
+      test('transposed horizontal pan is clamped by value-axis bounds', () {
+        const currentTransform = ChartTransform(
+          dataXMin: 25,
+          dataXMax: 75,
+          dataYMin: 0,
+          dataYMax: 100,
+          plotWidth: 800,
+          plotHeight: 600,
+          invertY: true,
+          transposed: true,
+        );
+        const constraintTransform = ChartTransform(
+          dataXMin: 0,
+          dataXMax: 100,
+          dataYMin: 0,
+          dataYMax: 100,
+          plotWidth: 800,
+          plotHeight: 600,
+          invertY: true,
+          transposed: true,
+        );
+
+        final result = constraints.clampPanDelta(
+          requestedPlotDx: -200,
+          requestedPlotDy: 0,
+          currentTransform: currentTransform,
+          constraintTransform: constraintTransform,
+        );
+        final panned = currentTransform.pan(result.dx, result.dy);
+
+        expect(result.dx, closeTo(-80, 0.01));
+        expect(panned.dataXMin, currentTransform.dataXMin);
+        expect(panned.dataYMin, closeTo(-10, 0.01));
+      });
+
+      test('transposed vertical pan is clamped by category-axis bounds', () {
+        const currentTransform = ChartTransform(
+          dataXMin: 0,
+          dataXMax: 100,
+          dataYMin: 25,
+          dataYMax: 75,
+          plotWidth: 800,
+          plotHeight: 600,
+          invertY: true,
+          transposed: true,
+        );
+        const constraintTransform = ChartTransform(
+          dataXMin: 0,
+          dataXMax: 100,
+          dataYMin: 0,
+          dataYMax: 100,
+          plotWidth: 800,
+          plotHeight: 600,
+          invertY: true,
+          transposed: true,
+        );
+
+        final result = constraints.clampPanDelta(
+          requestedPlotDx: 0,
+          requestedPlotDy: -200,
+          currentTransform: currentTransform,
+          constraintTransform: constraintTransform,
+        );
+        final panned = currentTransform.pan(result.dx, result.dy);
+
+        expect(result.dy, closeTo(-60, 0.01));
+        expect(panned.dataXMin, closeTo(-10, 0.01));
+        expect(panned.dataYMin, currentTransform.dataYMin);
       });
     });
   });

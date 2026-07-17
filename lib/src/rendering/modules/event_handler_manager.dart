@@ -1670,7 +1670,10 @@ class EventHandlerManager {
 
       for (int i = 0; i < element.series.points.length; i++) {
         final point = element.series.points[i];
-        final markerPlotPos = transform.dataToPlot(point.x, point.y);
+        final barGeometry = element.barGeometryForPoint(i);
+        final markerPlotPos = barGeometry == null
+            ? transform.dataToPlot(point.x, point.y)
+            : barGeometry.valueEndPoint;
         final distance = (plotPosition - markerPlotPos).distance;
 
         if (distance < minDistance) {

@@ -14,6 +14,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 ## Guides
 
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
+- [guides/bar-charts.md](guides/bar-charts.md) - Bar orientation, composition, floating ranges, styling, labels, and interaction
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system
