@@ -11,6 +11,7 @@ import 'pages/bar_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/chart_workbench_page.dart';
 import 'pages/cartesian_chart_type_pages.dart';
+import 'pages/donut_charts_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
 import 'pages/live_streaming_page.dart';
@@ -24,6 +25,7 @@ import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/chart_type_catalog.dart';
+import 'widgets/donut_gallery_cards.dart';
 import 'widgets/gallery_flagships.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
@@ -254,6 +256,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'bar-charts' => const BarLabPage(),
     'scatter-charts' => const ScatterChartsPage(),
     'pie-charts' => const PieChartsPage(),
+    'donut-charts' => const DonutChartsPage(),
     _ => throw StateError('No showcase page is registered for $slug'),
   };
 
@@ -299,6 +302,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       return const _HeroMediaCapture(
         panel: PerformanceIntelligenceHeroPanel.powerDuration,
       );
+    }
+    if (capture == 'donut-gallery') {
+      return const DonutGalleryMediaPanel();
     }
     final width = MediaQuery.of(context).size.width;
 

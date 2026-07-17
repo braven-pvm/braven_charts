@@ -116,12 +116,27 @@ schema version `1`. Store the JSON string as UTF-8; do not depend on the
 private files under `lib/src` or on the order of Dart object fields.
 
 Built-in series capabilities are explicit. A pie document declares
-`series.pie` and `series.pie.style.v2`; a reader that does not support those
+`series.pie`, `series.pie.style.v2`, and
+`series.pie.corner-treatment.v1`; a reader that does not support those
 capabilities rejects the document instead of interpreting or silently
 degrading radial data. Capability negotiation adds the advanced style payload
 without changing schema version 1. Pie series and theme payloads preserve
-physical separation, corners, opacity, elevation, callout styling, and
+physical separation, corner radius/treatment, opacity, elevation, callout
+styling, and
 animation mode alongside the original geometry.
+
+Variable-radius Pie documents additionally declare
+`series.pie.variable-radius.v1` and preserve the raw per-point radius metric,
+mapping scale, minimum factor, label, and unit. Uniform Pie documents omit the
+capability for compatibility with readers that support the established Pie
+contract.
+
+Donut documents declare `series.donut` and `series.donut.style.v1` so an older
+reader never guesses that annular geometry is Pie. Visible center text adds
+`series.donut.center-content.v1`; variable outer radii add
+`series.donut.variable-radius.v1`. These capabilities preserve the inner
+radius, partial sweep, center mode/styles, optional second metric, and stable
+point identity through JSON, preview capture, and hydration.
 
 ## Hydrate a fresh chart
 
@@ -188,7 +203,7 @@ per-row representation. `ChartDataTable` virtualizes rows, keeps raw values
 for export, and derives its colors and typography from `ChartDataTableTheme`
 and `ThemeData` unless overridden.
 
-A document containing one `PieChartSeries` automatically uses the native pie
+A document containing one `PieChartSeries` or `DonutChartSeries` automatically uses the native radial
 projection instead of exposing its ordering ordinals as an X axis:
 
 ```text
@@ -196,11 +211,15 @@ projection instead of exposing its ordering ordinals as an X axis:
 1 │ Subscriptions │ 42.00       │ 42.00%
 ```
 
-Pie rows preserve the original `ChartPointRef`, raw contribution, calculated
+Radial rows preserve the original `ChartPointRef`, raw contribution, calculated
 share, category, unit, and resolved slice color. Pass `selectedPointRefs` to
 mirror durable slice selection into the row. Row activation can send the same
 reference back through `BravenChartController.selectPoints` using the
 snapshot revision.
+
+When the radial series carries a variable-radius metric, the table inserts its configured
+label and unit as a sortable column between Value and Share. Copy and CSV
+exports include the display and raw radius values respectively.
 
 ### Built-in copy and export actions
 

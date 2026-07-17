@@ -275,6 +275,53 @@ void main() {
       );
     });
 
+    test('projects the optional Pie radius metric as a native column', () {
+      final pie = PieChartSeries.fromMap(
+        id: 'countries',
+        unit: 'people/km²',
+        values: const {'Germany': 233, 'Spain': 96},
+        radiusValues: const {'Germany': 357022, 'Spain': 505990},
+        sliceRadiusConfig: const PieSliceRadiusConfig(
+          label: 'Total area',
+          unit: 'km²',
+        ),
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(pie)).value]),
+      );
+
+      expect(model.hasPieRadiusValues, isTrue);
+      expect(model.pieRadiusColumnLabel, 'Total area (km²)');
+      expect(model.pieRows.first.radiusRaw, 357022);
+      expect(model.pieRows.first.radiusDisplay, '357022.00');
+      expect(model.pieRows.first.radiusLabel, 'Total area');
+      expect(model.pieRows.first.radiusUnit, 'km²');
+    });
+
+    test('projects Donut documents through the radial category table', () {
+      final donut = DonutChartSeries.fromMap(
+        id: 'donut',
+        unit: 'vehicles',
+        values: const {'EV': 24, 'Hybrid': 13, 'Diesel': 63},
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([_success(ChartSeriesDocumentCodec.encode(donut)).value]),
+      );
+
+      expect(model.projectionKind, ChartTableProjectionKind.pie);
+      expect(model.xColumnLabel, 'Category');
+      expect(model.pieRows.map((row) => row.category), [
+        'EV',
+        'Hybrid',
+        'Diesel',
+      ]);
+      expect(model.pieRows.first.shareDisplay, '24.00%');
+      expect(
+        model.pieRows.first.reference,
+        const ChartPointRef(seriesId: 'donut', pointIndex: 0),
+      );
+    });
+
     test('keeps all-zero pie categories visible with zero shares', () {
       final pie = PieChartSeries.fromMap(
         id: 'zero',

@@ -82,6 +82,7 @@ class DataConverter {
         pointFocusColor: theme?.interactionTheme.crosshairColor,
         pointSelectionColor: theme?.interactionTheme.selectionColor,
         fontFamily: theme?.typographyTheme.fontFamily,
+        hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
       );
     }).toList();
   }
@@ -125,6 +126,11 @@ class DataConverter {
           if (start > yMax) yMax = start;
           if (end < yMin) yMin = end;
           if (end > yMax) yMax = end;
+          final target = s.targetValueFor(pointIndex);
+          if (target != null && target.isFinite) {
+            if (target < yMin) yMin = target;
+            if (target > yMax) yMax = target;
+          }
         } else {
           if (point.y < yMin) yMin = point.y;
           if (point.y > yMax) yMax = point.y;

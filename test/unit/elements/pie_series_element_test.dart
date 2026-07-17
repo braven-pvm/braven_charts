@@ -9,6 +9,193 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('PieSeriesElement', () {
+    test('renders Donut series through the shared radial element', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'donut',
+        values: const {'A': 2, 'B': 1},
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.6,
+          radiusFactor: 1,
+          sliceGap: 0,
+        ),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.series, same(series));
+      expect(
+        element.geometry.innerRadius,
+        closeTo(element.geometry.outerRadius * 0.6, 1e-9),
+      );
+      expect(element.hitTest(element.geometry.center), isFalse);
+      expect(
+        element.hitTest(element.geometry.slices.first.insideLabelAnchor),
+        isTrue,
+      );
+      expect(element.semanticDataHits, hasLength(2));
+    });
+
+    test('resolves total, selected, fallback, and custom center content', () {
+      DonutChartSeries series(DonutCenterContent centerContent) =>
+          DonutChartSeries.fromMap(
+            id: 'center',
+            unit: 'USD',
+            values: const {'Subscriptions': 42, 'Services': 58},
+            centerContent: centerContent,
+            donutStyle: const DonutChartStyle(
+              innerRadiusFactor: 0.62,
+              radiusFactor: 1,
+              sliceGap: 0,
+            ),
+          );
+
+      final fallback = PieSeriesElement(
+        series: series(
+          const DonutCenterContent(
+            valueMode: DonutCenterValueMode.selectedOrTotal,
+          ),
+        ),
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      expect(fallback.centerPresentation?.label, isNull);
+      expect(fallback.centerPresentation?.value, '100 USD');
+      expect(
+        fallback.centerPresentation?.semanticLabel,
+        contains('total fallback'),
+      );
+
+      final selected = PieSeriesElement(
+        series: fallback.series,
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+        selectedPointIndices: const {1},
+      );
+      expect(selected.centerPresentation?.label, 'Services');
+      expect(selected.centerPresentation?.value, '58 USD');
+      expect(selected.centerPresentation?.selectedPointIndex, 1);
+      expect(
+        selected.centerPresentation?.semanticLabel,
+        contains('selected slice Services'),
+      );
+
+      final selectedOnly = PieSeriesElement(
+        series: series(
+          const DonutCenterContent(
+            valueMode: DonutCenterValueMode.selectedValue,
+          ),
+        ),
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      expect(selectedOnly.centerPresentation, isNull);
+
+      final custom = PieSeriesElement(
+        series: series(
+          const DonutCenterContent(
+            label: 'Status',
+            valueMode: DonutCenterValueMode.custom,
+            customValue: 'Ready',
+          ),
+        ),
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      expect(custom.centerPresentation?.label, 'Status');
+      expect(custom.centerPresentation?.value, 'Ready');
+    });
+
+    test('paints styled center content inside the measured opening', () async {
+      const centerRed = Color(0xFFFF1744);
+      final element = PieSeriesElement(
+        series: DonutChartSeries.fromMap(
+          id: 'paint-center',
+          values: const {'Only': 1},
+          donutStyle: const DonutChartStyle(
+            innerRadiusFactor: 0.7,
+            radiusFactor: 1,
+            sliceGap: 0,
+            borderWidth: 0,
+          ),
+          centerContent: const DonutCenterContent(
+            valueMode: DonutCenterValueMode.custom,
+            customValue: 'X',
+            valueStyle: LabelStyle(
+              textStyle: TextStyle(
+                color: centerRed,
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+              ),
+              backgroundColor: Color(0x00000000),
+              borderColor: Color(0x00000000),
+              borderWidth: 0,
+              borderRadius: 0,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+        ),
+        size: const Size.square(200),
+        theme: ChartTheme.light,
+      );
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(200));
+      final image = await recorder.endRecording().toImage(200, 200);
+      addTearDown(image.dispose);
+      final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+      expect(bytes, isNotNull);
+
+      var redPixels = 0;
+      final bounds = element.centerContentBounds!;
+      for (var y = bounds.top.floor(); y < bounds.bottom.ceil(); y++) {
+        for (var x = bounds.left.floor(); x < bounds.right.ceil(); x++) {
+          final offset = (y * 200 + x) * 4;
+          final red = bytes!.getUint8(offset);
+          final green = bytes.getUint8(offset + 1);
+          final blue = bytes.getUint8(offset + 2);
+          if (red > 220 && green < 80 && blue < 110) redPixels++;
+        }
+      }
+      expect(redPixels, greaterThan(12));
+      expect(
+        element.centerContentBounds!.contains(element.geometry.center),
+        isTrue,
+      );
+      expect(element.semanticSummaries, hasLength(1));
+    });
+
+    test('large center text remains bounded and paints without overflow', () {
+      final element = PieSeriesElement(
+        series: DonutChartSeries.fromMap(
+          id: 'scaled-center',
+          values: const {'A': 1, 'B': 1},
+          donutStyle: const DonutChartStyle(innerRadiusFactor: 0.28),
+          centerContent: const DonutCenterContent(
+            label: 'A deliberately long label',
+            valueMode: DonutCenterValueMode.custom,
+            customValue: '123456789 units',
+          ),
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+        ),
+        size: const Size.square(180),
+        theme: ChartTheme.light,
+        textScaleFactor: 2.4,
+      );
+      final bounds = element.centerContentBounds!;
+      expect(
+        (bounds.center - element.geometry.center).distance,
+        lessThan(1e-9),
+      );
+      expect(bounds.width, lessThan(element.geometry.innerRadius * 2));
+      expect(
+        () => element.paint(Canvas(PictureRecorder()), const Size.square(180)),
+        returnsNormally,
+      );
+    });
+
     test('participates in the shared cached data-series contract', () {
       final series = PieChartSeries.fromMap(
         id: 'pie',
@@ -518,6 +705,11 @@ void main() {
         id: 'share',
         unit: 'USD',
         values: const {'Subscriptions': 42, 'Services': 58},
+        radiusValues: const {'Subscriptions': 120, 'Services': 80},
+        sliceRadiusConfig: const PieSliceRadiusConfig(
+          label: 'Total area',
+          unit: 'km²',
+        ),
       );
       final element = PieSeriesElement(
         series: series,
@@ -537,11 +729,15 @@ void main() {
       expect(hit.formattedValue, '42.00 USD');
       expect(hit.total, 100);
       expect(hit.share, 0.42);
+      expect(hit.radiusValue, 120);
+      expect(hit.formattedRadiusValue, '120.00 km²');
+      expect(hit.radiusLabel, 'Total area');
       expect(hit.ordinal, 1);
       expect(hit.count, 2);
       expect(hit.isSelected, isTrue);
       expect(hit.isFocused, isTrue);
       expect(hit.semanticLabel, contains('slice 1 of 2, selected'));
+      expect(hit.semanticLabel, contains('Total area 120.00 km²'));
     });
   });
 }

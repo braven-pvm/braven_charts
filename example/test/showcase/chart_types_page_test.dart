@@ -22,15 +22,15 @@ void main() {
       find.byKey(const ValueKey('chart-type-catalog-grid')),
       findsOneWidget,
     );
-    expect(find.byType(BravenChartPlus), findsNWidgets(5));
-    for (final family in ['Line', 'Area', 'Bar', 'Scatter', 'Pie']) {
+    expect(find.byType(BravenChartPlus), findsNWidgets(6));
+    for (final family in ['Line', 'Area', 'Bar', 'Scatter', 'Pie', 'Donut']) {
       expect(find.text(family), findsOneWidget);
     }
     expect(find.text('Chart Options'), findsNothing);
     expect(find.text('Regenerate Dataset'), findsNothing);
   });
 
-  testWidgets('family card opens the matching deep guide', (tester) async {
+  testWidgets('family cards open the matching deep guides', (tester) async {
     final pixelRatio = tester.view.devicePixelRatio;
     tester.view.physicalSize = Size(1440 * pixelRatio, 1000 * pixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
@@ -47,7 +47,10 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('chart-type-card-bar')));
     await tester.pump();
-
     expect(selectedSlug, 'bar-charts');
+
+    await tester.tap(find.byKey(const ValueKey('chart-type-card-donut')));
+    await tester.pump();
+    expect(selectedSlug, 'donut-charts');
   });
 }

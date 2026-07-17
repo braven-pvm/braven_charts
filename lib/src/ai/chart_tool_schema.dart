@@ -39,9 +39,10 @@ abstract final class ChartToolSchema {
 Creates an interactive BravenChartPlus chart from provided data.
 Use this tool when the user wants to visualize data as a chart.
 Cartesian charts support multiple overlaid series, axes, pan, zoom, and crosshair.
-Pie charts support one categorical series, slice tooltips, selection, labels,
-legend entries, and a Category / Value / Share data-table alternative.
-Pie charts do not use axes, crosshair, pan, or zoom.
+Pie and Donut charts support one categorical series, slice tooltips, selection,
+labels, legend entries, and a Category / Value / Share data-table alternative.
+Pie charts do not use axes, crosshair, pan, or zoom. Donut charts follow the
+same radial interaction contract.
 ''',
     'input_schema': {
       'type': 'object',
@@ -52,14 +53,14 @@ Pie charts do not use axes, crosshair, pan, or zoom.
         },
         'chart_type': {
           'type': 'string',
-          'enum': ['line', 'area', 'bar', 'scatter', 'pie'],
+          'enum': ['line', 'area', 'bar', 'scatter', 'pie', 'donut'],
           'description':
-              'Type of chart to render. Use pie for part-to-whole category contributions; pie requires exactly one series.',
+              'Type of chart to render. Pie and Donut show part-to-whole category contributions and require exactly one series.',
         },
         'series': {
           'type': 'array',
           'description':
-              'One or more Cartesian series, or exactly one series when chart_type is pie.',
+              'One or more Cartesian series, or exactly one series for Pie and Donut.',
           'items': {
             'type': 'object',
             'properties': {
@@ -83,6 +84,16 @@ Pie charts do not use axes, crosshair, pan, or zoom.
                 'description':
                     'Unit for Y-axis values (e.g., "W", "°C", "USD", "km/h")',
               },
+              'radius_label': {
+                'type': 'string',
+                'description':
+                    'Radial-only label for the optional radius metric (for example, "Total area").',
+              },
+              'radius_unit': {
+                'type': 'string',
+                'description':
+                    'Radial-only unit for the optional radius metric (for example, "km²").',
+              },
               'data': {
                 'type': 'array',
                 'description': 'Array of data points',
@@ -92,22 +103,28 @@ Pie charts do not use axes, crosshair, pan, or zoom.
                     'x': {
                       'type': 'number',
                       'description':
-                          'X-axis value for Cartesian charts. For pie, this is only a stable finite ordering index.',
+                          'X-axis value for Cartesian charts. For Pie and Donut, this is only a stable finite ordering index.',
                     },
                     'y': {
                       'type': 'number',
                       'description':
-                          'Y-axis value for Cartesian charts. For pie, this is a finite non-negative contribution.',
+                          'Y-axis value for Cartesian charts. For Pie and Donut, this is a finite non-negative contribution.',
                     },
                     'label': {
                       'type': 'string',
                       'description':
-                          'Optional Cartesian point label. Required and non-empty for every pie category.',
+                          'Optional Cartesian point label. Required and non-empty for every Pie or Donut category.',
                     },
                     'color': {
                       'type': 'string',
                       'description':
-                          'Optional pie-slice color as a hex code or named color.',
+                          'Optional radial-slice color as a hex code or named color.',
+                    },
+                    'radius': {
+                      'type': 'number',
+                      'minimum': 0,
+                      'description':
+                          'Optional radial second metric controlling slice radius. Supply it for every radial point when used.',
                     },
                     'timestamp': {
                       'type': 'string',
@@ -125,7 +142,7 @@ Pie charts do not use axes, crosshair, pan, or zoom.
         'x_axis': {
           'type': 'object',
           'description':
-              'Cartesian X-axis configuration. Omit when chart_type is pie.',
+              'Cartesian X-axis configuration. Omit when chart_type is pie or donut.',
           'properties': {
             'label': {
               'type': 'string',
@@ -150,7 +167,7 @@ Pie charts do not use axes, crosshair, pan, or zoom.
         'y_axis': {
           'type': 'object',
           'description':
-              'Cartesian Y-axis configuration. Omit when chart_type is pie; use series.unit for Cartesian multi-axis charts.',
+              'Cartesian Y-axis configuration. Omit for Pie and Donut; use series.unit for Cartesian multi-axis charts.',
           'properties': {
             'label': {
               'type': 'string',
@@ -216,71 +233,127 @@ Pie charts do not use axes, crosshair, pan, or zoom.
               'type': 'number',
               'description': 'Chart height in pixels (default: 300)',
             },
+            'donut_inner_radius_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'exclusiveMaximum': 1,
+              'description':
+                  'Donut-only circular opening as a fraction of the outer radius (default: 0.58).',
+            },
+            'donut_sweep_angle': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 360,
+              'description':
+                  'Donut-only total angular span in degrees (default: 360).',
+            },
+            'donut_center_visible': {
+              'type': 'boolean',
+              'description':
+                  'Show portable text content inside the Donut opening.',
+            },
+            'donut_center_value_mode': {
+              'type': 'string',
+              'enum': [
+                'total',
+                'selected_value',
+                'selected_or_total',
+                'custom',
+              ],
+              'description':
+                  'Donut center value source. Selected modes follow the durable slice selection.',
+            },
+            'donut_center_label': {
+              'type': 'string',
+              'description':
+                  'Optional short label above the Donut center value.',
+            },
+            'donut_center_custom_value': {
+              'type': 'string',
+              'description':
+                  'Portable custom center text required when donut_center_value_mode is custom.',
+            },
             'pie_start_angle': {
               'type': 'number',
               'description':
-                  'Pie-only starting angle in degrees (default: -90).',
+                  'Radial Pie/Donut starting angle in degrees (default: -90).',
             },
             'pie_clockwise': {
               'type': 'boolean',
-              'description': 'Pie-only slice direction (default: clockwise).',
+              'description':
+                  'Radial Pie/Donut slice direction (default: clockwise).',
             },
             'pie_radius_factor': {
               'type': 'number',
               'exclusiveMinimum': 0,
               'maximum': 1,
-              'description': 'Pie-only radius factor in the range (0, 1].',
+              'description':
+                  'Radial Pie/Donut outer-radius factor in the range (0, 1].',
+            },
+            'pie_radius_minimum_factor': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description':
+                  'Radial Pie/Donut minimum variable slice radius as a fraction of the maximum radius.',
+            },
+            'pie_radius_scale': {
+              'type': 'string',
+              'enum': ['area', 'linear'],
+              'description':
+                  'Radial Pie/Donut mapping for optional per-point radius values. Area is the perceptual default.',
             },
             'pie_slice_gap': {
               'type': 'number',
               'minimum': 0,
-              'description': 'Pie-only logical-pixel gap between slices.',
+              'description':
+                  'Radial Pie/Donut logical-pixel gap between slices.',
             },
             'pie_border_width': {
               'type': 'number',
               'minimum': 0,
-              'description': 'Pie-only slice-border width.',
+              'description': 'Radial Pie/Donut slice-border width.',
             },
             'pie_border_color': {
               'type': 'string',
               'description':
-                  'Pie-only fixed shared slice-border color. When supplied, this overrides the border color mode.',
+                  'Radial Pie/Donut fixed shared slice-border color. When supplied, this overrides the border color mode.',
             },
             'pie_border_color_mode': {
               'type': 'string',
               'enum': ['chart_theme', 'slice'],
               'description':
-                  'Pie-only fallback border policy: chart axis color or a color derived independently from each slice.',
+                  'Radial Pie/Donut fallback border policy: chart axis color or a color derived independently from each slice.',
             },
             'pie_border_hue_shift': {
               'type': 'number',
               'description':
-                  'Hue rotation in degrees for slice-derived Pie borders.',
+                  'Hue rotation in degrees for slice-derived radial borders.',
             },
             'pie_border_saturation_shift': {
               'type': 'number',
               'minimum': -1,
               'maximum': 1,
               'description':
-                  'Additive HSL saturation shift for slice-derived Pie borders.',
+                  'Additive HSL saturation shift for slice-derived radial borders.',
             },
             'pie_border_lightness_shift': {
               'type': 'number',
               'minimum': -1,
               'maximum': 1,
               'description':
-                  'Additive HSL lightness shift for slice-derived Pie borders; negative values create darker borders.',
+                  'Additive HSL lightness shift for slice-derived radial borders; negative values create darker borders.',
             },
             'pie_gradient_enabled': {
               'type': 'boolean',
               'description':
-                  'Whether the Pie slice gradient is enabled. A disabled series gradient can opt out of a theme gradient.',
+                  'Whether the radial Pie/Donut slice gradient is enabled. A disabled series gradient can opt out of a theme gradient.',
             },
             'pie_gradient_type': {
               'type': 'string',
               'enum': ['linear', 'radial'],
               'description':
-                  'Pie-only gradient geometry shared across all slices.',
+                  'Radial Pie/Donut gradient geometry shared across all slices.',
             },
             'pie_gradient_start_color': {
               'type': 'string',
@@ -309,52 +382,60 @@ Pie charts do not use axes, crosshair, pan, or zoom.
             'pie_gradient_angle': {
               'type': 'number',
               'description':
-                  'Linear Pie gradient direction in screen-space degrees; zero points right and 90 points down.',
+                  'Linear radial-slice gradient direction in screen-space degrees; zero points right and 90 points down.',
             },
             'pie_selection_explode_offset': {
               'type': 'number',
               'minimum': 0,
-              'description': 'Pie-only offset applied to a selected slice.',
+              'description':
+                  'Radial Pie/Donut offset applied to a selected slice.',
             },
             'pie_opacity': {
               'type': 'number',
               'minimum': 0,
               'maximum': 1,
-              'description': 'Pie-only slice opacity in the range [0, 1].',
+              'description':
+                  'Radial Pie/Donut slice opacity in the range [0, 1].',
             },
             'pie_corner_radius': {
               'type': 'number',
               'minimum': 0,
               'description':
-                  'Pie-only rounded-corner radius in logical pixels.',
+                  'Radial Pie/Donut rounded-corner radius in logical pixels.',
+            },
+            'pie_corner_treatment': {
+              'type': 'string',
+              'enum': ['round_all', 'outer_only', 'circular_center'],
+              'description':
+                  'Radial Pie/Donut policy for rounding every corner, only outer corners, or creating a uniform circular center gap.',
             },
             'pie_shadow_color': {
               'type': 'string',
-              'description': 'Optional Pie slice shadow color.',
+              'description': 'Optional radial-slice shadow color.',
             },
             'pie_shadow_blur': {
               'type': 'number',
               'minimum': 0,
-              'description': 'Pie slice shadow blur radius.',
+              'description': 'Radial-slice shadow blur radius.',
             },
             'pie_shadow_spread': {
               'type': 'number',
               'minimum': 0,
-              'description': 'Pie slice shadow spread radius.',
+              'description': 'Radial-slice shadow spread radius.',
             },
             'pie_shadow_offset_x': {
               'type': 'number',
-              'description': 'Horizontal Pie slice shadow offset.',
+              'description': 'Horizontal radial-slice shadow offset.',
             },
             'pie_shadow_offset_y': {
               'type': 'number',
-              'description': 'Vertical Pie slice shadow offset.',
+              'description': 'Vertical radial-slice shadow offset.',
             },
             'pie_shadow_opacity': {
               'type': 'number',
               'minimum': 0,
               'maximum': 1,
-              'description': 'Pie slice shadow opacity.',
+              'description': 'Radial-slice shadow opacity.',
             },
             'pie_selected_glow_color': {
               'type': 'string',
@@ -388,16 +469,16 @@ Pie charts do not use axes, crosshair, pan, or zoom.
             'pie_animation_mode': {
               'type': 'string',
               'enum': ['none', 'grow'],
-              'description': 'Pie entrance animation mode.',
+              'description': 'Radial Pie/Donut entrance animation mode.',
             },
             'show_data_labels': {
               'type': 'boolean',
-              'description': 'Show labels on eligible pie slices.',
+              'description': 'Show labels on eligible Pie/Donut slices.',
             },
             'pie_label_position': {
               'type': 'string',
               'enum': ['inside', 'outside'],
-              'description': 'Pie-only data-label placement.',
+              'description': 'Radial Pie/Donut data-label placement.',
             },
             'pie_label_content': {
               'type': 'string',
@@ -410,26 +491,26 @@ Pie charts do not use axes, crosshair, pan, or zoom.
                 'value_and_percentage',
                 'category_value_and_percentage',
               ],
-              'description': 'Pie-only label content.',
+              'description': 'Radial Pie/Donut label content.',
             },
             'pie_label_minimum_share': {
               'type': 'number',
               'minimum': 0,
               'maximum': 1,
-              'description': 'Minimum pie share eligible for a label.',
+              'description': 'Minimum radial-slice share eligible for a label.',
             },
             'pie_label_minimum_sweep': {
               'type': 'number',
               'minimum': 0,
               'maximum': 360,
               'description':
-                  'Minimum pie-slice sweep in degrees eligible for a label.',
+                  'Minimum radial-slice sweep in degrees eligible for a label.',
             },
             'pie_label_offset': {
               'type': 'number',
               'minimum': 0,
               'description':
-                  'Horizontal logical-pixel gap between the pie and outside labels. Zero keeps labels tight to the chart.',
+                  'Horizontal logical-pixel gap between the Pie/Donut and outside labels. Zero keeps labels tight to the chart.',
             },
           },
         },

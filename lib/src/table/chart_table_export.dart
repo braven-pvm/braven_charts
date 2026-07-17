@@ -154,11 +154,18 @@ abstract final class ChartTableExporter {
   ) => ChartTableRowExport(
     rowId: row.rowId,
     headers: headers(model),
-    rawValues: [displayIndex + 1, row.category, row.valueRaw, row.shareRaw],
+    rawValues: [
+      displayIndex + 1,
+      row.category,
+      row.valueRaw,
+      if (model.hasPieRadiusValues) row.radiusRaw,
+      row.shareRaw,
+    ],
     displayValues: [
       '${displayIndex + 1}',
       row.category,
       row.valueDisplay,
+      if (model.hasPieRadiusValues) row.radiusDisplay ?? 'No value',
       row.shareDisplay,
     ],
     references: [row.reference],
@@ -189,6 +196,7 @@ abstract final class ChartTableExporter {
           model.series.single.unit == null
               ? 'Value'
               : 'Value (${model.series.single.unit})',
+          ?model.pieRadiusColumnLabel,
           'Share',
         ],
       };

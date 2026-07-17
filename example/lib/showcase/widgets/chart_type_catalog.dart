@@ -60,7 +60,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Grouped, stacked, range, and waterfall data',
     icon: Icons.bar_chart,
     accent: Color(0xFF10B981),
-    highlights: ['Grouped + stacked', 'Horizontal', 'Waterfall'],
+    highlights: ['12+ layouts', 'Interactive states', 'Targets + motion'],
   ),
   ShowcaseChartType(
     type: ChartType.scatter,
@@ -82,6 +82,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     accent: Color(0xFFE11D48),
     highlights: ['Labels', 'Gradients', 'Selection'],
   ),
+  ShowcaseChartType(
+    type: ChartType.donut,
+    label: 'Donut',
+    slug: 'donut-charts',
+    summary: 'Contribution with contextual center content',
+    bestFor: 'Part-to-whole data that benefits from a central value',
+    icon: Icons.donut_large_outlined,
+    accent: Color(0xFF0F766E),
+    highlights: ['Center content', 'Partial sweeps', 'Variable radii'],
+  ),
 ];
 
 ShowcaseChartType showcaseChartTypeForSlug(String slug) =>
@@ -95,7 +105,8 @@ class ChartTypePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPie = chartType.type == ChartType.pie;
+    final isRadial =
+        chartType.type == ChartType.pie || chartType.type == ChartType.donut;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseTheme = isDark ? ChartTheme.dark : ChartTheme.light;
     final background = Color.alphaBlend(
@@ -108,7 +119,7 @@ class ChartTypePreview extends StatelessWidget {
         series: _previewSeries(chartType.type),
         theme: baseTheme.copyWith(backgroundColor: background),
         showLegend: false,
-        grid: isPie
+        grid: isRadial
             ? const GridConfig(horizontal: false, vertical: false)
             : GridConfig(
                 horizontal: true,
@@ -288,7 +299,7 @@ class ChartTypeCatalogStrip extends StatelessWidget {
         final fittedWidth =
             (constraints.maxWidth - (gap * (showcaseChartTypes.length - 1))) /
             showcaseChartTypes.length;
-        final fitAll = fittedWidth >= 210;
+        final fitAll = fittedWidth >= 176;
         final cardWidth = fitAll ? fittedWidth : 236.0;
         final row = Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -423,6 +434,40 @@ List<ChartSeries> _previewSeries(ChartType type) {
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.percentage,
           minimumShare: 0.12,
+        ),
+      ),
+    ],
+    ChartType.donut => [
+      DonutChartSeries.fromMap(
+        id: 'catalog-donut',
+        values: const {
+          'Product': 38,
+          'Services': 26,
+          'Platform': 21,
+          'Other': 15,
+        },
+        sliceColors: const {
+          'Product': Color(0xFF0F766E),
+          'Services': Color(0xFF14B8A6),
+          'Platform': Color(0xFF5EEAD4),
+          'Other': Color(0xFF99F6E4),
+        },
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.58,
+          radiusFactor: 0.78,
+          sliceGap: 3,
+          cornerRadius: 7,
+          borderWidth: 1,
+          borderColorMode: PieBorderColorMode.slice,
+        ),
+        centerContent: const DonutCenterContent(
+          label: 'Total',
+          valueMode: DonutCenterValueMode.total,
+        ),
+        dataLabels: const PieDataLabelConfig(
+          position: PieDataLabelPosition.inside,
+          content: PieDataLabelContent.percentage,
+          minimumShare: 0.14,
         ),
       ),
     ],

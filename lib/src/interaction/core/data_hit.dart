@@ -20,6 +20,9 @@ class ChartDataHit {
     this.category,
     this.total,
     this.share,
+    this.radiusValue,
+    this.formattedRadiusValue,
+    this.radiusLabel,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -48,6 +51,15 @@ class ChartDataHit {
   /// Fractional contribution in the inclusive range 0–1.
   final double? share;
 
+  /// Optional raw second metric controlling radial extent.
+  final double? radiusValue;
+
+  /// Optional formatted radius metric including its unit.
+  final String? formattedRadiusValue;
+
+  /// Optional human-readable name of the radius metric.
+  final String? radiusLabel;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -69,6 +81,9 @@ class ChartDataHit {
     final parts = <String>[name, formattedValue];
     if (share != null) {
       parts.add('${(share! * 100).toStringAsFixed(1)} percent');
+    }
+    if (formattedRadiusValue != null) {
+      parts.add('${radiusLabel ?? 'Radius'} $formattedRadiusValue');
     }
     parts.add('${share == null ? 'point' : 'slice'} $ordinal of $count');
     parts.add(isSelected ? 'selected' : 'not selected');

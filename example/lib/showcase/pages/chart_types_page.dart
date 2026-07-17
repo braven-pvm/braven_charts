@@ -73,7 +73,7 @@ class _OverviewIntroduction extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, and pie charts for a small part-to-whole story.',
+                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, and Pie or Donut charts for a small part-to-whole story.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     height: 1.45,
@@ -163,18 +163,23 @@ class _SelectionGuide extends StatelessWidget {
                 _GuideItem(
                   icon: Icons.category_outlined,
                   title: 'Discrete categories',
-                  body: 'Start with bar or pie.',
+                  body: 'Start with bar.',
                 ),
                 _GuideItem(
                   icon: Icons.scatter_plot_outlined,
                   title: 'Independent observations',
                   body: 'Start with scatter.',
                 ),
+                _GuideItem(
+                  icon: Icons.donut_large_outlined,
+                  title: 'Contribution to a whole',
+                  body: 'Start with Pie or Donut.',
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
-              'All Cartesian families can share Braven Charts interaction, axes, annotations, themes, tables, artifacts, and controller APIs.',
+              'Cartesian families share interaction, axes, and annotations. Every family supports themes, tables, artifacts, and controller APIs.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),

@@ -1,9 +1,8 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter Cartesian and pie charts with custom rendering, multi-axis
-  interaction, live streaming, editable annotations, data tables, and portable
-  artifacts.
-version: 0.4.0
+  Pure Dart Flutter line, area, bar, scatter, Pie, and Donut charts with custom
+  rendering, multi-axis interaction, streaming, annotations, tables, and artifacts.
+version: 0.5.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -18,12 +17,12 @@ topics:
 
 screenshots:
   - description: >-
-      Compact comparison of line, area, scatter, bar, and pie charts with
-      distinct native Flutter rendering and theme treatments.
+      Compact comparison of line, area, scatter, bar, pie, and Donut charts
+      with distinct native Flutter rendering and theme treatments.
     path: doc/screenshots/chart_type_strip.png
   - description: >-
-      Mixed interval chart with threshold-styled bars, cardiac drift, multiple
-      axes, tracking, LT1 annotations, and a polynomial trend.
+      Multi-axis training profile with a power area, heart-rate response,
+      stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
       Dark power-duration model with six curves, positive and negative
@@ -46,16 +45,17 @@ screenshots:
       highlighted VO2max event.
     path: doc/screenshots/gallery_vo2_stage.png
   - description: >-
-      Reusable lactate chart configuration presented as comparable reference
-      and current-session small multiples.
-    path: doc/screenshots/gallery_lactate.png
+      Three Donut compositions with selection-aware center content, a partial
+      sweep, variable radii, compact labels, and light and dark themes.
+    path: doc/screenshots/gallery_donut_collection.png
   - description: >-
       Live sensor data in a follow-latest viewport with a visible synchronized
       scrollbar.
     path: doc/screenshots/gallery_live_sensor.png
   - description: >-
-      Point, range, and threshold annotations combined in one analytical chart.
-    path: doc/screenshots/gallery_annotated.png
+      Grouped Bar chart with gradients, per-category target
+      markers, tracking tooltip, and durable point interaction.
+    path: doc/screenshots/bar_targets_interaction.png
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

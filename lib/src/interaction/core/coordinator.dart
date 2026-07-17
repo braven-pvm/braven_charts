@@ -98,6 +98,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
   /// as single spatial index entry (performance optimization).
   HoveredMarkerInfo? _hoveredMarker;
 
+  /// Marker currently held by the primary pointer button.
+  HoveredMarkerInfo? _pressedMarker;
+
   /// Set of currently pressed keyboard modifier keys.
   final Set<LogicalKeyboardKey> _modifierKeys = {};
 
@@ -132,6 +135,9 @@ class ChartInteractionCoordinator extends ChangeNotifier {
 
   /// Currently hovered marker within a series.
   HoveredMarkerInfo? get hoveredMarker => _hoveredMarker;
+
+  /// Marker currently receiving pressed-state feedback.
+  HoveredMarkerInfo? get pressedMarker => _pressedMarker;
 
   /// Whether Ctrl/Command modifier is pressed.
   bool get isCtrlPressed =>
@@ -211,6 +217,7 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     if (requestedMode == InteractionMode.zooming ||
         requestedMode == InteractionMode.panning) {
       _hoveredMarker = null;
+      _pressedMarker = null;
     }
 
     // Allow mode claim
@@ -369,6 +376,17 @@ class ChartInteractionCoordinator extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the marker receiving primary-button pressed feedback.
+  void setPressedMarker(HoveredMarkerInfo? marker) {
+    if (_pressedMarker?.sameMarkerAs(marker) ?? marker == null) {
+      if (_pressedMarker == null && marker == null) return;
+      _pressedMarker = marker;
+      return;
+    }
+    _pressedMarker = marker;
+    notifyListeners();
+  }
+
   // ============================================================================
   // Keyboard Modifier Tracking
   // ============================================================================
@@ -513,6 +531,7 @@ ChartInteractionCoordinator State:
   Active Element: ${_activeElement?.id ?? 'none'}
   Selected: ${_selectedElements.length} elements
   Hovered: ${_hoveredElement?.id ?? 'none'}
+  Pressed marker: ${_pressedMarker?.seriesId ?? 'none'}[${_pressedMarker?.markerIndex ?? '-'}]
   Modifiers: Ctrl:$isCtrlPressed Shift:$isShiftPressed Alt:$isAltPressed
   Interaction Start: $_interactionStartPosition
   Box Selection: $_boxSelectionRect
@@ -523,6 +542,7 @@ ChartInteractionCoordinator State:
   void dispose() {
     _isDisposed = true;
     _selectedElements.clear();
+    _pressedMarker = null;
     _modifierKeys.clear();
     super.dispose();
   }

@@ -75,6 +75,8 @@ For pie points:
 - `label` is the required, non-empty category;
 - point index is the stable identity used by `ChartPointRef`;
 - `PointStyle.color` overrides the resolved palette color for that slice;
+- `PointStyle.size` carries an optional raw second metric when variable slice
+  radii are enabled;
 - metadata is transported but not interpreted by the renderer.
 
 Zero values remain in artifacts and data tables but do not paint a slice. An
@@ -82,6 +84,48 @@ all-zero series renders the chart's configured empty state. Negative, `NaN`,
 infinite, or empty-label values fail with `ArgumentError` in release and debug
 modes. Duplicate labels are allowed because labels are display text, not
 identity.
+
+## Variable slice radii
+
+Use a variable-radius Pie when angle should compare one contribution and the
+outer radius should compare a second independent, non-negative metric. Supply
+one radius value for every category; partial maps fail validation instead of
+quietly mixing two encodings.
+
+```dart
+final countries = PieChartSeries.fromMap(
+  id: 'country-density-area',
+  unit: 'people/km²',
+  values: const {
+    'Germany': 233,
+    'Spain': 96,
+    'France': 119,
+  },
+  radiusValues: const {
+    'Germany': 357022,
+    'Spain': 505990,
+    'France': 551695,
+  },
+  sliceRadiusConfig: const PieSliceRadiusConfig(
+    minimumFactor: 0.35,
+    scale: PieSliceRadiusScale.area,
+    label: 'Total area',
+    unit: 'km²',
+  ),
+);
+```
+
+`y` still determines angular share. `radiusValues` determine only the outer
+radius and preserve insertion-order identity. Values must be finite and
+non-negative and must have exactly the same category keys as `values`.
+
+The renderer normalizes the visible radius domain between `minimumFactor` and
+the series' maximum `PieChartStyle.radiusFactor`. `PieSliceRadiusScale.area`
+is the default because equal normalized changes then produce equal visible
+area changes; use `linear` only when literal radius interpolation is the
+intended visual encoding. When all radius values are equal, every slice uses
+the full radius. Omitting both radius arguments preserves ordinary uniform Pie
+geometry.
 
 ## Composition boundary
 
@@ -109,6 +153,8 @@ const PieChartStyle(
     type: PieGradientType.linear,
     angleDegrees: -45,
   ),
+  cornerRadius: 10,
+  cornerTreatment: PieCornerTreatment.circularCenter,
   selectionExplodeOffset: 10,
 )
 ```
@@ -135,15 +181,33 @@ large slices terminate on the same outer ring. Increasing the gap therefore
 behaves like padding rather than sharpening the center or shrinking the
 largest category inward.
 
-The geometry preserves an internal inner-radius seam, but doughnut, nested,
-rose, and semi-circular charts are not part of this release.
+`cornerTreatment` makes the meaning of `cornerRadius` explicit:
+
+- `PieCornerTreatment.roundAll` is the compatibility default. It rounds the
+  two outer corners and independently rounds each slice tip at the center;
+- `PieCornerTreatment.outerOnly` rounds the outer circumference while keeping
+  each slice apex sharp;
+- `PieCornerTreatment.circularCenter` applies the same outer rounding and
+  subtracts one uniform circular opening. The opening is derived from the
+  effective corner radius and physical slice spacing, then capped against the
+  smallest visible slice so variable-radius data is not erased.
+
+The circular-center mode is still a Pie styling treatment: it does not expose
+an independently sized inner radius or Donut center content. Use
+`DonutChartSeries` when the hole itself carries product meaning; see the
+[Donut chart guide](donut_charts.md).
+
+The geometry preserves an internal inner-radius seam, but nested radial charts
+are not part of Pie. Variable-radius Pie is
+supported through the explicit second-metric contract above; it is not an
+unlabeled per-slice styling trick.
 
 ## Theme and advanced slice styling
 
 `ChartTheme.pieChartTheme` defines reusable product-wide Pie defaults. A
-`PieChartStyle` may override gradient, opacity, corner radius, elevation, or
-animation for one series. Null series values continue to inherit the chart
-theme.
+`PieChartStyle` may override gradient, opacity, corner radius and treatment,
+elevation, or animation for one series. Null series values continue to inherit
+the chart theme.
 
 ```dart
 final theme = ChartTheme.light.copyWith(
@@ -163,6 +227,7 @@ final theme = ChartTheme.light.copyWith(
     ),
     opacity: 0.88,
     cornerRadius: 12,
+    cornerTreatment: PieCornerTreatment.circularCenter,
     shadow: PieElevationStyle(
       color: Color(0x401A1A1A),
       blurRadius: 8,
@@ -372,6 +437,17 @@ to 2 decimals by default, and provides row copy, bounded dataset copy, and CSV
 export. `BravenChartWorkbench` supplies revision-safe chart/table linking by
 default when the same behavior is needed in a reusable surface.
 
+Variable-radius documents add the configured second metric without changing
+the category projection:
+
+```text
+# | Category | Value (people/km²) | Total area (km²) | Share
+1 | Germany  | 233.00             | 357022.00        | 52.01%
+```
+
+The radius column participates in sorting, row and dataset copy, raw CSV
+export, and accessible row descriptions.
+
 ## Capture, JSON, preview, and restore
 
 Pie artifacts use the built-in `series.pie` capability and schema version 1.
@@ -410,8 +486,14 @@ final widget = switch (restored) {
 Slice order, values, labels, point styles, geometry, data labels, durable
 selection, theme, and optional revision-bound PNG preview round-trip through
 the artifact. New encoders declare both `series.pie` and
-`series.pie.style.v2`, so older readers fail closed rather than silently
+`series.pie.style.v2` and `series.pie.corner-treatment.v1`, so older readers
+fail closed rather than silently
 dropping advanced appearance values.
+
+A Pie using the second radius metric additionally requires
+`series.pie.variable-radius.v1`. Uniform Pie artifacts do not require that
+capability, while readers that do not understand the radius mapping reject a
+variable-radius document instead of flattening it into a misleading Pie.
 
 ## AI and tool configuration
 
@@ -420,10 +502,13 @@ series, a non-empty point label, a non-negative finite `y`, and a stable
 ordering `x`. Omit Cartesian axes, crosshair, pan, and zoom. Pie-specific style
 keys include start angle, direction, radius, gaps, fixed or slice-derived
 borders (including HSL shifts), linear/radial gradient type and stops, gradient
-angle/lightness shifts, explode offset, opacity, corner radius, shadow,
+angle/lightness shifts, explode offset, opacity, corner radius/treatment, shadow,
 selected glow, animation mode, label position/content, and label thresholds.
 Use `pie_label_offset` to move outside-label lanes away from their compact
-zero-offset position.
+zero-offset position. Each Pie point may also include `radius`; when one point
+uses it, every point must. Set series-level `radius_label` and `radius_unit`,
+then choose `pie_radius_minimum_factor` and `pie_radius_scale` (`area` or
+`linear`) in the chart style.
 
 ## Accessibility and responsive behavior
 
@@ -441,4 +526,5 @@ Open [Pie Charts](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 to change datasets, labels, geometry, themes, and interaction; switch among
 Chart, Data, and Split; change palettes, transparency, corners, elevation,
 callout/tooltip styles, and legend placement; capture canonical JSON and a
-preview; then restore a fresh chart runtime.
+preview; then restore a fresh chart runtime. Choose **Density and area** to
+exercise the variable-radius model and inspect its second table column.

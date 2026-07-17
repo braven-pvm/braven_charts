@@ -53,6 +53,7 @@ void main() {
     expect(find.text('Bar Charts'), findsOneWidget);
     expect(find.text('Scatter Charts'), findsOneWidget);
     expect(find.text('Pie Charts'), findsOneWidget);
+    expect(find.text('Donut Charts'), findsOneWidget);
     expect(find.text('Power + Lactate'), findsNothing);
     expect(find.text('Lactate Threshold'), findsNothing);
     expect(find.text('Multi-Axis'), findsOneWidget);
@@ -87,6 +88,11 @@ void main() {
 
     expect(find.text('Choose a category story'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
+
+    await tester.tap(find.text('Donut Charts'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Contribution ring'), findsOneWidget);
 
     await tester.tap(find.text('Performance'));
     await tester.pump(const Duration(milliseconds: 300));

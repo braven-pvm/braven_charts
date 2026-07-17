@@ -316,7 +316,8 @@ class _ChartDataTableState extends State<ChartDataTable> {
             ChartTableProjectionKind.pie =>
               tableTheme.rowNumberWidth +
                   192 +
-                  tableTheme.seriesColumnWidth * 2 +
+                  tableTheme.seriesColumnWidth *
+                      (model.hasPieRadiusValues ? 3 : 2) +
                   (widget.showCopyRowAction ? 44 : 0),
           },
         );
@@ -430,6 +431,16 @@ class _ChartDataTableState extends State<ChartDataTable> {
             theme: tableTheme,
             numeric: true,
           ),
+          if (model.pieRadiusColumnLabel case final radiusLabel?)
+            _SortHeader(
+              key: const ValueKey('chart-table-header-radius'),
+              label: radiusLabel,
+              columnId: 'radius',
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
           _SortHeader(
             key: const ValueKey('chart-table-header-share'),
             label: 'Share',
@@ -548,10 +559,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
       final row = pieRows[index];
       final references = List<ChartPointRef>.unmodifiable([row.reference]);
       final unitSuffix = row.unit == null ? '' : ' ${row.unit}';
+      final radiusSemantics = row.radiusLabel == null
+          ? ''
+          : ', ${row.radiusLabel}, ${row.radiusDisplay ?? 'No value'}${row.radiusUnit == null ? '' : ' ${row.radiusUnit}'}';
       return _FocusableTableRow(
         key: ValueKey(row.rowId),
         semanticsLabel:
-            'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
+            'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix$radiusSemantics, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
         references: references,
         selected: _isRowSelected(references),
         rowIndex: index,
@@ -595,6 +609,16 @@ class _ChartDataTableState extends State<ChartDataTable> {
             color: row.colorValue == null ? null : Color(row.colorValue!),
             theme: theme,
           ),
+          if (model.hasPieRadiusValues)
+            _TableCell(
+              key: ValueKey('chart-table-cell-radius-$index'),
+              text: row.radiusDisplay ?? 'No value',
+              width: theme.seriesColumnWidth,
+              numeric: true,
+              invalid: row.radiusRaw == null || !row.radiusRaw!.isFinite,
+              color: row.colorValue == null ? null : Color(row.colorValue!),
+              theme: theme,
+            ),
           _TableCell(
             key: ValueKey('chart-table-cell-share-$index'),
             text: row.shareDisplay,
@@ -846,6 +870,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
           right.category.toLowerCase(),
         ),
         'value' => _compareNumbers(left.valueRaw, right.valueRaw),
+        'radius' => _compareNullableNumbers(left.radiusRaw, right.radiusRaw),
         'share' => _compareNumbers(left.shareRaw, right.shareRaw),
         _ => 0,
       };

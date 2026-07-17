@@ -158,6 +158,29 @@ abstract interface class DataHitElement implements DataSeriesElement {
   Iterable<ChartDataHit> get semanticDataHits;
 }
 
+/// One non-interactive summary exposed by a custom-painted chart element.
+class ChartSemanticSummary {
+  const ChartSemanticSummary({
+    required this.id,
+    required this.label,
+    required this.bounds,
+  });
+
+  /// Stable identity within the owning chart element.
+  final String id;
+
+  /// Complete assistive description of the painted summary.
+  final String label;
+
+  /// Plot-local bounds occupied by the summary.
+  final Rect bounds;
+}
+
+/// Custom-painted element that contributes non-interactive summary semantics.
+abstract interface class ChartSemanticSummaryProvider implements ChartElement {
+  Iterable<ChartSemanticSummary> get semanticSummaries;
+}
+
 /// Mixin for elements with resize handles.
 ///
 /// Per conflict resolution scenario 1: Resize handles have priority 9

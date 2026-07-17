@@ -256,7 +256,7 @@ Long layout is the canonical lossless row representation. Table options also
 support all, visible, selected, or explicitly named series and optional
 viewport filtering.
 
-Pie documents use a dedicated `Category | Value | Share` projection. The
+Pie and Donut documents use a dedicated `Category | Value | Share` projection. The
 ordering X value remains internal, while every row retains its original
 `ChartPointRef`, raw contribution, unit, share, category, and resolved slice
 color. This keeps chart/table selection revision-safe without presenting pie
@@ -292,11 +292,23 @@ explicitly supplies a trusted adjacent-version migration chain. See
 [chart-artifact-migrations.md](chart-artifact-migrations.md).
 
 Built-in series capabilities also fail closed. Pie documents require
-`series.pie` and `series.pie.style.v2`; older readers reject those capabilities
+`series.pie`, `series.pie.style.v2`, and
+`series.pie.corner-treatment.v1`; older readers reject those capabilities
 rather than misrendering or silently dropping appearance. Advanced Pie
-values—gap separation, corners, opacity, elevation, callouts, and animation
+values—gap separation, corner radius/treatment, opacity, elevation, callouts,
+and animation
 mode—remain deterministic parts of the series/theme documents. Capability
 negotiation keeps this within schema version 1.
+
+Variable-radius Pie documents also require
+`series.pie.variable-radius.v1`. The capability covers the raw second metric,
+its area/linear mapping, minimum factor, label, and unit. It is omitted for a
+uniform Pie so established Pie documents retain their existing compatibility.
+
+Donut documents require `series.donut` and `series.donut.style.v1`. Visible
+center content adds `series.donut.center-content.v1`; variable outer radii add
+`series.donut.variable-radius.v1`. The reader therefore validates annular
+geometry and portable center behavior before constructing a runtime.
 
 ## Showcase checkpoints
 
@@ -315,3 +327,5 @@ query parameter:
 - `formatter-binding-lab`: safe formatter fallback and explicit host rebinding;
 - `pie-charts`: pie table projection, `series.pie`, preview capture, canonical
   JSON, and fresh-runtime restore.
+- `donut-charts`: radial table projection, selection-aware center content,
+  Donut capabilities, preview capture, canonical JSON, and fresh hydration.

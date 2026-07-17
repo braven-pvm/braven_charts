@@ -237,6 +237,12 @@ abstract final class ChartDocumentHydrator {
     'series.bar',
     'series.pie',
     'series.pie.style.v2',
+    'series.pie.corner-treatment.v1',
+    'series.pie.variable-radius.v1',
+    'series.donut',
+    'series.donut.style.v1',
+    'series.donut.center-content.v1',
+    'series.donut.variable-radius.v1',
     'annotation.point',
     'annotation.range',
     'annotation.text',
@@ -253,6 +259,7 @@ abstract final class ChartDocumentHydrator {
     'area',
     'bar',
     'pie',
+    'donut',
   };
   static const _builtInAnnotationTypes = <String>{
     'point',

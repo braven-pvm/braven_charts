@@ -9,6 +9,7 @@ import '../widgets/standard_options.dart';
 
 enum _BarLabPreset {
   capacity,
+  targets,
   rods,
   gradient,
   signed,
@@ -18,8 +19,48 @@ enum _BarLabPreset {
   waterfall,
   horizontal,
   axes,
+  motion,
+  states,
   stacked,
   normalized,
+}
+
+extension on _BarLabPreset {
+  String get label => switch (this) {
+    _BarLabPreset.capacity => 'Capacity',
+    _BarLabPreset.targets => 'Targets',
+    _BarLabPreset.rods => 'Rods',
+    _BarLabPreset.gradient => 'Gradient',
+    _BarLabPreset.signed => 'Signed',
+    _BarLabPreset.overlay => 'Overlay',
+    _BarLabPreset.offset => 'Offset',
+    _BarLabPreset.range => 'Range',
+    _BarLabPreset.waterfall => 'Waterfall',
+    _BarLabPreset.horizontal => 'Horizontal',
+    _BarLabPreset.axes => 'Axes',
+    _BarLabPreset.motion => 'Motion',
+    _BarLabPreset.states => 'States',
+    _BarLabPreset.stacked => 'Stacked',
+    _BarLabPreset.normalized => '100%',
+  };
+
+  IconData get icon => switch (this) {
+    _BarLabPreset.capacity => Icons.stacked_bar_chart,
+    _BarLabPreset.targets => Icons.flag_outlined,
+    _BarLabPreset.rods => Icons.equalizer,
+    _BarLabPreset.gradient => Icons.gradient,
+    _BarLabPreset.signed => Icons.swap_vert,
+    _BarLabPreset.overlay => Icons.layers_outlined,
+    _BarLabPreset.offset => Icons.compare_arrows,
+    _BarLabPreset.range => Icons.height,
+    _BarLabPreset.waterfall => Icons.waterfall_chart,
+    _BarLabPreset.horizontal => Icons.align_horizontal_left,
+    _BarLabPreset.axes => Icons.straighten,
+    _BarLabPreset.motion => Icons.animation,
+    _BarLabPreset.states => Icons.touch_app_outlined,
+    _BarLabPreset.stacked => Icons.stacked_bar_chart,
+    _BarLabPreset.normalized => Icons.percent,
+  };
 }
 
 /// Interactive review surface for the modern bar geometry and style system.
@@ -31,6 +72,7 @@ class BarLabPage extends StatefulWidget {
 }
 
 class _BarLabPageState extends State<BarLabPage> {
+  final BravenChartController _chartController = BravenChartController();
   static const _dayCategories = [
     'Mon',
     'Tue',
@@ -98,10 +140,18 @@ class _BarLabPageState extends State<BarLabPage> {
   BarCornerRadiusPolicy _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
   BarLabelPosition _labelPosition = BarLabelPosition.auto;
   double _labelEdgeOffset = 8;
+  double _dimmedOpacity = 0.42;
+  int _motionRevision = 0;
+  double _motionDurationMs = 650;
+  bool _animateBars = true;
+  bool _showTargets = false;
+  double _targetMarkerWidth = 2;
+  double _targetMarkerLength = 1.3;
 
   @override
   void initState() {
     super.initState();
+    _chartController.addListener(_onChartInteractionChanged);
     final requestedPreset = Uri.base.queryParameters['preset'];
     for (final preset in _BarLabPreset.values) {
       if (preset.name == requestedPreset) {
@@ -139,6 +189,18 @@ class _BarLabPageState extends State<BarLabPage> {
   }
 
   @override
+  void dispose() {
+    _chartController
+      ..removeListener(_onChartInteractionChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onChartInteractionChanged() {
+    if (mounted && _preset == _BarLabPreset.states) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ChartPageLayout(
       title: 'Bar Charts',
@@ -172,77 +234,43 @@ class _BarLabPageState extends State<BarLabPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<_BarLabPreset>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: _BarLabPreset.capacity,
-                    icon: Icon(Icons.stacked_bar_chart, size: 18),
-                    label: Text('Capacity'),
+            Wrap(
+              key: const ValueKey('bar-lab-preset-wrap'),
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final preset in _BarLabPreset.values)
+                  ChoiceChip(
+                    key: ValueKey('bar-lab-preset-${preset.name}'),
+                    showCheckmark: false,
+                    selected: preset == _preset,
+                    onSelected: (_) => _applyPreset(preset),
+                    avatar: Icon(
+                      preset.icon,
+                      size: 17,
+                      color: preset == _preset
+                          ? theme.colorScheme.onSecondaryContainer
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                    label: Text(preset.label),
+                    labelStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: preset == _preset
+                          ? theme.colorScheme.onSecondaryContainer
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: preset == _preset
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                    selectedColor: theme.colorScheme.secondaryContainer,
+                    backgroundColor: theme.colorScheme.surface,
+                    side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  ButtonSegment(
-                    value: _BarLabPreset.rods,
-                    icon: Icon(Icons.equalizer, size: 18),
-                    label: Text('Rods'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.gradient,
-                    icon: Icon(Icons.gradient, size: 18),
-                    label: Text('Gradient'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.signed,
-                    icon: Icon(Icons.swap_vert, size: 18),
-                    label: Text('Signed'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.overlay,
-                    icon: Icon(Icons.layers_outlined, size: 18),
-                    label: Text('Overlay'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.offset,
-                    icon: Icon(Icons.compare_arrows, size: 18),
-                    label: Text('Offset'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.range,
-                    icon: Icon(Icons.height, size: 18),
-                    label: Text('Range'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.waterfall,
-                    icon: Icon(Icons.waterfall_chart, size: 18),
-                    label: Text('Waterfall'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.horizontal,
-                    icon: Icon(Icons.align_horizontal_left, size: 18),
-                    label: Text('Horizontal'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.axes,
-                    icon: Icon(Icons.straighten, size: 18),
-                    label: Text('Axes'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.stacked,
-                    icon: Icon(Icons.stacked_bar_chart, size: 18),
-                    label: Text('Stacked'),
-                  ),
-                  ButtonSegment(
-                    value: _BarLabPreset.normalized,
-                    icon: Icon(Icons.percent, size: 18),
-                    label: Text('100%'),
-                  ),
-                ],
-                selected: {_preset},
-                onSelectionChanged: (selection) {
-                  _applyPreset(selection.single);
-                },
-              ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -259,7 +287,15 @@ class _BarLabPageState extends State<BarLabPage> {
 
   Widget _buildChartCard() {
     final lastCategory = _categories.length - 1;
+    final baseTheme = ChartTheme.light;
     final chart = BravenChartPlus(
+      bravenChartController: _chartController,
+      theme: baseTheme.copyWith(
+        animationTheme: baseTheme.animationTheme.copyWith(
+          dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
+          dataUpdateCurve: Curves.easeInOutCubic,
+        ),
+      ),
       series: _buildSeries(),
       showLegend: _preset != _BarLabPreset.waterfall,
       normalizationMode: _preset == _BarLabPreset.axes
@@ -292,6 +328,8 @@ class _BarLabPageState extends State<BarLabPage> {
         position: YAxisPosition.left,
         label: _preset == _BarLabPreset.offset
             ? 'Gold medals'
+            : _preset == _BarLabPreset.targets
+            ? 'Completion (%)'
             : _preset == _BarLabPreset.range
             ? 'Temperature (°C)'
             : _preset == _BarLabPreset.waterfall
@@ -530,11 +568,97 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
       ],
     ),
+    if (_preset == _BarLabPreset.targets)
+      OptionSection(
+        title: 'Benchmarks',
+        icon: Icons.flag_outlined,
+        children: [
+          BoolOption(
+            label: 'Target markers',
+            value: _showTargets,
+            subtitle: 'Show one benchmark across each bar',
+            onChanged: (value) => setState(() => _showTargets = value),
+          ),
+          if (_showTargets)
+            SliderOption(
+              label: 'Marker width',
+              value: _targetMarkerWidth,
+              min: 1,
+              max: 6,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _targetMarkerWidth = value),
+            ),
+          if (_showTargets)
+            SliderOption(
+              label: 'Marker span',
+              value: _targetMarkerLength,
+              min: 0.8,
+              max: 1.8,
+              divisions: 10,
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _targetMarkerLength = value),
+            ),
+        ],
+      ),
+    if (_preset == _BarLabPreset.states)
+      OptionSection(
+        title: 'Interaction',
+        icon: Icons.touch_app_outlined,
+        children: [
+          SliderOption(
+            label: 'Inactive opacity',
+            value: _dimmedOpacity,
+            min: 0.15,
+            max: 0.8,
+            divisions: 13,
+            decimalPlaces: 2,
+            onChanged: (value) => setState(() => _dimmedOpacity = value),
+          ),
+        ],
+      ),
+    if (_preset == _BarLabPreset.motion)
+      OptionSection(
+        title: 'Motion',
+        icon: Icons.animation,
+        children: [
+          SliderOption(
+            label: 'Duration',
+            value: _motionDurationMs,
+            min: 150,
+            max: 1200,
+            divisions: 21,
+            suffix: 'ms',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _motionDurationMs = value),
+          ),
+          BoolOption(
+            label: 'Animate bars',
+            value: _animateBars,
+            subtitle: 'Reduced-motion settings still take priority',
+            onChanged: (value) => setState(() => _animateBars = value),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const ValueKey('bar-lab-replay-motion'),
+              onPressed: _animateBars
+                  ? () => setState(() => _motionRevision++)
+                  : null,
+              icon: const Icon(Icons.replay, size: 18),
+              label: const Text('Replay values'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+            ),
+          ),
+        ],
+      ),
   ];
 
   List<ChartSeries> _buildSeries() {
     final values = switch (_preset) {
       _BarLabPreset.capacity => const <double>[42, 61, 88, 35, 70, 94, 55],
+      _BarLabPreset.targets => const <double>[68, 74, 81, 57, 88, 92, 70],
       _BarLabPreset.rods => const <double>[34, 57, 46, 69, 81, 96, 62],
       _BarLabPreset.gradient => const <double>[28, 49, 64, 91, 73, 84, 58],
       _BarLabPreset.signed => const <double>[38, -24, 52, -38, 71, 26, -18],
@@ -544,11 +668,17 @@ class _BarLabPageState extends State<BarLabPage> {
       _BarLabPreset.waterfall => const <double>[82, 28, 16, -18, -24, 7, 0],
       _BarLabPreset.horizontal => const <double>[96, 84, 73, 61, 49, 36],
       _BarLabPreset.axes => const <double>[96, 84, 73, 61, 49, 36],
+      _BarLabPreset.motion =>
+        _motionRevision.isEven
+            ? const <double>[54, 72, 61, 88, 69, 94, 76]
+            : const <double>[82, 48, 91, 63, 86, 57, 96],
+      _BarLabPreset.states => const <double>[54, 72, 61, 88, 69, 94, 76],
       _BarLabPreset.stacked => const <double>[18, 24, 31, 22, 28, 35, 26],
       _BarLabPreset.normalized => const <double>[18, 24, 31, 22, 28, 35, 26],
     };
     final comparison = switch (_preset) {
       _BarLabPreset.capacity => const <double>[31, 69, 81, 52, 64, 86, 72],
+      _BarLabPreset.targets => const <double>[61, 82, 76, 69, 79, 86, 73],
       _BarLabPreset.rods => const <double>[46, 39, 71, 53, 88, 72, 90],
       _BarLabPreset.gradient => const <double>[41, 58, 51, 76, 89, 65, 78],
       _BarLabPreset.signed => const <double>[21, -39, 34, -14, 48, -28, 32],
@@ -558,6 +688,11 @@ class _BarLabPageState extends State<BarLabPage> {
       _BarLabPreset.waterfall => const <double>[76, 22, 12, -15, -20, 5, 0],
       _BarLabPreset.horizontal => const <double>[88, 79, 68, 57, 44, 31],
       _BarLabPreset.axes => const <double>[420, 385, 352, 316, 274, 230],
+      _BarLabPreset.motion =>
+        _motionRevision.isEven
+            ? const <double>[42, 64, 79, 58, 83, 71, 91]
+            : const <double>[68, 84, 55, 92, 61, 88, 73],
+      _BarLabPreset.states => const <double>[42, 64, 79, 58, 83, 71, 91],
       _BarLabPreset.stacked => const <double>[14, 19, 26, 18, 24, 29, 21],
       _BarLabPreset.normalized => const <double>[14, 19, 26, 18, 24, 29, 21],
     };
@@ -567,6 +702,7 @@ class _BarLabPageState extends State<BarLabPage> {
         _series(
           id: 'series-${index + 1}',
           name: switch ((_preset, index)) {
+            (_BarLabPreset.targets, 0) => 'Actual',
             (_BarLabPreset.offset, 0) => 'Summer 2020',
             (_BarLabPreset.offset, 1) => 'Current result',
             (_BarLabPreset.range, 0) => 'Observed',
@@ -576,6 +712,10 @@ class _BarLabPageState extends State<BarLabPage> {
             (_BarLabPreset.horizontal, 0) => 'Current',
             (_BarLabPreset.horizontal, 1) => 'Target',
             (_BarLabPreset.axes, _) => _axisMetric(index).name,
+            (_BarLabPreset.motion, 0) => 'Actual',
+            (_BarLabPreset.motion, 1) => 'Forecast',
+            (_BarLabPreset.states, 0) => 'Actual',
+            (_BarLabPreset.states, 1) => 'Plan',
             (_, 0) => 'Current',
             (_, 1) => 'Previous',
             _ => 'Series ${index + 1}',
@@ -719,13 +859,16 @@ class _BarLabPageState extends State<BarLabPage> {
           ChartDataPoint(
             x: index.toDouble(),
             y: values[index],
+            label: _categories[index],
             pointStyle: _preset == _BarLabPreset.offset && seriesIndex == 1
                 ? PointStyle.color(_medalColors[index])
                 : null,
           ),
       ],
       color: color,
-      unit: _preset == _BarLabPreset.signed
+      unit: _preset == _BarLabPreset.targets
+          ? '%'
+          : _preset == _BarLabPreset.signed
           ? '%'
           : _preset == _BarLabPreset.range
           ? '°C'
@@ -767,12 +910,16 @@ class _BarLabPageState extends State<BarLabPage> {
       ),
       minBarLength: 4,
       barStyle: BarChartStyle(
+        animationMode: _animateBars
+            ? BarAnimationMode.grow
+            : BarAnimationMode.none,
         cornerRadius: _cornerRadius,
         cornerRadiusPolicy: _cornerPolicy,
         gradient: _showGradient ? BarGradient(colors: gradientColors) : null,
         border: _showBorder
             ? BarBorderStyle(color: color.withValues(alpha: 0.9), width: 1.5)
             : null,
+        interaction: BarInteractionStyle(dimmedOpacity: _dimmedOpacity),
       ),
       trackStyle: _showTracks
           ? BarTrackStyle(
@@ -785,6 +932,13 @@ class _BarLabPageState extends State<BarLabPage> {
               cornerRadius: _cornerRadius,
             )
           : null,
+      targetValues: _showTargets
+          ? _targetValuesForSeries(seriesIndex)
+          : const [],
+      targetMarkerStyle: BarTargetMarkerStyle(
+        width: _targetMarkerWidth,
+        lengthFactor: _targetMarkerLength,
+      ),
       labelStyle: BarLabelStyle(
         show:
             _showLabels &&
@@ -823,6 +977,14 @@ class _BarLabPageState extends State<BarLabPage> {
     ];
   }
 
+  List<double?> _targetValuesForSeries(int seriesIndex) {
+    const baseTargets = <double>[72, 78, 85, 68, 84, 95, 76];
+    return [
+      for (var index = 0; index < _categories.length; index++)
+        (baseTargets[index] + seriesIndex * 3).clamp(0, 100).toDouble(),
+    ];
+  }
+
   int get _effectiveGroupCount => _stackGroupCount.clamp(1, _seriesCount);
 
   bool _supportsLayout(_BarLabPreset preset, BarLayoutMode mode) {
@@ -844,6 +1006,9 @@ class _BarLabPageState extends State<BarLabPage> {
   };
 
   void _applyPreset(_BarLabPreset preset) {
+    _chartController
+      ..clearPointFocus()
+      ..clearPointSelection();
     setState(() {
       _preset = preset;
       _setPresetValues(preset);
@@ -853,11 +1018,18 @@ class _BarLabPageState extends State<BarLabPage> {
   void _setPresetValues(_BarLabPreset preset) {
     _showBorder = false;
     _showConnectors = true;
+    _dimmedOpacity = 0.42;
     _overlayWidthStep = 22;
     _overlayOffsetStep = 0;
     _labelPosition = BarLabelPosition.auto;
     _labelEdgeOffset = 8;
     _orientation = BarOrientation.vertical;
+    _motionRevision = 0;
+    _motionDurationMs = 650;
+    _animateBars = true;
+    _showTargets = false;
+    _targetMarkerWidth = 2;
+    _targetMarkerLength = 1.3;
     switch (preset) {
       case _BarLabPreset.capacity:
         _seriesCount = 2;
@@ -869,6 +1041,19 @@ class _BarLabPageState extends State<BarLabPage> {
         _showTracks = true;
         _showGradient = false;
         _showLabels = true;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.targets:
+        _seriesCount = 1;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _barWidth = 0.52;
+        _barGap = 6;
+        _cornerRadius = 5;
+        _showTracks = true;
+        _showTargets = true;
+        _showGradient = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.rods:
         _seriesCount = 3;
@@ -987,6 +1172,33 @@ class _BarLabPageState extends State<BarLabPage> {
         _showLabels = true;
         _labelPosition = BarLabelPosition.insideEnd;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.motion:
+        _seriesCount = 2;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _barWidth = 0.7;
+        _barGap = 6;
+        _cornerRadius = 6;
+        _showTracks = false;
+        _showGradient = false;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.states:
+        _seriesCount = 3;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.grouped;
+        _barWidth = 0.7;
+        _barGap = 6;
+        _cornerRadius = 6;
+        _showTracks = false;
+        _showGradient = false;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideEnd;
+        _dimmedOpacity = 0.32;
+        _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
       case _BarLabPreset.stacked:
         _seriesCount = 6;
         _stackGroupCount = 2;
@@ -1026,6 +1238,7 @@ class _BarLabPageState extends State<BarLabPage> {
 
   String _presetTitle() => switch (_preset) {
     _BarLabPreset.capacity => 'Progress against capacity',
+    _BarLabPreset.targets => 'Actual against target',
     _BarLabPreset.rods => 'Compact rounded rods',
     _BarLabPreset.gradient => 'Value-axis gradients',
     _BarLabPreset.signed => 'Positive and negative values',
@@ -1035,6 +1248,8 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.waterfall => 'Cash-flow bridge',
     _BarLabPreset.horizontal => 'Revenue by channel',
     _BarLabPreset.axes => 'Independent channel metrics',
+    _BarLabPreset.motion => 'Animated value updates',
+    _BarLabPreset.states => 'Interactive bar states',
     _BarLabPreset.stacked => 'Named stacked totals',
     _BarLabPreset.normalized => '100% stacked composition',
   };
@@ -1042,6 +1257,8 @@ class _BarLabPageState extends State<BarLabPage> {
   String _presetDescription() => switch (_preset) {
     _BarLabPreset.capacity =>
       'Tracks reveal remaining capacity without adding another data series.',
+    _BarLabPreset.targets =>
+      'Benchmarks remain distinct from actual values without becoming another series.',
     _BarLabPreset.rods =>
       'Narrow bars and full rounding create a compact dashboard treatment.',
     _BarLabPreset.gradient =>
@@ -1060,6 +1277,10 @@ class _BarLabPageState extends State<BarLabPage> {
       'Horizontal ranking gives category names room while values remain easy to compare.',
     _BarLabPreset.axes =>
       'Independent value axes stack above and below one shared category plot.',
+    _BarLabPreset.motion =>
+      'Replay value changes through the same geometry used for labels and interaction.',
+    _BarLabPreset.states =>
+      'Hover, press, click, or use the arrow keys and Enter to inspect every state.',
     _BarLabPreset.stacked =>
       'Two named stacks compare totals while preserving every contribution.',
     _BarLabPreset.normalized =>
@@ -1079,11 +1300,16 @@ class _BarLabPageState extends State<BarLabPage> {
           : '${_layoutLabel(_layoutMode).toLowerCase()} · $_effectiveGroupCount ${_effectiveGroupCount == 1 ? 'stack' : 'stacks'}',
       '${(_barWidth * 100).round()}% category fill',
       if (_showTracks) 'capacity tracks',
+      if (_showTargets) 'benchmark markers',
       if (_showGradient) 'gradient fill',
       if (_preset == _BarLabPreset.range) 'floating ranges',
       if (_preset == _BarLabPreset.waterfall) 'cumulative bridge',
       if (_preset == _BarLabPreset.waterfall && _showConnectors) 'connectors',
       if (_preset == _BarLabPreset.axes) 'independent value axes',
+      if (_preset == _BarLabPreset.motion && _animateBars)
+        '${_motionDurationMs.round()}ms updates',
+      if (_preset == _BarLabPreset.states)
+        '${_chartController.selectedPointRefs.length} selected',
       if (_showLabels)
         _layoutMode == BarLayoutMode.overlaid
             ? 'front-layer ${_labelPosition.name} labels'

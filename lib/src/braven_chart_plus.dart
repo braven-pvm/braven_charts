@@ -37,6 +37,7 @@ import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'layout/chart_layout_kind.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
+import 'models/bar_chart_style.dart';
 import 'models/braven_chart_controller.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
@@ -45,12 +46,14 @@ import 'models/chart_state_config.dart';
 import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
 import 'models/data_range.dart';
+import 'models/donut_chart_series.dart';
 import 'models/enums.dart';
 import 'models/grid_config.dart';
 import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
+import 'models/radial_category_series.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -60,6 +63,7 @@ import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
+import 'utils/bar_series_transition.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/chord_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
@@ -154,9 +158,9 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Creates a Cartesian chart from a simple list of y-values.
   ///
-  /// Supports line, area, bar, and scatter. Pie is rejected because numeric
-  /// values alone cannot provide the required accessible category labels; use
-  /// [PieChartSeries.fromMap] with the primary constructor instead.
+  /// Supports line, area, bar, and scatter. Pie and Donut are rejected because
+  /// numeric values alone cannot provide the required accessible category
+  /// labels; use their `fromMap` series factories with the primary constructor.
   factory BravenChartPlus.fromValues({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -206,6 +210,12 @@ class BravenChartPlus extends StatefulWidget {
       throw ArgumentError(
         'BravenChartPlus.fromValues cannot infer pie category labels. '
         'Use PieChartSeries.fromMap with BravenChartPlus instead.',
+      );
+    }
+    if (chartType == ChartType.donut) {
+      throw ArgumentError(
+        'BravenChartPlus.fromValues cannot infer donut category labels. '
+        'Use DonutChartSeries.fromMap with BravenChartPlus instead.',
       );
     }
 
@@ -272,8 +282,9 @@ class BravenChartPlus extends StatefulWidget {
   /// Creates a chart from a map.
   ///
   /// For Cartesian chart types, keys must be numbers or numeric strings and
-  /// are interpreted as X values. For [ChartType.pie], keys become category
-  /// labels and map insertion order becomes stable slice order.
+  /// are interpreted as X values. For [ChartType.pie] and [ChartType.donut],
+  /// keys become category labels and map insertion order becomes stable slice
+  /// order.
   factory BravenChartPlus.fromMap({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -319,15 +330,25 @@ class BravenChartPlus extends StatefulWidget {
     onAxisSwapped,
   }) {
     final ChartSeries series;
-    if (chartType == ChartType.pie) {
-      series = PieChartSeries.fromMap(
-        id: seriesId,
-        name: seriesName ?? seriesId,
-        values: <String, num>{
-          for (final entry in data.entries) entry.key.toString(): entry.value,
-        },
-        color: seriesColor,
-      );
+    if (chartType == ChartType.pie || chartType == ChartType.donut) {
+      final values = <String, num>{
+        for (final entry in data.entries) entry.key.toString(): entry.value,
+      };
+      series = switch (chartType) {
+        ChartType.pie => PieChartSeries.fromMap(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          values: values,
+          color: seriesColor,
+        ),
+        ChartType.donut => DonutChartSeries.fromMap(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          values: values,
+          color: seriesColor,
+        ),
+        _ => throw StateError('Unreachable radial chart type'),
+      };
     } else {
       final points = data.entries.map((entry) {
         final x = switch (entry.key) {
@@ -555,6 +576,12 @@ class BravenChartPlus extends StatefulWidget {
         color: color,
       ),
       ChartType.pie => PieChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+      ),
+      ChartType.donut => DonutChartSeries(
         id: id,
         name: name,
         points: points,
@@ -978,7 +1005,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   bool _previewCaptureInProgress = false;
   final Map<String, _IncomingPointAnimation> _incomingPointAnimations =
       <String, _IncomingPointAnimation>{};
+  final Map<String, _ActiveBarSeriesTransition> _barSeriesTransitions =
+      <String, _ActiveBarSeriesTransition>{};
   late final AnimationController _incomingDataAnimationController;
+  late final AnimationController _barDataAnimationController;
   late final AnimationController _radialRevealAnimationController;
   late final AnimationController _radialSelectionAnimationController;
 
@@ -1132,6 +1162,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           )
           ..addListener(_handleIncomingDataAnimationTick)
           ..addStatusListener(_handleIncomingDataAnimationStatus);
+    _barDataAnimationController = AnimationController(vsync: this, value: 1)
+      ..addListener(_handleBarDataAnimationTick)
+      ..addStatusListener(_handleBarDataAnimationStatus);
     _radialRevealAnimationController = AnimationController(
       vsync: this,
       value: 1,
@@ -1156,6 +1189,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _effectiveAnnotationController?.addListener(_onAnnotationControllerUpdate);
 
     _rebuildElements();
+    _startBarEntranceAnimation();
     _startRadialRevealAnimation();
 
     // Initialize cached bounds from existing series data for pan constraints
@@ -1213,6 +1247,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _textScaleFactor = nextTextScale;
       _disableAnimations = nextDisableAnimations;
       if (_disableAnimations) {
+        _barDataAnimationController
+          ..stop()
+          ..value = 1;
+        _barSeriesTransitions.clear();
         _radialRevealAnimationController
           ..stop()
           ..value = 1;
@@ -1220,6 +1258,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
       }
+      _refreshAnimatedRenderSeries();
       _rebuildElements();
     }
   }
@@ -1325,12 +1364,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     final seriesChanged = !listEquals(widget.series, oldWidget.series);
-    final radialDataChanged = _pieDataChanged(oldWidget.series, widget.series);
+    final radialDataChanged = _radialDataChanged(
+      oldWidget.series,
+      widget.series,
+    );
     if (seriesChanged ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations) {
       // Removed excessive debugPrint (theme/series/annotations changed)
-      _rebuildElements();
+      _rebuildElements(detectBarAnimations: seriesChanged);
       if (radialDataChanged) _startRadialRevealAnimation();
       // Focus will be acquired on next mouse enter — no need to grab it here.
       // Previously this called requestFocus() which caused 21 charts to fight
@@ -1361,6 +1403,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _incomingDataAnimationController
       ..removeListener(_handleIncomingDataAnimationTick)
       ..removeStatusListener(_handleIncomingDataAnimationStatus)
+      ..dispose();
+    _barDataAnimationController
+      ..removeListener(_handleBarDataAnimationTick)
+      ..removeStatusListener(_handleBarDataAnimationStatus)
       ..dispose();
     _radialRevealAnimationController
       ..removeListener(_handleRadialAnimationTick)
@@ -1949,11 +1995,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
-  void _rebuildElements({bool detectIncomingAnimations = false}) {
+  void _rebuildElements({
+    bool detectIncomingAnimations = false,
+    bool detectBarAnimations = false,
+  }) {
     _spatialIndex.clear();
 
     final previousSeriesById = <String, ChartSeries>{
       for (final series in _effectiveDataSeries) series.id: series,
+    };
+    final previousRenderSeriesById = <String, ChartSeries>{
+      for (final series in _effectiveRenderSeries) series.id: series,
     };
 
     _resolvedChartData = _resolveChartData();
@@ -1979,9 +2031,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
     if (_layoutKind == ChartLayoutKind.radial &&
-        _resolvedChartData.allSeries.single is PieChartSeries) {
+        _resolvedChartData.allSeries.single is RadialCategorySeries) {
       final visibleIndices =
-          (_resolvedChartData.allSeries.single as PieChartSeries)
+          (_resolvedChartData.allSeries.single as RadialCategorySeries)
               .visiblePointIndices;
       if (_radialKeyboardFocusIndex != null &&
           !visibleIndices.contains(_radialKeyboardFocusIndex)) {
@@ -1994,14 +2046,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (_layoutKind == ChartLayoutKind.radial &&
         _resolveEffectiveAnnotations().isNotEmpty) {
-      throw ArgumentError(
-        'Pie charts do not support Cartesian annotations in the first release',
-      );
+      throw ArgumentError('Radial charts do not support Cartesian annotations');
     }
     _pruneInvalidPointRefs();
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
         previousSeriesById: previousSeriesById,
+        nextSeries: _effectiveDataSeries,
+      );
+    }
+    if (detectBarAnimations) {
+      _updateBarSeriesTransitions(
+        previousSeriesById: previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
     }
@@ -2171,21 +2227,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         if (_effectiveRenderSeries.isEmpty) {
           elements = <ChartElement>[];
         } else {
-          final pieSeries = _effectiveRenderSeries.single as PieChartSeries;
+          final radialSeries =
+              _effectiveRenderSeries.single as RadialCategorySeries;
           elements = <ChartElement>[
             PieSeriesElement(
-              series: pieSeries,
+              series: radialSeries,
               size: Size(transform.plotWidth, transform.plotHeight),
               theme: widget.theme ?? ChartTheme.light,
               textScaleFactor: _textScaleFactor,
               focusedPointIndices: {
                 for (final ref in _focusedPointRefs)
-                  if (ref.seriesId == pieSeries.id) ref.pointIndex,
+                  if (ref.seriesId == radialSeries.id) ref.pointIndex,
                 if (_radialFocusIndicatorVisible) ?_radialKeyboardFocusIndex,
               },
               selectedPointIndices: {
                 for (final ref in _selectedPointRefs)
-                  if (ref.seriesId == pieSeries.id) ref.pointIndex,
+                  if (ref.seriesId == radialSeries.id) ref.pointIndex,
               },
               coordinator: _coordinator,
               animationProgress: _radialRevealProgress,
@@ -2324,6 +2381,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  void _handleBarDataAnimationTick() {
+    if (!mounted || _barSeriesTransitions.isEmpty) return;
+    setState(() {
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _handleBarDataAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() {
+      _barSeriesTransitions.clear();
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
   void _handleIncomingDataAnimationStatus(AnimationStatus status) {
     if (status != AnimationStatus.completed || !mounted) {
       return;
@@ -2341,28 +2415,92 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     setState(() => _elementGeneratorVersion++);
   }
 
-  bool _pieDataChanged(List<ChartSeries> previous, List<ChartSeries> next) {
-    if (previous.length != 1 || next.length != 1) return false;
-    final previousPie = previous.single;
-    final nextPie = next.single;
-    if (previousPie is! PieChartSeries || nextPie is! PieChartSeries) {
-      return false;
-    }
-    return previousPie.id != nextPie.id ||
-        !listEquals(previousPie.points, nextPie.points);
+  Duration get _barDataAnimationDuration =>
+      (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateDuration;
+
+  double get _barDataAnimationProgress {
+    final curve =
+        (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
+    return curve.transform(_barDataAnimationController.value).clamp(0.0, 1.0);
   }
 
-  PieAnimationMode _effectivePieAnimationMode(PieChartSeries series) =>
-      series.pieStyle.animationMode ??
+  bool get _canAnimateBars =>
+      !_disableAnimations && _barDataAnimationDuration > Duration.zero;
+
+  void _startBarEntranceAnimation() {
+    _updateBarSeriesTransitions(
+      previousSeriesById: const <String, ChartSeries>{},
+      nextSeries: _effectiveDataSeries,
+      entrance: true,
+    );
+    _refreshAnimatedRenderSeries();
+    _elementGeneratorVersion++;
+  }
+
+  void _updateBarSeriesTransitions({
+    required Map<String, ChartSeries> previousSeriesById,
+    required List<ChartSeries> nextSeries,
+    bool entrance = false,
+  }) {
+    _barSeriesTransitions.clear();
+    _barDataAnimationController.stop();
+    if (!_canAnimateBars || _layoutKind != ChartLayoutKind.cartesian) {
+      _barDataAnimationController.value = 1;
+      return;
+    }
+    _barDataAnimationController.value = 0;
+
+    for (final next in nextSeries.whereType<BarChartSeries>()) {
+      if (next.barStyle.animationMode == BarAnimationMode.none) continue;
+      final previous = previousSeriesById[next.id];
+      final from = entrance || previous is! BarChartSeries
+          ? BarSeriesTransition.collapsed(next)
+          : BarSeriesTransition.hasCompatibleLayout(previous, next)
+          ? previous
+          : BarSeriesTransition.collapsed(next);
+      if (!entrance && from == next) continue;
+      _barSeriesTransitions[next.id] = _ActiveBarSeriesTransition(
+        from: from,
+        to: next,
+      );
+    }
+
+    if (_barSeriesTransitions.isEmpty) {
+      _barDataAnimationController.value = 1;
+      return;
+    }
+
+    _barDataAnimationController.duration = _barDataAnimationDuration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _barSeriesTransitions.isEmpty) return;
+      _barDataAnimationController.forward();
+    });
+  }
+
+  bool _radialDataChanged(List<ChartSeries> previous, List<ChartSeries> next) {
+    if (previous.length != 1 || next.length != 1) return false;
+    final previousRadial = previous.single;
+    final nextRadial = next.single;
+    if (previousRadial is! RadialCategorySeries ||
+        nextRadial is! RadialCategorySeries) {
+      return false;
+    }
+    return previousRadial.runtimeType != nextRadial.runtimeType ||
+        previousRadial.id != nextRadial.id ||
+        !listEquals(previousRadial.points, nextRadial.points);
+  }
+
+  PieAnimationMode _effectiveRadialAnimationMode(RadialCategorySeries series) =>
+      series.radialStyle.animationMode ??
       (widget.theme ?? ChartTheme.light).pieChartTheme.animationMode;
 
-  bool _canAnimatePie(PieChartSeries series, Duration duration) =>
+  bool _canAnimateRadial(RadialCategorySeries series, Duration duration) =>
       !_disableAnimations &&
       duration > Duration.zero &&
-      _effectivePieAnimationMode(series) != PieAnimationMode.none;
+      _effectiveRadialAnimationMode(series) != PieAnimationMode.none;
 
   void _startRadialRevealAnimation() {
-    final series = _effectivePieSeries;
+    final series = _effectiveRadialSeries;
     if (series == null) {
       _radialRevealAnimationController
         ..stop()
@@ -2371,7 +2509,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     final animationTheme = (widget.theme ?? ChartTheme.light).animationTheme;
     final duration = animationTheme.dataUpdateDuration;
-    if (!_canAnimatePie(series, duration)) {
+    if (!_canAnimateRadial(series, duration)) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -2382,17 +2520,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ..stop()
       ..value = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _effectivePieSeries == null) return;
+      if (!mounted || _effectiveRadialSeries == null) return;
       _radialRevealAnimationController.forward();
     });
   }
 
   void _startRadialSelectionAnimation() {
-    final series = _effectivePieSeries;
+    final series = _effectiveRadialSeries;
     if (series == null) return;
     final animationTheme = (widget.theme ?? ChartTheme.light).animationTheme;
     final duration = animationTheme.interactionDuration;
-    if (!_canAnimatePie(series, duration)) {
+    if (!_canAnimateRadial(series, duration)) {
       _radialSelectionAnimationController
         ..stop()
         ..value = 1;
@@ -2473,13 +2611,33 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _refreshAnimatedRenderSeries() {
-    if (_effectiveDataSeries.isEmpty || _incomingPointAnimations.isEmpty) {
+    if (_effectiveDataSeries.isEmpty) {
       _effectiveRenderSeries = _effectiveDataSeries;
       return;
     }
 
+    var renderSeries = _effectiveDataSeries;
+    if (_barSeriesTransitions.isNotEmpty) {
+      final progress = _barDataAnimationProgress;
+      renderSeries = _effectiveDataSeries
+          .map((series) {
+            final transition = _barSeriesTransitions[series.id];
+            if (transition == null) return series;
+            return BarSeriesTransition.interpolate(
+              from: transition.from,
+              to: transition.to,
+              progress: progress,
+            );
+          })
+          .toList(growable: false);
+    }
+    if (_incomingPointAnimations.isEmpty) {
+      _effectiveRenderSeries = renderSeries;
+      return;
+    }
+
     final progress = _incomingDataAnimationController.value;
-    _effectiveRenderSeries = _effectiveDataSeries
+    _effectiveRenderSeries = renderSeries
         .map((series) {
           final animation = _incomingPointAnimations[series.id];
           if (animation == null || series.points.length < 2) {
@@ -2508,12 +2666,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     double t,
   ) {
     final clampedT = t.clamp(0.0, 1.0);
-    return ChartDataPoint(
+    return to.copyWith(
       x: from.x + ((to.x - from.x) * clampedT),
       y: from.y + ((to.y - from.y) * clampedT),
-      timestamp: to.timestamp,
-      label: to.label,
-      metadata: to.metadata,
     );
   }
 
@@ -3224,15 +3379,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.onAnnotationTap?.call(tappedElement.annotation);
       } else if (tappedElement is SeriesElement) {
         // Check if a specific marker was tapped
-        final marker = _coordinator.hoveredMarker;
+        final marker = _coordinator.pressedMarker ?? _coordinator.hoveredMarker;
         if (marker != null && marker.seriesId == tappedElement.series.id) {
           final point = tappedElement.series.points[marker.markerIndex];
+          if (tappedElement.series is BarChartSeries) {
+            _selectBarPointFromInteraction(marker);
+          }
           widget.onPointTap?.call(point, tappedElement.series.id);
         } else {
           _handleSeriesSelected(tappedElement.series.id);
         }
       }
     } else {
+      _clearPointSelection();
       widget.onBackgroundTap?.call(details.localPosition);
     }
 
@@ -3240,6 +3399,30 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
+  }
+
+  void _selectBarPointFromInteraction(HoveredMarkerInfo marker) {
+    final ref = ChartPointRef(
+      seriesId: marker.seriesId,
+      pointIndex: marker.markerIndex,
+    );
+    _selectBarPointRef(ref, additive: _coordinator.isCtrlPressed);
+  }
+
+  void _selectBarPointRef(ChartPointRef ref, {required bool additive}) {
+    final nextSelection = additive
+        ? <ChartPointRef>{..._selectedPointRefs}
+        : <ChartPointRef>{ref};
+    if (additive && !nextSelection.add(ref)) {
+      nextSelection.remove(ref);
+    }
+    if (setEquals(nextSelection, _selectedPointRefs)) return;
+    _selectedPointRefs
+      ..clear()
+      ..addAll(nextSelection);
+    _captureStateRevision++;
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -3351,7 +3534,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     int pointIndex, {
     bool showFocusIndicator = false,
   }) {
-    final series = _effectivePieSeries;
+    final series = _effectiveRadialSeries;
     if (series == null) return;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -3405,7 +3588,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool announceHover = true,
     bool showFocusIndicator = true,
   }) {
-    final series = _effectivePieSeries;
+    final series = _effectiveRadialSeries;
     if (series == null || !series.visiblePointIndices.contains(pointIndex)) {
       return;
     }
@@ -3438,7 +3621,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (event is! KeyDownEvent) return false;
     final interaction = _effectiveRadialInteractionConfig();
     if (!interaction.enabled || !interaction.keyboard.enabled) return false;
-    final series = _effectivePieSeries;
+    final series = _effectiveRadialSeries;
     if (series == null || series.visiblePointIndices.isEmpty) return false;
     final visible = series.visiblePointIndices;
 
@@ -3485,9 +3668,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     return false;
   }
 
-  PieChartSeries? get _effectivePieSeries {
+  RadialCategorySeries? get _effectiveRadialSeries {
     for (final series in _effectiveRenderSeries) {
-      if (series is PieChartSeries) return series;
+      if (series is RadialCategorySeries) return series;
     }
     return null;
   }
@@ -3825,6 +4008,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       if (renderBox == null) return;
 
+      if (_handleBarPointKey(event.logicalKey)) return;
+
       // Cancel range annotation creation mode
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         if (_coordinator.currentMode ==
@@ -3919,6 +4104,105 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _coordinator.removeModifierKey(LogicalKeyboardKey.shift);
       }
     }
+  }
+
+  bool _handleBarPointKey(LogicalKeyboardKey key) {
+    final keyboard =
+        widget.interactionConfig?.keyboard ?? const KeyboardConfig();
+    if (!keyboard.enabled) return false;
+    final bars = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((series) => series.points.isNotEmpty)
+        .toList(growable: false);
+    if (bars.isEmpty || bars.length != _effectiveDataSeries.length) {
+      return false;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      if (_focusedPointRefs.isEmpty && _selectedPointRefs.isEmpty) return false;
+      _clearPointFocus();
+      _clearPointSelection();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current == null) return false;
+      _selectBarPointRef(
+        current,
+        additive:
+            HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed,
+      );
+      return true;
+    }
+
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+    if (!isArrow ||
+        !keyboard.enableArrowKeys ||
+        HardwareKeyboard.instance.isAltPressed) {
+      return false;
+    }
+
+    var seriesIndex = 0;
+    var pointIndex = 0;
+    final current = _focusedPointRefs.firstOrNull;
+    if (current != null) {
+      final resolvedSeriesIndex = bars.indexWhere(
+        (series) => series.id == current.seriesId,
+      );
+      if (resolvedSeriesIndex >= 0) {
+        seriesIndex = resolvedSeriesIndex;
+        pointIndex = current.pointIndex.clamp(
+          0,
+          bars[seriesIndex].points.length - 1,
+        );
+      }
+    }
+
+    final orientation = bars.first.orientation;
+    final movesCategory = orientation == BarOrientation.vertical
+        ? key == LogicalKeyboardKey.arrowLeft ||
+              key == LogicalKeyboardKey.arrowRight
+        : key == LogicalKeyboardKey.arrowUp ||
+              key == LogicalKeyboardKey.arrowDown;
+    final delta =
+        key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowUp
+        ? -1
+        : 1;
+
+    if (current == null) {
+      // The first arrow press establishes a visible focus target without
+      // skipping the first bar.
+      _setKeyboardBarFocus(bars.first, 0);
+      return true;
+    }
+    if (movesCategory) {
+      pointIndex = (pointIndex + delta).clamp(
+        0,
+        bars[seriesIndex].points.length - 1,
+      );
+    } else {
+      seriesIndex = (seriesIndex + delta).clamp(0, bars.length - 1);
+      pointIndex = pointIndex.clamp(0, bars[seriesIndex].points.length - 1);
+    }
+    _setKeyboardBarFocus(bars[seriesIndex], pointIndex);
+    return true;
+  }
+
+  void _setKeyboardBarFocus(BarChartSeries series, int pointIndex) {
+    final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
+    if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
+      return;
+    }
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   // ============================================================================
@@ -4230,6 +4514,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         if (point.y < minY) minY = point.y;
         if (point.y > maxY) maxY = point.y;
       }
+      if (series is BarChartSeries) {
+        for (final target in series.targetValues.whereType<double>()) {
+          if (!target.isFinite) continue;
+          if (target < minY) minY = target;
+          if (target > maxY) maxY = target;
+        }
+      }
 
       // Handle edge case where all Y values are identical (zero span)
       if (minY == maxY) {
@@ -4295,7 +4586,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       );
     } else {
       final hasData = _layoutKind == ChartLayoutKind.radial
-          ? _effectiveDataSeries.whereType<PieChartSeries>().any(
+          ? _effectiveDataSeries.whereType<RadialCategorySeries>().any(
               (series) => series.total > 0,
             )
           : _effectiveDataSeries.any(
@@ -4326,6 +4617,80 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
+  ({String value, bool isSelected})? _focusedBarSemantics() {
+    final ref = _focusedPointRefs.firstOrNull;
+    if (ref == null) return null;
+    return _barSemanticsForRef(ref);
+  }
+
+  ({String value, bool isSelected})? _barSemanticsForRef(ChartPointRef ref) {
+    final series = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((candidate) => candidate.id == ref.seriesId)
+        .firstOrNull;
+    if (series == null ||
+        ref.pointIndex < 0 ||
+        ref.pointIndex >= series.points.length) {
+      return null;
+    }
+    final point = series.points[ref.pointIndex];
+    final category = point.hasLabel
+        ? point.label!
+        : 'Category ${ref.pointIndex + 1}';
+    final unit = series.unit == null || series.unit!.isEmpty
+        ? ''
+        : ' ${series.unit}';
+    final value = switch (series.layoutMode) {
+      BarLayoutMode.waterfall =>
+        series.isWaterfallTotal(ref.pointIndex)
+            ? 'total ${series.waterfallDisplayValueFor(ref.pointIndex)}$unit'
+            : 'change ${point.y}$unit',
+      _ when series.hasRangeValues =>
+        '${series.rangeStartValueFor(ref.pointIndex)} to ${point.y}$unit',
+      BarLayoutMode.normalizedStacked => '${point.y}$unit, normalized segment',
+      _ => '${point.y}$unit',
+    };
+    final target = series.targetValueFor(ref.pointIndex);
+    final targetDescription = target == null ? '' : ', target $target$unit';
+    return (
+      value: '${series.name}, $category, $value$targetDescription',
+      isSelected: _selectedPointRefs.contains(ref),
+    );
+  }
+
+  String? _adjacentBarSemanticsValue(int delta) {
+    final current = _focusedPointRefs.firstOrNull;
+    if (current == null) return null;
+    final series = _effectiveDataSeries
+        .whereType<BarChartSeries>()
+        .where((candidate) => candidate.id == current.seriesId)
+        .firstOrNull;
+    if (series == null || series.points.isEmpty) return null;
+    final nextIndex = (current.pointIndex + delta).clamp(
+      0,
+      series.points.length - 1,
+    );
+    return _barSemanticsForRef(
+      ChartPointRef(seriesId: series.id, pointIndex: nextIndex),
+    )?.value;
+  }
+
+  void _moveSemanticBarFocus(int delta) {
+    final bars = _effectiveDataSeries.whereType<BarChartSeries>();
+    if (bars.isEmpty) return;
+    final orientation = bars.first.orientation;
+    _handleBarPointKey(
+      orientation == BarOrientation.vertical
+          ? delta < 0
+                ? LogicalKeyboardKey.arrowLeft
+                : LogicalKeyboardKey.arrowRight
+          : delta < 0
+          ? LogicalKeyboardKey.arrowUp
+          : LogicalKeyboardKey.arrowDown,
+    );
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Disable browser context menu on web platform
@@ -4338,18 +4703,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
     ChartPointRef? selectedTooltipPoint;
-    final pieSeries = isRadial ? _effectivePieSeries : null;
-    if (pieSeries != null) {
+    final radialSeries = isRadial ? _effectiveRadialSeries : null;
+    if (radialSeries != null) {
       for (final pointRef in _selectedPointRefs) {
-        if (pointRef.seriesId == pieSeries.id &&
-            pieSeries.visiblePointIndices.contains(pointRef.pointIndex)) {
+        if (pointRef.seriesId == radialSeries.id &&
+            radialSeries.visiblePointIndices.contains(pointRef.pointIndex)) {
           selectedTooltipPoint = pointRef;
           break;
         }
       }
     }
 
-    final Widget renderedChart = Focus(
+    final focusChart = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
@@ -4521,6 +4886,33 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ),
     );
 
+    final hasOnlyBars =
+        !isRadial &&
+        _effectiveDataSeries.isNotEmpty &&
+        _effectiveDataSeries.every((series) => series is BarChartSeries);
+    final focusedBar = hasOnlyBars ? _focusedBarSemantics() : null;
+    final Widget renderedChart = hasOnlyBars
+        ? Semantics(
+            container: true,
+            focusable: true,
+            label: widget.title ?? 'Interactive bar chart',
+            value: focusedBar?.value,
+            increasedValue: focusedBar == null
+                ? null
+                : _adjacentBarSemanticsValue(1) ?? focusedBar.value,
+            decreasedValue: focusedBar == null
+                ? null
+                : _adjacentBarSemanticsValue(-1) ?? focusedBar.value,
+            hint: focusedBar == null
+                ? 'Use arrow keys to move between bars. Press Enter to select.'
+                : null,
+            selected: focusedBar?.isSelected,
+            onIncrease: () => _moveSemanticBarFocus(1),
+            onDecrease: () => _moveSemanticBarFocus(-1),
+            child: focusChart,
+          )
+        : focusChart;
+
     final chartContent = _buildViewportContent(renderedChart);
 
     // Add title, subtitle, and legend
@@ -4553,15 +4945,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         );
       }
 
-      final pieSeries = isRadial ? _effectivePieSeries : null;
-      if (widget.showLegend && pieSeries != null) {
+      final radialSeries = isRadial ? _effectiveRadialSeries : null;
+      if (widget.showLegend && radialSeries != null) {
         final theme = widget.theme ?? ChartTheme.light;
         final legend = PieChartLegend(
-          series: pieSeries,
+          series: radialSeries,
           chartTheme: theme,
           selectedPointIndices: {
             for (final ref in _selectedPointRefs)
-              if (ref.seriesId == pieSeries.id) ref.pointIndex,
+              if (ref.seriesId == radialSeries.id) ref.pointIndex,
           },
           onSliceTap: _activateRadialPointIndex,
           disableAnimations: _disableAnimations,
@@ -4892,6 +5284,13 @@ class _IncomingPointAnimation {
 
   final ChartDataPoint anchorPoint;
   final ChartDataPoint targetPoint;
+}
+
+class _ActiveBarSeriesTransition {
+  const _ActiveBarSeriesTransition({required this.from, required this.to});
+
+  final BarChartSeries from;
+  final BarChartSeries to;
 }
 
 class _ChartEffectiveRevisionToken {

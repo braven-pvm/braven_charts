@@ -146,6 +146,93 @@ void main() {
 
       expect(averageMilliseconds, lessThan(16.67));
     });
+
+    test('advanced Donut geometry and center content stay within one frame', () {
+      const size = Size(800, 600);
+      final values = {
+        for (var index = 0; index < 24; index++)
+          'Category ${index + 1}': 8 + (index % 7),
+      };
+      final radiusValues = {
+        for (var index = 0; index < 24; index++)
+          'Category ${index + 1}': 30 + ((index * 17) % 71),
+      };
+      final series = DonutChartSeries.fromMap(
+        id: 'donut-advanced',
+        unit: 'units',
+        values: values,
+        radiusValues: radiusValues,
+        sliceRadiusConfig: const RadialSliceRadiusConfig(
+          minimumFactor: 0.4,
+          label: 'Reach',
+          unit: 'k users',
+        ),
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.56,
+          sweepAngleDegrees: 300,
+          sliceGap: 3,
+          cornerRadius: 8,
+          gradient: PieGradientStyle(type: PieGradientType.radial),
+        ),
+        centerContent: const DonutCenterContent(
+          label: 'Status',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: 'On track',
+        ),
+        dataLabels: const PieDataLabelConfig(
+          position: PieDataLabelPosition.outside,
+          content: PieDataLabelContent.categoryAndPercentage,
+          minimumShare: 0,
+          minimumSweepDegrees: 0,
+          collisionStrategy: PieDataLabelCollisionStrategy.shiftAndHide,
+        ),
+      );
+      final theme = ChartTheme.dark.copyWith(
+        pieChartTheme: const PieChartTheme(
+          shadow: PieElevationStyle(
+            color: Color(0x401A1A1A),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+            opacity: 0.7,
+          ),
+          selectedElevation: PieElevationStyle(
+            blurRadius: 12,
+            spreadRadius: 2,
+            opacity: 0.5,
+          ),
+          animationMode: PieAnimationMode.none,
+        ),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: size,
+        theme: theme,
+        selectedPointIndices: const {0},
+      );
+
+      for (var index = 0; index < 10; index++) {
+        _paint(element, size);
+      }
+      const iterations = 100;
+      final stopwatch = Stopwatch()..start();
+      for (var index = 0; index < iterations; index++) {
+        _paint(element, size);
+      }
+      stopwatch.stop();
+      final averageMilliseconds =
+          stopwatch.elapsedMicroseconds / iterations / 1000;
+      print(
+        'Donut paint (partial/variable/center, ${series.points.length} '
+        'slices): ${averageMilliseconds.toStringAsFixed(3)}ms average',
+      );
+
+      expect(
+        averageMilliseconds,
+        lessThan(16.67),
+        reason:
+            'Advanced Donut painting must remain inside the 60fps frame budget.',
+      );
+    });
   });
 }
 

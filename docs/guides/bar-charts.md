@@ -344,6 +344,31 @@ value-axis boundary in the direction of the bar.
 Tracks participate in bar bounds and rendering but not in value hit testing:
 the interactive mark remains the actual data bar.
 
+## Benchmark and target markers
+
+Use `targetValues` for a distinct benchmark at each category without modelling
+the benchmark as another data series. The marker crosses the actual bar and
+automatically transposes with horizontal orientation:
+
+```dart
+BarChartSeries(
+  id: 'actual',
+  name: 'Actual',
+  points: actual,
+  targetValues: const [72, 78, 85, 68, 84, 95, 76],
+  targetMarkerStyle: const BarTargetMarkerStyle(
+    width: 2,
+    lengthFactor: 1.3,
+  ),
+)
+```
+
+Targets participate in value-axis bounds, artifact round-tripping, tooltips,
+keyboard semantics, and animated data updates. They remain passive reference
+marks: hit testing, focus, selection, and series counts continue to describe
+the actual bar. Set a marker color explicitly or leave it null to derive a
+high-contrast color from each bar.
+
 ## Labels
 
 Bar labels use rendered rectangle geometry rather than marker geometry:
@@ -360,11 +385,62 @@ unless an explicit label color is supplied. `BarLabelStyle.padding` controls
 the edge offset for end labels. For `insideEnd`, this is a minimum: rounded
 value ends automatically add enough inset to keep text clear of the curve.
 
+## Motion
+
+Bars grow from their baseline on first render and interpolate value changes
+through the same canonical geometry used by paint, labels, tooltips, and hit
+testing. The duration and easing come from the chart theme:
+
+```dart
+final baseTheme = ChartTheme.light;
+
+BravenChartPlus(
+  theme: baseTheme.copyWith(
+    animationTheme: baseTheme.animationTheme.copyWith(
+      dataUpdateDuration: const Duration(milliseconds: 650),
+      dataUpdateCurve: Curves.easeInOutCubic,
+    ),
+  ),
+  series: series,
+)
+```
+
+Set `BarChartStyle.animationMode` to `BarAnimationMode.none` for a series that
+must update immediately. New points grow from their target baseline; removed
+points leave immediately. Structural changes such as orientation or layout
+mode replay in their new geometry instead of morphing between incompatible
+coordinate systems. Flutter's reduced-motion setting always renders the final
+geometry immediately.
+
 ## Interaction and artifacts
 
 Hit testing, focus outlines, durable selection, tooltips, and bounds all use
 the same canonical bar rectangles. Crosshair tracking snaps to the nearest
 real category and never interpolates values between bars.
+
+Hover applies to the complete bar rectangle rather than a small value-end
+target. Primary-button press feedback is transient; clicking a bar creates a
+durable point selection, while Ctrl/Command-click toggles additive selection.
+When a point is selected, other bars use
+`BarInteractionStyle.dimmedOpacity`. Hover, press, focus, selection, and
+dimming can be restyled through `BarChartStyle.interaction`:
+
+```dart
+barStyle: const BarChartStyle(
+  interaction: BarInteractionStyle(
+    hoverBorderWidth: 2,
+    selectionBorderWidth: 2.5,
+    focusGap: 3,
+    dimmedOpacity: 0.32,
+  ),
+),
+```
+
+With keyboard focus inside a bar-only chart, arrow keys move between
+categories and series, Enter or Space selects the focused bar, and Escape
+clears point focus and selection. Hold Alt while using arrow keys to retain
+viewport panning. The chart semantics node announces the focused series,
+category, value or range, unit, and selection state.
 
 For horizontal bars, panning follows the rendered orientation: horizontal
 movement pans the value axes and vertical movement pans categories. Viewport
@@ -391,4 +467,6 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=overlay`, `?page=bar-lab&preset=offset`,
 `?page=bar-lab&preset=range`, `?page=bar-lab&preset=waterfall`,
 `?page=bar-lab&preset=horizontal`, `?page=bar-lab&preset=axes`,
+`?page=bar-lab&preset=targets`, `?page=bar-lab&preset=motion`,
+`?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

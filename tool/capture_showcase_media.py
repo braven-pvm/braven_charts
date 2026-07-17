@@ -466,7 +466,7 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
     output = output_dir.resolve()
     flutter = shutil.which("flutter")
     if flutter is None:
-        raise RuntimeError("Flutter is required to capture native Pie media.")
+        raise RuntimeError("Flutter is required to capture native chart media.")
     command = [
         flutter,
         "test",
@@ -476,6 +476,12 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
     ]
     if group == "pie":
         command.extend(["--plain-name", "capture pub.dev Pie media"])
+    elif group == "donut":
+        command.extend(["--plain-name", "capture pub.dev Donut media"])
+    elif group == "bar":
+        command.extend(["--plain-name", "capture pub.dev Bar media"])
+    elif group == "hero":
+        command.extend(["--plain-name", "capture pub.dev flagship hero media"])
     elif group == "interaction":
         command.extend(["--plain-name", "capture pub.dev interaction media"])
     elif group == "type-strip":
@@ -484,6 +490,24 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command,
         cwd=repository,
         check=True,
+    )
+
+
+def _donut_gallery_still(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture three reusable Donut compositions without app chrome."""
+    _load(driver, f"{base_url}?capture=donut-gallery")
+    time.sleep(6)
+    driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
+    time.sleep(1)
+    _save_png(
+        driver,
+        output_dir / "gallery_donut_collection.png",
+        (16, 16, VIEWPORT[0] - 16, VIEWPORT[1] - 16),
+        max_left_dark_fraction=0.45,
     )
 
 
@@ -747,8 +771,10 @@ def main() -> None:
             "stills",
             "hero",
             "pie",
+            "bar",
             "interaction-still",
             "type-strip",
+            "donut",
         ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
@@ -759,11 +785,20 @@ def main() -> None:
     if args.capture == "pie":
         _native_stills(args.output_dir, "pie")
         return
+    if args.capture == "bar":
+        _native_stills(args.output_dir, "bar")
+        return
     if args.capture == "interaction-still":
         _native_stills(args.output_dir, "interaction")
         return
     if args.capture == "type-strip":
         _native_stills(args.output_dir, "type-strip")
+        return
+    if args.capture == "donut":
+        _native_stills(args.output_dir, "donut")
+        return
+    if args.capture == "hero":
+        _native_stills(args.output_dir, "hero")
         return
 
     driver = _driver()
@@ -782,9 +817,6 @@ def main() -> None:
             )
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
-        elif args.capture == "hero":
-            _hero_panel_stills(driver, base_url, args.output_dir)
-            _hero_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()
 

@@ -279,7 +279,11 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
           allowDragging: false,
         ),
         normalizationMode: NormalizationMode.perSeries,
-        xAxisConfig: const XAxisConfig(label: 'Session time', min: 0, max: 10),
+        xAxisConfig: const XAxisConfig(
+          label: 'Session time',
+          min: -0.15,
+          max: 10.15,
+        ),
         yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
         interactionConfig: const InteractionConfig(
           enableZoom: true,
@@ -488,8 +492,8 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
         xAxisConfig: const XAxisConfig(
           label: 'Power',
           unit: 'W',
-          min: 0,
-          max: 400,
+          min: -5,
+          max: 405,
         ),
         yAxis: YAxisConfig(
           position: YAxisPosition.left,
