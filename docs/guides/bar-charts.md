@@ -515,6 +515,11 @@ focus. Durable chart selection separately reveals the row and uses selected
 styling and semantics. Either automatic reveal policy can be disabled on a
 standalone `ChartDataTable` when its host owns scrolling.
 
+Data and Split rows use the same multi-selection convention as bars:
+Ctrl/Command-click or Ctrl/Command-Enter adds a row's points to the durable
+selection, and repeating the modified activation removes the complete row.
+For shared-X rows this toggles every populated series point together.
+
 ## Current boundary
 
 Horizontal orientation is a chart-level transform, so it cannot currently be

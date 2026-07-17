@@ -713,6 +713,75 @@ void main() {
     expect(chartController.focusedPointRefs, isEmpty);
   });
 
+  testWidgets('Ctrl activation additively toggles complete wide rows', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [
+                ChartDataPoint(x: 0, y: 220),
+                ChartDataPoint(x: 1, y: 240),
+              ],
+            ),
+            LineChartSeries(
+              id: 'heart-rate',
+              points: [
+                ChartDataPoint(x: 0, y: 130),
+                ChartDataPoint(x: 1, y: 135),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Finder rowAt(int index) => find.byKey(
+      ValueKey(workbenchController.tableModel!.wideRows[index].rowId),
+    );
+
+    await tester.tap(rowAt(0));
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(rowAt(1));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+      const ChartPointRef(seriesId: 'power', pointIndex: 1),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(rowAt(0));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 1),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+    });
+  });
+
   testWidgets('row hover temporarily overrides and restores keyboard focus', (
     tester,
   ) async {

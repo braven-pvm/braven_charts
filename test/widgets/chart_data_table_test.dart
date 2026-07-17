@@ -153,6 +153,44 @@ void main() {
     ]);
   });
 
+  testWidgets('reports Ctrl activation details without breaking legacy taps', (
+    tester,
+  ) async {
+    final activations = <ChartTableRowActivationDetails>[];
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+    final row = find.byKey(ValueKey(model.wideRows.single.rowId));
+
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, onRowActivation: activations.add)),
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(row);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(activations.single.additive, isTrue);
+    expect(activations.single.points, const [
+      ChartPointRef(seriesId: 'power', pointIndex: 0),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    ]);
+
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(of: row, matching: find.byType(FocusableActionDetector)),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(activations, hasLength(2));
+    expect(activations.last.additive, isTrue);
+  });
+
   testWidgets('mirrors complete point selection into a themed table row', (
     tester,
   ) async {

@@ -248,6 +248,8 @@ The workbench enables safe row linking by default:
 - pointer exit restores keyboard-driven focus when present;
 - focus loss clears the ring when no row remains hovered;
 - click or Enter replaces the durable point selection;
+- Ctrl/Command-click or Ctrl/Command-Enter additively selects an unselected
+  row and removes every point represented by an already selected row;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
 - chart-controller point focus is mirrored into the table with the focused-row
@@ -326,8 +328,10 @@ snapshot instead of retrying an old reference against a new revision.
 
 Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
 `onTableRowFocused`, `onTableRowFocusCleared`, `onTableRowHoverChanged`, or
-`onTableRowActivated` to replace individual defaults with product-specific
-behavior. Use
+`onTableRowActivation` to replace individual defaults with product-specific
+behavior. `onTableRowActivation` receives modifier-aware
+`ChartTableRowActivationDetails` and takes precedence over the legacy
+`onTableRowActivated` callback when both are supplied. Use
 `onPointLinkError` to observe the same structured error shown by the workbench.
 
 ## Configure the data table

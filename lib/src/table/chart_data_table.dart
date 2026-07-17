@@ -21,6 +21,25 @@ typedef ChartTableRowCallback = void Function(List<ChartPointRef> points);
 /// Reports the row currently under the pointer, or null when it exits.
 typedef ChartTableRowHoverCallback = void Function(List<ChartPointRef>? points);
 
+/// Modifier-aware request to activate every chart point represented by a row.
+@immutable
+class ChartTableRowActivationDetails {
+  ChartTableRowActivationDetails({
+    required Iterable<ChartPointRef> points,
+    this.additive = false,
+  }) : points = List.unmodifiable(points);
+
+  /// Every chart point represented by the activated row.
+  final List<ChartPointRef> points;
+
+  /// Whether Ctrl or Command was held during pointer or keyboard activation.
+  final bool additive;
+}
+
+/// Reports one modifier-aware row activation request.
+typedef ChartTableRowActivationCallback =
+    void Function(ChartTableRowActivationDetails details);
+
 /// Accessible, horizontally scrollable, row-virtualized chart data table.
 ///
 /// Supply a [ChartTableModel] created from the same [ChartDocument] that feeds
@@ -40,6 +59,7 @@ class ChartDataTable extends StatefulWidget {
     this.onRowFocused,
     this.onRowFocusCleared,
     this.onRowHoverChanged,
+    this.onRowActivation,
     this.onRowActivated,
     this.focusedPointRefs = const <ChartPointRef>{},
     this.selectedPointRefs = const <ChartPointRef>{},
@@ -80,10 +100,16 @@ class ChartDataTable extends StatefulWidget {
   /// Reports pointer entry with row refs and pointer exit with null.
   final ChartTableRowHoverCallback? onRowHoverChanged;
 
+  /// Called by row click or Enter with points and modifier-key state.
+  ///
+  /// This takes precedence over [onRowActivated] when both are supplied.
+  final ChartTableRowActivationCallback? onRowActivation;
+
   /// Called by row click or Enter with every point represented by that row.
   ///
-  /// When supplied, activation takes precedence over drag-selecting cell text;
-  /// use the table's row or dataset copy actions for clipboard workflows.
+  /// Used only when [onRowActivation] is null. When supplied, activation takes
+  /// precedence over drag-selecting cell text; use the table's row or dataset
+  /// copy actions for clipboard workflows.
   final ChartTableRowCallback? onRowActivated;
 
   /// Transient chart-point focus mirrored into visible table rows.
@@ -483,7 +509,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
                               controller: _verticalController,
                               thumbVisibility: true,
                               child: _TableSelectionBoundary(
-                                enableSelection: widget.onRowActivated == null,
+                                enableSelection:
+                                    widget.onRowActivation == null &&
+                                    widget.onRowActivated == null,
                                 child: ListView.builder(
                                   controller: _verticalController,
                                   itemExtent: tableTheme.rowHeight,
@@ -724,6 +752,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onFocused: widget.onRowFocused,
         onFocusCleared: widget.onRowFocusCleared,
         onHoverChanged: widget.onRowHoverChanged,
+        onActivation: widget.onRowActivation,
         onActivated: widget.onRowActivated,
         children: [
           if (widget.showCopyRowAction)
@@ -797,6 +826,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onFocused: widget.onRowFocused,
         onFocusCleared: widget.onRowFocusCleared,
         onHoverChanged: widget.onRowHoverChanged,
+        onActivation: widget.onRowActivation,
         onActivated: widget.onRowActivated,
         children: [
           if (widget.showCopyRowAction)
@@ -852,6 +882,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       onFocused: widget.onRowFocused,
       onFocusCleared: widget.onRowFocusCleared,
       onHoverChanged: widget.onRowHoverChanged,
+      onActivation: widget.onRowActivation,
       onActivated: widget.onRowActivated,
       children: [
         if (widget.showCopyRowAction)
@@ -1355,6 +1386,7 @@ class _FocusableTableRow extends StatefulWidget {
     this.onFocused,
     this.onFocusCleared,
     this.onHoverChanged,
+    this.onActivation,
     this.onActivated,
   });
 
@@ -1371,6 +1403,7 @@ class _FocusableTableRow extends StatefulWidget {
   final ChartTableRowCallback? onFocused;
   final VoidCallback? onFocusCleared;
   final ChartTableRowHoverCallback? onHoverChanged;
+  final ChartTableRowActivationCallback? onActivation;
   final ChartTableRowCallback? onActivated;
 
   @override
@@ -1380,12 +1413,28 @@ class _FocusableTableRow extends StatefulWidget {
 class _FocusableTableRowState extends State<_FocusableTableRow> {
   bool _focused = false;
 
+  void _activate() {
+    final onActivation = widget.onActivation;
+    if (onActivation != null) {
+      onActivation(
+        ChartTableRowActivationDetails(
+          points: widget.references,
+          additive:
+              HardwareKeyboard.instance.isControlPressed ||
+              HardwareKeyboard.instance.isMetaPressed,
+        ),
+      );
+      return;
+    }
+    widget.onActivated?.call(widget.references);
+  }
+
   @override
   Widget build(BuildContext context) {
     final visuallyFocused = _focused || widget.chartFocused;
     return Semantics(
       label: widget.semanticsLabel,
-      button: widget.onActivated != null,
+      button: widget.onActivation != null || widget.onActivated != null,
       focused: _focused,
       selected: widget.selected,
       child: FocusableActionDetector(
@@ -1404,6 +1453,10 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
             horizontal: 1,
           ),
           SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.enter, control: true):
+              ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.enter, meta: true):
+              ActivateIntent(),
         },
         actions: {
           _MoveTableFocusIntent: CallbackAction<_MoveTableFocusIntent>(
@@ -1419,7 +1472,7 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
           ),
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
-              widget.onActivated?.call(widget.references);
+              _activate();
               return null;
             },
           ),
@@ -1432,14 +1485,14 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
             widget.onFocusCleared?.call();
           }
         },
-        mouseCursor: widget.onActivated == null
+        mouseCursor: widget.onActivation == null && widget.onActivated == null
             ? MouseCursor.defer
             : SystemMouseCursors.click,
         child: InkWell(
           canRequestFocus: false,
-          onTap: widget.onActivated == null
+          onTap: widget.onActivation == null && widget.onActivated == null
               ? null
-              : () => widget.onActivated!(widget.references),
+              : _activate,
           onHover: (hovering) {
             widget.onHoverChanged?.call(hovering ? widget.references : null);
           },
