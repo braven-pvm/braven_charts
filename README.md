@@ -90,7 +90,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.3.1
+  braven_charts: ^0.4.0
 ```
 
 Then fetch dependencies:
@@ -99,7 +99,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.3.1 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.4.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 
