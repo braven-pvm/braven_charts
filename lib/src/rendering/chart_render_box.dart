@@ -3,6 +3,7 @@
 
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueKey, visibleForTesting;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -14,6 +15,7 @@ import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
 import '../models/axis_swap_mode.dart';
@@ -74,6 +76,8 @@ class ChartRenderBox extends RenderBox {
     ElementGenerator? elementGenerator,
     ChartTheme? theme,
     bool tooltipsEnabled = true,
+    String? selectedTooltipSeriesId,
+    int? selectedTooltipPointIndex,
     bool showXScrollbar = false,
     bool showYScrollbar = false,
     ScrollbarConfig? scrollbarTheme,
@@ -82,15 +86,21 @@ class ChartRenderBox extends RenderBox {
     List<ChartSeries>? series,
     this.onElementClick,
     this.onElementHover,
+    this.onDataHitActivate,
+    this.onDataHitFocus,
     this.onEmptyAreaClick,
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
     this.onViewportInteracted,
+    double textScaleFactor = 1,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
+       _selectedTooltipSeriesId = selectedTooltipSeriesId,
+       _selectedTooltipPointIndex = selectedTooltipPointIndex,
        _interactionConfig = interactionConfig,
+       _textScaleFactor = textScaleFactor,
        assert(
          (elements != null) != (elementGenerator != null),
          'Must provide either elements or elementGenerator, but not both',
@@ -217,6 +227,12 @@ class ChartRenderBox extends RenderBox {
   /// Callback for element hover events.
   void Function(ChartElement? element)? onElementHover;
 
+  /// Activates a resolved datum through assistive semantics.
+  void Function(ChartDataHit hit)? onDataHitActivate;
+
+  /// Focuses a resolved datum through assistive semantics.
+  void Function(ChartDataHit hit)? onDataHitFocus;
+
   /// Callback for empty area click (for box select start).
   final void Function(Offset position, PointerEvent event)? onEmptyAreaClick;
 
@@ -248,6 +264,10 @@ class ChartRenderBox extends RenderBox {
   /// Whether tooltips are enabled.
   bool _tooltipsEnabled;
 
+  /// Durable selected datum whose tooltip is independent of pointer hover.
+  String? _selectedTooltipSeriesId;
+  int? _selectedTooltipPointIndex;
+
   /// Manages tooltip show/hide animations with configurable delays.
   ///
   /// Handles timing and opacity animation for tooltips:
@@ -271,6 +291,12 @@ class ChartRenderBox extends RenderBox {
 
   /// Interaction configuration for controlling enabled interactions.
   InteractionConfig? _interactionConfig;
+
+  /// Effective MediaQuery text scale used by canvas tooltips.
+  double _textScaleFactor;
+
+  final Map<String, SemanticsNode> _dataSemanticsNodes =
+      <String, SemanticsNode>{};
 
   /// X-axis for the chart (optional).
   chart_axis.Axis? _xAxis;
@@ -524,6 +550,7 @@ class ChartRenderBox extends RenderBox {
 
     _rebuildSpatialIndex();
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   /// Sets the X-axis for the chart.
@@ -754,11 +781,64 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
+  /// Updates the datum whose tooltip follows durable chart selection.
+  void setSelectedTooltipPoint({String? seriesId, int? pointIndex}) {
+    if (_selectedTooltipSeriesId == seriesId &&
+        _selectedTooltipPointIndex == pointIndex) {
+      return;
+    }
+    final removedSelection =
+        _selectedTooltipSeriesId != null && seriesId == null;
+    _selectedTooltipSeriesId = seriesId;
+    _selectedTooltipPointIndex = pointIndex;
+    if (removedSelection) {
+      _eventHandlerManager.clearTappedMarker();
+      _tooltipAnimator.hideImmediately();
+    }
+    markNeedsPaint();
+  }
+
+  HoveredMarkerInfo? _resolveSelectedTooltipMarker() {
+    final seriesId = _selectedTooltipSeriesId;
+    final pointIndex = _selectedTooltipPointIndex;
+    if (seriesId == null || pointIndex == null) return null;
+    for (final element in _elements.whereType<DataHitElement>()) {
+      if (element.id != seriesId) continue;
+      final hit = element.dataHitForPointIndex(pointIndex);
+      if (hit == null) return null;
+      return HoveredMarkerInfo(
+        seriesId: hit.seriesId,
+        markerIndex: hit.pointIndex,
+        plotPosition: hit.plotPosition,
+        dataHit: hit,
+      );
+    }
+    return null;
+  }
+
+  /// Current geometry-resolved selected tooltip marker for widget tests.
+  @visibleForTesting
+  HoveredMarkerInfo? get debugSelectedTooltipMarker =>
+      _resolveSelectedTooltipMarker();
+
+  /// Current generated chart elements for lifecycle-focused widget tests.
+  @visibleForTesting
+  List<ChartElement> get debugElements =>
+      List<ChartElement>.unmodifiable(_elements);
+
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
+  }
+
+  /// Updates canvas text scaling for tooltip content.
+  void setTextScaleFactor(double value) {
+    if (_textScaleFactor == value) return;
+    _textScaleFactor = value;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   // ==================== MULTI-AXIS SETTERS ====================
@@ -1374,6 +1454,7 @@ class ChartRenderBox extends RenderBox {
 
     // Mark for repaint to show updated elements
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   // ============================================================================
@@ -1432,7 +1513,9 @@ class ChartRenderBox extends RenderBox {
     // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
     // This ensures consistent layout whether using single or multiple axes.
     // Previously, single-axis mode used hardcoded 60px margin which caused gaps.
-    final effectiveAxes = _getEffectiveYAxes();
+    final effectiveAxes = _yAxis == null
+        ? const <YAxisConfig>[]
+        : _getEffectiveYAxes();
     if (effectiveAxes.isNotEmpty) {
       final axisBounds = _computeAxisBounds();
       final axisWidths = _multiAxisManager.computeAxisWidths(
@@ -1578,6 +1661,32 @@ class ChartRenderBox extends RenderBox {
           }
         }
       }
+    } else if (_elementGenerator != null) {
+      // Radial layouts do not have Cartesian axes, but their element generator
+      // still needs the resolved plot dimensions. Keep a neutral transform as
+      // the render-box sizing contract without exposing axes or data scaling.
+      final needsAxislessTransform =
+          _transform == null ||
+          _transform!.dataXMin != 0 ||
+          _transform!.dataXMax != 1 ||
+          _transform!.dataYMin != 0 ||
+          _transform!.dataYMax != 1 ||
+          _transform!.plotWidth != _plotArea.width ||
+          _transform!.plotHeight != _plotArea.height;
+      if (needsAxislessTransform) {
+        _transform = ChartTransform(
+          dataXMin: 0,
+          dataXMax: 1,
+          dataYMin: 0,
+          dataYMax: 1,
+          plotWidth: _plotArea.width,
+          plotHeight: _plotArea.height,
+          invertY: true,
+        );
+        _originalTransform = _transform!.copyWith();
+        _rebuildElementsWithTransform();
+        _seriesCacheManager.invalidate();
+      }
     }
 
     // Rebuild spatial index when size changes (for static elements or after transform updates)
@@ -1702,6 +1811,25 @@ class ChartRenderBox extends RenderBox {
     return hits.first;
   }
 
+  /// Resolves one renderer-neutral datum from widget-local coordinates.
+  ChartDataHit? dataHitAtWidgetPosition(Offset widgetPosition) {
+    final plotPosition = widgetToPlot(widgetPosition);
+    for (final element in _elements.whereType<DataHitElement>()) {
+      final hit = element.dataHitAt(plotPosition);
+      if (hit != null) return hit;
+    }
+    return null;
+  }
+
+  /// Resolves one visible datum by stable series ID and source point index.
+  ChartDataHit? dataHitForPointIndex(String seriesId, int pointIndex) {
+    for (final element in _elements.whereType<DataHitElement>()) {
+      if (element.id != seriesId) continue;
+      return element.dataHitForPointIndex(pointIndex);
+    }
+    return null;
+  }
+
   /// Ensures SeriesElement transforms are updated before hit testing.
   ///
   /// In perSeries normalization mode, each series needs its own Y bounds
@@ -1783,8 +1911,10 @@ class ChartRenderBox extends RenderBox {
   void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
 
   /// Removes crosshair and tooltip state that is not part of the artifact.
-  void clearTransientPreviewState() =>
-      _eventHandlerManager.clearTransientPreviewState();
+  void clearTransientPreviewState() {
+    _eventHandlerManager.clearTransientPreviewState();
+    _tooltipAnimator.hideImmediately();
+  }
 
   // ============================================================================
   // Y-Axis Slot Selection Delegation
@@ -1875,7 +2005,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
-    final seriesElements = _elements.whereType<SeriesElement>().toList()
+    final seriesElements = _elements.whereType<DataSeriesElement>().toList()
       ..sort((a, b) => a.priority.compareTo(b.priority));
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
@@ -1898,7 +2028,7 @@ class ChartRenderBox extends RenderBox {
 
     // Paint each series with current transform
     for (final series in seriesElements) {
-      if (_transform != null) {
+      if (_transform != null && series is SeriesElement) {
         // CRITICAL: Update transform before painting (enables path caching!)
         // This allows SeriesElement to cache paths and only regenerate when transform changes.
 
@@ -1995,6 +2125,7 @@ class ChartRenderBox extends RenderBox {
       if (_tooltipAnimator.isVisible || _tooltipAnimator.opacity > 0) {
         return true;
       }
+      if (_resolveSelectedTooltipMarker() != null) return true;
       // Check if there's a marker that would trigger a tooltip
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
       final hasHoveredMarker = coordinator.hoveredMarker != null;
@@ -2195,22 +2326,24 @@ class ChartRenderBox extends RenderBox {
     // Show based on tooltip trigger mode configuration with animations
     if (_tooltipsEnabled && !coordinator.isPanningOrZooming) {
       final config = _interactionConfig?.tooltip ?? const TooltipConfig();
-      HoveredMarkerInfo? markerToShow;
+      HoveredMarkerInfo? markerToShow = _resolveSelectedTooltipMarker();
 
-      switch (config.triggerMode) {
-        case TooltipTriggerMode.hover:
-          // Show tooltip only when hovering
-          markerToShow = coordinator.hoveredMarker;
-          break;
-        case TooltipTriggerMode.tap:
-          // Show tooltip only for tapped marker
-          markerToShow = _eventHandlerManager.tappedMarker;
-          break;
-        case TooltipTriggerMode.both:
-          // Show tooltip for either hover or tap (prefer tapped if both exist)
-          markerToShow =
-              _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
-          break;
+      if (markerToShow == null) {
+        switch (config.triggerMode) {
+          case TooltipTriggerMode.hover:
+            // Show tooltip only when hovering
+            markerToShow = coordinator.hoveredMarker;
+            break;
+          case TooltipTriggerMode.tap:
+            // Show tooltip only for tapped marker
+            markerToShow = _eventHandlerManager.tappedMarker;
+            break;
+          case TooltipTriggerMode.both:
+            // Show tooltip for either hover or tap (prefer tapped if both exist)
+            markerToShow =
+                _eventHandlerManager.tappedMarker ?? coordinator.hoveredMarker;
+            break;
+        }
       }
 
       // Handle show/hide animations based on marker presence
@@ -2285,7 +2418,9 @@ class ChartRenderBox extends RenderBox {
 
     // Paint axes (behind all chart elements)
     // Paint Y-axes using MultiAxisPainter (handles single or multiple axes)
-    _paintMultipleYAxes(canvas);
+    if (_yAxis != null) {
+      _paintMultipleYAxes(canvas);
+    }
 
     // Paint X-axis using XAxisPainter (unified approach)
     if (_xAxis != null) {
@@ -2331,7 +2466,8 @@ class ChartRenderBox extends RenderBox {
     final backgroundElements =
         _elements
             .where(
-              (e) => e is! SeriesElement && e.renderOrder < RenderOrder.series,
+              (e) =>
+                  e is! DataSeriesElement && e.renderOrder < RenderOrder.series,
             )
             .toList()
           ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
@@ -2408,7 +2544,9 @@ class ChartRenderBox extends RenderBox {
     final foregroundElements =
         _elements
             .where(
-              (e) => e is! SeriesElement && e.renderOrder >= RenderOrder.series,
+              (e) =>
+                  e is! DataSeriesElement &&
+                  e.renderOrder >= RenderOrder.series,
             )
             .toList()
           ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
@@ -2609,6 +2747,12 @@ class ChartRenderBox extends RenderBox {
     Size size,
     HoveredMarkerInfo markerInfo,
   ) {
+    if (!_elements.whereType<DataHitElement>().any(
+      (element) => element.id == markerInfo.seriesId,
+    )) {
+      _tooltipAnimator.hideImmediately();
+      return;
+    }
     _tooltipRenderer.drawMarkerTooltip(
       canvas: canvas,
       size: size,
@@ -2622,7 +2766,79 @@ class ChartRenderBox extends RenderBox {
       effectiveBindings: _getEffectiveBindings(),
       formatDataValue: _formatDataValue,
       plotToWidget: plotToWidget,
+      textScaleFactor: _textScaleFactor,
     );
+  }
+
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    final hitCount = _elements
+        .whereType<DataHitElement>()
+        .expand((element) => element.semanticDataHits)
+        .length;
+    if (hitCount == 0) return;
+    config
+      ..isSemanticBoundary = true
+      ..explicitChildNodes = true
+      ..textDirection = TextDirection.ltr
+      ..label = 'Pie chart with $hitCount slices';
+  }
+
+  @override
+  void assembleSemanticsNode(
+    SemanticsNode node,
+    SemanticsConfiguration config,
+    Iterable<SemanticsNode> children,
+  ) {
+    final hits = _elements
+        .whereType<DataHitElement>()
+        .expand((element) => element.semanticDataHits)
+        .toList();
+    if (hits.isEmpty) {
+      _dataSemanticsNodes.clear();
+      super.assembleSemanticsNode(node, config, children);
+      return;
+    }
+
+    final nextNodes = <String, SemanticsNode>{};
+    final orderedNodes = <SemanticsNode>[];
+    for (final hit in hits) {
+      final identity = '${hit.seriesId}:${hit.pointIndex}';
+      final semanticConfig = SemanticsConfiguration()
+        ..sortKey = OrdinalSortKey(hit.ordinal.toDouble())
+        ..textDirection = TextDirection.ltr
+        ..identifier = identity
+        ..label = hit.semanticLabel
+        ..isButton = true
+        ..isSelected = hit.isSelected
+        ..isFocusable = true
+        ..isFocused = hit.isFocused
+        ..onTap = () => onDataHitActivate?.call(hit);
+      semanticConfig.onDidGainAccessibilityFocus = () {
+        onDataHitFocus?.call(hit);
+      };
+      final semanticNode =
+          _dataSemanticsNodes[identity] ??
+          SemanticsNode(key: ValueKey(identity));
+      semanticNode
+        ..rect = hit.semanticBounds
+            .shift(_plotArea.topLeft)
+            .intersect(Offset.zero & size)
+        ..updateWith(config: semanticConfig);
+      nextNodes[identity] = semanticNode;
+      orderedNodes.add(semanticNode);
+    }
+    _dataSemanticsNodes
+      ..clear()
+      ..addAll(nextNodes);
+    node.updateWith(config: config, childrenInInversePaintOrder: orderedNodes);
+  }
+
+  @override
+  void clearSemantics() {
+    super.clearSemantics();
+    _dataSemanticsNodes.clear();
   }
 
   // ============================================================================

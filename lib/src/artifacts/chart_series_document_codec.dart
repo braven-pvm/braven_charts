@@ -5,6 +5,8 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
+import '../models/pie_chart_config.dart';
+import '../models/pie_chart_series.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
@@ -15,6 +17,7 @@ import 'chart_artifact_diagnostics.dart';
 import 'chart_data_payload.dart';
 import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
+import 'chart_style_document_codec.dart';
 import 'json_value.dart';
 
 /// Audited adapter between public built-in series models and schema-v1
@@ -92,7 +95,10 @@ abstract final class ChartSeriesDocumentCodec {
               points,
             ),
           },
-          requiredCapabilities: {'series.${_typeOf(series)}'},
+          requiredCapabilities: {
+            'series.${_typeOf(series)}',
+            if (series is PieChartSeries) 'series.pie.style.v2',
+          },
         ),
       );
     } on _RuntimeBindingException catch (error) {
@@ -291,6 +297,16 @@ abstract final class ChartSeriesDocumentCodec {
           minWidth: _double(style, 'minWidth'),
           maxWidth: _double(style, 'maxWidth'),
         ),
+        'pie' => PieChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
+          dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+        ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
@@ -325,6 +341,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   ScatterChartSeries() => 'scatter',
   AreaChartSeries() => 'area',
   BarChartSeries() => 'bar',
+  PieChartSeries() => 'pie',
   ChartSeries() => 'base',
 };
 
@@ -443,12 +460,172 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
             : _number(series.barWidthPixels!)
         ..['minWidth'] = _number(series.minWidth)
         ..['maxWidth'] = _number(series.maxWidth);
+    case PieChartSeries():
+      result
+        ..['pieStyle'] = _encodePieStyle(series.pieStyle)
+        ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
     case ChartSeries():
       break;
   }
   result.removeWhere((_, value) => value == null);
   return result;
 }
+
+Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
+  'startAngleDegrees': _number(style.startAngleDegrees),
+  'clockwise': style.clockwise,
+  'radiusFactor': _number(style.radiusFactor),
+  'sliceGap': _number(style.sliceGap),
+  'borderWidth': _number(style.borderWidth),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  if (style.borderColorMode != null)
+    'borderColorMode': style.borderColorMode!.name,
+  if (style.borderHueShiftDegrees != null)
+    'borderHueShiftDegrees': _number(style.borderHueShiftDegrees!),
+  if (style.borderSaturationShift != null)
+    'borderSaturationShift': _number(style.borderSaturationShift!),
+  if (style.borderLightnessShift != null)
+    'borderLightnessShift': _number(style.borderLightnessShift!),
+  if (style.gradient != null) 'gradient': _encodePieGradient(style.gradient!),
+  'selectionExplodeOffset': _number(style.selectionExplodeOffset),
+  if (style.opacity != null) 'opacity': _number(style.opacity!),
+  if (style.cornerRadius != null) 'cornerRadius': _number(style.cornerRadius!),
+  if (style.shadow != null) 'shadow': _encodePieElevation(style.shadow!),
+  if (style.selectedElevation != null)
+    'selectedElevation': _encodePieElevation(style.selectedElevation!),
+  if (style.animationMode != null) 'animationMode': style.animationMode!.name,
+};
+
+PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
+  startAngleDegrees: _double(value, 'startAngleDegrees'),
+  clockwise: _bool(value, 'clockwise'),
+  radiusFactor: _double(value, 'radiusFactor'),
+  sliceGap: _double(value, 'sliceGap'),
+  borderWidth: _double(value, 'borderWidth'),
+  borderColor: _optionalColor(
+    value['borderColor'],
+    r'$.style.pieStyle.borderColor',
+  ),
+  borderColorMode: _optionalEnum(
+    value['borderColorMode'],
+    PieBorderColorMode.values,
+    r'$.style.pieStyle.borderColorMode',
+  ),
+  borderHueShiftDegrees: _optionalDouble(value['borderHueShiftDegrees']),
+  borderSaturationShift: _optionalDouble(value['borderSaturationShift']),
+  borderLightnessShift: _optionalDouble(value['borderLightnessShift']),
+  gradient: _optionalMap(value, 'gradient') == null
+      ? null
+      : _decodePieGradient(_map(value, 'gradient')),
+  selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
+  opacity: _optionalDouble(value['opacity']),
+  cornerRadius: _optionalDouble(value['cornerRadius']),
+  shadow: _optionalMap(value, 'shadow') == null
+      ? null
+      : _decodePieElevation(_map(value, 'shadow')),
+  selectedElevation: _optionalMap(value, 'selectedElevation') == null
+      ? null
+      : _decodePieElevation(_map(value, 'selectedElevation')),
+  animationMode: _optionalEnum(
+    value['animationMode'],
+    PieAnimationMode.values,
+    r'$.style.pieStyle.animationMode',
+  ),
+);
+
+Map<String, Object?> _encodePieGradient(PieGradientStyle style) => {
+  'enabled': style.enabled,
+  'type': style.type.name,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _number(style.startLightnessShift),
+  'endLightnessShift': _number(style.endLightnessShift),
+  'angleDegrees': _number(style.angleDegrees),
+};
+
+PieGradientStyle _decodePieGradient(Map<String, Object?> value) =>
+    PieGradientStyle(
+      enabled: _bool(value, 'enabled'),
+      type: _enum(value, 'type', PieGradientType.values),
+      startColor: _optionalColor(
+        value['startColor'],
+        r'$.style.pieStyle.gradient.startColor',
+      ),
+      endColor: _optionalColor(
+        value['endColor'],
+        r'$.style.pieStyle.gradient.endColor',
+      ),
+      startLightnessShift: _double(value, 'startLightnessShift'),
+      endLightnessShift: _double(value, 'endLightnessShift'),
+      angleDegrees: _double(value, 'angleDegrees'),
+    );
+
+Map<String, Object?> _encodePieElevation(PieElevationStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _number(style.blurRadius),
+  'spreadRadius': _number(style.spreadRadius),
+  'offsetX': _number(style.offset.dx),
+  'offsetY': _number(style.offset.dy),
+  'opacity': _number(style.opacity),
+};
+
+PieElevationStyle _decodePieElevation(Map<String, Object?> value) =>
+    PieElevationStyle(
+      color: _optionalColor(value['color'], r'$.style.pieElevation.color'),
+      blurRadius: _double(value, 'blurRadius'),
+      spreadRadius: _double(value, 'spreadRadius'),
+      offset: Offset(_double(value, 'offsetX'), _double(value, 'offsetY')),
+      opacity: _double(value, 'opacity'),
+    );
+
+Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
+  'isVisible': config.isVisible,
+  'position': config.position.name,
+  'content': config.content.name,
+  'minimumShare': _number(config.minimumShare),
+  'minimumSweepDegrees': _number(config.minimumSweepDegrees),
+  'padding': _number(config.padding),
+  'outsideOffset': _number(config.outsideOffset),
+  'connectorLength': _number(config.connectorLength),
+  'connectorWidth': _number(config.connectorWidth),
+  if (config.connectorColor != null)
+    'connectorColor': config.connectorColor!.toARGB32(),
+  'collisionStrategy': config.collisionStrategy.name,
+  if (config.calloutStyle != null)
+    'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      config.calloutStyle!,
+    ).toJson(),
+};
+
+PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
+    PieDataLabelConfig(
+      isVisible: _bool(value, 'isVisible'),
+      position: _enum(value, 'position', PieDataLabelPosition.values),
+      content: _enum(value, 'content', PieDataLabelContent.values),
+      minimumShare: _double(value, 'minimumShare'),
+      minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
+      padding: _double(value, 'padding'),
+      outsideOffset: _optionalDouble(value['outsideOffset']) ?? 0,
+      connectorLength: _double(value, 'connectorLength'),
+      connectorWidth: _double(value, 'connectorWidth'),
+      connectorColor: _optionalColor(
+        value['connectorColor'],
+        r'$.style.dataLabels.connectorColor',
+      ),
+      collisionStrategy: _enum(
+        value,
+        'collisionStrategy',
+        PieDataLabelCollisionStrategy.values,
+      ),
+      calloutStyle: _optionalMap(value, 'calloutStyle') == null
+          ? null
+          : ChartStyleDocumentCodec.decodeLabelStyle(
+              _jsonObject(
+                _map(value, 'calloutStyle'),
+                path: r'$.style.dataLabels.calloutStyle',
+              ),
+            ),
+    );
 
 Map<String, Object?> _encodeLineStyle({
   required LineInterpolation interpolation,

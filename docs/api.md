@@ -36,6 +36,7 @@ The primary chart widget. It renders a chart with optional annotations, interact
 
 - `BravenChartPlus.fromValues(...)`
 - `BravenChartPlus.fromMap(...)`
+- `BravenChartPlus.fromJson(...)`
 
 **Callbacks**:
 
@@ -53,6 +54,28 @@ Defines a series of data points with optional styling and axis configuration.
 - `color`, `style`, `isXOrdered`
 - `yAxisId` (shared axis), `yAxisConfig` (inline axis)
 - `unit` (value suffix)
+
+Concrete series are `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
+`ScatterChartSeries`, and `PieChartSeries`.
+
+### `PieChartSeries`
+
+Represents one insertion-ordered set of category contributions. A pie chart
+accepts exactly one pie series and cannot mix with Cartesian series.
+
+- `PieChartSeries.fromMap`: category/value convenience constructor
+- `pieStyle`: `PieChartStyle` geometry, physical separation, border, solid or
+  `PieGradientStyle` fill, explode, opacity, rounded-corner, elevation, and
+  animation overrides
+- `dataLabels`: `PieDataLabelConfig` content, position, eligibility, compact
+  outside-lane offset, connector, collision, and callout policy
+- `ChartTheme.pieChartTheme`: shared `PieChartTheme` defaults, including
+  `PieGradientStyle` fills, `PieElevationStyle` shadows/glows, and
+  `PieAnimationMode`
+- `total` and `visiblePointIndices`: validated contribution helpers
+
+Values must be finite and non-negative, and categories must be non-empty. Zero
+values remain in transport and tables but do not paint a slice.
 
 ### `ChartDataPoint`
 
@@ -221,7 +244,8 @@ alignment, unit/domain safety, diagnostics, and independent hydration.
 ### Tables, identity, and migration
 
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` derive an
-  accessible long or exact-X wide table from the portable document. The widget
+  accessible long, exact-X wide, or pie `Category | Value | Share` table from
+  the portable document. The widget
   natively provides bounded dataset clipboard copy, per-row copy, and raw CSV
   export; web downloads directly and non-web hosts can override delivery. Row
   callbacks report one point ref for long rows and every populated point ref

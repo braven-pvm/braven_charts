@@ -17,7 +17,6 @@ import '../../interaction/core/element_types.dart';
 import '../../interaction/core/hit_test_strategy.dart';
 import '../../interaction/core/interaction_mode.dart';
 import '../../models/chart_annotation.dart';
-import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
 
 /// Delegate interface for EventHandlerManager to interact with ChartRenderBox.
@@ -375,6 +374,13 @@ class EventHandlerManager {
   /// Gets the tapped marker for tooltip rendering.
   HoveredMarkerInfo? get tappedMarker => _tappedMarker;
 
+  /// Clears a tap-pinned tooltip without disturbing cursor or hover state.
+  void clearTappedMarker() {
+    if (_tappedMarker == null) return;
+    _tappedMarker = null;
+    _delegate.markNeedsPaint();
+  }
+
   // ==========================================================================
   // Hit Test Throttling
   // ==========================================================================
@@ -435,6 +441,11 @@ class EventHandlerManager {
 
   void _handlePointerDown(PointerDownEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
+
+    // Touch and stylus input do not produce a preceding hover event. Resolve
+    // the datum on pointer-down so tap selection and tap tooltips use the same
+    // precise data-hit contract as mouse hover.
+    _updateHoveredMarker(position);
 
     // PRIORITY 1: Check if pointer is on scrollbar (highest priority)
     if (_delegate.hitTestScrollbars(
@@ -1651,6 +1662,10 @@ class EventHandlerManager {
   }
 
   void _updateHoveredMarker(Offset widgetPosition) {
+    if (!(_delegate.interactionConfig?.enabled ?? true)) {
+      _delegate.coordinator.setHoveredMarker(null);
+      return;
+    }
     final transform = _delegate.transform;
     if (transform == null) {
       _delegate.coordinator.setHoveredMarker(null);
@@ -1663,24 +1678,20 @@ class EventHandlerManager {
     HoveredMarkerInfo? nearestMarker;
     double minDistance = snapRadius;
 
-    for (final element in _delegate.elements.whereType<SeriesElement>()) {
-      final series = element.series;
-      if (series is LineChartSeries && !series.showDataPointMarkers) continue;
-      if (series is AreaChartSeries && !series.showDataPointMarkers) continue;
-
-      for (int i = 0; i < element.series.points.length; i++) {
-        final point = element.series.points[i];
-        final markerPlotPos = transform.dataToPlot(point.x, point.y);
-        final distance = (plotPosition - markerPlotPos).distance;
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestMarker = HoveredMarkerInfo(
-            seriesId: element.id,
-            markerIndex: i,
-            plotPosition: markerPlotPos,
-          );
-        }
+    for (final element in _delegate.elements.whereType<DataHitElement>()) {
+      final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
+      if (hit == null) continue;
+      final distance = hit.share == null
+          ? (plotPosition - hit.plotPosition).distance
+          : 0.0;
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestMarker = HoveredMarkerInfo(
+          seriesId: hit.seriesId,
+          markerIndex: hit.pointIndex,
+          plotPosition: hit.plotPosition,
+          dataHit: hit,
+        );
       }
     }
 
@@ -1696,6 +1707,16 @@ class EventHandlerManager {
 
     if (markerChanged) {
       _delegate.invalidateSeriesCache();
+      final element = nearestMarker == null
+          ? null
+          : _delegate.elements
+                .whereType<DataHitElement>()
+                .cast<ChartElement?>()
+                .firstWhere(
+                  (candidate) => candidate?.id == nearestMarker!.seriesId,
+                  orElse: () => null,
+                );
+      _delegate.onElementHover?.call(element);
     }
   }
 

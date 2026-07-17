@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../data/ecg_generator.dart';
 import '../widgets/gallery_flagships.dart';
+import '../widgets/pie_gallery_cards.dart';
 
 const _capabilities = <(IconData, String)>[
   (Icons.open_with, 'Zoom, pan & scroll'),
@@ -216,6 +217,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(buildingBlockCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'PIE COMPOSITIONS',
+              title: 'One whole, five presentation strategies',
+              subtitle:
+                  'Compare a simple value-first Pie with outside and inside labels, dense categories, dark and light themes, rounded slices, elevation, and legend treatments.',
+              count: 5,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-pie-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 420,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(pieGalleryCards),
             ),
           ),
         ],
@@ -2639,8 +2662,8 @@ class _GalleryModeControl extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             mode == _GalleryMode.curated
-                ? '17 representative compositions'
-                : '30 examples across the complete catalog',
+                ? '22 representative compositions'
+                : '35 examples across the complete catalog',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

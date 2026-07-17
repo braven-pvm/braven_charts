@@ -109,6 +109,52 @@ class ChartTableWideRow {
   final Map<String, ChartTableWideCell> cells;
 }
 
+/// Native categorical projection for one transported pie slice.
+@immutable
+class ChartTablePieRow {
+  const ChartTablePieRow({
+    required this.rowId,
+    required this.reference,
+    required this.category,
+    required this.valueRaw,
+    required this.valueDisplay,
+    required this.shareRaw,
+    required this.shareDisplay,
+    required this.isValid,
+    this.unit,
+    this.colorValue,
+  });
+
+  final String rowId;
+  final ChartTablePointReference reference;
+  final String category;
+  final double valueRaw;
+  final String valueDisplay;
+
+  /// Fractional share in the inclusive range 0–1 for valid pie documents.
+  final double shareRaw;
+
+  /// Percentage display with two fractional digits.
+  final String shareDisplay;
+  final String? unit;
+  final bool isValid;
+
+  /// Effective ARGB slice color, when the point produces visible geometry.
+  final int? colorValue;
+}
+
+/// Renderer-aware shape exposed by a derived chart table.
+enum ChartTableProjectionKind {
+  /// Canonical one-point-per-row Cartesian projection.
+  cartesianLong,
+
+  /// Exact-X Cartesian projection with one value column per series.
+  cartesianWide,
+
+  /// Category, value, and share projection for one pie series.
+  pie,
+}
+
 /// Immutable chart-table projection derived exclusively from [ChartDocument].
 ///
 /// [longRows] always remains available as the canonical lossless form. A wide
@@ -119,14 +165,17 @@ class ChartTableModel {
     required this.documentId,
     required this.documentRevision,
     required this.xColumnLabel,
+    required this.projectionKind,
     required this.options,
     required Iterable<ChartTableSeriesColumn> series,
     required Iterable<ChartTableLongRow> longRows,
     required Iterable<ChartTableWideRow> wideRows,
+    required Iterable<ChartTablePieRow> pieRows,
     required Iterable<ChartArtifactWarning> warnings,
   }) : series = List.unmodifiable(series),
        longRows = List.unmodifiable(longRows),
        wideRows = List.unmodifiable(wideRows),
+       pieRows = List.unmodifiable(pieRows),
        warnings = List.unmodifiable(warnings);
 
   factory ChartTableModel.fromDocument(
@@ -137,6 +186,19 @@ class ChartTableModel {
     final warnings = <ChartArtifactWarning>[];
     final hiddenIds = viewState?.hiddenSeriesIds ?? const <String>{};
     final selected = _selectSeries(document, viewState, options);
+    final pieSeries = selected.where((series) => series.type == 'pie').toList();
+    if (pieSeries.isNotEmpty &&
+        (pieSeries.length != 1 || selected.length != 1)) {
+      throw UnsupportedError(
+        'Pie table projection requires exactly one pie series and cannot mix '
+        'pie with Cartesian series.',
+      );
+    }
+    final projectionKind = pieSeries.isNotEmpty
+        ? ChartTableProjectionKind.pie
+        : options.rowLayout == ChartTableRowLayout.long
+        ? ChartTableProjectionKind.cartesianLong
+        : ChartTableProjectionKind.cartesianWide;
     final xFormatter = _resolveFormatter(
       document.xAxis.formatter,
       options.formatters,
@@ -147,6 +209,7 @@ class ChartTableModel {
     final themeSeriesColors = _themeSeriesColors(document);
     final seriesColumns = <ChartTableSeriesColumn>[];
     final longRows = <ChartTableLongRow>[];
+    final pieRows = <ChartTablePieRow>[];
 
     for (final series in selected) {
       final inlineAxis = series.inlineAxis?.values;
@@ -193,6 +256,16 @@ class ChartTableModel {
           'Table generation does not support ${payload.storage} payloads.',
         );
       }
+      if (series.type == 'pie') {
+        pieRows.addAll(
+          _projectPieRows(
+            series,
+            payload.points,
+            unit: unit,
+            themeSeriesColors: themeSeriesColors,
+          ),
+        );
+      }
       for (
         var pointIndex = 0;
         pointIndex < payload.points.length;
@@ -229,13 +302,17 @@ class ChartTableModel {
     return ChartTableModel._(
       documentId: document.documentId,
       documentRevision: document.revision,
-      xColumnLabel: _xColumnLabel(document.xAxis),
+      xColumnLabel: projectionKind == ChartTableProjectionKind.pie
+          ? 'Category'
+          : _xColumnLabel(document.xAxis),
+      projectionKind: projectionKind,
       options: options,
       series: seriesColumns,
       longRows: longRows,
-      wideRows: options.rowLayout == ChartTableRowLayout.wide
+      wideRows: projectionKind == ChartTableProjectionKind.cartesianWide
           ? _pivotExactX(longRows, seriesColumns)
           : const [],
+      pieRows: pieRows,
       warnings: warnings,
     );
   }
@@ -243,15 +320,24 @@ class ChartTableModel {
   final String documentId;
   final int documentRevision;
   final String xColumnLabel;
+
+  /// Effective renderer-aware projection derived from the document.
+  ///
+  /// This remains separate from [ChartTableOptions.rowLayout] so adding a new
+  /// renderer does not expand the existing public long/wide option enum.
+  final ChartTableProjectionKind projectionKind;
   final ChartTableOptions options;
   final List<ChartTableSeriesColumn> series;
   final List<ChartTableLongRow> longRows;
   final List<ChartTableWideRow> wideRows;
+  final List<ChartTablePieRow> pieRows;
   final List<ChartArtifactWarning> warnings;
 
-  int get rowCount => options.rowLayout == ChartTableRowLayout.long
-      ? longRows.length
-      : wideRows.length;
+  int get rowCount => switch (projectionKind) {
+    ChartTableProjectionKind.cartesianLong => longRows.length,
+    ChartTableProjectionKind.cartesianWide => wideRows.length,
+    ChartTableProjectionKind.pie => pieRows.length,
+  };
 
   bool get isEmpty => rowCount == 0;
 
@@ -261,6 +347,70 @@ class ChartTableModel {
     ChartTableDataScope.selectedSeries => 'Selected series',
     ChartTableDataScope.specifiedSeries => 'Specified series',
   };
+}
+
+List<ChartTablePieRow> _projectPieRows(
+  ChartSeriesDocument series,
+  List<ChartPointDocument> points, {
+  required String? unit,
+  required List<int> themeSeriesColors,
+}) {
+  var total = 0.0;
+  for (final point in points) {
+    final value = point.y.asDouble;
+    if (value.isFinite && value >= 0) total += value;
+  }
+  final validTotal = total.isFinite && total > 0;
+  final explicitSeriesColor = _validColorValue(
+    series.style?.values['color']?.toJson(),
+  );
+  final rows = <ChartTablePieRow>[];
+  var visibleIndex = 0;
+  for (final (pointIndex, point) in points.indexed) {
+    final value = point.y.asDouble;
+    final category = point.label?.trim();
+    final valid =
+        point.x.asDouble.isFinite &&
+        value.isFinite &&
+        value >= 0 &&
+        category != null &&
+        category.isNotEmpty;
+    final share = validTotal && value.isFinite && value >= 0
+        ? value / total
+        : 0.0;
+    final contributesSlice = value.isFinite && value > 0;
+    final pointColor = _validColorValue(
+      point.pointStyle?.values['color']?.toJson(),
+    );
+    final colorValue = contributesSlice
+        ? pointColor ??
+              (visibleIndex == 0 ? explicitSeriesColor : null) ??
+              (themeSeriesColors.isEmpty
+                  ? null
+                  : themeSeriesColors[visibleIndex % themeSeriesColors.length])
+        : pointColor;
+    if (contributesSlice) visibleIndex++;
+    rows.add(
+      ChartTablePieRow(
+        rowId: '${Uri.encodeComponent(series.id)}:$pointIndex',
+        reference: ChartTablePointReference(
+          seriesId: series.id,
+          pointIndex: pointIndex,
+        ),
+        category: category == null || category.isEmpty
+            ? 'No category'
+            : category,
+        valueRaw: value,
+        valueDisplay: value.isFinite ? value.toStringAsFixed(2) : 'No value',
+        shareRaw: share,
+        shareDisplay: '${(share * 100).toStringAsFixed(2)}%',
+        unit: unit,
+        isValid: valid,
+        colorValue: colorValue,
+      ),
+    );
+  }
+  return rows;
 }
 
 List<int> _themeSeriesColors(ChartDocument document) {

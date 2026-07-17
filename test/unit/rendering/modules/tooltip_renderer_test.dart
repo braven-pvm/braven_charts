@@ -1,8 +1,6 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Tests for TooltipRenderer module
 
-import 'dart:ui';
-
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/interaction/core/chart_element.dart';
@@ -16,6 +14,7 @@ import 'package:braven_charts/src/models/y_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_position.dart';
 import 'package:braven_charts/src/rendering/modules/tooltip_animator.dart';
 import 'package:braven_charts/src/rendering/modules/tooltip_renderer.dart';
+import 'package:braven_charts/src/theming/styles/label_style.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,9 +22,9 @@ void main() {
   // Initialize Flutter test binding for SchedulerBinding
   TestWidgetsFlutterBinding.ensureInitialized();
 
-// =============================================================================
-// Test Helpers
-// =============================================================================
+  // =============================================================================
+  // Test Helpers
+  // =============================================================================
 
   /// Creates a test transform for series elements.
   ChartTransform createTestTransform() {
@@ -51,7 +50,8 @@ void main() {
     final series = LineChartSeries(
       id: id,
       name: name,
-      points: points ??
+      points:
+          points ??
           const [
             ChartDataPoint(x: 0, y: 0),
             ChartDataPoint(x: 50, y: 100),
@@ -61,10 +61,7 @@ void main() {
       dataPointMarkerRadius: markerRadius,
     );
 
-    return SeriesElement(
-      series: series,
-      transform: createTestTransform(),
-    );
+    return SeriesElement(series: series, transform: createTestTransform());
   }
 
   /// Creates a mock HoveredMarkerInfo for testing.
@@ -80,9 +77,9 @@ void main() {
     );
   }
 
-// =============================================================================
-// Tests
-// =============================================================================
+  // =============================================================================
+  // Tests
+  // =============================================================================
 
   group('TooltipRenderer', () {
     late TooltipRenderer renderer;
@@ -162,10 +159,7 @@ void main() {
 
       test('uses series name in tooltip when available', () {
         elements = [
-          createTestSeriesElement(
-            id: 'test-series',
-            name: 'Test Series Name',
-          ),
+          createTestSeriesElement(id: 'test-series', name: 'Test Series Name'),
         ];
 
         final markerInfo = createTestMarkerInfo();
@@ -290,6 +284,48 @@ void main() {
     });
 
     group('Styling', () {
+      test('theme style replaces the legacy default config style', () {
+        final theme = ChartTheme.light.copyWith(
+          interactionTheme: ChartTheme.light.interactionTheme.copyWith(
+            tooltipStyle: const LabelStyle(
+              backgroundColor: Color(0xFF112233),
+              borderColor: Color(0xFF445566),
+              borderWidth: 2,
+              borderRadius: 9,
+              padding: EdgeInsets.all(11),
+              textStyle: TextStyle(color: Color(0xFFFAFAFA), fontSize: 15),
+              shadowColor: Color(0x55000000),
+              shadowBlurRadius: 7,
+            ),
+          ),
+        );
+
+        final style = renderer.resolveStyle(
+          const InteractionConfig(tooltip: TooltipConfig()),
+          theme,
+        );
+
+        expect(style.backgroundColor, const Color(0xFF112233));
+        expect(style.borderColor, const Color(0xFF445566));
+        expect(style.borderWidth, 2);
+        expect(style.borderRadius, 9);
+        expect(style.padding, 11);
+        expect(style.textColor, const Color(0xFFFAFAFA));
+        expect(style.fontSize, 15);
+        expect(style.shadowColor, const Color(0x55000000));
+        expect(style.shadowBlurRadius, 7);
+      });
+
+      test('explicit non-default config style overrides the theme', () {
+        const explicit = TooltipStyle(backgroundColor: Color(0xFFAABBCC));
+        final style = renderer.resolveStyle(
+          const InteractionConfig(tooltip: TooltipConfig(style: explicit)),
+          ChartTheme.dark,
+        );
+
+        expect(style, explicit);
+      });
+
       test('uses custom tooltip style when provided', () {
         final markerInfo = createTestMarkerInfo();
         animator.show('marker', const TooltipConfig(showDelay: Duration.zero));
@@ -365,7 +401,9 @@ void main() {
 
         const effectiveBindings = [
           SeriesAxisBinding(
-              seriesId: 'test-series', yAxisId: 'test-series_axis'),
+            seriesId: 'test-series',
+            yAxisId: 'test-series_axis',
+          ),
         ];
 
         expect(
@@ -416,19 +454,13 @@ void main() {
       test('handles ScatterChartSeries', () {
         const series = ScatterChartSeries(
           id: 'scatter-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 50, y: 100),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 50, y: 100)],
           color: Color(0xFF0000FF),
           markerRadius: 6.0,
         );
 
         elements = [
-          SeriesElement(
-            series: series,
-            transform: createTestTransform(),
-          ),
+          SeriesElement(series: series, transform: createTestTransform()),
         ];
 
         final markerInfo = createTestMarkerInfo(seriesId: 'scatter-series');
@@ -456,19 +488,13 @@ void main() {
       test('handles AreaChartSeries', () {
         const series = AreaChartSeries(
           id: 'area-series',
-          points: [
-            ChartDataPoint(x: 0, y: 0),
-            ChartDataPoint(x: 50, y: 100),
-          ],
+          points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 50, y: 100)],
           color: Color(0xFF0000FF),
           dataPointMarkerRadius: 5.0,
         );
 
         elements = [
-          SeriesElement(
-            series: series,
-            transform: createTestTransform(),
-          ),
+          SeriesElement(series: series, transform: createTestTransform()),
         ];
 
         final markerInfo = createTestMarkerInfo(seriesId: 'area-series');

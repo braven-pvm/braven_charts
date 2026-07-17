@@ -108,6 +108,8 @@ export 'src/models/interaction_config.dart';
 export 'src/models/legend_style.dart';
 export 'src/models/multi_axis_config.dart';
 export 'src/models/normalization_mode.dart';
+export 'src/models/pie_chart_config.dart';
+export 'src/models/pie_chart_series.dart';
 export 'src/models/segment_style.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';

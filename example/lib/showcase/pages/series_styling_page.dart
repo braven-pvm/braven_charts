@@ -819,7 +819,9 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
             EnumOption<ChartType>(
               label: 'Chart Type',
               value: _conditionalType,
-              values: ChartType.values,
+              values: ChartType.values
+                  .where((value) => value != ChartType.pie)
+                  .toList(growable: false),
               labelBuilder: (value) => value.name,
               onChanged: (value) => setState(() => _conditionalType = value),
             ),

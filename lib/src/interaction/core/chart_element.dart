@@ -3,6 +3,8 @@
 
 import 'dart:ui';
 
+import '../../models/chart_series.dart';
+import 'data_hit.dart';
 import 'element_types.dart';
 
 /// Base interface for all interactive chart elements.
@@ -124,6 +126,36 @@ abstract class ChartElement {
   ///
   /// Immutable pattern for state updates without rebuilding entire tree.
   ChartElement copyWith({bool? isHovered, bool? isSelected});
+}
+
+/// Shared contract for cached elements that render chart data series.
+///
+/// Cartesian and radial series use different geometry, but the render pipeline
+/// can cache and order them through this common boundary.
+abstract interface class DataSeriesElement implements ChartElement {
+  /// Source public series represented by this element.
+  ChartSeries get series;
+
+  /// Stable series position used for theme palette resolution.
+  int get seriesIndex;
+
+  /// Number of transported points used by lightweight cache validation.
+  int get pointCount;
+}
+
+/// Data-series element that can resolve precise per-datum interactions.
+///
+/// Renderers retain their own geometry while hover, tooltip, selection, and
+/// semantics consume one stable [ChartDataHit] payload.
+abstract interface class DataHitElement implements DataSeriesElement {
+  /// Returns the datum at or near [position], or null when no datum qualifies.
+  ChartDataHit? dataHitAt(Offset position, {double maxDistance = 20});
+
+  /// Returns one stable source datum by point index, if it is visible.
+  ChartDataHit? dataHitForPointIndex(int pointIndex);
+
+  /// Data items that should become explicit assistive semantic nodes.
+  Iterable<ChartDataHit> get semanticDataHits;
 }
 
 /// Mixin for elements with resize handles.

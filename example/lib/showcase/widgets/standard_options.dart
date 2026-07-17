@@ -281,6 +281,7 @@ class ChartPageLayout extends StatelessWidget {
       ...?actions,
       if (showOptionsButton)
         OutlinedButton.icon(
+          key: const ValueKey('chart-page-options-button'),
           style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
           onPressed: () => _showOptionsSheet(context),
           icon: const Icon(Icons.tune, size: 18),
@@ -293,37 +294,62 @@ class ChartPageLayout extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final titleBlock = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          subtitle!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.hintColor,
-                          ),
+                  ),
+                  if (subtitle != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        subtitle!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.hintColor,
                         ),
                       ),
+                    ),
+                ],
+              );
+              final actionGroup = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: headerActions,
+              );
+
+              if (constraints.maxWidth < 520) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleBlock,
+                    if (headerActions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: actionGroup,
+                      ),
+                    ],
                   ],
-                ),
-              ),
-              if (headerActions.isNotEmpty) ...[
-                const SizedBox(width: 16),
-                Wrap(spacing: 8, runSpacing: 8, children: headerActions),
-              ],
-            ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: titleBlock),
+                  if (headerActions.isNotEmpty) ...[
+                    const SizedBox(width: 16),
+                    actionGroup,
+                  ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           Expanded(child: chart),

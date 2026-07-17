@@ -15,12 +15,14 @@ import 'pages/live_streaming_page.dart';
 import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
+import 'pages/pie_charts_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/gallery_flagships.dart';
+import 'widgets/pie_gallery_cards.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
 ///
@@ -128,6 +130,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
       page: ChartTypesPage(),
+    ),
+    const NavDestination(
+      label: 'Pie Charts',
+      icon: Icons.pie_chart_outline,
+      selectedIcon: Icons.pie_chart,
+      page: PieChartsPage(),
+      routeSlug: 'pie-charts',
     ),
     const NavDestination(
       label: 'Interaction',
@@ -251,6 +260,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       return const _HeroMediaCapture(
         panel: PerformanceIntelligenceHeroPanel.powerDuration,
       );
+    }
+    if (capture == 'pie-gallery') {
+      return const PieGalleryMediaPanel();
     }
 
     final width = MediaQuery.of(context).size.width;

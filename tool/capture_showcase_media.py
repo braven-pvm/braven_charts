@@ -238,7 +238,7 @@ def _save_png(
     max_left_dark_fraction: float | None = None,
 ) -> None:
     image: Image.Image | None = None
-    for attempt in range(3):
+    for attempt in range(5):
         candidate = Image.open(
             io.BytesIO(driver.get_screenshot_as_png())
         ).convert("RGB")
@@ -261,7 +261,7 @@ def _save_png(
             f"({dark_fraction:.1%} dark pixels on attempt {attempt + 1})"
         )
         driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
-        time.sleep(1)
+        time.sleep(2)
 
     if image is None:
         raise RuntimeError(f"Could not capture a complete canvas for {output}")
@@ -456,6 +456,27 @@ def _gallery_stills(
     _hero_still(driver, base_url, output_dir)
     _gallery_stills_intro(driver, base_url, output_dir)
     _gallery_stills_remainder(driver, base_url, output_dir)
+
+
+def _pie_gallery_still(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture the five reusable Pie compositions without app chrome."""
+    _load(driver, f"{base_url}?capture=pie-gallery")
+    # Multiple canvas-backed cards can finish their first raster pass after
+    # Flutter reports the page title. Let that pass settle, then nudge the
+    # viewport so Chrome composites every card before capture.
+    time.sleep(6)
+    driver.execute_script("window.scrollBy(0, 1); window.scrollBy(0, -1);")
+    time.sleep(1)
+    _save_png(
+        driver,
+        output_dir / "gallery_pie_collection.png",
+        (16, 16, VIEWPORT[0] - 16, VIEWPORT[1] - 16),
+        max_left_dark_fraction=0.35,
+    )
 
 
 def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
@@ -711,7 +732,14 @@ def main() -> None:
     )
     parser.add_argument(
         "--capture",
-        choices=("all", "interaction", "live-stream", "stills", "hero"),
+        choices=(
+            "all",
+            "interaction",
+            "live-stream",
+            "stills",
+            "hero",
+            "pie",
+        ),
         default="all",
         help="Capture all media, both animations, or the static showcase set.",
     )
@@ -734,9 +762,12 @@ def main() -> None:
             )
         if args.capture in ("all", "stills"):
             _gallery_stills(driver, base_url, args.output_dir)
+            _pie_gallery_still(driver, base_url, args.output_dir)
         elif args.capture == "hero":
             _hero_panel_stills(driver, base_url, args.output_dir)
             _hero_still(driver, base_url, args.output_dir)
+        elif args.capture == "pie":
+            _pie_gallery_still(driver, base_url, args.output_dir)
     finally:
         driver.quit()
 

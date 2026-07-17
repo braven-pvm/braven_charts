@@ -265,6 +265,30 @@ void main() {
       expect(identical(decoded.trendAnnotations.single, trend), isFalse);
     });
 
+    test('round-trips a nested pie series in legend annotations', () {
+      final source = LegendAnnotation(
+        id: 'pie-legend',
+        series: [
+          PieChartSeries.fromMap(
+            id: 'revenue',
+            unit: 'USD',
+            values: const {'Subscriptions': 42, 'Services': 58},
+            pieStyle: const PieChartStyle(startAngleDegrees: 20),
+          ),
+        ],
+      );
+
+      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+      final pie = decoded.series.single as PieChartSeries;
+
+      expect(pie.points.map((point) => point.label), [
+        'Subscriptions',
+        'Services',
+      ]);
+      expect(pie.pieStyle.startAngleDegrees, 20);
+      expect(pie.unit, 'USD');
+    });
+
     test('projects nested legend series with the selected data storage', () {
       final result = ChartAnnotationDocumentCodec.encode(
         LegendAnnotation(

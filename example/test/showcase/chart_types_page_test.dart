@@ -36,6 +36,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey('chart-type-preview-pie')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey('selected-chart-type-line')),
       findsOneWidget,
     );
@@ -63,6 +67,42 @@ void main() {
     );
     expect(find.text('Scatter chart playground'), findsOneWidget);
     expect(find.text('Marker Appearance'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('chart-type-preview-pie')));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      find.byKey(const ValueKey('selected-chart-type-pie')),
+      findsOneWidget,
+    );
+    expect(find.text('Pie chart playground'), findsOneWidget);
+    expect(find.textContaining('5 categories'), findsOneWidget);
+    expect(find.text('Pie Appearance'), findsOneWidget);
+    expect(find.text('Show Data Labels'), findsOneWidget);
+    expect(find.text('Label Position'), findsOneWidget);
+    expect(find.text('Label Offset'), findsOneWidget);
+    expect(find.text('Slice Gap'), findsOneWidget);
+    expect(find.text('Start Angle'), findsOneWidget);
+    expect(find.text('Slice Fill'), findsOneWidget);
+    expect(find.text('Show Second Series'), findsNothing);
+    expect(find.text('Show Grid Lines'), findsNothing);
+    expect(find.text('Show Axis Lines'), findsNothing);
+    expect(find.text('Show X Scrollbar'), findsNothing);
+    expect(find.text('Enable Zoom'), findsNothing);
+    expect(find.text('Show Legend'), findsOneWidget);
+
+    final pieChart = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .singleWhere(
+          (chart) =>
+              chart.series.any((series) => series.id == 'pie-contributions'),
+        );
+    final pieSeries = pieChart.series.single as PieChartSeries;
+    expect(pieSeries.pieStyle.sliceGap, 3);
+    expect(pieSeries.pieStyle.gradient?.type, PieGradientType.radial);
+    expect(pieSeries.dataLabels.isVisible, isTrue);
+    expect(pieSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(pieSeries.dataLabels.outsideOffset, 0);
   });
 
   testWidgets('chart-defining controls precede generic display controls', (
