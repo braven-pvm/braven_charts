@@ -65,6 +65,7 @@ class ChartDataTable extends StatefulWidget {
     this.selectedPointRefs = const <ChartPointRef>{},
     this.autoRevealFocusedPoints = true,
     this.autoRevealSelectedPoints = true,
+    this.onClearSelection,
     this.onCopyRow,
     this.onCopyDataset,
     this.onExportCsv,
@@ -139,6 +140,12 @@ class ChartDataTable extends StatefulWidget {
   /// The reveal runs only when selection or the projected model changes, so
   /// subsequent manual table scrolling is left untouched.
   final bool autoRevealSelectedPoints;
+
+  /// Clears the durable selection mirrored by [selectedPointRefs].
+  ///
+  /// When supplied and selection is non-empty, the table exposes a compact
+  /// Clear selection action in its summary toolbar.
+  final VoidCallback? onClearSelection;
 
   /// Overrides the default clipboard delivery for one requested visible row.
   ///
@@ -481,6 +488,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
             children: [
               _TableSummary(
                 model: model,
+                selectedPointCount: widget.selectedPointRefs.length,
+                onClearSelection: widget.selectedPointRefs.isEmpty
+                    ? null
+                    : widget.onClearSelection,
                 onCopyDataset: !widget.showCopyDatasetAction
                     ? null
                     : () => _copyDataset(buildDatasetExport()),
@@ -1096,12 +1107,16 @@ class _TableSummary extends StatelessWidget {
   const _TableSummary({
     required this.model,
     required this.theme,
+    this.selectedPointCount = 0,
+    this.onClearSelection,
     this.onCopyDataset,
     this.onExportCsv,
   });
 
   final ChartTableModel model;
   final _ResolvedTableTheme theme;
+  final int selectedPointCount;
+  final VoidCallback? onClearSelection;
   final VoidCallback? onCopyDataset;
   final VoidCallback? onExportCsv;
 
@@ -1135,13 +1150,22 @@ class _TableSummary extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                '${model.scopeLabel} · ${model.rowCount} rows · ${model.options.viewportOnly ? 'Current viewport' : 'Full data'}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.summaryTextStyle,
+              child: Semantics(
+                liveRegion: selectedPointCount > 0,
+                child: Text(
+                  '${selectedPointCount == 0 ? '' : '$selectedPointCount selected · '}${model.scopeLabel} · ${model.rowCount} rows · ${model.options.viewportOnly ? 'Current viewport' : 'Full data'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.summaryTextStyle,
+                ),
               ),
             ),
+            if (onClearSelection != null)
+              action(
+                label: 'Clear selection',
+                icon: Icons.close,
+                onPressed: onClearSelection!,
+              ),
             if (onCopyDataset != null)
               action(
                 label: 'Copy data',

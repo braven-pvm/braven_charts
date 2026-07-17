@@ -252,6 +252,8 @@ The workbench enables safe row linking by default:
   row and removes every point represented by an already selected row;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
+- the table summary reports the selected point count and exposes a compact
+  Clear selection action that keeps subsequent row references current;
 - chart-controller point focus is mirrored into the table with the focused-row
   treatment and reveals the matching row without taking keyboard focus;
 - a newly selected chart point is scrolled into the table viewport once,
@@ -275,6 +277,10 @@ selected when its point is present. A shared-X row is selected only when every
 populated series point represented by that row is present. Override the fill
 with `ChartDataTableTheme.selectedRowColor`; the leading indicator and
 accessibility semantics remain package-owned.
+
+Supply `ChartDataTable.onClearSelection` to expose the summary toolbar's Clear
+selection action for standalone tables. The table reports point count rather
+than row count because a shared-X row can represent several selected points.
 
 Pass `ChartDataTable.focusedPointRefs` to mirror transient chart focus in a
 standalone table. A long row matches its point; a shared-X row matches when any
@@ -331,7 +337,8 @@ Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
 `onTableRowActivation` to replace individual defaults with product-specific
 behavior. `onTableRowActivation` receives modifier-aware
 `ChartTableRowActivationDetails` and takes precedence over the legacy
-`onTableRowActivated` callback when both are supplied. Use
+`onTableRowActivated` callback when both are supplied. Override
+`onTableSelectionCleared` when the host owns selection cleanup. Use
 `onPointLinkError` to observe the same structured error shown by the workbench.
 
 ## Configure the data table

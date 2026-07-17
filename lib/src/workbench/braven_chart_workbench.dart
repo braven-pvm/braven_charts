@@ -550,6 +550,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.onTableRowHoverChanged,
     this.onTableRowActivation,
     this.onTableRowActivated,
+    this.onTableSelectionCleared,
     this.onPointLinkError,
     this.showModeSwitcher = true,
     this.splitBreakpoint = 900,
@@ -609,6 +610,9 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Legacy durable-selection override used when [onTableRowActivation] is null.
   final ChartTableRowCallback? onTableRowActivated;
+
+  /// Overrides the package-owned table action that clears point selection.
+  final VoidCallback? onTableSelectionCleared;
 
   /// Receives structured stale/invalid point-link failures.
   final ValueChanged<ChartArtifactError>? onPointLinkError;
@@ -1015,6 +1019,11 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                 errorMessage: model == null ? state.error?.message : null,
                 focusedPointRefs: _chartController.focusedPointRefs,
                 selectedPointRefs: _chartController.selectedPointRefs,
+                onClearSelection:
+                    widget.onTableSelectionCleared ??
+                    (widget.linkTableRowsToChart
+                        ? _clearTablePointSelection
+                        : null),
                 onRowFocused:
                     widget.onTableRowFocused ??
                     (widget.linkTableRowsToChart ? _focusTablePoints : null),
@@ -1106,6 +1115,14 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       // semantics and still surface as stale.
       unawaited(_workbenchController.refreshTable());
     }
+  }
+
+  void _clearTablePointSelection() {
+    if (_chartController.selectedPointRefs.isEmpty) return;
+    _chartController.clearPointSelection();
+    // Durable selection advances the effective document revision. Refresh the
+    // package-owned snapshot so subsequent row references remain current.
+    unawaited(_workbenchController.refreshTable());
   }
 
   void _handlePointLinkResult(ChartArtifactResult<void> result) {

@@ -230,6 +230,38 @@ void main() {
     expect(semantics.properties.selected, isTrue);
   });
 
+  testWidgets('summarizes selected points and exposes a compact clear action', (
+    tester,
+  ) async {
+    var clearCalls = 0;
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          selectedPointRefs: {
+            const ChartPointRef(seriesId: 'power', pointIndex: 0),
+            const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+          },
+          onClearSelection: () => clearCalls++,
+        ),
+        width: 360,
+      ),
+    );
+
+    expect(find.textContaining('2 selected'), findsOneWidget);
+    expect(find.byTooltip('Clear selection'), findsOneWidget);
+    await tester.tap(find.byTooltip('Clear selection'));
+    expect(clearCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reveals a newly selected point without taking over scrolling', (
     tester,
   ) async {
