@@ -3,7 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../models/chart_data_point.dart';
-import '../models/pie_chart_series.dart';
+import '../models/pie_chart_config.dart';
+import '../models/radial_category_series.dart';
 
 const double _tau = math.pi * 2;
 const double _angleEpsilon = 1e-9;
@@ -20,6 +21,7 @@ class PieSliceGeometry {
     required this.center,
     required this.innerRadius,
     required this.outerRadius,
+    required this.radiusFactor,
     required this.spacingOffset,
     required this.explodeOffset,
     required this.path,
@@ -55,6 +57,12 @@ class PieSliceGeometry {
 
   /// Outer radius in logical pixels.
   final double outerRadius;
+
+  /// Normalized radius multiplier applied to this slice before spacing.
+  ///
+  /// Uniform Pie slices use 1. Variable-radius slices map their second metric
+  /// into the configured minimum-to-maximum range.
+  final double radiusFactor;
 
   /// Translation that creates physical padding without sharpening the wedge.
   final Offset spacingOffset;
@@ -100,7 +108,7 @@ class PieChartGeometry {
   /// Shared inner radius.
   final double innerRadius;
 
-  /// Shared outer radius.
+  /// Maximum outer radius available to any slice.
   final double outerRadius;
 
   /// Sum of all positive contributions.
@@ -126,15 +134,16 @@ class PieChartGeometryCalculator {
 
   /// Calculates visible slices within [size].
   ///
-  /// [innerRadiusFactor] is an internal extension seam for a future doughnut
-  /// release. Public pie configuration intentionally leaves it at zero.
+  /// [innerRadiusFactor] can override the series contract in focused geometry
+  /// tests. Production callers use the value declared by the radial series.
   static PieChartGeometry calculate({
-    required PieChartSeries series,
+    required RadialCategorySeries series,
     required Size size,
     EdgeInsets padding = EdgeInsets.zero,
     Set<int> explodedPointIndices = const <int>{},
-    double innerRadiusFactor = 0,
+    double? innerRadiusFactor,
     double? cornerRadius,
+    PieCornerTreatment? cornerTreatment,
     double animationProgress = 1,
     double selectionProgress = 1,
   }) {
@@ -148,11 +157,13 @@ class PieChartGeometryCalculator {
         'Size must be finite and positive',
       );
     }
-    if (!innerRadiusFactor.isFinite ||
-        innerRadiusFactor < 0 ||
-        innerRadiusFactor >= 1) {
+    final effectiveInnerRadiusFactor =
+        innerRadiusFactor ?? series.innerRadiusFactor;
+    if (!effectiveInnerRadiusFactor.isFinite ||
+        effectiveInnerRadiusFactor < 0 ||
+        effectiveInnerRadiusFactor >= 1) {
       throw ArgumentError.value(
-        innerRadiusFactor,
+        effectiveInnerRadiusFactor,
         'innerRadiusFactor',
         'Value must be finite and in [0, 1)',
       );
@@ -176,7 +187,11 @@ class PieChartGeometryCalculator {
       );
     }
     final requestedCornerRadius =
-        cornerRadius ?? series.pieStyle.cornerRadius ?? 0;
+        cornerRadius ?? series.radialStyle.cornerRadius ?? 0;
+    final effectiveCornerTreatment =
+        cornerTreatment ??
+        series.radialStyle.cornerTreatment ??
+        PieCornerTreatment.roundAll;
     if (!requestedCornerRadius.isFinite || requestedCornerRadius < 0) {
       throw ArgumentError.value(
         requestedCornerRadius,
@@ -207,10 +222,25 @@ class PieChartGeometryCalculator {
     final center = contentRect.center;
     final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
     final visibleSliceCount = series.visiblePointIndices.length;
-    final fullOuterRadius = availableRadius * series.pieStyle.radiusFactor;
+    final fullOuterRadius = availableRadius * series.radialStyle.radiusFactor;
     final outerRadius = fullOuterRadius * animationProgress;
-    final innerRadius = outerRadius * innerRadiusFactor;
+    final configuredInnerRadius = outerRadius * effectiveInnerRadiusFactor;
     final total = series.total;
+    final sliceRadiusFactors = _sliceRadiusFactors(series);
+    final effectiveCornerRadius = requestedCornerRadius * animationProgress;
+    final circularCenterRadius =
+        effectiveCornerTreatment == PieCornerTreatment.circularCenter &&
+            configuredInnerRadius <= _angleEpsilon
+        ? _circularCenterGapRadius(
+            series: series,
+            total: total,
+            outerRadius: outerRadius,
+            sliceRadiusFactors: sliceRadiusFactors,
+            cornerRadius: effectiveCornerRadius,
+            animationProgress: animationProgress,
+          )
+        : 0.0;
+    final innerRadius = math.max(configuredInnerRadius, circularCenterRadius);
 
     if (total == 0 || outerRadius <= 0) {
       return PieChartGeometry(
@@ -222,8 +252,9 @@ class PieChartGeometryCalculator {
       );
     }
 
-    final direction = series.pieStyle.clockwise ? 1.0 : -1.0;
-    var cursor = _degreesToRadians(series.pieStyle.startAngleDegrees);
+    final direction = series.radialStyle.clockwise ? 1.0 : -1.0;
+    final configuredSweep = _degreesToRadians(series.sweepAngleDegrees);
+    var cursor = _degreesToRadians(series.radialStyle.startAngleDegrees);
     final slices = <PieSliceGeometry>[];
     for (final (pointIndex, point) in series.points.indexed) {
       if (point.y == 0) {
@@ -231,52 +262,83 @@ class PieChartGeometryCalculator {
       }
 
       final share = point.y / total;
-      final rawSweepMagnitude = _tau * share;
+      final sliceRadiusFactor = sliceRadiusFactors[pointIndex] ?? 1;
+      final sliceFullOuterRadius =
+          configuredInnerRadius +
+          (outerRadius - configuredInnerRadius) * sliceRadiusFactor;
+      final rawSweepMagnitude = configuredSweep * share;
       final startAngle = cursor;
       final sweepAngle = direction * rawSweepMagnitude;
       final midAngle = cursor + direction * rawSweepMagnitude / 2;
-      final halfSweepSine = math.sin(rawSweepMagnitude / 2).abs();
-      final spacingDistance = visibleSliceCount <= 1
+      final isAnnular = configuredInnerRadius > _angleEpsilon;
+      final angularGap = isAnnular
+          ? _annularSliceGapAngle(
+              sliceGap: series.radialStyle.sliceGap,
+              animationProgress: animationProgress,
+              visibleSliceCount: visibleSliceCount,
+              sweepMagnitude: rawSweepMagnitude,
+              innerRadius: configuredInnerRadius,
+              outerRadius: sliceFullOuterRadius,
+            )
+          : 0.0;
+      final pathStartAngle = startAngle + direction * angularGap / 2;
+      final pathSweepAngle =
+          direction * math.max(0, rawSweepMagnitude - angularGap);
+      final spacingDistance = isAnnular
           ? 0.0
-          : math.min(
-              series.pieStyle.sliceGap *
-                  animationProgress /
-                  (2 * math.max(0.25, halfSweepSine)),
-              outerRadius * 0.12,
+          : _sliceSpacingDistance(
+              sliceGap: series.radialStyle.sliceGap,
+              animationProgress: animationProgress,
+              visibleSliceCount: visibleSliceCount,
+              sweepMagnitude: rawSweepMagnitude,
+              sliceOuterRadius: sliceFullOuterRadius,
             );
       final spacingOffset = Offset.fromDirection(midAngle, spacingDistance);
       // Offset the radial seams to create physical padding. The wedge apex is
       // translated, but the outer arc remains on the shared chart circle.
       final sliceOuterRadius = math
-          .max(0, outerRadius - spacingDistance)
+          .max(0, sliceFullOuterRadius - spacingDistance)
           .toDouble();
       final sliceInnerRadius = math
           .min(innerRadius, sliceOuterRadius)
           .toDouble();
       final explodeDistance = explodedPointIndices.contains(pointIndex)
-          ? series.pieStyle.selectionExplodeOffset * selectionProgress
+          ? series.radialStyle.selectionExplodeOffset * selectionProgress
           : 0.0;
       final explodeOffset = Offset.fromDirection(midAngle, explodeDistance);
       final outerArcCenter = center + explodeOffset;
       final sliceCenter = outerArcCenter + spacingOffset;
-      final effectiveCornerRadius = requestedCornerRadius * animationProgress;
-      final path = spacingDistance > _angleEpsilon && sliceInnerRadius == 0
+      final usesCircularCenter = circularCenterRadius > _angleEpsilon;
+      final roundsInnerCorners =
+          effectiveCornerTreatment == PieCornerTreatment.roundAll;
+      final basePath =
+          spacingDistance > _angleEpsilon &&
+              configuredInnerRadius <= _angleEpsilon
           ? _paddedPieSectorPath(
               apex: sliceCenter,
               outerArcCenter: outerArcCenter,
-              outerRadius: outerRadius,
-              startAngle: startAngle,
-              sweepAngle: sweepAngle,
+              outerRadius: sliceFullOuterRadius,
+              startAngle: pathStartAngle,
+              sweepAngle: pathSweepAngle,
               cornerRadius: effectiveCornerRadius,
+              roundInnerCorners: roundsInnerCorners,
             )
           : _sectorPath(
               center: sliceCenter,
-              innerRadius: sliceInnerRadius,
+              innerRadius: usesCircularCenter ? 0 : sliceInnerRadius,
               outerRadius: sliceOuterRadius,
-              startAngle: startAngle,
-              sweepAngle: sweepAngle,
+              startAngle: pathStartAngle,
+              sweepAngle: pathSweepAngle,
               cornerRadius: effectiveCornerRadius,
+              roundInnerCorners: roundsInnerCorners,
             );
+      final path = usesCircularCenter
+          ? _subtractCircularCenter(
+              basePath,
+              center: outerArcCenter,
+              radius: circularCenterRadius,
+            )
+          : basePath;
       final tooltipRadius =
           sliceInnerRadius + (sliceOuterRadius - sliceInnerRadius) * 0.62;
       final insideRadius =
@@ -298,6 +360,7 @@ class PieChartGeometryCalculator {
           center: sliceCenter,
           innerRadius: sliceInnerRadius,
           outerRadius: sliceOuterRadius,
+          radiusFactor: sliceRadiusFactor,
           spacingOffset: spacingOffset,
           explodeOffset: explodeOffset,
           path: path,
@@ -324,6 +387,106 @@ class PieChartGeometryCalculator {
   }
 }
 
+double _annularSliceGapAngle({
+  required double sliceGap,
+  required double animationProgress,
+  required int visibleSliceCount,
+  required double sweepMagnitude,
+  required double innerRadius,
+  required double outerRadius,
+}) {
+  if (visibleSliceCount <= 1 || sliceGap <= 0 || sweepMagnitude <= 0) return 0;
+  final middleRadius = innerRadius + (outerRadius - innerRadius) / 2;
+  if (middleRadius <= _angleEpsilon) return 0;
+  final requested = sliceGap * animationProgress / middleRadius;
+  return math.min(requested, sweepMagnitude * 0.8);
+}
+
+double _sliceSpacingDistance({
+  required double sliceGap,
+  required double animationProgress,
+  required int visibleSliceCount,
+  required double sweepMagnitude,
+  required double sliceOuterRadius,
+}) {
+  if (visibleSliceCount <= 1) return 0;
+  final halfSweepSine = math.sin(sweepMagnitude / 2).abs();
+  return math.min(
+    sliceGap * animationProgress / (2 * math.max(0.25, halfSweepSine)),
+    sliceOuterRadius * 0.12,
+  );
+}
+
+double _circularCenterGapRadius({
+  required RadialCategorySeries series,
+  required double total,
+  required double outerRadius,
+  required Map<int, double> sliceRadiusFactors,
+  required double cornerRadius,
+  required double animationProgress,
+}) {
+  if (total <= 0 || outerRadius <= 0 || cornerRadius <= 0) return 0;
+
+  var maximumSpacing = 0.0;
+  var minimumSliceRadius = double.infinity;
+  final visibleSliceCount = series.visiblePointIndices.length;
+  for (final (pointIndex, point) in series.points.indexed) {
+    if (point.y <= 0) continue;
+    final sliceRadius = outerRadius * (sliceRadiusFactors[pointIndex] ?? 1);
+    minimumSliceRadius = math.min(minimumSliceRadius, sliceRadius);
+    maximumSpacing = math.max(
+      maximumSpacing,
+      _sliceSpacingDistance(
+        sliceGap: series.radialStyle.sliceGap,
+        animationProgress: animationProgress,
+        visibleSliceCount: visibleSliceCount,
+        sweepMagnitude: _tau * point.y / total,
+        sliceOuterRadius: sliceRadius,
+      ),
+    );
+  }
+
+  if (!minimumSliceRadius.isFinite) return 0;
+  // Preserve at least one quarter of the smallest slice's radial depth. This
+  // mirrors the 24% cap used by outer corner rounding and prevents a large
+  // requested radius from erasing a valid variable-radius slice entirely.
+  final maximumSafeGap = minimumSliceRadius * 0.75;
+  return math.min(math.max(cornerRadius, maximumSpacing), maximumSafeGap);
+}
+
+Map<int, double> _sliceRadiusFactors(RadialCategorySeries series) {
+  final config = series.sliceRadiusConfig;
+  if (config == null) return const <int, double>{};
+
+  final values = <int, double>{
+    for (final pointIndex in series.visiblePointIndices)
+      pointIndex: series.points[pointIndex].pointStyle!.size!,
+  };
+  if (values.isEmpty) return const <int, double>{};
+
+  final minimum = values.values.reduce(math.min);
+  final maximum = values.values.reduce(math.max);
+  if ((maximum - minimum).abs() <= _angleEpsilon) {
+    return {for (final pointIndex in values.keys) pointIndex: 1};
+  }
+
+  final minimumFactor = config.minimumFactor;
+  return {
+    for (final entry in values.entries)
+      entry.key: switch (config.scale) {
+        PieSliceRadiusScale.linear =>
+          minimumFactor +
+              ((entry.value - minimum) / (maximum - minimum)) *
+                  (1 - minimumFactor),
+        PieSliceRadiusScale.area => math.sqrt(
+          minimumFactor * minimumFactor +
+              ((entry.value - minimum) / (maximum - minimum)) *
+                  (1 - minimumFactor * minimumFactor),
+        ),
+      },
+  };
+}
+
 Path _sectorPath({
   required Offset center,
   required double innerRadius,
@@ -331,6 +494,7 @@ Path _sectorPath({
   required double startAngle,
   required double sweepAngle,
   double cornerRadius = 0,
+  bool roundInnerCorners = true,
 }) {
   final outerRect = Rect.fromCircle(center: center, radius: outerRadius);
   final path = Path();
@@ -352,6 +516,18 @@ Path _sectorPath({
       startAngle: startAngle,
       sweepAngle: sweepAngle,
       cornerRadius: cornerRadius,
+      roundInnerCorners: roundInnerCorners,
+    );
+  }
+  if (cornerRadius > 0 && innerRadius > 0) {
+    return _roundedAnnularSectorPath(
+      center: center,
+      innerRadius: innerRadius,
+      outerRadius: outerRadius,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+      cornerRadius: cornerRadius,
+      roundInnerCorners: roundInnerCorners,
     );
   }
 
@@ -376,6 +552,135 @@ Path _sectorPath({
   return path;
 }
 
+Path _roundedAnnularSectorPath({
+  required Offset center,
+  required double innerRadius,
+  required double outerRadius,
+  required double startAngle,
+  required double sweepAngle,
+  required double cornerRadius,
+  required bool roundInnerCorners,
+}) {
+  final sweepMagnitude = sweepAngle.abs();
+  final thickness = outerRadius - innerRadius;
+  if (thickness <= _angleEpsilon || sweepMagnitude <= _angleEpsilon) {
+    return _sectorPath(
+      center: center,
+      innerRadius: innerRadius,
+      outerRadius: outerRadius,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+    );
+  }
+
+  final maximumByOuterSweep =
+      outerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45;
+  final maximumByInnerSweep = roundInnerCorners
+      ? innerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45
+      : double.infinity;
+  final radius = math.min(
+    cornerRadius,
+    math.min(
+      thickness * 0.45,
+      math.min(maximumByOuterSweep, maximumByInnerSweep),
+    ),
+  );
+  if (radius <= _angleEpsilon) {
+    return _sectorPath(
+      center: center,
+      innerRadius: innerRadius,
+      outerRadius: outerRadius,
+      startAngle: startAngle,
+      sweepAngle: sweepAngle,
+    );
+  }
+
+  final direction = sweepAngle.sign;
+  final endAngle = startAngle + sweepAngle;
+  final outerTrim = math.min(radius / outerRadius, sweepMagnitude * 0.2);
+  final innerTrim = roundInnerCorners
+      ? math.min(radius / innerRadius, sweepMagnitude * 0.2)
+      : 0.0;
+  final outerArcStartAngle = startAngle + direction * outerTrim;
+  final outerArcSweep = sweepAngle - direction * outerTrim * 2;
+  final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
+  final outerEnd = center + Offset.fromDirection(endAngle, outerRadius);
+  final outerStartEdge =
+      center + Offset.fromDirection(startAngle, outerRadius - radius);
+  final outerEndEdge =
+      center + Offset.fromDirection(endAngle, outerRadius - radius);
+  final outerArcStart =
+      center + Offset.fromDirection(outerArcStartAngle, outerRadius);
+
+  final path = Path()
+    ..moveTo(outerStartEdge.dx, outerStartEdge.dy)
+    ..quadraticBezierTo(
+      outerStart.dx,
+      outerStart.dy,
+      outerArcStart.dx,
+      outerArcStart.dy,
+    )
+    ..arcTo(
+      Rect.fromCircle(center: center, radius: outerRadius),
+      outerArcStartAngle,
+      outerArcSweep,
+      false,
+    )
+    ..quadraticBezierTo(
+      outerEnd.dx,
+      outerEnd.dy,
+      outerEndEdge.dx,
+      outerEndEdge.dy,
+    );
+
+  if (!roundInnerCorners) {
+    final innerEnd = center + Offset.fromDirection(endAngle, innerRadius);
+    path
+      ..lineTo(innerEnd.dx, innerEnd.dy)
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: innerRadius),
+        endAngle,
+        -sweepAngle,
+        false,
+      )
+      ..close();
+    return path;
+  }
+
+  final innerEndOuter =
+      center + Offset.fromDirection(endAngle, innerRadius + radius);
+  final innerEnd = center + Offset.fromDirection(endAngle, innerRadius);
+  final innerArcEndAngle = endAngle - direction * innerTrim;
+  final innerArcEnd =
+      center + Offset.fromDirection(innerArcEndAngle, innerRadius);
+  final innerArcSweep = -sweepAngle + direction * innerTrim * 2;
+  final innerStart = center + Offset.fromDirection(startAngle, innerRadius);
+  final innerStartOuter =
+      center + Offset.fromDirection(startAngle, innerRadius + radius);
+  path
+    ..lineTo(innerEndOuter.dx, innerEndOuter.dy)
+    ..quadraticBezierTo(
+      innerEnd.dx,
+      innerEnd.dy,
+      innerArcEnd.dx,
+      innerArcEnd.dy,
+    )
+    ..arcTo(
+      Rect.fromCircle(center: center, radius: innerRadius),
+      innerArcEndAngle,
+      innerArcSweep,
+      false,
+    )
+    ..quadraticBezierTo(
+      innerStart.dx,
+      innerStart.dy,
+      innerStartOuter.dx,
+      innerStartOuter.dy,
+    )
+    ..close();
+  return path;
+}
+
 Path _paddedPieSectorPath({
   required Offset apex,
   required Offset outerArcCenter,
@@ -383,6 +688,7 @@ Path _paddedPieSectorPath({
   required double startAngle,
   required double sweepAngle,
   required double cornerRadius,
+  required bool roundInnerCorners,
 }) {
   final outerStart = _rayCircleIntersection(
     origin: apex,
@@ -439,7 +745,7 @@ Path _paddedPieSectorPath({
   final endUnit = (outerEnd - apex) / endLength;
   final startEdge = outerStart - startUnit * radius;
   final endEdge = outerEnd - endUnit * radius;
-  final centerTrim = sweepMagnitude < math.pi
+  final centerTrim = roundInnerCorners && sweepMagnitude < math.pi
       ? math.min(
           radius / math.max(0.2, math.tan(sweepMagnitude / 2)),
           math.min(startLength, endLength) * 0.32,
@@ -461,6 +767,16 @@ Path _paddedPieSectorPath({
     path.lineTo(apex.dx, apex.dy);
   }
   return path..close();
+}
+
+Path _subtractCircularCenter(
+  Path source, {
+  required Offset center,
+  required double radius,
+}) {
+  final cutout = Path()
+    ..addOval(Rect.fromCircle(center: center, radius: radius));
+  return Path.combine(PathOperation.difference, source, cutout);
 }
 
 Offset _rayCircleIntersection({
@@ -486,6 +802,7 @@ Path _roundedPieSectorPath({
   required double startAngle,
   required double sweepAngle,
   required double cornerRadius,
+  required bool roundInnerCorners,
 }) {
   final sweepMagnitude = sweepAngle.abs();
   final direction = sweepAngle.sign;
@@ -515,7 +832,7 @@ Path _roundedPieSectorPath({
       center + Offset.fromDirection(startAngle, outerRadius - radius);
   final endEdge = center + Offset.fromDirection(endAngle, outerRadius - radius);
   final arcStart = center + Offset.fromDirection(arcStartAngle, outerRadius);
-  final centerTrim = sweepMagnitude < math.pi
+  final centerTrim = roundInnerCorners && sweepMagnitude < math.pi
       ? math.min(
           radius / math.max(0.2, math.tan(sweepMagnitude / 2)),
           outerRadius * 0.32,

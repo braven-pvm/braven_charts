@@ -102,6 +102,8 @@ export 'src/models/chart_state_config.dart';
 export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/data_range.dart';
+export 'src/models/donut_chart_config.dart';
+export 'src/models/donut_chart_series.dart';
 export 'src/models/enums.dart';
 export 'src/models/grid_config.dart';
 export 'src/models/interaction_callbacks.dart';
@@ -111,6 +113,7 @@ export 'src/models/multi_axis_config.dart';
 export 'src/models/normalization_mode.dart';
 export 'src/models/pie_chart_config.dart';
 export 'src/models/pie_chart_series.dart';
+export 'src/models/radial_category_series.dart';
 export 'src/models/segment_style.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';

@@ -9,7 +9,7 @@ rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
 `BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
-and single-series pie charts; multiple independent axes and normalization;
+and single-series Pie and Donut charts; multiple independent axes and normalization;
 zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
 frame-coalesced live data; configurable themes and state views; chart/table
 display modes; and portable chart artifacts. Rendering, input handling, and
@@ -51,7 +51,7 @@ bounded buffer continues receiving data, and resume with buffered catch-up.
 
 ## Gallery
 
-The Gallery combines curated and full-catalog views across Pie, line, area,
+The Gallery combines curated and full-catalog views across Pie, Donut, line, area,
 bar, scatter, and mixed compositions. It covers light and dark Pie treatments,
 inside and collision-aware outside labels, dense categories, rounded and
 elevated slices, solid and gradient fills, baseline fills, live data,
@@ -65,6 +65,8 @@ native image path available to package consumers:
 | --- | --- |
 | [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/v0.4.0/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
 
+[![Three product-shaped Donut compositions with center content, a partial sweep, and variable radii](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_donut_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
+
 The wider Cartesian catalog remains available in the current Gallery mosaic:
 
 [![Varied Braven Charts compositions from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
@@ -75,7 +77,7 @@ The wider Cartesian catalog remains available in the current Gallery mosaic:
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
-| Data series | Line, area, bar, scatter, mixed Cartesian series, and category-based pie charts with labels, positioned legends, solid/gradient fills, rounded/translucent slices, elevation, selection, and animation |
+| Data series | Line, area, bar, scatter, mixed Cartesian series, and category-based Pie and Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
@@ -94,6 +96,9 @@ artifact capture, deliberate table freshness, and document comparison.
 [Open Pie Charts directly](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
 to try category datasets, inside/outside labels, slice selection, native data
 tables, artifact capture, previews, and restored charts.
+[Open Donut Charts directly](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
+to try full and partial rings, variable outer radii, selection-aware center
+content, Chart/Data/Split views, native tables, and portable restoration.
 
 ## Install
 
@@ -215,6 +220,16 @@ BravenChartPlus(
         'Services': 31,
         'Hardware': 27,
       },
+      // Optional: provide one second-metric value per category.
+      radiusValues: const {
+        'Subscriptions': 120,
+        'Services': 90,
+        'Hardware': 65,
+      },
+      sliceRadiusConfig: const PieSliceRadiusConfig(
+        label: 'Market size',
+        unit: 'k users',
+      ),
       pieStyle: const PieChartStyle(
         gradient: PieGradientStyle(type: PieGradientType.radial),
       ),
@@ -232,10 +247,50 @@ BravenChartPlus(
 
 Pie values must be finite and non-negative. Zero values remain portable and
 appear in the native table but do not paint a slice; an all-zero dataset uses
-the configured empty state. See the
+the configured empty state. Optional radius values must be complete, finite,
+and non-negative; they appear in tooltips, the table, CSV, AI input, and
+portable artifacts. See the
 [Pie chart guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 for fills, labels, selection, tables, artifacts, validation, and
 accessibility.
+
+## Donut charts
+
+Donut uses the same ordered category contract as Pie, with a required shared
+center opening and optional portable center text. The center can show the
+total, the selected category value, a selected-or-total fallback, or custom
+status text.
+
+```dart
+BravenChartPlus(
+  series: [
+    DonutChartSeries.fromMap(
+      id: 'revenue-share',
+      unit: 'USD',
+      values: const {
+        'Subscriptions': 42,
+        'Services': 31,
+        'Hardware': 27,
+      },
+      donutStyle: const DonutChartStyle(
+        innerRadiusFactor: 0.58,
+        sliceGap: 2,
+        cornerRadius: 8,
+      ),
+      centerContent: const DonutCenterContent(
+        label: 'Revenue',
+        valueMode: DonutCenterValueMode.selectedOrTotal,
+      ),
+    ),
+  ],
+)
+```
+
+Slice, legend, table, keyboard, and controller selection share one
+`ChartPointRef`, so the center follows selection no matter where it begins.
+The complete Donut document—including center content and optional
+variable-radius values—round-trips through canonical JSON and PNG previews.
+See the [Donut chart guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md).
 
 ## Loading and empty states
 
@@ -408,7 +463,7 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, pie charts, interaction, tracking, annotations,
+focused pages for chart types, Pie and Donut charts, interaction, tracking, annotations,
 streaming, theming, performance, multi-axis layouts, scientific data, baseline
 fills, and state UX.
 
@@ -418,6 +473,7 @@ fills, and state UX.
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
+- [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)
 - [Chart Workbench](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
 - [Chart Document Comparison](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_comparison.md)

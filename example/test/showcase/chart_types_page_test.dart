@@ -40,6 +40,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey('chart-type-preview-donut')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey('selected-chart-type-line')),
       findsOneWidget,
     );
@@ -103,6 +107,33 @@ void main() {
     expect(pieSeries.dataLabels.isVisible, isTrue);
     expect(pieSeries.dataLabels.position, PieDataLabelPosition.outside);
     expect(pieSeries.dataLabels.outsideOffset, 0);
+
+    await tester.tap(find.byKey(const ValueKey('chart-type-preview-donut')));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+      find.byKey(const ValueKey('selected-chart-type-donut')),
+      findsOneWidget,
+    );
+    expect(find.text('Donut chart playground'), findsOneWidget);
+    expect(find.text('Donut Appearance'), findsOneWidget);
+    expect(find.text('Inner Radius'), findsOneWidget);
+    expect(find.text('Sweep Angle'), findsOneWidget);
+    expect(find.text('Show Center Content'), findsOneWidget);
+    expect(find.text('Center Value'), findsOneWidget);
+    final donutChart = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .singleWhere(
+          (chart) =>
+              chart.series.any((series) => series.id == 'donut-contributions'),
+        );
+    final donutSeries = donutChart.series.single as DonutChartSeries;
+    expect(donutSeries.donutStyle.innerRadiusFactor, 0.58);
+    expect(donutSeries.centerContent.isVisible, isTrue);
+    expect(
+      donutSeries.centerContent.valueMode,
+      DonutCenterValueMode.selectedOrTotal,
+    );
   });
 
   testWidgets('chart-defining controls precede generic display controls', (

@@ -79,15 +79,48 @@ void main() {
     );
     expect(export.rows.first.references.single.pointIndex, 0);
   });
+
+  test('variable-radius Pie export includes the raw second metric', () {
+    final model = _pieModel(variableRadius: true);
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      pieRows: model.pieRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'Category',
+      'Value (USD)',
+      'Total area (km²)',
+      'Share',
+    ]);
+    expect(export.rows.first.displayValues, [
+      '1',
+      'Subscriptions',
+      '42.00',
+      '120.00',
+      '42.00%',
+    ]);
+    expect(export.csv, contains('Subscriptions,42.0,120.0,0.42'));
+  });
 }
 
-ChartTableModel _pieModel() {
+ChartTableModel _pieModel({bool variableRadius = false}) {
   final series =
       (ChartSeriesDocumentCodec.encode(
                 PieChartSeries.fromMap(
                   id: 'revenue',
                   unit: 'USD',
                   values: const {'Subscriptions': 42, 'Services': 58},
+                  radiusValues: variableRadius
+                      ? const {'Subscriptions': 120, 'Services': 80}
+                      : const {},
+                  sliceRadiusConfig: variableRadius
+                      ? const PieSliceRadiusConfig(
+                          label: 'Total area',
+                          unit: 'km²',
+                        )
+                      : null,
                 ),
               )
               as ChartArtifactSuccess<ChartSeriesDocument>)

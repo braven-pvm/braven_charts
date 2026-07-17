@@ -113,7 +113,8 @@ class TooltipRenderer {
     final tooltipText = dataHit.category == null || dataHit.share == null
         ? '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY'
         : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
-              'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%';
+              'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%'
+              '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
 
     // Create text painter with configured style
     final textStyle = TextStyle(

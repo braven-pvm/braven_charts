@@ -27,6 +27,83 @@ void main() {
       expect(series.unit, 'USD');
     });
 
+    test('fromMap preserves a labeled second metric for variable radii', () {
+      final series = PieChartSeries.fromMap(
+        id: 'countries',
+        values: const {'Germany': 233, 'Spain': 96, 'France': 119},
+        radiusValues: const {
+          'Germany': 357022,
+          'Spain': 505990,
+          'France': 551695,
+        },
+        sliceRadiusConfig: const PieSliceRadiusConfig(
+          minimumFactor: 0.4,
+          scale: PieSliceRadiusScale.area,
+          label: 'Total area',
+          unit: 'km²',
+        ),
+      );
+
+      expect(series.hasVariableSliceRadius, isTrue);
+      expect(series.points.map((point) => point.pointStyle?.size), [
+        357022,
+        505990,
+        551695,
+      ]);
+      expect(series.sliceRadiusConfig?.minimumFactor, 0.4);
+      expect(series.sliceRadiusConfig?.label, 'Total area');
+      expect(series.sliceRadiusConfig?.unit, 'km²');
+    });
+
+    test('variable radii require complete finite non-negative values', () {
+      expect(
+        () => PieChartSeries.fromMap(
+          id: 'missing-radius',
+          values: const {'A': 1, 'B': 2},
+          radiusValues: const {'A': 10},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PieChartSeries(
+          id: 'negative-radius',
+          points: const [
+            ChartDataPoint(
+              x: 0,
+              y: 1,
+              label: 'A',
+              pointStyle: PointStyle(size: -1),
+            ),
+          ],
+          sliceRadiusConfig: const PieSliceRadiusConfig(),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PieChartSeries(
+          id: 'missing-config',
+          points: const [
+            ChartDataPoint(
+              x: 0,
+              y: 1,
+              label: 'A',
+              pointStyle: PointStyle(size: 10),
+            ),
+          ],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PieChartSeries.fromMap(
+          id: 'bad-minimum',
+          values: const {'A': 1},
+          radiusValues: const {'A': 10},
+          sliceRadiusConfig: const PieSliceRadiusConfig(minimumFactor: 1.1),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('explicit points allow duplicate labels and retain zero values', () {
       final series = PieChartSeries(
         id: 'segments',
@@ -213,7 +290,10 @@ void main() {
         values: const {'A': 2, 'B': 1},
       );
       final copied = original.copyWith(
-        pieStyle: original.pieStyle.copyWith(clockwise: false),
+        pieStyle: original.pieStyle.copyWith(
+          clockwise: false,
+          cornerTreatment: PieCornerTreatment.circularCenter,
+        ),
         dataLabels: original.dataLabels.copyWith(
           content: PieDataLabelContent.categoryValueAndPercentage,
           outsideOffset: 18,
@@ -221,6 +301,14 @@ void main() {
       );
 
       expect(copied.pieStyle.clockwise, isFalse);
+      expect(
+        copied.pieStyle.cornerTreatment,
+        PieCornerTreatment.circularCenter,
+      );
+      expect(
+        copied.pieStyle.copyWith(clearCornerTreatment: true).cornerTreatment,
+        isNull,
+      );
       expect(
         copied.dataLabels.content,
         PieDataLabelContent.categoryValueAndPercentage,
@@ -233,6 +321,22 @@ void main() {
         throwsArgumentError,
       );
       expect(() => original.copyWith(isXOrdered: false), throwsArgumentError);
+    });
+
+    test('clearing variable radii preserves independent slice colors', () {
+      final original = PieChartSeries.fromMap(
+        id: 'copy-variable',
+        values: const {'A': 2, 'B': 1},
+        radiusValues: const {'A': 20, 'B': 10},
+        sliceColors: const {'A': Color(0xFF6750A4)},
+      );
+
+      final copied = original.copyWith(clearSliceRadiusConfig: true);
+
+      expect(copied.hasVariableSliceRadius, isFalse);
+      expect(copied.points.first.pointStyle?.color, const Color(0xFF6750A4));
+      expect(copied.points.first.pointStyle?.size, isNull);
+      expect(copied.points.last.pointStyle, isNull);
     });
 
     test('copies and compares gradient appearance independently', () {
@@ -276,10 +380,16 @@ void main() {
         values: const {'A': 2, 'B': 1},
         pieStyle: const PieChartStyle(clockwise: false),
       );
+      final variable = PieChartSeries.fromMap(
+        id: 'same',
+        values: const {'A': 2, 'B': 1},
+        radiusValues: const {'A': 2, 'B': 1},
+      );
 
       expect(first, same);
       expect(first.hashCode, same.hashCode);
       expect(first, isNot(different));
+      expect(first, isNot(variable));
     });
 
     test('defensively freezes the supplied point list', () {

@@ -27,6 +27,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
   _PieDataset _dataset = _PieDataset.revenue;
   _PieShowcasePreset _showcasePreset = _PieShowcasePreset.editorial;
   late Map<String, num> _values;
+  late Map<String, num> _radiusValues;
   bool _showLabels = true;
   PieDataLabelPosition _labelPosition = PieDataLabelPosition.outside;
   PieDataLabelContent _labelContent = PieDataLabelContent.categoryAndPercentage;
@@ -37,12 +38,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _startAngle = -90;
   bool _clockwise = true;
   double _radiusFactor = 0.86;
+  double _minimumSliceRadiusFactor = 0.35;
+  PieSliceRadiusScale _sliceRadiusScale = PieSliceRadiusScale.area;
   double _sliceGap = 4;
   double _borderWidth = 1;
   _PieBorderPreset _borderPreset = _PieBorderPreset.darkerSlice;
   _PieGradientPreset _gradientPreset = _PieGradientPreset.radial;
   double _selectionExplodeOffset = 10;
   double _cornerRadius = 8;
+  PieCornerTreatment _cornerTreatment = PieCornerTreatment.roundAll;
   double _sliceOpacity = 1;
   bool _showShadow = false;
   bool _showSelectedGlow = true;
@@ -75,6 +79,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
   void initState() {
     super.initState();
     _values = Map<String, num>.of(_dataset.categoryValues);
+    _radiusValues = Map<String, num>.of(
+      _dataset.radiusValues ?? const <String, num>{},
+    );
     _scheduleTableRefresh();
   }
 
@@ -90,6 +97,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
     setState(() {
       _dataset = dataset;
       _values = Map<String, num>.of(dataset.categoryValues);
+      _radiusValues = Map<String, num>.of(
+        dataset.radiusValues ?? const <String, num>{},
+      );
       _selectedCategory = null;
       _clearPortableState();
     });
@@ -122,6 +132,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _gradientPreset = _PieGradientPreset.linear;
           _selectionExplodeOffset = 8;
           _cornerRadius = 6;
+          _cornerTreatment = PieCornerTreatment.outerOnly;
           _sliceOpacity = 1;
           _showShadow = false;
           _showSelectedGlow = false;
@@ -148,6 +159,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _gradientPreset = _PieGradientPreset.radial;
           _selectionExplodeOffset = 10;
           _cornerRadius = 8;
+          _cornerTreatment = PieCornerTreatment.roundAll;
           _sliceOpacity = 1;
           _showShadow = false;
           _showSelectedGlow = true;
@@ -178,6 +190,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 8;
           _cornerRadius = 4;
+          _cornerTreatment = PieCornerTreatment.outerOnly;
           _sliceOpacity = 1;
           _showShadow = false;
           _showSelectedGlow = false;
@@ -204,6 +217,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _gradientPreset = _PieGradientPreset.radial;
           _selectionExplodeOffset = 14;
           _cornerRadius = 14;
+          _cornerTreatment = PieCornerTreatment.circularCenter;
           _sliceOpacity = 0.94;
           _showShadow = true;
           _showSelectedGlow = true;
@@ -234,6 +248,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 10;
           _cornerRadius = 4;
+          _cornerTreatment = PieCornerTreatment.circularCenter;
           _sliceOpacity = 1;
           _showShadow = false;
           _showSelectedGlow = true;
@@ -272,6 +287,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
           entry.key: math.max(
             1,
             entry.value * (0.72 + _random.nextDouble() * 0.56),
+          ),
+      };
+      _radiusValues = {
+        for (final entry
+            in (_dataset.radiusValues ?? const <String, num>{}).entries)
+          entry.key: math.max(
+            1,
+            entry.value * (0.82 + _random.nextDouble() * 0.36),
           ),
       };
     });
@@ -487,6 +510,29 @@ class _PieChartsPageState extends State<PieChartsPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _radiusFactor = value / 100),
           ),
+          if (_dataset.hasVariableSliceRadius) ...[
+            SliderOption(
+              label: 'Smallest slice radius',
+              value: _minimumSliceRadiusFactor * 100,
+              min: 0,
+              max: 100,
+              divisions: 20,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _minimumSliceRadiusFactor = value / 100),
+            ),
+            EnumOption<PieSliceRadiusScale>(
+              label: 'Radius scale',
+              value: _sliceRadiusScale,
+              values: PieSliceRadiusScale.values,
+              labelBuilder: (value) => switch (value) {
+                PieSliceRadiusScale.area => 'Perceptual area',
+                PieSliceRadiusScale.linear => 'Linear radius',
+              },
+              onChanged: (value) => setState(() => _sliceRadiusScale = value),
+            ),
+          ],
           SliderOption(
             label: 'Slice gap',
             value: _sliceGap,
@@ -566,6 +612,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _cornerRadius = value),
           ),
+          if (_cornerRadius > 0)
+            EnumOption<PieCornerTreatment>(
+              label: 'Corner treatment',
+              value: _cornerTreatment,
+              values: PieCornerTreatment.values,
+              labelBuilder: _cornerTreatmentName,
+              onChanged: (value) => setState(() => _cornerTreatment = value),
+            ),
           BoolOption(
             label: 'Slice shadow',
             value: _showShadow,
@@ -1123,6 +1177,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
             Chip(label: Text('Schema ${artifact.schemaVersion}')),
             const Chip(label: Text('series.pie')),
             const Chip(label: Text('series.pie.style.v2')),
+            const Chip(label: Text('series.pie.corner-treatment.v1')),
+            if (artifact.document.requiredCapabilities.contains(
+              'series.pie.variable-radius.v1',
+            ))
+              const Chip(label: Text('series.pie.variable-radius.v1')),
             Chip(
               label: Text(
                 preview == null
@@ -1509,9 +1568,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 _FeatureCard(
                   width: cardWidth,
                   icon: Icons.donut_large_outlined,
-                  title: 'One meaningful whole',
+                  title: 'One whole, optional second metric',
                   description:
-                      'Each non-negative value becomes one contribution. Zero values stay in the data but do not draw a slice.',
+                      'Angle shows contribution. Add one radius value per category to compare a second non-negative metric without losing the whole.',
                 ),
                 _FeatureCard(
                   width: cardWidth,
@@ -1525,7 +1584,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                   icon: Icons.contrast_outlined,
                   title: 'Theme-aware rendering',
                   description:
-                      'Palettes, opacity, corners, shadow, selected glow, callouts, tooltips, and legends resolve through the active chart theme.',
+                      'Palettes, opacity, corner treatments, shadow, selected glow, callouts, tooltips, and legends resolve through the active chart theme.',
                 ),
                 _FeatureCard(
                   width: cardWidth,
@@ -1602,6 +1661,16 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "    'Services': 31,\n"
               "    'Hardware': 17,\n"
               "  },\n"
+              "  // Optional: encode a second metric through radius.\n"
+              "  radiusValues: {\n"
+              "    'Subscriptions': 120,\n"
+              "    'Services': 90,\n"
+              "    'Hardware': 65,\n"
+              "  },\n"
+              "  sliceRadiusConfig: PieSliceRadiusConfig(\n"
+              "    label: 'Market size',\n"
+              "    unit: 'k users',\n"
+              "  ),\n"
               "  pieStyle: PieChartStyle(\n"
               "    gradient: PieGradientStyle(\n"
               "      type: PieGradientType.radial,\n"
@@ -1619,6 +1688,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "  ),\n"
               "  pieChartTheme: const PieChartTheme(\n"
               "    cornerRadius: 10,\n"
+              "    cornerTreatment: PieCornerTreatment.circularCenter,\n"
               "    selectedElevation: PieElevationStyle(\n"
               "      blurRadius: 12,\n"
               "      spreadRadius: 2,\n"
@@ -1677,6 +1747,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
       name: _dataset.title,
       unit: _dataset.unit,
       values: _values,
+      radiusValues: _radiusValues,
+      sliceRadiusConfig: _dataset.hasVariableSliceRadius
+          ? PieSliceRadiusConfig(
+              minimumFactor: _minimumSliceRadiusFactor,
+              scale: _sliceRadiusScale,
+              label: _dataset.radiusLabel!,
+              unit: _dataset.radiusUnit,
+            )
+          : null,
       pieStyle: PieChartStyle(
         startAngleDegrees: _startAngle,
         clockwise: _clockwise,
@@ -1702,6 +1781,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           ),
         },
         selectionExplodeOffset: _selectionExplodeOffset,
+        cornerTreatment: _cornerTreatment,
       ),
       dataLabels: PieDataLabelConfig(
         isVisible: _showLabels,
@@ -1763,6 +1843,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
       pieChartTheme: PieChartTheme(
         opacity: _sliceOpacity,
         cornerRadius: _cornerRadius,
+        cornerTreatment: _cornerTreatment,
         shadow: _showShadow
             ? const PieElevationStyle(
                 color: Color(0x4D1A1A1A),
@@ -1902,6 +1983,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
   };
 
   String _chartSummary() {
+    if (_dataset.hasVariableSliceRadius) {
+      return '${_values.length} countries · angle: ${_dataset.unit} · '
+          'radius: ${_dataset.radiusLabel} (${_dataset.radiusUnit})';
+    }
     final total = _values.values.fold<double>(
       0,
       (sum, value) => sum + value.toDouble(),
@@ -1997,6 +2082,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _PieGradientPreset.solid => 'Solid color',
     _PieGradientPreset.linear => 'Linear light',
     _PieGradientPreset.radial => 'Radial light',
+  };
+
+  String _cornerTreatmentName(PieCornerTreatment value) => switch (value) {
+    PieCornerTreatment.roundAll => 'All corners (legacy)',
+    PieCornerTreatment.outerOnly => 'Outer corners only',
+    PieCornerTreatment.circularCenter => 'Circular center',
   };
 
   String _glowColorName(_PieGlowColor value) => switch (value) {
@@ -2152,6 +2243,34 @@ enum _PieDataset {
       'Exports': 7,
       'Other': 5,
     },
+  ),
+  countries(
+    title: 'Density and area',
+    chartTitle: 'Countries by density and area',
+    chartSubtitle:
+        'Angle compares population density · radius compares total area',
+    selectorDescription: '7 countries · two independent metrics',
+    unit: 'people/km²',
+    categoryValues: {
+      'Germany': 233,
+      'Spain': 96,
+      'France': 119,
+      'Poland': 120,
+      'Czech Republic': 139,
+      'Italy': 195,
+      'Switzerland': 219,
+    },
+    radiusValues: {
+      'Germany': 357022,
+      'Spain': 505990,
+      'France': 551695,
+      'Poland': 312696,
+      'Czech Republic': 78871,
+      'Italy': 301340,
+      'Switzerland': 41285,
+    },
+    radiusLabel: 'Total area',
+    radiusUnit: 'km²',
   );
 
   const _PieDataset({
@@ -2161,6 +2280,9 @@ enum _PieDataset {
     required this.selectorDescription,
     required this.unit,
     required this.categoryValues,
+    this.radiusValues,
+    this.radiusLabel,
+    this.radiusUnit,
   });
 
   final String title;
@@ -2169,4 +2291,9 @@ enum _PieDataset {
   final String selectorDescription;
   final String unit;
   final Map<String, num> categoryValues;
+  final Map<String, num>? radiusValues;
+  final String? radiusLabel;
+  final String? radiusUnit;
+
+  bool get hasVariableSliceRadius => radiusValues != null;
 }

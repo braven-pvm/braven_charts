@@ -22,6 +22,15 @@ void main() {
       expect(ChartLayoutResolver.resolve([pie]), ChartLayoutKind.radial);
     });
 
+    test('uses radial layout for exactly one DonutChartSeries', () {
+      final donut = DonutChartSeries.fromMap(
+        id: 'donut',
+        values: const {'A': 1},
+      );
+
+      expect(ChartLayoutResolver.resolve([donut]), ChartLayoutKind.radial);
+    });
+
     test('rejects mixed radial and Cartesian series', () {
       final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
 
@@ -73,6 +82,25 @@ void main() {
             (error) => error.message,
             'message',
             contains('requires a PieChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects generic series that only claim the donut style', () {
+      const invalid = ChartSeries(
+        id: 'fake-donut',
+        points: [],
+        style: SeriesStyle.donut,
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve(const [invalid]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('requires a DonutChartSeries'),
           ),
         ),
       );

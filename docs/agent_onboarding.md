@@ -40,8 +40,9 @@ shared implementation contract.
 
 **Key capabilities:**
 
-- Line, area, bar, scatter, and single-series pie charts; Cartesian lines and
-  areas support bezier/monotone/stepped interpolation
+- Line, area, bar, scatter, Pie, and Donut charts; Cartesian lines and areas
+  support bezier/monotone/stepped interpolation, while radial category charts
+  support variable radii, partial sweeps, labels, and portable selection
 - Multi-axis support with independent Y-axis scales and per-series normalization
 - Interactive annotations: point, range, text, threshold, trend, pin, legend
 - Crosshair with standard and tracking modes, per-axis labels
@@ -90,7 +91,7 @@ lib/
     │   └── chart_transform.dart # ★ Universal data↔plot coordinate converter
     ├── elements/               # ChartElement implementations
     │   ├── series_element.dart        # ★ Series rendering (line/area/bar/scatter)
-    │   ├── pie_series_element.dart    # ★ Radial pie rendering, labels, and hits
+    │   ├── pie_series_element.dart    # ★ Shared Pie/Donut rendering, labels, and hits
     │   ├── annotation_elements.dart   # All annotation element types
     │   ├── resize_handle_element.dart # Drag handles for annotations
     │   └── simulated_*.dart           # Test harness elements
@@ -109,8 +110,11 @@ lib/
     ├── layout/                 # Cartesian/radial and multi-axis layout computation
     ├── models/                 # ★ All data models (immutable value objects)
     │   ├── chart_series.dart          # Cartesian series hierarchy
-    │   ├── pie_chart_series.dart      # Validated radial pie series
-    │   ├── pie_chart_config.dart      # Pie geometry, theme, elevation, labels, motion
+    │   ├── radial_category_series.dart # Shared validated Pie/Donut source contract
+    │   ├── pie_chart_series.dart      # Validated Pie series
+    │   ├── donut_chart_series.dart    # Donut series and center content
+    │   ├── pie_chart_config.dart      # Shared radial appearance, labels, motion
+    │   ├── donut_chart_config.dart    # Donut hole, sweep, and center configuration
     │   ├── chart_data_point.dart      # (x,y) with optional metadata
     │   ├── chart_annotation.dart      # Sealed annotation hierarchy
     │   ├── interaction_config.dart    # Full interaction configuration
@@ -205,7 +209,7 @@ lib/
 ┌─────────────────────────────────────────────────────────────┐
 │  ChartElement (interface) — unified element model            │
 │  ├── SeriesElement      — renders line/area/bar/scatter      │
-│  ├── PieSeriesElement   — renders styled/animated pie slices │
+│  ├── PieSeriesElement   — renders styled/animated Pie/Donut slices │
 │  ├── *AnnotationElement — renders each annotation type       │
 │  └── ResizeHandleElement — drag handles on annotations       │
 │                                                              │
@@ -604,7 +608,10 @@ ChartSeries (base)           // id, name, points, color, yAxisConfig, yAxisId, u
 ├── LineChartSeries           // interpolation, strokeWidth, tension, showDataPointMarkers
 ├── AreaChartSeries           // interpolation, strokeWidth, fillOpacity
 ├── BarChartSeries            // barWidthPercent or barWidthPixels
-└── ScatterChartSeries        // markerRadius
+├── ScatterChartSeries        // markerRadius
+└── RadialCategorySeries      // category identity, shared radial style, optional radius metric
+    ├── PieChartSeries        // full/partial disc geometry
+    └── DonutChartSeries      // annular geometry plus portable center content
 ```
 
 ### ChartDataPoint

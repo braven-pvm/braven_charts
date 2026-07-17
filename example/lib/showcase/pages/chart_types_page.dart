@@ -15,6 +15,7 @@ const _availableChartTypes = <ChartType>[
   ChartType.bar,
   ChartType.scatter,
   ChartType.pie,
+  ChartType.donut,
 ];
 
 /// A browse-then-configure showcase for every primary chart type.
@@ -41,6 +42,11 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   double _pieLabelOffset = 0;
   double _pieSliceGap = 3;
   double _pieStartAngle = -90;
+  double _donutInnerRadius = 0.58;
+  double _donutSweepAngle = 360;
+  bool _donutShowCenter = true;
+  DonutCenterValueMode _donutCenterValueMode =
+      DonutCenterValueMode.selectedOrTotal;
   _ChartTypePieFill _pieFill = _ChartTypePieFill.radial;
   bool _showSecondSeries = true;
 
@@ -106,7 +112,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             labelBuilder: (value) => _chartTypeLabel(value),
             onChanged: _selectChartType,
           ),
-          if (_chartType != ChartType.pie)
+          if (!_isRadialType(_chartType))
             BoolOption(
               label: 'Show Second Series',
               value: _showSecondSeries,
@@ -187,10 +193,14 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             ),
           ],
         ),
-      if (_chartType == ChartType.pie)
+      if (_isRadialType(_chartType))
         OptionSection(
-          title: 'Pie Appearance',
-          icon: Icons.pie_chart_outline,
+          title: _chartType == ChartType.donut
+              ? 'Donut Appearance'
+              : 'Pie Appearance',
+          icon: _chartType == ChartType.donut
+              ? Icons.donut_large_outlined
+              : Icons.pie_chart_outline,
           children: [
             BoolOption(
               label: 'Show Data Labels',
@@ -241,6 +251,48 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _pieStartAngle = value),
             ),
+            if (_chartType == ChartType.donut) ...[
+              SliderOption(
+                label: 'Inner Radius',
+                value: _donutInnerRadius * 100,
+                min: 20,
+                max: 82,
+                divisions: 31,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _donutInnerRadius = value / 100),
+              ),
+              SliderOption(
+                label: 'Sweep Angle',
+                value: _donutSweepAngle,
+                min: 90,
+                max: 360,
+                divisions: 18,
+                suffix: '°',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _donutSweepAngle = value),
+              ),
+              BoolOption(
+                label: 'Show Center Content',
+                value: _donutShowCenter,
+                onChanged: (value) => setState(() => _donutShowCenter = value),
+              ),
+              if (_donutShowCenter)
+                EnumOption<DonutCenterValueMode>(
+                  label: 'Center Value',
+                  value: _donutCenterValueMode,
+                  values: DonutCenterValueMode.values,
+                  labelBuilder: (value) => switch (value) {
+                    DonutCenterValueMode.total => 'Total',
+                    DonutCenterValueMode.selectedValue => 'Selected value',
+                    DonutCenterValueMode.selectedOrTotal => 'Selected or total',
+                    DonutCenterValueMode.custom => 'Custom text',
+                  },
+                  onChanged: (value) =>
+                      setState(() => _donutCenterValueMode = value),
+                ),
+            ],
             EnumOption<_ChartTypePieFill>(
               label: 'Slice Fill',
               value: _pieFill,
@@ -256,12 +308,12 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         ),
       StandardChartOptions(
         controller: _optionsController,
-        showGridOption: _chartType != ChartType.pie,
-        showAxisOption: _chartType != ChartType.pie,
-        showMarkerOption: _chartType != ChartType.pie,
-        showScrollbarOptions: _chartType != ChartType.pie,
+        showGridOption: !_isRadialType(_chartType),
+        showAxisOption: !_isRadialType(_chartType),
+        showMarkerOption: !_isRadialType(_chartType),
+        showScrollbarOptions: !_isRadialType(_chartType),
         showLineStyleOption: false,
-        showInteractionOptions: _chartType != ChartType.pie,
+        showInteractionOptions: !_isRadialType(_chartType),
       ),
       OptionSection(
         title: 'Dataset',
@@ -359,7 +411,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
   }
 
   Widget _buildMainChart() {
-    final isPie = _chartType == ChartType.pie;
+    final isRadial = _isRadialType(_chartType);
     return ChartCard(
       title: '${_chartTypeLabel(_chartType)} chart playground',
       subtitle: _mainChartSummary(),
@@ -368,16 +420,16 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         series: _buildSeries(_chartType),
         theme: _optionsController.theme,
         showLegend: _optionsController.showLegend,
-        showXScrollbar: !isPie && _optionsController.showXScrollbar,
-        showYScrollbar: !isPie && _optionsController.showYScrollbar,
+        showXScrollbar: !isRadial && _optionsController.showXScrollbar,
+        showYScrollbar: !isRadial && _optionsController.showYScrollbar,
         scrollbarTheme: ScrollbarConfig.defaultLight.copyWith(autoHide: false),
-        grid: isPie
+        grid: isRadial
             ? const GridConfig(horizontal: false, vertical: false)
             : GridConfig(
                 horizontal: _optionsController.showGrid,
                 vertical: _optionsController.showGrid,
               ),
-        xAxisConfig: isPie
+        xAxisConfig: isRadial
             ? null
             : XAxisConfig(
                 label: 'Interval',
@@ -387,7 +439,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                 renderMax: 16,
                 showAxisLine: _optionsController.showAxisLines,
               ),
-        yAxis: isPie
+        yAxis: isRadial
             ? null
             : YAxisConfig(
                 position: YAxisPosition.left,
@@ -396,7 +448,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
                 max: 110,
                 showAxisLine: _optionsController.showAxisLines,
               ),
-        interactionConfig: isPie
+        interactionConfig: isRadial
             ? const InteractionConfig(
                 crosshair: CrosshairConfig(enabled: false),
                 tooltip: TooltipConfig(enabled: true),
@@ -551,11 +603,76 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
             ),
           ),
         ];
+      case ChartType.donut:
+        const categories = [
+          'Subscriptions',
+          'Services',
+          'Hardware',
+          'Training',
+          'Other',
+        ];
+        final categoryCount = preview ? 4 : categories.length;
+        return [
+          DonutChartSeries.fromMap(
+            id: preview ? 'preview-donut' : 'donut-contributions',
+            name: 'Contribution',
+            unit: 'units',
+            values: {
+              for (var index = 0; index < categoryCount; index++)
+                categories[index]: _observedData[index].y.clamp(
+                  1,
+                  double.infinity,
+                ),
+            },
+            donutStyle: DonutChartStyle(
+              innerRadiusFactor: preview ? 0.58 : _donutInnerRadius,
+              sweepAngleDegrees: preview ? 360 : _donutSweepAngle,
+              startAngleDegrees: preview ? -90 : _pieStartAngle,
+              radiusFactor: preview ? 0.82 : 0.86,
+              sliceGap: preview ? 1 : _pieSliceGap,
+              borderWidth: preview ? 0 : 1,
+              gradient: switch (preview ? _ChartTypePieFill.radial : _pieFill) {
+                _ChartTypePieFill.solid => null,
+                _ChartTypePieFill.linear => const PieGradientStyle(
+                  type: PieGradientType.linear,
+                ),
+                _ChartTypePieFill.radial => const PieGradientStyle(
+                  type: PieGradientType.radial,
+                ),
+              },
+            ),
+            centerContent: DonutCenterContent(
+              isVisible: preview || _donutShowCenter,
+              label: preview
+                  ? 'Total'
+                  : switch (_donutCenterValueMode) {
+                      DonutCenterValueMode.total => 'Total',
+                      DonutCenterValueMode.custom => 'Status',
+                      DonutCenterValueMode.selectedValue ||
+                      DonutCenterValueMode.selectedOrTotal => null,
+                    },
+              valueMode: preview
+                  ? DonutCenterValueMode.total
+                  : _donutCenterValueMode,
+              customValue:
+                  !preview &&
+                      _donutCenterValueMode == DonutCenterValueMode.custom
+                  ? 'On track'
+                  : null,
+            ),
+            dataLabels: PieDataLabelConfig(
+              isVisible: !preview && _pieShowLabels,
+              position: _pieLabelPosition,
+              content: PieDataLabelContent.categoryAndPercentage,
+              outsideOffset: _pieLabelOffset,
+            ),
+          ),
+        ];
     }
   }
 
   String _mainChartSummary() {
-    final seriesCount = _chartType == ChartType.pie
+    final seriesCount = _isRadialType(_chartType)
         ? 1
         : (_showSecondSeries ? 2 : 1);
     final configuration = switch (_chartType) {
@@ -568,9 +685,13 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
         '5 categories · ${_pieSliceGap.toStringAsFixed(0)}px gap · '
             '${_pieFill.name} fill · '
             '${_pieShowLabels ? _pieLabelPosition.name : 'labels hidden'}',
+      ChartType.donut =>
+        '5 categories · ${(_donutInnerRadius * 100).round()}% center · '
+            '${_donutSweepAngle.round()}° sweep · ${_pieFill.name} fill · '
+            '${_donutShowCenter ? _donutCenterValueMode.name : 'center hidden'}',
     };
 
-    final dataSummary = _chartType == ChartType.pie
+    final dataSummary = _isRadialType(_chartType)
         ? '1 series'
         : '$seriesCount series · ${_observedData.length} points each';
     return '$dataSummary · $configuration · '
@@ -596,6 +717,7 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.bar => 'Bar',
       ChartType.scatter => 'Scatter',
       ChartType.pie => 'Pie',
+      ChartType.donut => 'Donut',
     };
   }
 
@@ -606,8 +728,12 @@ class _ChartTypesPageState extends State<ChartTypesPage> {
       ChartType.bar => 'Multi-series columns',
       ChartType.scatter => 'Distinct marker sets',
       ChartType.pie => 'Category contributions',
+      ChartType.donut => 'Contributions around a center',
     };
   }
+
+  bool _isRadialType(ChartType chartType) =>
+      chartType == ChartType.pie || chartType == ChartType.donut;
 }
 
 enum _ChartTypePieFill { solid, linear, radial }

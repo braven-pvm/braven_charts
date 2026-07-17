@@ -6,6 +6,8 @@ import '../models/bar_chart_style.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/segment_style.dart';
@@ -105,6 +107,14 @@ abstract final class ChartSeriesDocumentCodec {
           requiredCapabilities: {
             'series.${_typeOf(series)}',
             if (series is PieChartSeries) 'series.pie.style.v2',
+            if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
+            if (series is PieChartSeries && series.hasVariableSliceRadius)
+              'series.pie.variable-radius.v1',
+            if (series is DonutChartSeries) 'series.donut.style.v1',
+            if (series is DonutChartSeries && series.centerContent.isVisible)
+              'series.donut.center-content.v1',
+            if (series is DonutChartSeries && series.hasVariableSliceRadius)
+              'series.donut.variable-radius.v1',
           },
         ),
       );
@@ -349,6 +359,25 @@ abstract final class ChartSeriesDocumentCodec {
           unit: document.unit,
           pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
           dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+          sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
+              ? null
+              : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
+        ),
+        'donut' => DonutChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          donutStyle: _decodeDonutStyle(_map(style, 'donutStyle')),
+          centerContent: _optionalMap(style, 'centerContent') == null
+              ? DonutCenterContent.hidden
+              : _decodeDonutCenterContent(_map(style, 'centerContent')),
+          dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+          sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
+              ? null
+              : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
         ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
@@ -389,6 +418,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   AreaChartSeries() => 'area',
   BarChartSeries() => 'bar',
   PieChartSeries() => 'pie',
+  DonutChartSeries() => 'donut',
   ChartSeries() => 'base',
 };
 
@@ -539,6 +569,17 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
       result
         ..['pieStyle'] = _encodePieStyle(series.pieStyle)
         ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
+      if (series.sliceRadiusConfig case final radiusConfig?) {
+        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
+      }
+    case DonutChartSeries():
+      result
+        ..['donutStyle'] = _encodeDonutStyle(series.donutStyle)
+        ..['centerContent'] = _encodeDonutCenterContent(series.centerContent)
+        ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
+      if (series.sliceRadiusConfig case final radiusConfig?) {
+        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
+      }
     case ChartSeries():
       break;
   }
@@ -769,7 +810,7 @@ BarLabelStyle _decodeBarLabels(Map<String, Object?>? value) {
   );
 }
 
-Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
+Map<String, Object?> _encodePieStyle(RadialChartStyle style) => {
   'startAngleDegrees': _number(style.startAngleDegrees),
   'clockwise': style.clockwise,
   'radiusFactor': _number(style.radiusFactor),
@@ -788,11 +829,74 @@ Map<String, Object?> _encodePieStyle(PieChartStyle style) => {
   'selectionExplodeOffset': _number(style.selectionExplodeOffset),
   if (style.opacity != null) 'opacity': _number(style.opacity!),
   if (style.cornerRadius != null) 'cornerRadius': _number(style.cornerRadius!),
+  if (style.cornerTreatment != null)
+    'cornerTreatment': style.cornerTreatment!.name,
   if (style.shadow != null) 'shadow': _encodePieElevation(style.shadow!),
   if (style.selectedElevation != null)
     'selectedElevation': _encodePieElevation(style.selectedElevation!),
   if (style.animationMode != null) 'animationMode': style.animationMode!.name,
 };
+
+Map<String, Object?> _encodeDonutStyle(DonutChartStyle style) => {
+  ..._encodePieStyle(style),
+  'innerRadiusFactor': _number(style.innerRadiusFactor),
+  'sweepAngleDegrees': _number(style.sweepAngleDegrees),
+};
+
+Map<String, Object?> _encodeDonutCenterContent(DonutCenterContent content) => {
+  'isVisible': content.isVisible,
+  if (content.label != null) 'label': content.label,
+  'valueMode': content.valueMode.name,
+  if (content.customValue != null) 'customValue': content.customValue,
+  if (content.labelStyle != null)
+    'labelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      content.labelStyle!,
+    ).toJson(),
+  if (content.valueStyle != null)
+    'valueStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      content.valueStyle!,
+    ).toJson(),
+};
+
+DonutCenterContent _decodeDonutCenterContent(Map<String, Object?> value) =>
+    DonutCenterContent(
+      isVisible: _bool(value, 'isVisible'),
+      label: _optionalString(value['label']),
+      valueMode: _enum(value, 'valueMode', DonutCenterValueMode.values),
+      customValue: _optionalString(value['customValue']),
+      labelStyle: _optionalMap(value, 'labelStyle') == null
+          ? null
+          : ChartStyleDocumentCodec.decodeLabelStyle(
+              _jsonObject(
+                _map(value, 'labelStyle'),
+                path: r'$.style.centerContent.labelStyle',
+              ),
+            ),
+      valueStyle: _optionalMap(value, 'valueStyle') == null
+          ? null
+          : ChartStyleDocumentCodec.decodeLabelStyle(
+              _jsonObject(
+                _map(value, 'valueStyle'),
+                path: r'$.style.centerContent.valueStyle',
+              ),
+            ),
+    );
+
+Map<String, Object?> _encodePieSliceRadiusConfig(PieSliceRadiusConfig config) =>
+    {
+      'minimumFactor': _number(config.minimumFactor),
+      'scale': config.scale.name,
+      'label': config.label,
+      if (config.unit != null) 'unit': config.unit,
+    };
+
+PieSliceRadiusConfig _decodePieSliceRadiusConfig(Map<String, Object?> value) =>
+    PieSliceRadiusConfig(
+      minimumFactor: _double(value, 'minimumFactor'),
+      scale: _enum(value, 'scale', PieSliceRadiusScale.values),
+      label: _string(value, 'label'),
+      unit: _optionalString(value['unit']),
+    );
 
 PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
   startAngleDegrees: _double(value, 'startAngleDegrees'),
@@ -818,6 +922,11 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
   selectionExplodeOffset: _double(value, 'selectionExplodeOffset'),
   opacity: _optionalDouble(value['opacity']),
   cornerRadius: _optionalDouble(value['cornerRadius']),
+  cornerTreatment: _optionalEnum(
+    value['cornerTreatment'],
+    PieCornerTreatment.values,
+    r'$.style.pieStyle.cornerTreatment',
+  ),
   shadow: _optionalMap(value, 'shadow') == null
       ? null
       : _decodePieElevation(_map(value, 'shadow')),
@@ -830,6 +939,13 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
     r'$.style.pieStyle.animationMode',
   ),
 );
+
+DonutChartStyle _decodeDonutStyle(Map<String, Object?> value) =>
+    DonutChartStyle.fromRadialStyle(
+      _decodePieStyle(value),
+      innerRadiusFactor: _double(value, 'innerRadiusFactor'),
+      sweepAngleDegrees: _double(value, 'sweepAngleDegrees'),
+    );
 
 Map<String, Object?> _encodePieGradient(PieGradientStyle style) => {
   'enabled': style.enabled,

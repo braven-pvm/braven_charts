@@ -1,9 +1,9 @@
 # Chart types
 
-Braven Charts renders five first-class series types through
-`BravenChartPlus`: line, area, bar, scatter, and pie. Line, area, bar, and
-scatter use the Cartesian layout and may share one chart. Pie uses the radial
-layout and is intentionally a single-series chart.
+Braven Charts renders six first-class series types through
+`BravenChartPlus`: line, area, bar, scatter, Pie, and Donut. Line, area, bar,
+and scatter use the Cartesian layout and may share one chart. Pie and Donut use
+the radial layout and are intentionally single-series charts.
 
 Import only the public package entrypoint:
 
@@ -20,6 +20,7 @@ import 'package:braven_charts/braven_charts.dart';
 | `BarChartSeries` | Discrete comparisons and grouped values | relative or fixed bar width |
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
+| `DonutChartSeries` | Parts of one whole with a meaningful center | inner radius, partial sweep, center content, selection |
 
 Use pie only when every category contributes to the same total. Use bars when
 precise comparison matters more than contribution to a whole, when values may
@@ -38,8 +39,8 @@ const points = [
 ];
 ```
 
-`x` and `y` are the plotted Cartesian coordinates. For pie, `x` is a stable
-ordering ordinal, `y` is the contribution, and `label` is the category.
+`x` and `y` are the plotted Cartesian coordinates. For Pie and Donut, `x` is a
+stable ordering ordinal, `y` is the contribution, and `label` is the category.
 `ChartPointRef(seriesId, pointIndex)` remains the portable identity across
 charts, tables, artifacts, and restored runtimes.
 
@@ -170,6 +171,7 @@ BravenChartPlus(
     ),
     pieChartTheme: const PieChartTheme(
       cornerRadius: 10,
+      cornerTreatment: PieCornerTreatment.circularCenter,
       selectedElevation: PieElevationStyle(
         blurRadius: 12,
         spreadRadius: 2,
@@ -193,10 +195,59 @@ Pie has these enforced boundaries:
 - duplicate category labels are allowed because point index, not label, is the
   stable identity.
 
+To compare a second metric, provide one `radiusValues` entry per category and
+a `PieSliceRadiusConfig`. Angular share remains driven by `values`; radius is
+normalized independently, shown in tooltips and the native table, and
+transported with capability `series.pie.variable-radius.v1`.
+
 See the complete [Pie chart guide](../../doc/pie_charts.md) for labels,
 palettes, solid or gradient fills, callouts, tooltips, legends,
-rounded/translucent slices, elevation, animation, selection, tables,
-artifacts, AI configuration, and accessibility.
+three corner treatments, translucent slices, elevation, animation, selection,
+tables,
+artifacts, variable radii, AI configuration, and accessibility.
+
+## Donut charts
+
+Donut keeps Pie's ordered category contract and adds a validated shared inner
+radius, optional partial sweep, and portable center content.
+
+```dart
+final donut = DonutChartSeries.fromMap(
+  id: 'revenue-share',
+  name: 'Revenue share',
+  unit: 'USD',
+  values: const {
+    'Subscriptions': 42,
+    'Services': 31,
+    'Hardware': 27,
+  },
+  donutStyle: const DonutChartStyle(
+    innerRadiusFactor: 0.58,
+    sweepAngleDegrees: 360,
+    sliceGap: 2,
+    cornerRadius: 8,
+  ),
+  centerContent: const DonutCenterContent(
+    label: 'Revenue',
+    valueMode: DonutCenterValueMode.selectedOrTotal,
+  ),
+);
+
+BravenChartPlus(series: [donut]);
+```
+
+The center supports total, selected value, selected-or-total, and custom text.
+It follows the same `ChartPointRef` selected from a slice, legend, native table,
+keyboard, or `BravenChartController`. Center text is measured inside the real
+opening and is included in preview images and portable artifacts.
+
+Donut documents declare `series.donut` plus `series.donut.style.v1`. Visible
+center content declares `series.donut.center-content.v1`; a second radius
+metric declares `series.donut.variable-radius.v1`.
+
+See the complete [Donut chart guide](../../doc/donut_charts.md) for geometry,
+center styling, selection, tables, artifacts, AI configuration, theming,
+validation, and accessibility.
 
 ## Mixed Cartesian charts
 
@@ -224,20 +275,20 @@ BravenChartPlus(
 )
 ```
 
-Do not add a pie series to this list. Mixed radial/Cartesian composition fails
+Do not add a Pie or Donut series to this list. Mixed radial/Cartesian composition fails
 explicitly instead of silently dropping or misrendering data.
 
 ## Convenience factories
 
 `BravenChartPlus.fromValues` accepts line, area, bar, and scatter. It rejects
-pie because numeric values alone cannot provide accessible category labels.
+Pie and Donut because numeric values alone cannot provide accessible category labels.
 
 `BravenChartPlus.fromMap` treats keys as numeric X values for Cartesian chart
-types. With `chartType: ChartType.pie`, keys become category strings and map
-insertion order becomes slice order.
+types. With `chartType: ChartType.pie` or `ChartType.donut`, keys become
+category strings and map insertion order becomes slice order.
 
 `BravenChartPlus.fromJson` accepts point objects with `x`, `y`, and optional
-`label`. Pie JSON must provide a non-empty label on every point.
+`label`. Pie and Donut JSON must provide a non-empty label on every point.
 
 For product code, explicit series constructors are usually clearer because
 they expose the full type-specific configuration.
@@ -245,11 +296,11 @@ they expose the full type-specific configuration.
 ## Interaction and data tables
 
 Cartesian charts may use pan, zoom, scrollbars, crosshairs, tracking, and point
-tooltips. Pie uses slice hover, tooltip, tap selection, legend selection,
+tooltips. Pie and Donut use slice hover, tooltip, tap selection, legend selection,
 arrow-key traversal, Enter/Space activation, and Escape clear.
 
 `ChartTableModel.fromDocument` projects Cartesian documents into exact-X wide
-or lossless long rows. A pie document automatically becomes:
+or lossless long rows. A Pie or Donut document automatically becomes:
 
 ```text
 # | Category      | Value (USD) | Share
@@ -263,10 +314,10 @@ directions. `BravenChartWorkbench` provides this linking by default.
 ## Themes, responsiveness, and accessibility
 
 All series inherit `ChartTheme` colors unless a series or point provides an
-override. Pie resolves one palette color per visible slice and keeps category
+override. Pie and Donut resolve one palette color per visible slice and keep category
 text in labels or the legend, so color is never the only cue.
 
-Pie outside labels are lane-managed and may hide the lowest-priority labels
+Radial outside labels are lane-managed and may hide the lowest-priority labels
 when a compact viewport cannot fit all text. The legend and native data table
 remain complete. Inside labels are omitted when the text does not fit the
 slice. `MediaQuery.disableAnimationsOf` removes selection motion, and slice
@@ -275,16 +326,18 @@ semantics announce category, formatted value, share, ordinal, and state.
 ## Portable documents
 
 Every built-in series encodes through `ChartSeriesDocumentCodec`. Pie declares
-the `series.pie` capability. Older readers that do not support it reject the
-document rather than interpreting it as a Cartesian series. Artifact capture,
+`series.pie`; Donut declares `series.donut`. Older readers that do not support
+the required capability reject the document rather than interpreting it as a Cartesian series. Artifact capture,
 canonical JSON, previews, hydration, and table export all preserve point
 identity and type-specific configuration.
 
 ## Runnable examples
 
 - [Chart Types](https://braven-pvm.github.io/braven_charts/?page=chart-types)
-  compares all five series types.
+  compares all six series types.
 - [Pie Charts](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
   demonstrates labels, geometry, linked data, capture, preview, and restore.
-- [Gallery](https://braven-pvm.github.io/braven_charts/) demonstrates mixed
-  Cartesian product compositions.
+- [Donut Charts](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
+  demonstrates center content, partial sweeps, linked data, and transport.
+- [Gallery](https://braven-pvm.github.io/braven_charts/) demonstrates radial
+  and mixed Cartesian product compositions.

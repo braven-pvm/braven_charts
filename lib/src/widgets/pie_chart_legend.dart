@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/chart_theme.dart';
 import '../models/legend_style.dart';
-import '../models/pie_chart_series.dart';
+import '../models/radial_category_series.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 
 /// Native, slice-aware legend used by radial charts.
@@ -23,7 +23,7 @@ class PieChartLegend extends StatelessWidget {
   });
 
   /// Source pie series.
-  final PieChartSeries series;
+  final RadialCategorySeries series;
 
   /// Effective chart theme used by the slice painter.
   final ChartTheme chartTheme;

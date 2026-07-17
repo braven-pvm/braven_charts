@@ -2882,12 +2882,16 @@ class ChartRenderBox extends RenderBox {
         .whereType<DataHitElement>()
         .expand((element) => element.semanticDataHits)
         .length;
-    if (hitCount == 0) return;
+    final summaryCount = _elements
+        .whereType<ChartSemanticSummaryProvider>()
+        .expand((element) => element.semanticSummaries)
+        .length;
+    if (hitCount == 0 && summaryCount == 0) return;
     config
       ..isSemanticBoundary = true
       ..explicitChildNodes = true
       ..textDirection = TextDirection.ltr
-      ..label = 'Pie chart with $hitCount slices';
+      ..label = 'Radial chart with $hitCount slices';
   }
 
   @override
@@ -2900,7 +2904,11 @@ class ChartRenderBox extends RenderBox {
         .whereType<DataHitElement>()
         .expand((element) => element.semanticDataHits)
         .toList();
-    if (hits.isEmpty) {
+    final summaries = _elements
+        .whereType<ChartSemanticSummaryProvider>()
+        .expand((element) => element.semanticSummaries)
+        .toList();
+    if (hits.isEmpty && summaries.isEmpty) {
       _dataSemanticsNodes.clear();
       super.assembleSemanticsNode(node, config, children);
       return;
@@ -2908,10 +2916,28 @@ class ChartRenderBox extends RenderBox {
 
     final nextNodes = <String, SemanticsNode>{};
     final orderedNodes = <SemanticsNode>[];
+    for (final summary in summaries) {
+      final identity = 'summary:${summary.id}';
+      final semanticConfig = SemanticsConfiguration()
+        ..sortKey = const OrdinalSortKey(0)
+        ..textDirection = TextDirection.ltr
+        ..identifier = identity
+        ..label = summary.label;
+      final semanticNode =
+          _dataSemanticsNodes[identity] ??
+          SemanticsNode(key: ValueKey(identity));
+      semanticNode
+        ..rect = summary.bounds
+            .shift(_plotArea.topLeft)
+            .intersect(Offset.zero & size)
+        ..updateWith(config: semanticConfig);
+      nextNodes[identity] = semanticNode;
+      orderedNodes.add(semanticNode);
+    }
     for (final hit in hits) {
       final identity = '${hit.seriesId}:${hit.pointIndex}';
       final semanticConfig = SemanticsConfiguration()
-        ..sortKey = OrdinalSortKey(hit.ordinal.toDouble())
+        ..sortKey = OrdinalSortKey(hit.ordinal.toDouble() + 1)
         ..textDirection = TextDirection.ltr
         ..identifier = identity
         ..label = hit.semanticLabel

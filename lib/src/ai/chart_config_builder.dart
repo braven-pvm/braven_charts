@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_type.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/radial_category_series.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -121,29 +124,31 @@ class ChartConfigBuilder {
         )
         .toList();
 
-    final isPie = chartType == ChartType.pie;
-    if (isPie) {
-      if (series.length != 1 || series.single is! PieChartSeries) {
+    final isRadial = chartType == ChartType.pie || chartType == ChartType.donut;
+    if (isRadial) {
+      if (series.length != 1 || series.single is! RadialCategorySeries) {
         throw const FormatException(
-          'Pie charts require exactly one pie series and cannot mix series types.',
+          'Radial charts require exactly one matching radial series and '
+          'cannot mix series types.',
         );
       }
       if (json.containsKey('x_axis') || json.containsKey('y_axis')) {
         throw const FormatException(
-          'Pie charts do not use x_axis or y_axis configuration.',
+          'Pie and Donut charts do not use x_axis or y_axis configuration.',
         );
       }
-    } else if (series.any((value) => value is PieChartSeries)) {
+    } else if (series.any((value) => value is RadialCategorySeries)) {
       throw const FormatException(
-        'Pie series require chart_type "pie" and cannot mix with Cartesian series.',
+        'Radial series require a matching radial chart_type and cannot mix '
+        'with Cartesian series.',
       );
     }
 
     // Parse axes
-    final xAxisConfig = isPie
+    final xAxisConfig = isRadial
         ? null
         : _parseXAxisConfig(json['x_axis'] as Map<String, dynamic>?);
-    final yAxisConfig = isPie
+    final yAxisConfig = isRadial
         ? null
         : _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
 
@@ -154,7 +159,7 @@ class ChartConfigBuilder {
         .toSet();
 
     List<YAxisConfig>? yAxes;
-    if (!isPie && units.length > 1) {
+    if (!isRadial && units.length > 1) {
       // Multi-axis mode: create Y-axes from series configurations
       yAxes = series
           .where((s) => s.yAxisConfig != null)
@@ -165,11 +170,11 @@ class ChartConfigBuilder {
     // Parse interactions
     final interactionConfig = _parseInteractionConfig(
       json['interactions'] as Map<String, dynamic>?,
-      isPie: isPie,
+      isPie: isRadial,
     );
 
     // Parse style
-    final gridConfig = isPie
+    final gridConfig = isRadial
         ? const GridConfig(horizontal: false, vertical: false)
         : _parseGridConfig(styleJson);
     final showLegend = _parseShowLegend(styleJson);
@@ -216,6 +221,12 @@ class ChartConfigBuilder {
       final pointColor = pointJson['color'] is String
           ? _parseColor(pointJson['color'] as String)
           : null;
+      final radiusValue = pointJson['radius'];
+      if (radiusValue != null && radiusValue is! num) {
+        throw const FormatException(
+          'Pie radius values must be numeric when supplied.',
+        );
+      }
       return ChartDataPoint(
         x: x.toDouble(),
         y: y.toDouble(),
@@ -223,7 +234,12 @@ class ChartConfigBuilder {
         timestamp: pointJson['timestamp'] != null
             ? DateTime.tryParse(pointJson['timestamp'] as String)
             : null,
-        pointStyle: pointColor == null ? null : PointStyle.color(pointColor),
+        pointStyle: pointColor == null && radiusValue == null
+            ? null
+            : PointStyle(
+                color: pointColor,
+                size: (radiusValue as num?)?.toDouble(),
+              ),
       );
     }).toList();
 
@@ -291,8 +307,81 @@ class ChartConfigBuilder {
         color: color,
         unit: unit,
         chartStyle: chartStyle,
+        seriesJson: json,
+      ),
+      SeriesStyle.donut => _buildDonutSeries(
+        id: id,
+        name: name ?? id,
+        points: points,
+        color: color,
+        unit: unit,
+        chartStyle: chartStyle,
+        seriesJson: json,
       ),
     };
+  }
+
+  static DonutChartSeries _buildDonutSeries({
+    required String id,
+    required String name,
+    required List<ChartDataPoint> points,
+    required Color? color,
+    required String? unit,
+    required Map<String, dynamic>? chartStyle,
+    required Map<String, dynamic> seriesJson,
+  }) {
+    try {
+      final radialStyle = _parsePieChartStyle(chartStyle);
+      return DonutChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        unit: unit,
+        donutStyle: DonutChartStyle.fromRadialStyle(
+          radialStyle,
+          innerRadiusFactor:
+              (chartStyle?['donut_inner_radius_factor'] as num?)?.toDouble() ??
+              0.58,
+          sweepAngleDegrees:
+              (chartStyle?['donut_sweep_angle'] as num?)?.toDouble() ?? 360,
+        ),
+        centerContent: _parseDonutCenterContent(chartStyle),
+        dataLabels: _parsePieDataLabels(chartStyle),
+        sliceRadiusConfig: _parsePieSliceRadiusConfig(
+          points,
+          seriesJson: seriesJson,
+          chartStyle: chartStyle,
+        ),
+      );
+    } on ArgumentError catch (error) {
+      throw FormatException('Invalid donut series "$id": ${error.message}');
+    }
+  }
+
+  static DonutCenterContent _parseDonutCenterContent(
+    Map<String, dynamic>? json,
+  ) {
+    if (json == null) return DonutCenterContent.hidden;
+    final modeValue = json['donut_center_value_mode'];
+    final label = json['donut_center_label'] as String?;
+    final customValue = json['donut_center_custom_value'] as String?;
+    final hasCenterInput =
+        modeValue != null || label != null || customValue != null;
+    return DonutCenterContent(
+      isVisible: json['donut_center_visible'] as bool? ?? hasCenterInput,
+      label: label,
+      valueMode: switch (modeValue) {
+        null || 'total' => DonutCenterValueMode.total,
+        'selected_value' => DonutCenterValueMode.selectedValue,
+        'selected_or_total' => DonutCenterValueMode.selectedOrTotal,
+        'custom' => DonutCenterValueMode.custom,
+        final value => throw FormatException(
+          'Unknown donut_center_value_mode "$value".',
+        ),
+      },
+      customValue: customValue,
+    );
   }
 
   static PieChartSeries _buildPieSeries({
@@ -302,6 +391,7 @@ class ChartConfigBuilder {
     required Color? color,
     required String? unit,
     required Map<String, dynamic>? chartStyle,
+    required Map<String, dynamic> seriesJson,
   }) {
     try {
       return PieChartSeries(
@@ -312,10 +402,38 @@ class ChartConfigBuilder {
         unit: unit,
         pieStyle: _parsePieChartStyle(chartStyle),
         dataLabels: _parsePieDataLabels(chartStyle),
+        sliceRadiusConfig: _parsePieSliceRadiusConfig(
+          points,
+          seriesJson: seriesJson,
+          chartStyle: chartStyle,
+        ),
       );
     } on ArgumentError catch (error) {
       throw FormatException('Invalid pie series "$id": ${error.message}');
     }
+  }
+
+  static PieSliceRadiusConfig? _parsePieSliceRadiusConfig(
+    List<ChartDataPoint> points, {
+    required Map<String, dynamic> seriesJson,
+    required Map<String, dynamic>? chartStyle,
+  }) {
+    if (!points.any((point) => point.pointStyle?.size != null)) return null;
+    const defaults = PieSliceRadiusConfig();
+    return PieSliceRadiusConfig(
+      minimumFactor:
+          (chartStyle?['pie_radius_minimum_factor'] as num?)?.toDouble() ??
+          defaults.minimumFactor,
+      scale: switch (chartStyle?['pie_radius_scale']) {
+        null || 'area' => PieSliceRadiusScale.area,
+        'linear' => PieSliceRadiusScale.linear,
+        final value => throw FormatException(
+          'Unknown pie_radius_scale "$value".',
+        ),
+      },
+      label: seriesJson['radius_label'] as String? ?? defaults.label,
+      unit: seriesJson['radius_unit'] as String?,
+    );
   }
 
   static ChartType? _parseChartType(String? type) {
@@ -325,6 +443,7 @@ class ChartConfigBuilder {
       'bar' => ChartType.bar,
       'scatter' => ChartType.scatter,
       'pie' => ChartType.pie,
+      'donut' => ChartType.donut,
       _ => null,
     };
   }
@@ -336,6 +455,7 @@ class ChartConfigBuilder {
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
       'pie' => SeriesStyle.pie,
+      'donut' => SeriesStyle.donut,
       _ => SeriesStyle.line, // Default to line
     };
   }
@@ -347,6 +467,7 @@ class ChartConfigBuilder {
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
       'pie' => SeriesStyle.pie,
+      'donut' => SeriesStyle.donut,
       _ => null,
     };
   }
@@ -435,6 +556,15 @@ class ChartConfigBuilder {
           defaults.selectionExplodeOffset,
       opacity: (json?['pie_opacity'] as num?)?.toDouble(),
       cornerRadius: (json?['pie_corner_radius'] as num?)?.toDouble(),
+      cornerTreatment: switch (json?['pie_corner_treatment']) {
+        null => null,
+        'round_all' => PieCornerTreatment.roundAll,
+        'outer_only' => PieCornerTreatment.outerOnly,
+        'circular_center' => PieCornerTreatment.circularCenter,
+        final value => throw FormatException(
+          'Unknown pie_corner_treatment "$value".',
+        ),
+      },
       shadow: _parsePieElevation(json, prefix: 'pie_shadow'),
       selectedElevation: _parsePieElevation(json, prefix: 'pie_selected_glow'),
       animationMode: switch (json?['pie_animation_mode']) {

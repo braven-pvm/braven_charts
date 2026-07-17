@@ -44,8 +44,8 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] Screenshot 1 is a chart-only flagship hero and works as the package
   thumbnail without relying on showcase application chrome.
 - [ ] The remaining screenshot slots show varied chart-only examples,
-  including pie, multi-axis, annotations, live data, themes, and baseline
-  fills.
+      including Pie, Donut, multi-axis, annotations, live data, themes, and
+      baseline fills.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
 - [ ] The interaction and live-stream animations show real behavior from the
   deployed showcase, remain below 4 MB each, and render from package-local
@@ -62,9 +62,10 @@ python tool/capture_showcase_media.py
 ```
 
 Use `--capture interaction`, `--capture interaction-still`,
-`--capture live-stream`, `--capture stills`, or `--capture pie` when only one
-media group changed. Capture browser media from a local release build with
-`--url http://127.0.0.1:<port>/` before the public site has the change.
+`--capture live-stream`, `--capture stills`, `--capture pie`, or
+`--capture donut` when only one media group changed. Capture browser media
+from a local release build with `--url http://127.0.0.1:<port>/` before the
+public site has the change.
 
 `--capture pie` and `--capture interaction-still` do not take browser
 screenshots. They mount the same Gallery configurations in Flutter's
@@ -81,6 +82,7 @@ interaction and live-stream GIFs.
 - [ ] GitHub Pages is configured to use GitHub Actions as its source.
 - [ ] The deployed Gallery route loads directly and after a browser refresh.
 - [ ] The deployed Pie Charts route loads directly and after a browser refresh.
+- [ ] The deployed Donut Charts route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.

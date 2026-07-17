@@ -10,13 +10,17 @@ import '../interaction/core/element_types.dart';
 import '../layout/pie_chart_geometry.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_theme.dart';
+import '../models/donut_chart_config.dart';
+import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
-import '../models/pie_chart_series.dart';
+import '../models/radial_category_series.dart';
+import '../formatting/multi_axis_value_formatter.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 import '../theming/styles/label_style.dart';
 
-/// Radial chart element responsible for pie wedges and deterministic labels.
-class PieSeriesElement implements DataHitElement {
+/// Radial chart element responsible for category sectors and deterministic
+/// labels.
+class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
   /// Creates a pie element for one resolved plot size.
   PieSeriesElement({
     required this.series,
@@ -40,13 +44,17 @@ class PieSeriesElement implements DataHitElement {
          padding: _geometryPadding(series, size, theme, textScaleFactor),
          explodedPointIndices: selectedPointIndices,
          cornerRadius:
-             series.pieStyle.cornerRadius ?? theme.pieChartTheme.cornerRadius,
+             series.radialStyle.cornerRadius ??
+             theme.pieChartTheme.cornerRadius,
+         cornerTreatment:
+             series.radialStyle.cornerTreatment ??
+             theme.pieChartTheme.cornerTreatment,
          animationProgress: animationProgress,
          selectionProgress: selectionProgress,
        );
 
   @override
-  final PieChartSeries series;
+  final RadialCategorySeries series;
 
   /// Plot-local size used to resolve the radial geometry.
   final Size size;
@@ -147,6 +155,96 @@ class PieSeriesElement implements DataHitElement {
   Iterable<ChartDataHit> get semanticDataHits =>
       geometry.slices.map(_dataHitForSlice);
 
+  /// Resolved text shown in the Donut opening for the current selection.
+  DonutCenterPresentation? get centerPresentation {
+    final donut = series;
+    if (donut is! DonutChartSeries || !donut.centerContent.isVisible) {
+      return null;
+    }
+    final config = donut.centerContent;
+    final selectedIndices =
+        selectedPointIndices
+            .where(
+              (index) =>
+                  index >= 0 &&
+                  index < donut.points.length &&
+                  donut.visiblePointIndices.contains(index),
+            )
+            .toList()
+          ..sort();
+    final selectedIndex = selectedIndices.firstOrNull;
+    final selectedPoint = selectedIndex == null
+        ? null
+        : donut.points[selectedIndex];
+    final usesSelectedValue = switch (config.valueMode) {
+      DonutCenterValueMode.selectedValue => true,
+      DonutCenterValueMode.selectedOrTotal => selectedPoint != null,
+      DonutCenterValueMode.total || DonutCenterValueMode.custom => false,
+    };
+    final String? value = switch (config.valueMode) {
+      DonutCenterValueMode.total => _formatCenterNumber(
+        donut.total,
+        donut.unit,
+      ),
+      DonutCenterValueMode.selectedValue =>
+        selectedPoint == null
+            ? null
+            : _formatCenterNumber(selectedPoint.y, donut.unit),
+      DonutCenterValueMode.selectedOrTotal => _formatCenterNumber(
+        selectedPoint?.y ?? donut.total,
+        donut.unit,
+      ),
+      DonutCenterValueMode.custom => config.customValue!.trim(),
+    };
+    if (value == null) return null;
+
+    final explicitLabel = config.label?.trim();
+    final dynamicSelectedLabel = usesSelectedValue
+        ? selectedPoint?.label?.trim()
+        : null;
+    final label = explicitLabel ?? dynamicSelectedLabel;
+    final semanticParts = <String>[
+      'Donut center',
+      if (label != null && label.isNotEmpty) label,
+      value,
+      if (usesSelectedValue && selectedPoint?.label != null)
+        'selected slice ${selectedPoint!.label!.trim()}',
+      if (config.valueMode == DonutCenterValueMode.selectedOrTotal &&
+          selectedPoint == null)
+        'total fallback',
+    ];
+    return DonutCenterPresentation(
+      label: label,
+      value: value,
+      semanticLabel: semanticParts.join(', '),
+      selectedPointIndex: usesSelectedValue ? selectedIndex : null,
+    );
+  }
+
+  /// Safe rectangular region inscribed within the circular center opening.
+  Rect? get centerContentBounds {
+    if (centerPresentation == null || geometry.innerRadius <= 0) return null;
+    final diameter = geometry.innerRadius * 2;
+    if (diameter < 16) return null;
+    return Rect.fromCenter(
+      center: geometry.center,
+      width: diameter * 0.78,
+      height: diameter * 0.62,
+    );
+  }
+
+  @override
+  Iterable<ChartSemanticSummary> get semanticSummaries sync* {
+    final presentation = centerPresentation;
+    final contentBounds = centerContentBounds;
+    if (presentation == null || contentBounds == null) return;
+    yield ChartSemanticSummary(
+      id: '${series.id}:center',
+      label: presentation.semanticLabel,
+      bounds: contentBounds,
+    );
+  }
+
   @override
   bool get isSelectable => false;
 
@@ -159,8 +257,8 @@ class PieSeriesElement implements DataHitElement {
   @override
   void paint(Canvas canvas, Size size) {
     final slices = geometry.slices;
-    final opacity = series.pieStyle.opacity ?? theme.pieChartTheme.opacity;
-    final shadow = series.pieStyle.shadow ?? theme.pieChartTheme.shadow;
+    final opacity = series.radialStyle.opacity ?? theme.pieChartTheme.opacity;
+    final shadow = series.radialStyle.shadow ?? theme.pieChartTheme.shadow;
     final combinedShadow = shadow.isVisible && shadow.color != null;
     if (combinedShadow && slices.isNotEmpty) {
       final combinedPath = Path();
@@ -179,7 +277,7 @@ class PieSeriesElement implements DataHitElement {
       final fillColor = _resolveSliceColor(slice.point, index);
       final selected = selectedPointIndices.contains(slice.pointIndex);
       final selectedElevation =
-          series.pieStyle.selectedElevation ??
+          series.radialStyle.selectedElevation ??
           theme.pieChartTheme.selectedElevation;
       if (!combinedShadow) {
         _paintElevation(
@@ -200,12 +298,12 @@ class PieSeriesElement implements DataHitElement {
         );
       }
       canvas.drawPath(slice.path, _sliceFillPaint(fillColor, opacity));
-      if (series.pieStyle.borderWidth > 0) {
+      if (series.radialStyle.borderWidth > 0) {
         canvas.drawPath(
           slice.path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = series.pieStyle.borderWidth
+            ..strokeWidth = series.radialStyle.borderWidth
             ..strokeJoin = StrokeJoin.round
             ..color = _resolveBorderColor(fillColor)
             ..isAntiAlias = true,
@@ -237,15 +335,144 @@ class PieSeriesElement implements DataHitElement {
       }
     }
 
-    if (!shouldPaintDataLabels) {
-      return;
+    if (shouldPaintDataLabels) {
+      if (series.dataLabels.position == PieDataLabelPosition.inside) {
+        _paintInsideLabels(canvas);
+      } else {
+        _paintOutsideLabels(canvas);
+      }
     }
-    if (series.dataLabels.position == PieDataLabelPosition.inside) {
-      _paintInsideLabels(canvas);
-    } else {
-      _paintOutsideLabels(canvas);
-    }
+    _paintCenterContent(canvas);
   }
+
+  void _paintCenterContent(Canvas canvas) {
+    final donut = series;
+    if (donut is! DonutChartSeries) return;
+    final presentation = centerPresentation;
+    final contentBounds = centerContentBounds;
+    if (presentation == null || contentBounds == null) return;
+
+    final config = donut.centerContent;
+    final labelStyle =
+        config.labelStyle ?? theme.pieChartTheme.centerLabelStyle;
+    final valueStyle =
+        config.valueStyle ?? theme.pieChartTheme.centerValueStyle;
+    final hasLabel = presentation.label?.isNotEmpty ?? false;
+    final gap = hasLabel
+        ? math.min(4 * textScaleFactor, contentBounds.height * 0.1)
+        : 0.0;
+
+    var labelPainter = hasLabel
+        ? _centerTextPainter(
+            presentation.label!,
+            style: labelStyle,
+            defaultFontSize: 12,
+            defaultWeight: FontWeight.w500,
+            scale: 1,
+            maxWidth: contentBounds.width,
+          )
+        : null;
+    var valuePainter = _centerTextPainter(
+      presentation.value,
+      style: valueStyle,
+      defaultFontSize: 22,
+      defaultWeight: FontWeight.w700,
+      scale: 1,
+      maxWidth: contentBounds.width,
+    );
+    final initialHeight =
+        (labelPainter == null
+            ? 0
+            : _labelSize(labelPainter, labelStyle).height) +
+        gap +
+        _labelSize(valuePainter, valueStyle).height;
+    final fitScale = initialHeight <= 0
+        ? 1.0
+        : math.min(1.0, contentBounds.height / initialHeight);
+    if (fitScale < 1) {
+      labelPainter = hasLabel
+          ? _centerTextPainter(
+              presentation.label!,
+              style: labelStyle,
+              defaultFontSize: 12,
+              defaultWeight: FontWeight.w500,
+              scale: fitScale,
+              maxWidth: contentBounds.width,
+            )
+          : null;
+      valuePainter = _centerTextPainter(
+        presentation.value,
+        style: valueStyle,
+        defaultFontSize: 22,
+        defaultWeight: FontWeight.w700,
+        scale: fitScale,
+        maxWidth: contentBounds.width,
+      );
+    }
+
+    final labelSize = labelPainter == null
+        ? Size.zero
+        : _labelSize(labelPainter, labelStyle);
+    final valueSize = _labelSize(valuePainter, valueStyle);
+    final effectiveGap = labelPainter == null ? 0.0 : gap * fitScale;
+    final totalHeight = labelSize.height + effectiveGap + valueSize.height;
+    var top = contentBounds.center.dy - totalHeight / 2;
+    if (labelPainter != null) {
+      final labelRect = Rect.fromLTWH(
+        contentBounds.center.dx - labelSize.width / 2,
+        top,
+        labelSize.width,
+        labelSize.height,
+      );
+      _paintLabel(canvas, labelPainter, labelRect, labelStyle);
+      top = labelRect.bottom + effectiveGap;
+    }
+    final valueRect = Rect.fromLTWH(
+      contentBounds.center.dx - valueSize.width / 2,
+      top,
+      valueSize.width,
+      valueSize.height,
+    );
+    _paintLabel(canvas, valuePainter, valueRect, valueStyle);
+  }
+
+  TextPainter _centerTextPainter(
+    String text, {
+    required LabelStyle? style,
+    required double defaultFontSize,
+    required FontWeight defaultWeight,
+    required double scale,
+    required double maxWidth,
+  }) {
+    final typography = theme.typographyTheme;
+    final sourceStyle = style?.textStyle;
+    final fontSize =
+        (sourceStyle?.fontSize ?? defaultFontSize) * textScaleFactor * scale;
+    final color =
+        sourceStyle?.color ??
+        theme.axisStyle.labelStyle.color ??
+        const Color(0xFF1F2937);
+    final horizontalPadding = style?.padding.horizontal ?? 0;
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontFamily: typography.fontFamily,
+          fontSize: fontSize,
+          fontWeight: defaultWeight,
+          height: 1.1,
+        ).merge(sourceStyle).copyWith(fontSize: fontSize),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: math.max(8, maxWidth - horizontalPadding));
+  }
+
+  String _formatCenterNumber(double value, String? unit) =>
+      MultiAxisValueFormatter.format(value: value, unit: unit);
 
   void _paintElevation(
     Canvas canvas,
@@ -638,7 +865,8 @@ class PieSeriesElement implements DataHitElement {
     final paint = Paint()
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
-    final gradient = series.pieStyle.gradient ?? theme.pieChartTheme.gradient;
+    final gradient =
+        series.radialStyle.gradient ?? theme.pieChartTheme.gradient;
     if (gradient == null || !gradient.enabled) {
       return paint
         ..color = sliceColor.withValues(alpha: sliceColor.a * opacity);
@@ -691,7 +919,7 @@ class PieSeriesElement implements DataHitElement {
   }
 
   Color _resolveBorderColor(Color sliceColor) {
-    final style = series.pieStyle;
+    final style = series.radialStyle;
     if (style.borderColor case final fixedColor?) return fixedColor;
 
     final pieTheme = theme.pieChartTheme;
@@ -724,6 +952,13 @@ class PieSeriesElement implements DataHitElement {
     final unit = series.unit == null || series.unit!.isEmpty
         ? ''
         : ' ${series.unit}';
+    final radiusConfig = series.sliceRadiusConfig;
+    final radiusValue = radiusConfig == null
+        ? null
+        : slice.point.pointStyle!.size;
+    final radiusUnit = radiusConfig?.unit == null || radiusConfig!.unit!.isEmpty
+        ? ''
+        : ' ${radiusConfig.unit}';
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: slice.pointIndex,
@@ -733,6 +968,11 @@ class PieSeriesElement implements DataHitElement {
       category: slice.point.label!.trim(),
       total: geometry.total,
       share: slice.share,
+      radiusValue: radiusValue,
+      formattedRadiusValue: radiusValue == null
+          ? null
+          : '${radiusValue.toStringAsFixed(2)}$radiusUnit',
+      radiusLabel: radiusConfig?.label,
       formattedValue: '${slice.point.y.toStringAsFixed(2)}$unit',
       ordinal: visibleIndex + 1,
       count: geometry.slices.length,
@@ -773,7 +1013,7 @@ class PieSeriesElement implements DataHitElement {
   }
 
   static EdgeInsets _geometryPadding(
-    PieChartSeries series,
+    RadialCategorySeries series,
     Size size,
     ChartTheme theme,
     double textScaleFactor,
@@ -795,12 +1035,12 @@ class PieSeriesElement implements DataHitElement {
     }
 
     final strokeOverflow = math.max(
-      series.pieStyle.borderWidth / 2,
+      series.radialStyle.borderWidth / 2,
       math.max(3, theme.focusBorderWidth) / 2,
     );
-    final shadow = series.pieStyle.shadow ?? theme.pieChartTheme.shadow;
+    final shadow = series.radialStyle.shadow ?? theme.pieChartTheme.shadow;
     final selectedElevation =
-        series.pieStyle.selectedElevation ??
+        series.radialStyle.selectedElevation ??
         theme.pieChartTheme.selectedElevation;
     final shadowOverflow = _paintOverflowInsets(
       shadow,
@@ -808,7 +1048,7 @@ class PieSeriesElement implements DataHitElement {
     );
     final selectedOverflow = _paintOverflowInsets(
       selectedElevation,
-      radialOffset: strokeOverflow + series.pieStyle.selectionExplodeOffset,
+      radialOffset: strokeOverflow + series.radialStyle.selectionExplodeOffset,
     );
 
     return EdgeInsets.fromLTRB(
@@ -845,6 +1085,22 @@ class PieSeriesElement implements DataHitElement {
       radialOffset + elevationExtent + math.max(0, style.offset.dy),
     );
   }
+}
+
+/// Deterministic center text resolved from one Donut and its durable
+/// selection state.
+class DonutCenterPresentation {
+  const DonutCenterPresentation({
+    required this.label,
+    required this.value,
+    required this.semanticLabel,
+    required this.selectedPointIndex,
+  });
+
+  final String? label;
+  final String value;
+  final String semanticLabel;
+  final int? selectedPointIndex;
 }
 
 class _PieLabelCandidate {

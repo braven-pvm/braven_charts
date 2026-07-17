@@ -92,7 +92,9 @@ class ChartDataPoint {
   /// or bar charts. Unlike [segmentStyle] which affects the line between
   /// points, [pointStyle] affects the visual representation of this point.
   ///
-  /// **Applies to**: [ScatterChartSeries], [BarChartSeries]
+  /// **Applies to**: [ScatterChartSeries], [BarChartSeries], and Pie slices.
+  /// Pie uses color as a slice override and size as the raw radius metric when
+  /// variable slice radii are configured.
   ///
   /// **Performance**: Charts detect if any points have point styles.
   /// If none do, rendering uses an optimized single-color code path.
@@ -154,8 +156,9 @@ class ChartDataPoint {
       timestamp: timestamp ?? this.timestamp,
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,
-      segmentStyle:
-          clearSegmentStyle ? null : (segmentStyle ?? this.segmentStyle),
+      segmentStyle: clearSegmentStyle
+          ? null
+          : (segmentStyle ?? this.segmentStyle),
       pointStyle: clearPointStyle ? null : (pointStyle ?? this.pointStyle),
     );
   }

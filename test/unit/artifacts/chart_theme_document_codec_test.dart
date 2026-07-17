@@ -69,6 +69,7 @@ void main() {
         pieChartTheme: const PieChartTheme(
           opacity: 0.72,
           cornerRadius: 11,
+          cornerTreatment: PieCornerTreatment.circularCenter,
           gradient: PieGradientStyle(
             type: PieGradientType.linear,
             startColor: Color(0xFFABCDEF),
@@ -104,6 +105,26 @@ void main() {
             shadowColor: Color(0x66000000),
             shadowBlurRadius: 6,
           ),
+          centerLabelStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFFB0BEC5), fontSize: 11),
+            backgroundColor: Color(0x00000000),
+            borderColor: Color(0x00000000),
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
+          centerValueStyle: LabelStyle(
+            textStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            backgroundColor: Color(0x22000000),
+            borderColor: Color(0xFF64B5F6),
+            borderWidth: 1,
+            borderRadius: 10,
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
           animationMode: PieAnimationMode.none,
         ),
       );
@@ -115,6 +136,35 @@ void main() {
       );
 
       expect(decoded.pieChartTheme, theme.pieChartTheme);
+    });
+
+    test('defaults older Pie themes to the legacy corner treatment', () {
+      final encoded = _success(
+        ChartThemeDocumentCodec.encode(
+          ChartTheme.light.copyWith(
+            pieChartTheme: const PieChartTheme(cornerRadius: 8),
+          ),
+        ),
+      );
+      final resolved = Map<String, Object?>.from(
+        encoded.resolved.toJson() as Map<String, Object?>,
+      );
+      final pieTheme = Map<String, Object?>.from(
+        resolved['pieChartTheme']! as Map<String, Object?>,
+      )..remove('cornerTreatment');
+      resolved['pieChartTheme'] = pieTheme;
+      final legacyDocument = ChartThemeDocument(
+        captureMode: encoded.captureMode,
+        reference: encoded.reference,
+        resolved: JsonValue.fromJson(resolved) as JsonObjectValue,
+      );
+
+      final decoded = _success(ChartThemeDocumentCodec.decode(legacyDocument));
+
+      expect(
+        decoded.pieChartTheme.cornerTreatment,
+        PieCornerTreatment.roundAll,
+      );
     });
 
     test('reference-only capture requires a host registry to hydrate', () {
