@@ -17,6 +17,7 @@ import '../../interaction/core/element_types.dart';
 import '../../interaction/core/hit_test_strategy.dart';
 import '../../interaction/core/interaction_mode.dart';
 import '../../models/chart_annotation.dart';
+import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
 
 /// Delegate interface for EventHandlerManager to interact with ChartRenderBox.
@@ -355,8 +356,15 @@ class EventHandlerManager {
 
   /// Clears the cursor position and repaints. Call when the pointer leaves the chart.
   void clearCursorPosition() {
-    if (_cursorPosition == null) return;
+    if (_cursorPosition == null &&
+        _delegate.coordinator.hoveredMarker == null &&
+        _delegate.coordinator.pressedMarker == null) {
+      return;
+    }
     _cursorPosition = null;
+    _delegate.coordinator.setHoveredMarker(null);
+    _delegate.coordinator.setPressedMarker(null);
+    _delegate.coordinator.setHoveredElement(null);
     _delegate.markNeedsPaint();
   }
 
@@ -365,6 +373,8 @@ class EventHandlerManager {
     _cursorPosition = null;
     _tappedMarker = null;
     _pendingHitTestPosition = null;
+    _delegate.coordinator.setHoveredMarker(null);
+    _delegate.coordinator.setPressedMarker(null);
     _delegate.markNeedsPaint();
   }
 
@@ -428,6 +438,8 @@ class EventHandlerManager {
       _handlePointerMove(event, localPosition);
     } else if (event is PointerUpEvent) {
       _handlePointerUp(event, localPosition);
+    } else if (event is PointerCancelEvent) {
+      _handlePointerCancel();
     } else if (event is PointerHoverEvent) {
       _handlePointerHover(event, localPosition);
     } else if (event is PointerScrollEvent) {
@@ -441,6 +453,7 @@ class EventHandlerManager {
 
   void _handlePointerDown(PointerDownEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
+    coordinator.setPressedMarker(null);
 
     // Touch and stylus input do not produce a preceding hover event. Resolve
     // the datum on pointer-down so tap selection and tap tooltips use the same
@@ -464,6 +477,24 @@ class EventHandlerManager {
     final hitElement = _delegate.hitTestElements(position);
 
     coordinator.startInteraction(position, element: hitElement);
+
+    if (event.buttons == kPrimaryMouseButton &&
+        hitElement is SeriesElement &&
+        hitElement.series is BarChartSeries) {
+      final geometry = hitElement.barGeometryAt(
+        _delegate.widgetToPlot(position),
+      );
+      if (geometry != null) {
+        final marker = HoveredMarkerInfo(
+          seriesId: hitElement.id,
+          markerIndex: geometry.pointIndex,
+          plotPosition: geometry.valueEndPoint,
+        );
+        coordinator.setPressedMarker(marker);
+        coordinator.setHoveredMarker(marker);
+        _delegate.markNeedsPaint();
+      }
+    }
 
     // Check if we hit a resize handle (priority 7)
     if (event.buttons == kPrimaryMouseButton &&
@@ -965,6 +996,7 @@ class EventHandlerManager {
 
   void _handlePointerUp(PointerUpEvent event, Offset position) {
     final coordinator = _delegate.coordinator;
+    coordinator.setPressedMarker(null);
 
     // Clear scrollbar drag state if active
     if (_delegate.isScrollbarDragging) {
@@ -1017,6 +1049,13 @@ class EventHandlerManager {
     // Release interaction
     coordinator.endInteraction();
     coordinator.releaseMode();
+    _delegate.markNeedsPaint();
+  }
+
+  void _handlePointerCancel() {
+    _delegate.coordinator.setPressedMarker(null);
+    _delegate.coordinator.endInteraction();
+    _delegate.coordinator.releaseMode(force: true);
     _delegate.markNeedsPaint();
   }
 
@@ -1655,7 +1694,11 @@ class EventHandlerManager {
       return;
     }
 
-    _delegate.onCursorChange?.call(SystemMouseCursors.basic);
+    _delegate.onCursorChange?.call(
+      hitElement is SeriesElement
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+    );
     _delegate.coordinator.setHoveredElement(hitElement);
     _delegate.onElementHover?.call(hitElement);
     _delegate.markNeedsPaint();
@@ -1666,8 +1709,7 @@ class EventHandlerManager {
       _delegate.coordinator.setHoveredMarker(null);
       return;
     }
-    final transform = _delegate.transform;
-    if (transform == null) {
+    if (_delegate.transform == null) {
       _delegate.coordinator.setHoveredMarker(null);
       return;
     }
@@ -1678,7 +1720,28 @@ class EventHandlerManager {
     HoveredMarkerInfo? nearestMarker;
     double minDistance = snapRadius;
 
+    final seriesElements = _delegate.elements
+        .whereType<SeriesElement>()
+        .toList();
+
+    // Bars own their complete rectangle, not only the value-end marker. Prefer
+    // later-painted series so overlaid front layers receive interaction first.
+    for (final element in seriesElements.reversed) {
+      if (element.series is! BarChartSeries) continue;
+      final geometry = element.barGeometryAt(plotPosition);
+      if (geometry == null) continue;
+      nearestMarker = HoveredMarkerInfo(
+        seriesId: element.id,
+        markerIndex: geometry.pointIndex,
+        plotPosition: geometry.valueEndPoint,
+        dataHit: element.dataHitForPointIndex(geometry.pointIndex),
+      );
+      minDistance = 0;
+      break;
+    }
+
     for (final element in _delegate.elements.whereType<DataHitElement>()) {
+      if (minDistance == 0) break;
       final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
       if (hit == null) continue;
       final distance = hit.share == null
@@ -1705,7 +1768,10 @@ class EventHandlerManager {
             (previousMarker.seriesId != nearestMarker.seriesId ||
                 previousMarker.markerIndex != nearestMarker.markerIndex));
 
-    if (markerChanged) {
+    final cachedMarkerFeedbackChanged =
+        _usesCachedMarkerFeedback(previousMarker) ||
+        _usesCachedMarkerFeedback(nearestMarker);
+    if (markerChanged && cachedMarkerFeedbackChanged) {
       _delegate.invalidateSeriesCache();
       final element = nearestMarker == null
           ? null
@@ -1718,6 +1784,16 @@ class EventHandlerManager {
                 );
       _delegate.onElementHover?.call(element);
     }
+  }
+
+  bool _usesCachedMarkerFeedback(HoveredMarkerInfo? marker) {
+    if (marker == null) return false;
+    for (final element in _delegate.elements.whereType<SeriesElement>()) {
+      if (element.id == marker.seriesId) {
+        return element.series is! BarChartSeries;
+      }
+    }
+    return false;
   }
 
   // ==========================================================================

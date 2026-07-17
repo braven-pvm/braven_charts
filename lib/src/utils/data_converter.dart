@@ -82,6 +82,7 @@ class DataConverter {
         pointFocusColor: theme?.interactionTheme.crosshairColor,
         pointSelectionColor: theme?.interactionTheme.selectionColor,
         fontFamily: theme?.typographyTheme.fontFamily,
+        hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
       );
     }).toList();
   }

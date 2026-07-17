@@ -327,6 +327,20 @@ void main() {
                       stops: [0, 1],
                     ),
                     border: BarBorderStyle(color: Color(0xFF0A0A0A), width: 2),
+                    interaction: BarInteractionStyle(
+                      hoverColor: Color(0xFFFFFFFF),
+                      hoverOpacity: 0.2,
+                      hoverBorderWidth: 3,
+                      pressedColor: Color(0xFF111827),
+                      pressedOpacity: 0.24,
+                      selectionColor: Color(0xFF2563EB),
+                      selectionOpacity: 0.18,
+                      selectionBorderWidth: 4,
+                      focusColor: Color(0xFFF59E0B),
+                      focusBorderWidth: 3,
+                      focusGap: 5,
+                      dimmedOpacity: 0.3,
+                    ),
                   ),
                   trackStyle: BarTrackStyle(
                     color: Color(0xFFE0E0E0),
@@ -369,6 +383,23 @@ void main() {
       ]);
       expect(bar.barStyle.gradient?.stops, const [0, 1]);
       expect(bar.barStyle.border?.width, 2);
+      expect(
+        bar.barStyle.interaction,
+        const BarInteractionStyle(
+          hoverColor: Color(0xFFFFFFFF),
+          hoverOpacity: 0.2,
+          hoverBorderWidth: 3,
+          pressedColor: Color(0xFF111827),
+          pressedOpacity: 0.24,
+          selectionColor: Color(0xFF2563EB),
+          selectionOpacity: 0.18,
+          selectionBorderWidth: 4,
+          focusColor: Color(0xFFF59E0B),
+          focusBorderWidth: 3,
+          focusGap: 5,
+          dimmedOpacity: 0.3,
+        ),
+      );
       expect(bar.trackStyle?.value, 10);
       expect(bar.trackStyle?.border?.color, const Color(0xFFB0B0B0));
       expect(bar.labelStyle.show, isTrue);

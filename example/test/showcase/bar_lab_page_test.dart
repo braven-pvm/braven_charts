@@ -215,10 +215,7 @@ void main() {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    final axesPreset = find.descendant(
-      of: find.byWidgetPredicate((widget) => widget is SegmentedButton),
-      matching: find.text('Axes'),
-    );
+    final axesPreset = find.byKey(const ValueKey('bar-lab-preset-axes'));
     await tester.ensureVisible(axesPreset);
     await tester.tap(axesPreset);
     await tester.pumpAndSettle();
@@ -271,10 +268,7 @@ void main() {
 
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
-    final rangePreset = find.descendant(
-      of: find.byWidgetPredicate((widget) => widget is SegmentedButton),
-      matching: find.text('Range'),
-    );
+    final rangePreset = find.byKey(const ValueKey('bar-lab-preset-range'));
     await tester.ensureVisible(rangePreset);
     await tester.pumpAndSettle();
     await tester.tap(rangePreset);
@@ -317,9 +311,7 @@ void main() {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    final presetSelector = find.byWidgetPredicate(
-      (widget) => widget is SegmentedButton,
-    );
+    final presetSelector = find.byKey(const ValueKey('bar-lab-preset-wrap'));
     Future<void> tapPreset(String label) async {
       final target = find.descendant(
         of: presetSelector,
@@ -342,6 +334,7 @@ void main() {
       'Waterfall',
       'Horizontal',
       'Axes',
+      'States',
       'Stacked',
       '100%',
     ]) {
@@ -350,6 +343,14 @@ void main() {
         findsOneWidget,
       );
     }
+
+    final firstPreset = find.byKey(const ValueKey('bar-lab-preset-capacity'));
+    final lastPreset = find.byKey(const ValueKey('bar-lab-preset-normalized'));
+    expect(
+      tester.getTopLeft(lastPreset).dy,
+      greaterThan(tester.getTopLeft(firstPreset).dy),
+      reason: 'The full preset set should wrap instead of clipping offscreen.',
+    );
 
     await tapPreset('Overlay');
     var bars = tester
@@ -524,6 +525,24 @@ void main() {
     expect(axesChart.normalizationMode, NormalizationMode.perSeries);
     expect(axesChart.maxAxesPerSide, 3);
     expect(tester.takeException(), isNull);
+
+    await tapPreset('States');
+    bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(find.text('Interactive bar states'), findsOneWidget);
+    expect(find.text('Inactive opacity', skipOffstage: false), findsOneWidget);
+    expect(bars, hasLength(3));
+    expect(
+      bars.every((series) => series.barStyle.interaction.dimmedOpacity == 0.32),
+      isTrue,
+    );
+    expect(
+      bars.expand((series) => series.points).every((point) => point.hasLabel),
+      isTrue,
+    );
 
     await tapPreset('Stacked');
     bars = tester

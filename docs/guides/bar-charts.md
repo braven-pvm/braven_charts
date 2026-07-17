@@ -366,6 +366,30 @@ Hit testing, focus outlines, durable selection, tooltips, and bounds all use
 the same canonical bar rectangles. Crosshair tracking snaps to the nearest
 real category and never interpolates values between bars.
 
+Hover applies to the complete bar rectangle rather than a small value-end
+target. Primary-button press feedback is transient; clicking a bar creates a
+durable point selection, while Ctrl/Command-click toggles additive selection.
+When a point is selected, other bars use
+`BarInteractionStyle.dimmedOpacity`. Hover, press, focus, selection, and
+dimming can be restyled through `BarChartStyle.interaction`:
+
+```dart
+barStyle: const BarChartStyle(
+  interaction: BarInteractionStyle(
+    hoverBorderWidth: 2,
+    selectionBorderWidth: 2.5,
+    focusGap: 3,
+    dimmedOpacity: 0.32,
+  ),
+),
+```
+
+With keyboard focus inside a bar-only chart, arrow keys move between
+categories and series, Enter or Space selects the focused bar, and Escape
+clears point focus and selection. Hold Alt while using arrow keys to retain
+viewport panning. The chart semantics node announces the focused series,
+category, value or range, unit, and selection state.
+
 For horizontal bars, panning follows the rendered orientation: horizontal
 movement pans the value axes and vertical movement pans categories. Viewport
 constraints are applied to those transposed semantic axes, including when the
@@ -391,4 +415,5 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=overlay`, `?page=bar-lab&preset=offset`,
 `?page=bar-lab&preset=range`, `?page=bar-lab&preset=waterfall`,
 `?page=bar-lab&preset=horizontal`, `?page=bar-lab&preset=axes`,
+`?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.

@@ -146,6 +146,7 @@ class SeriesElement implements DataHitElement {
     this.pointFocusColor,
     this.pointSelectionColor,
     this.fontFamily,
+    this.hasAnySelectedPoints = false,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -177,6 +178,12 @@ class SeriesElement implements DataHitElement {
 
   /// Font family inherited from the chart typography theme.
   final String? fontFamily;
+
+  /// Whether any point in the chart is durably selected.
+  ///
+  /// Bar series use this to de-emphasize non-selected bars consistently across
+  /// series without coupling the renderer to widget state.
+  final bool hasAnySelectedPoints;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -355,6 +362,15 @@ class SeriesElement implements DataHitElement {
     final geometries = _resolveBarGeometries();
     if (pointIndex >= geometries.length) return null;
     return geometries[pointIndex];
+  }
+
+  /// Returns the topmost bar geometry whose interaction bounds contain [point].
+  BarGeometry? barGeometryAt(Offset point) {
+    if (series is! BarChartSeries) return null;
+    for (final geometry in _resolveBarGeometries().reversed) {
+      if (geometry.hitBounds.contains(point)) return geometry;
+    }
+    return null;
   }
 
   /// Compute bounding box that encompasses all data points (with stroke padding).
@@ -598,17 +614,24 @@ class SeriesElement implements DataHitElement {
   }
 
   void _paintLinkedBars(Canvas canvas, Color baseColor) {
+    final currentSeries = series as BarChartSeries;
+    final interaction = currentSeries.barStyle.interaction;
     final focusPaint = Paint()
-      ..color = pointFocusColor ?? const Color(0xFF424242)
+      ..color =
+          interaction.focusColor ?? pointFocusColor ?? const Color(0xFF424242)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = interaction.focusBorderWidth;
     final selectionFill = Paint()
-      ..color = pointSelectionColor ?? const Color(0x332196F3)
+      ..color =
+          (interaction.selectionColor ??
+                  pointSelectionColor ??
+                  const Color(0xFF2196F3))
+              .withValues(alpha: interaction.selectionOpacity)
       ..style = PaintingStyle.fill;
     final selectionBorder = Paint()
-      ..color = baseColor
+      ..color = interaction.selectionColor ?? pointSelectionColor ?? baseColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = interaction.selectionBorderWidth;
 
     for (final geometry in _resolveBarGeometries()) {
       if (selectedPointIndices.contains(geometry.pointIndex)) {
@@ -616,8 +639,64 @@ class SeriesElement implements DataHitElement {
         canvas.drawRRect(geometry.rrect.inflate(2), selectionBorder);
       }
       if (focusedPointIndices.contains(geometry.pointIndex)) {
-        canvas.drawRRect(geometry.rrect.inflate(4), focusPaint);
+        canvas.drawRRect(
+          geometry.rrect.inflate(interaction.focusGap),
+          focusPaint,
+        );
       }
+    }
+  }
+
+  /// Paints transient hover and press feedback for a bar point.
+  ///
+  /// This is called from the uncached overlay layer so pointer movement never
+  /// forces the expensive series picture to be regenerated.
+  void paintBarInteractionOverlay(
+    Canvas canvas, {
+    int? hoveredPointIndex,
+    int? pressedPointIndex,
+  }) {
+    final currentSeries = series;
+    if (currentSeries is! BarChartSeries) return;
+    final interaction = currentSeries.barStyle.interaction;
+
+    final activeIndex = pressedPointIndex ?? hoveredPointIndex;
+    if (activeIndex == null) return;
+    final geometry = barGeometryForPoint(activeIndex);
+    if (geometry == null) return;
+    final barColor = _resolvedBarColor(currentSeries, geometry, themeColor);
+
+    if (pressedPointIndex != null) {
+      canvas.drawRRect(
+        geometry.rrect,
+        Paint()
+          ..color = interaction.pressedColor.withValues(
+            alpha: interaction.pressedOpacity,
+          )
+          ..style = PaintingStyle.fill,
+      );
+      return;
+    }
+
+    final hoverColor =
+        interaction.hoverColor ??
+        (barColor.computeLuminance() > 0.45
+            ? const Color(0xFF111827)
+            : const Color(0xFFFFFFFF));
+    canvas.drawRRect(
+      geometry.rrect,
+      Paint()
+        ..color = hoverColor.withValues(alpha: interaction.hoverOpacity)
+        ..style = PaintingStyle.fill,
+    );
+    if (interaction.hoverBorderWidth > 0) {
+      canvas.drawRRect(
+        geometry.rrect.inflate(interaction.hoverBorderWidth / 2),
+        Paint()
+          ..color = hoverColor.withValues(alpha: 0.82)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = interaction.hoverBorderWidth,
+      );
     }
   }
 
@@ -1357,12 +1436,7 @@ class SeriesElement implements DataHitElement {
   }
 
   void _paintBarSeries(Canvas canvas, BarChartSeries series, Color baseColor) {
-    final interactionOpacity = isSelected
-        ? 1.0
-        : isHovered
-        ? 0.8
-        : 0.7;
-    final opacity = interactionOpacity * series.barStyle.opacity;
+    final opacity = series.barStyle.opacity;
     final track = series.trackStyle;
     final geometries = _resolveBarGeometries();
 
@@ -1389,8 +1463,13 @@ class SeriesElement implements DataHitElement {
       }
 
       final waterfallColor = _waterfallColor(series, geometry);
-      final barColor =
-          geometry.point.pointStyle?.color ?? waterfallColor ?? baseColor;
+      final barColor = _resolvedBarColor(series, geometry, baseColor);
+      final pointOpacity =
+          opacity *
+          (hasAnySelectedPoints &&
+                  !selectedPointIndices.contains(geometry.pointIndex)
+              ? series.barStyle.interaction.dimmedOpacity
+              : 1.0);
       final gradient =
           geometry.point.pointStyle?.color == null && waterfallColor == null
           ? series.barStyle.gradient
@@ -1407,12 +1486,12 @@ class SeriesElement implements DataHitElement {
           geometry.valueEndPoint,
           [
             for (final color in gradient.colors)
-              color.withValues(alpha: opacity),
+              color.withValues(alpha: pointOpacity),
           ],
           gradient.stops,
         );
       } else {
-        barPaint.color = barColor.withValues(alpha: opacity);
+        barPaint.color = barColor.withValues(alpha: pointOpacity);
       }
       canvas.drawRRect(geometry.rrect, barPaint);
 
@@ -1421,7 +1500,7 @@ class SeriesElement implements DataHitElement {
         canvas.drawRRect(
           geometry.rrect,
           Paint()
-            ..color = border.color.withValues(alpha: opacity)
+            ..color = border.color.withValues(alpha: pointOpacity)
             ..style = PaintingStyle.stroke
             ..strokeWidth = border.width,
         );
@@ -1432,6 +1511,15 @@ class SeriesElement implements DataHitElement {
       }
     }
   }
+
+  Color _resolvedBarColor(
+    BarChartSeries series,
+    BarGeometry geometry,
+    Color baseColor,
+  ) =>
+      geometry.point.pointStyle?.color ??
+      _waterfallColor(series, geometry) ??
+      baseColor;
 
   Color? _waterfallColor(BarChartSeries series, BarGeometry geometry) {
     if (series.layoutMode != BarLayoutMode.waterfall) return null;
@@ -2141,6 +2229,7 @@ class SeriesElement implements DataHitElement {
       pointFocusColor: pointFocusColor,
       pointSelectionColor: pointSelectionColor,
       fontFamily: fontFamily,
+      hasAnySelectedPoints: hasAnySelectedPoints,
     );
   }
 }

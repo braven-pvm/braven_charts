@@ -557,6 +557,7 @@ Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {
         'stops': [for (final stop in style.gradient!.stops!) _number(stop)],
     },
   if (style.border != null) 'border': _encodeBarBorder(style.border!),
+  'interaction': _encodeBarInteraction(style.interaction),
 };
 
 BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
@@ -573,6 +574,55 @@ BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
     opacity: _optionalDouble(value['opacity']) ?? 1.0,
     gradient: _decodeBarGradient(_optionalMap(value, 'gradient')),
     border: _decodeBarBorder(_optionalMap(value, 'border')),
+    interaction: _decodeBarInteraction(_optionalMap(value, 'interaction')),
+  );
+}
+
+Map<String, Object?> _encodeBarInteraction(BarInteractionStyle style) => {
+  if (style.hoverColor != null) 'hoverColor': style.hoverColor!.toARGB32(),
+  'hoverOpacity': _number(style.hoverOpacity),
+  'hoverBorderWidth': _number(style.hoverBorderWidth),
+  'pressedColor': style.pressedColor.toARGB32(),
+  'pressedOpacity': _number(style.pressedOpacity),
+  if (style.selectionColor != null)
+    'selectionColor': style.selectionColor!.toARGB32(),
+  'selectionOpacity': _number(style.selectionOpacity),
+  'selectionBorderWidth': _number(style.selectionBorderWidth),
+  if (style.focusColor != null) 'focusColor': style.focusColor!.toARGB32(),
+  'focusBorderWidth': _number(style.focusBorderWidth),
+  'focusGap': _number(style.focusGap),
+  'dimmedOpacity': _number(style.dimmedOpacity),
+};
+
+BarInteractionStyle _decodeBarInteraction(Map<String, Object?>? value) {
+  if (value == null) return const BarInteractionStyle();
+  return BarInteractionStyle(
+    hoverColor: _optionalColor(
+      value['hoverColor'],
+      r'$.style.barStyle.interaction.hoverColor',
+    ),
+    hoverOpacity: _optionalDouble(value['hoverOpacity']) ?? 0.12,
+    hoverBorderWidth: _optionalDouble(value['hoverBorderWidth']) ?? 2.0,
+    pressedColor:
+        _optionalColor(
+          value['pressedColor'],
+          r'$.style.barStyle.interaction.pressedColor',
+        ) ??
+        const Color(0xFF000000),
+    pressedOpacity: _optionalDouble(value['pressedOpacity']) ?? 0.16,
+    selectionColor: _optionalColor(
+      value['selectionColor'],
+      r'$.style.barStyle.interaction.selectionColor',
+    ),
+    selectionOpacity: _optionalDouble(value['selectionOpacity']) ?? 0.14,
+    selectionBorderWidth: _optionalDouble(value['selectionBorderWidth']) ?? 2.5,
+    focusColor: _optionalColor(
+      value['focusColor'],
+      r'$.style.barStyle.interaction.focusColor',
+    ),
+    focusBorderWidth: _optionalDouble(value['focusBorderWidth']) ?? 2.5,
+    focusGap: _optionalDouble(value['focusGap']) ?? 3.0,
+    dimmedOpacity: _optionalDouble(value['dimmedOpacity']) ?? 0.42,
   );
 }
 
