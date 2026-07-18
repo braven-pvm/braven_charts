@@ -10,6 +10,7 @@ import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/path_animation_style.dart';
 import '../models/radial_category_series.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
@@ -164,6 +165,9 @@ abstract final class ChartSeriesDocumentCodec {
                 series.radialStyle.dataTransitionMode ==
                     RadialDataTransitionMode.automatic)
               'series.radial.data-transitions.v1',
+            if ((series is LineChartSeries || series is AreaChartSeries) &&
+                _pathAnimationFor(series) != const PathAnimationStyle())
+              'series.path-motion.v1',
           },
         ),
       );
@@ -292,6 +296,9 @@ abstract final class ChartSeriesDocumentCodec {
             _optionalMap(style, 'dataPointLabels'),
           ),
           inlineLabel: _decodeInlineLabel(_optionalMap(style, 'inlineLabel')),
+          pathAnimation: _decodePathAnimation(
+            _optionalMap(style, 'pathAnimation'),
+          ),
         ),
         'scatter' => ScatterChartSeries(
           id: document.id,
@@ -348,6 +355,9 @@ abstract final class ChartSeriesDocumentCodec {
           belowBaselineFillColor: _optionalColor(
             style['belowBaselineFillColor'],
             r'$.style.belowBaselineFillColor',
+          ),
+          pathAnimation: _decodePathAnimation(
+            _optionalMap(style, 'pathAnimation'),
           ),
         ),
         'bar' => BarChartSeries(
@@ -620,6 +630,7 @@ Map<String, Object?> _encodeSeriesStyle(
           inlineLabel: series.inlineLabel,
         ),
       );
+      result['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
     case ScatterChartSeries():
       result['markerRadius'] = _number(series.markerRadius);
     case AreaChartSeries():
@@ -643,8 +654,8 @@ Map<String, Object?> _encodeSeriesStyle(
             ? null
             : _number(series.baselineValue!)
         ..['aboveBaselineFillColor'] = series.aboveBaselineFillColor?.toARGB32()
-        ..['belowBaselineFillColor'] = series.belowBaselineFillColor
-            ?.toARGB32();
+        ..['belowBaselineFillColor'] = series.belowBaselineFillColor?.toARGB32()
+        ..['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
     case BarChartSeries():
       result
         ..['barWidthPercent'] = series.barWidthPercent == null
@@ -751,6 +762,37 @@ Map<String, Object?> _encodeSeriesStyle(
   }
   result.removeWhere((_, value) => value == null);
   return result;
+}
+
+PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
+  LineChartSeries() => series.pathAnimation,
+  AreaChartSeries() => series.pathAnimation,
+  _ => null,
+};
+
+Map<String, Object?> _encodePathAnimation(PathAnimationStyle style) => {
+  'entranceMode': style.entranceMode.name,
+  'dataUpdateMode': style.dataUpdateMode.name,
+};
+
+PathAnimationStyle _decodePathAnimation(Map<String, Object?>? value) {
+  if (value == null) return const PathAnimationStyle();
+  return PathAnimationStyle(
+    entranceMode:
+        _optionalEnum(
+          value['entranceMode'],
+          PathEntranceAnimationMode.values,
+          r'$.style.pathAnimation.entranceMode',
+        ) ??
+        PathEntranceAnimationMode.none,
+    dataUpdateMode:
+        _optionalEnum(
+          value['dataUpdateMode'],
+          PathDataUpdateAnimationMode.values,
+          r'$.style.pathAnimation.dataUpdateMode',
+        ) ??
+        PathDataUpdateAnimationMode.none,
+  );
 }
 
 Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {

@@ -8,6 +8,7 @@ import 'bar_chart_style.dart';
 import 'chart_data_point.dart';
 import 'data_point_label_config.dart';
 import 'series_inline_label_config.dart';
+import 'path_animation_style.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
 
@@ -300,6 +301,7 @@ class LineChartSeries extends ChartSeries {
     this.lineGlow = 0.0,
     this.dataPointLabels,
     this.inlineLabel,
+    this.pathAnimation = const PathAnimationStyle(),
   });
 
   final LineInterpolation interpolation;
@@ -316,6 +318,7 @@ class LineChartSeries extends ChartSeries {
   final double lineGlow;
   final DataPointLabelConfig? dataPointLabels;
   final SeriesInlineLabelConfig? inlineLabel;
+  final PathAnimationStyle pathAnimation;
 
   @override
   LineChartSeries copyWith({
@@ -340,6 +343,7 @@ class LineChartSeries extends ChartSeries {
     double? lineGlow,
     DataPointLabelConfig? dataPointLabels,
     SeriesInlineLabelConfig? inlineLabel,
+    PathAnimationStyle? pathAnimation,
   }) {
     return LineChartSeries(
       id: id ?? this.id,
@@ -365,6 +369,7 @@ class LineChartSeries extends ChartSeries {
       lineGlow: lineGlow ?? this.lineGlow,
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
       inlineLabel: inlineLabel ?? this.inlineLabel,
+      pathAnimation: pathAnimation ?? this.pathAnimation,
     );
   }
 
@@ -386,7 +391,8 @@ class LineChartSeries extends ChartSeries {
         other.dataPointMarkerBackground == dataPointMarkerBackground &&
         other.lineGlow == lineGlow &&
         other.dataPointLabels == dataPointLabels &&
-        other.inlineLabel == inlineLabel;
+        other.inlineLabel == inlineLabel &&
+        other.pathAnimation == pathAnimation;
   }
 
   @override
@@ -402,6 +408,7 @@ class LineChartSeries extends ChartSeries {
     lineGlow,
     dataPointLabels,
     inlineLabel,
+    pathAnimation,
   ]);
 }
 
@@ -488,6 +495,7 @@ class AreaChartSeries extends ChartSeries {
     this.baselineValue,
     this.aboveBaselineFillColor,
     this.belowBaselineFillColor,
+    this.pathAnimation = const PathAnimationStyle(),
   });
 
   final LineInterpolation interpolation;
@@ -507,6 +515,7 @@ class AreaChartSeries extends ChartSeries {
   final double? baselineValue;
   final Color? aboveBaselineFillColor;
   final Color? belowBaselineFillColor;
+  final PathAnimationStyle pathAnimation;
 
   @override
   AreaChartSeries copyWith({
@@ -537,6 +546,7 @@ class AreaChartSeries extends ChartSeries {
     double? baselineValue,
     Color? aboveBaselineFillColor,
     Color? belowBaselineFillColor,
+    PathAnimationStyle? pathAnimation,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
@@ -568,6 +578,7 @@ class AreaChartSeries extends ChartSeries {
           aboveBaselineFillColor ?? this.aboveBaselineFillColor,
       belowBaselineFillColor:
           belowBaselineFillColor ?? this.belowBaselineFillColor,
+      pathAnimation: pathAnimation ?? this.pathAnimation,
     );
   }
 
@@ -593,7 +604,8 @@ class AreaChartSeries extends ChartSeries {
         other.inlineLabel == inlineLabel &&
         other.baselineValue == baselineValue &&
         other.aboveBaselineFillColor == aboveBaselineFillColor &&
-        other.belowBaselineFillColor == belowBaselineFillColor;
+        other.belowBaselineFillColor == belowBaselineFillColor &&
+        other.pathAnimation == pathAnimation;
   }
 
   @override
@@ -613,6 +625,7 @@ class AreaChartSeries extends ChartSeries {
     baselineValue,
     aboveBaselineFillColor,
     belowBaselineFillColor,
+    pathAnimation,
   ]);
 }
 

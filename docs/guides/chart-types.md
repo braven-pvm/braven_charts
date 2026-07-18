@@ -15,8 +15,8 @@ import 'package:braven_charts/braven_charts.dart';
 
 | Series | Use it for | Key configuration |
 | --- | --- | --- |
-| `LineChartSeries` | Trends and ordered measurements | interpolation, stroke, markers, labels, glow |
-| `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, fill opacity, baseline colors |
+| `LineChartSeries` | Trends and ordered measurements | interpolation, stroke, markers, labels, glow, path motion |
+| `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, fill opacity, baseline colors, path motion |
 | `BarChartSeries` | Discrete comparisons and grouped values | relative or fixed bar width |
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
@@ -59,6 +59,10 @@ BravenChartPlus(
       interpolation: LineInterpolation.monotone,
       strokeWidth: 2.5,
       showDataPointMarkers: true,
+      pathAnimation: PathAnimationStyle(
+        entranceMode: PathEntranceAnimationMode.reveal,
+        dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+      ),
     ),
   ],
   xAxisConfig: const XAxisConfig(label: 'Month'),
@@ -69,6 +73,30 @@ BravenChartPlus(
 Use monotone interpolation when the curve must not overshoot the source
 values. Use stepped interpolation for state changes. Markers and data labels
 are useful for small datasets but add visual and rendering cost at scale.
+
+Path motion is opt-in. `reveal` clips the normal Line renderer from the leading
+edge, while `interpolate` moves compatible point updates through the same
+geometry used for hit testing, tooltips, crosshairs, and labels. Timing and
+easing come from `ChartTheme.animationTheme.dataUpdateDuration` and
+`dataUpdateCurve`.
+
+Updates interpolate only when the series ID, series type, interpolation mode,
+point count, and point identities remain compatible. Topology changes fall
+back to the configured entrance reveal. Reduced-motion preferences and a
+zero-duration theme always render the final frame immediately.
+
+Attach a `BravenChartController` to replay the configured entrance:
+
+```dart
+final controller = BravenChartController();
+
+BravenChartPlus(
+  bravenChartController: controller,
+  series: series,
+);
+
+controller.replaySeriesEntrance();
+```
 
 ## Area charts
 
@@ -85,11 +113,48 @@ AreaChartSeries(
   baselineValue: 0,
   aboveBaselineFillColor: Color(0x6634A853),
   belowBaselineFillColor: Color(0x66EA4335),
+  pathAnimation: PathAnimationStyle(
+    entranceMode: PathEntranceAnimationMode.reveal,
+    dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+  ),
 )
 ```
 
 Avoid overlapping many opaque areas. Lower the opacity or use a line when the
 overlap makes individual series hard to read.
+
+Area fill, stroke, glow, markers, and labels share one reveal boundary. During
+compatible value updates, the fill and outline interpolate as one canonical
+series rather than as independent paint effects.
+
+## Chart and data workbench
+
+Line and Area work with the package-owned Chart/Data/Split surface. The chart
+stays mounted as users inspect the native table, and the wide Split divider is
+pointer- and keyboard-resizable.
+
+```dart
+final chartController = BravenChartController();
+
+BravenChartWorkbench(
+  chartController: chartController,
+  splitBreakpoint: 760,
+  autoFitTablePane: true,
+  tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: series,
+  ),
+)
+```
+
+The table and extracted artifacts use target data while an animation is in
+progress; transient frames are strictly a rendering concern.
+
+The showcase routes accept review-friendly query parameters. For example,
+`?page=line-charts&preset=motion&view=split` and
+`?page=area-charts&preset=motion&view=split` open the complete motion and
+workbench surfaces directly.
 
 ## Bar charts
 

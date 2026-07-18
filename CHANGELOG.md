@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- Opt-in Line and Area entrance reveals and compatible data-update
+  interpolation through `PathAnimationStyle`, including reduced-motion
+  handling, controller replay, canonical artifact persistence, and
+  render-path interaction coverage.
+- Resizable Chart/Data/Split workbenches for the Line and Area showcase pages,
+  with dedicated motion presets, replay and live-update controls, responsive
+  compact layouts, and direct review routes.
 - Runtime Donut center builders and actions with package-owned circular
   interaction, portable center-content fallback, and explicit rebinding after
   artifact hydration.
