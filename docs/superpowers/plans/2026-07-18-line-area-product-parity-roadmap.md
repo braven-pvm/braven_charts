@@ -6,7 +6,7 @@
 **Continuation PR:** #37 (merged)
 **Sprint 8 promotion:** PR #38 (merged)
 **Sprint 9 lane:** Stable-identity interior topology motion (review approved)
-**Next lane:** Showcase polish and Area gradients (Sprint 10; local review ready)
+**Next lane:** Path stroke patterns and Forecast (Sprint 11; in progress)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -431,3 +431,89 @@ catalogue.
   `DocumentationComment._stripDocImports` range error before diagnostics.
 - The refreshed Line Spotlight and Area Pulse routes and compiled application
   script return HTTP 200 from the release bundle on port 8097.
+
+## Sprint 11 — Path stroke patterns and Forecast
+
+**Status:** Ready for local review
+
+### Product outcome
+
+Ordinary Line and Area series support portable dotted, dashed, and dash-dot
+outlines. A new Line Forecast preset demonstrates a solid observed path,
+dotted forecast path, hollow forecast markers, and a vertical current-time
+threshold without introducing a forecast engine or new options panel.
+
+### Scope
+
+- Add an empty-by-default `dashPattern` to Line and Area series.
+- Pattern the interpolated rendered path while preserving fill, hit testing,
+  tracking, markers, labels, glow, and path motion.
+- Round-trip patterns through artifacts, hydration, capabilities, and readable
+  Dart source, and represent them in the package legend.
+- Add the Forecast composition to the existing Line Workbench page with wide
+  and compact coverage.
+
+### Acceptance gates
+
+- Pure and pixel-backed pattern coverage across every interpolation and Area
+  fill mode.
+- Model, artifact, hydration, capability, source, legend, animation, and
+  interaction regression coverage.
+- Forecast wide/compact and Workbench coverage.
+- Complete analyzers/suites, release builds, publication checks, direct-route
+  browser review, and local pixel approval before PR promotion.
+
+The locked contract and executable work slices are recorded in
+`../specs/2026-07-18-path-strokes-and-synchronized-charts-design.md` and
+`2026-07-18-line-stroke-forecast.md`.
+
+### Delivered local slice
+
+- Line and Area now accept portable path-space dash patterns; solid rendering
+  remains the empty default and Area fill geometry stays continuous.
+- Renderer coverage proves all interpolation modes, segment styling, glow,
+  ordinary and baseline Area fill, plus animated geometry style retention.
+- Artifacts, built-in hydration, capabilities, generated source, legends, and
+  malformed-document handling preserve the new series identity.
+- The new Line Forecast composition uses one canonical series with a native
+  outgoing-segment pattern transition. This replaces the reviewed two-series
+  draft whose independent monotone endpoint tangents produced a visible
+  handoff break.
+- Full package (1,972) and showcase (160) suites are green; package and
+  showcase analysis is clean, both production base-href builds pass, and the
+  refreshed root build is served locally on port 8099. Promotion remains
+  gated on pixel approval.
+- A follow-up performance audit restores the baseline Area single-path fast
+  path when no segment override exists and locks 5,000-point solid Line, Area,
+  baseline Area, and continuous-Forecast frame-budget benchmarks into the
+  package suite. Legacy Area medians match `origin/master` within noise.
+
+## Sprint 12 — Synchronized Cartesian charts
+
+**Status:** Planned after Sprint 11 promotion
+
+### Product outcome
+
+Independent Cartesian charts can share a data-X cursor, aligned crosshairs,
+nearest-point focus, and X-only viewport changes while retaining their own
+units, Y domains, titles, and artifacts.
+
+### Scope
+
+- Add a caller-owned `ChartInteractionGroupController`; do not extend the
+  presentation-only `ChartWorkbenchGroupController`.
+- Coordinate data-space X, local nearest points, pointer/touch cleanup, and
+  loop-safe X viewport changes.
+- Add a stacked Speed, Elevation, and Heart rate showcase at wide and compact
+  sizes.
+- Keep Y interaction, annotations, tooltips, durable selection, and artifacts
+  local to each chart.
+
+### Acceptance gates
+
+- Controller lifecycle, data-X mapping, nearest-point, viewport, opt-out, and
+  loop-prevention unit coverage.
+- Real render-path crosshair coverage across different sizes, sample counts,
+  interpolation modes, and Y domains.
+- Pointer, touch, keyboard, compact, release, publication, and pixel-review
+  gates before promotion.

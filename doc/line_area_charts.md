@@ -45,6 +45,52 @@ const area = AreaChartSeries(
 resolved against stable plot bounds rather than the animated path bounds.
 When `baselineValue` is set, the above/below baseline fills take precedence.
 
+## Pattern a Line or Area outline
+
+Line and Area outlines are solid by default. Set `dashPattern` to alternating
+painted and skipped distances in logical pixels:
+
+```dart
+const forecast = LineChartSeries(
+  id: 'forecast',
+  name: 'Forecast',
+  points: forecastPoints,
+  interpolation: LineInterpolation.monotone,
+  dashPattern: [2, 6],
+  showDataPointMarkers: true,
+  dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+);
+```
+
+Patterns must contain an even number of positive, finite values. Rounded line
+caps make `[2, 6]` read as dotted; `[8, 4]` is dashed and
+`[8, 4, 2, 4]` is dash-dot. Spacing follows the final interpolated path, so it
+remains consistent across linear, Bezier, monotone, and stepped geometry.
+
+For Area series, the pattern affects only the outline. Solid, gradient, and
+positive/negative baseline fills remain continuous. Glow uses the same
+pattern, while markers, labels, hit testing, tracking, and motion retain the
+canonical series geometry.
+
+Change the pattern without splitting the series by styling outgoing segments:
+
+```dart
+final continuousForecast = LineChartSeries(
+  id: 'temperature',
+  points: allPoints,
+  interpolation: LineInterpolation.monotone,
+).withStyleInRange(
+  currentTime,
+  double.infinity,
+  const SegmentStyle(dashPattern: [2, 6]),
+);
+```
+
+The style starts on the segment leaving `currentTime`. A null segment pattern
+inherits the series pattern, while an empty list explicitly makes that segment
+solid. Interpolation still uses every point in the series, so tangent geometry
+flows through the style boundary.
+
 ## Opt in to motion
 
 Path motion is intentionally disabled by default. Existing analytical,
@@ -150,6 +196,7 @@ families. See [Chart Workbench](chart_workbench.md) and
 - [Area motion workbench](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split)
 - [Area gradient](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=gradient)
 - [Line and Area composition](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=envelope)
+- [Observed and dotted forecast](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=forecast)
 - [Line chart family](https://braven-pvm.github.io/braven_charts/?page=line-charts)
 - [Area chart family](https://braven-pvm.github.io/braven_charts/?page=area-charts)
 

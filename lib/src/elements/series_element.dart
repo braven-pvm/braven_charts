@@ -30,17 +30,33 @@ import '../rendering/bar_bullet_painter.dart';
 import '../rendering/bar_label_layout.dart';
 import '../rendering/bar_pattern_painter.dart';
 import '../theming/components/series_theme.dart';
+import '../utils/dashed_path.dart';
 import '../utils/interpolation_geometry.dart';
 import '../utils/path_series_transition.dart';
 
+List<double> _dashPatternFor(ChartSeries series) => switch (series) {
+  LineChartSeries() => series.dashPattern,
+  AreaChartSeries() => series.dashPattern,
+  _ => const [],
+};
+
+bool _dashPatternsEqual(List<double> first, List<double> second) {
+  if (identical(first, second)) return true;
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
+}
+
 // =============================================================================
-// Style Region for Segment Color Batching
+// Style Region for Segment Stroke Batching
 // =============================================================================
 
 /// Represents a continuous region of same-styled segments for batched rendering.
 ///
-/// When segment colors are used, the series line is divided into regions
-/// where each region has consistent styling (color + stroke width).
+/// When segment styles are used, the series line is divided into regions
+/// where each region has consistent styling (color + stroke width + pattern).
 /// This enables efficient batched rendering with minimal drawPath() calls.
 class _StyleRegion {
   const _StyleRegion({
@@ -48,6 +64,7 @@ class _StyleRegion {
     required this.endIndex,
     required this.color,
     required this.strokeWidth,
+    required this.dashPattern,
   });
 
   /// Index of first point in region (segment starts here).
@@ -61,6 +78,9 @@ class _StyleRegion {
 
   /// Effective stroke width for this region.
   final double strokeWidth;
+
+  /// Effective dash pattern for this region. Empty means a solid stroke.
+  final List<double> dashPattern;
 
   /// Number of segments in this region.
   int get segmentCount => endIndex - startIndex;
@@ -77,6 +97,7 @@ List<_StyleRegion> _analyzeStyleRegions(
   List<ChartDataPoint> points,
   Color defaultColor,
   double defaultStrokeWidth,
+  List<double> defaultDashPattern,
 ) {
   if (points.length < 2) return [];
 
@@ -87,6 +108,8 @@ List<_StyleRegion> _analyzeStyleRegions(
   Color currentColor = points[0].segmentStyle?.color ?? defaultColor;
   double currentWidth =
       points[0].segmentStyle?.strokeWidth ?? defaultStrokeWidth;
+  List<double> currentDashPattern =
+      points[0].segmentStyle?.dashPattern ?? defaultDashPattern;
 
   // Iterate through points, detecting style changes
   // Note: We check points[i] for segment i→i+1's style
@@ -94,9 +117,12 @@ List<_StyleRegion> _analyzeStyleRegions(
     final style = points[i].segmentStyle;
     final pointColor = style?.color ?? defaultColor;
     final pointWidth = style?.strokeWidth ?? defaultStrokeWidth;
+    final pointDashPattern = style?.dashPattern ?? defaultDashPattern;
 
     // Check if style changed at this point
-    if (pointColor != currentColor || pointWidth != currentWidth) {
+    if (pointColor != currentColor ||
+        pointWidth != currentWidth ||
+        !_dashPatternsEqual(pointDashPattern, currentDashPattern)) {
       // Close current region (ends at point i, inclusive)
       regions.add(
         _StyleRegion(
@@ -104,6 +130,7 @@ List<_StyleRegion> _analyzeStyleRegions(
           endIndex: i,
           color: currentColor,
           strokeWidth: currentWidth,
+          dashPattern: currentDashPattern,
         ),
       );
 
@@ -111,6 +138,7 @@ List<_StyleRegion> _analyzeStyleRegions(
       regionStart = i;
       currentColor = pointColor;
       currentWidth = pointWidth;
+      currentDashPattern = pointDashPattern;
     }
   }
 
@@ -121,6 +149,7 @@ List<_StyleRegion> _analyzeStyleRegions(
       endIndex: points.length - 1,
       color: currentColor,
       strokeWidth: currentWidth,
+      dashPattern: currentDashPattern,
     ),
   );
 
@@ -327,6 +356,10 @@ class SeriesElement implements DataHitElement {
   }) {
     // Check if we need to invalidate path cache
     final pointCountChanged = newSeries.points.length != series.points.length;
+    final dashPatternChanged = !_dashPatternsEqual(
+      _dashPatternFor(series),
+      _dashPatternFor(newSeries),
+    );
 
     series = newSeries;
     _barViewportIndex = null;
@@ -340,7 +373,7 @@ class SeriesElement implements DataHitElement {
     }
 
     // Invalidate cache only if geometry changed significantly
-    if (pointCountChanged) {
+    if (pointCountChanged || dashPatternChanged) {
       _invalidateAllCaches();
     }
     // Always clear label cache — label config may have changed
@@ -351,6 +384,7 @@ class SeriesElement implements DataHitElement {
   /// Call when series data changes or segment styles are modified.
   void _invalidateAllCaches() {
     _cachedPath = null;
+    _cachedStrokePath = null;
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
@@ -377,6 +411,7 @@ class SeriesElement implements DataHitElement {
 
   // Cache the rendered path to avoid recalculating on every paint
   Path? _cachedPath;
+  Path? _cachedStrokePath;
   List<Offset>? _cachedTransformedPoints;
   List<int>?
   _cachedOriginalIndices; // Maps visible point index → original series.points index
@@ -1105,10 +1140,20 @@ class SeriesElement implements DataHitElement {
 
       // Cache the generated path, transformed points, original indices, and transform
       _cachedPath = path;
+      _cachedStrokePath = null;
       _cachedTransformedPoints = transformedPoints;
       _cachedOriginalIndices = visibleIndices;
       _cachedTransform = _currentTransform;
     }
+
+    // Apply the pattern after interpolation so every curve mode shares the
+    // same measured dash spacing. The derived path is cached with its source.
+    final strokePath = series.dashPattern.isEmpty
+        ? _cachedPath!
+        : _cachedStrokePath ??= createDashedPath(
+            _cachedPath!,
+            series.dashPattern,
+          );
 
     // Paint using the cached path (no regeneration on hover!)
     if (series.lineGlow > 0) {
@@ -1119,9 +1164,9 @@ class SeriesElement implements DataHitElement {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
-      canvas.drawPath(_cachedPath!, glowPaint);
+      canvas.drawPath(strokePath, glowPaint);
     }
-    canvas.drawPath(_cachedPath!, paint);
+    canvas.drawPath(strokePath, paint);
 
     // Draw data point markers if enabled (use cached transforms!)
     if (series.showDataPointMarkers && _cachedTransformedPoints != null) {
@@ -1221,6 +1266,7 @@ class SeriesElement implements DataHitElement {
       visiblePoints,
       baseColor,
       effectiveStrokeWidth,
+      series.dashPattern,
     );
 
     // Paint each region
@@ -1232,6 +1278,7 @@ class SeriesElement implements DataHitElement {
         series.interpolation,
         series.tension,
       );
+      final strokePath = createDashedPath(regionPath, region.dashPattern);
 
       final paint = Paint()
         ..color = region.color.withValues(alpha: opacity)
@@ -1248,9 +1295,9 @@ class SeriesElement implements DataHitElement {
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
-        canvas.drawPath(regionPath, glowPaint);
+        canvas.drawPath(strokePath, glowPaint);
       }
-      canvas.drawPath(regionPath, paint);
+      canvas.drawPath(strokePath, paint);
     }
 
     // Draw data point markers if enabled
@@ -1295,7 +1342,6 @@ class SeriesElement implements DataHitElement {
       endIndex: endIndex,
       tension: tension,
     );
-
     return path;
   }
 
@@ -1376,8 +1422,8 @@ class SeriesElement implements DataHitElement {
     // Use theme-based stroke width with selection multiplier
     final effectiveStrokeWidth = isSelected ? strokeWidth * 1.5 : strokeWidth;
 
-    // NOTE: When baselineValue is set, segmentStyle per-point colour overrides
-    // are not applied — the baseline fill path handles all fill and stroke.
+    // Baseline fill remains continuous while its outline can use per-segment
+    // stroke styling. Each outline region retains full interpolation context.
     if (series.baselineValue != null) {
       _paintAreaSeriesBaseline(
         canvas,
@@ -1386,6 +1432,7 @@ class SeriesElement implements DataHitElement {
         baseColor,
         opacity,
         effectiveStrokeWidth,
+        hasOverrides,
       );
     } else if (!hasOverrides) {
       // FAST PATH: Single color for both fill and stroke
@@ -1479,6 +1526,7 @@ class SeriesElement implements DataHitElement {
       getY: (point) => point.dy,
       tension: series.tension,
     );
+    final strokePath = createDashedPath(linePath, series.dashPattern);
 
     if (series.lineGlow > 0) {
       final glowPaint = Paint()
@@ -1488,12 +1536,12 @@ class SeriesElement implements DataHitElement {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
-      canvas.drawPath(linePath, glowPaint);
+      canvas.drawPath(strokePath, glowPaint);
     }
-    canvas.drawPath(linePath, linePaint);
+    canvas.drawPath(strokePath, linePaint);
   }
 
-  /// Paints an area series with per-segment colors for both fill and stroke.
+  /// Paints an area series with per-segment styles for both fill and stroke.
   void _paintAreaSeriesMultiColor(
     Canvas canvas,
     AreaChartSeries series,
@@ -1503,7 +1551,12 @@ class SeriesElement implements DataHitElement {
     double strokeWidth,
   ) {
     // Analyze style regions (same logic as line charts)
-    final regions = _analyzeStyleRegions(series.points, baseColor, strokeWidth);
+    final regions = _analyzeStyleRegions(
+      series.points,
+      baseColor,
+      strokeWidth,
+      series.dashPattern,
+    );
 
     // Draw each region's fill and stroke
     for (final region in regions) {
@@ -1528,6 +1581,10 @@ class SeriesElement implements DataHitElement {
         series.interpolation,
         series.tension,
       );
+      final patternedStrokePath = createDashedPath(
+        strokePath,
+        region.dashPattern,
+      );
 
       // Draw stroke with region color
       final strokePaint = Paint()
@@ -1544,9 +1601,9 @@ class SeriesElement implements DataHitElement {
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow);
-        canvas.drawPath(strokePath, glowPaint);
+        canvas.drawPath(patternedStrokePath, glowPaint);
       }
-      canvas.drawPath(strokePath, strokePaint);
+      canvas.drawPath(patternedStrokePath, strokePaint);
     }
   }
 
@@ -1595,6 +1652,7 @@ class SeriesElement implements DataHitElement {
     Color baseColor,
     double opacity,
     double strokeWidth,
+    bool hasSegmentOverrides,
   ) {
     final baselineY = _currentTransform
         .dataToPlot(0, series.baselineValue!)
@@ -1655,38 +1713,90 @@ class SeriesElement implements DataHitElement {
       );
     }
 
-    // Draw the series stroke on top (identical to single-colour path).
-    final linePaint = Paint()
-      ..color = baseColor.withValues(alpha: opacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    // Preserve the original single-path fast path for ordinary baseline Area
+    // series. Segment-region analysis is only paid for when it is requested.
+    if (!hasSegmentOverrides) {
+      final linePath = Path()
+        ..moveTo(transformedPoints.first.dx, transformedPoints.first.dy);
+      InterpolationGeometry.addPathSegments<Offset>(
+        path: linePath,
+        points: transformedPoints,
+        interpolation: series.interpolation,
+        getX: (point) => point.dx,
+        getY: (point) => point.dy,
+        tension: series.tension,
+      );
+      _paintAreaStrokePath(
+        canvas,
+        path: linePath,
+        color: baseColor,
+        opacity: opacity,
+        strokeWidth: strokeWidth,
+        lineGlow: series.lineGlow,
+        dashPattern: series.dashPattern,
+      );
+      return;
+    }
 
-    final linePath = Path()
-      ..moveTo(transformedPoints.first.dx, transformedPoints.first.dy);
-    InterpolationGeometry.addPathSegments<Offset>(
-      path: linePath,
-      points: transformedPoints,
-      interpolation: series.interpolation,
-      getX: (p) => p.dx,
-      getY: (p) => p.dy,
-      tension: series.tension,
+    // Styled region paths are derived from the full point list so
+    // interpolation tangents remain continuous at style changes.
+    final regions = _analyzeStyleRegions(
+      series.points,
+      baseColor,
+      strokeWidth,
+      series.dashPattern,
     );
+    for (final region in regions) {
+      final linePath = _buildRegionPath(
+        transformedPoints,
+        region.startIndex,
+        region.endIndex,
+        series.interpolation,
+        series.tension,
+      );
+      _paintAreaStrokePath(
+        canvas,
+        path: linePath,
+        color: region.color,
+        opacity: opacity,
+        strokeWidth: region.strokeWidth,
+        lineGlow: series.lineGlow,
+        dashPattern: region.dashPattern,
+      );
+    }
+  }
 
-    if (series.lineGlow > 0) {
+  void _paintAreaStrokePath(
+    Canvas canvas, {
+    required Path path,
+    required Color color,
+    required double opacity,
+    required double strokeWidth,
+    required double lineGlow,
+    required List<double> dashPattern,
+  }) {
+    final strokePath = createDashedPath(path, dashPattern);
+    if (lineGlow > 0) {
       canvas.drawPath(
-        linePath,
+        strokePath,
         Paint()
-          ..color = baseColor.withAlpha(60)
-          ..strokeWidth = strokeWidth + series.lineGlow * 2
+          ..color = color.withAlpha(60)
+          ..strokeWidth = strokeWidth + lineGlow * 2
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, series.lineGlow),
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, lineGlow),
       );
     }
-    canvas.drawPath(linePath, linePaint);
+    canvas.drawPath(
+      strokePath,
+      Paint()
+        ..color = color.withValues(alpha: opacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
   }
 
   /// Builds a closed fill path for an area region (line segment + down to x-axis).

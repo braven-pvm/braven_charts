@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Portable `dashPattern` outlines for ordinary Line and Area series, including
+  interpolation-aware rendering, continuous Area fills, glow, native outgoing-
+  segment pattern changes, artifacts, built-in hydration, generated Dart
+  source, legend identity, and a continuous observed-versus-forecast showcase.
+
 ### Fixed
 - Invalid or non-finite Bar points no longer poison stacked, normalized,
   diverging, Waterfall, bounds, viewport, or hit-test geometry.

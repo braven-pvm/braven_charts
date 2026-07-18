@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('bar legend uses the patterned rectangular series swatch', (
+  testWidgets('legend renders bar and path-aware series swatches', (
     tester,
   ) async {
     String? toggledId;
@@ -27,6 +27,13 @@ void main() {
                 name: 'Trend',
                 points: [ChartDataPoint(x: 0, y: 42)],
                 color: Color(0xFF386A78),
+                dashPattern: [2, 6],
+              ),
+              AreaChartSeries(
+                id: 'range',
+                name: 'Range',
+                points: [ChartDataPoint(x: 0, y: 38)],
+                color: Color(0xFF805AD5),
               ),
             ],
             hiddenSeriesIds: const {},
@@ -40,7 +47,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) => widget is CustomPaint && widget.size == const Size(18, 12),
       ),
-      findsOneWidget,
+      findsNWidgets(3),
     );
     expect(
       find.byWidgetPredicate(
@@ -49,7 +56,7 @@ void main() {
             widget.decoration is BoxDecoration &&
             (widget.decoration! as BoxDecoration).shape == BoxShape.circle,
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     await tester.tap(find.text('Forecast'));

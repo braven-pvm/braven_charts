@@ -14,15 +14,16 @@ import 'chart_series.dart';
 ///
 /// When applied to a [ChartDataPoint], this style affects the segment
 /// from that point to the next point in the series. This enables
-/// per-segment color and stroke width customization.
+/// per-segment color, stroke width, and dash-pattern customization.
 ///
 /// **Applies to**: [LineChartSeries], [AreaChartSeries]
 ///
 /// **Rendering behavior**:
-/// - Color and strokeWidth override series defaults for this segment only
+/// - Color, strokeWidth, and dashPattern override series defaults for this
+///   segment only
 /// - Null values inherit from series/theme defaults
 /// - Style on last point is ignored (no segment follows it)
-/// - Bezier curves remain smooth at color boundaries
+/// - Bezier and monotone curves remain smooth at style boundaries
 ///
 /// **Performance**:
 /// - Fast path: Charts without any segment styles use optimized single-path rendering
@@ -48,20 +49,24 @@ import 'chart_series.dart';
 /// See also:
 /// - [PointStyle] for styling individual points in scatter/bar charts
 class SegmentStyle {
-  /// Creates a segment style with optional color and stroke width overrides.
+  /// Creates a segment style with optional color, width, and pattern overrides.
   ///
-  /// Both parameters are optional. Null values mean "use series default".
-  const SegmentStyle({this.color, this.strokeWidth});
+  /// All parameters are optional. Null values mean "use series default".
+  const SegmentStyle({this.color, this.strokeWidth, this.dashPattern});
 
   /// Creates a segment style with only a color override.
   ///
   /// Stroke width will inherit from series default.
-  const SegmentStyle.color(Color this.color) : strokeWidth = null;
+  const SegmentStyle.color(Color this.color)
+    : strokeWidth = null,
+      dashPattern = null;
 
   /// Creates a segment style with only a stroke width override.
   ///
   /// Color will inherit from series default.
-  const SegmentStyle.strokeWidth(double this.strokeWidth) : color = null;
+  const SegmentStyle.strokeWidth(double this.strokeWidth)
+    : color = null,
+      dashPattern = null;
 
   /// Color override for this segment.
   ///
@@ -73,21 +78,32 @@ class SegmentStyle {
   /// If null, uses the series stroke width or theme default.
   final double? strokeWidth;
 
+  /// Stroke pattern override for the outgoing segment.
+  ///
+  /// Null inherits the owning Line or Area series pattern. An empty list
+  /// explicitly restores a solid segment. Non-empty patterns follow the same
+  /// positive, finite, even-length contract as the series-level pattern.
+  final List<double>? dashPattern;
+
   /// Whether this style has any overrides.
   ///
-  /// Returns false if both color and strokeWidth are null.
-  bool get hasOverrides => color != null || strokeWidth != null;
+  /// Returns false if color, strokeWidth, and dashPattern are all null.
+  bool get hasOverrides =>
+      color != null || strokeWidth != null || dashPattern != null;
 
   /// Creates a copy of this style with the given overrides.
   SegmentStyle copyWith({
     Color? color,
     double? strokeWidth,
+    List<double>? dashPattern,
     bool clearColor = false,
     bool clearStrokeWidth = false,
+    bool clearDashPattern = false,
   }) {
     return SegmentStyle(
       color: clearColor ? null : (color ?? this.color),
       strokeWidth: clearStrokeWidth ? null : (strokeWidth ?? this.strokeWidth),
+      dashPattern: clearDashPattern ? null : (dashPattern ?? this.dashPattern),
     );
   }
 
@@ -97,13 +113,30 @@ class SegmentStyle {
       other is SegmentStyle &&
           runtimeType == other.runtimeType &&
           color == other.color &&
-          strokeWidth == other.strokeWidth;
+          strokeWidth == other.strokeWidth &&
+          _nullableListEquals(dashPattern, other.dashPattern);
 
   @override
-  int get hashCode => Object.hash(color, strokeWidth);
+  int get hashCode => Object.hash(
+    color,
+    strokeWidth,
+    dashPattern == null ? null : Object.hashAll(dashPattern!),
+  );
 
   @override
-  String toString() => 'SegmentStyle(color: $color, strokeWidth: $strokeWidth)';
+  String toString() =>
+      'SegmentStyle(color: $color, strokeWidth: $strokeWidth, dashPattern: $dashPattern)';
+}
+
+bool _nullableListEquals<T>(List<T>? first, List<T>? second) {
+  if (identical(first, second)) return true;
+  if (first == null || second == null || first.length != second.length) {
+    return false;
+  }
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
 }
 
 // =============================================================================

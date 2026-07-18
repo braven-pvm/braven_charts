@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../models/chart_series.dart';
 import '../models/bar_chart_style.dart';
 import '../rendering/bar_pattern_painter.dart';
+import '../utils/dashed_path.dart';
 
 /// A legend widget for displaying chart series with show/hide functionality.
 ///
@@ -238,6 +239,21 @@ class _LegendSwatch extends StatelessWidget {
         ),
       );
     }
+    if (series is LineChartSeries || series is AreaChartSeries) {
+      final dashPattern = switch (series) {
+        LineChartSeries(:final dashPattern) => dashPattern,
+        AreaChartSeries(:final dashPattern) => dashPattern,
+        _ => const <double>[],
+      };
+      return CustomPaint(
+        size: const Size(18, 12),
+        painter: _PathLegendSwatchPainter(
+          color: color,
+          dashPattern: dashPattern,
+          showAreaFill: series is AreaChartSeries,
+        ),
+      );
+    }
     return Container(
       width: 16,
       height: 16,
@@ -248,6 +264,55 @@ class _LegendSwatch extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PathLegendSwatchPainter extends CustomPainter {
+  const _PathLegendSwatchPainter({
+    required this.color,
+    required this.dashPattern,
+    required this.showAreaFill,
+  });
+
+  final Color color;
+  final List<double> dashPattern;
+  final bool showAreaFill;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final y = size.height / 2;
+    if (showAreaFill) {
+      canvas.drawRect(
+        Rect.fromLTRB(1, y, size.width - 1, size.height - 1),
+        Paint()..color = color.withValues(alpha: 0.18),
+      );
+    }
+    final source = Path()
+      ..moveTo(1, y)
+      ..lineTo(size.width - 1, y);
+    canvas.drawPath(
+      createDashedPath(source, dashPattern),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PathLegendSwatchPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.showAreaFill != showAreaFill ||
+      !_patternsEqual(oldDelegate.dashPattern, dashPattern);
+}
+
+bool _patternsEqual(List<double> first, List<double> second) {
+  if (identical(first, second)) return true;
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
 }
 
 class _BarLegendSwatchPainter extends CustomPainter {

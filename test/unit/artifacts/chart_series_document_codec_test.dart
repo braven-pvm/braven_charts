@@ -18,6 +18,7 @@ void main() {
             segmentStyle: const SegmentStyle(
               color: Color(0xFFAA1122),
               strokeWidth: 3.5,
+              dashPattern: [2, 6],
             ),
             pointStyle: const PointStyle(color: Color(0xFF1144AA), size: 7.25),
           ),
@@ -100,6 +101,7 @@ void main() {
             delay: Duration(milliseconds: 120),
           ),
         ),
+        dashPattern: const [2, 6],
       );
 
       final decoded = _roundTrip(source) as LineChartSeries;
@@ -127,6 +129,7 @@ void main() {
       expect(decoded.dataPointLabels, source.dataPointLabels);
       expect(decoded.inlineLabel, source.inlineLabel);
       expect(decoded.pathAnimation, source.pathAnimation);
+      expect(decoded.dashPattern, const [2, 6]);
       expect(decoded.points.single.x.isNaN, isTrue);
       expect(decoded.points.single.y, double.infinity);
       expect(decoded.points.single.timestamp, source.points.single.timestamp);
@@ -169,6 +172,7 @@ void main() {
           entranceMode: PathEntranceAnimationMode.reveal,
           dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
         ),
+        dashPattern: [8, 4],
       );
 
       final decoded = _roundTrip(source) as AreaChartSeries;
@@ -190,6 +194,76 @@ void main() {
       expect(decoded.aboveBaselineFillColor, const Color(0xFF00AA00));
       expect(decoded.belowBaselineFillColor, const Color(0xFFAA0000));
       expect(decoded.pathAnimation, source.pathAnimation);
+      expect(decoded.dashPattern, const [8, 4]);
+    });
+
+    test('advertises the path dash capability only when configured', () {
+      const dotted = LineChartSeries(
+        id: 'forecast',
+        points: [],
+        dashPattern: [2, 6],
+      );
+      const solid = AreaChartSeries(id: 'history', points: []);
+      const segmented = LineChartSeries(
+        id: 'continuous-forecast',
+        points: [
+          ChartDataPoint(
+            x: 0,
+            y: 1,
+            segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+          ),
+          ChartDataPoint(x: 1, y: 2),
+        ],
+      );
+
+      final dottedDocument =
+          (ChartSeriesDocumentCodec.encode(dotted)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+      final solidDocument =
+          (ChartSeriesDocumentCodec.encode(solid)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+      final segmentedDocument =
+          (ChartSeriesDocumentCodec.encode(segmented)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+
+      expect(
+        dottedDocument.requiredCapabilities,
+        contains('series.path-dash.v1'),
+      );
+      expect(
+        solidDocument.requiredCapabilities,
+        isNot(contains('series.path-dash.v1')),
+      );
+      expect(
+        segmentedDocument.requiredCapabilities,
+        contains('series.path-dash.v1'),
+      );
+    });
+
+    test('rejects malformed decoded path dash patterns structurally', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                const LineChartSeries(id: 'forecast', points: []),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = encoded.value.toJson();
+      final style = Map<String, Object?>.from(json['style']! as Map);
+      style['dashPattern'] = [2, 0];
+      json['style'] = style;
+
+      final decoded = ChartSeriesDocumentCodec.decode(
+        ChartSeriesDocument.fromJson(json),
+      );
+
+      expect(decoded, isA<ChartArtifactFailure<ChartSeries>>());
+      expect(
+        (decoded as ChartArtifactFailure<ChartSeries>).error.code,
+        ChartArtifactDiagnosticCodes.invalidArtifact,
+      );
+      expect(decoded.error.message, contains('positive finite'));
     });
 
     test('advertises the Area gradient capability only when configured', () {
