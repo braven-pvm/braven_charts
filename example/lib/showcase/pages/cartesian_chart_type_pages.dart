@@ -514,6 +514,22 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                   label: const Text('Update values'),
                 ),
                 OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-backfill-point'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: _toggleMotionBackfill,
+                  icon: Icon(
+                    _hasMotionBackfill
+                        ? Icons.remove_circle_outline
+                        : Icons.add_circle_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _hasMotionBackfill ? 'Remove backfill' : 'Add backfill',
+                  ),
+                ),
+                OutlinedButton.icon(
                   key: ValueKey('${widget.family.name}-add-point'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 48),
@@ -978,6 +994,48 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           )
           .toList(growable: false);
       _motionValueRevision++;
+    });
+  }
+
+  bool get _hasMotionBackfill =>
+      _motionPrimaryPoints.any((point) => point.label == 'Backfill');
+
+  void _toggleMotionBackfill() {
+    setState(() {
+      if (_hasMotionBackfill) {
+        _motionPrimaryPoints = _motionPrimaryPoints
+            .where((point) => point.label != 'Backfill')
+            .toList(growable: false);
+        _motionSecondaryPoints = _motionSecondaryPoints
+            .where((point) => point.label != 'Backfill')
+            .toList(growable: false);
+        return;
+      }
+
+      final insertionIndex = _motionPrimaryPoints.length ~/ 2;
+      final primaryBefore = _motionPrimaryPoints[insertionIndex - 1];
+      final primaryAfter = _motionPrimaryPoints[insertionIndex];
+      final secondaryBefore = _motionSecondaryPoints[insertionIndex - 1];
+      final secondaryAfter = _motionSecondaryPoints[insertionIndex];
+      final x = (primaryBefore.x + primaryAfter.x) / 2;
+      _motionPrimaryPoints = [
+        ..._motionPrimaryPoints.take(insertionIndex),
+        ChartDataPoint(
+          x: x,
+          y: ((primaryBefore.y + primaryAfter.y) / 2) + 8,
+          label: 'Backfill',
+        ),
+        ..._motionPrimaryPoints.skip(insertionIndex),
+      ];
+      _motionSecondaryPoints = [
+        ..._motionSecondaryPoints.take(insertionIndex),
+        ChartDataPoint(
+          x: x,
+          y: ((secondaryBefore.y + secondaryAfter.y) / 2) - 6,
+          label: 'Backfill',
+        ),
+        ..._motionSecondaryPoints.skip(insertionIndex),
+      ];
     });
   }
 

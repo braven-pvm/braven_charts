@@ -250,7 +250,7 @@ void main() {
       expect(frame.targetPointIndices, [0, 1, 2, null]);
     });
 
-    test('rejects interior edits, reordering, and interpolation changes', () {
+    test('inserts an interior Line point from the phase-start path', () {
       const from = LineChartSeries(id: 'line', points: fromPoints);
       const insertedInside = LineChartSeries(
         id: 'line',
@@ -260,11 +260,152 @@ void main() {
           ChartDataPoint(x: 1, y: 40, label: 'B'),
         ],
       );
+
+      expect(PathSeriesTransition.isCompatible(from, insertedInside), isTrue);
+      final start = PathSeriesTransition.frame(
+        from: from,
+        to: insertedInside,
+        progress: 0,
+      );
+      final midpoint = PathSeriesTransition.frame(
+        from: from,
+        to: insertedInside,
+        progress: 0.5,
+      );
+
+      expect((start.series as LineChartSeries).points.map((point) => point.y), [
+        10,
+        15,
+        20,
+      ]);
+      expect(
+        (midpoint.series as LineChartSeries).points.map((point) => point.y),
+        [20, 25, 30],
+      );
+      expect(midpoint.targetPointIndices, [0, 1, 2]);
+    });
+
+    test('removes an interior Area point onto the target path', () {
+      const from = AreaChartSeries(
+        id: 'area',
+        points: [
+          ChartDataPoint(x: 0, y: 10, label: 'A'),
+          ChartDataPoint(x: 0.5, y: 50, label: 'X'),
+          ChartDataPoint(x: 1, y: 20, label: 'B'),
+        ],
+      );
+      const to = AreaChartSeries(id: 'area', points: toPoints);
+
+      expect(PathSeriesTransition.isCompatible(from, to), isTrue);
+      final midpoint = PathSeriesTransition.frame(
+        from: from,
+        to: to,
+        progress: 0.5,
+      );
+      final result = midpoint.series as AreaChartSeries;
+
+      expect(result.points.map((point) => point.label), ['A', 'X', 'B']);
+      expect(result.points.map((point) => point.y), [20, 42.5, 30]);
+      expect(midpoint.targetPointIndices, [0, null, 1]);
+      expect(PathSeriesTransition.targetIndexForSource(from, to, 1), isNull);
+      expect(PathSeriesTransition.targetIndexForSource(from, to, 2), 1);
+    });
+
+    test('samples the configured interpolation for an interior insertion', () {
+      for (final interpolation in LineInterpolation.values) {
+        final from = LineChartSeries(
+          id: 'line',
+          interpolation: interpolation,
+          points: const [
+            ChartDataPoint(x: 0, y: 10, label: 'A'),
+            ChartDataPoint(x: 1, y: 20, label: 'B'),
+            ChartDataPoint(x: 2, y: 10, label: 'C'),
+          ],
+        );
+        final to = from.copyWith(
+          points: const [
+            ChartDataPoint(x: 0, y: 10, label: 'A'),
+            ChartDataPoint(x: 0.5, y: 40, label: 'X'),
+            ChartDataPoint(x: 1, y: 20, label: 'B'),
+            ChartDataPoint(x: 2, y: 10, label: 'C'),
+          ],
+        );
+
+        final start =
+            PathSeriesTransition.frame(from: from, to: to, progress: 0).series
+                as LineChartSeries;
+
+        expect(start.points[1].y, switch (interpolation) {
+          LineInterpolation.linear => 15,
+          LineInterpolation.stepped => 10,
+          LineInterpolation.bezier => closeTo(16.37, 0.01),
+          LineInterpolation.monotone => closeTo(17.5, 0.01),
+        }, reason: interpolation.name);
+      }
+    });
+
+    test('supports multiple ordered insertions in one retained segment', () {
+      const from = LineChartSeries(id: 'line', points: fromPoints);
+      const to = LineChartSeries(
+        id: 'line',
+        points: [
+          ChartDataPoint(x: 0, y: 10, label: 'A'),
+          ChartDataPoint(x: 0.25, y: 30, label: 'X'),
+          ChartDataPoint(x: 0.75, y: 40, label: 'Y'),
+          ChartDataPoint(x: 1, y: 20, label: 'B'),
+        ],
+      );
+
+      final start = PathSeriesTransition.frame(from: from, to: to, progress: 0);
+
+      expect(PathSeriesTransition.isCompatible(from, to), isTrue);
+      expect((start.series as LineChartSeries).points.map((point) => point.y), [
+        10,
+        12.5,
+        17.5,
+        20,
+      ]);
+      expect(start.targetPointIndices, [0, 1, 2, 3]);
+    });
+
+    test('rejects mixed interior replacement and retained reordering', () {
+      const from = LineChartSeries(
+        id: 'line',
+        points: [
+          ChartDataPoint(x: 0, y: 10, label: 'A'),
+          ChartDataPoint(x: 0.33, y: 20, label: 'X'),
+          ChartDataPoint(x: 0.66, y: 25, label: 'Z'),
+          ChartDataPoint(x: 1, y: 30, label: 'B'),
+        ],
+      );
+      const replacedInside = LineChartSeries(
+        id: 'line',
+        points: [
+          ChartDataPoint(x: 0, y: 15, label: 'A'),
+          ChartDataPoint(x: 0.5, y: 25, label: 'Y'),
+          ChartDataPoint(x: 1, y: 35, label: 'B'),
+        ],
+      );
       const reordered = LineChartSeries(
         id: 'line',
         points: [
-          ChartDataPoint(x: 1, y: 40, label: 'B'),
+          ChartDataPoint(x: 1, y: 35, label: 'B'),
+          ChartDataPoint(x: 0, y: 15, label: 'A'),
+        ],
+      );
+
+      expect(PathSeriesTransition.isCompatible(from, replacedInside), isFalse);
+      expect(PathSeriesTransition.isCompatible(from, reordered), isFalse);
+    });
+
+    test('rejects unbracketed or out-of-segment interior insertion', () {
+      const from = LineChartSeries(id: 'line', points: fromPoints);
+      const invalidX = LineChartSeries(
+        id: 'line',
+        points: [
           ChartDataPoint(x: 0, y: 30, label: 'A'),
+          ChartDataPoint(x: 2, y: 35, label: 'X'),
+          ChartDataPoint(x: 1, y: 40, label: 'B'),
         ],
       );
       const changedInterpolation = LineChartSeries(
@@ -273,8 +414,7 @@ void main() {
         interpolation: LineInterpolation.stepped,
       );
 
-      expect(PathSeriesTransition.isCompatible(from, insertedInside), isFalse);
-      expect(PathSeriesTransition.isCompatible(from, reordered), isFalse);
+      expect(PathSeriesTransition.isCompatible(from, invalidX), isFalse);
       expect(
         PathSeriesTransition.isCompatible(from, changedInterpolation),
         isFalse,

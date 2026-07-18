@@ -377,6 +377,52 @@ void main() {
     expect(topologySeries.points.last.x, closeTo(7.5, 0.05));
     await tester.pumpAndSettle();
 
+    final backfill = find.byKey(const ValueKey('line-backfill-point'));
+    await tester.ensureVisible(backfill);
+    expect(find.text('Add backfill'), findsOneWidget);
+    await tester.tap(backfill);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+    topologySeries =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-observed')
+                .series
+            as LineChartSeries;
+    expect(topologySeries.points, hasLength(9));
+    expect(
+      topologySeries.points.singleWhere((point) => point.label == 'Backfill').x,
+      closeTo(3.5, 0.05),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Remove backfill'), findsOneWidget);
+
+    await tester.tap(backfill);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+    topologySeries =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-observed')
+                .series
+            as LineChartSeries;
+    expect(topologySeries.points, hasLength(9));
+    expect(
+      topologySeries.points.where((point) => point.label == 'Backfill'),
+      hasLength(1),
+    );
+    await tester.pumpAndSettle();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(
+      (chart.series.first as LineChartSeries).points.where(
+        (point) => point.label == 'Backfill',
+      ),
+      isEmpty,
+    );
+    expect(find.text('Add backfill'), findsOneWidget);
+
     final rollWindow = find.byKey(const ValueKey('line-roll-window'));
     final workbench = tester.widget<BravenChartWorkbench>(
       find.byKey(const ValueKey('line-workbench')),
@@ -443,8 +489,9 @@ void main() {
 
     expect(find.byKey(const ValueKey('area-add-point')), findsOneWidget);
     expect(find.byKey(const ValueKey('area-remove-point')), findsOneWidget);
-    final rollWindow = find.byKey(const ValueKey('area-roll-window'));
-    tester.widget<OutlinedButton>(rollWindow).onPressed!();
+    final backfill = find.byKey(const ValueKey('area-backfill-point'));
+    expect(backfill, findsOneWidget);
+    tester.widget<OutlinedButton>(backfill).onPressed!();
     await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
@@ -452,7 +499,38 @@ void main() {
     final renderBox = tester.allRenderObjects
         .whereType<ChartRenderBox>()
         .single;
-    final area =
+    var area =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-volume')
+                .series
+            as AreaChartSeries;
+    expect(area.points, hasLength(9));
+    expect(
+      area.points.singleWhere((point) => point.label == 'Backfill').x,
+      closeTo(3.5, 0.05),
+    );
+    await tester.pumpAndSettle();
+
+    tester.widget<OutlinedButton>(backfill).onPressed!();
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle();
+    area = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<AreaChartSeries>()
+        .first;
+    expect(area.points, hasLength(8));
+    expect(area.points.where((point) => point.label == 'Backfill'), isEmpty);
+
+    final rollWindow = find.byKey(const ValueKey('area-roll-window'));
+    tester.widget<OutlinedButton>(rollWindow).onPressed!();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+
+    area =
         renderBox.debugElements
                 .whereType<SeriesElement>()
                 .firstWhere((element) => element.series.id == 'motion-volume')
@@ -489,6 +567,58 @@ void main() {
         expect(rect.right, lessThanOrEqualTo(viewportWidth));
       }
       expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('compact Line and Area Motion sheets run backfill updates', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final entry in const <(String, Widget)>[
+      ('line', LineChartsPage()),
+      ('area', AreaChartsPage()),
+    ]) {
+      final (family, page) = entry;
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: page)));
+      await tester.pump(const Duration(milliseconds: 300));
+      final motion = find.descendant(
+        of: find.byKey(ValueKey('$family-preset-picker')),
+        matching: find.text('Motion'),
+      );
+      await tester.ensureVisible(motion);
+      await tester.pumpAndSettle();
+      await tester.tap(motion);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('chart-page-options-button')));
+      await tester.pumpAndSettle();
+
+      final backfill = find.byKey(ValueKey('$family-backfill-point'));
+      await tester.ensureVisible(backfill);
+      await tester.pumpAndSettle();
+      final rect = tester.getRect(backfill);
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(390));
+      expect(rect.top, greaterThanOrEqualTo(0));
+      expect(rect.bottom, lessThanOrEqualTo(844));
+
+      await tester.tap(backfill);
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      expect(
+        chart.series.first.points.where((point) => point.label == 'Backfill'),
+        hasLength(1),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
     }
   });
 }
