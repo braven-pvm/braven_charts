@@ -88,6 +88,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct full-disc and center-opening constraints.
 
 ### Fixed
+- Effective chart-document revisions no longer advance for layout-only parent
+  rebuilds or responsive constraint changes. Fresh Data and Source snapshots
+  therefore remain current after first layout and resize, while actual series,
+  axes, annotations, themes, interactions, dimensions, and other portable
+  configuration changes still mark them stale.
 - Source capture now preserves Pie and Donut formatter descriptors without
   routing radial series through Cartesian annotation-copy paths or casting
   Donut series to Pie.

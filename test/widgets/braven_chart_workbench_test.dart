@@ -354,6 +354,58 @@ void main() {
     expect(workbenchController.generatedSource?.source, contains('y: 42.0'));
   });
 
+  testWidgets(
+    'keeps generated source current across layout-only parent rebuilds',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          width: 720,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+          chartValue: 11,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final generated = workbenchController.generatedSource;
+      expect(generated, isNotNull);
+      expect(workbenchController.sourceIsStale, isFalse);
+
+      await tester.pumpWidget(
+        _host(
+          width: 840,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+          chartValue: 11,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(workbenchController.generatedSource, same(generated));
+      expect(workbenchController.sourceIsStale, isFalse);
+      expect(
+        find.text('The chart changed after this source was generated.'),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('exposes Source as a 48px keyboard-operable presentation', (
     tester,
   ) async {
