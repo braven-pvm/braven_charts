@@ -4,7 +4,8 @@
 **Original PR:** #35 (merged)
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
-**Next lane:** Per-series motion timing (Sprint 8; review needed)
+**Sprint 8 promotion:** PR #38 open
+**Next lane:** Stable-identity interior topology motion (Sprint 9; in progress)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -172,7 +173,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 8 — Per-series motion timing
 
-**Status:** Local review
+**Status:** PR open
 
 ### Product outcome
 
@@ -255,4 +256,56 @@ The detailed proposal is recorded in
   404 response. Compact widget coverage asserts the header actions and
   workbench remain inside a 390 px viewport.
 - The root release build is available for joint review on port 8097. No push,
-  PR, or merge has been performed.
+  PR, or merge had been performed when the local record was captured.
+- Local review was approved on 2026-07-18. PR #38 was opened against `master`
+  with the hosted package-quality gate in progress.
+
+## Sprint 9 — Stable-identity interior topology motion
+
+**Status:** In progress
+
+### Product outcome
+
+Line and Area snapshot updates can animate ordered points inserted into or
+removed from the interior of a path. This covers late-arriving and corrected
+samples without replaying the whole series, while retaining the existing
+canonical target-data and interaction contracts.
+
+The detailed contract is recorded in
+`../specs/2026-07-18-line-area-interior-topology-motion-design.md`.
+
+### Scope
+
+- Extend the private `PathSeriesTransition` plan; add no new public model or
+  animation controller.
+- Support insertion-only or removal-only interior edits with at least two
+  ordered retained stable identities bracketing every interior edit.
+- Start inserted points on the phase-start path at their target X and collapse
+  removed points onto the target path at their source X, using the configured
+  interpolation geometry.
+- Preserve render-to-target point maps, target bounds, focus and selection,
+  linked workbench identity, artifacts, interruption continuity, reduced
+  motion, streaming exclusion, and Sprint 8 per-series timing windows.
+- Add one compact backfill action to the existing Line and Area Motion presets
+  while retaining 48 px targets, 8 px action spacing, and chart-first layout.
+
+### Explicit exclusions
+
+- A single snapshot that both inserts and removes interior identities.
+- Arbitrary retained-identity reordering or duplicate/ambiguous identities.
+- Interpolation-mode morphing, axis-domain animation, or path-shape tween APIs.
+- Scatter, Bar, Pie, Donut, polar families, or controller-fed streaming tails.
+- New artifact schema: artifacts continue to persist canonical target data.
+
+### Acceptance gates
+
+- Pure frames prove exact start anchors, intermediate geometry, exact targets,
+  canonical maps, and fallback for mixed/reordered edits across Line and Area.
+- Real render-path tests prove interpolation-aware interior insertion/removal,
+  delayed series timing, interruption continuity, non-interactive exits,
+  retained focus/selection, target bounds, reduced motion, and artifacts.
+- Motion showcase actions exercise actual backfill insertion and removal in
+  wide and compact Chart/Data/Split compositions.
+- Package/showcase analyzers and complete suites, Dartdoc, pub.dev dry run,
+  deployment-base and root release builds, and direct browser review pass
+  before promotion.
