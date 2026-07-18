@@ -5,7 +5,7 @@
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
 **Sprint 8 promotion:** PR #38 open
-**Next lane:** Stable-identity interior topology motion (Sprint 9; in progress)
+**Next lane:** Stable-identity interior topology motion (Sprint 9; local review)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -262,7 +262,7 @@ The detailed proposal is recorded in
 
 ## Sprint 9 — Stable-identity interior topology motion
 
-**Status:** In progress
+**Status:** Local review
 
 ### Product outcome
 
@@ -309,3 +309,25 @@ The detailed contract is recorded in
 - Package/showcase analyzers and complete suites, Dartdoc, pub.dev dry run,
   deployment-base and root release builds, and direct browser review pass
   before promotion.
+
+### Sprint 9 verification record
+
+- Pure transition coverage passes for linear, stepped, Bezier, and monotone
+  insertion sampling, multiple interior entries, removal collapse, canonical
+  maps, exact targets, and explicit mixed/reordered/invalid fallbacks.
+- Real Line and Area render-path coverage passes for independent timing,
+  visual-only exits, canonical artifacts, cleared exiting state, and in-flight
+  interruption from the exact rendered geometry.
+- Package analyzer: clean; complete package suite: 1,813 tests passed.
+  Showcase analyzer: clean; complete showcase suite: 135 tests passed.
+- Dartdoc 9.0.8 generated the public library with zero warnings and errors.
+  The Flutter-bundled Dartdoc 9.0.4 has a reproducible internal `RangeError`
+  on the unchanged Sprint 8 branch, so the newer installed patch was used.
+- The pub.dev dry run reports zero warnings. Deployment-base and root release
+  builds pass with `/braven_charts/` and `/` verified respectively.
+- Wide release captures render both direct Motion/Split routes nonblank. Widget
+  coverage runs the backfill action for Line and Area in both wide and 390 px
+  compact option surfaces, with 48 px actions kept inside the viewport.
+- The root release build is available on port 8097 for joint review. This lane
+  remains local and stacked on Sprint 8 / PR #38; it has not been pushed or
+  opened as a PR.

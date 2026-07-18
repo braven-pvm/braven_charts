@@ -1,6 +1,6 @@
 # Line and Area Interior Topology Motion
 
-**Status:** In progress
+**Status:** Local review
 **Roadmap:** Sprint 9 of Line and Area Product Parity
 **Implementation lane:** `feature/line-area-interior-topology`
 **Prerequisite:** Sprint 8 / PR #38
