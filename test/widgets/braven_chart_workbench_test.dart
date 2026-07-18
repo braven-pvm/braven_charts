@@ -870,6 +870,85 @@ void main() {
     });
   });
 
+  testWidgets('Shift activation selects a range across snapshot refreshes', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [
+                ChartDataPoint(x: 0, y: 220),
+                ChartDataPoint(x: 1, y: 230),
+                ChartDataPoint(x: 2, y: 240),
+                ChartDataPoint(x: 3, y: 250),
+              ],
+            ),
+            LineChartSeries(
+              id: 'heart-rate',
+              points: [
+                ChartDataPoint(x: 0, y: 130),
+                ChartDataPoint(x: 1, y: 135),
+                ChartDataPoint(x: 2, y: 140),
+                ChartDataPoint(x: 3, y: 145),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Finder rowAt(int index) => find.byKey(
+      ValueKey(workbenchController.tableModel!.wideRows[index].rowId),
+    );
+
+    await tester.tap(rowAt(0));
+    await tester.pumpAndSettle();
+    final targetDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: rowAt(2),
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    targetDetector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, {
+      for (final seriesId in const ['power', 'heart-rate'])
+        for (var pointIndex = 0; pointIndex <= 2; pointIndex++)
+          ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
+    });
+    expect(find.textContaining('6 selected'), findsOneWidget);
+    expect(workbenchController.tableIsStale, isFalse);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(rowAt(3));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, hasLength(8));
+    expect(find.textContaining('8 selected'), findsOneWidget);
+  });
+
   testWidgets('row hover temporarily overrides and restores keyboard focus', (
     tester,
   ) async {

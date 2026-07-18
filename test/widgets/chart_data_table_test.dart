@@ -325,6 +325,76 @@ void main() {
     expect(find.textContaining('selected'), findsNothing);
   });
 
+  testWidgets(
+    'Shift activation spans sorted shared-X rows and preserves additivity',
+    (tester) async {
+      final controller = ChartTableController()
+        ..sortBy('x')
+        ..sortBy('x');
+      addTearDown(controller.dispose);
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _series('power', [
+            _point(0, 220),
+            _point(1, 230),
+            _point(2, 240),
+            _point(3, 250),
+          ]),
+          _series('heart-rate', [
+            _point(0, 130),
+            _point(1, 135),
+            _point(2, 140),
+            _point(3, 145),
+          ]),
+        ]),
+      );
+      final activations = <ChartTableRowActivationDetails>[];
+
+      await tester.pumpWidget(
+        _host(
+          ChartDataTable(
+            model: model,
+            controller: controller,
+            onRowActivation: activations.add,
+          ),
+        ),
+      );
+
+      Finder rowAtSourceIndex(int index) =>
+          find.byKey(ValueKey(model.wideRows[index].rowId));
+
+      await tester.tap(rowAtSourceIndex(3));
+      await tester.pump();
+      expect(activations.single.points, const [
+        ChartPointRef(seriesId: 'power', pointIndex: 3),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 3),
+      ]);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tap(rowAtSourceIndex(1));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(activations.last.additive, isFalse);
+      expect(activations.last.points, const [
+        ChartPointRef(seriesId: 'power', pointIndex: 3),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 3),
+        ChartPointRef(seriesId: 'power', pointIndex: 2),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 2),
+        ChartPointRef(seriesId: 'power', pointIndex: 1),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+      ]);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tap(rowAtSourceIndex(0));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(activations.last.additive, isTrue);
+      expect(activations.last.points, hasLength(8));
+    },
+  );
+
   testWidgets('selecting all virtualized rows keeps the viewport in place', (
     tester,
   ) async {

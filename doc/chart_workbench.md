@@ -250,6 +250,9 @@ The workbench enables safe row linking by default:
 - click or Enter replaces the durable point selection;
 - Ctrl/Command-click or Ctrl/Command-Enter additively selects an unselected
   row and removes every point represented by an already selected row;
+- Shift-click or Shift-Enter replaces selection with the contiguous row range
+  from the last unmodified activation, following the current table sort;
+- Ctrl/Command+Shift activation additively selects that sorted row range;
 - Ctrl/Command+A selects every point in the current sorted table projection,
   while Escape clears durable selection and keeps row focus in place;
 - selected chart points are mirrored into the table with a themed row fill,
@@ -338,7 +341,8 @@ Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
 `onTableRowFocused`, `onTableRowFocusCleared`, `onTableRowHoverChanged`, or
 `onTableRowActivation` to replace individual defaults with product-specific
 behavior. `onTableRowActivation` receives modifier-aware
-`ChartTableRowActivationDetails` and takes precedence over the legacy
+`ChartTableRowActivationDetails`; Shift ranges arrive as the complete ordered
+point collection and take precedence over the legacy
 `onTableRowActivated` callback when both are supplied. Override
 `onTableSelectAllPoints` or `onTableSelectionCleared` when the host owns those
 keyboard selection commands. Use

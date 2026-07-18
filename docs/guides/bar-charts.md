@@ -519,6 +519,9 @@ Data and Split rows use the same multi-selection convention as bars:
 Ctrl/Command-click or Ctrl/Command-Enter adds a row's points to the durable
 selection, and repeating the modified activation removes the complete row.
 For shared-X rows this toggles every populated series point together.
+Shift-click or Shift-Enter selects the contiguous range from the last ordinary
+activation in the current sorted order. Add Ctrl/Command to preserve the
+existing selection while applying that complete range.
 The table summary reports the selected point count and keeps a compact Clear
 selection action beside Copy and Export, including at narrow Split widths.
 With a row focused, Ctrl/Command+A selects every point in the current sorted

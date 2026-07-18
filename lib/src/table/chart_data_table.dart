@@ -104,6 +104,10 @@ class ChartDataTable extends StatefulWidget {
 
   /// Called by row click or Enter with points and modifier-key state.
   ///
+  /// Shift activation expands [ChartTableRowActivationDetails.points] from the
+  /// most recent unmodified activation through the current row in displayed
+  /// sort order. Ctrl/Command+Shift preserves the additive flag.
+  ///
   /// This takes precedence over [onRowActivated] when both are supplied.
   final ChartTableRowActivationCallback? onRowActivation;
 
@@ -203,6 +207,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
   final _horizontalController = ScrollController();
   final _verticalController = ScrollController();
   final _rowFocusNodes = <String, FocusNode>{};
+  String? _selectionAnchorRowId;
   ChartPointRef? _pendingPointReveal;
   bool _pointRevealScheduled = false;
 
@@ -479,11 +484,14 @@ class _ChartDataTableState extends State<ChartDataTable> {
       context,
       widget.theme ?? Theme.of(context).extension<ChartDataTableTheme>(),
     );
-    final displayedPoints = _displayedPoints(
+    final displayedRows = _displayedRows(
       model,
       longRows: longRows,
       wideRows: wideRows,
       pieRows: pieRows,
+    );
+    final displayedPoints = List<ChartPointRef>.unmodifiable(
+      displayedRows.expand((row) => row.points),
     );
 
     return LayoutBuilder(
@@ -585,6 +593,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                                     longRows: longRows,
                                     wideRows: wideRows,
                                     pieRows: pieRows,
+                                    displayedRows: displayedRows,
                                     displayedPoints: displayedPoints,
                                     theme: tableTheme,
                                   ),
@@ -605,21 +614,58 @@ class _ChartDataTableState extends State<ChartDataTable> {
     );
   }
 
-  List<ChartPointRef> _displayedPoints(
+  List<_DisplayedTableRow> _displayedRows(
     ChartTableModel model, {
     required List<ChartTableLongRow> longRows,
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
   }) => List.unmodifiable(switch (model.projectionKind) {
     ChartTableProjectionKind.cartesianLong => [
-      for (final row in longRows) row.reference,
+      for (final row in longRows)
+        _DisplayedTableRow(row.rowId, [row.reference]),
     ],
     ChartTableProjectionKind.cartesianWide => [
       for (final row in wideRows)
-        for (final cell in row.cells.values) cell.reference,
+        _DisplayedTableRow(
+          row.rowId,
+          row.cells.values.map((cell) => cell.reference),
+        ),
     ],
-    ChartTableProjectionKind.pie => [for (final row in pieRows) row.reference],
+    ChartTableProjectionKind.pie => [
+      for (final row in pieRows) _DisplayedTableRow(row.rowId, [row.reference]),
+    ],
   });
+
+  void _activateRow(
+    String rowId,
+    List<_DisplayedTableRow> displayedRows,
+    ChartTableRowActivationDetails details,
+  ) {
+    final callback = widget.onRowActivation;
+    if (callback == null) return;
+    final anchorIndex = _selectionAnchorRowId == null
+        ? -1
+        : displayedRows.indexWhere((row) => row.id == _selectionAnchorRowId);
+    final currentIndex = displayedRows.indexWhere((row) => row.id == rowId);
+    if (!HardwareKeyboard.instance.isShiftPressed ||
+        anchorIndex < 0 ||
+        currentIndex < 0) {
+      _selectionAnchorRowId = rowId;
+      callback(details);
+      return;
+    }
+    final start = math.min(anchorIndex, currentIndex);
+    final end = math.max(anchorIndex, currentIndex);
+    callback(
+      ChartTableRowActivationDetails(
+        points: [
+          for (var index = start; index <= end; index++)
+            ...displayedRows[index].points,
+        ],
+        additive: details.additive,
+      ),
+    );
+  }
 
   Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
     if (model.projectionKind == ChartTableProjectionKind.pie) {
@@ -801,6 +847,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableLongRow> longRows,
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
+    required List<_DisplayedTableRow> displayedRows,
     required List<ChartPointRef> displayedPoints,
     required _ResolvedTableTheme theme,
   }) {
@@ -838,7 +885,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onFocused: widget.onRowFocused,
         onFocusCleared: widget.onRowFocusCleared,
         onHoverChanged: widget.onRowHoverChanged,
-        onActivation: widget.onRowActivation,
+        onActivation: widget.onRowActivation == null
+            ? null
+            : (details) => _activateRow(row.rowId, displayedRows, details),
         onActivated: widget.onRowActivated,
         children: [
           if (widget.showCopyRowAction)
@@ -917,7 +966,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
         onFocused: widget.onRowFocused,
         onFocusCleared: widget.onRowFocusCleared,
         onHoverChanged: widget.onRowHoverChanged,
-        onActivation: widget.onRowActivation,
+        onActivation: widget.onRowActivation == null
+            ? null
+            : (details) => _activateRow(row.rowId, displayedRows, details),
         onActivated: widget.onRowActivated,
         children: [
           if (widget.showCopyRowAction)
@@ -978,7 +1029,9 @@ class _ChartDataTableState extends State<ChartDataTable> {
       onFocused: widget.onRowFocused,
       onFocusCleared: widget.onRowFocusCleared,
       onHoverChanged: widget.onRowHoverChanged,
-      onActivation: widget.onRowActivation,
+      onActivation: widget.onRowActivation == null
+          ? null
+          : (details) => _activateRow(row.rowId, displayedRows, details),
       onActivated: widget.onRowActivated,
       children: [
         if (widget.showCopyRowAction)
@@ -1487,6 +1540,14 @@ class _ClearTableSelectionIntent extends Intent {
   const _ClearTableSelectionIntent();
 }
 
+class _DisplayedTableRow {
+  _DisplayedTableRow(this.id, Iterable<ChartPointRef> points)
+    : points = List.unmodifiable(points);
+
+  final String id;
+  final List<ChartPointRef> points;
+}
+
 class _FocusableTableRow extends StatefulWidget {
   const _FocusableTableRow({
     super.key,
@@ -1577,6 +1638,18 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
               const ActivateIntent(),
           const SingleActivator(LogicalKeyboardKey.enter, meta: true):
               const ActivateIntent(),
+          const SingleActivator(LogicalKeyboardKey.enter, shift: true):
+              const ActivateIntent(),
+          const SingleActivator(
+            LogicalKeyboardKey.enter,
+            control: true,
+            shift: true,
+          ): const ActivateIntent(),
+          const SingleActivator(
+            LogicalKeyboardKey.enter,
+            meta: true,
+            shift: true,
+          ): const ActivateIntent(),
           if (widget.onSelectAllPoints != null)
             const SingleActivator(LogicalKeyboardKey.keyA, control: true):
                 const _SelectAllTablePointsIntent(),
