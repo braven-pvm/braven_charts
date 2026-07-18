@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/chart_theme.dart';
 import '../models/legend_style.dart';
 import '../models/radial_category_series.dart';
+import '../models/radial_legend_item.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 
 /// Native, slice-aware legend used by radial charts.
@@ -19,6 +20,7 @@ class PieChartLegend extends StatelessWidget {
     required this.chartTheme,
     required this.selectedPointIndices,
     required this.onSliceTap,
+    this.itemBuilder,
     this.disableAnimations = false,
   });
 
@@ -33,6 +35,12 @@ class PieChartLegend extends StatelessWidget {
 
   /// Invoked with the source point index of an activated legend item.
   final ValueChanged<int> onSliceTap;
+
+  /// Optional host builder for the visible contents of every legend item.
+  ///
+  /// Layout, activation, and assistive semantics remain package-owned. The
+  /// returned widget replaces the default marker, category, value, and share.
+  final RadialLegendItemBuilder? itemBuilder;
 
   /// Whether selection transitions must complete immediately.
   final bool disableAnimations;
@@ -50,28 +58,41 @@ class PieChartLegend extends StatelessWidget {
           key: ValueKey<String>(
             'pie-legend-item-${slice.sourcePointIndices.join('-')}',
           ),
-          category: slice.point.label!.trim(),
-          value: slice.point.y,
-          unit: series.unit,
-          share: slice.point.y / total,
-          color: PieSliceColorResolver.resolve(
-            series: series,
-            theme: chartTheme,
-            point: slice.point,
-            visibleIndex: visibleIndex,
-          ),
-          selectionColor: chartTheme.focusBorderColor,
-          textStyle: style.textStyle,
           markerShape: style.markerShape,
           markerSize: style.markerSize,
           markerLineWidth: style.markerLineWidth,
           markerLabelSpacing: style.markerLabelSpacing,
-          selected: slice.sourcePointIndices.every(
-            selectedPointIndices.contains,
+          itemBuilder: itemBuilder,
+          data: RadialLegendItemData(
+            seriesId: series.id,
+            seriesName: series.name,
+            unit: series.unit,
+            visibleIndex: visibleIndex,
+            pointIndex: slice.pointIndex,
+            sourcePointIndices: slice.sourcePointIndices,
+            sourcePoints: [
+              for (final pointIndex in slice.sourcePointIndices)
+                series.points[pointIndex],
+            ],
+            point: slice.point,
+            category: slice.point.label!.trim(),
+            value: slice.point.y,
+            share: slice.point.y / total,
+            color: PieSliceColorResolver.resolve(
+              series: series,
+              theme: chartTheme,
+              point: slice.point,
+              visibleIndex: visibleIndex,
+            ),
+            selectionColor: chartTheme.focusBorderColor,
+            defaultTextStyle: style.textStyle,
+            selected: slice.sourcePointIndices.every(
+              selectedPointIndices.contains,
+            ),
+            animationDuration: disableAnimations
+                ? Duration.zero
+                : chartTheme.animationTheme.interactionDuration,
           ),
-          duration: disableAnimations
-              ? Duration.zero
-              : chartTheme.animationTheme.interactionDuration,
           onTap: () => onSliceTap(slice.pointIndex),
         ),
     ];
@@ -121,56 +142,34 @@ class PieChartLegend extends StatelessWidget {
 class _PieLegendItem extends StatelessWidget {
   const _PieLegendItem({
     super.key,
-    required this.category,
-    required this.value,
-    required this.unit,
-    required this.share,
-    required this.color,
-    required this.selectionColor,
-    required this.textStyle,
     required this.markerShape,
     required this.markerSize,
     required this.markerLineWidth,
     required this.markerLabelSpacing,
-    required this.selected,
-    required this.duration,
+    required this.data,
+    required this.itemBuilder,
     required this.onTap,
   });
 
-  final String category;
-  final double value;
-  final String? unit;
-  final double share;
-  final Color color;
-  final Color selectionColor;
-  final TextStyle textStyle;
   final LegendMarkerShape markerShape;
   final double markerSize;
   final double markerLineWidth;
   final double markerLabelSpacing;
-  final bool selected;
-  final Duration duration;
+  final RadialLegendItemData data;
+  final RadialLegendItemBuilder? itemBuilder;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final valueText =
-        '${value.toStringAsFixed(2)}${unit == null || unit!.isEmpty ? '' : ' $unit'}';
-    final shareText = '${(share * 100).toStringAsFixed(1)}%';
-    final semanticLabel =
-        '$category, $valueText, ${(share * 100).toStringAsFixed(1)} percent, '
-        '${selected ? 'selected' : 'not selected'}';
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: semanticLabel,
-      child: Tooltip(
-        message: '$category\n$valueText · $shareText',
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: AnimatedContainer(
-            duration: duration,
+    final valueText = data.valueLabel;
+    final shareText = data.shareLabel;
+    final textStyle = data.defaultTextStyle;
+    final selectionColor = data.selectionColor;
+    final selected = data.selected;
+    final customContent = itemBuilder?.call(context, data);
+    final interactiveContent = customContent == null
+        ? AnimatedContainer(
+            duration: data.animationDuration,
             constraints: const BoxConstraints(minHeight: 48, maxWidth: 260),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -187,7 +186,7 @@ class _PieLegendItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _PieLegendMarker(
-                  color: color,
+                  color: data.color,
                   borderColor: textStyle.color ?? Colors.black87,
                   selectionColor: selectionColor,
                   shape: markerShape,
@@ -202,7 +201,7 @@ class _PieLegendItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        category,
+                        data.category,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textStyle.copyWith(fontWeight: FontWeight.w600),
@@ -220,9 +219,27 @@ class _PieLegendItem extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
+          )
+        : ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: customContent,
+          );
+    final interactive = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: interactiveContent,
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      label: data.semanticLabel,
+      child: customContent == null
+          ? Tooltip(
+              message: '${data.category}\n$valueText · $shareText',
+              child: interactive,
+            )
+          : interactive,
     );
   }
 }

@@ -54,6 +54,7 @@ import 'models/legend_style.dart';
 import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
 import 'models/radial_category_series.dart';
+import 'models/radial_legend_item.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -130,6 +131,7 @@ class BravenChartPlus extends StatefulWidget {
     this.subtitle,
     this.showLegend = true,
     this.legendStyle,
+    this.radialLegendItemBuilder,
     this.showToolbar = false,
     this.interactiveAnnotations = true,
     this.isLoading = false,
@@ -181,6 +183,7 @@ class BravenChartPlus extends StatefulWidget {
     String? title,
     String? subtitle,
     bool showLegend = true,
+    RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
     bool isLoading = false,
@@ -257,6 +260,7 @@ class BravenChartPlus extends StatefulWidget {
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
+      radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
       isLoading: isLoading,
@@ -304,6 +308,7 @@ class BravenChartPlus extends StatefulWidget {
     String? title,
     String? subtitle,
     bool showLegend = true,
+    RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
     bool isLoading = false,
@@ -385,6 +390,7 @@ class BravenChartPlus extends StatefulWidget {
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
+      radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
       isLoading: isLoading,
@@ -430,6 +436,7 @@ class BravenChartPlus extends StatefulWidget {
     String? title,
     String? subtitle,
     bool showLegend = true,
+    RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
     bool isLoading = false,
@@ -509,6 +516,7 @@ class BravenChartPlus extends StatefulWidget {
       title: title,
       subtitle: subtitle,
       showLegend: showLegend,
+      radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
       isLoading: isLoading,
@@ -748,21 +756,17 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Whether to show the legend.
   ///
-  /// Legend displays all series with their colors and names.
-  /// When [legendStyle] is provided, an overlay legend is rendered
-  /// within the chart area (draggable, configurable styling).
-  /// When [legendStyle] is null, a simple widget legend is shown
-  /// below the chart.
+  /// Cartesian charts use their series legend. Pie and Donut charts use a
+  /// native, slice-aware Flutter widget legend that selects slices without
+  /// hiding data.
   final bool showLegend;
 
-  /// Style configuration for the overlay legend.
+  /// Optional per-chart style for the Cartesian overlay legend.
   ///
-  /// When provided, the legend is rendered as a draggable overlay
-  /// within the chart area, using the professional styling from
-  /// [LegendStyle]. This is the recommended approach for production
-  /// charts.
-  ///
-  /// When null, the legacy widget-based legend is shown below the chart.
+  /// Radial widget legends resolve [LegendStyle] through
+  /// [ChartTheme.legendStyle] so their position and appearance remain part of
+  /// the portable chart theme. Use [radialLegendItemBuilder] only when the
+  /// host needs custom runtime item widgets.
   ///
   /// Example:
   /// ```dart
@@ -777,6 +781,18 @@ class BravenChartPlus extends StatefulWidget {
   /// )
   /// ```
   final LegendStyle? legendStyle;
+
+  /// Builds the visible contents of each Pie or Donut legend item.
+  ///
+  /// Braven Charts keeps the legend layout, tap target, selection action, and
+  /// assistive semantics around the returned widget. The builder receives the
+  /// resolved slice color, value, share, source points, and selection state.
+  /// It is ignored for Cartesian series.
+  ///
+  /// This is a runtime-only binding. Widget builders are not serialized into
+  /// chart artifacts; portable documents retain legend visibility, style, and
+  /// data, and the hydrating host must bind the builder again.
+  final RadialLegendItemBuilder? radialLegendItemBuilder;
 
   /// Whether to show the toolbar.
   ///
@@ -5031,6 +5047,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               if (ref.seriesId == radialSeries.id) ref.pointIndex,
           },
           onSliceTap: _activateRadialPointIndex,
+          itemBuilder: widget.radialLegendItemBuilder,
           disableAnimations: _disableAnimations,
         );
         children.add(

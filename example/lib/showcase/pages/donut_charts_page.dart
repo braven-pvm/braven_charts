@@ -7,6 +7,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../widgets/options_panel.dart';
+import '../widgets/radial_legend_value_card.dart';
 import '../widgets/standard_options.dart';
 
 /// Public showcase for first-class Donut geometry and portable center content.
@@ -33,6 +34,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   bool _clockwise = true;
   bool _showLabels = true;
   bool _showLegend = true;
+  _DonutLegendContent _legendContent = _DonutLegendContent.standard;
   bool _showCenterContent = true;
   bool _groupSmallSlices = false;
   double _groupingMinimumShare = 0.07;
@@ -348,6 +350,9 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       subtitle: _story.chartDescription,
       bravenChartController: controller,
       showLegend: _showLegend,
+      radialLegendItemBuilder: _legendContent == _DonutLegendContent.valueCards
+          ? _buildValueCardLegendItem
+          : null,
       theme: ChartTheme.light,
       interactionConfig: const InteractionConfig(
         crosshair: CrosshairConfig(enabled: false),
@@ -364,6 +369,14 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       series: [_buildSeries()],
     );
   }
+
+  Widget _buildValueCardLegendItem(
+    BuildContext context,
+    RadialLegendItemData item,
+  ) => RadialLegendValueCard(
+    key: ValueKey('donut-custom-legend-item-${item.visibleIndex}'),
+    item: item,
+  );
 
   DonutChartSeries _buildSeries() {
     return DonutChartSeries.fromMap(
@@ -745,6 +758,15 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             value: _showLegend,
             onChanged: (value) => setState(() => _showLegend = value),
           ),
+          if (_showLegend)
+            EnumOption<_DonutLegendContent>(
+              key: const ValueKey('donut-legend-content'),
+              label: 'Legend content',
+              value: _legendContent,
+              values: _DonutLegendContent.values,
+              labelBuilder: _legendContentName,
+              onChanged: (value) => setState(() => _legendContent = value),
+            ),
         ],
       ),
     ];
@@ -1049,6 +1071,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             'Slices, legends, tables, controllers, and restored charts resolve the same ChartPointRef.',
       ),
       _DonutFeature(
+        icon: Icons.view_list_outlined,
+        title: 'Host-built legend items',
+        description:
+            'Replace every visible legend item with a Flutter widget while the package retains responsive layout, selection, and semantics.',
+      ),
+      _DonutFeature(
         icon: Icons.call_merge_outlined,
         title: 'Group without losing detail',
         description:
@@ -1169,6 +1197,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _animationMode = PieAnimationMode.grow;
           _centerValueMode = DonutCenterValueMode.selectedOrTotal;
           _centerStyle = _DonutCenterStyle.theme;
+          _legendContent = _DonutLegendContent.standard;
           _groupSmallSlices = false;
         case _DonutStory.progress:
           _innerRadiusFactor = 0.68;
@@ -1180,6 +1209,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _animationMode = PieAnimationMode.sweep;
           _centerValueMode = DonutCenterValueMode.custom;
           _centerStyle = _DonutCenterStyle.accent;
+          _legendContent = _DonutLegendContent.valueCards;
           _groupSmallSlices = false;
         case _DonutStory.reach:
           _innerRadiusFactor = 0.3;
@@ -1191,6 +1221,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _animationMode = PieAnimationMode.fade;
           _centerValueMode = DonutCenterValueMode.total;
           _centerStyle = _DonutCenterStyle.compact;
+          _legendContent = _DonutLegendContent.standard;
           _groupSmallSlices = false;
         case _DonutStory.grouping:
           _innerRadiusFactor = 0.58;
@@ -1202,6 +1233,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _animationMode = PieAnimationMode.sweep;
           _centerValueMode = DonutCenterValueMode.selectedOrTotal;
           _centerStyle = _DonutCenterStyle.theme;
+          _legendContent = _DonutLegendContent.standard;
           _groupSmallSlices = true;
           _groupingMinimumShare = 0.07;
       }
@@ -1220,6 +1252,11 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     PieAnimationMode.grow => 'Grow',
     PieAnimationMode.sweep => 'Sweep',
     PieAnimationMode.fade => 'Fade',
+  };
+
+  String _legendContentName(_DonutLegendContent value) => switch (value) {
+    _DonutLegendContent.standard => 'Standard details',
+    _DonutLegendContent.valueCards => 'Custom value cards',
   };
 
   void _setAnimationMode(PieAnimationMode mode) {
@@ -1278,6 +1315,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
 enum _DonutStory { contribution, progress, reach, grouping }
 
 enum _DonutCenterStyle { theme, compact, accent }
+
+enum _DonutLegendContent { standard, valueCards }
 
 extension on _DonutStory {
   String get label => switch (this) {

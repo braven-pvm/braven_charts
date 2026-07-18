@@ -388,6 +388,59 @@ legends scroll inside their safety bound instead of claiming a fixed fraction
 of the chart. `LegendPosition.center` overlays the legend and should be
 reserved for charts with deliberate empty center space.
 
+### Custom Pie and Donut legend items
+
+Radial legends are Flutter widgets rather than canvas-painted labels. Supply a
+`radialLegendItemBuilder` when the host needs complete control over the visible
+contents of each item:
+
+```dart
+BravenChartPlus(
+  series: [series],
+  showLegend: true,
+  radialLegendItemBuilder: (context, item) {
+    return AnimatedContainer(
+      duration: item.animationDuration,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: item.selected
+            ? item.selectionColor.withValues(alpha: 0.10)
+            : Colors.transparent,
+        border: Border.all(
+          color: item.selected ? item.selectionColor : Colors.transparent,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 4, height: 32, color: item.color),
+          const SizedBox(width: 8),
+          Text('${item.category}: ${item.valueLabel} (${item.shareLabel})'),
+        ],
+      ),
+    );
+  },
+)
+```
+
+The builder receives the resolved slice color, effective aggregate point,
+formatted value/share helpers, visible index, selected state, and stable source
+points. A grouped `Other` item therefore exposes every original point through
+`sourcePointIndices` and `sourcePoints` while its `point` remains the aggregate
+slice shown by the chart.
+
+The returned widget replaces the default marker and text. Braven Charts keeps
+the outer tap target, selection action, and selected/button semantics, and the
+existing `LegendStyle` still controls placement, orientation, scrolling,
+spacing, and the legend surface. Custom content must remain legible at large
+text sizes and inside the configured horizontal band or vertical rail.
+
+`radialLegendItemBuilder` is deliberately runtime-only: Dart widget callbacks
+cannot be serialized. Artifacts retain the portable radial data, legend
+visibility, and `LegendStyle`; a hydrating host binds the builder again, just
+like any other runtime callback.
+
 ## Interaction and callbacks
 
 Pie uses the existing point callbacks with the original source point and pie
@@ -438,6 +491,46 @@ controller.selectPoint(
 
 Stale revisions and invalid references return a structured
 `ChartArtifactFailure` without changing selection.
+
+## Resizable Chart, Data, and Split views
+
+Use `BravenChartWorkbench` when a Pie surface needs Chart, Data, and Split
+views. It keeps one chart mounted, derives the native table from the same
+effective document, and owns revision-safe row focus and selection linking.
+
+```dart
+final chartController = BravenChartController();
+final workbenchController = ChartWorkbenchController();
+
+BravenChartWorkbench(
+  chartController: chartController,
+  workbenchController: workbenchController,
+  initialDisplayMode: ChartDisplayMode.split,
+  tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+  autoFitTablePane: true,
+  isSplitResizable: true,
+  minimumChartPaneExtent: 360,
+  minimumTablePaneExtent: 420,
+  maximumAutoTablePaneExtent: 620,
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: [revenuePieSeries],
+  ),
+)
+```
+
+For a horizontal Split, `autoFitTablePane` gives the table the smallest width
+that reasonably fits its current columns, subject to the configured pane
+limits. The user can then drag the divider, focus it and use the arrow keys,
+or press Escape/double-click to return to auto-fit. Set `splitAxis` to
+`Axis.vertical` at compact breakpoints; automatic table-width fitting only
+applies to horizontal splits. Caller-supplied chart and workbench controllers
+remain caller-owned and must be disposed by the host.
+
+When an application renders its own mode control, set `showModeSwitcher` to
+`false` and call `workbenchController.setDisplayMode(mode)`. The chart remains
+mounted in Data mode, so its controller stays attached for artifact capture,
+selection, and host actions.
 
 ## Native data table
 

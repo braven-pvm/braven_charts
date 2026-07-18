@@ -279,6 +279,51 @@ chart has keyboard focus. Center content contributes one non-interactive
 summary semantics node; every slice keeps its own category, value, share,
 ordinal, and selection semantics.
 
+## Custom legend widgets
+
+Donut uses the same widget-based radial legend as Pie. Set
+`radialLegendItemBuilder` on `BravenChartPlus` when the host needs complete
+control over the visible content of every item:
+
+```dart
+BravenChartPlus(
+  showLegend: true,
+  radialLegendItemBuilder: (context, item) {
+    return Row(
+      children: [
+        Container(width: 4, height: 32, color: item.color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.category),
+              Text('${item.valueLabel} · ${item.shareLabel}'),
+            ],
+          ),
+        ),
+        if (item.selected) const Icon(Icons.check_circle),
+      ],
+    );
+  },
+  series: [donut],
+)
+```
+
+`RadialLegendItemData` supplies the resolved category, value, share, slice
+color, selected state, default text style, animation duration, series identity,
+and original source points. A grouped `Other` item exposes every represented
+source through `sourcePoints` and `sourcePointIndices`.
+
+The builder owns all visible item content. Braven Charts retains the outer
+48-point interaction target, responsive legend layout, slice-selection action,
+and accessible description. `LegendStyle` still controls position,
+orientation, spacing, scrolling, and the surrounding legend surface.
+
+Widget callbacks are runtime-only and are not encoded into chart artifacts.
+Portable documents retain the Donut data, geometry, legend visibility, and
+`LegendStyle`; bind `radialLegendItemBuilder` again after hydration.
+
 ## Native data table
 
 Extract a document and project it through `ChartTableModel` to get the package

@@ -4,6 +4,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/widgets/pie_chart_legend.dart';
 import 'package:braven_charts_example/showcase/pages/donut_charts_page.dart';
+import 'package:braven_charts_example/showcase/widgets/radial_legend_value_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,6 +106,49 @@ void main() {
     expect(find.text('Campaign contribution and reach'), findsWidgets);
     expect(find.text('30% center'), findsOneWidget);
     expect(find.text('Fade in'), findsOneWidget);
+  });
+
+  testWidgets('shows host-built Donut legend items with linked selection', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: DonutChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('donut-story-progress')));
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('donut-showcase-chart')),
+    );
+    expect(chart.radialLegendItemBuilder, isNotNull);
+    final firstItemFinder = find.byKey(
+      const ValueKey('donut-custom-legend-item-0'),
+    );
+    var firstItem = tester.widget<RadialLegendValueCard>(firstItemFinder);
+    expect(firstItem.item.category, 'Build');
+    expect(firstItem.item.valueLabel, '46.00 hours');
+    expect(firstItem.item.shareLabel, '46.0%');
+    expect(firstItem.item.selected, isFalse);
+    final initialRect = tester.getRect(firstItemFinder);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('chart-workbench-data-table')),
+        matching: find.text('Build'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    firstItem = tester.widget<RadialLegendValueCard>(firstItemFinder);
+    expect(firstItem.item.selected, isTrue);
+    expect(tester.getRect(firstItemFinder), initialRect);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

@@ -279,6 +279,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('custom radial legend items receive resolved data and select', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    final semantics = tester.ensureSemantics();
+    final builtItems = <RadialLegendItemData>[];
+
+    await tester.pumpWidget(
+      _host(
+        controller: controller,
+        showLegend: true,
+        radialLegendItemBuilder: (context, item) {
+          builtItems.add(item);
+          return SizedBox(
+            key: ValueKey('custom-legend-content-${item.visibleIndex}'),
+            width: 180,
+            child: Text(
+              '${item.visibleIndex + 1} · ${item.category} · '
+              '${item.shareLabel} · ${item.selected ? 'selected' : 'ready'}',
+            ),
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final subscriptions = builtItems.lastWhere(
+      (item) => item.category == 'Subscriptions',
+    );
+    expect(subscriptions.seriesId, 'revenue');
+    expect(subscriptions.value, 42);
+    expect(subscriptions.valueLabel, '42.00 USD');
+    expect(subscriptions.shareLabel, '42.0%');
+    expect(subscriptions.sourcePointIndices, [0]);
+    expect(subscriptions.sourcePoints.single.label, 'Subscriptions');
+    expect(
+      controller.extractDocument(),
+      isA<ChartArtifactSuccess<ChartDocumentSnapshot>>(),
+    );
+    expect(find.text('1 · Subscriptions · 42.0% · ready'), findsOneWidget);
+    expect(find.text('42.00 USD · 42.0%'), findsNothing);
+    expect(
+      find.semantics.byLabel(
+        'Subscriptions, 42.00 USD, 42.0 percent, not selected',
+      ),
+      findsOne,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'revenue', pointIndex: 0),
+    });
+    expect(find.text('1 · Subscriptions · 42.0% · selected'), findsOneWidget);
+    expect(
+      find.semantics.byLabel(
+        'Subscriptions, 42.00 USD, 42.0 percent, selected',
+      ),
+      findsOne,
+    );
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
   testWidgets('selected tooltip anchor follows current pie geometry', (
     tester,
   ) async {
@@ -362,6 +428,7 @@ Widget _host({
   void Function(ChartDataPoint point, String seriesId)? onPointTap,
   void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
   bool showLegend = false,
+  RadialLegendItemBuilder? radialLegendItemBuilder,
   bool disableAnimations = false,
   TextScaler textScaler = TextScaler.noScaling,
 }) {
@@ -381,6 +448,7 @@ Widget _host({
               key: const ValueKey('interactive-pie'),
               bravenChartController: controller,
               showLegend: showLegend,
+              radialLegendItemBuilder: radialLegendItemBuilder,
               interactionConfig: interactionConfig,
               onPointTap: onPointTap,
               onPointHover: onPointHover,
