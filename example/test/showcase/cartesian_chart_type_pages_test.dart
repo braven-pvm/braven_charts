@@ -210,20 +210,31 @@ void main() {
     await tester.pumpAndSettle();
 
     final rollWindow = find.byKey(const ValueKey('line-roll-window'));
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byKey(const ValueKey('line-workbench')),
+    );
+    final controller = workbench.chartController!;
+    controller.selectPoint(
+      const ChartPointRef(seriesId: 'motion-observed', pointIndex: 1),
+      revision: controller.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
     await tester.ensureVisible(rollWindow);
     await tester.tap(rollWindow);
     await tester.pump();
     await tester.pump();
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'motion-observed', pointIndex: 0),
+    });
     await tester.pump(const Duration(milliseconds: 325));
-    topologySeries =
-        renderBox.debugElements
-                .whereType<SeriesElement>()
-                .firstWhere((element) => element.series.id == 'motion-observed')
-                .series
-            as LineChartSeries;
+    final topologyElement = renderBox.debugElements
+        .whereType<SeriesElement>()
+        .firstWhere((element) => element.series.id == 'motion-observed');
+    topologySeries = topologyElement.series as LineChartSeries;
     expect(topologySeries.points, hasLength(9));
     expect(topologySeries.points.first.x, closeTo(0.5, 0.05));
     expect(topologySeries.points.last.x, closeTo(7.5, 0.05));
+    expect(topologyElement.dataHitForPointIndex(0)!.isSelected, isTrue);
     await tester.pumpAndSettle();
 
     final replay = find.byKey(const ValueKey('line-replay-entrance'));

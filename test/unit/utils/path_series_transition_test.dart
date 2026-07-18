@@ -120,6 +120,14 @@ void main() {
       expect(result.points.map((point) => point.y), [20, 30, 45]);
       expect(result.points.last.label, 'C');
       expect(
+        PathSeriesTransition.frame(
+          from: from,
+          to: to,
+          progress: 0.5,
+        ).targetPointIndices,
+        [0, 1, null],
+      );
+      expect(
         PathSeriesTransition.interpolate(from: from, to: to, progress: 1),
         same(to),
       );
@@ -153,6 +161,64 @@ void main() {
       expect(result.points.map((point) => point.y), [17, 22, 32, 37]);
     });
 
+    test('maps rolling render points to canonical target indices', () {
+      const from = LineChartSeries(
+        id: 'line',
+        points: [
+          ChartDataPoint(x: 0, y: 10, label: 'A'),
+          ChartDataPoint(x: 1, y: 20, label: 'B'),
+          ChartDataPoint(x: 2, y: 30, label: 'C'),
+        ],
+      );
+      const to = LineChartSeries(
+        id: 'line',
+        points: [
+          ChartDataPoint(x: 1, y: 24, label: 'B'),
+          ChartDataPoint(x: 2, y: 34, label: 'C'),
+          ChartDataPoint(x: 3, y: 44, label: 'D'),
+        ],
+      );
+
+      final midpoint = PathSeriesTransition.frame(
+        from: from,
+        to: to,
+        progress: 0.5,
+      );
+      final completed = PathSeriesTransition.frame(
+        from: from,
+        to: to,
+        progress: 1,
+      );
+
+      expect(midpoint.targetPointIndices, [null, 0, 1, 2]);
+      expect(midpoint.targetPointCount, 3);
+      expect(completed.series, same(to));
+      expect(completed.targetPointIndices, [0, 1, 2]);
+    });
+
+    test('remaps retained source indices by stable target identity', () {
+      const from = AreaChartSeries(
+        id: 'area',
+        points: [
+          ChartDataPoint(x: 0, y: 10, label: 'A'),
+          ChartDataPoint(x: 1, y: 20, label: 'B'),
+          ChartDataPoint(x: 2, y: 30, label: 'C'),
+        ],
+      );
+      const to = AreaChartSeries(
+        id: 'area',
+        points: [
+          ChartDataPoint(x: 1, y: 24, label: 'B'),
+          ChartDataPoint(x: 2, y: 34, label: 'C'),
+          ChartDataPoint(x: 3, y: 44, label: 'D'),
+        ],
+      );
+
+      expect(PathSeriesTransition.targetIndexForSource(from, to, 0), isNull);
+      expect(PathSeriesTransition.targetIndexForSource(from, to, 1), 0);
+      expect(PathSeriesTransition.targetIndexForSource(from, to, 2), 1);
+    });
+
     test('supports a reverse rolling window at the opposite boundaries', () {
       const from = LineChartSeries(
         id: 'line',
@@ -171,13 +237,17 @@ void main() {
         ],
       );
 
-      final result =
-          PathSeriesTransition.interpolate(from: from, to: to, progress: 0.5)
-              as LineChartSeries;
+      final frame = PathSeriesTransition.frame(
+        from: from,
+        to: to,
+        progress: 0.5,
+      );
+      final result = frame.series as LineChartSeries;
 
       expect(result.points.map((point) => point.label), ['A', 'B', 'C', 'D']);
       expect(result.points.map((point) => point.x), [0.5, 1, 2, 2.5]);
       expect(result.points.map((point) => point.y), [15, 22, 32, 37]);
+      expect(frame.targetPointIndices, [0, 1, 2, null]);
     });
 
     test('rejects interior edits, reordering, and interpolation changes', () {

@@ -189,9 +189,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    const retainedB = ChartPointRef(seriesId: 'area', pointIndex: 1);
+    final revision = controller.effectiveDocumentRevision.value!;
+    controller.selectPoint(retainedB, revision: revision);
+    controller.focusPoint(retainedB, revision: revision);
+    await tester.pump();
+
     key.currentState!.rollWindow();
     await tester.pump();
     await tester.pump();
+
+    const remappedB = ChartPointRef(seriesId: 'area', pointIndex: 0);
+    expect(controller.selectedPointRefs, {remappedB});
+    expect(controller.focusedPointRefs, {remappedB});
 
     final targetSnapshot =
         (controller.extractDocument()
@@ -209,18 +219,128 @@ void main() {
     expect(midpoint.points.map((point) => point.label), ['A', 'B', 'C', 'D']);
     expect(midpoint.points.map((point) => point.x), [0.5, 1, 2, 2.5]);
     expect(midpoint.points.map((point) => point.y), [17, 22, 32, 37]);
-    final enteringHit = renderedElement(tester).dataHitForPointIndex(3)!;
+    final element = renderedElement(tester);
+    final retainedHit = element.dataHitForPointIndex(0)!;
+    expect(retainedHit.point.label, 'B');
+    expect(retainedHit.pointIndex, 0);
+    expect(retainedHit.count, 3);
+    expect(retainedHit.isSelected, isTrue);
+    expect(retainedHit.isFocused, isTrue);
+    expect(
+      element.dataHitAt(
+        element.transform.dataToPlot(
+          midpoint.points.first.x,
+          midpoint.points.first.y,
+        ),
+        maxDistance: 1,
+      ),
+      isNull,
+    );
+    final enteringHit = element.dataHitForPointIndex(2)!;
     expect(enteringHit.point, midpoint.points.last);
+    expect(enteringHit.pointIndex, 2);
     expect(
       enteringHit.plotPosition,
-      renderedElement(
-        tester,
-      ).transform.dataToPlot(midpoint.points.last.x, midpoint.points.last.y),
+      element.transform.dataToPlot(
+        midpoint.points.last.x,
+        midpoint.points.last.y,
+      ),
     );
 
     await tester.pumpAndSettle();
     final completed = renderedElement(tester).series as AreaChartSeries;
     expect(completed.points.map((point) => point.label), ['B', 'C', 'D']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rapid rolling updates preserve geometry and point identity', (
+    tester,
+  ) async {
+    final key = GlobalKey<_RollingAreaHarnessState>();
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _RollingAreaHarness(key: key, theme: theme, controller: controller),
+    );
+    await tester.pumpAndSettle();
+
+    const initialC = ChartPointRef(seriesId: 'area', pointIndex: 2);
+    final revision = controller.effectiveDocumentRevision.value!;
+    controller.selectPoint(initialC, revision: revision);
+    controller.focusPoint(initialC, revision: revision);
+    await tester.pump();
+
+    key.currentState!.rollWindow();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 160));
+    const firstRemap = ChartPointRef(seriesId: 'area', pointIndex: 1);
+    expect(controller.selectedPointRefs, {firstRemap});
+    expect(controller.focusedPointRefs, {firstRemap});
+    final interrupted = renderedElement(tester).series as AreaChartSeries;
+    final interruptedByLabel = {
+      for (final point in interrupted.points) point.label!: (point.x, point.y),
+    };
+
+    key.currentState!.rollWindow();
+    await tester.pump();
+    await tester.pump();
+
+    const secondRemap = ChartPointRef(seriesId: 'area', pointIndex: 0);
+    expect(controller.selectedPointRefs, {secondRemap});
+    expect(controller.focusedPointRefs, {secondRemap});
+    final restartedElement = renderedElement(tester);
+    final restarted = restartedElement.series as AreaChartSeries;
+    final restartedByLabel = {
+      for (final point in restarted.points) point.label!: (point.x, point.y),
+    };
+    for (final label in const ['A', 'B', 'C', 'D']) {
+      expect(restartedByLabel[label], interruptedByLabel[label]);
+    }
+    final retainedHit = restartedElement.dataHitForPointIndex(0)!;
+    expect(retainedHit.point.label, 'C');
+    expect(retainedHit.isSelected, isTrue);
+    expect(retainedHit.isFocused, isTrue);
+    final exitingA = restarted.points.firstWhere((point) => point.label == 'A');
+    expect(
+      restartedElement.dataHitAt(
+        restartedElement.transform.dataToPlot(exitingA.x, exitingA.y),
+        maxDistance: 1,
+      ),
+      isNull,
+    );
+
+    await tester.pumpAndSettle();
+    final completed = renderedElement(tester).series as AreaChartSeries;
+    expect(completed.points.map((point) => point.label), ['C', 'D', 'E']);
+    expect(controller.selectedPointRefs, {secondRemap});
+    expect(controller.focusedPointRefs, {secondRemap});
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rolling removes focus and selection for an exiting identity', (
+    tester,
+  ) async {
+    final key = GlobalKey<_RollingAreaHarnessState>();
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _RollingAreaHarness(key: key, theme: theme, controller: controller),
+    );
+    await tester.pumpAndSettle();
+
+    const exitingA = ChartPointRef(seriesId: 'area', pointIndex: 0);
+    final revision = controller.effectiveDocumentRevision.value!;
+    controller.selectPoint(exitingA, revision: revision);
+    controller.focusPoint(exitingA, revision: revision);
+    await tester.pump();
+
+    key.currentState!.rollWindow();
+    await tester.pump();
+    await tester.pump();
+
+    expect(controller.selectedPointRefs, isEmpty);
+    expect(controller.focusedPointRefs, isEmpty);
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -539,9 +659,9 @@ class _RollingAreaHarness extends StatefulWidget {
 }
 
 class _RollingAreaHarnessState extends State<_RollingAreaHarness> {
-  var rolled = false;
+  var windowOffset = 0;
 
-  void rollWindow() => setState(() => rolled = true);
+  void rollWindow() => setState(() => windowOffset++);
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -555,17 +675,23 @@ class _RollingAreaHarnessState extends State<_RollingAreaHarness> {
         series: [
           AreaChartSeries(
             id: 'area',
-            points: rolled
-                ? const [
-                    ChartDataPoint(x: 1, y: 24, label: 'B'),
-                    ChartDataPoint(x: 2, y: 34, label: 'C'),
-                    ChartDataPoint(x: 3, y: 44, label: 'D'),
-                  ]
-                : const [
-                    ChartDataPoint(x: 0, y: 10, label: 'A'),
-                    ChartDataPoint(x: 1, y: 20, label: 'B'),
-                    ChartDataPoint(x: 2, y: 30, label: 'C'),
-                  ],
+            points: switch (windowOffset) {
+              0 => const [
+                ChartDataPoint(x: 0, y: 10, label: 'A'),
+                ChartDataPoint(x: 1, y: 20, label: 'B'),
+                ChartDataPoint(x: 2, y: 30, label: 'C'),
+              ],
+              1 => const [
+                ChartDataPoint(x: 1, y: 24, label: 'B'),
+                ChartDataPoint(x: 2, y: 34, label: 'C'),
+                ChartDataPoint(x: 3, y: 44, label: 'D'),
+              ],
+              _ => const [
+                ChartDataPoint(x: 2, y: 38, label: 'C'),
+                ChartDataPoint(x: 3, y: 48, label: 'D'),
+                ChartDataPoint(x: 4, y: 58, label: 'E'),
+              ],
+            },
             showDataPointMarkers: true,
             dataPointLabels: const DataPointLabelConfig(show: true),
             pathAnimation: const PathAnimationStyle(

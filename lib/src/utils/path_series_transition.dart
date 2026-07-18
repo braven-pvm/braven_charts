@@ -29,10 +29,24 @@ abstract final class PathSeriesTransition {
     required ChartSeries to,
     required double progress,
   }) {
+    return frame(from: from, to: to, progress: progress).series;
+  }
+
+  /// Builds interpolated geometry and its canonical target-point mapping.
+  static PathSeriesTransitionFrame frame({
+    required ChartSeries from,
+    required ChartSeries to,
+    required double progress,
+  }) {
     final plan = _plan(from, to);
-    if (plan == null) return to;
+    final identityMap = PathSeriesPointMap.identity(to.points.length);
+    if (plan == null) {
+      return PathSeriesTransitionFrame(series: to, pointMap: identityMap);
+    }
     final t = progress.clamp(0.0, 1.0);
-    if (t >= 1) return to;
+    if (t >= 1) {
+      return PathSeriesTransitionFrame(series: to, pointMap: identityMap);
+    }
 
     final points = <ChartDataPoint>[
       for (final point in plan.points)
@@ -41,11 +55,37 @@ abstract final class PathSeriesTransition {
           y: _lerp(point.from.y, point.to.y, t),
         ),
     ];
-    return switch (to) {
+    final series = switch (to) {
       LineChartSeries() => to.copyWith(points: points),
       AreaChartSeries() => to.copyWith(points: points),
       _ => to,
     };
+    return PathSeriesTransitionFrame(
+      series: series,
+      pointMap: PathSeriesPointMap(
+        targetPointIndices: [
+          for (final point in plan.points) point.targetIndex,
+        ],
+        targetPointCount: to.points.length,
+      ),
+    );
+  }
+
+  /// Resolves a source point to its stable canonical target index.
+  ///
+  /// Returns null when the point exits or the series are incompatible.
+  static int? targetIndexForSource(
+    ChartSeries from,
+    ChartSeries to,
+    int sourceIndex,
+  ) {
+    final plan = _plan(from, to);
+    if (plan == null ||
+        sourceIndex < 0 ||
+        sourceIndex >= plan.sourceTargetIndices.length) {
+      return null;
+    }
+    return plan.sourceTargetIndices[sourceIndex];
   }
 
   static _PathTransitionPlan? _plan(ChartSeries from, ChartSeries to) {
@@ -66,10 +106,17 @@ abstract final class PathSeriesTransition {
         source.length == target.length &&
         matches.every((match) => match.sourceIndex == match.targetIndex);
     if (isEqualLengthOrderedUpdate) {
-      return _PathTransitionPlan([
-        for (var index = 0; index < target.length; index++)
-          _PathTransitionPoint(from: source[index], to: target[index]),
-      ]);
+      return _PathTransitionPlan(
+        [
+          for (var index = 0; index < target.length; index++)
+            _PathTransitionPoint(
+              from: source[index],
+              to: target[index],
+              targetIndex: index,
+            ),
+        ],
+        sourceTargetIndices: [for (var i = 0; i < source.length; i++) i],
+      );
     }
 
     if (matches.length == target.length && source.length == target.length) {
@@ -81,8 +128,9 @@ abstract final class PathSeriesTransition {
           _PathTransitionPoint(
             from: source[match.sourceIndex],
             to: target[match.targetIndex],
+            targetIndex: match.targetIndex,
           ),
-      ]);
+      ], sourceTargetIndices: _sourceTargetIndices(source.length, matches));
     }
 
     if (matches.isEmpty ||
@@ -118,6 +166,7 @@ abstract final class PathSeriesTransition {
             x: firstTargetBoundary.x,
             y: firstTargetBoundary.y,
           ),
+          targetIndex: null,
         ),
       );
     }
@@ -129,6 +178,7 @@ abstract final class PathSeriesTransition {
           _PathTransitionPoint(
             from: source[match.sourceIndex],
             to: target[index],
+            targetIndex: index,
           ),
         );
         continue;
@@ -136,7 +186,13 @@ abstract final class PathSeriesTransition {
       final anchor = index < firstMatch.targetIndex
           ? source[firstMatch.sourceIndex]
           : source[lastMatch.sourceIndex];
-      points.add(_PathTransitionPoint(from: anchor, to: target[index]));
+      points.add(
+        _PathTransitionPoint(
+          from: anchor,
+          to: target[index],
+          targetIndex: index,
+        ),
+      );
     }
 
     for (
@@ -151,11 +207,26 @@ abstract final class PathSeriesTransition {
             x: lastTargetBoundary.x,
             y: lastTargetBoundary.y,
           ),
+          targetIndex: null,
         ),
       );
     }
 
-    return _PathTransitionPlan(points);
+    return _PathTransitionPlan(
+      points,
+      sourceTargetIndices: _sourceTargetIndices(source.length, matches),
+    );
+  }
+
+  static List<int?> _sourceTargetIndices(
+    int sourceLength,
+    List<_PointMatch> matches,
+  ) {
+    final result = List<int?>.filled(sourceLength, null);
+    for (final match in matches) {
+      result[match.sourceIndex] = match.targetIndex;
+    }
+    return result;
   }
 
   static List<_PointMatch> _stableMatches(
@@ -219,17 +290,77 @@ abstract final class PathSeriesTransition {
       from + (to - from) * t;
 }
 
+/// One private-runtime Line/Area transition frame.
+class PathSeriesTransitionFrame {
+  PathSeriesTransitionFrame({required this.series, required this.pointMap});
+
+  /// Interpolated geometry consumed by the standard series renderer.
+  final ChartSeries series;
+
+  /// Mapping from temporary render indices to canonical target indices.
+  final PathSeriesPointMap pointMap;
+
+  /// Convenience view of [pointMap]'s render-to-target mapping.
+  List<int?> get targetPointIndices => pointMap.targetPointIndices;
+
+  /// Number of points in the canonical target snapshot.
+  int get targetPointCount => pointMap.targetPointCount;
+}
+
+/// Maps temporary rendered Line/Area points to canonical target points.
+class PathSeriesPointMap {
+  PathSeriesPointMap({
+    required List<int?> targetPointIndices,
+    required this.targetPointCount,
+  }) : targetPointIndices = List<int?>.unmodifiable(targetPointIndices);
+
+  /// Creates an identity mapping for a completed target series.
+  factory PathSeriesPointMap.identity(int pointCount) => PathSeriesPointMap(
+    targetPointIndices: [
+      for (var index = 0; index < pointCount; index++) index,
+    ],
+    targetPointCount: pointCount,
+  );
+
+  /// Canonical target index for each render index; exits map to null.
+  final List<int?> targetPointIndices;
+
+  /// Number of points in the canonical target snapshot.
+  final int targetPointCount;
+
+  /// Returns the canonical target index for [renderIndex].
+  int? targetIndexForRenderIndex(int renderIndex) {
+    if (renderIndex < 0 || renderIndex >= targetPointIndices.length) {
+      return null;
+    }
+    return targetPointIndices[renderIndex];
+  }
+
+  /// Returns the temporary render index for [targetIndex].
+  int? renderIndexForTargetIndex(int targetIndex) {
+    if (targetIndex < 0 || targetIndex >= targetPointCount) return null;
+    final renderIndex = targetPointIndices.indexOf(targetIndex);
+    return renderIndex < 0 ? null : renderIndex;
+  }
+}
+
 class _PathTransitionPlan {
-  const _PathTransitionPlan(this.points);
+  const _PathTransitionPlan(this.points, {required this.sourceTargetIndices});
 
   final List<_PathTransitionPoint> points;
+  final List<int?> sourceTargetIndices;
 }
 
 class _PathTransitionPoint {
-  const _PathTransitionPoint({required this.from, required this.to});
+  const _PathTransitionPoint({
+    required this.from,
+    required this.to,
+    required this.targetIndex,
+  });
 
   final ChartDataPoint from;
   final ChartDataPoint to;
+  final int? targetIndex;
 }
 
 class _PointMatch {

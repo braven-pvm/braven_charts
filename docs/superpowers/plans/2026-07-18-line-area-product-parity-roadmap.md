@@ -98,3 +98,32 @@ The locked behavior and exclusions are recorded in
 - Dartdoc 9.0.8 reports zero warnings and zero errors. The package dry run
   reaches validation with only the expected dirty-worktree warning before the
   approved local slice is committed.
+
+## Sprint 6 — Path identity continuity
+
+**Status:** Complete
+
+- Keep temporary exiting geometry visual-only while all interaction surfaces
+  expose canonical target point indices.
+- Remap retained Line/Area focus and selection by stable point identity when a
+  topology snapshot changes; remove state whose identity exits.
+- Preserve canonical hit, hover, tooltip, linked-marker, workbench, callback,
+  and artifact behavior throughout append, removal, and rolling transitions.
+- Prove rapid snapshot interruption starts from current geometry without
+  leaking temporary render indices or migrating durable point state.
+
+The locked interaction contract and exclusions are recorded in
+`../specs/2026-07-18-line-area-motion-identity-continuity-design.md`.
+
+### Sprint 6 verification record
+
+- Pure transition and real render-path tests prove canonical mapping for
+  forward/reverse rolling and removal, non-interactive exits, retained and
+  removed point state, workbench-linked selection, and rapid interruption.
+- Full package suite: 1,790 tests passed. Full showcase suite: 134 tests
+  passed. Package and showcase analyzers report zero issues.
+- The timing-sensitive workbench benchmark was isolated after a deliberately
+  concurrent first run and passed; the complete package suite then passed
+  serially.
+- The root-path release web build passes, and the refreshed Line Motion direct
+  route plus compiled application script respond successfully on port 8098.

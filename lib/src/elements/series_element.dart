@@ -21,6 +21,7 @@ import '../models/series_inline_label_config.dart';
 import '../rendering/bar_geometry.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
+import '../utils/path_series_transition.dart';
 
 // =============================================================================
 // Style Region for Segment Color Batching
@@ -148,6 +149,7 @@ class SeriesElement implements DataHitElement {
     this.fontFamily,
     this.hasAnySelectedPoints = false,
     this.revealProgress = 1,
+    this.pathPointMap,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -165,7 +167,7 @@ class SeriesElement implements DataHitElement {
   final int seriesIndex;
 
   @override
-  int get pointCount => series.points.length;
+  int get pointCount => pathPointMap?.targetPointCount ?? series.points.length;
   final ChartInteractionCoordinator? coordinator;
 
   /// Point indices receiving transient linked focus from another surface.
@@ -189,6 +191,9 @@ class SeriesElement implements DataHitElement {
   /// Leading-edge reveal progress for Line and Area series.
   final double revealProgress;
 
+  /// Canonical point identities for temporary Line/Area transition geometry.
+  final PathSeriesPointMap? pathPointMap;
+
   bool get _isPathSeries =>
       series is LineChartSeries || series is AreaChartSeries;
 
@@ -197,6 +202,20 @@ class SeriesElement implements DataHitElement {
 
   double get _revealEdge =>
       _currentTransform.plotWidth * _effectiveRevealProgress;
+
+  int? _targetIndexForRenderIndex(int renderIndex) {
+    final pointMap = pathPointMap;
+    return pointMap == null
+        ? renderIndex
+        : pointMap.targetIndexForRenderIndex(renderIndex);
+  }
+
+  int? _renderIndexForTargetIndex(int targetIndex) {
+    final pointMap = pathPointMap;
+    return pointMap == null
+        ? targetIndex
+        : pointMap.renderIndexForTargetIndex(targetIndex);
+  }
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -508,8 +527,12 @@ class SeriesElement implements DataHitElement {
 
     ChartDataHit? nearest;
     var nearestDistance = maxDistance;
-    for (var index = 0; index < source.points.length; index++) {
-      final hit = dataHitForPointIndex(index);
+    for (
+      var renderIndex = 0;
+      renderIndex < source.points.length;
+      renderIndex++
+    ) {
+      final hit = _dataHitForRenderPointIndex(renderIndex);
       if (hit == null) continue;
       final distance = (position - hit.plotPosition).distance;
       if (distance < nearestDistance) {
@@ -522,23 +545,32 @@ class SeriesElement implements DataHitElement {
 
   @override
   ChartDataHit? dataHitForPointIndex(int pointIndex) {
-    if (pointIndex < 0 || pointIndex >= series.points.length) return null;
-    final point = series.points[pointIndex];
+    final renderIndex = _renderIndexForTargetIndex(pointIndex);
+    if (renderIndex == null) return null;
+    return _dataHitForRenderPointIndex(renderIndex);
+  }
+
+  ChartDataHit? _dataHitForRenderPointIndex(int renderIndex) {
+    if (renderIndex < 0 || renderIndex >= series.points.length) return null;
+    final targetIndex = _targetIndexForRenderIndex(renderIndex);
+    if (targetIndex == null) return null;
+    if (targetIndex < 0 || targetIndex >= pointCount) return null;
+    final point = series.points[renderIndex];
     if (!point.isValid) return null;
     final position = _currentTransform.dataToPlot(point.x, point.y);
     if (_isPathSeries && position.dx > _revealEdge) return null;
     return ChartDataHit(
       seriesId: series.id,
-      pointIndex: pointIndex,
+      pointIndex: targetIndex,
       plotPosition: position,
       semanticBounds: Rect.fromCircle(center: position, radius: 24),
       point: point,
       formattedValue:
           '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
-      ordinal: pointIndex + 1,
-      count: series.points.length,
-      isSelected: selectedPointIndices.contains(pointIndex),
-      isFocused: focusedPointIndices.contains(pointIndex),
+      ordinal: targetIndex + 1,
+      count: pointCount,
+      isSelected: selectedPointIndices.contains(targetIndex),
+      isFocused: focusedPointIndices.contains(targetIndex),
     );
   }
 
@@ -626,16 +658,20 @@ class SeriesElement implements DataHitElement {
       ..style = PaintingStyle.fill;
 
     for (final index in selectedPointIndices) {
-      if (index < 0 || index >= series.points.length) continue;
-      final point = series.points[index];
+      final renderIndex = _renderIndexForTargetIndex(index);
+      if (renderIndex == null) continue;
+      if (renderIndex < 0 || renderIndex >= series.points.length) continue;
+      final point = series.points[renderIndex];
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 5, selectionFill);
       canvas.drawCircle(offset, markerSize + 3, selectionBorder);
       canvas.drawCircle(offset, math.max(2, markerSize * 0.5), pointFill);
     }
     for (final index in focusedPointIndices) {
-      if (index < 0 || index >= series.points.length) continue;
-      final point = series.points[index];
+      final renderIndex = _renderIndexForTargetIndex(index);
+      if (renderIndex == null) continue;
+      if (renderIndex < 0 || renderIndex >= series.points.length) continue;
+      final point = series.points[renderIndex];
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 7, focusPaint);
     }
@@ -2157,7 +2193,8 @@ class SeriesElement implements DataHitElement {
     for (int i = 0; i < transformedPoints.length; i++) {
       final plotPos = transformedPoints[i];
       final originalIndex = originalIndices?[i] ?? i;
-      if (isThisSeriesHovered && originalIndex == hoveredMarker!.markerIndex) {
+      final targetIndex = _targetIndexForRenderIndex(originalIndex);
+      if (isThisSeriesHovered && targetIndex == hoveredMarker!.markerIndex) {
         if (isHollow) canvas.drawCircle(plotPos, radius * 1.5, maskPaint);
         canvas.drawCircle(plotPos, radius * 1.5, hoverPaint);
         if (!isHollow) canvas.drawCircle(plotPos, radius * 1.5, borderPaint);
@@ -2311,6 +2348,8 @@ class SeriesElement implements DataHitElement {
       pointSelectionColor: pointSelectionColor,
       fontFamily: fontFamily,
       hasAnySelectedPoints: hasAnySelectedPoints,
+      revealProgress: revealProgress,
+      pathPointMap: pathPointMap,
     );
   }
 }
