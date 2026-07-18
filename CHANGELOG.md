@@ -7,44 +7,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.7.0 - 2026-07-18
+
 ### Added
-- Opt-in Line and Area entrance reveals and compatible data-update
-  interpolation through `PathAnimationStyle`, including reduced-motion
-  handling, controller replay, canonical artifact persistence, and
-  render-path interaction coverage.
-- Resizable Chart/Data/Split workbenches for the Line and Area showcase pages,
-  with dedicated motion presets, replay and live-update controls, responsive
-  compact layouts, and direct review routes.
-- Opt-in `ChartDisplayMode.source` for `BravenChartWorkbench`, backed by a
-  public deterministic `ChartDartSourceGenerator`. The generated direct Dart
-  covers Line, Area, Scatter, Bar, Pie, Donut, multi-axis, annotations,
-  interactions, resolved themes, canvas legends, and optional durable view
-  state; large datasets and runtime-owned callbacks use explicit placeholders
-  and diagnostics rather than silent omission.
-- A package-owned Source viewport with syntax highlighting, line numbers,
-  selectable text, wrapping, exact clipboard copy, independent loading/stale/
-  failure state, retry, reduced-motion-safe behavior, a dark code canvas in
-  either host theme, and manual, mode-entry, or revision refresh policies.
-- Generated Source demonstrations on the Chart Workbench and every public
-  Line, Area, Bar, Scatter, Pie, and Donut detail page.
+- Opt-in `ChartDisplayMode.source` for `BravenChartWorkbench`, backed by the
+  public deterministic `ChartDartSourceGenerator`. Generated direct Dart
+  covers Line, Area, Scatter, Bar, Pie, Donut, mixed and multi-axis charts,
+  annotations, interactions, resolved themes, legends, and optional durable
+  view state. `ChartDartSourceOptions` bounds inline data, while
+  `ChartGeneratedSource` reports completeness, placeholders, and diagnostics
+  for runtime-only behavior instead of silently omitting it.
+- A package-owned Source viewport with Dart syntax highlighting, line numbers,
+  selectable and wrappable text, exact clipboard copy, a dedicated dark code
+  canvas in either host theme, independent loading/stale/failure state, retry,
+  and manual, mode-entry, or document-revision refresh policies.
 - Nestable `ChartWorkbenchScope` and caller-owned
   `ChartWorkbenchGroupController` for system-wide or chart-family-wide display
-  mode and selector visibility. Grouped Workbenches synchronize UI and
-  controller requests, intersect supported modes safely, and retain local
-  split sizing, data/source state, focus, and interaction.
-- Runtime Donut center builders and actions with package-owned circular
-  interaction, portable center-content fallback, and explicit rebinding after
-  artifact hydration.
+  mode and mode-selector visibility. Grouped Workbenches reconcile their common
+  supported modes safely while retaining local split sizing, data/source
+  snapshots, selection, focus, and interaction state.
+- Opt-in Line and Area entrance reveals and compatible mounted data-update
+  interpolation through `PathAnimationStyle`, `PathEntranceAnimationMode`, and
+  `PathDataUpdateAnimationMode`. `PathAnimationTiming` adds independent
+  per-series delay and duration for entrance and update phases, while
+  `BravenChartController.replaySeriesEntrance()` replays the mounted entrance.
+- Stable-identity Line and Area transition support for value changes, appends,
+  boundary removals, and rolling-window snapshots. Area fill and outline share
+  one timeline, artifacts persist the motion configuration, and reduced motion,
+  zero-duration themes, interaction, and streaming paths retain their existing
+  contracts.
+- `CategoryAxisConfig`, `CategoryLabelDensity`, and
+  `CategoryLabelOverflow` for stable categorical identity, automatic readable
+  viewports, label thinning, wrapping or ellipsis, rotation, and transposed
+  horizontal Bar axes without host label callbacks.
+- `BarLayoutMode.divergingStacked`, `BarDivergingRole`, and
+  `BarDivergingStyle` for centered normalized Likert-style compositions with a
+  configurable center line and source-value preservation.
+- `BarPatternStyle` and `BarFillPattern` for contrast-aware non-colour fills;
+  `BarLollipopStyle` for stem-and-head categorical marks; and
+  `BarBulletStyle`/`BarBulletRange` for qualitative ranges around an actual
+  measure and target.
+- `ParetoCategory`/`ParetoChartData` for stable ranked values and cumulative
+  mixed-series data, plus `HistogramChartData`, `HistogramBin`, configurable
+  binning methods, and count, percentage, or density output for continuous
+  samples.
+- `BarMotionStyle` and `BarAnimationOrder` for together, forward, reverse,
+  center-out, or edges-in keyed Bar entrance/update/exit sequencing with
+  baseline-collapse exits and reduced-motion support.
+- Collision-aware Bar labels with reposition/hide policies, plot-edge
+  containment, optional backgrounds and callouts, range endpoints, normalized
+  percentages, waterfall values, and exposed positive/negative stack totals.
+- `BravenChartPlus.transitionKey` for switching one mounted chart between
+  semantically different configurations without interpolating incompatible
+  geometry. A changed key clears prior Line, Area, Bar, Pie, and Donut motion
+  history, replays only the destination entrance, and preserves Workbench and
+  controller state.
+- Runtime Donut center builders and actions through
+  `BravenChartPlus.donutCenterBuilder`, `onDonutCenterTap`, and
+  `DonutCenterData`, with package-owned circular hit testing and semantics,
+  portable center-content fallback, and explicit rebinding after hydration.
 - Shared Pie and Donut value, percentage, radius, and center formatting across
-  labels, legends, tooltips, semantics, artifacts, and restored charts.
-- Explicit sum, mean, weighted-mean, minimum, and maximum radius aggregation
-  when variable-radius Pie or Donut slices are grouped, without collapsing the
-  source data carried by tables and artifacts.
+  labels, legends, tooltips, semantics, artifacts, restored charts, and source
+  generation through `RadialValueFormatter` and portable formatter descriptors.
+- Explicit sum, mean, weighted-mean, minimum, and maximum
+  `RadialSliceRadiusAggregation` policies when variable-radius Pie or Donut
+  slices are grouped, without collapsing source rows carried by tables and
+  artifacts.
 - Identity-aware Pie and Donut data transitions that preserve category
   selection across keyed updates, fade structural changes safely, honor
   reduced motion, and support per-series opt-out.
 
+### Changed
+- Visible Workbench Source now follows effective chart-document changes by
+  default. Regeneration is coalesced on a bounded cadence, hidden Source catches
+  up on entry, and normal automatic refreshes no longer present manual
+  `Chart changed` or `Refresh source` controls. `manual` and `onModeEntry`
+  policies remain explicit opt-ins, independent from Data's snapshot policy.
+- Line, Area, Bar, Scatter, Pie, and Donut showcase guides now use the same
+  package-owned Chart/Data/Split/Source Workbench contract. Line and Area add
+  resizable Split panes, motion presets, replay/update controls, responsive
+  compact layouts, and direct review routes.
+- Advanced Bar properties now round-trip through chart artifacts and hydration,
+  project their resolved fields into native tables and CSV, and are available
+  through `ChartConfigBuilder` and the public chart tool schema.
+- Bar charts now inherit right-to-left canvas text direction and semantics,
+  retain canonical interaction geometry across lollipop/bullet/pattern marks,
+  and use keyed transitions for durable selection and focus across updates.
+- Dense Bar charts now materialize only viewport-intersecting categories with
+  visual overscan while retaining original point identity. Plot-cell hit-test
+  indexing and a separate spatial index for collision-aware labels avoid
+  full-series and previously accepted-label scans; maintained stress coverage
+  spans 100,000 source points, 5,000 labels, and the public 12–10,000-category
+  Bar Lab preset.
+- Pie and Donut share the annular-sector layout foundation, formatter contract,
+  grouped-radius semantics, and data-transition policy while preserving their
+  distinct full-disc and center-opening constraints.
+
 ### Fixed
+- Effective chart-document revisions no longer advance for layout-only parent
+  rebuilds or responsive constraint changes. Fresh Data and Source snapshots
+  therefore remain current after first layout and resize, while actual series,
+  axes, annotations, themes, interactions, dimensions, and other portable
+  configuration changes still mark them stale.
 - Source capture now preserves Pie and Donut formatter descriptors without
   routing radial series through Cartesian annotation-copy paths or casting
   Donut series to Pie.

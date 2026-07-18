@@ -44,6 +44,25 @@ void main() {
       ),
     );
     expect(find.byType(ChartSourceView), findsOneWidget);
+
+    final firstSource = workbench.workbenchController!.generatedSource;
+    final compactPreset = find.byKey(const ValueKey('pie-preset-compact'));
+    await tester.ensureVisible(compactPreset);
+    await tester.pump();
+    await tester.tap(compactPreset);
+    await tester.pumpAndSettle();
+
+    expect(workbench.workbenchController!.sourceIsStale, isFalse);
+    expect(
+      workbench.workbenchController!.generatedSource,
+      isNot(same(firstSource)),
+    );
+    expect(
+      workbench.workbenchController!.generatedSource!.source,
+      contains('position: PieDataLabelPosition.inside'),
+    );
+    expect(find.text('Chart changed'), findsNothing);
+    expect(find.text('Refresh source'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

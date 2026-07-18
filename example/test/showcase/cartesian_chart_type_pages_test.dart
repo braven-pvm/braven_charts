@@ -71,6 +71,67 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('Line Source follows preset changes without a stale prompt', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: LineChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+
+    var workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final firstSource = workbench.workbenchController!.generatedSource;
+    expect(firstSource?.source, contains("id: 'observed'"));
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Motion'),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('The chart changed after this source was generated.'),
+      findsNothing,
+    );
+    expect(find.text('Chart changed'), findsNothing);
+    expect(find.text('Refresh source'), findsNothing);
+
+    await tester.pumpAndSettle();
+    workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    expect(workbench.workbenchController!.sourceIsStale, isFalse);
+    expect(
+      workbench.workbenchController!.generatedSource,
+      isNot(same(firstSource)),
+    );
+    expect(
+      workbench.workbenchController!.generatedSource!.source,
+      allOf(
+        contains("id: 'motion-observed'"),
+        isNot(contains("id: 'interpolation-linear'")),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('line guide covers workhorse, interpolation, axes, and motion', (
     tester,
   ) async {

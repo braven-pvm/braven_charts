@@ -1352,7 +1352,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _captureStateRevision++;
+    final seriesChanged = !listEquals(widget.series, oldWidget.series);
+    if (_documentConfigurationChanged(
+      oldWidget,
+      seriesChanged: seriesChanged,
+    )) {
+      _captureStateRevision++;
+    }
     final transitionKeyChanged =
         widget.transitionKey != oldWidget.transitionKey;
     // Removed excessive debugPrints (didUpdateWidget details)
@@ -1454,7 +1460,6 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _syncControllerPointState();
     }
 
-    final seriesChanged = !listEquals(widget.series, oldWidget.series);
     if (_pathAnimationDuration == Duration.zero) {
       _finishPathAnimationsImmediately();
     }
@@ -1497,6 +1502,35 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // for focus on gallery page load, contributing to startup lag.
     }
   }
+
+  bool _documentConfigurationChanged(
+    BravenChartPlus oldWidget, {
+    required bool seriesChanged,
+  }) =>
+      seriesChanged ||
+      !listEquals(widget.annotations, oldWidget.annotations) ||
+      !identical(widget.annotationController, oldWidget.annotationController) ||
+      !identical(widget.controller, oldWidget.controller) ||
+      !identical(widget.liveStreamController, oldWidget.liveStreamController) ||
+      widget.theme != oldWidget.theme ||
+      widget.xAxisConfig != oldWidget.xAxisConfig ||
+      widget.yAxis != oldWidget.yAxis ||
+      widget.grid != oldWidget.grid ||
+      widget.interactionConfig != oldWidget.interactionConfig ||
+      widget.title != oldWidget.title ||
+      widget.subtitle != oldWidget.subtitle ||
+      widget.width != oldWidget.width ||
+      widget.height != oldWidget.height ||
+      widget.backgroundColor != oldWidget.backgroundColor ||
+      widget.showXScrollbar != oldWidget.showXScrollbar ||
+      widget.showYScrollbar != oldWidget.showYScrollbar ||
+      widget.showLegend != oldWidget.showLegend ||
+      widget.legendStyle != oldWidget.legendStyle ||
+      widget.showToolbar != oldWidget.showToolbar ||
+      widget.interactiveAnnotations != oldWidget.interactiveAnnotations ||
+      widget.maxAxesPerSide != oldWidget.maxAxesPerSide ||
+      widget.axisSwapMode != oldWidget.axisSwapMode ||
+      widget.normalizationMode != oldWidget.normalizationMode;
 
   /// Called when focus state changes.
   void _onFocusChanged() {

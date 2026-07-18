@@ -354,6 +354,125 @@ void main() {
     expect(workbenchController.generatedSource?.source, contains('y: 42.0'));
   });
 
+  testWidgets(
+    'keeps visible Source synchronized with effective chart changes by default',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      final defaults = BravenChartWorkbench(
+        chartBuilder: (context, controller) => _chart(controller),
+      );
+      expect(
+        defaults.sourceRefreshPolicy,
+        ChartSourceRefreshPolicy.onDocumentRevision,
+      );
+
+      await tester.pumpWidget(
+        _host(
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          chartValue: 11,
+          chartTitle: 'Initial chart options',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final firstSource = workbenchController.generatedSource;
+      expect(firstSource?.source, contains('y: 11.0'));
+      expect(firstSource?.source, contains("title: 'Initial chart options'"));
+
+      await tester.pumpWidget(
+        _host(
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          chartValue: 42,
+          chartTitle: 'Updated chart options',
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.text('The chart changed after this source was generated.'),
+        findsNothing,
+      );
+      expect(find.text('Chart changed'), findsNothing);
+      expect(find.text('Refresh source'), findsNothing);
+
+      await tester.pumpAndSettle();
+      expect(workbenchController.sourceIsStale, isFalse);
+      expect(workbenchController.generatedSource, isNot(same(firstSource)));
+      expect(workbenchController.generatedSource?.source, contains('y: 42.0'));
+      expect(
+        workbenchController.generatedSource?.source,
+        contains("title: 'Updated chart options'"),
+      );
+    },
+  );
+
+  testWidgets(
+    'keeps generated source current across layout-only parent rebuilds',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          width: 720,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+          chartValue: 11,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final generated = workbenchController.generatedSource;
+      expect(generated, isNotNull);
+      expect(workbenchController.sourceIsStale, isFalse);
+
+      await tester.pumpWidget(
+        _host(
+          width: 840,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.source,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+          chartValue: 11,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(workbenchController.generatedSource, same(generated));
+      expect(workbenchController.sourceIsStale, isFalse);
+      expect(
+        find.text('The chart changed after this source was generated.'),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('exposes Source as a 48px keyboard-operable presentation', (
     tester,
   ) async {
@@ -1892,12 +2011,13 @@ Widget _host({
   ChartTableRefreshPolicy tableRefreshPolicy =
       ChartTableRefreshPolicy.onModeEntry,
   ChartSourceRefreshPolicy sourceRefreshPolicy =
-      ChartSourceRefreshPolicy.onModeEntry,
+      ChartSourceRefreshPolicy.onDocumentRevision,
   ChartDartSourceOptions sourceOptions = const ChartDartSourceOptions(),
   ChartTableOptions tableOptions = const ChartTableOptions(),
   ChartDocumentExtractOptions documentOptions =
       const ChartDocumentExtractOptions(includeViewState: true),
   double chartValue = 10,
+  String? chartTitle,
   TextScaler textScaler = TextScaler.noScaling,
   bool highContrast = false,
   bool autoFitTablePane = false,
@@ -1919,7 +2039,8 @@ Widget _host({
           initialDisplayMode: initialDisplayMode,
           chartBuilder:
               chartBuilder ??
-              (context, controller) => _chart(controller, y: chartValue),
+              (context, controller) =>
+                  _chart(controller, y: chartValue, title: chartTitle),
           actionsBuilder: actionsBuilder,
           splitBreakpoint: splitBreakpoint,
           availableDisplayModes: availableDisplayModes,
@@ -1935,22 +2056,26 @@ Widget _host({
   ),
 );
 
-Widget _chart(BravenChartController controller, {double y = 10}) =>
-    BravenChartPlus(
-      bravenChartController: controller,
-      showLegend: false,
-      series: [
-        LineChartSeries(
-          id: 'signal',
-          name: 'Signal',
-          points: [
-            ChartDataPoint(x: 0, y: y),
-            ChartDataPoint(x: 1, y: y + 2),
-            ChartDataPoint(x: 2, y: y + 1),
-          ],
-        ),
+Widget _chart(
+  BravenChartController controller, {
+  double y = 10,
+  String? title,
+}) => BravenChartPlus(
+  bravenChartController: controller,
+  title: title,
+  showLegend: false,
+  series: [
+    LineChartSeries(
+      id: 'signal',
+      name: 'Signal',
+      points: [
+        ChartDataPoint(x: 0, y: y),
+        ChartDataPoint(x: 1, y: y + 2),
+        ChartDataPoint(x: 2, y: y + 1),
       ],
-    );
+    ),
+  ],
+);
 
 Future<ChartArtifactResult<ChartArtifact>> _capture(
   WidgetTester tester,

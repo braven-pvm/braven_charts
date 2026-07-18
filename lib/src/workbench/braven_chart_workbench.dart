@@ -108,7 +108,7 @@ class ChartWorkbenchController extends ChangeNotifier
   ChartTableRefreshPolicy _refreshPolicy = ChartTableRefreshPolicy.onModeEntry;
   ChartDartSourceOptions _sourceOptions = const ChartDartSourceOptions();
   ChartSourceRefreshPolicy _sourceRefreshPolicy =
-      ChartSourceRefreshPolicy.onModeEntry;
+      ChartSourceRefreshPolicy.onDocumentRevision;
   ValueChanged<ChartWorkbenchStatus>? _onStatusChanged;
   ChartWorkbenchTableState _tableState = const ChartWorkbenchTableState();
   ChartWorkbenchArtifactState _artifactState =
@@ -763,7 +763,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.tableOptions = const ChartTableOptions(),
     this.tableRefreshPolicy = ChartTableRefreshPolicy.onModeEntry,
     this.sourceOptions = const ChartDartSourceOptions(),
-    this.sourceRefreshPolicy = ChartSourceRefreshPolicy.onModeEntry,
+    this.sourceRefreshPolicy = ChartSourceRefreshPolicy.onDocumentRevision,
     this.actionsBuilder,
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
@@ -831,6 +831,9 @@ class BravenChartWorkbench extends StatefulWidget {
   final ChartDartSourceOptions sourceOptions;
 
   /// Determines when generated source is refreshed automatically.
+  ///
+  /// Defaults to [ChartSourceRefreshPolicy.onDocumentRevision] so visible
+  /// Source always follows the chart's current effective configuration.
   final ChartSourceRefreshPolicy sourceRefreshPolicy;
 
   /// Builds storage-agnostic host actions with a stable imperative handle.
@@ -1319,10 +1322,16 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   Widget _buildSourceSurface(BuildContext context) {
     final state = _workbenchController.sourceState;
     final generated = state.generated;
+    final followsDocumentRevision =
+        widget.sourceRefreshPolicy ==
+        ChartSourceRefreshPolicy.onDocumentRevision;
+    final isAwaitingAutomaticRefresh =
+        followsDocumentRevision && state.isStale && state.error == null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.phase == ChartWorkbenchSourcePhase.refreshing)
+        if (state.phase == ChartWorkbenchSourcePhase.refreshing ||
+            isAwaitingAutomaticRefresh)
           const LinearProgressIndicator(minHeight: 2),
         if (state.error != null && generated != null)
           _WorkbenchTableMessage(
@@ -1341,10 +1350,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
             onAction: _workbenchController.refreshSource,
             tone: _WorkbenchMessageTone.error,
           )
-        else if (state.isStale &&
-            generated != null &&
-            widget.sourceRefreshPolicy !=
-                ChartSourceRefreshPolicy.onDocumentRevision)
+        else if (state.isStale && generated != null && !followsDocumentRevision)
           _WorkbenchTableMessage(
             icon: Icons.update_outlined,
             message: 'The chart changed after this source was generated.',
@@ -1374,7 +1380,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                 )
               : ChartSourceView(
                   generated: generated,
-                  isStale: state.isStale,
+                  isStale: state.isStale && !followsDocumentRevision,
                   isRefreshing:
                       state.phase == ChartWorkbenchSourcePhase.refreshing,
                   onRefresh: _workbenchController.refreshSource,
