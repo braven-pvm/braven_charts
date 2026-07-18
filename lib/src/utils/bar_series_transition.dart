@@ -66,24 +66,44 @@ abstract final class BarSeriesTransition {
     required BarChartSeries previous,
     required BarChartSeries next,
   }) {
+    final nextIndexByX = <double, int>{};
+    for (var index = 0; index < next.points.length; index++) {
+      nextIndexByX.putIfAbsent(next.points[index].x, () => index);
+    }
     final exitingIndices = <int>[
       for (var index = 0; index < previous.points.length; index++)
-        if (!_containsX(next.points, previous.points[index].x)) index,
+        if (!nextIndexByX.containsKey(previous.points[index].x)) index,
     ];
     if (exitingIndices.isEmpty) return next;
 
-    final slots = <_TransitionPointSlot>[
-      for (var index = 0; index < next.points.length; index++)
-        _TransitionPointSlot.next(index),
-    ];
+    final nextAnchorByPreviousIndex = List<int?>.filled(
+      previous.points.length,
+      null,
+    );
+    int? nextAnchor;
+    for (var index = previous.points.length - 1; index >= 0; index--) {
+      final matchingNextIndex = nextIndexByX[previous.points[index].x];
+      if (matchingNextIndex != null) {
+        nextAnchor = matchingNextIndex;
+      } else {
+        nextAnchorByPreviousIndex[index] = nextAnchor;
+      }
+    }
+    final exitingByNextAnchor = <int?, List<int>>{};
     for (final previousIndex in exitingIndices) {
-      final insertionIndex = _exitInsertionIndex(
-        slots: slots,
-        previous: previous,
-        previousIndex: previousIndex,
-        next: next,
-      );
-      slots.insert(insertionIndex, _TransitionPointSlot.exiting(previousIndex));
+      (exitingByNextAnchor[nextAnchorByPreviousIndex[previousIndex]] ??= [])
+          .add(previousIndex);
+    }
+    final slots = <_TransitionPointSlot>[];
+    for (var nextIndex = 0; nextIndex < next.points.length; nextIndex++) {
+      for (final previousIndex
+          in exitingByNextAnchor[nextIndex] ?? const <int>[]) {
+        slots.add(_TransitionPointSlot.exiting(previousIndex));
+      }
+      slots.add(_TransitionPointSlot.next(nextIndex));
+    }
+    for (final previousIndex in exitingByNextAnchor[null] ?? const <int>[]) {
+      slots.add(_TransitionPointSlot.exiting(previousIndex));
     }
 
     final points = <ChartDataPoint>[];
@@ -181,6 +201,13 @@ abstract final class BarSeriesTransition {
     final animatedTargets = <double?>[];
     final animatedErrorLower = <double?>[];
     final animatedErrorUpper = <double?>[];
+    final sourceIndexByIdentity = <(double, String?), int>{};
+    final sourceIndexByX = <double, int>{};
+    for (var index = 0; index < from.points.length; index++) {
+      final point = from.points[index];
+      sourceIndexByIdentity.putIfAbsent((point.x, point.label), () => index);
+      sourceIndexByX.putIfAbsent(point.x, () => index);
+    }
     for (var index = 0; index < to.points.length; index++) {
       final pointProgress = _pointProgress(
         progress: t,
@@ -189,10 +216,9 @@ abstract final class BarSeriesTransition {
         motion: to.barStyle.motion,
       );
       final targetPoint = to.points[index];
-      final sourceIndex = _sourceIndexFor(
-        targetPoint: targetPoint,
-        source: from,
-      );
+      final sourceIndex =
+          sourceIndexByIdentity[(targetPoint.x, targetPoint.label)] ??
+          sourceIndexByX[targetPoint.x];
       final sourcePoint = sourceIndex == null
           ? targetPoint.copyWith(
               y: to.layoutMode == BarLayoutMode.waterfall
@@ -265,52 +291,6 @@ abstract final class BarSeriesTransition {
       from.orientation == to.orientation &&
       from.layoutMode == to.layoutMode &&
       from.groupId == to.groupId;
-
-  static int? _sourceIndexFor({
-    required ChartDataPoint targetPoint,
-    required BarChartSeries source,
-  }) {
-    for (var index = 0; index < source.points.length; index++) {
-      final candidate = source.points[index];
-      if (candidate.x == targetPoint.x &&
-          candidate.label == targetPoint.label) {
-        return index;
-      }
-    }
-    for (var index = 0; index < source.points.length; index++) {
-      if (source.points[index].x == targetPoint.x) return index;
-    }
-    return null;
-  }
-
-  static bool _containsX(List<ChartDataPoint> points, double x) =>
-      points.any((point) => point.x == x);
-
-  static int _exitInsertionIndex({
-    required List<_TransitionPointSlot> slots,
-    required BarChartSeries previous,
-    required int previousIndex,
-    required BarChartSeries next,
-  }) {
-    for (
-      var index = previousIndex + 1;
-      index < previous.points.length;
-      index++
-    ) {
-      final nextIndex = _indexOfX(next.points, previous.points[index].x);
-      if (nextIndex == null) continue;
-      final slotIndex = slots.indexWhere((slot) => slot.nextIndex == nextIndex);
-      if (slotIndex >= 0) return slotIndex;
-    }
-    return slots.length;
-  }
-
-  static int? _indexOfX(List<ChartDataPoint> points, double x) {
-    for (var index = 0; index < points.length; index++) {
-      if (points[index].x == x) return index;
-    }
-    return null;
-  }
 
   static double _lerp(double from, double to, double t) =>
       from + (to - from) * t;

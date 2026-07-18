@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- Invalid or non-finite Bar points no longer poison stacked, normalized,
+  diverging, Waterfall, bounds, viewport, or hit-test geometry.
+- Oversized per-point bars remain visible when their bodies intersect the
+  viewport, while extreme widths are clipped before spatial indexing.
+- Bar transition matching and exit placement now scale linearly, and dense
+  charts bypass full-list entrance interpolation beyond the maintained
+  10,000-mark animation budget.
+- Changing `transitionKey` during an active radial morph now clears the stale
+  transition before the destination chart enters.
+- The Bar Lab maximum stress configuration no longer rebuilds its 10,000-item
+  category list once per data point.
+
 ## 0.7.0 - 2026-07-18
 
 ### Added

@@ -4,6 +4,59 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BarCompositionEngine', () {
+    test('invalid stacked points do not poison valid sibling geometry', () {
+      final result = BarCompositionEngine.resolve(const [
+        BarChartSeries(
+          id: 'first',
+          points: [ChartDataPoint(x: 0, y: 20)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.stacked,
+        ),
+        BarChartSeries(
+          id: 'missing',
+          points: [ChartDataPoint(x: 0, y: double.nan)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.stacked,
+        ),
+        BarChartSeries(
+          id: 'last',
+          points: [ChartDataPoint(x: 0, y: 30)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.stacked,
+        ),
+      ]);
+
+      expect(result['first']!.startValues, {0: 0});
+      expect(result['first']!.endValues, {0: 20});
+      expect(result['missing']!.startValues, isEmpty);
+      expect(result['missing']!.endValues, isEmpty);
+      expect(result['last']!.startValues, {0: 20});
+      expect(result['last']!.endValues, {0: 50});
+    });
+
+    test(
+      'invalid Waterfall deltas are omitted without poisoning the total',
+      () {
+        const series = BarChartSeries(
+          id: 'waterfall-with-gap',
+          points: [
+            ChartDataPoint(x: 0, y: 10),
+            ChartDataPoint(x: 1, y: double.nan),
+            ChartDataPoint(x: 2, y: 5),
+            ChartDataPoint(x: 3, y: 0),
+          ],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.waterfall,
+          waterfallTotalIndices: {3},
+        );
+
+        final info = BarCompositionEngine.resolve([series])[series.id]!;
+        expect(info.startValues, {0: 0, 2: 10, 3: 0});
+        expect(info.endValues, {0: 10, 2: 15, 3: 15});
+        expect(series.waterfallDisplayValueFor(3), 15);
+      },
+    );
+
     test('rejects mixed bar orientations in one chart', () {
       const vertical = BarChartSeries(
         id: 'vertical',

@@ -836,7 +836,9 @@ class BarChartSeries extends ChartSeries {
     }
     var runningTotal = baselineValue;
     for (var index = 0; index < pointIndex; index++) {
-      if (!isWaterfallTotal(index)) runningTotal += points[index].y;
+      if (!isWaterfallTotal(index) && points[index].isValid) {
+        runningTotal += points[index].y;
+      }
     }
     return runningTotal;
   }
@@ -918,6 +920,7 @@ class BarChartSeries extends ChartSeries {
     }
     if (layoutMode == BarLayoutMode.divergingStacked) {
       for (var index = 0; index < points.length; index++) {
+        if (!points[index].isValid) continue;
         final magnitude = points[index].y - baselineValue;
         if (!magnitude.isFinite || magnitude < 0) {
           throw ArgumentError.value(
@@ -947,14 +950,18 @@ class BarChartSeries extends ChartSeries {
       }
     }
     if (layoutMode == BarLayoutMode.waterfall) {
-      for (var index = 1; index < points.length; index++) {
-        if (points[index].x <= points[index - 1].x) {
+      double? previousX;
+      for (var index = 0; index < points.length; index++) {
+        final point = points[index];
+        if (!point.isValid) continue;
+        if (previousX != null && point.x <= previousX) {
           throw ArgumentError.value(
-            points[index].x,
+            point.x,
             'points[$index].x',
             'Waterfall points must use strictly increasing X values',
           );
         }
+        previousX = point.x;
       }
     }
     final bullet = bulletStyle;

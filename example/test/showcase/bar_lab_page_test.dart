@@ -104,16 +104,21 @@ void main() {
     );
 
     tester
+        .widgetList<IntSliderOption>(find.byType(IntSliderOption))
+        .singleWhere((option) => option.label == 'Series count')
+        .onChanged(12);
+    tester
         .widget<IntSliderOption>(
           find.byKey(const ValueKey('bar-lab-stress-category-count')),
         )
-        .onChanged(1000);
+        .onChanged(10000);
     await tester.pumpAndSettle();
 
     chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
     bars = chart.series.whereType<BarChartSeries>().toList();
-    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(1000));
-    expect(bars.expand((series) => series.points), hasLength(8000));
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(10000));
+    expect(bars, hasLength(12));
+    expect(bars.expand((series) => series.points), hasLength(120000));
     expect(tester.takeException(), isNull);
   });
 

@@ -976,6 +976,8 @@ class BravenChartPlus extends StatefulWidget {
 
 class _BravenChartPlusState extends State<BravenChartPlus>
     with TickerProviderStateMixin {
+  static const int _maximumAnimatedBarPointCount = 10000;
+
   late ChartInteractionCoordinator _coordinator;
   late QuadTree _spatialIndex;
   late PriorityPanGestureRecognizer _panRecognizer;
@@ -1489,9 +1491,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         detectBarAnimations: seriesChanged || transitionKeyChanged,
         detectPathAnimations: seriesChanged || transitionKeyChanged,
         detectRadialAnimations:
-            radialDataChanged &&
-            !radialAnimationModeChanged &&
-            !transitionKeyChanged,
+            transitionKeyChanged ||
+            (radialDataChanged && !radialAnimationModeChanged),
         restartSeriesAnimations: transitionKeyChanged,
       );
       if (radialAnimationModeChanged || transitionKeyChanged) {
@@ -2960,6 +2961,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _barDataAnimationController.value = 1;
       return;
     }
+    if (_barAnimationPointCount(
+          previousSeriesById: previousSeriesById,
+          nextSeries: nextSeries,
+        ) >
+        _maximumAnimatedBarPointCount) {
+      _barDataAnimationController.value = 1;
+      return;
+    }
     _barDataAnimationController.value = 0;
 
     final nextBarIds = <String>{
@@ -3030,6 +3039,29 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (!mounted || _barSeriesTransitions.isEmpty) return;
       _barDataAnimationController.forward();
     });
+  }
+
+  int _barAnimationPointCount({
+    required Map<String, ChartSeries> previousSeriesById,
+    required List<ChartSeries> nextSeries,
+  }) {
+    var count = 0;
+    final nextIds = <String>{};
+    for (final next in nextSeries.whereType<BarChartSeries>()) {
+      nextIds.add(next.id);
+      final previous = previousSeriesById[next.id];
+      count += previous is BarChartSeries
+          ? math.max(previous.points.length, next.points.length)
+          : next.points.length;
+      if (count > _maximumAnimatedBarPointCount) return count;
+    }
+    for (final previous
+        in previousSeriesById.values.whereType<BarChartSeries>()) {
+      if (nextIds.contains(previous.id)) continue;
+      count += previous.points.length;
+      if (count > _maximumAnimatedBarPointCount) return count;
+    }
+    return count;
   }
 
   void _updateRadialSeriesTransition({

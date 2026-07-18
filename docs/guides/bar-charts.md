@@ -912,6 +912,12 @@ chart paint pass. `BarLabelCollisionPolicy.hide` and `reposition` therefore
 compare a label only with nearby occupied cells instead of scanning every
 previously accepted label.
 
+Bar entrance and update interpolation has a 10,000-mark safety budget. Larger
+bar datasets apply destination values immediately so animation cannot rebuild
+an entire dense source list on every frame; viewport rendering, interaction,
+and scrolling remain virtualized. Set `isXOrdered: true` when dense categories
+are already sorted to avoid an unnecessary one-time index sort.
+
 The benchmark at
 `test/benchmarks/rendering/bar_label_layout_benchmark_test.dart` exercises
 5,000 collision-aware labels against the 16.67 ms frame budget. The geometry

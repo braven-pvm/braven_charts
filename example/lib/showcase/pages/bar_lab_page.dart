@@ -2101,6 +2101,7 @@ class _BarLabPageState extends State<BarLabPage> {
     required Color trackColor,
   }) {
     final seriesIndex = int.parse(id.split('-').last) - 1;
+    final categories = _categories;
     final groupCount = _effectiveGroupCount;
     final groupIndex = seriesIndex % groupCount;
     final overlayLayer = seriesIndex ~/ groupCount;
@@ -2123,7 +2124,7 @@ class _BarLabPageState extends State<BarLabPage> {
           ChartDataPoint(
             x: index.toDouble(),
             y: values[index],
-            label: _categories[index],
+            label: categories[index],
             pointStyle: _preset == _BarLabPreset.offset && seriesIndex == 1
                 ? PointStyle.color(_medalColors[index])
                 : null,

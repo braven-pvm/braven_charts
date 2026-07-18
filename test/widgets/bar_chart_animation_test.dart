@@ -141,6 +141,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('dense bar data bypasses full-list entrance interpolation', (
+    tester,
+  ) async {
+    final base = ChartTheme.light;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: BravenChartPlus(
+            showLegend: false,
+            theme: base.copyWith(
+              animationTheme: base.animationTheme.copyWith(
+                dataUpdateDuration: const Duration(milliseconds: 400),
+              ),
+            ),
+            series: [
+              BarChartSeries(
+                id: 'dense',
+                points: [
+                  for (var index = 0; index < 10001; index++)
+                    ChartDataPoint(x: index.toDouble(), y: 50),
+                ],
+                isXOrdered: true,
+                barWidthPercent: 0.7,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(_renderedBarSeries(tester)['dense']!.points, hasLength(10001));
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('removed points collapse before leaving canonical geometry', (
     tester,
   ) async {

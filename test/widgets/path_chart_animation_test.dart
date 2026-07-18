@@ -57,6 +57,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'a new transition key reveals destination paths from fresh data',
+    (tester) async {
+      final key = GlobalKey<_FreshPathHarnessState>();
+      await tester.pumpWidget(_FreshPathHarness(key: key, theme: theme));
+      await tester.pumpAndSettle();
+
+      key.currentState!.startFresh();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final element = renderedElement(tester);
+      expect(element.revealProgress, closeTo(0.5, 0.01));
+      expect(element.series.points.last.y, 40);
+      await tester.pumpAndSettle();
+      expect(renderedElement(tester).revealProgress, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('entrance reveal is interpolation agnostic', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -862,6 +883,53 @@ class _AnimatedAreaHarness extends StatefulWidget {
 
   @override
   State<_AnimatedAreaHarness> createState() => _AnimatedAreaHarnessState();
+}
+
+class _FreshPathHarness extends StatefulWidget {
+  const _FreshPathHarness({super.key, required this.theme});
+
+  final ChartTheme theme;
+
+  @override
+  State<_FreshPathHarness> createState() => _FreshPathHarnessState();
+}
+
+class _FreshPathHarnessState extends State<_FreshPathHarness> {
+  Object transitionKey = 'initial';
+  double endValue = 20;
+
+  void startFresh() => setState(() {
+    transitionKey = Object();
+    endValue = 40;
+  });
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    home: SizedBox(
+      width: 520,
+      height: 360,
+      child: BravenChartPlus(
+        transitionKey: transitionKey,
+        showLegend: false,
+        theme: widget.theme,
+        xAxisConfig: const XAxisConfig(min: 0, max: 1),
+        yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 60),
+        series: [
+          LineChartSeries(
+            id: 'fresh-line',
+            points: [
+              const ChartDataPoint(x: 0, y: 10),
+              ChartDataPoint(x: 1, y: endValue),
+            ],
+            pathAnimation: const PathAnimationStyle(
+              entranceMode: PathEntranceAnimationMode.reveal,
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _StaggeredPathHarness extends StatefulWidget {
