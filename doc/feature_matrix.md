@@ -13,13 +13,13 @@ is added to package marketing.
 | Annotations | `ChartAnnotation` subtypes, `AnnotationController`, editing dialogs | Annotations, Lactate Threshold, Gallery |
 | Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, explicit per-series entrance/update timing, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
-| Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, `rangeStartValues`, `BarLayoutMode`, `BarChartStyle`, `BarTrackStyle`, `BarLabelStyle`, `BarGroupInfo` | Bar Lab, Chart Types, Gallery |
+| Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, inherited RTL canvas text and semantics, `rangeStartValues`, `BarLayoutMode`, first-class diverging/Likert roles and center line, `BarChartStyle`, non-colour `BarPatternStyle`, `BarTrackStyle`, `BarLollipopStyle`, first-class `BarBulletStyle`, `ParetoChartData` mixed bar-line compositions, `HistogramChartData` continuous-sample binning, keyed entrance/update/exit `BarMotionStyle`, chart-wide collision-aware `BarLabelStyle`, stack totals, `BarGroupInfo` | Bar Lab RTL, Bar Lab Histogram, Bar Lab Pareto, Bar Lab Lollipop, Bar Lab Likert, Bar Lab Bullet, Bar Lab Patterns, Bar Lab, Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
-| Configurable X axis | `XAxisConfig` | Minor Ticks, Render Range, all chart pages |
+| Configurable X axis | `XAxisConfig`, `CategoryAxisConfig`, `CategoryLabelDensity`, `CategoryLabelOverflow` | Bar Lab Categories, Minor Ticks, Render Range |
 | Streaming data | `StreamingConfig`, `StreamingController` | Streaming |
 | Direct live ingestion | `LiveStreamController`, `StreamingBuffer` | Gallery, Live Stream |
 | Theming | `ChartTheme` and component theme types, including radial defaults | Theming, Pie Charts, Gallery |
@@ -29,7 +29,7 @@ is added to package marketing.
 | Portable chart artifacts | `ChartArtifact`, canonical JSON, preview capture, hydration | Chart Artifacts, Pie Charts |
 | Reusable chart workbench | `BravenChartWorkbench`, resizable Split view, revision-safe linked point identity | Line Charts, Area Charts, Pie Charts, Donut Charts, Chart Workbench |
 | Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
-| Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including the `pie` contract | Pie Charts, API documentation |
+| Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including complete advanced `bar`, `pie`, and `donut` contracts | Bar Lab, Pie Charts, API documentation |
 | Dense-data performance | bounded buffers, viewport culling, render caches | Performance, Live Stream |
 
 ## Current boundary

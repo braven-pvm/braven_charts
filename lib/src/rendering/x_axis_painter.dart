@@ -9,6 +9,7 @@ import 'package:flutter/painting.dart'
     show FontWeight, TextPainter, TextSpan, TextStyle;
 
 import '../models/chart_series.dart';
+import '../models/category_axis_config.dart';
 import '../models/data_range.dart';
 import '../models/x_axis_config.dart';
 
@@ -41,6 +42,7 @@ class XAxisPainter {
     required this.labelStyle,
     this.series,
     this.tickValues,
+    this.textDirection = TextDirection.ltr,
   });
 
   /// X-axis configuration.
@@ -57,6 +59,119 @@ class XAxisPainter {
 
   /// Optional precomputed tick positions for the X-axis.
   final List<double>? tickValues;
+
+  /// Reading direction inherited from the chart's [Directionality].
+  final TextDirection textDirection;
+
+  /// Resolves numeric or categorical ticks for the current viewport.
+  ///
+  /// Categorical ticks always land on integer category centers. In automatic
+  /// density mode they are thinned against the available screen extent, then
+  /// naturally expand again as the user zooms into fewer categories.
+  List<double> resolveTickValues(double pixelExtent) {
+    final categoryAxis = config.categoryAxis;
+    if (categoryAxis == null || categoryAxis.categories.isEmpty) {
+      return tickValues ?? generateTicks(axisBounds);
+    }
+
+    final renderMin = config.renderMin ?? axisBounds.min;
+    final renderMax = config.renderMax ?? axisBounds.max;
+    final first = math.max(0, math.max(axisBounds.min, renderMin).ceil());
+    final last = math.min(
+      categoryAxis.categories.length - 1,
+      math.min(axisBounds.max, renderMax).floor(),
+    );
+    if (last < first) return const [];
+
+    final visibleCount = last - first + 1;
+    if (categoryAxis.labelDensity == CategoryLabelDensity.showAll ||
+        !pixelExtent.isFinite ||
+        pixelExtent <= 0) {
+      return [for (var index = first; index <= last; index++) index.toDouble()];
+    }
+
+    final labelCapacity = math.max(
+      1,
+      (pixelExtent / categoryAxis.minimumCategoryExtent).floor(),
+    );
+    if (visibleCount <= labelCapacity) {
+      return [for (var index = first; index <= last; index++) index.toDouble()];
+    }
+
+    final stride = (visibleCount / labelCapacity).ceil();
+    final result = <double>[
+      for (var index = first; index <= last; index += stride) index.toDouble(),
+    ];
+    if (result.last != last.toDouble() &&
+        last - result.last >= math.max(1, stride / 2)) {
+      result.add(last.toDouble());
+    }
+    return result;
+  }
+
+  /// Lays out one tick label using categorical wrapping and truncation rules.
+  TextPainter layoutTickLabel(double value, {double? maximumWidth}) {
+    final categoryAxis = config.categoryAxis;
+    final categorical = categoryAxis != null && config.isCategorical;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: formatTickLabel(value),
+        style: labelStyle.copyWith(color: resolveAxisColor()),
+      ),
+      textDirection: textDirection,
+      maxLines: categorical
+          ? (categoryAxis.labelOverflow == CategoryLabelOverflow.ellipsis
+                ? 1
+                : categoryAxis.maxLabelLines)
+          : 1,
+      ellipsis:
+          categorical &&
+              categoryAxis.labelOverflow == CategoryLabelOverflow.ellipsis
+          ? '…'
+          : null,
+    );
+    final width = categorical
+        ? math.max(
+            1.0,
+            math.min(
+              categoryAxis.maximumLabelExtent,
+              maximumWidth ?? categoryAxis.maximumLabelExtent,
+            ),
+          )
+        : double.infinity;
+    painter.layout(maxWidth: width);
+    return painter;
+  }
+
+  /// Required bottom-axis height for the current plot width.
+  double measureRequiredHeight(double plotWidth) {
+    if (!config.visible) return 0;
+    const tickLength = 6.0;
+    final ticks = resolveTickValues(plotWidth);
+    final labelWidth = _categoryLabelWidth(ticks, plotWidth);
+    var tickLabelExtent = 0.0;
+    if (config.shouldShowTickLabels) {
+      for (final tick in ticks) {
+        final painter = layoutTickLabel(tick, maximumWidth: labelWidth);
+        tickLabelExtent = math.max(
+          tickLabelExtent,
+          _rotatedLabelHeight(painter),
+        );
+      }
+    }
+    final tickExtent = config.showTicks ? tickLength : 0.0;
+    final labelExtent = config.shouldShowTickLabels
+        ? config.tickLabelPadding + tickLabelExtent
+        : 0.0;
+    final titleExtent =
+        config.shouldShowAxisLabel && (config.label?.isNotEmpty ?? false)
+        ? config.axisLabelPadding + (labelStyle.fontSize ?? 12) * 1.25
+        : 0.0;
+    return (tickExtent + labelExtent + titleExtent + config.axisMargin).clamp(
+      config.minHeight,
+      config.maxHeight,
+    );
+  }
 
   /// Paints the X-axis on the canvas.
   ///
@@ -85,17 +200,21 @@ class XAxisPainter {
     }
 
     // Generate ticks and draw them
-    final ticks = tickValues ?? generateTicks(axisBounds);
+    final ticks = resolveTickValues(plotArea.width);
+    final categoryLabelWidth = _categoryLabelWidth(ticks, plotArea.width);
+    var maximumTickLabelHeight = 0.0;
 
     // Save canvas state and clip to prevent ticks from extending beyond plot area bounds
     canvas.save();
     // Clip horizontally to plot area, allow vertical overflow for labels below axis
-    canvas.clipRect(Rect.fromLTRB(
-      plotArea.left,
-      plotArea.top,
-      plotArea.right,
-      chartArea.bottom,
-    ));
+    canvas.clipRect(
+      Rect.fromLTRB(
+        plotArea.left,
+        plotArea.top,
+        plotArea.right,
+        chartArea.bottom,
+      ),
+    );
 
     final effectiveRenderMin = config.renderMin ?? axisBounds.min;
     final effectiveRenderMax = config.renderMax ?? axisBounds.max;
@@ -122,28 +241,29 @@ class XAxisPainter {
 
       // Draw tick label (only if labelDisplay is not none)
       if (config.shouldShowTickLabels) {
-        final label = formatTickLabel(tickValue);
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: label,
-            style: labelStyle.copyWith(color: axisColor),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        final textPainter = layoutTickLabel(
+          tickValue,
+          maximumWidth: categoryLabelWidth,
+        );
+        maximumTickLabelHeight = math.max(
+          maximumTickLabelHeight,
+          _rotatedLabelHeight(textPainter),
+        );
 
         const tickLength = 6.0;
-        textPainter.paint(
-          canvas,
-          Offset(
-            x - textPainter.width / 2,
-            plotArea.bottom + tickLength + config.tickLabelPadding,
-          ),
+        _paintTickLabel(
+          canvas: canvas,
+          painter: textPainter,
+          centerX: x,
+          top: plotArea.bottom + tickLength + config.tickLabelPadding,
         );
       }
     }
 
     // Minor ticks — shorter unlabelled marks between major ticks
-    if (config.showMinorTicks && config.minorTickCount > 0 && ticks.length >= 2) {
+    if (config.showMinorTicks &&
+        config.minorTickCount > 0 &&
+        ticks.length >= 2) {
       for (int i = 0; i < ticks.length - 1; i++) {
         final a = ticks[i];
         final b = ticks[i + 1];
@@ -153,8 +273,10 @@ class XAxisPainter {
               ? 0.0
               : (v - axisBounds.min) / axisBounds.span;
           final x = plotArea.left + ratio * plotArea.width;
-          if (x >= plotArea.left && x <= plotArea.right &&
-              v >= effectiveRenderMin && v <= effectiveRenderMax) {
+          if (x >= plotArea.left &&
+              x <= plotArea.right &&
+              v >= effectiveRenderMin &&
+              v <= effectiveRenderMax) {
             canvas.drawLine(
               Offset(x, plotArea.bottom),
               Offset(x, plotArea.bottom + config.minorTickLength),
@@ -172,8 +294,8 @@ class XAxisPainter {
     if (config.shouldShowAxisLabel && config.label != null) {
       final axisLabelText =
           config.shouldAppendUnitToLabel && config.unit != null
-              ? '${config.label} (${config.unit})'
-              : config.label!;
+          ? '${config.label} (${config.unit})'
+          : config.label!;
 
       final axisLabelPainter = TextPainter(
         text: TextSpan(
@@ -183,17 +305,16 @@ class XAxisPainter {
             fontWeight: FontWeight.bold,
           ),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: textDirection,
       )..layout();
 
       // Position the axis label centered below the tick labels
       const tickLength = 6.0;
-      // Estimate tick label height (approximately fontSize * 1.2)
-      final tickLabelHeight = labelStyle.fontSize ?? 12.0 * 1.2;
-      final axisLabelY = plotArea.bottom +
+      final axisLabelY =
+          plotArea.bottom +
           tickLength +
           config.tickLabelPadding +
-          tickLabelHeight +
+          maximumTickLabelHeight +
           config.axisLabelPadding;
 
       // Use canvas save/restore to ensure axis label doesn't affect other rendering
@@ -281,6 +402,9 @@ class XAxisPainter {
   ///
   /// Returns a formatted string representation of the value.
   String formatTickLabel(double value) {
+    final categoryLabel = config.categoryLabelFor(value);
+    if (categoryLabel != null) return categoryLabel;
+
     // Try custom formatter first
     if (config.labelFormatter != null) {
       try {
@@ -313,6 +437,46 @@ class XAxisPainter {
     }
 
     return formatted;
+  }
+
+  double _categoryLabelWidth(List<double> ticks, double plotWidth) {
+    final categoryAxis = config.categoryAxis;
+    if (categoryAxis == null || ticks.isEmpty || axisBounds.span <= 0) {
+      return double.infinity;
+    }
+    var minimumGap = double.infinity;
+    for (var index = 1; index < ticks.length; index++) {
+      minimumGap = math.min(minimumGap, ticks[index] - ticks[index - 1]);
+    }
+    if (!minimumGap.isFinite) minimumGap = 1;
+    final available = plotWidth / axisBounds.span * minimumGap - 8;
+    return math.min(categoryAxis.maximumLabelExtent, math.max(24, available));
+  }
+
+  double _rotatedLabelHeight(TextPainter painter) {
+    final degrees = config.categoryAxis?.labelRotationDegrees ?? 0;
+    if (degrees == 0) return painter.height;
+    final radians = degrees.abs() * math.pi / 180;
+    return painter.width * math.sin(radians) +
+        painter.height * math.cos(radians);
+  }
+
+  void _paintTickLabel({
+    required Canvas canvas,
+    required TextPainter painter,
+    required double centerX,
+    required double top,
+  }) {
+    final degrees = config.categoryAxis?.labelRotationDegrees ?? 0;
+    if (degrees == 0) {
+      painter.paint(canvas, Offset(centerX - painter.width / 2, top));
+      return;
+    }
+    canvas.save();
+    canvas.translate(centerX, top);
+    canvas.rotate(degrees * math.pi / 180);
+    painter.paint(canvas, Offset(-painter.width / 2, 0));
+    canvas.restore();
   }
 
   /// Resolves the color to use for the axis.

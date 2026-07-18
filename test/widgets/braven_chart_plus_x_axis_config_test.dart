@@ -17,25 +17,63 @@ library;
 import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
+import 'package:braven_charts/src/models/category_axis_config.dart';
 import 'package:braven_charts/src/models/x_axis_config.dart';
 import 'package:braven_charts/src/models/y_axis_config.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BravenChartPlus.xAxisConfig parameter', () {
+    testWidgets('categorical bounds open a readable scrollable viewport', (
+      tester,
+    ) async {
+      final categories = List.generate(24, (index) => 'Category $index');
+      final points = List.generate(
+        categories.length,
+        (index) => ChartDataPoint(x: index.toDouble(), y: index + 10.0),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 480,
+              height: 320,
+              child: BravenChartPlus(
+                series: [LineChartSeries(id: 'dense', points: points)],
+                showXScrollbar: true,
+                xAxisConfig: XAxisConfig(
+                  categoryAxis: CategoryAxisConfig(
+                    categories: categories,
+                    minimumCategoryExtent: 72,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      expect(renderBox.transform, isNotNull);
+      expect(renderBox.transform!.dataXMin, -0.5);
+      expect(renderBox.transform!.dataXRange, lessThan(categories.length));
+      expect(renderBox.transform!.dataXRange, greaterThanOrEqualTo(1));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('accepts xAxisConfig parameter', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'test',
-                  points: [],
-                ),
-              ],
+              series: [LineChartSeries(id: 'test', points: [])],
               // This parameter now exists - GREEN phase implementation
               xAxisConfig: XAxisConfig(
                 label: 'Time',
@@ -65,12 +103,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: BravenChartPlus(
-              series: [
-                LineChartSeries(
-                  id: 'sensor',
-                  points: [],
-                ),
-              ],
+              series: [LineChartSeries(id: 'sensor', points: [])],
               xAxisConfig: xAxisConfig,
             ),
           ),
@@ -85,8 +118,9 @@ void main() {
       expect(renderBox, isNotNull);
     });
 
-    testWidgets('crosshairLabelPosition.insidePlot affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.insidePlot affects rendering', (
+      tester,
+    ) async {
       const xAxisConfig = XAxisConfig(
         label: 'X-Axis',
         showCrosshairLabel: true,
@@ -129,8 +163,9 @@ void main() {
       expect(find.byType(BravenChartPlus), findsOneWidget);
     });
 
-    testWidgets('crosshairLabelPosition.overAxis affects rendering',
-        (tester) async {
+    testWidgets('crosshairLabelPosition.overAxis affects rendering', (
+      tester,
+    ) async {
       const xAxisConfig = XAxisConfig(
         label: 'Data Points',
         showCrosshairLabel: true,

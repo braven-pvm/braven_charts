@@ -583,6 +583,95 @@ void main() {
       },
     );
 
+    test('round-trips bullet-chart ranges and capability', () {
+      const source = BarChartSeries(
+        id: 'delivery',
+        points: [ChartDataPoint(x: 0, y: 82)],
+        barWidthPercent: 0.5,
+        orientation: BarOrientation.horizontal,
+        bulletStyle: BarBulletStyle(
+          measureThicknessFactor: 0.42,
+          cornerRadius: 4,
+          ranges: [
+            BarBulletRange(
+              endValue: 55,
+              color: Color(0xFFE2E8F0),
+              label: 'Needs attention',
+            ),
+            BarBulletRange(
+              endValue: 100,
+              color: Color(0xFF94A3B8),
+              label: 'On track',
+            ),
+          ],
+        ),
+        targetValues: [88],
+      );
+
+      final encoded = ChartSeriesDocumentCodec.encode(source);
+      final document =
+          (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+      expect(document.requiredCapabilities, contains('series.bar.bullet.v1'));
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+      expect(decoded.bulletStyle, source.bulletStyle);
+      expect(decoded.targetValues, [88]);
+    });
+
+    test('round-trips diverging role and capability', () {
+      const source = BarChartSeries(
+        id: 'disagree',
+        points: [ChartDataPoint(x: 0, y: 24)],
+        barWidthPercent: 0.8,
+        layoutMode: BarLayoutMode.divergingStacked,
+        groupId: 'responses',
+        divergingRole: BarDivergingRole.negative,
+        divergingStyle: BarDivergingStyle(
+          centerLineColor: Color(0xFF334155),
+          centerLineWidth: 2,
+          centerLineOpacity: 0.6,
+        ),
+      );
+
+      final encoded = ChartSeriesDocumentCodec.encode(source);
+      final document =
+          (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+      expect(
+        document.requiredCapabilities,
+        contains('series.bar.diverging.v1'),
+      );
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+      expect(decoded.layoutMode, BarLayoutMode.divergingStacked);
+      expect(decoded.divergingRole, BarDivergingRole.negative);
+      expect(decoded.divergingStyle, source.divergingStyle);
+    });
+
+    test('round-trips lollipop presentation and capability', () {
+      const source = BarChartSeries(
+        id: 'lollipop',
+        points: [ChartDataPoint(x: 0, y: 72)],
+        barWidthPercent: 0.6,
+        orientation: BarOrientation.horizontal,
+        lollipopStyle: BarLollipopStyle(
+          stemWidth: 4,
+          headRadius: 9,
+          stemColor: Color(0xFF64748B),
+          headColor: Color(0xFF168AAD),
+          headBorder: BarBorderStyle(color: Color(0xFF0F5F73), width: 2),
+        ),
+      );
+
+      final encoded = ChartSeriesDocumentCodec.encode(source);
+      final document =
+          (encoded as ChartArtifactSuccess<ChartSeriesDocument>).value;
+      expect(document.requiredCapabilities, contains('series.bar.lollipop.v1'));
+
+      final decoded = _roundTrip(source) as BarChartSeries;
+      expect(decoded.lollipopStyle, source.lollipopStyle);
+      expect(decoded.orientation, BarOrientation.horizontal);
+    });
+
     test('round-trips scatter, bar, and concrete base series', () {
       final scatter =
           _roundTrip(
@@ -618,9 +707,20 @@ void main() {
                     cornerRadiusPolicy: BarCornerRadiusPolicy.all,
                     opacity: 0.85,
                     animationMode: BarAnimationMode.none,
+                    motion: BarMotionStyle(
+                      order: BarAnimationOrder.centerOut,
+                      staggerFraction: 0.45,
+                    ),
                     gradient: BarGradient(
                       colors: [Color(0xFF123456), Color(0xFF65AADD)],
                       stops: [0, 1],
+                    ),
+                    pattern: BarPatternStyle(
+                      pattern: BarFillPattern.diagonalUp,
+                      color: Color(0xFFFFFFFF),
+                      spacing: 6,
+                      strokeWidth: 1.25,
+                      opacity: 0.7,
                     ),
                     border: BarBorderStyle(color: Color(0xFF0A0A0A), width: 2),
                     interaction: BarInteractionStyle(
@@ -669,6 +769,21 @@ void main() {
                     fontWeight: FontWeight.w700,
                     showUnit: true,
                     padding: 5,
+                    collisionPolicy: BarLabelCollisionPolicy.reposition,
+                    plotEdgeAware: false,
+                    collisionPadding: 6,
+                    backgroundColor: Color(0xEEFFFFFF),
+                    borderColor: Color(0xFF334155),
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    backgroundPadding: 4,
+                    callout: BarLabelCalloutStyle(
+                      show: true,
+                      color: Color(0xFF475569),
+                      width: 1.25,
+                      minimumLength: 7,
+                    ),
+                    showStackTotal: true,
                   ),
                 ),
               )
@@ -689,11 +804,18 @@ void main() {
       expect(bar.barStyle.cornerRadiusPolicy, BarCornerRadiusPolicy.all);
       expect(bar.barStyle.opacity, 0.85);
       expect(bar.barStyle.animationMode, BarAnimationMode.none);
+      expect(bar.barStyle.motion.order, BarAnimationOrder.centerOut);
+      expect(bar.barStyle.motion.staggerFraction, 0.45);
       expect(bar.barStyle.gradient?.colors, const [
         Color(0xFF123456),
         Color(0xFF65AADD),
       ]);
       expect(bar.barStyle.gradient?.stops, const [0, 1]);
+      expect(bar.barStyle.pattern?.pattern, BarFillPattern.diagonalUp);
+      expect(bar.barStyle.pattern?.color, const Color(0xFFFFFFFF));
+      expect(bar.barStyle.pattern?.spacing, 6);
+      expect(bar.barStyle.pattern?.strokeWidth, 1.25);
+      expect(bar.barStyle.pattern?.opacity, 0.7);
       expect(bar.barStyle.border?.width, 2);
       expect(
         bar.barStyle.interaction,
@@ -740,6 +862,27 @@ void main() {
       expect(bar.labelStyle.valueMode, BarLabelValueMode.percentage);
       expect(bar.labelStyle.fontWeight, FontWeight.w700);
       expect(bar.labelStyle.padding, 5);
+      expect(
+        bar.labelStyle.collisionPolicy,
+        BarLabelCollisionPolicy.reposition,
+      );
+      expect(bar.labelStyle.plotEdgeAware, isFalse);
+      expect(bar.labelStyle.collisionPadding, 6);
+      expect(bar.labelStyle.backgroundColor, const Color(0xEEFFFFFF));
+      expect(bar.labelStyle.borderColor, const Color(0xFF334155));
+      expect(bar.labelStyle.borderWidth, 1.5);
+      expect(bar.labelStyle.borderRadius, 6);
+      expect(bar.labelStyle.backgroundPadding, 4);
+      expect(
+        bar.labelStyle.callout,
+        const BarLabelCalloutStyle(
+          show: true,
+          color: Color(0xFF475569),
+          width: 1.25,
+          minimumLength: 7,
+        ),
+      );
+      expect(bar.labelStyle.showStackTotal, isTrue);
 
       final base = _roundTrip(
         const ChartSeries(

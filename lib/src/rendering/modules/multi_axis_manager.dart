@@ -1,12 +1,15 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Multi-Axis Manager Module - Extracted from ChartRenderBox
 
+import 'dart:math' as math;
+
 import 'package:flutter/painting.dart';
 
 import '../../axis/normalization_detector.dart';
 import '../../coordinates/chart_transform.dart';
 import '../../layout/multi_axis_layout.dart';
 import '../../models/axis_swap_mode.dart';
+import '../../models/bar_chart_style.dart';
 import '../../models/chart_series.dart';
 import '../../models/normalization_mode.dart';
 import '../../models/series_axis_binding.dart';
@@ -705,12 +708,20 @@ class MultiAxisManager {
       // Find series bound to this axis and compute bounds from data
       double? minY;
       double? maxY;
+      final boundDivergingBars = <BarChartSeries>[];
+      var hasNonDivergingBoundSeries = false;
 
       for (final binding in effectiveBindings) {
         if (binding.yAxisId == axis.id) {
           // Find matching series
           for (final series in _series) {
             if (series.id == binding.seriesId) {
+              if (series is BarChartSeries &&
+                  series.layoutMode == BarLayoutMode.divergingStacked) {
+                boundDivergingBars.add(series);
+              } else {
+                hasNonDivergingBoundSeries = true;
+              }
               for (
                 var pointIndex = 0;
                 pointIndex < series.points.length;
@@ -761,10 +772,36 @@ class MultiAxisManager {
                   if (minY == null || trackValue < minY) minY = trackValue;
                   if (maxY == null || trackValue > maxY) maxY = trackValue;
                 }
+                for (final range
+                    in series.bulletStyle?.ranges ?? const <BarBulletRange>[]) {
+                  if (minY == null || range.endValue < minY) {
+                    minY = range.endValue;
+                  }
+                  if (maxY == null || range.endValue > maxY) {
+                    maxY = range.endValue;
+                  }
+                }
               }
             }
           }
         }
+      }
+
+      if (boundDivergingBars.isNotEmpty &&
+          !hasNonDivergingBoundSeries &&
+          minY != null &&
+          maxY != null &&
+          boundDivergingBars.every(
+            (current) =>
+                current.baselineValue == boundDivergingBars.first.baselineValue,
+          )) {
+        final baseline = boundDivergingBars.first.baselineValue;
+        final extent = math.max(
+          (minY - baseline).abs(),
+          (maxY - baseline).abs(),
+        );
+        minY = baseline - extent;
+        maxY = baseline + extent;
       }
 
       // Use computed bounds, or fallback to 0-100 if no data

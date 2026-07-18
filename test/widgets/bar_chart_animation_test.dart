@@ -75,8 +75,18 @@ void main() {
             series: const [
               BarChartSeries(
                 id: 'actual',
-                points: [ChartDataPoint(x: 0, y: 100)],
+                points: [
+                  ChartDataPoint(x: 0, y: 100),
+                  ChartDataPoint(x: 1, y: 80),
+                  ChartDataPoint(x: 2, y: 60),
+                ],
                 barWidthPercent: 0.7,
+                barStyle: BarChartStyle(
+                  motion: BarMotionStyle(
+                    order: BarAnimationOrder.reverse,
+                    staggerFraction: 0.6,
+                  ),
+                ),
               ),
             ],
           ),
@@ -91,11 +101,108 @@ void main() {
     final series =
         renderBox.debugElements.whereType<SeriesElement>().single.series
             as BarChartSeries;
-    expect(series.points.single.y, 100);
+    expect(series.points.map((point) => point.y), [100, 80, 60]);
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('removed points collapse before leaving canonical geometry', (
+    tester,
+  ) async {
+    final key = GlobalKey<_LifecycleBarHarnessState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: _LifecycleBarHarness(key: key),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    key.currentState!.removeLastPoint();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    var actual = _renderedBarSeries(tester)['actual']!;
+    expect(actual.points.length, 2);
+    expect(actual.points.last.x, 1);
+    expect(actual.points.last.y, closeTo(40, 0.01));
+
+    await tester.pumpAndSettle();
+    actual = _renderedBarSeries(tester)['actual']!;
+    expect(actual.points.length, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('removed series collapse in their previous render order', (
+    tester,
+  ) async {
+    final key = GlobalKey<_LifecycleBarHarnessState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: _LifecycleBarHarness(key: key),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    key.currentState!.removePlanSeries();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    var rendered = _renderedBarSeries(tester);
+    expect(rendered.keys, const ['actual', 'plan']);
+    expect(rendered['plan']!.points.single.y, closeTo(30, 0.01));
+
+    await tester.pumpAndSettle();
+    rendered = _renderedBarSeries(tester);
+    expect(rendered.keys, const ['actual']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reduced motion removes points immediately', (tester) async {
+    final key = GlobalKey<_LifecycleBarHarnessState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: _LifecycleBarHarness(key: key),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    key.currentState!.removeLastPoint();
+    await tester.pump();
+
+    expect(_renderedBarSeries(tester)['actual']!.points.length, 1);
     expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);
   });
 }
+
+Map<String, BarChartSeries> _renderedBarSeries(WidgetTester tester) => {
+  for (final element
+      in tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single
+          .debugElements
+          .whereType<SeriesElement>())
+    if (element.series is BarChartSeries)
+      element.series.id: element.series as BarChartSeries,
+};
 
 class _AnimatedBarHarness extends StatefulWidget {
   const _AnimatedBarHarness({super.key, required this.theme});
@@ -123,6 +230,53 @@ class _AnimatedBarHarnessState extends State<_AnimatedBarHarness> {
           points: [ChartDataPoint(x: 0, y: value)],
           barWidthPercent: 0.7,
         ),
+      ],
+    );
+  }
+}
+
+class _LifecycleBarHarness extends StatefulWidget {
+  const _LifecycleBarHarness({super.key});
+
+  @override
+  State<_LifecycleBarHarness> createState() => _LifecycleBarHarnessState();
+}
+
+class _LifecycleBarHarnessState extends State<_LifecycleBarHarness> {
+  bool includeLastPoint = true;
+  bool includePlan = true;
+
+  void removeLastPoint() => setState(() => includeLastPoint = false);
+
+  void removePlanSeries() => setState(() => includePlan = false);
+
+  @override
+  Widget build(BuildContext context) {
+    final base = ChartTheme.light;
+    return BravenChartPlus(
+      showLegend: false,
+      theme: base.copyWith(
+        animationTheme: base.animationTheme.copyWith(
+          dataUpdateDuration: const Duration(milliseconds: 400),
+          dataUpdateCurve: Curves.linear,
+        ),
+      ),
+      yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 120),
+      series: [
+        BarChartSeries(
+          id: 'actual',
+          points: [
+            const ChartDataPoint(x: 0, y: 100),
+            if (includeLastPoint) const ChartDataPoint(x: 1, y: 80),
+          ],
+          barWidthPercent: 0.7,
+        ),
+        if (includePlan)
+          const BarChartSeries(
+            id: 'plan',
+            points: [ChartDataPoint(x: 0, y: 60)],
+            barWidthPercent: 0.7,
+          ),
       ],
     );
   }

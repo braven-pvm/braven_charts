@@ -76,6 +76,97 @@ void main() {
       expect(collapsed.errorUpperValues, const [5]);
     });
 
+    test('collapses target markers to the bar baseline', () {
+      const source = BarChartSeries(
+        id: 'targets',
+        points: [ChartDataPoint(x: 0, y: 30)],
+        barWidthPercent: 0.7,
+        baselineValue: 5,
+        targetValues: [34],
+      );
+
+      final collapsed = BarSeriesTransition.collapsed(source);
+
+      expect(collapsed.targetValues, const [5]);
+    });
+
+    test('keeps removed points in-order and collapses their full geometry', () {
+      const previous = BarChartSeries(
+        id: 'ranges',
+        points: [
+          ChartDataPoint(x: 0, y: 20, label: 'Old A'),
+          ChartDataPoint(x: 1, y: 28, label: 'B'),
+          ChartDataPoint(x: 2, y: 34, label: 'C'),
+        ],
+        barWidthPercent: 0.7,
+        rangeStartValues: [8, 10, 12],
+        targetValues: [22, 30, 36],
+        errorLowerValues: [17, 24, 31],
+        errorUpperValues: [24, 33, 39],
+      );
+      const next = BarChartSeries(
+        id: 'ranges',
+        points: [
+          ChartDataPoint(x: 0, y: 30, label: 'Renamed A'),
+          ChartDataPoint(x: 2, y: 40, label: 'C'),
+        ],
+        barWidthPercent: 0.7,
+        rangeStartValues: [9, 14],
+        targetValues: [32, 42],
+        errorLowerValues: [26, 36],
+        errorUpperValues: [35, 45],
+      );
+
+      final target = BarSeriesTransition.withExitingPoints(
+        previous: previous,
+        next: next,
+      );
+      final midpoint = BarSeriesTransition.interpolate(
+        from: previous,
+        to: target,
+        progress: 0.5,
+      );
+
+      expect(target.points.map((point) => point.x), const [0, 1, 2]);
+      expect(target.points.map((point) => point.y), const [30, 10, 40]);
+      expect(target.rangeStartValues, const [9, 10, 14]);
+      expect(target.targetValues, const [32, 10, 42]);
+      expect(target.errorLowerValues, const [26, 10, 36]);
+      expect(target.errorUpperValues, const [35, 10, 45]);
+      expect(midpoint.points.map((point) => point.y), const [25, 19, 37]);
+      expect(midpoint.points.first.label, 'Renamed A');
+    });
+
+    test('remaps waterfall totals around an exiting step', () {
+      const previous = BarChartSeries(
+        id: 'bridge',
+        points: [
+          ChartDataPoint(x: 0, y: 80),
+          ChartDataPoint(x: 1, y: -20),
+          ChartDataPoint(x: 2, y: 60),
+        ],
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.waterfall,
+        waterfallTotalIndices: {2},
+      );
+      const next = BarChartSeries(
+        id: 'bridge',
+        points: [ChartDataPoint(x: 0, y: 80), ChartDataPoint(x: 2, y: 80)],
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.waterfall,
+        waterfallTotalIndices: {1},
+      );
+
+      final target = BarSeriesTransition.withExitingPoints(
+        previous: previous,
+        next: next,
+      );
+
+      expect(target.points.map((point) => point.x), const [0, 1, 2]);
+      expect(target.points[1].y, 0);
+      expect(target.waterfallTotalIndices, const {2});
+    });
+
     test('grows new points from the target baseline', () {
       const from = BarChartSeries(
         id: 'values',
@@ -101,6 +192,72 @@ void main() {
 
       expect(midpoint.points[0].y, 25);
       expect(midpoint.points[1].y, 14);
+    });
+
+    for (final entry in <BarAnimationOrder, List<double>>{
+      BarAnimationOrder.forward: [50, 0, 0],
+      BarAnimationOrder.reverse: [0, 0, 50],
+      BarAnimationOrder.centerOut: [0, 50, 0],
+      BarAnimationOrder.edgesIn: [50, 0, 50],
+    }.entries) {
+      test('sequences ${entry.key.name} motion on one shared timeline', () {
+        const from = BarChartSeries(
+          id: 'sequenced',
+          points: [
+            ChartDataPoint(x: 0, y: 0),
+            ChartDataPoint(x: 1, y: 0),
+            ChartDataPoint(x: 2, y: 0),
+          ],
+          barWidthPercent: 0.7,
+        );
+        final to = BarChartSeries(
+          id: 'sequenced',
+          points: const [
+            ChartDataPoint(x: 0, y: 100),
+            ChartDataPoint(x: 1, y: 100),
+            ChartDataPoint(x: 2, y: 100),
+          ],
+          barWidthPercent: 0.7,
+          barStyle: BarChartStyle(
+            motion: BarMotionStyle(order: entry.key, staggerFraction: 0.5),
+          ),
+        );
+
+        final animated = BarSeriesTransition.interpolate(
+          from: from,
+          to: to,
+          progress: 0.25,
+        );
+
+        expect(animated.points.map((point) => point.y), entry.value);
+      });
+    }
+
+    test('keeps together motion synchronized when stagger is configured', () {
+      const from = BarChartSeries(
+        id: 'together',
+        points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 1, y: 0)],
+        barWidthPercent: 0.7,
+      );
+      const to = BarChartSeries(
+        id: 'together',
+        points: [ChartDataPoint(x: 0, y: 100), ChartDataPoint(x: 1, y: 100)],
+        barWidthPercent: 0.7,
+        barStyle: BarChartStyle(
+          motion: BarMotionStyle(
+            order: BarAnimationOrder.together,
+            staggerFraction: 0.5,
+          ),
+        ),
+      );
+
+      final animated = BarSeriesTransition.interpolate(
+        from: from,
+        to: to,
+        progress: 0.25,
+      );
+
+      expect(animated.points.map((point) => point.y), [25, 25]);
     });
 
     test('collapses waterfall deltas to zero', () {

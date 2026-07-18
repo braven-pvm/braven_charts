@@ -35,9 +35,18 @@ class ChartAxisDocument {
     this.showMinorTicks = false,
     this.minorTickCount = 4,
     this.minorTickLength,
+    List<String> categories = const [],
+    this.categoryLabelDensity = 'auto',
+    this.categoryLabelOverflow = 'wrap',
+    this.categoryMinimumExtent,
+    this.categoryMaximumLabelExtent,
+    this.categoryMaxLabelLines = 2,
+    this.categoryLabelRotationDegrees,
+    this.categoryAutoViewport = true,
     this.formatter,
     Map<String, JsonValue> extensions = const {},
-  }) : extensions = Map.unmodifiable(extensions);
+  }) : categories = List.unmodifiable(categories),
+       extensions = Map.unmodifiable(extensions);
 
   final String id;
   final String position;
@@ -65,6 +74,14 @@ class ChartAxisDocument {
   final bool showMinorTicks;
   final int minorTickCount;
   final ChartNumberDocument? minorTickLength;
+  final List<String> categories;
+  final String categoryLabelDensity;
+  final String categoryLabelOverflow;
+  final ChartNumberDocument? categoryMinimumExtent;
+  final ChartNumberDocument? categoryMaximumLabelExtent;
+  final int categoryMaxLabelLines;
+  final ChartNumberDocument? categoryLabelRotationDegrees;
+  final bool categoryAutoViewport;
   final JsonObjectValue? formatter;
   final Map<String, JsonValue> extensions;
 
@@ -98,6 +115,21 @@ class ChartAxisDocument {
     if (showMinorTicks) 'showMinorTicks': true,
     if (minorTickCount != 4) 'minorTickCount': minorTickCount,
     if (minorTickLength != null) 'minorTickLength': minorTickLength!.toJson(),
+    if (categories.isNotEmpty) 'categories': categories,
+    if (categories.isNotEmpty && categoryLabelDensity != 'auto')
+      'categoryLabelDensity': categoryLabelDensity,
+    if (categories.isNotEmpty && categoryLabelOverflow != 'wrap')
+      'categoryLabelOverflow': categoryLabelOverflow,
+    if (categories.isNotEmpty && categoryMinimumExtent != null)
+      'categoryMinimumExtent': categoryMinimumExtent!.toJson(),
+    if (categories.isNotEmpty && categoryMaximumLabelExtent != null)
+      'categoryMaximumLabelExtent': categoryMaximumLabelExtent!.toJson(),
+    if (categories.isNotEmpty && categoryMaxLabelLines != 2)
+      'categoryMaxLabelLines': categoryMaxLabelLines,
+    if (categories.isNotEmpty && categoryLabelRotationDegrees != null)
+      'categoryLabelRotationDegrees': categoryLabelRotationDegrees!.toJson(),
+    if (categories.isNotEmpty && !categoryAutoViewport)
+      'categoryAutoViewport': false,
     if (formatter != null) 'formatter': formatter!.toJson(),
     if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
   };
@@ -152,6 +184,23 @@ class ChartAxisDocument {
     minorTickLength: json['minorTickLength'] == null
         ? null
         : ChartNumberDocument.fromJson(json['minorTickLength']),
+    categories: readOptionalStringList(json, 'categories'),
+    categoryLabelDensity:
+        readOptionalString(json, 'categoryLabelDensity') ?? 'auto',
+    categoryLabelOverflow:
+        readOptionalString(json, 'categoryLabelOverflow') ?? 'wrap',
+    categoryMinimumExtent: json['categoryMinimumExtent'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['categoryMinimumExtent']),
+    categoryMaximumLabelExtent: json['categoryMaximumLabelExtent'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['categoryMaximumLabelExtent']),
+    categoryMaxLabelLines: readOptionalInt(json, 'categoryMaxLabelLines') ?? 2,
+    categoryLabelRotationDegrees: json['categoryLabelRotationDegrees'] == null
+        ? null
+        : ChartNumberDocument.fromJson(json['categoryLabelRotationDegrees']),
+    categoryAutoViewport:
+        readOptionalBool(json, 'categoryAutoViewport') ?? true,
     formatter: readOptionalJsonObject(json, 'formatter'),
     extensions: readOptionalJsonValueMap(json, 'extensions'),
   );

@@ -192,6 +192,96 @@ void main() {
       expect(result['second']?.endValueFor(1, 1), closeTo(-100, 0.001));
     });
 
+    test('centers neutral Likert responses and stacks both sides outward', () {
+      final result = BarCompositionEngine.resolve(const [
+        BarChartSeries(
+          id: 'strongly-disagree',
+          points: [ChartDataPoint(x: 0, y: 10)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          groupId: 'responses',
+          divergingRole: BarDivergingRole.negative,
+        ),
+        BarChartSeries(
+          id: 'disagree',
+          points: [ChartDataPoint(x: 0, y: 20)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          groupId: 'responses',
+          divergingRole: BarDivergingRole.negative,
+        ),
+        BarChartSeries(
+          id: 'neutral',
+          points: [ChartDataPoint(x: 0, y: 20)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          groupId: 'responses',
+          divergingRole: BarDivergingRole.neutral,
+        ),
+        BarChartSeries(
+          id: 'agree',
+          points: [ChartDataPoint(x: 0, y: 30)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          groupId: 'responses',
+        ),
+        BarChartSeries(
+          id: 'strongly-agree',
+          points: [ChartDataPoint(x: 0, y: 20)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          groupId: 'responses',
+        ),
+      ]);
+
+      expect(result['neutral']?.startValueFor(0, 99), closeTo(-10, 0.001));
+      expect(result['neutral']?.endValueFor(0, 99), closeTo(10, 0.001));
+      expect(result['disagree']?.startValueFor(0, 99), closeTo(-10, 0.001));
+      expect(result['disagree']?.endValueFor(0, 99), closeTo(-30, 0.001));
+      expect(
+        result['strongly-disagree']?.endValueFor(0, 99),
+        closeTo(-40, 0.001),
+      );
+      expect(result['agree']?.startValueFor(0, 99), closeTo(10, 0.001));
+      expect(result['agree']?.endValueFor(0, 99), closeTo(40, 0.001));
+      expect(result['strongly-agree']?.endValueFor(0, 99), closeTo(60, 0.001));
+      expect(result['strongly-disagree']?.isOuterPoint(0), isTrue);
+      expect(result['strongly-agree']?.isOuterPoint(0), isTrue);
+      expect(result['neutral']?.percentageFor(0), closeTo(20, 0.001));
+    });
+
+    test('rejects negative magnitudes and duplicate neutral series', () {
+      const negativeMagnitude = BarChartSeries(
+        id: 'invalid',
+        points: [ChartDataPoint(x: 0, y: -1)],
+        barWidthPercent: 0.8,
+        layoutMode: BarLayoutMode.divergingStacked,
+      );
+      expect(
+        () => BarCompositionEngine.resolve(const [negativeMagnitude]),
+        throwsArgumentError,
+      );
+
+      const firstNeutral = BarChartSeries(
+        id: 'neutral-a',
+        points: [ChartDataPoint(x: 0, y: 20)],
+        barWidthPercent: 0.8,
+        layoutMode: BarLayoutMode.divergingStacked,
+        divergingRole: BarDivergingRole.neutral,
+      );
+      const secondNeutral = BarChartSeries(
+        id: 'neutral-b',
+        points: [ChartDataPoint(x: 0, y: 10)],
+        barWidthPercent: 0.8,
+        layoutMode: BarLayoutMode.divergingStacked,
+        divergingRole: BarDivergingRole.neutral,
+      );
+      expect(
+        () => BarCompositionEngine.resolve(const [firstNeutral, secondNeutral]),
+        throwsArgumentError,
+      );
+    });
+
     test('accumulates waterfall deltas and resolves total columns', () {
       const series = BarChartSeries(
         id: 'bridge',

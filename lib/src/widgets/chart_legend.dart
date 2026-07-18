@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/chart_series.dart';
+import '../models/bar_chart_style.dart';
+import '../rendering/bar_pattern_painter.dart';
 
 /// A legend widget for displaying chart series with show/hide functionality.
 ///
@@ -138,10 +140,12 @@ class ChartLegend extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: series
-                  .map((s) => Padding(
-                        padding: EdgeInsets.only(bottom: spacing),
-                        child: _buildLegendItem(s),
-                      ))
+                  .map(
+                    (s) => Padding(
+                      padding: EdgeInsets.only(bottom: spacing),
+                      child: _buildLegendItem(s),
+                    ),
+                  )
                   .toList(),
             ),
     );
@@ -164,19 +168,9 @@ class ChartLegend extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Color indicator
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: isHidden ? Colors.grey : seriesColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color:
-                        isHidden ? Colors.grey : seriesColor.withOpacity(0.5),
-                    width: 1.5,
-                  ),
-                ),
+              _LegendSwatch(
+                series: series,
+                color: isHidden ? Colors.grey : seriesColor,
               ),
               const SizedBox(width: 8),
               // Series name
@@ -225,4 +219,70 @@ class ChartLegend extends StatelessWidget {
     Color(0xFF009688), // Teal
     Color(0xFF795548), // Brown
   ];
+}
+
+class _LegendSwatch extends StatelessWidget {
+  const _LegendSwatch({required this.series, required this.color});
+
+  final ChartSeries series;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (series case final BarChartSeries barSeries) {
+      return CustomPaint(
+        size: const Size(18, 12),
+        painter: _BarLegendSwatchPainter(
+          color: color,
+          pattern: barSeries.barStyle.pattern,
+        ),
+      );
+    }
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
+      ),
+    );
+  }
+}
+
+class _BarLegendSwatchPainter extends CustomPainter {
+  const _BarLegendSwatchPainter({required this.color, required this.pattern});
+
+  final Color color;
+  final BarPatternStyle? pattern;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final clip = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(clip, Paint()..color = color);
+    if (pattern case final pattern?) {
+      BarPatternPainter.paint(
+        canvas: canvas,
+        clip: clip,
+        style: pattern,
+        baseColor: color,
+      );
+    }
+    canvas.drawRRect(
+      clip,
+      Paint()
+        ..color = color.computeLuminance() > 0.45
+            ? const Color(0x66000000)
+            : const Color(0x66FFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BarLegendSwatchPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.pattern != pattern;
 }

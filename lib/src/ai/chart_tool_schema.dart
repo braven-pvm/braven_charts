@@ -39,6 +39,9 @@ abstract final class ChartToolSchema {
 Creates an interactive BravenChartPlus chart from provided data.
 Use this tool when the user wants to visualize data as a chart.
 Cartesian charts support multiple overlaid series, axes, pan, zoom, and crosshair.
+Bar charts additionally support grouped, overlaid, stacked, normalized, range,
+waterfall, horizontal, benchmark, uncertainty, sequenced motion, and
+collision-aware label models.
 Pie and Donut charts support one categorical series, slice tooltips, selection,
 labels, legend entries, and a Category / Value / Share data-table alternative.
 Pie charts do not use axes, crosshair, pan, or zoom. Donut charts follow the
@@ -83,6 +86,136 @@ same radial interaction contract.
                 'type': 'string',
                 'description':
                     'Unit for Y-axis values (e.g., "W", "°C", "USD", "km/h")',
+              },
+              'bar_group_id': {
+                'type': 'string',
+                'description':
+                    'Bar-only named stack or overlay group. Series sharing an ID share one category slot.',
+              },
+              'bar_diverging_role': {
+                'type': 'string',
+                'enum': ['negative', 'neutral', 'positive'],
+                'description':
+                    'Per-series side in a diverging_stacked Likert composition. Source values remain positive magnitudes.',
+              },
+              'bar_overlay_width_factor': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'maximum': 1,
+                'description':
+                    'Bar-only width of this overlaid layer relative to its resolved slot.',
+              },
+              'bar_overlay_offset_factor': {
+                'type': 'number',
+                'minimum': -1,
+                'maximum': 1,
+                'description':
+                    'Bar-only category-axis shift for this overlaid layer.',
+              },
+              'bar_gradient_colors': {
+                'type': 'array',
+                'minItems': 2,
+                'items': {'type': 'string'},
+                'description':
+                    'Bar-only per-series gradient override. Prefer this over a chart-level fixed gradient when series use distinct colors.',
+              },
+              'bar_gradient_stops': {
+                'type': 'array',
+                'minItems': 2,
+                'items': {'type': 'number', 'minimum': 0, 'maximum': 1},
+                'description':
+                    'Per-series stops aligned with bar_gradient_colors.',
+              },
+              'bar_pattern': {
+                'type': 'string',
+                'enum': [
+                  'none',
+                  'diagonal_up',
+                  'diagonal_down',
+                  'crosshatch',
+                  'horizontal',
+                  'vertical',
+                ],
+                'description':
+                    'Optional per-series non-color fill encoding for monochrome readability.',
+              },
+              'bar_pattern_color': {
+                'type': 'string',
+                'description':
+                    'Optional per-series pattern color; omit for automatic contrast.',
+              },
+              'bar_pattern_spacing': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'description': 'Per-series pattern spacing in pixels.',
+              },
+              'bar_pattern_stroke_width': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'description': 'Per-series pattern stroke width in pixels.',
+              },
+              'bar_pattern_opacity': {
+                'type': 'number',
+                'minimum': 0,
+                'maximum': 1,
+                'description': 'Per-series pattern opacity.',
+              },
+              'bar_border_color': {
+                'type': 'string',
+                'description': 'Optional per-series bar-border override.',
+              },
+              'bar_track_color': {
+                'type': 'string',
+                'description': 'Optional per-series capacity-track override.',
+              },
+              'bar_bullet_ranges': {
+                'type': 'array',
+                'minItems': 1,
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'end': {'type': 'number'},
+                    'color': {'type': 'string'},
+                    'label': {'type': 'string'},
+                  },
+                  'required': ['end', 'color'],
+                },
+                'description':
+                    'Per-series qualitative bullet ranges ordered from the baseline outward.',
+              },
+              'bar_bullet_measure_thickness': {
+                'type': 'number',
+                'exclusiveMinimum': 0,
+                'maximum': 1,
+                'description':
+                    'Actual measure thickness relative to its bullet range background.',
+              },
+              'bar_bullet_corner_radius': {
+                'type': 'number',
+                'minimum': 0,
+                'description': 'Bullet range frame corner radius.',
+              },
+              'bar_label_color': {
+                'type': 'string',
+                'description': 'Optional per-series bar-label color override.',
+              },
+              'bar_animation_order': {
+                'type': 'string',
+                'enum': [
+                  'together',
+                  'forward',
+                  'reverse',
+                  'center_out',
+                  'edges_in',
+                ],
+                'description':
+                    'Optional per-series category sequencing override.',
+              },
+              'bar_animation_stagger': {
+                'type': 'number',
+                'minimum': 0,
+                'exclusiveMaximum': 1,
+                'description': 'Optional per-series stagger fraction override.',
               },
               'radius_label': {
                 'type': 'string',
@@ -131,6 +264,30 @@ same radial interaction contract.
                       'description':
                           'ISO 8601 timestamp if this is time-series data',
                     },
+                    'bar_start': {
+                      'type': 'number',
+                      'description':
+                          'Bar-only explicit start value for a floating range. Omit for a baseline bar.',
+                    },
+                    'bar_target': {
+                      'type': 'number',
+                      'description': 'Bar-only passive benchmark marker value.',
+                    },
+                    'bar_error_lower': {
+                      'type': 'number',
+                      'description':
+                          'Bar-only lower uncertainty endpoint. Supply with bar_error_upper.',
+                    },
+                    'bar_error_upper': {
+                      'type': 'number',
+                      'description':
+                          'Bar-only upper uncertainty endpoint. Supply with bar_error_lower.',
+                    },
+                    'bar_total': {
+                      'type': 'boolean',
+                      'description':
+                          'Bar-only waterfall total column resolved from the running cumulative value.',
+                    },
                   },
                   'required': ['x', 'y'],
                 },
@@ -161,6 +318,53 @@ same radial interaction contract.
               'type': 'number',
               'description':
                   'Explicit maximum value (auto-calculated if omitted)',
+            },
+            'categories': {
+              'type': 'array',
+              'minItems': 1,
+              'items': {'type': 'string', 'minLength': 1},
+              'description':
+                  'Ordered category labels mapped to integer X values. Preferred for categorical bar charts.',
+            },
+            'category_label_density': {
+              'type': 'string',
+              'enum': ['auto', 'show_all'],
+              'description':
+                  'Thin category labels automatically or paint every visible label.',
+            },
+            'category_label_overflow': {
+              'type': 'string',
+              'enum': ['wrap', 'ellipsis'],
+              'description': 'Wrap or truncate long category labels.',
+            },
+            'category_minimum_extent': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description':
+                  'Minimum logical pixels reserved per readable category.',
+            },
+            'category_maximum_label_extent': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description':
+                  'Maximum category-label width, including horizontal bars.',
+            },
+            'category_max_label_lines': {
+              'type': 'integer',
+              'minimum': 1,
+              'description': 'Maximum wrapped lines for each category label.',
+            },
+            'category_label_rotation': {
+              'type': 'number',
+              'minimum': -90,
+              'maximum': 90,
+              'description':
+                  'Clockwise category-label rotation in screen-space degrees.',
+            },
+            'category_auto_viewport': {
+              'type': 'boolean',
+              'description':
+                  'Open a readable initial category window when all labels cannot fit.',
             },
           },
         },
@@ -232,6 +436,487 @@ same radial interaction contract.
             'height': {
               'type': 'number',
               'description': 'Chart height in pixels (default: 300)',
+            },
+            'bar_layout': {
+              'type': 'string',
+              'enum': [
+                'grouped',
+                'overlaid',
+                'stacked',
+                'normalized_stacked',
+                'diverging_stacked',
+                'waterfall',
+              ],
+              'description': 'Bar-only category-slot composition mode.',
+            },
+            'bar_orientation': {
+              'type': 'string',
+              'enum': ['vertical', 'horizontal'],
+              'description': 'Bar-only screen orientation.',
+            },
+            'bar_width_percent': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Bar width as a fraction of its category slot.',
+            },
+            'bar_min_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Minimum rendered bar thickness.',
+            },
+            'bar_max_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Maximum rendered bar thickness.',
+            },
+            'bar_gap': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Logical-pixel gap between grouped bars.',
+            },
+            'bar_baseline': {
+              'type': 'number',
+              'description':
+                  'Value-axis baseline from which ordinary bars grow.',
+            },
+            'bar_minimum_length': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Minimum visible value-axis bar length in pixels.',
+            },
+            'bar_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Bar corner radius in logical pixels.',
+            },
+            'bar_corner_policy': {
+              'type': 'string',
+              'enum': ['value_end', 'all'],
+              'description':
+                  'Round only the exposed value end or every corner.',
+            },
+            'bar_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Base bar opacity.',
+            },
+            'bar_animation_mode': {
+              'type': 'string',
+              'enum': ['grow', 'none'],
+              'description': 'Bar entrance and data-update animation behavior.',
+            },
+            'bar_animation_order': {
+              'type': 'string',
+              'enum': [
+                'together',
+                'forward',
+                'reverse',
+                'center_out',
+                'edges_in',
+              ],
+              'description':
+                  'Category order used to sequence bar entrance and updates.',
+            },
+            'bar_animation_stagger': {
+              'type': 'number',
+              'minimum': 0,
+              'exclusiveMaximum': 1,
+              'description':
+                  'Fraction of the shared animation timeline used for staggered starts.',
+            },
+            'bar_gradient_colors': {
+              'type': 'array',
+              'minItems': 2,
+              'items': {'type': 'string'},
+              'description':
+                  'Bar gradient colors ordered from baseline to value end.',
+            },
+            'bar_gradient_stops': {
+              'type': 'array',
+              'minItems': 2,
+              'items': {'type': 'number', 'minimum': 0, 'maximum': 1},
+              'description':
+                  'Optional stops aligned one-for-one with bar_gradient_colors.',
+            },
+            'bar_pattern': {
+              'type': 'string',
+              'enum': [
+                'none',
+                'diagonal_up',
+                'diagonal_down',
+                'crosshatch',
+                'horizontal',
+                'vertical',
+              ],
+              'description':
+                  'Non-color fill encoding shared by bar series unless overridden.',
+            },
+            'bar_pattern_color': {
+              'type': 'string',
+              'description':
+                  'Pattern color; omit to derive black or white from the bar fill.',
+            },
+            'bar_pattern_spacing': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Pattern spacing in logical pixels.',
+            },
+            'bar_pattern_stroke_width': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Pattern stroke width in logical pixels.',
+            },
+            'bar_pattern_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pattern opacity.',
+            },
+            'bar_border_color': {
+              'type': 'string',
+              'description': 'Optional bar outline color.',
+            },
+            'bar_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Bar outline width.',
+            },
+            'bar_track_enabled': {
+              'type': 'boolean',
+              'description': 'Show a passive capacity track behind each bar.',
+            },
+            'bar_track_color': {
+              'type': 'string',
+              'description': 'Capacity-track fill color.',
+            },
+            'bar_track_value': {
+              'type': 'number',
+              'description':
+                  'Explicit capacity value; omit to use the visible axis boundary.',
+            },
+            'bar_track_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Capacity-track opacity.',
+            },
+            'bar_track_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Capacity-track corner radius.',
+            },
+            'bar_lollipop_enabled': {
+              'type': 'boolean',
+              'description':
+                  'Replace each filled bar with a stem and circular value marker.',
+            },
+            'bar_lollipop_stem_width': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Lollipop stem width in logical pixels.',
+            },
+            'bar_lollipop_head_radius': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Lollipop value-marker radius in logical pixels.',
+            },
+            'bar_lollipop_stem_color': {
+              'type': 'string',
+              'description':
+                  'Optional stem color; omit to inherit the series or point color.',
+            },
+            'bar_lollipop_head_color': {
+              'type': 'string',
+              'description':
+                  'Optional marker color; omit to inherit the series or point color.',
+            },
+            'bar_lollipop_head_border_color': {
+              'type': 'string',
+              'description': 'Optional lollipop marker outline color.',
+            },
+            'bar_lollipop_head_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Lollipop marker outline width.',
+            },
+            'bar_bullet_ranges': {
+              'type': 'array',
+              'minItems': 1,
+              'items': {
+                'type': 'object',
+                'properties': {
+                  'end': {'type': 'number'},
+                  'color': {'type': 'string'},
+                  'label': {'type': 'string'},
+                },
+                'required': ['end', 'color'],
+              },
+              'description':
+                  'Qualitative bullet ranges ordered from the baseline outward. Pair with per-point bar_target values for comparison markers.',
+            },
+            'bar_bullet_measure_thickness': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 1,
+              'description':
+                  'Actual measure thickness relative to its bullet range background.',
+            },
+            'bar_bullet_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Bullet range frame corner radius.',
+            },
+            'bar_diverging_center_line_show': {
+              'type': 'boolean',
+              'description':
+                  'Show the shared baseline through a diverging_stacked composition.',
+            },
+            'bar_diverging_center_line_color': {
+              'type': 'string',
+              'description': 'Diverging composition center-line color.',
+            },
+            'bar_diverging_center_line_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Diverging composition center-line width.',
+            },
+            'bar_diverging_center_line_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Diverging composition center-line opacity.',
+            },
+            'bar_target_color': {
+              'type': 'string',
+              'description': 'Color for per-point bar_target markers.',
+            },
+            'bar_target_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Benchmark marker stroke width.',
+            },
+            'bar_target_length_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Benchmark span relative to the bar thickness.',
+            },
+            'bar_target_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Benchmark marker opacity.',
+            },
+            'bar_error_color': {
+              'type': 'string',
+              'description': 'Color for bar uncertainty stems and caps.',
+            },
+            'bar_error_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Uncertainty line width.',
+            },
+            'bar_error_cap_length_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Uncertainty cap span relative to bar thickness.',
+            },
+            'bar_error_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Uncertainty line opacity.',
+            },
+            'bar_waterfall_increase_color': {
+              'type': 'string',
+              'description': 'Waterfall-only positive-delta color.',
+            },
+            'bar_waterfall_decrease_color': {
+              'type': 'string',
+              'description': 'Waterfall-only negative-delta color.',
+            },
+            'bar_waterfall_total_color': {
+              'type': 'string',
+              'description': 'Waterfall-only cumulative-total color.',
+            },
+            'bar_waterfall_connector_show': {
+              'type': 'boolean',
+              'description': 'Draw cumulative waterfall connector lines.',
+            },
+            'bar_waterfall_connector_color': {
+              'type': 'string',
+              'description': 'Waterfall connector color.',
+            },
+            'bar_waterfall_connector_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Waterfall connector width.',
+            },
+            'bar_hover_color': {
+              'type': 'string',
+              'description': 'Optional hover overlay color.',
+            },
+            'bar_hover_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Hover overlay opacity.',
+            },
+            'bar_hover_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Hover outline width.',
+            },
+            'bar_pressed_color': {
+              'type': 'string',
+              'description': 'Pressed-state overlay color.',
+            },
+            'bar_pressed_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Pressed-state overlay opacity.',
+            },
+            'bar_selection_color': {
+              'type': 'string',
+              'description': 'Durable selected-bar overlay color.',
+            },
+            'bar_selection_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Selected-bar overlay opacity.',
+            },
+            'bar_selection_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Selected-bar outline width.',
+            },
+            'bar_focus_color': {
+              'type': 'string',
+              'description': 'Keyboard-focus outline color.',
+            },
+            'bar_focus_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Keyboard-focus outline width.',
+            },
+            'bar_focus_gap': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Gap between a focused bar and its outline.',
+            },
+            'bar_dimmed_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description':
+                  'Opacity multiplier for unselected bars while a selection is active.',
+            },
+            'bar_labels_show': {
+              'type': 'boolean',
+              'description': 'Show bar-native value labels.',
+            },
+            'bar_label_position': {
+              'type': 'string',
+              'enum': [
+                'auto',
+                'inside_end',
+                'inside_center',
+                'outside_end',
+                'range_ends',
+              ],
+              'description': 'Requested label placement relative to each bar.',
+            },
+            'bar_label_value_mode': {
+              'type': 'string',
+              'enum': ['value', 'range', 'percentage', 'waterfall'],
+              'description': 'Value represented by each bar label.',
+            },
+            'bar_label_color': {
+              'type': 'string',
+              'description':
+                  'Optional fixed label color; omit for automatic contrast.',
+            },
+            'bar_label_font_size': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'description': 'Bar-label font size.',
+            },
+            'bar_label_font_weight': {
+              'type': 'integer',
+              'enum': [100, 200, 300, 400, 500, 600, 700, 800, 900],
+              'description': 'Bar-label font weight.',
+            },
+            'bar_label_show_unit': {
+              'type': 'boolean',
+              'description': 'Append the series unit to bar labels.',
+            },
+            'bar_label_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Gap between an end label and its bar edge.',
+            },
+            'bar_label_collision': {
+              'type': 'string',
+              'enum': ['none', 'reposition', 'hide'],
+              'description': 'Chart-wide label collision policy.',
+            },
+            'bar_label_plot_edge_aware': {
+              'type': 'boolean',
+              'description': 'Keep label boxes inside the visible plot.',
+            },
+            'bar_label_collision_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Minimum gap around accepted label boxes.',
+            },
+            'bar_label_background_color': {
+              'type': 'string',
+              'description': 'Optional compact bar-label background color.',
+            },
+            'bar_label_border_color': {
+              'type': 'string',
+              'description': 'Optional bar-label box outline color.',
+            },
+            'bar_label_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Bar-label box outline width.',
+            },
+            'bar_label_border_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Bar-label box corner radius.',
+            },
+            'bar_label_background_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Inset between label text and its box.',
+            },
+            'bar_label_callout_show': {
+              'type': 'boolean',
+              'description': 'Connect displaced labels to their value ends.',
+            },
+            'bar_label_callout_color': {
+              'type': 'string',
+              'description': 'Optional fixed callout-line color.',
+            },
+            'bar_label_callout_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Callout-line width.',
+            },
+            'bar_label_callout_minimum_length': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Shortest callout line eligible to paint.',
+            },
+            'bar_label_show_stack_total': {
+              'type': 'boolean',
+              'description':
+                  'Show one resolved total at each exposed stack end.',
             },
             'donut_inner_radius_factor': {
               'type': 'number',

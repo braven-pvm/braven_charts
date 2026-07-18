@@ -33,6 +33,7 @@ import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
+import 'bar_label_layout.dart';
 import 'modules/annotation_drag_handler.dart';
 import 'modules/crosshair_renderer.dart';
 import 'modules/event_handler_manager.dart';
@@ -103,6 +104,7 @@ class ChartRenderBox extends RenderBox {
     this.onRangeCreationComplete,
     this.onViewportInteracted,
     double textScaleFactor = 1,
+    TextDirection textDirection = TextDirection.ltr,
   }) : _elementGenerator = elementGenerator,
        _theme = theme,
        _tooltipsEnabled = tooltipsEnabled,
@@ -110,6 +112,7 @@ class ChartRenderBox extends RenderBox {
        _selectedTooltipPointIndex = selectedTooltipPointIndex,
        _interactionConfig = interactionConfig,
        _textScaleFactor = textScaleFactor,
+       _textDirection = textDirection,
        assert(
          (elements != null) != (elementGenerator != null),
          'Must provide either elements or elementGenerator, but not both',
@@ -304,6 +307,9 @@ class ChartRenderBox extends RenderBox {
   /// Effective MediaQuery text scale used by canvas tooltips.
   double _textScaleFactor;
 
+  /// Ambient reading direction for canvas text and semantics.
+  TextDirection _textDirection;
+
   final Map<String, SemanticsNode> _dataSemanticsNodes =
       <String, SemanticsNode>{};
 
@@ -316,6 +322,11 @@ class ChartRenderBox extends RenderBox {
   /// components that need access to X-axis configuration like crosshairLabelPosition.
   /// This is the NEW [XAxisConfig] type, NOT the legacy [chart_axis.Axis].
   XAxisConfig? _xAxisConfig;
+
+  /// Category configuration for which the automatic initial viewport was
+  /// resolved. This prevents relayouts from snapping a user-panned chart back
+  /// to its first categories.
+  XAxisConfig? _categoricalViewportAppliedFor;
 
   /// Y-axis for the chart (optional).
   chart_axis.Axis? _yAxis;
@@ -765,8 +776,9 @@ class ChartRenderBox extends RenderBox {
   void setXAxisConfig(XAxisConfig? config) {
     if (_xAxisConfig == config) return;
     _xAxisConfig = config;
-    // No layout needed - config is used during paint for crosshair labels
-    markNeedsPaint();
+    _categoricalViewportAppliedFor = null;
+    // Category labels affect both axis reservation and the initial viewport.
+    markNeedsLayout();
   }
 
   /// Sets the theme for the chart.
@@ -849,6 +861,15 @@ class ChartRenderBox extends RenderBox {
     markNeedsSemanticsUpdate();
   }
 
+  /// Updates the ambient reading direction used by chart-owned text.
+  void setTextDirection(TextDirection value) {
+    if (_textDirection == value) return;
+    _textDirection = value;
+    markNeedsLayout();
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
   // ==================== MULTI-AXIS SETTERS ====================
 
   /// Sets the normalization mode for multi-axis charts.
@@ -914,7 +935,56 @@ class ChartRenderBox extends RenderBox {
       bindings: _getEffectiveBindings(),
       series: _multiAxisManager.series,
       categoryTickValues: _xAxis?.ticks.map((tick) => tick.value).toList(),
+      textDirection: _textDirection,
     );
+  }
+
+  XAxisPainter _buildXAxisPainter({DataRange? bounds}) {
+    final labelStyle =
+        _theme?.axisStyle.labelStyle ??
+        const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
+    return XAxisPainter(
+      config: _xAxisConfig ?? const XAxisConfig(),
+      axisBounds:
+          bounds ??
+          DataRange(
+            min: _transform?.dataXMin ?? _xAxis?.dataMin ?? 0,
+            max: _transform?.dataXMax ?? _xAxis?.dataMax ?? 1,
+          ),
+      labelStyle: labelStyle,
+      series: _multiAxisManager.series,
+      tickValues: _xAxis?.ticks.map((tick) => tick.value).toList(),
+      textDirection: _textDirection,
+    );
+  }
+
+  void _applyInitialCategoricalViewport() {
+    final config = _xAxisConfig;
+    final categoryAxis = config?.categoryAxis;
+    if (config == null ||
+        categoryAxis == null ||
+        categoryAxis.categories.isEmpty ||
+        !categoryAxis.autoViewport ||
+        _categoricalViewportAppliedFor == config ||
+        _transform == null) {
+      return;
+    }
+
+    _categoricalViewportAppliedFor = config;
+    final screenExtent = _isHorizontalBarChart
+        ? _plotArea.height
+        : _plotArea.width;
+    final visibleCategoryCount = math.max(
+      1,
+      (screenExtent / categoryAxis.minimumCategoryExtent).floor(),
+    );
+    if (visibleCategoryCount >= categoryAxis.categories.length) return;
+
+    _transform = _transform!.copyWith(
+      dataXMin: categoryAxis.domainMin,
+      dataXMax: categoryAxis.domainMin + visibleCategoryCount,
+    );
+    _updateAxesFromTransform();
   }
 
   /// Paints multiple Y-axes using [MultiAxisPainter].
@@ -1543,6 +1613,7 @@ class ChartRenderBox extends RenderBox {
     double topMargin = axislessPlotInsets.top;
     double bottomMargin =
         axislessPlotInsets.bottom + bottomReserved; // Add scrollbar space
+    double xAxisReservedHeight = 50;
 
     // Track right axis width separately for scrollbar positioning
     double rightAxisWidth = 0;
@@ -1554,13 +1625,6 @@ class ChartRenderBox extends RenderBox {
       bottomMargin =
           math.max(10, axesPainter.measureBottomAxesHeight()) + bottomReserved;
     } else {
-      // Reserve space for X-axis (bottom) - only if axis is visible
-      if (_xAxis != null && _xAxis!.config.showAxisLine) {
-        bottomMargin =
-            50 +
-            bottomReserved; // Space for X-axis labels + axis label + padding + scrollbar
-      }
-
       // MULTI-AXIS: Compute axis widths using the multi-axis system for ALL Y-axes
       // This ensures consistent layout whether using single or multiple axes.
       // Previously, single-axis mode used a hardcoded 60px margin which caused
@@ -1582,6 +1646,22 @@ class ChartRenderBox extends RenderBox {
           rightMargin = rightAxisWidth + rightReserved;
         }
       }
+
+      // Category labels may wrap or rotate, so reserve their measured height
+      // instead of relying on the legacy fixed 50px axis gutter.
+      if (_xAxis != null && (_xAxisConfig?.visible ?? true)) {
+        final estimatedPlotWidth = math.max(
+          1.0,
+          size.width - leftMargin - rightMargin,
+        );
+        xAxisReservedHeight = math.max(
+          50.0,
+          _buildXAxisPainter(
+            bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+          ).measureRequiredHeight(estimatedPlotWidth),
+        );
+        bottomMargin = xAxisReservedHeight + bottomReserved;
+      }
     }
 
     // Calculate plot area (chart canvas excluding axes and scrollbars)
@@ -1600,9 +1680,8 @@ class ChartRenderBox extends RenderBox {
       // Position horizontal scrollbar BELOW the X-axis label
       // Layout order: plot area → tick labels (~30px) → axis label (~20px) → scrollbar
       // So scrollbar should start after ~50px total
-      const xAxisAndLabelHeight = 50.0; // Space for tick labels + axis label
       final scrollbarTop =
-          _plotArea.bottom + xAxisAndLabelHeight + scrollbarPadding;
+          _plotArea.bottom + xAxisReservedHeight + scrollbarPadding;
       xScrollbarRect = Rect.fromLTWH(
         _plotArea.left,
         scrollbarTop,
@@ -1676,6 +1755,8 @@ class ChartRenderBox extends RenderBox {
         _originalTransform = _transform!.copyWith();
         _layoutBaseXMin = currentBaseXMin;
         _layoutBaseXMax = currentBaseXMax;
+
+        _applyInitialCategoricalViewport();
 
         // Pre-warm tooltip rendering to eliminate first-hover latency
         if (!_tooltipPrewarmed) {
@@ -2071,9 +2152,14 @@ class ChartRenderBox extends RenderBox {
           }
         : null;
 
+    final barLabelLayout = BarLabelLayoutCoordinator(
+      plotBounds: Offset.zero & size,
+    );
+
     // Paint each series with current transform
     for (final series in seriesElements) {
       if (_transform != null && series is SeriesElement) {
+        series.setBarLabelLayoutCoordinator(barLabelLayout);
         // CRITICAL: Update transform before painting (enables path caching!)
         // This allows SeriesElement to cache paths and only regenerate when transform changes.
 
@@ -2496,18 +2582,27 @@ class ChartRenderBox extends RenderBox {
       final List<double> yTicks;
       if (_isHorizontalBarChart && _transform != null) {
         xTicks = _buildTransposedAxesPainter().valueGridPositions(_plotArea);
-        yTicks = _xAxis!.ticks
+        final categoryTicks = _buildXAxisPainter(
+          bounds: DataRange(
+            min: _transform!.dataXMin,
+            max: _transform!.dataXMax,
+          ),
+        ).resolveTickValues(_plotArea.height);
+        yTicks = categoryTicks
             .map(
               (tick) =>
                   _plotArea.top +
-                  (tick.value - _transform!.dataXMin) /
+                  (tick - _transform!.dataXMin) /
                       _transform!.dataXRange *
                       _plotArea.height,
             )
             .toList();
       } else {
-        xTicks = _xAxis!.ticks
-            .map((t) => _xAxis!.scale.dataToPixel(t.value))
+        final categoryTicks = _buildXAxisPainter(
+          bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+        ).resolveTickValues(_plotArea.width);
+        xTicks = categoryTicks
+            .map((tick) => _xAxis!.scale.dataToPixel(tick))
             .toList();
         yTicks = _yAxis!.ticks
             .map((t) => _yAxis!.scale.dataToPixel(t.value))
@@ -2536,18 +2631,9 @@ class ChartRenderBox extends RenderBox {
 
       // Paint X-axis using XAxisPainter (unified approach)
       if (_xAxis != null) {
-        final effectiveXAxisConfig = _xAxisConfig ?? const XAxisConfig();
-        final TextStyle labelStyle =
-            _theme?.axisStyle.labelStyle ??
-            const TextStyle(fontSize: 12.0, color: ui.Color(0xFF000000));
-        final xAxisPainter = XAxisPainter(
-          config: effectiveXAxisConfig,
-          axisBounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
-          labelStyle: labelStyle,
-          series: _multiAxisManager.series,
-          tickValues: _xAxis!.ticks.map((t) => t.value).toList(),
-        );
-        xAxisPainter.paint(
+        _buildXAxisPainter(
+          bounds: DataRange(min: _xAxis!.dataMin, max: _xAxis!.dataMax),
+        ).paint(
           canvas,
           Rect.fromLTWH(0, 0, size.width, size.height),
           _plotArea,
@@ -2898,7 +2984,7 @@ class ChartRenderBox extends RenderBox {
     config
       ..isSemanticBoundary = true
       ..explicitChildNodes = true
-      ..textDirection = TextDirection.ltr
+      ..textDirection = _textDirection
       ..label = 'Radial chart with $hitCount slices';
   }
 
@@ -2928,7 +3014,7 @@ class ChartRenderBox extends RenderBox {
       final identity = 'summary:${summary.id}';
       final semanticConfig = SemanticsConfiguration()
         ..sortKey = const OrdinalSortKey(0)
-        ..textDirection = TextDirection.ltr
+        ..textDirection = _textDirection
         ..identifier = identity
         ..label = summary.label;
       final semanticNode =
@@ -2946,7 +3032,7 @@ class ChartRenderBox extends RenderBox {
       final identity = '${hit.seriesId}:${hit.pointIndex}';
       final semanticConfig = SemanticsConfiguration()
         ..sortKey = OrdinalSortKey(hit.ordinal.toDouble() + 1)
-        ..textDirection = TextDirection.ltr
+        ..textDirection = _textDirection
         ..identifier = identity
         ..label = hit.semanticLabel
         ..isButton = true

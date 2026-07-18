@@ -143,6 +143,15 @@ abstract final class ChartSeriesDocumentCodec {
           },
           requiredCapabilities: {
             'series.${_typeOf(series)}',
+            if (series is BarChartSeries && series.barStyle.pattern != null)
+              'series.bar.pattern.v1',
+            if (series is BarChartSeries && series.bulletStyle != null)
+              'series.bar.bullet.v1',
+            if (series is BarChartSeries && series.lollipopStyle != null)
+              'series.bar.lollipop.v1',
+            if (series is BarChartSeries &&
+                series.layoutMode == BarLayoutMode.divergingStacked)
+              'series.bar.diverging.v1',
             if (series is PieChartSeries) 'series.pie.style.v2',
             if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
             if (series is PieChartSeries && series.hasVariableSliceRadius)
@@ -395,6 +404,16 @@ abstract final class ChartSeriesDocumentCodec {
               ) ??
               BarLayoutMode.grouped,
           groupId: _optionalString(style['barGroupId']),
+          divergingRole:
+              _optionalEnum(
+                style['barDivergingRole'],
+                BarDivergingRole.values,
+                r'$.style.barDivergingRole',
+              ) ??
+              BarDivergingRole.positive,
+          divergingStyle: _decodeBarDivergingStyle(
+            _optionalMap(style, 'barDivergingStyle'),
+          ),
           overlayWidthFactor:
               _optionalDouble(style['barOverlayWidthFactor']) ?? 1.0,
           overlayOffsetFactor:
@@ -414,6 +433,8 @@ abstract final class ChartSeriesDocumentCodec {
           minBarLength: _optionalDouble(style['minBarLength']) ?? 0.0,
           barStyle: _decodeBarStyle(_optionalMap(style, 'barStyle')),
           trackStyle: _decodeBarTrack(_optionalMap(style, 'barTrack')),
+          lollipopStyle: _decodeBarLollipop(_optionalMap(style, 'barLollipop')),
+          bulletStyle: _decodeBarBullet(_optionalMap(style, 'barBullet')),
           targetValues: _decodeOptionalDoubleList(
             style['barTargetValues'],
             r'$.style.barTargetValues',
@@ -673,6 +694,14 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['barOrientation'] = series.orientation.name
         ..['barLayoutMode'] = series.layoutMode.name
         ..['barGroupId'] = series.groupId
+        ..['barDivergingRole'] =
+            series.layoutMode == BarLayoutMode.divergingStacked
+            ? series.divergingRole.name
+            : null
+        ..['barDivergingStyle'] =
+            series.layoutMode == BarLayoutMode.divergingStacked
+            ? _encodeBarDivergingStyle(series.divergingStyle)
+            : null
         ..['barOverlayWidthFactor'] = _number(series.overlayWidthFactor)
         ..['barOverlayOffsetFactor'] = _number(series.overlayOffsetFactor)
         ..['baselineValue'] = _number(series.baselineValue)
@@ -693,6 +722,12 @@ Map<String, Object?> _encodeSeriesStyle(
         ..['barTrack'] = series.trackStyle == null
             ? null
             : _encodeBarTrack(series.trackStyle!)
+        ..['barLollipop'] = series.lollipopStyle == null
+            ? null
+            : _encodeBarLollipop(series.lollipopStyle!)
+        ..['barBullet'] = series.bulletStyle == null
+            ? null
+            : _encodeBarBullet(series.bulletStyle!)
         ..['barTargetValues'] = series.targetValues.isEmpty
             ? null
             : [
@@ -855,9 +890,22 @@ Map<String, Object?> _encodeBarStyle(BarChartStyle style) => {
       if (style.gradient!.stops != null)
         'stops': [for (final stop in style.gradient!.stops!) _number(stop)],
     },
+  if (style.pattern != null)
+    'pattern': {
+      'type': style.pattern!.pattern.name,
+      if (style.pattern!.color != null)
+        'color': style.pattern!.color!.toARGB32(),
+      'spacing': _number(style.pattern!.spacing),
+      'strokeWidth': _number(style.pattern!.strokeWidth),
+      'opacity': _number(style.pattern!.opacity),
+    },
   if (style.border != null) 'border': _encodeBarBorder(style.border!),
   'interaction': _encodeBarInteraction(style.interaction),
   'animationMode': style.animationMode.name,
+  'motion': {
+    'order': style.motion.order.name,
+    'staggerFraction': _number(style.motion.staggerFraction),
+  },
 };
 
 BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
@@ -873,6 +921,7 @@ BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
         BarCornerRadiusPolicy.valueEnd,
     opacity: _optionalDouble(value['opacity']) ?? 1.0,
     gradient: _decodeBarGradient(_optionalMap(value, 'gradient')),
+    pattern: _decodeBarPattern(_optionalMap(value, 'pattern')),
     border: _decodeBarBorder(_optionalMap(value, 'border')),
     interaction: _decodeBarInteraction(_optionalMap(value, 'interaction')),
     animationMode:
@@ -882,6 +931,52 @@ BarChartStyle _decodeBarStyle(Map<String, Object?>? value) {
           r'$.style.barStyle.animationMode',
         ) ??
         BarAnimationMode.grow,
+    motion: _decodeBarMotion(_optionalMap(value, 'motion')),
+  );
+}
+
+BarPatternStyle? _decodeBarPattern(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final spacing = _optionalDouble(value['spacing']) ?? 8.0;
+  final strokeWidth = _optionalDouble(value['strokeWidth']) ?? 1.5;
+  final opacity = _optionalDouble(value['opacity']) ?? 0.55;
+  if (spacing <= 0 || strokeWidth <= 0 || opacity < 0 || opacity > 1) {
+    throw const FormatException(
+      'Bar pattern spacing and strokeWidth must be positive and opacity must be between 0 and 1.',
+    );
+  }
+  return BarPatternStyle(
+    pattern:
+        _optionalEnum(
+          value['type'],
+          BarFillPattern.values,
+          r'$.style.barStyle.pattern.type',
+        ) ??
+        BarFillPattern.diagonalUp,
+    color: _optionalColor(value['color'], r'$.style.barStyle.pattern.color'),
+    spacing: spacing,
+    strokeWidth: strokeWidth,
+    opacity: opacity,
+  );
+}
+
+BarMotionStyle _decodeBarMotion(Map<String, Object?>? value) {
+  if (value == null) return const BarMotionStyle();
+  final stagger = _optionalDouble(value['staggerFraction']) ?? 0.0;
+  if (stagger < 0 || stagger >= 1) {
+    throw const FormatException(
+      'Bar motion staggerFraction must be at least 0 and less than 1.',
+    );
+  }
+  return BarMotionStyle(
+    order:
+        _optionalEnum(
+          value['order'],
+          BarAnimationOrder.values,
+          r'$.style.barStyle.motion.order',
+        ) ??
+        BarAnimationOrder.together,
+    staggerFraction: stagger,
   );
 }
 
@@ -1037,6 +1132,93 @@ BarTrackStyle? _decodeBarTrack(Map<String, Object?>? value) {
   );
 }
 
+Map<String, Object?> _encodeBarLollipop(BarLollipopStyle style) => {
+  'stemWidth': _number(style.stemWidth),
+  'headRadius': _number(style.headRadius),
+  if (style.stemColor != null) 'stemColor': style.stemColor!.toARGB32(),
+  if (style.headColor != null) 'headColor': style.headColor!.toARGB32(),
+  if (style.headBorder != null)
+    'headBorder': _encodeBarBorder(style.headBorder!),
+};
+
+BarLollipopStyle? _decodeBarLollipop(Map<String, Object?>? value) {
+  if (value == null) return null;
+  return BarLollipopStyle(
+    stemWidth: _optionalDouble(value['stemWidth']) ?? 3,
+    headRadius: _optionalDouble(value['headRadius']) ?? 7,
+    stemColor: _optionalColor(
+      value['stemColor'],
+      r'$.style.barLollipop.stemColor',
+    ),
+    headColor: _optionalColor(
+      value['headColor'],
+      r'$.style.barLollipop.headColor',
+    ),
+    headBorder: _decodeBarBorder(_optionalMap(value, 'headBorder')),
+  );
+}
+
+Map<String, Object?> _encodeBarDivergingStyle(BarDivergingStyle style) => {
+  'showCenterLine': style.showCenterLine,
+  'centerLineColor': style.centerLineColor.toARGB32(),
+  'centerLineWidth': _number(style.centerLineWidth),
+  'centerLineOpacity': _number(style.centerLineOpacity),
+};
+
+BarDivergingStyle _decodeBarDivergingStyle(Map<String, Object?>? value) {
+  if (value == null) return const BarDivergingStyle();
+  return BarDivergingStyle(
+    showCenterLine: _bool(value, 'showCenterLine', fallback: true),
+    centerLineColor:
+        _optionalColor(
+          value['centerLineColor'],
+          r'$.style.barDivergingStyle.centerLineColor',
+        ) ??
+        const Color(0xFF64748B),
+    centerLineWidth: _optionalDouble(value['centerLineWidth']) ?? 1.25,
+    centerLineOpacity: _optionalDouble(value['centerLineOpacity']) ?? 0.7,
+  );
+}
+
+Map<String, Object?> _encodeBarBullet(BarBulletStyle bullet) => {
+  'ranges': [
+    for (final range in bullet.ranges)
+      {
+        'endValue': _number(range.endValue),
+        'color': range.color.toARGB32(),
+        if (range.label != null) 'label': range.label,
+      },
+  ],
+  'measureThicknessFactor': _number(bullet.measureThicknessFactor),
+  'cornerRadius': _number(bullet.cornerRadius),
+};
+
+BarBulletStyle? _decodeBarBullet(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final rawRanges = value['ranges'];
+  if (rawRanges is! List) {
+    throw const FormatException('Expected bullet range list.');
+  }
+  return BarBulletStyle(
+    ranges: [
+      for (var index = 0; index < rawRanges.length; index++)
+        if (rawRanges[index] case final Map range)
+          BarBulletRange(
+            endValue: _double(Map<String, Object?>.from(range), 'endValue'),
+            color: _color(Map<String, Object?>.from(range), 'color'),
+            label: _optionalString(range['label']),
+          )
+        else
+          throw FormatException(
+            'Expected bullet range object at ranges[$index].',
+          ),
+    ],
+    measureThicknessFactor:
+        _optionalDouble(value['measureThicknessFactor']) ?? 0.45,
+    cornerRadius: _optionalDouble(value['cornerRadius']) ?? 3.0,
+  );
+}
+
 Map<String, Object?> _encodeBarTargetMarker(BarTargetMarkerStyle marker) => {
   if (marker.color != null) 'color': marker.color!.toARGB32(),
   'width': _number(marker.width),
@@ -1080,6 +1262,22 @@ Map<String, Object?> _encodeBarLabels(BarLabelStyle labels) => {
   'fontWeightIndex': FontWeight.values.indexOf(labels.fontWeight),
   'showUnit': labels.showUnit,
   'padding': _number(labels.padding),
+  'collisionPolicy': labels.collisionPolicy.name,
+  'plotEdgeAware': labels.plotEdgeAware,
+  'collisionPadding': _number(labels.collisionPadding),
+  if (labels.backgroundColor != null)
+    'backgroundColor': labels.backgroundColor!.toARGB32(),
+  if (labels.borderColor != null) 'borderColor': labels.borderColor!.toARGB32(),
+  'borderWidth': _number(labels.borderWidth),
+  'borderRadius': _number(labels.borderRadius),
+  'backgroundPadding': _number(labels.backgroundPadding),
+  'callout': {
+    'show': labels.callout.show,
+    if (labels.callout.color != null) 'color': labels.callout.color!.toARGB32(),
+    'width': _number(labels.callout.width),
+    'minimumLength': _number(labels.callout.minimumLength),
+  },
+  'showStackTotal': labels.showStackTotal,
 };
 
 BarLabelStyle _decodeBarLabels(Map<String, Object?>? value) {
@@ -1107,6 +1305,38 @@ BarLabelStyle _decodeBarLabels(Map<String, Object?>? value) {
         : _fontWeight(value, 'fontWeightIndex'),
     showUnit: _bool(value, 'showUnit', fallback: false),
     padding: _optionalDouble(value['padding']) ?? 4.0,
+    collisionPolicy:
+        _optionalEnum(
+          value['collisionPolicy'],
+          BarLabelCollisionPolicy.values,
+          r'$.style.barLabels.collisionPolicy',
+        ) ??
+        BarLabelCollisionPolicy.none,
+    plotEdgeAware: _bool(value, 'plotEdgeAware', fallback: true),
+    collisionPadding: _optionalDouble(value['collisionPadding']) ?? 2.0,
+    backgroundColor: _optionalColor(
+      value['backgroundColor'],
+      r'$.style.barLabels.backgroundColor',
+    ),
+    borderColor: _optionalColor(
+      value['borderColor'],
+      r'$.style.barLabels.borderColor',
+    ),
+    borderWidth: _optionalDouble(value['borderWidth']) ?? 0.0,
+    borderRadius: _optionalDouble(value['borderRadius']) ?? 4.0,
+    backgroundPadding: _optionalDouble(value['backgroundPadding']) ?? 3.0,
+    callout: _decodeBarLabelCallout(_optionalMap(value, 'callout')),
+    showStackTotal: _bool(value, 'showStackTotal', fallback: false),
+  );
+}
+
+BarLabelCalloutStyle _decodeBarLabelCallout(Map<String, Object?>? value) {
+  if (value == null) return const BarLabelCalloutStyle();
+  return BarLabelCalloutStyle(
+    show: _bool(value, 'show', fallback: false),
+    color: _optionalColor(value['color'], r'$.style.barLabels.callout.color'),
+    width: _optionalDouble(value['width']) ?? 1.0,
+    minimumLength: _optionalDouble(value['minimumLength']) ?? 4.0,
   );
 }
 
