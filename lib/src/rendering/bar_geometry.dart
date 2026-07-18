@@ -175,9 +175,18 @@ class BarViewportIndex {
   BarViewportIndex(List<ChartDataPoint> points, {bool isXOrdered = false})
     : _entries = <_BarViewportEntry>[
         for (var index = 0; index < points.length; index++)
-          if (points[index].x.isFinite)
+          if (points[index].isValid)
             _BarViewportEntry(x: points[index].x, pointIndex: index),
       ] {
+    var maximumSizeMultiplier = 1.0;
+    for (final point in points) {
+      if (!point.isValid) continue;
+      final size = point.pointStyle?.size;
+      if (size != null && size.isFinite && size > maximumSizeMultiplier) {
+        maximumSizeMultiplier = size;
+      }
+    }
+    _maximumSizeMultiplier = maximumSizeMultiplier;
     if (!isXOrdered) {
       _entries.sort((left, right) {
         final byX = left.x.compareTo(right.x);
@@ -196,8 +205,12 @@ class BarViewportIndex {
 
   final List<_BarViewportEntry> _entries;
   late final double _minimumDataSpacing;
+  late final double _maximumSizeMultiplier;
 
   int get pointCount => _entries.length;
+
+  /// Largest finite per-point width multiplier in the indexed source data.
+  double get maximumSizeMultiplier => _maximumSizeMultiplier;
 
   /// Resolves the category-slot spacing without rescanning or sorting points.
   double categorySpacingPixels(ChartTransform transform) {
@@ -372,7 +385,10 @@ abstract final class BarGeometryEngine {
     required double defaultBarWidth,
     required double categoryOffset,
   }) {
-    final widthMultiplier = point.pointStyle?.size ?? 1.0;
+    final requestedWidthMultiplier = point.pointStyle?.size;
+    final widthMultiplier = requestedWidthMultiplier?.isFinite == true
+        ? requestedWidthMultiplier!
+        : 1.0;
     final width = math.max(1.0, defaultBarWidth * widthMultiplier);
     final pointPosition = transform.dataToPlot(point.x, point.y);
     final rangeStartValue = series.rangeStartValueFor(pointIndex);

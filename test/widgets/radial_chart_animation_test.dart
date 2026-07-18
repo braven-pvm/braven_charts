@@ -48,6 +48,49 @@ void main() {
     expect(renderedSeries().points.map((point) => point.y), [60, 40]);
   });
 
+  testWidgets('a new transition key cancels an active radial data morph', (
+    tester,
+  ) async {
+    final key = GlobalKey<_RadialAnimationHarnessState>();
+    final base = ChartTheme.light;
+    final theme = base.copyWith(
+      animationTheme: base.animationTheme.copyWith(
+        dataUpdateDuration: const Duration(milliseconds: 400),
+        dataUpdateCurve: Curves.linear,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 480,
+          height: 360,
+          child: _RadialAnimationHarness(key: key, theme: theme),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    key.currentState!.setValues(const {'A': 60, 'B': 40});
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    key.currentState!.startFresh(const {'A': 90, 'B': 10});
+    await tester.pump();
+    await tester.pump();
+
+    final rendered = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single
+        .debugElements
+        .whereType<PieSeriesElement>()
+        .single
+        .series;
+    expect(rendered.points.map((point) => point.y), [90, 10]);
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reordered radial data preserves selected category identity', (
     tester,
   ) async {
@@ -167,11 +210,18 @@ class _RadialAnimationHarness extends StatefulWidget {
 
 class _RadialAnimationHarnessState extends State<_RadialAnimationHarness> {
   Map<String, num> values = const {'A': 20, 'B': 80};
+  Object transitionKey = 'initial';
 
   void setValues(Map<String, num> next) => setState(() => values = next);
 
+  void startFresh(Map<String, num> next) => setState(() {
+    values = next;
+    transitionKey = Object();
+  });
+
   @override
   Widget build(BuildContext context) => BravenChartPlus(
+    transitionKey: transitionKey,
     bravenChartController: widget.controller,
     showLegend: false,
     theme: widget.theme,

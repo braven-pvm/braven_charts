@@ -125,6 +125,7 @@ class DataConverter {
     for (final s in series) {
       for (var pointIndex = 0; pointIndex < s.points.length; pointIndex++) {
         final point = s.points[pointIndex];
+        if (!point.isValid) continue;
         if (point.x < xMin) xMin = point.x;
         if (point.x > xMax) xMax = point.x;
         if (s is BarChartSeries) {
@@ -170,6 +171,10 @@ class DataConverter {
       }
     }
 
+    if (!xMin.isFinite || !xMax.isFinite || !yMin.isFinite || !yMax.isFinite) {
+      return const DataBounds(xMin: 0, xMax: 1, yMin: 0, yMax: 1);
+    }
+
     final divergingBars = barSeries
         .where(
           (current) => current.layoutMode == BarLayoutMode.divergingStacked,
@@ -203,8 +208,10 @@ class DataConverter {
       for (final s in series) {
         if (s is BarChartSeries && s.points.length >= 2) {
           // Sort points by X to calculate spacing correctly
-          final sortedPoints = [...s.points]
-            ..sort((a, b) => a.x.compareTo(b.x));
+          final sortedPoints = [
+            for (final point in s.points)
+              if (point.isValid) point,
+          ]..sort((a, b) => a.x.compareTo(b.x));
           for (int i = 1; i < sortedPoints.length; i++) {
             totalSpacing += sortedPoints[i].x - sortedPoints[i - 1].x;
             spacingCount++;

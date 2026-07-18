@@ -109,6 +109,7 @@ abstract final class BarCompositionEngine {
     final totals = <double, double>{};
     for (final current in series) {
       for (final point in current.points) {
+        if (!point.isValid) continue;
         final magnitude = point.y - current.baselineValue;
         totals[point.x] = (totals[point.x] ?? 0) + magnitude;
       }
@@ -118,12 +119,13 @@ abstract final class BarCompositionEngine {
     for (final current in series) {
       shares[current.id] = {
         for (final (pointIndex, point) in current.points.indexed)
-          pointIndex: (totals[point.x] ?? 0) == 0
-              ? 0
-              : _stablePercentage(
-                  point.y - current.baselineValue,
-                  totals[point.x]!,
-                ),
+          if (point.isValid)
+            pointIndex: (totals[point.x] ?? 0) == 0
+                ? 0
+                : _stablePercentage(
+                    point.y - current.baselineValue,
+                    totals[point.x]!,
+                  ),
       };
     }
 
@@ -139,12 +141,13 @@ abstract final class BarCompositionEngine {
 
     final xValues = <double>{
       for (final current in series)
-        for (final point in current.points) point.x,
+        for (final point in current.points)
+          if (point.isValid) point.x,
     };
     for (final x in xValues) {
       final neutral = neutralSeries.firstOrNull;
       final neutralPointIndex = neutral?.points.indexWhere(
-        (point) => point.x == x,
+        (point) => point.isValid && point.x == x,
       );
       final neutralShare =
           neutral == null || neutralPointIndex == null || neutralPointIndex < 0
@@ -169,7 +172,9 @@ abstract final class BarCompositionEngine {
           .reversed;
       _PointRef? outerNegative;
       for (final current in negative) {
-        final pointIndex = current.points.indexWhere((point) => point.x == x);
+        final pointIndex = current.points.indexWhere(
+          (point) => point.isValid && point.x == x,
+        );
         if (pointIndex < 0) continue;
         final share = shares[current.id]![pointIndex]!;
         starts[current.id]![pointIndex] = stackBaseline + negativeOffset;
@@ -185,7 +190,9 @@ abstract final class BarCompositionEngine {
       for (final current in series.where(
         (candidate) => candidate.divergingRole == BarDivergingRole.positive,
       )) {
-        final pointIndex = current.points.indexWhere((point) => point.x == x);
+        final pointIndex = current.points.indexWhere(
+          (point) => point.isValid && point.x == x,
+        );
         if (pointIndex < 0) continue;
         final share = shares[current.id]![pointIndex]!;
         starts[current.id]![pointIndex] = stackBaseline + positiveOffset;
@@ -264,6 +271,7 @@ abstract final class BarCompositionEngine {
         pointIndex++
       ) {
         final point = current.points[pointIndex];
+        if (!point.isValid) continue;
         final delta = point.y - current.baselineValue;
         final reference = _PointRef(current.id, pointIndex);
         if (delta >= 0) {
@@ -292,6 +300,7 @@ abstract final class BarCompositionEngine {
         pointIndex++
       ) {
         final point = current.points[pointIndex];
+        if (!point.isValid) continue;
         final rawDelta = point.y - current.baselineValue;
         var displayDelta = rawDelta;
         if (mode == BarLayoutMode.normalizedStacked) {
@@ -344,6 +353,7 @@ abstract final class BarCompositionEngine {
     var runningTotal = series.baselineValue;
 
     for (var pointIndex = 0; pointIndex < series.points.length; pointIndex++) {
+      if (!series.points[pointIndex].isValid) continue;
       if (series.isWaterfallTotal(pointIndex)) {
         startValues[pointIndex] = series.baselineValue;
         endValues[pointIndex] = runningTotal;

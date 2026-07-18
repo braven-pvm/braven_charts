@@ -442,7 +442,9 @@ class SeriesElement implements DataHitElement {
       ),
     );
     final passiveCategoryExtent = math.max(
-      currentSeries.maxWidth * passiveCategoryFactor,
+      currentSeries.maxWidth *
+          viewportIndex.maximumSizeMultiplier *
+          passiveCategoryFactor,
       (currentSeries.lollipopStyle?.headRadius ?? 0) * 2,
     );
     final paddingPixels =
@@ -480,8 +482,15 @@ class SeriesElement implements DataHitElement {
       for (final geometry in geometries) geometry.pointIndex: geometry,
     };
     final cells = <(int, int), List<BarGeometry>>{};
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
     for (final geometry in geometries) {
-      final bounds = geometry.hitBounds;
+      final bounds = geometry.hitBounds.intersect(plotBounds);
+      if (bounds.isEmpty) continue;
       final left = (bounds.left / _barHitCellSize).floor();
       final right = (bounds.right / _barHitCellSize).floor();
       final top = (bounds.top / _barHitCellSize).floor();

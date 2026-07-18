@@ -35,6 +35,18 @@ void main() {
       expect(index.categorySpacingPixels(_transform(0, 10)), 200);
       expect(index.categorySpacingPixels(_transform(0, 20)), 100);
     });
+
+    test('excludes points with non-finite coordinates', () {
+      final index = BarViewportIndex(const [
+        ChartDataPoint(x: 0, y: 10),
+        ChartDataPoint(x: 1, y: double.nan),
+        ChartDataPoint(x: double.infinity, y: 30),
+        ChartDataPoint(x: 3, y: 40),
+      ]);
+
+      expect(index.pointIndicesForViewport(minX: 0, maxX: 3), [0, 3]);
+      expect(index.pointCount, 2);
+    });
   });
 
   group('SeriesElement bar virtualization', () {
@@ -102,6 +114,84 @@ void main() {
       expect(dataHit?.pointIndex, 5005);
       expect(dataHit?.plotPosition, geometry.valueEndPoint);
       expect(element.barHitComparisonCount, lessThan(6));
+    });
+
+    test('does not materialize invalid points into the spatial hit index', () {
+      final element = SeriesElement(
+        series: const BarChartSeries(
+          id: 'invalid-data',
+          points: [
+            ChartDataPoint(x: 0, y: 20),
+            ChartDataPoint(x: 1, y: double.nan),
+            ChartDataPoint(x: 2, y: 40),
+          ],
+          barWidthPercent: 0.7,
+        ),
+        transform: _transform(0, 2),
+      );
+
+      expect(element.visibleBarPointIndices, [0, 2]);
+      expect(element.barGeometryForPoint(1), isNull);
+      expect(element.barGeometryForPoint(2), isNotNull);
+    });
+
+    test('keeps oversized point bars whose bodies overlap the viewport', () {
+      final element = SeriesElement(
+        series: const BarChartSeries(
+          id: 'wide-point',
+          points: [
+            ChartDataPoint(x: 4.7, y: 40, pointStyle: PointStyle(size: 10)),
+            ChartDataPoint(x: 6, y: 50),
+          ],
+          barWidthPixels: 100,
+          maxWidth: 100,
+        ),
+        transform: _transform(5, 6),
+      );
+
+      final geometry = element.barGeometryForPoint(0);
+      expect(geometry, isNotNull);
+      expect(geometry!.rect.right, greaterThan(0));
+    });
+
+    test('falls back safely for a non-finite point width multiplier', () {
+      final element = SeriesElement(
+        series: const BarChartSeries(
+          id: 'invalid-width',
+          points: [
+            ChartDataPoint(
+              x: 1,
+              y: 40,
+              pointStyle: PointStyle(size: double.nan),
+            ),
+          ],
+          barWidthPixels: 20,
+        ),
+        transform: _transform(0, 2),
+      );
+
+      expect(element.barGeometryForPoint(0)!.rect.width, 20);
+    });
+
+    test('bounds the hit index for an extreme finite point width', () {
+      final element = SeriesElement(
+        series: const BarChartSeries(
+          id: 'extreme-width',
+          points: [
+            ChartDataPoint(
+              x: 1,
+              y: 40,
+              pointStyle: PointStyle(size: 1000000000),
+            ),
+          ],
+          barWidthPixels: 20,
+        ),
+        transform: _transform(0, 2),
+      );
+
+      final geometry = element.barGeometryForPoint(0)!;
+      expect(element.barGeometryAt(geometry.rect.center)?.pointIndex, 0);
+      expect(element.barHitComparisonCount, 1);
     });
 
     test('keeps adjacent Waterfall steps for connector continuity', () {
