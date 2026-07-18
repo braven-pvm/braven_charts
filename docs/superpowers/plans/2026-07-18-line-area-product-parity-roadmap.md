@@ -127,3 +127,17 @@ The locked interaction contract and exclusions are recorded in
   serially.
 - The root-path release web build passes, and the refreshed Line Motion direct
   route plus compiled application script respond successfully on port 8098.
+
+## Sprint 7 — Continuation E2E and promotion readiness
+
+**Status:** In progress
+
+- Re-run every package, showcase, documentation, archive, and release-build
+  gate after rebasing the topology and identity commits onto current master.
+- Exercise Line and Area direct routes, Chart/Data/Split, resizing, linked
+  selection, append/remove/rolling motion, rapid interruption, reduced motion,
+  annotations, and multi-axis behavior against the final release bundle.
+- Review the complete two-commit continuation diff for cross-family regression
+  risk after the radial-family foundation merge.
+- Record residual risks and leave a refreshed local review route available.
+  Do not push, open a PR, or merge without explicit user approval.

@@ -389,7 +389,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('controller replays the configured Donut sweep entrance', (
+  testWidgets('generic controller replays Donut sweep entrance', (
     tester,
   ) async {
     final controller = BravenChartController();
@@ -423,7 +423,7 @@ void main() {
     await tester.pumpWidget(build());
     await tester.pumpAndSettle();
 
-    controller.replayRadialEntrance();
+    controller.replaySeriesEntrance();
     await tester.pump();
 
     expect(tester.hasRunningAnimations, isTrue);
@@ -431,7 +431,7 @@ void main() {
 
     await tester.pumpWidget(build(disableAnimations: true));
     await tester.pump();
-    controller.replayRadialEntrance();
+    controller.replaySeriesEntrance();
     await tester.pump();
     expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);

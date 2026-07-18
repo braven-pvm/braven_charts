@@ -2645,7 +2645,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   };
 
   void _replaySeriesEntrance() {
-    if (_layoutKind == ChartLayoutKind.radial) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial) {
       _startRadialRevealAnimation();
     } else {
       _startPathEntranceAnimation();
