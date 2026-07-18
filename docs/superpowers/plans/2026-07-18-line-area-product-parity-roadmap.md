@@ -1,9 +1,8 @@
 # Line and Area Product Parity — Sprint Roadmap
 
-**Branch:** `feature/line-area-product-parity`
-**PR:** #35
-**Merge policy:** Keep the PR open and unmerged until every sprint is complete,
-the consolidated E2E gate passes, and the user gives final merge approval.
+**Original branch:** `feature/line-area-product-parity`
+**Original PR:** #35 (merged)
+**Current continuation:** `feature/line-area-topology-motion`
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -68,4 +67,34 @@ the consolidated E2E gate passes, and the user gives final merge approval.
   not match the current Dart formatter. This PR does not mass-format unrelated
   code; every Dart file changed by this lane passes the formatter check.
 
-PR #35 remains unmerged pending green head CI and explicit user approval.
+PR #35 was approved and merged after its green E2E and CI gates.
+
+## Sprint 5 — Path Motion 1.1 topology updates
+
+**Status:** Complete
+
+- Animate stable-identity append, boundary removal, and rolling-window
+  snapshots for Line and Area.
+- Collapse entering and exiting points at the nearest retained boundary while
+  keeping all visual and interaction layers on the canonical animated series.
+- Preserve target bounds, reduced-motion behavior, multi-axis correctness, and
+  the dedicated controller streaming-tail path.
+- Add focused Motion-preset actions and complete package, showcase, release,
+  direct-route, and artifact verification before PR promotion.
+
+The locked behavior and exclusions are recorded in
+`../specs/2026-07-18-line-area-topology-motion-design.md`.
+
+### Sprint 5 verification record
+
+- Pure and real render-path coverage passes for append, removal, forward and
+  reverse rolling windows, reduced motion, target-bound multi-axis updates,
+  canonical artifact extraction, and the streaming-tail exclusion.
+- Full package and showcase suites pass; the showcase suite contains 134 tests.
+- `flutter analyze lib`, the full showcase analyzer, and every touched-file
+  analysis pass with zero issues.
+- Deployment-base and root-path release web builds pass; Line and Area direct
+  routes were inspected at 1600 x 1000 and accepted in local review.
+- Dartdoc 9.0.8 reports zero warnings and zero errors. The package dry run
+  reaches validation with only the expected dirty-worktree warning before the
+  approved local slice is committed.

@@ -145,7 +145,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('incompatible Line topology falls back to entrance reveal', (
+  testWidgets('Line append grows from the rendered tail without reveal', (
     tester,
   ) async {
     final key = GlobalKey<_AnimatedLineHarnessState>();
@@ -156,14 +156,71 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(renderedElement(tester).revealProgress, 0);
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(renderedElement(tester).revealProgress, closeTo(0.5, 0.01));
+    expect(renderedElement(tester).revealProgress, 1);
     expect(
-      (renderedElement(tester).series as LineChartSeries).points.length,
-      3,
+      (renderedElement(tester).series as LineChartSeries).points.map(
+        (point) => point.x,
+      ),
+      [0, 1, 1],
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    final midpoint = renderedElement(tester).series as LineChartSeries;
+    expect(renderedElement(tester).revealProgress, 1);
+    expect(midpoint.points.map((point) => point.x), [0, 1, 1.5]);
+    expect(midpoint.points.map((point) => point.y), [10, 20, 25]);
+    await tester.pumpAndSettle();
+    expect(
+      (renderedElement(tester).series as LineChartSeries).points.map(
+        (point) => point.x,
+      ),
+      [0, 1, 2],
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Area rolling window shares one in-flight render geometry', (
+    tester,
+  ) async {
+    final key = GlobalKey<_RollingAreaHarnessState>();
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _RollingAreaHarness(key: key, theme: theme, controller: controller),
     );
     await tester.pumpAndSettle();
+
+    key.currentState!.rollWindow();
+    await tester.pump();
+    await tester.pump();
+
+    final targetSnapshot =
+        (controller.extractDocument()
+                as ChartArtifactSuccess<ChartDocumentSnapshot>)
+            .value;
+    final target =
+        (ChartSeriesDocumentCodec.decode(targetSnapshot.document.series.single)
+                    as ChartArtifactSuccess<ChartSeries>)
+                .value
+            as AreaChartSeries;
+    expect(target.points.map((point) => point.label), ['B', 'C', 'D']);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    final midpoint = renderedElement(tester).series as AreaChartSeries;
+    expect(midpoint.points.map((point) => point.label), ['A', 'B', 'C', 'D']);
+    expect(midpoint.points.map((point) => point.x), [0.5, 1, 2, 2.5]);
+    expect(midpoint.points.map((point) => point.y), [17, 22, 32, 37]);
+    final enteringHit = renderedElement(tester).dataHitForPointIndex(3)!;
+    expect(enteringHit.point, midpoint.points.last);
+    expect(
+      enteringHit.plotPosition,
+      renderedElement(
+        tester,
+      ).transform.dataToPlot(midpoint.points.last.x, midpoint.points.last.y),
+    );
+
+    await tester.pumpAndSettle();
+    final completed = renderedElement(tester).series as AreaChartSeries;
+    expect(completed.points.map((point) => point.label), ['B', 'C', 'D']);
     expect(tester.takeException(), isNull);
   });
 
@@ -247,6 +304,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('reduced motion applies topology targets immediately', (
+    tester,
+  ) async {
+    final key = GlobalKey<_AnimatedLineHarnessState>();
+    await tester.pumpWidget(
+      _AnimatedLineHarness(key: key, theme: theme, disableAnimations: true),
+    );
+    await tester.pump();
+
+    key.currentState!.addPoint();
+    await tester.pump();
+
+    expect(tester.hasRunningAnimations, isFalse);
+    expect(
+      (renderedElement(tester).series as LineChartSeries).points.map(
+        (point) => point.x,
+      ),
+      [0, 1, 2],
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('multi-axis target bounds stay stable during path updates', (
     tester,
   ) async {
@@ -273,10 +352,9 @@ void main() {
       for (final element in renderedElements(tester))
         element.series.id: element.series,
     };
-    expect(
-      (midpointSeries['power'] as LineChartSeries).points.last.y,
-      closeTo(40, 0.01),
-    );
+    final midpointPower = midpointSeries['power'] as LineChartSeries;
+    expect(midpointPower.points, hasLength(3));
+    expect(midpointPower.points.last.y, closeTo(55, 0.01));
     expect(midpointBounds, startBounds);
 
     await tester.pumpAndSettle();
@@ -338,21 +416,28 @@ void main() {
   });
 }
 
-Widget _chartHost({required ChartTheme theme, required ChartSeries series}) =>
-    MaterialApp(
-      home: SizedBox(
-        width: 520,
-        height: 360,
-        child: BravenChartPlus(
-          bravenChartController: null,
-          showLegend: false,
-          theme: theme,
-          xAxisConfig: const XAxisConfig(min: 0, max: 2),
-          yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 60),
-          series: [series],
-        ),
-      ),
-    );
+Widget _chartHost({
+  required ChartTheme theme,
+  required ChartSeries series,
+  bool disableAnimations = false,
+}) => MaterialApp(
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: disableAnimations),
+    child: child!,
+  ),
+  home: SizedBox(
+    width: 520,
+    height: 360,
+    child: BravenChartPlus(
+      bravenChartController: null,
+      showLegend: false,
+      theme: theme,
+      xAxisConfig: const XAxisConfig(min: 0, max: 2),
+      yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 60),
+      series: [series],
+    ),
+  ),
+);
 
 class _AnimatedAreaHarness extends StatefulWidget {
   const _AnimatedAreaHarness({
@@ -402,9 +487,14 @@ class _AnimatedAreaHarnessState extends State<_AnimatedAreaHarness> {
 }
 
 class _AnimatedLineHarness extends StatefulWidget {
-  const _AnimatedLineHarness({super.key, required this.theme});
+  const _AnimatedLineHarness({
+    super.key,
+    required this.theme,
+    this.disableAnimations = false,
+  });
 
   final ChartTheme theme;
+  final bool disableAnimations;
 
   @override
   State<_AnimatedLineHarness> createState() => _AnimatedLineHarnessState();
@@ -418,6 +508,7 @@ class _AnimatedLineHarnessState extends State<_AnimatedLineHarness> {
   @override
   Widget build(BuildContext context) => _chartHost(
     theme: widget.theme,
+    disableAnimations: widget.disableAnimations,
     series: LineChartSeries(
       id: 'line',
       points: [
@@ -428,6 +519,60 @@ class _AnimatedLineHarnessState extends State<_AnimatedLineHarness> {
       pathAnimation: const PathAnimationStyle(
         entranceMode: PathEntranceAnimationMode.reveal,
         dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+      ),
+    ),
+  );
+}
+
+class _RollingAreaHarness extends StatefulWidget {
+  const _RollingAreaHarness({
+    super.key,
+    required this.theme,
+    required this.controller,
+  });
+
+  final ChartTheme theme;
+  final BravenChartController controller;
+
+  @override
+  State<_RollingAreaHarness> createState() => _RollingAreaHarnessState();
+}
+
+class _RollingAreaHarnessState extends State<_RollingAreaHarness> {
+  var rolled = false;
+
+  void rollWindow() => setState(() => rolled = true);
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    home: SizedBox(
+      width: 520,
+      height: 360,
+      child: BravenChartPlus(
+        bravenChartController: widget.controller,
+        showLegend: false,
+        theme: widget.theme,
+        series: [
+          AreaChartSeries(
+            id: 'area',
+            points: rolled
+                ? const [
+                    ChartDataPoint(x: 1, y: 24, label: 'B'),
+                    ChartDataPoint(x: 2, y: 34, label: 'C'),
+                    ChartDataPoint(x: 3, y: 44, label: 'D'),
+                  ]
+                : const [
+                    ChartDataPoint(x: 0, y: 10, label: 'A'),
+                    ChartDataPoint(x: 1, y: 20, label: 'B'),
+                    ChartDataPoint(x: 2, y: 30, label: 'C'),
+                  ],
+            showDataPointMarkers: true,
+            dataPointLabels: const DataPointLabelConfig(show: true),
+            pathAnimation: const PathAnimationStyle(
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -464,6 +609,7 @@ class _MultiAxisPathHarnessState extends State<_MultiAxisPathHarness> {
                 ? const [
                     ChartDataPoint(x: 0, y: 30),
                     ChartDataPoint(x: 1, y: 60),
+                    ChartDataPoint(x: 2, y: 90),
                   ]
                 : const [
                     ChartDataPoint(x: 0, y: 10),
@@ -484,6 +630,7 @@ class _MultiAxisPathHarnessState extends State<_MultiAxisPathHarness> {
                 ? const [
                     ChartDataPoint(x: 0, y: 300),
                     ChartDataPoint(x: 1, y: 600),
+                    ChartDataPoint(x: 2, y: 900),
                   ]
                 : const [
                     ChartDataPoint(x: 0, y: 100),

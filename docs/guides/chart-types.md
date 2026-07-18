@@ -81,8 +81,10 @@ easing come from `ChartTheme.animationTheme.dataUpdateDuration` and
 `dataUpdateCurve`.
 
 Updates interpolate only when the series ID, series type, interpolation mode,
-point count, and point identities remain compatible. Topology changes fall
-back to the configured entrance reveal. Reduced-motion preferences and a
+and ordered point identities remain compatible. Equal-length values move in
+place. Stable-identity appends, boundary removals, and rolling windows grow or
+collapse at the nearest retained edge. Interior edits and reordered identities
+fall back to the configured entrance reveal. Reduced-motion preferences and a
 zero-duration theme always render the final frame immediately.
 
 Attach a `BravenChartController` to replay the configured entrance:
@@ -124,8 +126,8 @@ Avoid overlapping many opaque areas. Lower the opacity or use a line when the
 overlap makes individual series hard to read.
 
 Area fill, stroke, glow, markers, and labels share one reveal boundary. During
-compatible value updates, the fill and outline interpolate as one canonical
-series rather than as independent paint effects.
+compatible value or boundary-topology updates, the fill and outline
+interpolate as one canonical series rather than as independent paint effects.
 
 ## Chart and data workbench
 

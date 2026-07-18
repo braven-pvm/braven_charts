@@ -63,12 +63,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _showBaselineFill = true;
   bool _animatePaths = true;
   double _motionDurationMs = 650;
-  int _motionRevision = 0;
+  int _motionValueRevision = 0;
+  late List<ChartDataPoint> _motionPrimaryPoints;
+  late List<ChartDataPoint> _motionSecondaryPoints;
   ChartDisplayMode _initialDisplayMode = ChartDisplayMode.chart;
 
   @override
   void initState() {
     super.initState();
+    _resetMotionData();
     final requestedPreset = Uri.base.queryParameters['preset']?.toLowerCase();
     if (requestedPreset != null) {
       final index = _presets.indexWhere(
@@ -244,7 +247,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 onSelectionChanged: (selection) {
                   setState(() {
                     _presetIndex = selection.single;
-                    _motionRevision = 0;
+                    _resetMotionData();
                   });
                 },
               ),
@@ -487,11 +490,50 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 48),
                   ),
-                  onPressed: () => setState(() => _motionRevision++),
+                  onPressed: _updateMotionValues,
                   icon: const Icon(Icons.swap_vert, size: 18),
-                  label: const Text('Update data'),
+                  label: const Text('Update values'),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-add-point'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: _addMotionPoint,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add point'),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-remove-point'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: _motionPrimaryPoints.length > 2
+                      ? _removeMotionPoint
+                      : null,
+                  icon: const Icon(Icons.remove, size: 18),
+                  label: const Text('Remove point'),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-roll-window'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: _motionPrimaryPoints.length > 1
+                      ? _rollMotionWindow
+                      : null,
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('Roll window'),
                 ),
               ],
+            ),
+            Text(
+              _animatePaths
+                  ? '${_motionPrimaryPoints.length} points · edge changes keep the path and points in sync'
+                  : 'Path animation is off · updates apply immediately',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -510,18 +552,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   List<ChartSeries> _buildLineSeries() {
     if (_presetIndex == 3) {
-      final first = _motionRevision.isEven
-          ? _primaryPoints
-          : _motionPrimaryUpdated;
-      final second = _motionRevision.isEven
-          ? _secondaryPoints
-          : _motionSecondaryUpdated;
       return [
         _line(
           id: 'motion-observed',
           name: 'Observed',
           unit: 'W',
-          points: first,
+          points: _motionPrimaryPoints,
           color: const Color(0xFF2563EB),
         ),
         if (_showSecondSeries)
@@ -529,7 +565,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             id: 'motion-plan',
             name: 'Plan',
             unit: 'W',
-            points: second,
+            points: _motionSecondaryPoints,
             color: const Color(0xFFF97316),
           ),
       ];
@@ -650,17 +686,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   List<ChartSeries> _buildAreaSeries() {
     if (_presetIndex == 3) {
-      final observed = _motionRevision.isEven
-          ? _primaryPoints
-          : _motionPrimaryUpdated;
-      final plan = _motionRevision.isEven
-          ? _secondaryPoints
-          : _motionSecondaryUpdated;
       return [
         _area(
           id: 'motion-volume',
           name: 'Volume',
-          points: observed,
+          points: _motionPrimaryPoints,
           color: const Color(0xFF4F46E5),
         ),
         if (_showSecondSeries)
@@ -668,7 +698,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             id: 'motion-plan',
             name: 'Plan',
             unit: 'k',
-            points: plan,
+            points: _motionSecondaryPoints,
             color: const Color(0xFF0891B2),
           ),
       ];
@@ -847,9 +877,106 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _showBaselineFill = true;
       _animatePaths = true;
       _motionDurationMs = 650;
-      _motionRevision = 0;
+      _resetMotionData();
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));
+  }
+
+  void _resetMotionData() {
+    _motionPrimaryPoints = List<ChartDataPoint>.of(_primaryPoints);
+    _motionSecondaryPoints = List<ChartDataPoint>.of(_secondaryPoints);
+    _motionValueRevision = 0;
+  }
+
+  void _updateMotionValues() {
+    const primaryDelta = <double>[6, 6, 6, 8, 7, 8, -5, 10];
+    const secondaryDelta = <double>[-3, 4, 6, 4, 5, 5, 6, 5];
+    final direction = _motionValueRevision.isEven ? 1.0 : -1.0;
+    setState(() {
+      _motionPrimaryPoints = _motionPrimaryPoints
+          .asMap()
+          .entries
+          .map(
+            (entry) => entry.value.copyWith(
+              y:
+                  entry.value.y +
+                  (primaryDelta[entry.key % primaryDelta.length] * direction),
+            ),
+          )
+          .toList(growable: false);
+      _motionSecondaryPoints = _motionSecondaryPoints
+          .asMap()
+          .entries
+          .map(
+            (entry) => entry.value.copyWith(
+              y:
+                  entry.value.y +
+                  (secondaryDelta[entry.key % secondaryDelta.length] *
+                      direction),
+            ),
+          )
+          .toList(growable: false);
+      _motionValueRevision++;
+    });
+  }
+
+  void _addMotionPoint() {
+    setState(() {
+      final nextX = _motionPrimaryPoints.last.x + 1;
+      _motionPrimaryPoints = [
+        ..._motionPrimaryPoints,
+        ChartDataPoint(
+          x: nextX,
+          y: _motionPrimaryPoints.last.y + 7,
+          label: 'Point ${nextX.toInt()}',
+        ),
+      ];
+      _motionSecondaryPoints = [
+        ..._motionSecondaryPoints,
+        ChartDataPoint(
+          x: nextX,
+          y: _motionSecondaryPoints.last.y + 5,
+          label: 'Point ${nextX.toInt()}',
+        ),
+      ];
+    });
+  }
+
+  void _removeMotionPoint() {
+    if (_motionPrimaryPoints.length <= 2) return;
+    setState(() {
+      _motionPrimaryPoints = _motionPrimaryPoints.sublist(
+        0,
+        _motionPrimaryPoints.length - 1,
+      );
+      _motionSecondaryPoints = _motionSecondaryPoints.sublist(
+        0,
+        _motionSecondaryPoints.length - 1,
+      );
+    });
+  }
+
+  void _rollMotionWindow() {
+    if (_motionPrimaryPoints.length <= 1) return;
+    setState(() {
+      final nextX = _motionPrimaryPoints.last.x + 1;
+      _motionPrimaryPoints = [
+        ..._motionPrimaryPoints.skip(1),
+        ChartDataPoint(
+          x: nextX,
+          y: _motionPrimaryPoints.last.y + 7,
+          label: 'Point ${nextX.toInt()}',
+        ),
+      ];
+      _motionSecondaryPoints = [
+        ..._motionSecondaryPoints.skip(1),
+        ChartDataPoint(
+          x: nextX,
+          y: _motionSecondaryPoints.last.y + 5,
+          label: 'Point ${nextX.toInt()}',
+        ),
+      ];
+    });
   }
 }
 
@@ -971,28 +1098,6 @@ const _secondaryPoints = [
   ChartDataPoint(x: 5, y: 51),
   ChartDataPoint(x: 6, y: 55),
   ChartDataPoint(x: 7, y: 59),
-];
-
-const _motionPrimaryUpdated = [
-  ChartDataPoint(x: 0, y: 36),
-  ChartDataPoint(x: 1, y: 44),
-  ChartDataPoint(x: 2, y: 41),
-  ChartDataPoint(x: 3, y: 56),
-  ChartDataPoint(x: 4, y: 51),
-  ChartDataPoint(x: 5, y: 63),
-  ChartDataPoint(x: 6, y: 58),
-  ChartDataPoint(x: 7, y: 68),
-];
-
-const _motionSecondaryUpdated = [
-  ChartDataPoint(x: 0, y: 31),
-  ChartDataPoint(x: 1, y: 40),
-  ChartDataPoint(x: 2, y: 45),
-  ChartDataPoint(x: 3, y: 47),
-  ChartDataPoint(x: 4, y: 52),
-  ChartDataPoint(x: 5, y: 56),
-  ChartDataPoint(x: 6, y: 61),
-  ChartDataPoint(x: 7, y: 64),
 ];
 
 const _powerPoints = [

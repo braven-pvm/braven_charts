@@ -25,8 +25,9 @@ types and where to begin.
 ### Line and Area charts
 
 - `PathAnimationStyle` opts a Line or Area series into leading-edge entrance
-  reveal and compatible mounted data-update interpolation. Both behaviors are
-  disabled by default.
+  reveal and compatible mounted data-update interpolation, including
+  stable-identity append, boundary removal, and rolling-window snapshots. Both
+  behaviors are disabled by default.
 - `PathEntranceAnimationMode` and `PathDataUpdateAnimationMode` select the two
   independent motion phases; timing and easing come from
   `ChartTheme.animationTheme`.

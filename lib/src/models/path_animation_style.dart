@@ -18,6 +18,11 @@ enum PathDataUpdateAnimationMode {
   none,
 
   /// Interpolate compatible point geometry through the standard renderer.
+  ///
+  /// Ordered value changes interpolate in place. Stable-identity points may
+  /// also enter or leave at a series boundary, including rolling-window
+  /// updates. Interior topology edits and reordered identities are not
+  /// interpolated.
   interpolate,
 }
 
@@ -33,6 +38,8 @@ class PathAnimationStyle {
   });
 
   final PathEntranceAnimationMode entranceMode;
+
+  /// How mounted snapshot updates animate after the entrance phase.
   final PathDataUpdateAnimationMode dataUpdateMode;
 
   PathAnimationStyle copyWith({
