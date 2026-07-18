@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resizable Chart/Data/Split workbenches for the Line and Area showcase pages,
   with dedicated motion presets, replay and live-update controls, responsive
   compact layouts, and direct review routes.
+- Opt-in `ChartDisplayMode.source` for `BravenChartWorkbench`, backed by a
+  public deterministic `ChartDartSourceGenerator`. The generated direct Dart
+  covers Line, Area, Scatter, Bar, Pie, Donut, multi-axis, annotations,
+  interactions, resolved themes, canvas legends, and optional durable view
+  state; large datasets and runtime-owned callbacks use explicit placeholders
+  and diagnostics rather than silent omission.
+- A package-owned Source viewport with syntax highlighting, line numbers,
+  selectable text, wrapping, exact clipboard copy, independent loading/stale/
+  failure state, retry, reduced-motion-safe behavior, a dark code canvas in
+  either host theme, and manual, mode-entry, or revision refresh policies.
+- Generated Source demonstrations on the Chart Workbench and every public
+  Line, Area, Bar, Scatter, Pie, and Donut detail page.
+- Nestable `ChartWorkbenchScope` and caller-owned
+  `ChartWorkbenchGroupController` for system-wide or chart-family-wide display
+  mode and selector visibility. Grouped Workbenches synchronize UI and
+  controller requests, intersect supported modes safely, and retain local
+  split sizing, data/source state, focus, and interaction.
 - Runtime Donut center builders and actions with package-owned circular
   interaction, portable center-content fallback, and explicit rebinding after
   artifact hydration.
@@ -26,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Identity-aware Pie and Donut data transitions that preserve category
   selection across keyed updates, fade structural changes safely, honor
   reduced motion, and support per-series opt-out.
+
+### Fixed
+- Source capture now preserves Pie and Donut formatter descriptors without
+  routing radial series through Cartesian annotation-copy paths or casting
+  Donut series to Pie.
 
 ## 0.6.0 - 2026-07-18
 

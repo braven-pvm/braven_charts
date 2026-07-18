@@ -272,28 +272,33 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       listenable: _optionsController,
       builder: (context, _) {
         final options = _optionsController.options;
-        final chart = _buildChart(options, _chartController);
         return ChartCard(
           title: _presets[_presetIndex].label,
           subtitle: _chartSummary,
           padding: const EdgeInsets.all(8),
-          child: widget.family == _CartesianFamily.scatter
-              ? chart
-              : BravenChartWorkbench(
-                  key: ValueKey('${widget.family.name}-workbench'),
-                  chartController: _chartController,
-                  workbenchController: _workbenchController,
-                  initialDisplayMode: _initialDisplayMode,
-                  splitBreakpoint: 760,
-                  autoFitTablePane: true,
-                  minimumChartPaneExtent: 360,
-                  minimumTablePaneExtent: 360,
-                  maximumAutoTablePaneExtent: 520,
-                  tableRefreshPolicy:
-                      ChartTableRefreshPolicy.onDocumentRevision,
-                  chartBuilder: (context, controller) =>
-                      _buildChart(options, controller),
-                ),
+          child: BravenChartWorkbench(
+            key: ValueKey('${widget.family.name}-workbench'),
+            chartController: _chartController,
+            workbenchController: _workbenchController,
+            initialDisplayMode: _initialDisplayMode,
+            availableDisplayModes: const {
+              ChartDisplayMode.chart,
+              ChartDisplayMode.data,
+              ChartDisplayMode.split,
+              ChartDisplayMode.source,
+            },
+            sourceOptions: ChartDartSourceOptions(
+              variableName: '${widget.family.name}Chart',
+            ),
+            tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+            splitBreakpoint: 760,
+            autoFitTablePane: true,
+            minimumChartPaneExtent: 360,
+            minimumTablePaneExtent: 360,
+            maximumAutoTablePaneExtent: 520,
+            chartBuilder: (context, controller) =>
+                _buildChart(options, controller),
+          ),
         );
       },
     );

@@ -16,8 +16,8 @@ enum ChartTableRowLayout { long, wide }
 /// Alignment rule for a wide table's shared X column.
 enum ChartTableAlignmentPolicy { exactX }
 
-/// Whether a host shows the chart, its data table, or both.
-enum ChartDisplayMode { chart, data, split }
+/// Whether a host shows the chart, its data table, both, or generated source.
+enum ChartDisplayMode { chart, data, split, source }
 
 /// Immutable rules for deriving a table from a chart document.
 @immutable

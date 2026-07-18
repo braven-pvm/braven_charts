@@ -47,7 +47,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       RadialSliceRadiusAggregation.weightedMean;
   DonutCenterValueMode _centerValueMode = DonutCenterValueMode.selectedOrTotal;
   _DonutCenterStyle _centerStyle = _DonutCenterStyle.theme;
-  ChartDisplayMode _displayMode = ChartDisplayMode.split;
   ChartArtifact? _capturedArtifact;
   HydratedChartConfiguration? _restoredConfiguration;
   String? _portableJson;
@@ -260,8 +259,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 ],
               ),
             const SizedBox(height: 8),
-            _buildDisplayModeSelector(),
-            const SizedBox(height: 8),
             Expanded(child: _buildDataSurface(compact: compact)),
           ],
         ),
@@ -301,44 +298,18 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     ],
   );
 
-  Widget _buildDisplayModeSelector() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SegmentedButton<ChartDisplayMode>(
-        key: const ValueKey('donut-display-mode'),
-        segments: const [
-          ButtonSegment(
-            value: ChartDisplayMode.chart,
-            icon: Icon(Icons.donut_large_outlined, size: 18),
-            label: Text('Chart'),
-          ),
-          ButtonSegment(
-            value: ChartDisplayMode.data,
-            icon: Icon(Icons.table_rows_outlined, size: 18),
-            label: Text('Data'),
-          ),
-          ButtonSegment(
-            value: ChartDisplayMode.split,
-            icon: Icon(Icons.vertical_split_outlined, size: 18),
-            label: Text('Split'),
-          ),
-        ],
-        selected: {_displayMode},
-        onSelectionChanged: (selected) {
-          final mode = selected.single;
-          setState(() => _displayMode = mode);
-          _workbenchController.setDisplayMode(mode);
-        },
-      ),
-    );
-  }
-
   Widget _buildDataSurface({required bool compact}) {
     return BravenChartWorkbench(
       chartController: _chartController,
       workbenchController: _workbenchController,
-      initialDisplayMode: _displayMode,
-      showModeSwitcher: false,
+      initialDisplayMode: ChartDisplayMode.split,
+      availableDisplayModes: const {
+        ChartDisplayMode.chart,
+        ChartDisplayMode.data,
+        ChartDisplayMode.split,
+        ChartDisplayMode.source,
+      },
+      sourceOptions: const ChartDartSourceOptions(variableName: 'donutChart'),
       splitBreakpoint: 1,
       splitAxis: compact ? Axis.vertical : Axis.horizontal,
       splitGap: 8,

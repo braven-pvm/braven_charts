@@ -35,12 +35,12 @@ flutter build web --release --base-href /braven_charts/
 | --- | --- |
 | Gallery | Start with a native-rendered six-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Cartesian, and mixed-series examples |
 | Chart Types | Choose between line, area, bar, scatter, Pie, and Donut from a concise visual overview; each family links to its own runnable guide |
-| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split views |
-| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect target data and artifacts in resizable Chart/Data/Split views |
-| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API |
-| Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
-| Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
-| Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
+| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
+| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
+| Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source |
+| Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection; then inspect the effective Dart source |
+| Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; inspect generated source; and capture or restore a portable artifact |
+| Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
 | Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
@@ -53,11 +53,16 @@ flutter build web --release --base-href /braven_charts/
 | Loading States | Animated chart skeleton, circular/linear progress, empty results, and custom state content |
 | Performance | Large data sets and rendering diagnostics |
 | Chart Artifacts | Capture effective chart state, switch between chart/table/restored views, inspect canonical JSON, and restore an independent chart |
-| Chart Workbench | Keep one chart mounted across Chart/Data/Split views, link rows to points, inspect captured JSON and diagnostics, recover table failures, refresh a bounded-stream snapshot deliberately, and prove three hydrated charts remain independent |
+| Chart Workbench | Keep one chart mounted across Chart/Data/Split/Source views, control the shared showcase-wide mode and selector visibility, copy generated Dart, link rows to points, inspect captured JSON and diagnostics, recover table or source failures, refresh a bounded-stream snapshot deliberately, and prove three hydrated charts remain independent |
 
 The chart-family hierarchy is intentionally extensible. A new family joins the
 overview and nested navigation only when its package API and full runnable
 guide are ready, avoiding placeholder public pages.
+
+The showcase wraps all chart-family Workbenches in one
+`ChartWorkbenchScope`. Choose a presentation on any chart page and the next
+chart retains it; use Chart Workbench's Shared presentation controls to change
+the mode or show/hide the selector for the entire application.
 
 ## Interaction shortcuts
 
@@ -88,7 +93,7 @@ interaction engine, and application states in more detail.
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
 Chart Artifacts page, see [Portable chart artifacts](../doc/chart_artifacts.md).
-For the reusable Chart/Data/Split composition shown by Chart Workbench, see
+For the reusable Chart/Data/Split/Source composition shown by Chart Workbench, see
 [Chart Workbench](../doc/chart_workbench.md) and
 [Chart Document Comparison](../doc/chart_comparison.md).
 For radial series contracts, see [Pie charts](../doc/pie_charts.md) and

@@ -33,6 +33,14 @@ void main() {
           size: _wideSize,
           workbenchController: workbenchController,
           initialMode: mode,
+          availableModes: mode == ChartDisplayMode.source
+              ? const {
+                  ChartDisplayMode.chart,
+                  ChartDisplayMode.data,
+                  ChartDisplayMode.split,
+                  ChartDisplayMode.source,
+                }
+              : null,
         ),
         settle: mode != ChartDisplayMode.chart,
       );
@@ -196,6 +204,7 @@ Widget _host({
   double chartValue = 10,
   TextScaler textScaler = TextScaler.noScaling,
   bool highContrast = false,
+  Set<ChartDisplayMode>? availableModes,
 }) {
   final scheme = highContrast
       ? const ColorScheme.highContrastLight()
@@ -225,6 +234,13 @@ Widget _host({
                 chartController: chartController,
                 workbenchController: workbenchController,
                 initialDisplayMode: initialMode,
+                availableDisplayModes:
+                    availableModes ??
+                    const {
+                      ChartDisplayMode.chart,
+                      ChartDisplayMode.data,
+                      ChartDisplayMode.split,
+                    },
                 splitBreakpoint: splitBreakpoint,
                 tableRefreshPolicy: refreshPolicy,
                 chartBuilder: (context, controller) => BravenChartPlus(

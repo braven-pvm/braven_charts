@@ -9,7 +9,7 @@ import '../widgets/standard_options.dart';
 
 enum _WorkbenchDataset { recovery, intervals, distribution }
 
-/// Demonstrates the package-owned Chart/Data/Split composition and host actions.
+/// Demonstrates Chart/Data/Split/Source composition and host actions.
 class ChartWorkbenchPage extends StatefulWidget {
   const ChartWorkbenchPage({super.key});
 
@@ -145,89 +145,122 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
     return ChartPageLayout(
       title: 'Chart Workbench',
       subtitle:
-          'Explore native data views, linked points, portable capture, restoration, and explicit document comparison',
+          'Inspect one effective chart as an interactive view, native data, reusable Dart source, or a portable artifact',
       optionsChildren: _buildOptions(),
       chart: _buildShowcase(),
     );
   }
 
-  List<Widget> _buildOptions() => [
-    OptionSection(
-      title: 'Table projection',
-      icon: Icons.table_chart_outlined,
-      children: [
-        EnumOption<ChartTableRowLayout>(
-          label: 'Row shape',
-          value: _rowLayout,
-          values: ChartTableRowLayout.values,
-          labelBuilder: (value) => switch (value) {
-            ChartTableRowLayout.wide => 'Shared X columns',
-            ChartTableRowLayout.long => 'One point per row',
-          },
-          onChanged: _changeRowLayout,
-        ),
-        EnumOption<ChartTableRefreshPolicy>(
-          label: 'Refresh policy',
-          value: _refreshPolicy,
-          values: ChartTableRefreshPolicy.values,
-          labelBuilder: (value) => switch (value) {
-            ChartTableRefreshPolicy.manual => 'Manual after first use',
-            ChartTableRefreshPolicy.onModeEntry => 'When Data becomes visible',
-            ChartTableRefreshPolicy.onDocumentRevision =>
-              'After chart revisions',
-          },
-          onChanged: (value) => setState(() => _refreshPolicy = value),
-        ),
-        ActionButton(
-          label: 'Refresh table snapshot',
-          icon: Icons.refresh,
-          onPressed: () => _workbenchController.refreshTable(),
-        ),
-      ],
-    ),
-    OptionSection(
-      title: 'Demo dataset',
-      icon: Icons.auto_graph_outlined,
-      children: [
-        ActionButton(
-          label: 'Generate another dataset',
-          icon: Icons.casino_outlined,
-          onPressed: _generateDataset,
-        ),
-      ],
-    ),
-    OptionSection(
-      title: 'Reliability states',
-      icon: Icons.health_and_safety_outlined,
-      children: [
-        ActionButton(
-          label: 'Show table warning',
-          icon: Icons.info_outline,
-          onPressed: _showTableWarning,
-        ),
-        ActionButton(
-          label: 'Show recoverable failure',
-          icon: Icons.warning_amber_rounded,
-          onPressed: _showRecoverableFailure,
-        ),
-        ActionButton(
-          label: 'Show stale snapshot',
-          icon: Icons.update_outlined,
-          onPressed: _showStaleSnapshot,
-        ),
-      ],
-    ),
-    const OptionSection(
-      title: 'What to try',
-      icon: Icons.lightbulb_outline,
-      children: [
-        InfoBox(
-          message:
-              'Switch Chart, Data, and Split; select a row; inspect captured JSON; try recoverable table states; then compare the independent restored charts.',
-        ),
-      ],
-    ),
-  ];
+  List<Widget> _buildOptions() {
+    final group = ChartWorkbenchScope.maybeControllerOf(context);
+    final sharedMode = group?.displayMode ?? _workbenchController.requestedMode;
+    final sharedModes =
+        group?.availableDisplayModes.toList() ?? ChartDisplayMode.values;
+    return [
+      OptionSection(
+        title: 'Shared presentation',
+        icon: Icons.sync_alt,
+        children: [
+          EnumOption<ChartDisplayMode>(
+            label: 'Shared view',
+            value: sharedMode,
+            values: sharedModes,
+            labelBuilder: (value) => switch (value) {
+              ChartDisplayMode.chart => 'Chart',
+              ChartDisplayMode.data => 'Data',
+              ChartDisplayMode.split => 'Split',
+              ChartDisplayMode.source => 'Source',
+            },
+            onChanged: (value) => group == null
+                ? _workbenchController.setDisplayMode(value)
+                : group.setDisplayMode(value),
+          ),
+          BoolOption(
+            label: 'Show view selector',
+            value: group?.showModeSwitcher ?? true,
+            subtitle: 'Applies to every Workbench in the current scope',
+            onChanged: (value) => group?.setShowModeSwitcher(value),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Table projection',
+        icon: Icons.table_chart_outlined,
+        children: [
+          EnumOption<ChartTableRowLayout>(
+            label: 'Row shape',
+            value: _rowLayout,
+            values: ChartTableRowLayout.values,
+            labelBuilder: (value) => switch (value) {
+              ChartTableRowLayout.wide => 'Shared X columns',
+              ChartTableRowLayout.long => 'One point per row',
+            },
+            onChanged: _changeRowLayout,
+          ),
+          EnumOption<ChartTableRefreshPolicy>(
+            label: 'Refresh policy',
+            value: _refreshPolicy,
+            values: ChartTableRefreshPolicy.values,
+            labelBuilder: (value) => switch (value) {
+              ChartTableRefreshPolicy.manual => 'Manual after first use',
+              ChartTableRefreshPolicy.onModeEntry =>
+                'When Data becomes visible',
+              ChartTableRefreshPolicy.onDocumentRevision =>
+                'After chart revisions',
+            },
+            onChanged: (value) => setState(() => _refreshPolicy = value),
+          ),
+          ActionButton(
+            label: 'Refresh table snapshot',
+            icon: Icons.refresh,
+            onPressed: () => _workbenchController.refreshTable(),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Demo dataset',
+        icon: Icons.auto_graph_outlined,
+        children: [
+          ActionButton(
+            label: 'Generate another dataset',
+            icon: Icons.casino_outlined,
+            onPressed: _generateDataset,
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Reliability states',
+        icon: Icons.health_and_safety_outlined,
+        children: [
+          ActionButton(
+            label: 'Show table warning',
+            icon: Icons.info_outline,
+            onPressed: _showTableWarning,
+          ),
+          ActionButton(
+            label: 'Show recoverable failure',
+            icon: Icons.warning_amber_rounded,
+            onPressed: _showRecoverableFailure,
+          ),
+          ActionButton(
+            label: 'Show stale snapshot',
+            icon: Icons.update_outlined,
+            onPressed: _showStaleSnapshot,
+          ),
+        ],
+      ),
+      const OptionSection(
+        title: 'What to try',
+        icon: Icons.lightbulb_outline,
+        children: [
+          InfoBox(
+            message:
+                'Switch Chart, Data, Split, and Source; copy the effective Dart configuration; select a row; inspect captured JSON; then compare the independent restored charts.',
+          ),
+        ],
+      ),
+    ];
+  }
 
   Widget _buildShowcase() => SingleChildScrollView(
     child: Column(
@@ -238,7 +271,7 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
         const _PointLinkingHint(),
         const SizedBox(height: 16),
         SizedBox(
-          height: 570,
+          height: MediaQuery.sizeOf(context).width < 700 ? 760 : 570,
           child: ChartCard(
             title: _datasetTitle,
             subtitle:
@@ -249,6 +282,12 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
               chartController: _chartController,
               workbenchController: _workbenchController,
               initialDisplayMode: ChartDisplayMode.split,
+              availableDisplayModes: const {
+                ChartDisplayMode.chart,
+                ChartDisplayMode.data,
+                ChartDisplayMode.split,
+                ChartDisplayMode.source,
+              },
               splitBreakpoint: 760,
               documentOptions: _documentOptions,
               tableOptions: ChartTableOptions(rowLayout: _rowLayout),
@@ -920,7 +959,7 @@ class _FeatureStrip extends StatelessWidget {
               icon: Icons.view_week_outlined,
               title: 'Choose a view',
               description:
-                  'Chart, native data table, or both—without remounting.',
+                  'Chart, native data, Split, or reusable Dart—without remounting.',
             ),
             _FeatureCard(
               width: width,
@@ -1219,6 +1258,12 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
                 chartController: _chartController,
                 workbenchController: _workbenchController,
                 initialDisplayMode: ChartDisplayMode.split,
+                availableDisplayModes: const {
+                  ChartDisplayMode.chart,
+                  ChartDisplayMode.data,
+                  ChartDisplayMode.split,
+                  ChartDisplayMode.source,
+                },
                 splitBreakpoint: 760,
                 // This proof isolates snapshot freshness. The primary
                 // workbench above demonstrates revision-safe row linking.

@@ -64,6 +64,7 @@ import 'rendering/spatial_index.dart';
 import 'streaming/buffer_manager.dart';
 import 'streaming/live_stream_controller.dart';
 import 'streaming/streaming_controller.dart';
+import 'source/chart_source_capture_adapter.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'utils/bar_series_transition.dart';
@@ -1278,6 +1279,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onDeselect: _handleSeriesDeselected,
       onSetSeriesVisibility: _setSeriesVisibility,
       onExtractDocument: _extractDocument,
+      onExtractSourceDocument: _extractSourceDocument,
       onRestoreViewState: _restoreViewState,
       onCapturePreview: _capturePreview,
       onFocusPoints: _focusPoints,
@@ -1411,6 +1413,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onDeselect: _handleSeriesDeselected,
         onSetSeriesVisibility: _setSeriesVisibility,
         onExtractDocument: _extractDocument,
+        onExtractSourceDocument: _extractSourceDocument,
         onRestoreViewState: _restoreViewState,
         onCapturePreview: _capturePreview,
         onFocusPoints: _focusPoints,
@@ -1849,9 +1852,27 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   ChartArtifactResult<ChartDocumentSnapshot> _extractDocument(
     ChartDocumentExtractOptions options,
-  ) {
+  ) => _extractDocumentInternal(options, forSource: false);
+
+  ChartArtifactResult<ChartDocumentSnapshot> _extractSourceDocument(
+    ChartDocumentExtractOptions options,
+  ) => _extractDocumentInternal(options, forSource: true);
+
+  ChartArtifactResult<ChartDocumentSnapshot> _extractDocumentInternal(
+    ChartDocumentExtractOptions options, {
+    required bool forSource,
+  }) {
     for (var attempt = 0; attempt < options.maxSnapshotAttempts; attempt++) {
-      final before = _captureRevisionToken(options);
+      final initialCapture = forSource
+          ? ChartSourceCaptureAdapter.adapt(
+              source: _buildDocumentExtractionSource(),
+              options: options,
+            )
+          : ChartSourceCaptureRequest(
+              source: _buildDocumentExtractionSource(),
+              options: options,
+            );
+      final before = _captureRevisionToken(initialCapture.options);
       final nextRevision =
           _lastDocumentRevisionToken == null ||
               _lastDocumentRevisionToken == before
@@ -1860,20 +1881,37 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final effectiveRevision = _publishEffectiveDocumentRevision(
         before.effectiveRevision,
       );
-      final assembled = _assembleDocumentSnapshot(
-        options,
-        nextRevision,
-        effectiveRevision,
+      final capture = forSource
+          ? ChartSourceCaptureAdapter.adapt(
+              source: _buildDocumentExtractionSource(),
+              options: options,
+            )
+          : ChartSourceCaptureRequest(
+              source: _buildDocumentExtractionSource(),
+              options: options,
+            );
+      final assembled = ChartDocumentExtractor.extract(
+        source: capture.source,
+        options: capture.options,
+        revision: nextRevision,
+        effectiveRevision: effectiveRevision,
       );
       if (assembled is ChartArtifactFailure<ChartDocumentSnapshot>) {
-        return assembled;
+        return ChartArtifactFailure(
+          error: assembled.error,
+          warnings: [...capture.warnings, ...assembled.warnings],
+        );
       }
-      final after = _captureRevisionToken(options);
+      final after = _captureRevisionToken(capture.options);
       if (before != after) continue;
 
       _lastDocumentRevisionToken = after;
       _documentRevision = nextRevision;
-      return assembled;
+      final success = assembled as ChartArtifactSuccess<ChartDocumentSnapshot>;
+      return ChartArtifactSuccess(
+        value: success.value,
+        warnings: [...capture.warnings, ...success.warnings],
+      );
     }
 
     return ChartArtifactFailure(
@@ -2012,11 +2050,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
-  ChartArtifactResult<ChartDocumentSnapshot> _assembleDocumentSnapshot(
-    ChartDocumentExtractOptions options,
-    int revision,
-    ChartDocumentRevision effectiveRevision,
-  ) {
+  ChartDocumentExtractionSource _buildDocumentExtractionSource() {
     final resolved = _resolveChartData(includeDirectStream: true);
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -2063,40 +2097,32 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           : ChartPositionDocument(x: legendPosition.dx, y: legendPosition.dy),
     );
 
-    return ChartDocumentExtractor.extract(
-      source: ChartDocumentExtractionSource(
-        allSeries: resolved.allSeries,
-        visibleSeries: resolved.visibleSeries,
-        declaredSeries: widget.series,
-        annotations: _resolveEffectiveAnnotations(),
-        xAxis: widget.xAxisConfig ?? const XAxisConfig(),
-        axes: axisModels,
-        theme: effectiveTheme,
-        interaction: baseInteraction.copyWith(
-          showXScrollbar:
-              widget.showXScrollbar || baseInteraction.showXScrollbar,
-          showYScrollbar:
-              widget.showYScrollbar || baseInteraction.showYScrollbar,
-        ),
-        legendVisible: widget.showLegend,
-        legendStyle: widget.legendStyle ?? effectiveTheme.legendStyle,
-        grid: widget.grid ?? const GridConfig(),
-        normalizationMode:
-            _effectiveNormalizationMode ?? NormalizationMode.none,
-        title: widget.title,
-        subtitle: widget.subtitle,
-        width: widget.width,
-        height: widget.height,
-        backgroundColor: widget.backgroundColor,
-        showToolbar: widget.showToolbar,
-        interactiveAnnotations: widget.interactiveAnnotations,
-        maxAxesPerSide: widget.maxAxesPerSide,
-        axisSwapMode: widget.axisSwapMode,
-        viewState: viewState,
+    return ChartDocumentExtractionSource(
+      allSeries: resolved.allSeries,
+      visibleSeries: resolved.visibleSeries,
+      declaredSeries: widget.series,
+      annotations: _resolveEffectiveAnnotations(),
+      xAxis: widget.xAxisConfig ?? const XAxisConfig(),
+      axes: axisModels,
+      theme: effectiveTheme,
+      interaction: baseInteraction.copyWith(
+        showXScrollbar: widget.showXScrollbar || baseInteraction.showXScrollbar,
+        showYScrollbar: widget.showYScrollbar || baseInteraction.showYScrollbar,
       ),
-      options: options,
-      revision: revision,
-      effectiveRevision: effectiveRevision,
+      legendVisible: widget.showLegend,
+      legendStyle: widget.legendStyle ?? effectiveTheme.legendStyle,
+      grid: widget.grid ?? const GridConfig(),
+      normalizationMode: _effectiveNormalizationMode ?? NormalizationMode.none,
+      title: widget.title,
+      subtitle: widget.subtitle,
+      width: widget.width,
+      height: widget.height,
+      backgroundColor: widget.backgroundColor,
+      showToolbar: widget.showToolbar,
+      interactiveAnnotations: widget.interactiveAnnotations,
+      maxAxesPerSide: widget.maxAxesPerSide,
+      axisSwapMode: widget.axisSwapMode,
+      viewState: viewState,
     );
   }
 

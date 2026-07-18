@@ -1,3 +1,6 @@
+// Copyright 2026 Braven Charts contributors
+// SPDX-License-Identifier: MIT
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
@@ -14,6 +17,60 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  final subjects = <String, Widget>{
+    'line': const LineChartsPage(),
+    'area': const AreaChartsPage(),
+    'scatter': const ScatterChartsPage(),
+  };
+
+  for (final entry in subjects.entries) {
+    testWidgets('${entry.key} guide exposes generated source centrally', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: entry.value)));
+      await tester.pumpAndSettle();
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      expect(switcher, findsOneWidget);
+      expect(
+        find.descendant(of: switcher, matching: find.text('Source')),
+        findsOneWidget,
+      );
+
+      final sourceMode = find.descendant(
+        of: switcher,
+        matching: find.text('Source'),
+      );
+      await tester.ensureVisible(sourceMode);
+      await tester.pump();
+      await tester.tap(sourceMode);
+      await tester.pumpAndSettle();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      expect(
+        workbench.workbenchController!.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      expect(
+        workbench.workbenchController!.generatedSource!.source,
+        contains('final ${entry.key}Chart = BravenChartPlus('),
+      );
+      expect(find.byType(ChartSourceView), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('chart-source-dark-window')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('line guide covers workhorse, interpolation, axes, and motion', (
     tester,
   ) async {

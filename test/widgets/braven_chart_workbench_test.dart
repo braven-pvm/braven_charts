@@ -64,6 +64,340 @@ void main() {
     expect(chartBuilds, 1);
   });
 
+  testWidgets('keeps Source opt-in and rejects it when unavailable', (
+    tester,
+  ) async {
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(_host(workbenchController: workbenchController));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Source'), findsNothing);
+    final result = workbenchController.setDisplayMode(ChartDisplayMode.source);
+    expect(result, isA<ChartArtifactFailure<ChartDisplayMode>>());
+    expect(workbenchController.effectiveMode, ChartDisplayMode.chart);
+    expect(
+      workbenchController.sourceState.phase,
+      ChartWorkbenchSourcePhase.uninitialized,
+    );
+  });
+
+  testWidgets(
+    'generates Source without rebuilding the chart or requesting a table',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+      var initializations = 0;
+      var disposals = 0;
+      var chartBuilds = 0;
+
+      await tester.pumpWidget(
+        _host(
+          chartController: chartController,
+          workbenchController: workbenchController,
+          availableDisplayModes: const {
+            ChartDisplayMode.chart,
+            ChartDisplayMode.source,
+          },
+          chartBuilder: (context, controller) {
+            chartBuilds++;
+            return _LifecycleProbe(
+              onInit: () => initializations++,
+              onDispose: () => disposals++,
+              child: _chart(controller),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Source'));
+      await tester.pumpAndSettle();
+
+      expect(workbenchController.effectiveMode, ChartDisplayMode.source);
+      expect(
+        workbenchController.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      expect(
+        workbenchController.generatedSource?.source,
+        contains('final chart'),
+      );
+      expect(
+        workbenchController.generatedSource?.source,
+        contains('LineChartSeries('),
+      );
+      expect(find.byKey(const ValueKey('chart-source-code')), findsOneWidget);
+      expect(
+        workbenchController.tableState.phase,
+        ChartWorkbenchTablePhase.uninitialized,
+      );
+      expect(initializations, 1);
+      expect(disposals, 0);
+      expect(chartBuilds, 1);
+      expect(
+        chartController.extractDocument(),
+        isA<ChartArtifactSuccess<ChartDocumentSnapshot>>(),
+      );
+    },
+  );
+
+  testWidgets('source placeholders preserve fail-closed artifact extraction', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.source,
+        },
+        chartBuilder: (context, controller) {
+          final runtimeSeries = LineChartSeries(
+            id: 'runtime',
+            points: const [
+              ChartDataPoint(x: 0, y: 10),
+              ChartDataPoint(x: 1, y: 12),
+            ],
+            dataPointLabels: DataPointLabelConfig(
+              show: true,
+              formatter: (point) => '${point.y} runtime',
+            ),
+          );
+          return BravenChartPlus(
+            bravenChartController: controller,
+            showLegend: false,
+            xAxisConfig: XAxisConfig(
+              label: 'Elapsed',
+              labelFormatter: (value) => '${value.toStringAsFixed(1)} h',
+            ),
+            interactionConfig: InteractionConfig(
+              onDataPointTap: (point, position) {},
+              tooltip: TooltipConfig(
+                customBuilder: (context, dataPoint) => const Text('Custom'),
+              ),
+            ),
+            series: [runtimeSeries],
+            annotations: [
+              LegendAnnotation(
+                id: 'runtime-legend',
+                series: [runtimeSeries],
+                onSeriesToggle: (seriesId) {},
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final portable = chartController.extractDocument();
+    expect(portable, isA<ChartArtifactFailure<ChartDocumentSnapshot>>());
+    expect(
+      (portable as ChartArtifactFailure<ChartDocumentSnapshot>).error.code,
+      ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+    );
+
+    workbenchController.setDisplayMode(ChartDisplayMode.source);
+    await tester.pumpAndSettle();
+
+    expect(
+      workbenchController.sourceState.phase,
+      ChartWorkbenchSourcePhase.ready,
+    );
+    expect(
+      workbenchController.sourceState.warnings,
+      contains(
+        isA<ChartArtifactWarning>().having(
+          (warning) => warning.path,
+          'path',
+          r'$.series.runtime.dataPointLabels.formatter',
+        ),
+      ),
+    );
+    expect(
+      workbenchController.sourceState.warnings,
+      contains(
+        isA<ChartArtifactWarning>().having(
+          (warning) => warning.path,
+          'path',
+          r'$.annotations.legend.onSeriesToggle',
+        ),
+      ),
+    );
+    expect(
+      workbenchController.generatedSource?.source,
+      contains('dataPointLabels: DataPointLabelConfig('),
+    );
+    expect(
+      workbenchController.generatedSource?.source,
+      contains('Runtime interaction bindings omitted:'),
+    );
+    expect(
+      workbenchController.generatedSource?.source,
+      contains('LegendAnnotation('),
+    );
+    expect(find.byKey(const ValueKey('chart-source-code')), findsOneWidget);
+  });
+
+  testWidgets('retains usable source through a failed refresh and retry', (
+    tester,
+  ) async {
+    final chartController = _ControlledExtractionController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.source,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.source,
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final usableSource = workbenchController.generatedSource;
+    expect(usableSource, isNotNull);
+
+    chartController.failNextSource = true;
+    workbenchController.refreshSource();
+    expect(
+      workbenchController.sourceState.phase,
+      ChartWorkbenchSourcePhase.refreshing,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      workbenchController.sourceState.phase,
+      ChartWorkbenchSourcePhase.failed,
+    );
+    expect(workbenchController.generatedSource, same(usableSource));
+    expect(workbenchController.sourceIsStale, isTrue);
+    expect(find.text('Retry refresh'), findsOneWidget);
+    expect(
+      find.textContaining('previous source is still shown'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Retry refresh'));
+    await tester.pumpAndSettle();
+    expect(
+      workbenchController.sourceState.phase,
+      ChartWorkbenchSourcePhase.ready,
+    );
+    expect(workbenchController.sourceIsStale, isFalse);
+  });
+
+  testWidgets('marks manual source stale until explicitly refreshed', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.source,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.source,
+        },
+        sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+        chartValue: 11,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final firstSource = workbenchController.generatedSource!;
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.source,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.source,
+        },
+        sourceRefreshPolicy: ChartSourceRefreshPolicy.manual,
+        chartValue: 42,
+      ),
+    );
+    await tester.pump();
+
+    expect(workbenchController.sourceIsStale, isTrue);
+    expect(workbenchController.generatedSource, same(firstSource));
+    expect(
+      find.text('The chart changed after this source was generated.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Refresh source').first);
+    await tester.pumpAndSettle();
+    expect(workbenchController.sourceIsStale, isFalse);
+    expect(workbenchController.generatedSource, isNot(same(firstSource)));
+    expect(workbenchController.generatedSource?.source, contains('y: 42.0'));
+  });
+
+  testWidgets('exposes Source as a 48px keyboard-operable presentation', (
+    tester,
+  ) async {
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        width: 720,
+        workbenchController: workbenchController,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.data,
+          ChartDisplayMode.source,
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    expect(tester.getSize(switcher).height, greaterThanOrEqualTo(48));
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == 'Chart presentation',
+      ),
+      findsOneWidget,
+    );
+
+    for (var attempt = 0; attempt < 10; attempt++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      if (workbenchController.requestedMode == ChartDisplayMode.source) break;
+    }
+
+    expect(workbenchController.requestedMode, ChartDisplayMode.source);
+    expect(find.byKey(const ValueKey('chart-source-code')), findsOneWidget);
+  });
+
   testWidgets('captures the same chart preview from Chart, Data, and Split', (
     tester,
   ) async {
@@ -1557,6 +1891,9 @@ Widget _host({
   },
   ChartTableRefreshPolicy tableRefreshPolicy =
       ChartTableRefreshPolicy.onModeEntry,
+  ChartSourceRefreshPolicy sourceRefreshPolicy =
+      ChartSourceRefreshPolicy.onModeEntry,
+  ChartDartSourceOptions sourceOptions = const ChartDartSourceOptions(),
   ChartTableOptions tableOptions = const ChartTableOptions(),
   ChartDocumentExtractOptions documentOptions =
       const ChartDocumentExtractOptions(includeViewState: true),
@@ -1587,6 +1924,8 @@ Widget _host({
           splitBreakpoint: splitBreakpoint,
           availableDisplayModes: availableDisplayModes,
           tableRefreshPolicy: tableRefreshPolicy,
+          sourceRefreshPolicy: sourceRefreshPolicy,
+          sourceOptions: sourceOptions,
           tableOptions: tableOptions,
           documentOptions: documentOptions,
           autoFitTablePane: autoFitTablePane,
@@ -1680,6 +2019,7 @@ class _TrackingWorkbenchController extends ChartWorkbenchController {
 class _ControlledExtractionController extends BravenChartController {
   bool failNextDocument = false;
   bool warnNextDocument = false;
+  bool failNextSource = false;
 
   @override
   ChartArtifactResult<ChartDocumentSnapshot> extractDocument([
@@ -1709,6 +2049,22 @@ class _ControlledExtractionController extends BravenChartController {
       ),
       ChartArtifactFailure<ChartDocumentSnapshot>() => result,
     };
+  }
+
+  @override
+  ChartArtifactResult<ChartDocumentSnapshot> extractSourceDocument([
+    ChartDocumentExtractOptions options = const ChartDocumentExtractOptions(),
+  ]) {
+    if (failNextSource) {
+      failNextSource = false;
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Demo source refresh failed. Retry to use current data.',
+        ),
+      );
+    }
+    return super.extractSourceDocument(options);
   }
 }
 

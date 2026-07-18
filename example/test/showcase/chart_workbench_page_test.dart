@@ -30,10 +30,74 @@ void main() {
       find.text('Bounded stream, deliberate table snapshot'),
       findsOneWidget,
     );
-    expect(find.text('Chart'), findsNWidgets(2));
-    expect(find.text('Data'), findsNWidgets(2));
-    expect(find.text('Split'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      findsNWidgets(2),
+    );
+    expect(find.text('Chart'), findsWidgets);
+    expect(find.text('Data'), findsWidgets);
+    expect(find.text('Split'), findsWidgets);
+    expect(find.text('Source'), findsWidgets);
+    expect(find.text('Shared presentation'), findsOneWidget);
+    expect(find.text('Shared view'), findsOneWidget);
+    expect(find.text('Show view selector'), findsOneWidget);
     expect(find.text('Add to report'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows copyable effective Dart in the central Source view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final mainWorkbench = find.byKey(
+      const ValueKey('showcase-chart-workbench'),
+    );
+    final sourceMode = find.descendant(
+      of: mainWorkbench,
+      matching: find.text('Source'),
+    );
+    await tester.ensureVisible(sourceMode);
+    await tester.pump();
+    await tester.tap(sourceMode);
+    for (var index = 0; index < 12; index++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    final modeSwitcher = tester.widget<SegmentedButton<ChartDisplayMode>>(
+      find.descendant(
+        of: mainWorkbench,
+        matching: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      ),
+    );
+    expect(modeSwitcher.selected, {ChartDisplayMode.source});
+    final controller = tester
+        .widget<BravenChartWorkbench>(mainWorkbench)
+        .workbenchController!;
+    final sourceState = controller.sourceState;
+    expect(
+      sourceState.phase,
+      ChartWorkbenchSourcePhase.ready,
+      reason: sourceState.error == null
+          ? null
+          : '${sourceState.error!.code}: ${sourceState.error!.message}',
+    );
+
+    expect(
+      find.descendant(
+        of: mainWorkbench,
+        matching: find.byType(ChartSourceView),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('chart-source-code')), findsOneWidget);
+    expect(find.text('Copy code'), findsOneWidget);
+    expect(find.byType(BravenChartPlus), findsNWidgets(5));
     expect(tester.takeException(), isNull);
   });
 

@@ -1,10 +1,10 @@
 # Chart Workbench
 
-`BravenChartWorkbench` gives one mounted `BravenChartPlus` a native data view,
-a responsive split view, and a safe extension point for host actions. It owns
-the generic presentation and extraction lifecycle; your application still owns
-the chart configuration, persistence, permissions, navigation, and action
-policy.
+`BravenChartWorkbench` gives one mounted `BravenChartPlus` native Chart, Data,
+Split, and generated Dart Source presentations plus a safe extension point for
+host actions. It owns the generic presentation and extraction lifecycle; your
+application still owns the chart configuration, persistence, permissions,
+navigation, and action policy.
 
 Use the public package barrel:
 
@@ -33,18 +33,93 @@ The supplied controller is the connection between the mounted chart, the data
 table, and artifact extraction. Do not create another controller inside the
 builder.
 
-The workbench keeps the chart subtree mounted in all three modes:
+The workbench keeps the chart subtree mounted in every mode:
 
 - `ChartDisplayMode.chart` shows the interactive chart;
 - `ChartDisplayMode.data` shows a table derived from the chart's effective
   document while the chart remains mounted underneath; and
 - `ChartDisplayMode.split` presents both surfaces when enough width is
-  available.
+  available; and
+- `ChartDisplayMode.source` shows deterministic Dart generated from the same
+  effective document used by Data and portable artifacts.
+
+Source is opt-in so adding the current package version does not change an
+existing Workbench control:
+
+```dart
+BravenChartWorkbench(
+  availableDisplayModes: const {
+    ChartDisplayMode.chart,
+    ChartDisplayMode.data,
+    ChartDisplayMode.split,
+    ChartDisplayMode.source,
+  },
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: series,
+  ),
+)
+```
 
 The table is never reconstructed from pixels or widget inputs. It comes from
 `BravenChartController.extractDocument()`, so controller changes, resolved
 series state, annotations, and requested durable view state follow the same
 artifact extraction boundary.
+
+## Shared presentation scope
+
+Use `ChartWorkbenchGroupController` when multiple Workbenches should present
+one consistent Chart, Data, Split, or Source preference. `ChartWorkbenchScope`
+applies that controller to every Workbench in its subtree:
+
+```dart
+class AnalysisScreenState extends State<AnalysisScreen> {
+  final presentation = ChartWorkbenchGroupController(
+    initialDisplayMode: ChartDisplayMode.chart,
+  );
+
+  @override
+  void dispose() {
+    presentation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ChartWorkbenchScope(
+      controller: presentation,
+      child: const AnalysisCharts(),
+    );
+  }
+}
+```
+
+Selecting a mode in any attached Workbench—or calling
+`setDisplayMode()` on one of its `ChartWorkbenchController`s—updates every
+Workbench in the scope. The shared controller also owns selector visibility:
+
+```dart
+presentation.setDisplayMode(ChartDisplayMode.split);
+presentation.setShowModeSwitcher(false);
+```
+
+`showModeSwitcher: false` on an individual Workbench remains a local capability
+gate: a group may hide or reveal eligible selectors, but cannot force a locally
+disabled selector to appear. Host actions remain visible when the selector is
+hidden.
+
+The group's `availableDisplayModes` is the intersection supported by every
+mounted member. If a newly mounted chart cannot support the current preference,
+the group reconciles all members to Chart when available, otherwise to their
+first common mode. Requests outside the intersection return a structured
+failure without changing the group.
+
+Scopes are nestable. Put one controller above the application shell for a
+system-wide preference, or insert a nearer scope around a Line, Bar, or radial
+chart subtree for a chart-family preference. An explicit `groupController` on
+`BravenChartWorkbench` takes precedence over the nearest inherited scope.
+Split ratio, compact Split pane, table/source freshness, focus, and chart
+interaction state remain local to each Workbench.
 
 ## Responsive Split behavior
 
@@ -172,6 +247,7 @@ void dispose() {
 // Later, while the workbench is mounted:
 final modeResult = workbenchController.setDisplayMode(ChartDisplayMode.data);
 final tableResult = await workbenchController.refreshTable();
+final sourceResult = await workbenchController.refreshSource();
 ```
 
 `setDisplayMode` returns `ChartArtifactFailure` with
@@ -184,19 +260,84 @@ The handle and controller expose:
 | Member | Meaning |
 | --- | --- |
 | `chartController` | Controller attached to the currently mounted chart |
-| `requestedMode` | User-selected Chart, Data, or Split preference |
+| `requestedMode` | User-selected Chart, Data, Split, or Source preference |
 | `effectiveMode` | Presentation actually visible at the current width |
 | `tableSnapshot` | Immutable effective document used for the current table |
 | `tableModel` | Current projected table, when ready |
 | `tableIsStale` | Whether the chart revision moved past the table snapshot, including after a failed refresh |
 | `tableState` | Table phase, model, warnings, and structured error |
 | `artifactState` | Independent artifact-extraction phase, result, warnings, and error |
+| `sourceState` | Independent source phase, snapshot, generated Dart, warnings, and error |
+| `generatedSource` | Most recent usable `ChartGeneratedSource`, when ready |
+| `sourceIsStale` | Whether the chart revision moved past the generated source |
 | `refreshTable()` | Coalesced document extraction and table projection |
+| `refreshSource()` | Coalesced effective-document extraction and Dart generation |
 | `extractArtifact()` | Atomic document and optional preview extraction |
 
 Table extraction and artifact extraction have separate state. A table refresh
 does not erase an artifact result, and an artifact failure does not replace a
 usable table.
+
+## Generated Dart Source
+
+Source is generated from the chart's effective mounted document—not from
+pixels and not by replaying the host widget builder. It therefore reflects
+resolved series, axes, annotations, built-in or resolved custom themes,
+interaction options, and other portable configuration captured at that
+revision. Canvas legends retain their series, labelled trends, style, hidden
+state, and custom position.
+
+```dart
+BravenChartWorkbench(
+  availableDisplayModes: const {
+    ChartDisplayMode.chart,
+    ChartDisplayMode.data,
+    ChartDisplayMode.split,
+    ChartDisplayMode.source,
+  },
+  sourceOptions: const ChartDartSourceOptions(
+    includeImports: true,
+    includeViewState: false,
+    maxInlinePoints: 250,
+    variableName: 'chart',
+  ),
+  sourceRefreshPolicy: ChartSourceRefreshPolicy.onModeEntry,
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: series,
+  ),
+)
+```
+
+The built-in Source surface provides selectable highlighted Dart, line
+numbers, line wrapping, exact clipboard copy, freshness state, and explicit
+warnings. It never silently samples a large dataset. When the configured
+`maxInlinePoints` ceiling is exceeded, all point lists are replaced by clear
+application-data placeholders and the result reports the omitted count.
+
+Portable document and artifact extraction remains fail-closed when a runtime
+callback or formatter has no host descriptor. Source uses a separate capture
+adapter: it preserves host descriptors, creates stable source-only placeholders
+for missing runtime values, and reports them in the Source diagnostics. The
+generated Dart includes the portable configuration and marks the application
+callbacks that still need to be supplied; Source never weakens artifact
+portability rules.
+
+`ChartSourceRefreshPolicy.manual`, `onModeEntry`, and `onDocumentRevision`
+mirror the table freshness model while keeping source and table operations
+independent. A failed refresh retains the previous usable source and marks it
+stale.
+
+Set `includeViewState: true` when the copied result should also retain the
+current viewport, hidden series, durable point selection, axis slots, selected
+annotation, and canvas-legend position. The generated Dart then declares a
+`BravenChartController`, attaches it to the chart, and includes a named restore
+function with a clear call-after-mount instruction. View state stays off by
+default so the usual copied result remains reusable across sessions.
+
+Resolved custom themes are emitted as complete public `ChartTheme`
+configuration. Series-theme markers use `SeriesMarkerShape` in copied Dart so
+they remain distinct from point-annotation `MarkerShape`.
 
 ## Table refresh and freshness
 
@@ -483,3 +624,7 @@ comparison model rather than name-based guessing.
 For the transport, validation, hydration, preview, and external-payload
 contracts behind workbench extraction, continue with
 [Portable Chart Artifacts](chart_artifacts.md).
+
+For the complete contract a future chart family must satisfy before Data,
+Source, artifacts, and the Workbench can support it, see
+[Chart family integration](chart_family_integration.md).

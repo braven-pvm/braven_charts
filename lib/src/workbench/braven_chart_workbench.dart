@@ -11,12 +11,16 @@ import '../artifacts/chart_artifact_extractor.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/braven_chart_controller.dart';
+import '../source/chart_dart_source_generator.dart';
+import '../source/chart_source_models.dart';
+import '../source/chart_source_view.dart';
 import '../table/chart_data_table.dart';
 import '../table/chart_data_table_theme.dart';
 import '../table/chart_table_controller.dart';
 import '../table/chart_table_model.dart';
 import '../table/chart_table_options.dart';
 import 'chart_workbench_models.dart';
+import 'chart_workbench_group.dart';
 
 /// Builds the chart managed by a [BravenChartWorkbench].
 typedef BravenChartBuilder =
@@ -61,11 +65,23 @@ abstract interface class ChartWorkbenchHandle implements Listenable {
   /// Operation-scoped state for host-requested artifact extraction.
   ChartWorkbenchArtifactState get artifactState;
 
+  /// Operation-scoped state for generated Dart source.
+  ChartWorkbenchSourceState get sourceState;
+
+  /// Most recent usable generated Dart source.
+  ChartGeneratedSource? get generatedSource;
+
+  /// Whether [generatedSource] represents an older chart revision.
+  bool get sourceIsStale;
+
   /// Requests a display [mode] without throwing for a disabled mode.
   ChartArtifactResult<ChartDisplayMode> setDisplayMode(ChartDisplayMode mode);
 
   /// Coalesces concurrent requests and rebuilds the table from mounted state.
   Future<ChartArtifactResult<ChartDocumentSnapshot>> refreshTable();
+
+  /// Coalesces concurrent requests and regenerates Dart from mounted state.
+  Future<ChartArtifactResult<ChartGeneratedSource>> refreshSource();
 
   /// Atomically extracts the effective document and optional preview.
   Future<ChartArtifactResult<ChartArtifact>> extractArtifact(
@@ -90,15 +106,23 @@ class ChartWorkbenchController extends ChangeNotifier
       const ChartDocumentExtractOptions(includeViewState: true);
   ChartTableOptions _tableOptions = const ChartTableOptions();
   ChartTableRefreshPolicy _refreshPolicy = ChartTableRefreshPolicy.onModeEntry;
+  ChartDartSourceOptions _sourceOptions = const ChartDartSourceOptions();
+  ChartSourceRefreshPolicy _sourceRefreshPolicy =
+      ChartSourceRefreshPolicy.onModeEntry;
   ValueChanged<ChartWorkbenchStatus>? _onStatusChanged;
   ChartWorkbenchTableState _tableState = const ChartWorkbenchTableState();
   ChartWorkbenchArtifactState _artifactState =
       const ChartWorkbenchArtifactState();
+  ChartWorkbenchSourceState _sourceState = const ChartWorkbenchSourceState();
   Future<ChartArtifactResult<ChartDocumentSnapshot>>? _refreshFuture;
+  Future<ChartArtifactResult<ChartGeneratedSource>>? _sourceRefreshFuture;
   Future<ChartArtifactResult<ChartArtifact>>? _artifactFuture;
   ChartDocumentRevision? _observedDocumentRevision;
   Timer? _revisionRefreshTimer;
+  Timer? _sourceRevisionRefreshTimer;
   bool _statusNotificationFrameScheduled = false;
+  ChartArtifactResult<ChartDisplayMode> Function(ChartDisplayMode)?
+  _groupModeDelegate;
 
   @override
   BravenChartController get chartController {
@@ -138,16 +162,34 @@ class ChartWorkbenchController extends ChangeNotifier
   @override
   ChartWorkbenchArtifactState get artifactState => _artifactState;
 
+  @override
+  ChartWorkbenchSourceState get sourceState => _sourceState;
+
+  @override
+  ChartGeneratedSource? get generatedSource => _sourceState.generated;
+
+  @override
+  bool get sourceIsStale => _sourceState.isStale;
+
   /// Current combined status snapshot.
   ChartWorkbenchStatus get status => ChartWorkbenchStatus(
     requestedMode: _requestedMode,
     effectiveMode: _effectiveMode,
     table: _tableState,
     artifact: _artifactState,
+    source: _sourceState,
   );
 
   @override
   ChartArtifactResult<ChartDisplayMode> setDisplayMode(ChartDisplayMode mode) {
+    final delegate = _groupModeDelegate;
+    if (delegate != null) return delegate(mode);
+    return _setDisplayModeLocally(mode);
+  }
+
+  ChartArtifactResult<ChartDisplayMode> _setDisplayModeLocally(
+    ChartDisplayMode mode,
+  ) {
     if (!_availableModes.contains(mode)) {
       return ChartArtifactFailure(
         error: ChartArtifactError(
@@ -172,6 +214,99 @@ class ChartWorkbenchController extends ChangeNotifier
     _refreshFuture = future;
     unawaited(future.whenComplete(() => _refreshFuture = null));
     return future;
+  }
+
+  @override
+  Future<ChartArtifactResult<ChartGeneratedSource>> refreshSource() {
+    final active = _sourceRefreshFuture;
+    if (active != null) return active;
+    final future = _performSourceRefresh();
+    _sourceRefreshFuture = future;
+    unawaited(future.whenComplete(() => _sourceRefreshFuture = null));
+    return future;
+  }
+
+  Future<ChartArtifactResult<ChartGeneratedSource>>
+  _performSourceRefresh() async {
+    final previous = _sourceState;
+    _sourceState = ChartWorkbenchSourceState(
+      phase: previous.hasUsableSource
+          ? ChartWorkbenchSourcePhase.refreshing
+          : ChartWorkbenchSourcePhase.loading,
+      snapshot: previous.snapshot,
+      generated: previous.generated,
+      isStale: previous.isStale,
+      warnings: previous.warnings,
+    );
+    _notifyStatus();
+
+    // Allow a newly built chart one frame to attach before extraction.
+    await Future<void>.delayed(Duration.zero);
+    final controller = _chartController;
+    if (controller == null) {
+      final failure = ChartArtifactFailure<ChartGeneratedSource>(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.chartNotAttached,
+          message: 'The workbench is not attached to a mounted chart.',
+        ),
+      );
+      _applySourceFailure(failure.error, failure.warnings, previous);
+      return failure;
+    }
+
+    final extracted = controller.extractSourceDocument(_documentOptions);
+    if (extracted case ChartArtifactFailure<ChartDocumentSnapshot>()) {
+      final failure = ChartArtifactFailure<ChartGeneratedSource>(
+        error: extracted.error,
+        warnings: extracted.warnings,
+      );
+      _applySourceFailure(failure.error, failure.warnings, previous);
+      return failure;
+    }
+    final snapshot =
+        (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>).value;
+    final generated = ChartDartSourceGenerator.generate(
+      snapshot,
+      options: _sourceOptions,
+    );
+    switch (generated) {
+      case ChartArtifactFailure<ChartGeneratedSource>():
+        final warnings = [...extracted.warnings, ...generated.warnings];
+        _applySourceFailure(generated.error, warnings, previous);
+        return ChartArtifactFailure(error: generated.error, warnings: warnings);
+      case ChartArtifactSuccess<ChartGeneratedSource>():
+        final warnings = [...extracted.warnings, ...generated.warnings];
+        _sourceState = ChartWorkbenchSourceState(
+          phase: ChartWorkbenchSourcePhase.ready,
+          snapshot: snapshot,
+          generated: generated.value,
+          isStale: _isSnapshotStale(snapshot),
+          warnings: warnings,
+        );
+        _notifyStatus();
+        if (_sourceState.isStale &&
+            _sourceRefreshPolicy ==
+                ChartSourceRefreshPolicy.onDocumentRevision) {
+          _scheduleSourceRevisionRefresh();
+        }
+        return ChartArtifactSuccess(value: generated.value, warnings: warnings);
+    }
+  }
+
+  void _applySourceFailure(
+    ChartArtifactError error,
+    List<ChartArtifactWarning> warnings,
+    ChartWorkbenchSourceState previous,
+  ) {
+    _sourceState = ChartWorkbenchSourceState(
+      phase: ChartWorkbenchSourcePhase.failed,
+      snapshot: previous.snapshot,
+      generated: previous.generated,
+      isStale: previous.hasUsableSource,
+      warnings: warnings,
+      error: error,
+    );
+    _notifyStatus();
   }
 
   Future<ChartArtifactResult<ChartDocumentSnapshot>>
@@ -331,6 +466,8 @@ class ChartWorkbenchController extends ChangeNotifier
     required ChartDocumentExtractOptions documentOptions,
     required ChartTableOptions tableOptions,
     required ChartTableRefreshPolicy refreshPolicy,
+    required ChartDartSourceOptions sourceOptions,
+    required ChartSourceRefreshPolicy sourceRefreshPolicy,
     required ValueChanged<ChartWorkbenchStatus>? onStatusChanged,
   }) {
     if (_attachment != null && !identical(_attachment, attachment)) {
@@ -348,6 +485,8 @@ class ChartWorkbenchController extends ChangeNotifier
       documentOptions: documentOptions,
       tableOptions: tableOptions,
       refreshPolicy: refreshPolicy,
+      sourceOptions: sourceOptions,
+      sourceRefreshPolicy: sourceRefreshPolicy,
     );
   }
 
@@ -357,12 +496,16 @@ class ChartWorkbenchController extends ChangeNotifier
     required ChartDocumentExtractOptions documentOptions,
     required ChartTableOptions tableOptions,
     required ChartTableRefreshPolicy refreshPolicy,
+    required ChartDartSourceOptions sourceOptions,
+    required ChartSourceRefreshPolicy sourceRefreshPolicy,
   }) {
     var statusChanged = false;
     _availableModes = Set.unmodifiable(availableModes);
     _documentOptions = documentOptions;
     _tableOptions = tableOptions;
     _refreshPolicy = refreshPolicy;
+    _sourceOptions = sourceOptions;
+    _sourceRefreshPolicy = sourceRefreshPolicy;
     if (!_configured) {
       _configured = true;
       _requestedMode = _availableModes.contains(initialMode)
@@ -377,6 +520,10 @@ class ChartWorkbenchController extends ChangeNotifier
     if (_refreshPolicy == ChartTableRefreshPolicy.onDocumentRevision &&
         _tableState.isStale) {
       _scheduleRevisionRefresh();
+    }
+    if (_sourceRefreshPolicy == ChartSourceRefreshPolicy.onDocumentRevision &&
+        _sourceState.isStale) {
+      _scheduleSourceRevisionRefresh();
     }
     if (statusChanged) _scheduleStatusNotification();
   }
@@ -395,6 +542,16 @@ class ChartWorkbenchController extends ChangeNotifier
         error: _tableState.error,
       );
     }
+    if (_sourceState.hasUsableSource) {
+      _sourceState = ChartWorkbenchSourceState(
+        phase: _sourceState.phase,
+        snapshot: _sourceState.snapshot,
+        generated: _sourceState.generated,
+        isStale: true,
+        warnings: _sourceState.warnings,
+        error: _sourceState.error,
+      );
+    }
     _notifyStatus();
   }
 
@@ -405,7 +562,7 @@ class ChartWorkbenchController extends ChangeNotifier
     _notifyStatus();
 
     final tableBecameVisible =
-        mode != ChartDisplayMode.chart && previous != mode;
+        _modeShowsTable(mode) && !_modeShowsTable(previous);
     final firstUse = tableBecameVisible && _tableState.snapshot == null;
     final refreshOnEntry =
         tableBecameVisible &&
@@ -417,14 +574,34 @@ class ChartWorkbenchController extends ChangeNotifier
     if (firstUse || refreshOnEntry || refreshStaleRevision) {
       unawaited(refreshTable());
     }
+
+    final sourceBecameVisible =
+        _modeShowsSource(mode) && !_modeShowsSource(previous);
+    final firstSourceUse = sourceBecameVisible && _sourceState.snapshot == null;
+    final refreshSourceOnEntry =
+        sourceBecameVisible &&
+        _sourceRefreshPolicy == ChartSourceRefreshPolicy.onModeEntry;
+    final refreshStaleSource =
+        sourceBecameVisible &&
+        _sourceRefreshPolicy == ChartSourceRefreshPolicy.onDocumentRevision &&
+        _sourceState.isStale;
+    if (firstSourceUse || refreshSourceOnEntry || refreshStaleSource) {
+      unawaited(refreshSource());
+    }
   }
 
-  void _ensureInitialTableIfNeeded() {
-    if (_effectiveMode != ChartDisplayMode.chart &&
+  void _ensureInitialSurfacesIfNeeded() {
+    if (_modeShowsTable(_effectiveMode) &&
         _tableState.snapshot == null &&
         _tableState.phase == ChartWorkbenchTablePhase.uninitialized &&
         _refreshFuture == null) {
       unawaited(refreshTable());
+    }
+    if (_modeShowsSource(_effectiveMode) &&
+        _sourceState.snapshot == null &&
+        _sourceState.phase == ChartWorkbenchSourcePhase.uninitialized &&
+        _sourceRefreshFuture == null) {
+      unawaited(refreshSource());
     }
   }
 
@@ -432,6 +609,8 @@ class ChartWorkbenchController extends ChangeNotifier
     if (!identical(_attachment, attachment)) return;
     _revisionRefreshTimer?.cancel();
     _revisionRefreshTimer = null;
+    _sourceRevisionRefreshTimer?.cancel();
+    _sourceRevisionRefreshTimer = null;
     _stopListeningToChartController();
     _attachment = null;
     _chartController = null;
@@ -457,6 +636,7 @@ class ChartWorkbenchController extends ChangeNotifier
   void dispose() {
     _disposed = true;
     _revisionRefreshTimer?.cancel();
+    _sourceRevisionRefreshTimer?.cancel();
     _stopListeningToChartController();
     _attachment = null;
     _chartController = null;
@@ -482,21 +662,40 @@ class ChartWorkbenchController extends ChangeNotifier
     final revision = _chartController?.effectiveDocumentRevision.value;
     if (revision == null || revision == _observedDocumentRevision) return;
     _observedDocumentRevision = revision;
-    final snapshot = _tableState.snapshot;
-    if (snapshot == null || snapshot.revision == revision) return;
-    _tableState = ChartWorkbenchTableState(
-      phase: _tableState.phase,
-      snapshot: snapshot,
-      model: _tableState.model,
-      isStale: true,
-      warnings: _tableState.warnings,
-      error: _tableState.error,
-    );
-    _notifyStatus();
-    if (_refreshPolicy == ChartTableRefreshPolicy.onDocumentRevision &&
-        _effectiveMode != ChartDisplayMode.chart) {
-      _scheduleRevisionRefresh();
+    var changed = false;
+    final tableSnapshot = _tableState.snapshot;
+    if (tableSnapshot != null && tableSnapshot.revision != revision) {
+      _tableState = ChartWorkbenchTableState(
+        phase: _tableState.phase,
+        snapshot: tableSnapshot,
+        model: _tableState.model,
+        isStale: true,
+        warnings: _tableState.warnings,
+        error: _tableState.error,
+      );
+      changed = true;
+      if (_refreshPolicy == ChartTableRefreshPolicy.onDocumentRevision &&
+          _modeShowsTable(_effectiveMode)) {
+        _scheduleRevisionRefresh();
+      }
     }
+    final sourceSnapshot = _sourceState.snapshot;
+    if (sourceSnapshot != null && sourceSnapshot.revision != revision) {
+      _sourceState = ChartWorkbenchSourceState(
+        phase: _sourceState.phase,
+        snapshot: sourceSnapshot,
+        generated: _sourceState.generated,
+        isStale: true,
+        warnings: _sourceState.warnings,
+        error: _sourceState.error,
+      );
+      changed = true;
+      if (_sourceRefreshPolicy == ChartSourceRefreshPolicy.onDocumentRevision &&
+          _modeShowsSource(_effectiveMode)) {
+        _scheduleSourceRevisionRefresh();
+      }
+    }
+    if (changed) _notifyStatus();
   }
 
   bool _isSnapshotStale(ChartDocumentSnapshot snapshot) {
@@ -506,7 +705,7 @@ class ChartWorkbenchController extends ChangeNotifier
 
   void _scheduleRevisionRefresh() {
     if (_revisionRefreshTimer != null ||
-        _effectiveMode == ChartDisplayMode.chart ||
+        !_modeShowsTable(_effectiveMode) ||
         _tableState.snapshot == null) {
       return;
     }
@@ -514,9 +713,26 @@ class ChartWorkbenchController extends ChangeNotifier
       _revisionRefreshTimer = null;
       if (!_disposed &&
           _attachment != null &&
-          _effectiveMode != ChartDisplayMode.chart &&
+          _modeShowsTable(_effectiveMode) &&
           _tableState.isStale) {
         unawaited(refreshTable());
+      }
+    });
+  }
+
+  void _scheduleSourceRevisionRefresh() {
+    if (_sourceRevisionRefreshTimer != null ||
+        !_modeShowsSource(_effectiveMode) ||
+        _sourceState.snapshot == null) {
+      return;
+    }
+    _sourceRevisionRefreshTimer = Timer(const Duration(milliseconds: 250), () {
+      _sourceRevisionRefreshTimer = null;
+      if (!_disposed &&
+          _attachment != null &&
+          _modeShowsSource(_effectiveMode) &&
+          _sourceState.isStale) {
+        unawaited(refreshSource());
       }
     });
   }
@@ -534,6 +750,7 @@ class BravenChartWorkbench extends StatefulWidget {
     this.chartController,
     this.workbenchController,
     this.tableController,
+    this.groupController,
     this.initialDisplayMode = ChartDisplayMode.chart,
     this.availableDisplayModes = const {
       ChartDisplayMode.chart,
@@ -545,6 +762,8 @@ class BravenChartWorkbench extends StatefulWidget {
     ),
     this.tableOptions = const ChartTableOptions(),
     this.tableRefreshPolicy = ChartTableRefreshPolicy.onModeEntry,
+    this.sourceOptions = const ChartDartSourceOptions(),
+    this.sourceRefreshPolicy = ChartSourceRefreshPolicy.onModeEntry,
     this.actionsBuilder,
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
@@ -587,6 +806,12 @@ class BravenChartWorkbench extends StatefulWidget {
   /// Optional caller-owned controller for table sort and focus state.
   final ChartTableController? tableController;
 
+  /// Optional shared presentation controller.
+  ///
+  /// When omitted, the nearest [ChartWorkbenchScope] is used. An explicit
+  /// controller takes precedence over an inherited scope.
+  final ChartWorkbenchGroupController? groupController;
+
   /// Mode selected when a newly attached controller has no prior state.
   final ChartDisplayMode initialDisplayMode;
 
@@ -601,6 +826,12 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Determines when the table snapshot is refreshed automatically.
   final ChartTableRefreshPolicy tableRefreshPolicy;
+
+  /// Formatting, data-volume, and view-state rules for generated Dart.
+  final ChartDartSourceOptions sourceOptions;
+
+  /// Determines when generated source is refreshed automatically.
+  final ChartSourceRefreshPolicy sourceRefreshPolicy;
 
   /// Builds storage-agnostic host actions with a stable imperative handle.
   final ChartWorkbenchActionsBuilder? actionsBuilder;
@@ -694,11 +925,18 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
   _TablePointFocus? _keyboardTableFocus;
   _TablePointFocus? _hoveredTableFocus;
   double? _manualSplitRatio;
+  ChartWorkbenchGroupController? _groupController;
 
   @override
   void initState() {
     super.initState();
     _acquireControllers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncGroupController();
   }
 
   void _acquireControllers() {
@@ -717,6 +955,8 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       documentOptions: widget.documentOptions,
       tableOptions: widget.tableOptions,
       refreshPolicy: widget.tableRefreshPolicy,
+      sourceOptions: widget.sourceOptions,
+      sourceRefreshPolicy: widget.sourceRefreshPolicy,
       onStatusChanged: widget.onStatusChanged,
     );
   }
@@ -735,6 +975,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     if (workbenchChanged) {
       final oldController = _workbenchController;
       final owned = _ownsWorkbenchController;
+      oldController._groupModeDelegate = null;
       oldController._detach(this);
       _ownsWorkbenchController = widget.workbenchController == null;
       _workbenchController =
@@ -748,6 +989,8 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         documentOptions: widget.documentOptions,
         tableOptions: widget.tableOptions,
         refreshPolicy: widget.tableRefreshPolicy,
+        sourceOptions: widget.sourceOptions,
+        sourceRefreshPolicy: widget.sourceRefreshPolicy,
         onStatusChanged: widget.onStatusChanged,
       );
     }
@@ -781,11 +1024,16 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         documentOptions: widget.documentOptions,
         tableOptions: widget.tableOptions,
         refreshPolicy: widget.tableRefreshPolicy,
+        sourceOptions: widget.sourceOptions,
+        sourceRefreshPolicy: widget.sourceRefreshPolicy,
       );
+    _syncGroupController(force: workbenchChanged);
+    _groupController?.updateWorkbench(this, widget.availableDisplayModes);
   }
 
   @override
   void dispose() {
+    _disconnectGroupController();
     _workbenchController._detach(this);
     if (_ownsWorkbenchController) _workbenchController.dispose();
     if (_ownsTableController) _tableController.dispose();
@@ -810,7 +1058,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (widget.showModeSwitcher || actions.isNotEmpty)
+            if (_showModeSwitcher || actions.isNotEmpty)
               _buildControls(context, actions),
             Expanded(
               child: LayoutBuilder(
@@ -847,9 +1095,9 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (widget.showModeSwitcher)
+                  if (_showModeSwitcher)
                     _ModeSwitcher(
-                      availableModes: widget.availableDisplayModes,
+                      availableModes: _availableDisplayModes,
                       selectedMode: requested,
                       onSelected: _workbenchController.setDisplayMode,
                     ),
@@ -921,6 +1169,48 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     );
   }
 
+  bool get _showModeSwitcher =>
+      widget.showModeSwitcher && (_groupController?.showModeSwitcher ?? true);
+
+  Set<ChartDisplayMode> get _availableDisplayModes =>
+      _groupController?.availableDisplayModes ?? widget.availableDisplayModes;
+
+  void _syncGroupController({bool force = false}) {
+    final next =
+        widget.groupController ??
+        ChartWorkbenchScope.maybeControllerOf(context);
+    if (!force && identical(next, _groupController)) return;
+    _disconnectGroupController();
+    _groupController = next;
+    if (next == null) return;
+    _workbenchController._groupModeDelegate = next.setDisplayMode;
+    next
+      ..addListener(_handleGroupChanged)
+      ..attachWorkbench(this, widget.availableDisplayModes);
+    _applyGroupMode();
+  }
+
+  void _disconnectGroupController() {
+    final current = _groupController;
+    if (current == null) return;
+    current
+      ..removeListener(_handleGroupChanged)
+      ..detachWorkbench(this);
+    _workbenchController._groupModeDelegate = null;
+    _groupController = null;
+  }
+
+  void _handleGroupChanged() {
+    _applyGroupMode();
+    if (mounted) setState(() {});
+  }
+
+  void _applyGroupMode() {
+    final group = _groupController;
+    if (group == null) return;
+    _workbenchController._setDisplayModeLocally(group.displayMode);
+  }
+
   Widget _buildStage(
     BuildContext context,
     BoxConstraints constraints,
@@ -969,18 +1259,22 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
     }
 
     final tableHasBeenRequested =
-        effective != ChartDisplayMode.chart ||
+        _modeShowsTable(effective) ||
         _workbenchController.tableState.phase !=
             ChartWorkbenchTablePhase.uninitialized;
+    final sourceHasBeenRequested =
+        _modeShowsSource(effective) ||
+        _workbenchController.sourceState.phase !=
+            ChartWorkbenchSourcePhase.uninitialized;
     return Stack(
       fit: StackFit.expand,
       children: [
         Positioned.fromRect(
           rect: chartRect,
           child: IgnorePointer(
-            ignoring: effective == ChartDisplayMode.data,
+            ignoring: !_modeShowsChart(effective),
             child: ExcludeSemantics(
-              excluding: effective == ChartDisplayMode.data,
+              excluding: !_modeShowsChart(effective),
               child: chart,
             ),
           ),
@@ -989,10 +1283,20 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
           Positioned.fromRect(
             rect: tableRect,
             child: Offstage(
-              offstage: effective == ChartDisplayMode.chart,
+              offstage: !_modeShowsTable(effective),
               child: ColoredBox(
                 color: Theme.of(context).colorScheme.surface,
                 child: _buildTableSurface(context),
+              ),
+            ),
+          ),
+        if (sourceHasBeenRequested)
+          Positioned.fill(
+            child: Offstage(
+              offstage: !_modeShowsSource(effective),
+              child: ColoredBox(
+                color: Theme.of(context).colorScheme.surface,
+                child: _buildSourceSurface(context),
               ),
             ),
           ),
@@ -1008,6 +1312,74 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
               onReset: () => _resetSplitRatio(size),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildSourceSurface(BuildContext context) {
+    final state = _workbenchController.sourceState;
+    final generated = state.generated;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (state.phase == ChartWorkbenchSourcePhase.refreshing)
+          const LinearProgressIndicator(minHeight: 2),
+        if (state.error != null && generated != null)
+          _WorkbenchTableMessage(
+            icon: Icons.warning_amber_rounded,
+            message:
+                '${state.error!.message} The previous source is still shown.',
+            actionLabel: 'Retry refresh',
+            onAction: _workbenchController.refreshSource,
+            tone: _WorkbenchMessageTone.error,
+          )
+        else if (state.error != null)
+          _WorkbenchTableMessage(
+            icon: Icons.error_outline,
+            message: state.error!.message,
+            actionLabel: 'Retry source',
+            onAction: _workbenchController.refreshSource,
+            tone: _WorkbenchMessageTone.error,
+          )
+        else if (state.isStale &&
+            generated != null &&
+            widget.sourceRefreshPolicy !=
+                ChartSourceRefreshPolicy.onDocumentRevision)
+          _WorkbenchTableMessage(
+            icon: Icons.update_outlined,
+            message: 'The chart changed after this source was generated.',
+            actionLabel: state.phase == ChartWorkbenchSourcePhase.refreshing
+                ? 'Refreshing…'
+                : 'Refresh source',
+            onAction: state.phase == ChartWorkbenchSourcePhase.refreshing
+                ? null
+                : _workbenchController.refreshSource,
+            tone: _WorkbenchMessageTone.warning,
+          )
+        else if (state.warnings.isNotEmpty && generated != null)
+          _WorkbenchTableMessage(
+            icon: Icons.info_outline,
+            message: state.warnings.length == 1
+                ? state.warnings.first.message
+                : '${state.warnings.first.message} '
+                      '${state.warnings.length - 1} more extraction warnings.',
+            tone: _WorkbenchMessageTone.info,
+          ),
+        Expanded(
+          child: generated == null
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    semanticsLabel: 'Generating chart source',
+                  ),
+                )
+              : ChartSourceView(
+                  generated: generated,
+                  isStale: state.isStale,
+                  isRefreshing:
+                      state.phase == ChartWorkbenchSourcePhase.refreshing,
+                  onRefresh: _workbenchController.refreshSource,
+                ),
+        ),
       ],
     );
   }
@@ -1292,15 +1664,22 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       return;
     }
     if (_workbenchController.effectiveMode == mode) {
-      if (mode != ChartDisplayMode.chart &&
+      final tableNeedsInitialization =
+          _modeShowsTable(mode) &&
           _workbenchController.tableSnapshot == null &&
           _workbenchController.tableState.phase ==
-              ChartWorkbenchTablePhase.uninitialized) {
+              ChartWorkbenchTablePhase.uninitialized;
+      final sourceNeedsInitialization =
+          _modeShowsSource(mode) &&
+          _workbenchController.sourceState.snapshot == null &&
+          _workbenchController.sourceState.phase ==
+              ChartWorkbenchSourcePhase.uninitialized;
+      if (tableNeedsInitialization || sourceNeedsInitialization) {
         _scheduledEffectiveMode = mode;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted || _scheduledEffectiveMode != mode) return;
           _scheduledEffectiveMode = null;
-          _workbenchController._ensureInitialTableIfNeeded();
+          _workbenchController._ensureInitialSurfacesIfNeeded();
         });
       }
       return;
@@ -1310,7 +1689,7 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
       if (!mounted || _scheduledEffectiveMode != mode) return;
       _scheduledEffectiveMode = null;
       _workbenchController._setEffectiveMode(mode);
-      _workbenchController._ensureInitialTableIfNeeded();
+      _workbenchController._ensureInitialSurfacesIfNeeded();
     });
   }
 }
@@ -1462,25 +1841,41 @@ class _ModeSwitcher extends StatelessWidget {
       for (final mode in ChartDisplayMode.values)
         if (availableModes.contains(mode)) mode,
     ];
+    final button = SegmentedButton<ChartDisplayMode>(
+      key: const ValueKey('chart-workbench-mode-switcher'),
+      segments: [
+        for (final mode in modes)
+          ButtonSegment(
+            value: mode,
+            icon: Icon(_modeIcon(mode)),
+            label: Text(_modeLabel(mode)),
+          ),
+      ],
+      selected: {selectedMode},
+      onSelectionChanged: (selection) => onSelected(selection.single),
+      style: const ButtonStyle(
+        minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+      ),
+    );
     return Semantics(
       container: true,
       label: 'Chart presentation',
-      child: SegmentedButton<ChartDisplayMode>(
-        key: const ValueKey('chart-workbench-mode-switcher'),
-        segments: [
-          for (final mode in modes)
-            ButtonSegment(
-              value: mode,
-              icon: Icon(_modeIcon(mode)),
-              label: Text(_modeLabel(mode)),
+      child: modes.length <= 3
+          ? button
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                // Leave enough room for icon + label + segment padding. On
+                // narrower hosts the control remains horizontally scrollable.
+                final preferredWidth = modes.length * 144.0;
+                return SizedBox(
+                  width: math.min(constraints.maxWidth, preferredWidth),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: button,
+                  ),
+                );
+              },
             ),
-        ],
-        selected: {selectedMode},
-        onSelectionChanged: (selection) => onSelected(selection.single),
-        style: const ButtonStyle(
-          minimumSize: WidgetStatePropertyAll(Size(0, 48)),
-        ),
-      ),
     );
   }
 }
@@ -1563,10 +1958,20 @@ String _modeLabel(ChartDisplayMode mode) => switch (mode) {
   ChartDisplayMode.chart => 'Chart',
   ChartDisplayMode.data => 'Data',
   ChartDisplayMode.split => 'Split',
+  ChartDisplayMode.source => 'Source',
 };
 
 IconData _modeIcon(ChartDisplayMode mode) => switch (mode) {
   ChartDisplayMode.chart => Icons.show_chart,
   ChartDisplayMode.data => Icons.table_rows_outlined,
   ChartDisplayMode.split => Icons.vertical_split_outlined,
+  ChartDisplayMode.source => Icons.code_outlined,
 };
+
+bool _modeShowsChart(ChartDisplayMode mode) =>
+    mode == ChartDisplayMode.chart || mode == ChartDisplayMode.split;
+
+bool _modeShowsTable(ChartDisplayMode mode) =>
+    mode == ChartDisplayMode.data || mode == ChartDisplayMode.split;
+
+bool _modeShowsSource(ChartDisplayMode mode) => mode == ChartDisplayMode.source;

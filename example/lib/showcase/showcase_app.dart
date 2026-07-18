@@ -1,6 +1,7 @@
 // Copyright 2025 Braven Charts - Showcase App
 // SPDX-License-Identifier: MIT
 
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -134,6 +135,7 @@ class ShowcaseHome extends StatefulWidget {
 class _ShowcaseHomeState extends State<ShowcaseHome> {
   late int _selectedIndex;
   late final List<NavDestination> _destinations;
+  late final ChartWorkbenchGroupController _workbenchGroupController;
 
   /// All navigation destinations in the showcase.
   List<NavDestination> _buildDestinations() => [
@@ -263,12 +265,29 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
   @override
   void initState() {
     super.initState();
+    _workbenchGroupController = ChartWorkbenchGroupController(
+      initialDisplayMode: _requestedWorkbenchMode,
+    );
     _destinations = _buildDestinations();
     final requestedPage = Uri.base.queryParameters['page'];
     final requestedIndex = _destinations.indexWhere(
       (destination) => destination.matchesSlug(requestedPage),
     );
     _selectedIndex = requestedIndex < 0 ? 0 : requestedIndex;
+  }
+
+  ChartDisplayMode get _requestedWorkbenchMode {
+    final requested = Uri.base.queryParameters['view'];
+    return ChartDisplayMode.values.firstWhere(
+      (mode) => mode.name == requested,
+      orElse: () => ChartDisplayMode.chart,
+    );
+  }
+
+  @override
+  void dispose() {
+    _workbenchGroupController.dispose();
+    super.dispose();
   }
 
   void _selectDestination(int index) {
@@ -292,6 +311,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
 
   @override
   Widget build(BuildContext context) {
+    return ChartWorkbenchScope(
+      controller: _workbenchGroupController,
+      child: _buildScopedContent(context),
+    );
+  }
+
+  Widget _buildScopedContent(BuildContext context) {
     final capture = Uri.base.queryParameters['capture'];
     if (capture == 'hero-threshold' || capture == 'hero-session') {
       return const _HeroMediaCapture(
