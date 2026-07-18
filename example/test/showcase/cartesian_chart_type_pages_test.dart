@@ -177,11 +177,107 @@ void main() {
     expect(observed.points.first.y, closeTo(33, 0.2));
     await tester.pumpAndSettle();
 
+    final addPoint = find.byKey(const ValueKey('line-add-point'));
+    await tester.ensureVisible(addPoint);
+    await tester.tap(addPoint);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+    var topologySeries =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-observed')
+                .series
+            as LineChartSeries;
+    expect(topologySeries.points, hasLength(9));
+    expect(topologySeries.points.last.x, closeTo(7.5, 0.05));
+    await tester.pumpAndSettle();
+
+    final removePoint = find.byKey(const ValueKey('line-remove-point'));
+    await tester.ensureVisible(removePoint);
+    await tester.tap(removePoint);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+    topologySeries =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-observed')
+                .series
+            as LineChartSeries;
+    expect(topologySeries.points, hasLength(9));
+    expect(topologySeries.points.last.x, closeTo(7.5, 0.05));
+    await tester.pumpAndSettle();
+
+    final rollWindow = find.byKey(const ValueKey('line-roll-window'));
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byKey(const ValueKey('line-workbench')),
+    );
+    final controller = workbench.chartController!;
+    controller.selectPoint(
+      const ChartPointRef(seriesId: 'motion-observed', pointIndex: 1),
+      revision: controller.effectiveDocumentRevision.value!,
+    );
+    await tester.pump();
+    await tester.ensureVisible(rollWindow);
+    await tester.tap(rollWindow);
+    await tester.pump();
+    await tester.pump();
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'motion-observed', pointIndex: 0),
+    });
+    await tester.pump(const Duration(milliseconds: 325));
+    final topologyElement = renderBox.debugElements
+        .whereType<SeriesElement>()
+        .firstWhere((element) => element.series.id == 'motion-observed');
+    topologySeries = topologyElement.series as LineChartSeries;
+    expect(topologySeries.points, hasLength(9));
+    expect(topologySeries.points.first.x, closeTo(0.5, 0.05));
+    expect(topologySeries.points.last.x, closeTo(7.5, 0.05));
+    expect(topologyElement.dataHitForPointIndex(0)!.isSelected, isTrue);
+    await tester.pumpAndSettle();
+
     final replay = find.byKey(const ValueKey('line-replay-entrance'));
     await tester.ensureVisible(replay);
     await tester.tap(replay);
     await tester.pump();
     expect(tester.hasRunningAnimations, isTrue);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Area Motion exposes and runs boundary topology actions', (
+    tester,
+  ) async {
+    await pumpPage(tester, const AreaChartsPage());
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('area-preset-picker')),
+        matching: find.text('Motion'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('area-add-point')), findsOneWidget);
+    expect(find.byKey(const ValueKey('area-remove-point')), findsOneWidget);
+    final rollWindow = find.byKey(const ValueKey('area-roll-window'));
+    tester.widget<OutlinedButton>(rollWindow).onPressed!();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+
+    final renderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    final area =
+        renderBox.debugElements
+                .whereType<SeriesElement>()
+                .firstWhere((element) => element.series.id == 'motion-volume')
+                .series
+            as AreaChartSeries;
+    expect(area.points, hasLength(9));
+    expect(area.points.first.x, closeTo(0.5, 0.05));
+    expect(area.points.last.x, closeTo(7.5, 0.05));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });

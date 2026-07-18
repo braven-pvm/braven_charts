@@ -10,6 +10,7 @@ import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
 import '../rendering/bar_composition.dart';
+import 'path_series_transition.dart';
 
 /// Converts ChartSeries data to SeriesElements for rendering.
 ///
@@ -49,6 +50,7 @@ class DataConverter {
     Set<ChartPointRef> focusedPointRefs = const {},
     Set<ChartPointRef> selectedPointRefs = const {},
     Map<String, double> pathRevealProgressBySeries = const {},
+    Map<String, PathSeriesPointMap> pathPointMapsBySeries = const {},
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
@@ -85,6 +87,7 @@ class DataConverter {
         fontFamily: theme?.typographyTheme.fontFamily,
         hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
         revealProgress: pathRevealProgressBySeries[s.id] ?? 1,
+        pathPointMap: pathPointMapsBySeries[s.id],
       );
     }).toList();
   }

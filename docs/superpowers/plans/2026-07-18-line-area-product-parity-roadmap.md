@@ -1,9 +1,8 @@
 # Line and Area Product Parity — Sprint Roadmap
 
-**Branch:** `feature/line-area-product-parity`
-**PR:** #35
-**Merge policy:** Keep the PR open and unmerged until every sprint is complete,
-the consolidated E2E gate passes, and the user gives final merge approval.
+**Original branch:** `feature/line-area-product-parity`
+**Original PR:** #35 (merged)
+**Current continuation:** `feature/line-area-topology-motion`
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -68,4 +67,103 @@ the consolidated E2E gate passes, and the user gives final merge approval.
   not match the current Dart formatter. This PR does not mass-format unrelated
   code; every Dart file changed by this lane passes the formatter check.
 
-PR #35 remains unmerged pending green head CI and explicit user approval.
+PR #35 was approved and merged after its green E2E and CI gates.
+
+## Sprint 5 — Path Motion 1.1 topology updates
+
+**Status:** Complete
+
+- Animate stable-identity append, boundary removal, and rolling-window
+  snapshots for Line and Area.
+- Collapse entering and exiting points at the nearest retained boundary while
+  keeping all visual and interaction layers on the canonical animated series.
+- Preserve target bounds, reduced-motion behavior, multi-axis correctness, and
+  the dedicated controller streaming-tail path.
+- Add focused Motion-preset actions and complete package, showcase, release,
+  direct-route, and artifact verification before PR promotion.
+
+The locked behavior and exclusions are recorded in
+`../specs/2026-07-18-line-area-topology-motion-design.md`.
+
+### Sprint 5 verification record
+
+- Pure and real render-path coverage passes for append, removal, forward and
+  reverse rolling windows, reduced motion, target-bound multi-axis updates,
+  canonical artifact extraction, and the streaming-tail exclusion.
+- Full package and showcase suites pass; the showcase suite contains 134 tests.
+- `flutter analyze lib`, the full showcase analyzer, and every touched-file
+  analysis pass with zero issues.
+- Deployment-base and root-path release web builds pass; Line and Area direct
+  routes were inspected at 1600 x 1000 and accepted in local review.
+- Dartdoc 9.0.8 reports zero warnings and zero errors. The package dry run
+  reaches validation with only the expected dirty-worktree warning before the
+  approved local slice is committed.
+
+## Sprint 6 — Path identity continuity
+
+**Status:** Complete
+
+- Keep temporary exiting geometry visual-only while all interaction surfaces
+  expose canonical target point indices.
+- Remap retained Line/Area focus and selection by stable point identity when a
+  topology snapshot changes; remove state whose identity exits.
+- Preserve canonical hit, hover, tooltip, linked-marker, workbench, callback,
+  and artifact behavior throughout append, removal, and rolling transitions.
+- Prove rapid snapshot interruption starts from current geometry without
+  leaking temporary render indices or migrating durable point state.
+
+The locked interaction contract and exclusions are recorded in
+`../specs/2026-07-18-line-area-motion-identity-continuity-design.md`.
+
+### Sprint 6 verification record
+
+- Pure transition and real render-path tests prove canonical mapping for
+  forward/reverse rolling and removal, non-interactive exits, retained and
+  removed point state, workbench-linked selection, and rapid interruption.
+- Full package suite: 1,790 tests passed. Full showcase suite: 134 tests
+  passed. Package and showcase analyzers report zero issues.
+- The timing-sensitive workbench benchmark was isolated after a deliberately
+  concurrent first run and passed; the complete package suite then passed
+  serially.
+- The root-path release web build passes, and the refreshed Line Motion direct
+  route plus compiled application script respond successfully on port 8098.
+
+## Sprint 7 — Continuation E2E and promotion readiness
+
+**Status:** Approved for PR promotion
+
+- Re-run every package, showcase, documentation, archive, and release-build
+  gate after rebasing the topology and identity commits onto current master.
+- Exercise Line and Area direct routes, Chart/Data/Split, resizing, linked
+  selection, append/remove/rolling motion, rapid interruption, reduced motion,
+  annotations, and multi-axis behavior against the final release bundle.
+- Review the complete three-commit continuation diff for cross-family regression
+  risk after the radial-family foundation merge.
+- Record residual risks and leave a refreshed local review route available.
+  Do not push, open a PR, or merge without explicit user approval.
+
+### Sprint 7 E2E record
+
+- Rebased the topology and identity work onto the radial-family foundation.
+  The rebase exposed the foundation's `radial` to `partitionRadial` layout-kind
+  rename in generic entrance replay; the dispatch was corrected and covered by
+  the existing Donut controller test through the generic replay API.
+- `flutter analyze lib` and the full showcase analyzer pass with zero issues.
+  The full package suite passes with 1,796 tests; the full showcase suite passes
+  with 134 tests.
+- Dartdoc reports zero warnings and zero errors. The pub.dev dry run reports
+  zero warnings; constrained dependency update notices remain informational.
+- Deployment-base and root-path release web builds pass. The deployment build's
+  `/braven_charts/` base href was verified before restoring the root build for
+  local review.
+- Chrome release-browser checks pass for refreshed Line and Area Motion direct
+  routes, Chart/Data/Split composition, divider resizing, linked table
+  selection, value updates, rapid rolling-window interruption, reduced motion,
+  compact layouts, Line multi-axis and workhorse presets, and the Area baseline
+  preset. Every checked route rendered nonblank with no severe console output,
+  controller error, or visible overflow.
+- Residual promotion gates are intentionally external to the local E2E slice:
+  cross-browser coverage and hosted CI run during PR promotion. No push, PR,
+  or merge had been performed when the E2E record was captured.
+- Final local review was approved on 2026-07-18. The continuation may be pushed
+  and opened as a PR; merge remains a separate explicit approval gate.

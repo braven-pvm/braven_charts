@@ -52,11 +52,18 @@ monotone, and stepped paths. Area fill, stroke, glow, markers, and labels share
 the same reveal boundary. Timing and easing come from
 `ChartTheme.animationTheme`.
 
-Mounted data updates interpolate only when the old and new series are
-compatible: they keep the same stable series identity and corresponding point
-X values. Incompatible changes render the target state immediately. Axis
-bounds, tables, extracted documents, and artifacts always describe the target
-data; transient geometry is confined to painting.
+Mounted data updates interpolate when the old and new series keep the same
+stable series identity and ordered point identities. Equal-length values move
+in place. Appended points grow from the retained boundary, removed points
+collapse into it, and rolling windows perform both motions together. Identity
+uses timestamps first and then corresponding `x + label` values. Interior
+insertion or removal, reordered identities, series-type changes, and
+interpolation-mode changes remain incompatible and use the existing fallback.
+
+Axis bounds, tables, extracted documents, and artifacts always describe the
+target data; transient geometry is confined to the standard renderer. Area
+fill and stroke, markers, labels, hit testing, tooltips, and crosshair tracking
+therefore stay on the same in-flight geometry.
 
 Replay the entrance phase without changing data:
 
@@ -114,6 +121,6 @@ families. See [Chart Workbench](chart_workbench.md) and
 - [Line chart family](https://braven-pvm.github.io/braven_charts/?page=line-charts)
 - [Area chart family](https://braven-pvm.github.io/braven_charts/?page=area-charts)
 
-The motion routes include replay and compatible data-update controls. Switch
-between Chart, Data, and Split to verify that visual interpolation never
-changes the target data exposed by the table or artifact.
+The motion routes include replay, value update, add, remove, and rolling-window
+controls. Switch between Chart, Data, and Split to verify that visual
+interpolation never changes the target data exposed by the table or artifact.

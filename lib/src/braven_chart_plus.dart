@@ -1048,6 +1048,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   _ActiveRadialSeriesTransition? _radialSeriesTransition;
   final Map<String, _ActivePathSeriesTransition> _pathSeriesTransitions =
       <String, _ActivePathSeriesTransition>{};
+  final Map<String, PathSeriesPointMap> _pathPointMapsBySeries =
+      <String, PathSeriesPointMap>{};
   final Set<String> _pathRevealSeriesIds = <String>{};
   late final AnimationController _incomingDataAnimationController;
   late final AnimationController _barDataAnimationController;
@@ -2153,6 +2155,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _resolveEffectiveAnnotations().isNotEmpty) {
       throw ArgumentError('Radial charts do not support Cartesian annotations');
     }
+    if (detectPathAnimations) {
+      _remapPathPointState(previousSeriesById, _effectiveDataSeries);
+    }
     _pruneInvalidPointRefs();
     if (detectIncomingAnimations) {
       _updateIncomingPointAnimations(
@@ -2384,6 +2389,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           pathRevealProgressBySeries: {
             for (final id in _pathRevealSeriesIds) id: _pathRevealProgress,
           },
+          pathPointMapsBySeries: _pathPointMapsBySeries,
         ).cast<ChartElement>().toList();
       }
 
@@ -2639,7 +2645,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   };
 
   void _replaySeriesEntrance() {
-    if (_layoutKind == ChartLayoutKind.radial) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial) {
       _startRadialRevealAnimation();
     } else {
       _startPathEntranceAnimation();
@@ -2835,6 +2841,55 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         previousRadial.sliceGroupingConfig != nextRadial.sliceGroupingConfig;
   }
 
+  void _remapPathPointState(
+    Map<String, ChartSeries> previousSeriesById,
+    List<ChartSeries> nextSeries,
+  ) {
+    if (_focusedPointRefs.isEmpty && _selectedPointRefs.isEmpty) return;
+    final nextSeriesById = <String, ChartSeries>{
+      for (final series in nextSeries) series.id: series,
+    };
+
+    Set<ChartPointRef> remap(Set<ChartPointRef> refs) {
+      final result = <ChartPointRef>{};
+      for (final ref in refs) {
+        final previous = previousSeriesById[ref.seriesId];
+        final next = nextSeriesById[ref.seriesId];
+        final isPathPair =
+            (previous is LineChartSeries || previous is AreaChartSeries) &&
+            (next is LineChartSeries || next is AreaChartSeries);
+        if (!isPathPair ||
+            !PathSeriesTransition.isCompatible(previous!, next!)) {
+          result.add(ref);
+          continue;
+        }
+        final targetIndex = PathSeriesTransition.targetIndexForSource(
+          previous,
+          next,
+          ref.pointIndex,
+        );
+        if (targetIndex != null) {
+          result.add(ChartPointRef(seriesId: next.id, pointIndex: targetIndex));
+        }
+      }
+      return result;
+    }
+
+    final focused = remap(_focusedPointRefs);
+    final selected = remap(_selectedPointRefs);
+    if (setEquals(focused, _focusedPointRefs) &&
+        setEquals(selected, _selectedPointRefs)) {
+      return;
+    }
+    _focusedPointRefs
+      ..clear()
+      ..addAll(focused);
+    _selectedPointRefs
+      ..clear()
+      ..addAll(selected);
+    _syncControllerPointState();
+  }
+
   void _remapRadialPointState(
     List<ChartSeries> previous,
     List<ChartSeries> next,
@@ -3022,6 +3077,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _refreshAnimatedRenderSeries() {
+    _pathPointMapsBySeries.clear();
     if (_effectiveDataSeries.isEmpty) {
       _effectiveRenderSeries = _effectiveDataSeries;
       return;
@@ -3048,11 +3104,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           .map((series) {
             final transition = _pathSeriesTransitions[series.id];
             if (transition == null) return series;
-            return PathSeriesTransition.interpolate(
+            final frame = PathSeriesTransition.frame(
               from: transition.from,
               to: transition.to,
               progress: progress,
             );
+            _pathPointMapsBySeries[series.id] = frame.pointMap;
+            return frame.series;
           })
           .toList(growable: false);
     }
