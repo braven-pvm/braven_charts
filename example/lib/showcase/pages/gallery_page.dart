@@ -60,7 +60,6 @@ class _GalleryPageState extends State<GalleryPage> {
     final buildingBlockCards = <Widget>[
       _buildMonthlyRevenueChart(isDark),
       _buildTemperatureTrendChart(isDark),
-      const BarTargetsGalleryCard(),
       _buildExperimentScatterChart(isDark),
       _buildMixedSeriesTypeChart(isDark),
       _buildMixedInterpolationChart(isDark),
@@ -242,6 +241,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(buildingBlockCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'BAR COMPOSITIONS',
+              title: 'Thirteen comparison strategies, one Bar API',
+              subtitle:
+                  'Compare benchmarks, capacity tracks, waterfall deltas, floating ranges, rankings, normalized and absolute stacks, diverging values, gradients, offset layers, capsule rods, and independent axes.',
+              count: 13,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-bar-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 420,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(barGalleryCards),
             ),
           ),
           const SliverToBoxAdapter(

@@ -136,13 +136,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       expect(find.text('The building blocks'), findsOneWidget);
-      expect(
-        _gridContains<BarTargetsGalleryCard>(
-          tester,
-          'gallery-building-blocks-curated',
-        ),
-        isTrue,
-      );
+      expect(_gridCount(tester, 'gallery-building-blocks-curated'), 7);
     },
   );
 
@@ -170,13 +164,40 @@ void main() {
       findsOneWidget,
     );
     expect(_gridCount(tester, 'gallery-advanced-curated'), 8);
-    expect(_gridCount(tester, 'gallery-building-blocks-curated'), 8);
+    expect(_gridCount(tester, 'gallery-building-blocks-curated'), 7);
     final galleryScrollable = find
         .descendant(
           of: find.byType(CustomScrollView),
           matching: find.byType(Scrollable),
         )
         .first;
+
+    await tester.scrollUntilVisible(
+      find.text('Thirteen comparison strategies, one Bar API'),
+      800,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(
+      find.byKey(const ValueKey('gallery-bar-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-bar-compositions'), 13);
+    const barGrid = 'gallery-bar-compositions';
+    expect(_gridContains<BarTargetsGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarCapacityGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarWaterfallGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarRangeGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarHorizontalGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarNormalizedGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarOverlayGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarRodsGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarGradientGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarSignedGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarOffsetGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarAxesGalleryCard>(tester, barGrid), isTrue);
+    expect(_gridContains<BarStackedGalleryCard>(tester, barGrid), isTrue);
 
     await tester.scrollUntilVisible(
       find.text('One whole, five presentation strategies'),
@@ -232,7 +253,7 @@ void main() {
       findsOneWidget,
     );
     expect(_gridCount(tester, 'gallery-advanced-full'), 11);
-    expect(_gridCount(tester, 'gallery-building-blocks-full'), 18);
+    expect(_gridCount(tester, 'gallery-building-blocks-full'), 17);
   });
   testWidgets('donut media panel reuses three product-shaped compositions', (
     tester,

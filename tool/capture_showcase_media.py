@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Capture the public Braven Charts showcase as animated GIF media.
+"""Capture individual Braven Charts examples as package media.
 
 Requirements:
     python -m pip install selenium Pillow
 
-The script records the real Flutter web application with Chrome, applies the
-same crop and brand-labelled action captions to every run, and writes compact
-animated GIF files suitable for README and pub.dev screenshots.
+The script records the real Flutter web application with Chrome. Focused
+interaction recordings use reusable Gallery charts, consistent crops, and no
+promotional caption overlays. It writes compact GIF files suitable for the
+README and pub.dev screenshots.
 """
 
 from __future__ import annotations
 
 import argparse
 import io
+import math
 import shutil
 import subprocess
 import time
@@ -31,6 +33,8 @@ HERO_PANEL_CROP = (444, 228, 996, 672)
 LIVE_CROP = (272, 300, 1110, 880)
 INTERACTION_SIZE = (900, 400)
 LIVE_SIZE = (754, 522)
+FOCUSED_MEDIA_CROP = (120, 90, 1320, 810)
+FOCUSED_MEDIA_SIZE = (800, 480)
 FRAME_DURATION_MS = 110
 BRAND = "#4F46E5"
 INK = "#262230"
@@ -191,6 +195,21 @@ def _frame(
     return _decorate(screenshot, caption, cursor, crop, caption_right)
 
 
+def _raw_frame(
+    driver: webdriver.Chrome,
+    cursor: tuple[int, int] | None,
+    crop: tuple[int, int, int, int],
+) -> Image.Image:
+    """Capture a chart-focused frame without promotional caption overlays."""
+    image = Image.open(io.BytesIO(driver.get_screenshot_as_png()))
+    image = image.crop(crop).convert("RGB")
+    if cursor is not None:
+        draw = ImageDraw.Draw(image)
+        crop_x, crop_y = crop[:2]
+        _draw_cursor(draw, cursor[0] - crop_x, cursor[1] - crop_y)
+    return image
+
+
 def _hold(
     driver: webdriver.Chrome,
     frames: list[Image.Image],
@@ -202,6 +221,18 @@ def _hold(
 ) -> None:
     for _ in range(count):
         frames.append(_frame(driver, caption, cursor, crop, caption_right))
+        time.sleep(FRAME_DURATION_MS / 1000)
+
+
+def _raw_hold(
+    driver: webdriver.Chrome,
+    frames: list[Image.Image],
+    cursor: tuple[int, int] | None,
+    count: int,
+    crop: tuple[int, int, int, int],
+) -> None:
+    for _ in range(count):
+        frames.append(_raw_frame(driver, cursor, crop))
         time.sleep(FRAME_DURATION_MS / 1000)
 
 
@@ -511,7 +542,11 @@ def _donut_gallery_still(
     )
 
 
-def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
+def _legacy_interaction(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output: Path,
+) -> None:
     _load(driver, base_url)
     _mouse(
         driver,
@@ -695,12 +730,132 @@ def _interaction(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
     _save(frames, output, INTERACTION_SIZE)
 
 
+def _tracking_demo(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output: Path,
+) -> None:
+    """Record one concise pass across a real multi-axis Gallery chart."""
+    _load(driver, f"{base_url}?capture=interaction-session")
+    frames: list[Image.Image] = []
+    start = (310, 430)
+    _mouse(driver, "mouseMoved", *start)
+    _raw_hold(driver, frames, start, 5, FOCUSED_MEDIA_CROP)
+
+    for step in range(22):
+        progress = step / 21
+        point = (
+            round(310 + progress * 800),
+            round(430 - 70 * math.sin(progress * math.pi)),
+        )
+        _mouse(driver, "mouseMoved", *point)
+        frames.append(_raw_frame(driver, point, FOCUSED_MEDIA_CROP))
+        time.sleep(FRAME_DURATION_MS / 1000)
+
+    _raw_hold(driver, frames, (1110, 430), 8, FOCUSED_MEDIA_CROP)
+    _save(frames, output, FOCUSED_MEDIA_SIZE)
+
+
+def _zoom_pan_demo(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output: Path,
+) -> None:
+    """Record focused wheel zoom and drag-to-pan behavior."""
+    _load(driver, f"{base_url}?capture=interaction-duration")
+    frames: list[Image.Image] = []
+    center = (760, 440)
+    _mouse(driver, "mouseMoved", *center)
+    _raw_hold(driver, frames, center, 5, FOCUSED_MEDIA_CROP)
+
+    _shift(driver, True)
+    for _ in range(2):
+        _mouse(
+            driver,
+            "mouseWheel",
+            *center,
+            deltaX=0,
+            deltaY=-220,
+            buttons=0,
+            pointerType="mouse",
+            modifiers=8,
+        )
+        time.sleep(0.22)
+        frames.append(_raw_frame(driver, center, FOCUSED_MEDIA_CROP))
+    _shift(driver, False)
+    _raw_hold(driver, frames, center, 5, FOCUSED_MEDIA_CROP)
+
+    drag_start = (980, 470)
+    _mouse(driver, "mouseMoved", *drag_start)
+    _mouse(
+        driver,
+        "mousePressed",
+        *drag_start,
+        button="left",
+        buttons=1,
+        clickCount=1,
+    )
+    for step in range(1, 13):
+        point = (980 - step * 13, 470)
+        _mouse(driver, "mouseMoved", *point, button="left", buttons=1)
+        frames.append(_raw_frame(driver, point, FOCUSED_MEDIA_CROP))
+        time.sleep(FRAME_DURATION_MS / 1000)
+    drag_end = (824, 470)
+    _mouse(
+        driver,
+        "mouseReleased",
+        *drag_end,
+        button="left",
+        buttons=0,
+        clickCount=1,
+    )
+    _raw_hold(driver, frames, drag_end, 8, FOCUSED_MEDIA_CROP)
+    _save(frames, output, FOCUSED_MEDIA_SIZE)
+
+
+def _donut_selection_demo(
+    driver: webdriver.Chrome,
+    base_url: str,
+    output: Path,
+) -> None:
+    """Record durable Donut selection and center-content changes."""
+    _load(driver, f"{base_url}?capture=donut-revenue")
+    frames: list[Image.Image] = []
+    first = (950, 440)
+    _mouse(driver, "mouseMoved", *first)
+    _raw_hold(driver, frames, first, 5, FOCUSED_MEDIA_CROP)
+
+    for point in ((950, 440), (610, 650), (460, 390)):
+        _mouse(driver, "mouseMoved", *point)
+        _mouse(
+            driver,
+            "mousePressed",
+            *point,
+            button="left",
+            buttons=1,
+            clickCount=1,
+        )
+        _mouse(
+            driver,
+            "mouseReleased",
+            *point,
+            button="left",
+            buttons=0,
+            clickCount=1,
+        )
+        resting = (720, 175)
+        _mouse(driver, "mouseMoved", *resting)
+        _raw_hold(driver, frames, resting, 8, FOCUSED_MEDIA_CROP)
+
+    _save(frames, output, FOCUSED_MEDIA_SIZE)
+
+
 def _live_stream(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
     _load(driver, f"{base_url}?page=live-stream")
     frames: list[Image.Image] = []
     cursor = (760, 650)
     _mouse(driver, "mouseMoved", *cursor)
-    _hold(driver, frames, "Live data at 20 Hz", cursor, 22, LIVE_CROP)
+    _raw_hold(driver, frames, cursor, 22, LIVE_CROP)
 
     pause = (1275, 286)
     _mouse(driver, "mouseMoved", *pause)
@@ -720,14 +875,7 @@ def _live_stream(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
         buttons=0,
         clickCount=1,
     )
-    _hold(
-        driver,
-        frames,
-        "Paused — points keep buffering",
-        None,
-        22,
-        LIVE_CROP,
-    )
+    _raw_hold(driver, frames, None, 22, LIVE_CROP)
 
     _mouse(driver, "mouseMoved", *pause)
     _mouse(
@@ -746,7 +894,7 @@ def _live_stream(driver: webdriver.Chrome, base_url: str, output: Path) -> None:
         buttons=0,
         clickCount=1,
     )
-    _hold(driver, frames, "Resume + catch up", None, 28, LIVE_CROP)
+    _raw_hold(driver, frames, None, 28, LIVE_CROP)
     _save(frames, output, LIVE_SIZE)
 
 
@@ -767,6 +915,9 @@ def main() -> None:
         choices=(
             "all",
             "interaction",
+            "tracking",
+            "zoom-pan",
+            "selection",
             "live-stream",
             "stills",
             "hero",
@@ -777,7 +928,7 @@ def main() -> None:
             "donut",
         ),
         default="all",
-        help="Capture all media, both animations, or the static showcase set.",
+        help="Capture all media, a focused animation, or the static set.",
     )
     args = parser.parse_args()
     base_url = args.url.rstrip("/") + "/"
@@ -803,11 +954,23 @@ def main() -> None:
 
     driver = _driver()
     try:
-        if args.capture in ("all", "interaction"):
-            _interaction(
+        if args.capture in ("all", "interaction", "tracking"):
+            _tracking_demo(
                 driver,
                 base_url,
-                args.output_dir / "interaction_demo.gif",
+                args.output_dir / "tracking_demo.gif",
+            )
+        if args.capture in ("all", "interaction", "zoom-pan"):
+            _zoom_pan_demo(
+                driver,
+                base_url,
+                args.output_dir / "zoom_pan_demo.gif",
+            )
+        if args.capture in ("all", "selection"):
+            _donut_selection_demo(
+                driver,
+                base_url,
+                args.output_dir / "donut_selection_demo.gif",
             )
         if args.capture in ("all", "live-stream"):
             _live_stream(

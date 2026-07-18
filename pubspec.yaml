@@ -2,7 +2,7 @@ name: braven_charts
 description: >-
   Pure Dart Flutter line, area, bar, scatter, Pie, and Donut charts with custom
   rendering, multi-axis interaction, streaming, annotations, tables, and artifacts.
-version: 0.5.0
+version: 0.6.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -17,45 +17,44 @@ topics:
 
 screenshots:
   - description: >-
-      Compact comparison of line, area, scatter, bar, pie, and Donut charts
-      with distinct native Flutter rendering and theme treatments.
-    path: doc/screenshots/chart_type_strip.png
-  - description: >-
       Multi-axis training profile with a power area, heart-rate response,
       stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
-      Dark power-duration model with six curves, positive and negative
-      baseline fills, range sections, glow, annotations, and a scrollbar.
-    path: doc/screenshots/hero_power_duration.png
+      Grouped Bar chart with gradients, targets, uncertainty intervals,
+      tracking tooltip, and durable point interaction.
+    path: doc/screenshots/bar_targets_interaction.png
   - description: >-
-      Pie contribution chart with collision-managed outside labels,
-      slice-derived borders, and category percentages.
-    path: doc/screenshots/pie_revenue_contribution.png
+      Waterfall Bar chart with positive and negative deltas, connector lines,
+      and a resolved total.
+    path: doc/screenshots/bar_waterfall.png
+  - description: >-
+      Horizontal Bar chart comparing revenue, orders, conversion, and margin
+      across four independently scaled and colored axes.
+    path: doc/screenshots/bar_axes.png
   - description: >-
       Pie allocation chart with radial gradients, rounded separated slices,
       elevation, inside percentages, and a positioned legend.
     path: doc/screenshots/pie_portfolio_allocation.png
   - description: >-
-      Positive and negative baseline fill across three independently scaled
-      signals with inline labels.
-    path: doc/screenshots/gallery_baseline.png
+      Dark partial-sweep Donut with center content, compact labels, gradients,
+      rounded slices, and a release-readiness status treatment.
+    path: doc/screenshots/donut_release_progress.png
   - description: >-
-      Raw VO2 signal with stage averages, target range, threshold lines, and a
-      highlighted VO2max event.
-    path: doc/screenshots/gallery_vo2_stage.png
+      Point, range, and threshold annotations applied to a focused analysis.
+    path: doc/screenshots/gallery_annotated.png
   - description: >-
-      Three Donut compositions with selection-aware center content, a partial
-      sweep, variable radii, compact labels, and light and dark themes.
-    path: doc/screenshots/gallery_donut_collection.png
+      Multi-series crosshair tracking across independently scaled line and
+      area series.
+    path: doc/screenshots/tracking_demo.gif
   - description: >-
-      Live sensor data in a follow-latest viewport with a visible synchronized
-      scrollbar.
-    path: doc/screenshots/gallery_live_sensor.png
+      Pointer zoom and drag-to-pan on a dark multi-axis chart with a
+      synchronized scrollbar.
+    path: doc/screenshots/zoom_pan_demo.gif
   - description: >-
-      Grouped Bar chart with gradients, targets, uncertainty intervals,
-      tracking tooltip, and durable point interaction.
-    path: doc/screenshots/bar_targets_interaction.png
+      A live chart pauses while samples continue buffering, then resumes with
+      bounded catch-up and a follow-latest viewport.
+    path: doc/screenshots/live_stream_demo.gif
 environment:
   sdk: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.0"

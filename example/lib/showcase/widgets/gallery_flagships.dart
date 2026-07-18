@@ -23,9 +23,11 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
   const PerformanceIntelligenceGalleryHero({
     super.key,
     this.panel = PerformanceIntelligenceHeroPanel.both,
+    this.showTracking = true,
   });
 
   final PerformanceIntelligenceHeroPanel panel;
+  final bool showTracking;
 
   static const _nightCyan = Color(0xFF22D3EE);
   static const _nightMint = Color(0xFF34D399);
@@ -285,16 +287,16 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
           max: 10.15,
         ),
         yAxis: YAxisConfig(position: YAxisPosition.left, label: 'Power'),
-        interactionConfig: const InteractionConfig(
+        interactionConfig: InteractionConfig(
           enableZoom: true,
           enablePan: true,
           crosshair: CrosshairConfig(
-            enabled: true,
+            enabled: showTracking,
             mode: CrosshairMode.both,
             snapToDataPoint: true,
             displayMode: CrosshairDisplayMode.tracking,
           ),
-          tooltip: TooltipConfig(enabled: true),
+          tooltip: TooltipConfig(enabled: showTracking),
         ),
       ),
     );
@@ -499,16 +501,16 @@ class PerformanceIntelligenceGalleryHero extends StatelessWidget {
           position: YAxisPosition.left,
           label: 'Session share',
         ),
-        interactionConfig: const InteractionConfig(
+        interactionConfig: InteractionConfig(
           enableZoom: true,
           enablePan: true,
           crosshair: CrosshairConfig(
-            enabled: true,
+            enabled: showTracking,
             mode: CrosshairMode.both,
             snapToDataPoint: true,
             displayMode: CrosshairDisplayMode.tracking,
           ),
-          tooltip: TooltipConfig(enabled: true),
+          tooltip: TooltipConfig(enabled: showTracking),
         ),
       ),
     );

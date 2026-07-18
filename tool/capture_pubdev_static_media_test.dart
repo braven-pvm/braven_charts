@@ -35,8 +35,26 @@ void main() {
     await _capturePie(
       tester,
       outputDirectory: outputDirectory,
+      fileName: 'pie_revenue_by_product.png',
+      source: const SimpleRevenueGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
       fileName: 'pie_revenue_contribution.png',
       source: const RevenueContributionGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'pie_release_effort.png',
+      source: const ReleaseEffortGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'pie_support_request_mix.png',
+      source: const SupportMixGalleryCard(),
     );
     await _capturePie(
       tester,
@@ -107,12 +125,33 @@ void main() {
     final outputDirectory = Directory(_outputDirectory)
       ..createSync(recursive: true);
 
-    await _captureInteraction(
-      tester,
-      outputDirectory: outputDirectory,
-      fileName: 'bar_targets_interaction.png',
-      source: const BarTargetsGalleryCard(),
-    );
+    for (final source in const [
+      (
+        fileName: 'bar_targets_interaction.png',
+        widget: BarTargetsGalleryCard(),
+      ),
+      (fileName: 'bar_capacity.png', widget: BarCapacityGalleryCard()),
+      (fileName: 'bar_waterfall.png', widget: BarWaterfallGalleryCard()),
+      (fileName: 'bar_range.png', widget: BarRangeGalleryCard()),
+      (fileName: 'bar_horizontal.png', widget: BarHorizontalGalleryCard()),
+      (fileName: 'bar_normalized.png', widget: BarNormalizedGalleryCard()),
+      (fileName: 'bar_overlay.png', widget: BarOverlayGalleryCard()),
+      (fileName: 'bar_rods.png', widget: BarRodsGalleryCard()),
+      (fileName: 'bar_gradient.png', widget: BarGradientGalleryCard()),
+      (fileName: 'bar_signed.png', widget: BarSignedGalleryCard()),
+      (fileName: 'bar_offset.png', widget: BarOffsetGalleryCard()),
+      (fileName: 'bar_axes.png', widget: BarAxesGalleryCard()),
+      (fileName: 'bar_stacked.png', widget: BarStackedGalleryCard()),
+    ]) {
+      await _captureInteraction(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: source.fileName,
+        source: source.widget,
+        includeTransientInteraction:
+            source.fileName == 'bar_targets_interaction.png',
+      );
+    }
   });
 
   testWidgets(
@@ -401,6 +440,7 @@ Future<void> _captureInteraction(
   required Directory outputDirectory,
   required String fileName,
   required Widget source,
+  bool includeTransientInteraction = true,
 }) async {
   const logicalSize = Size(1200, 720);
   const pixelRatio = 1.5;
@@ -460,10 +500,28 @@ Future<void> _captureInteraction(
   );
   await tester.pump(const Duration(milliseconds: 300));
 
+  final categoryLabels = galleryChart.series.first.points
+      .map((point) => point.label ?? point.x.toString())
+      .toList(growable: false);
+  final xAxisFormatterDescriptor =
+      galleryChart.xAxisConfig?.labelFormatter == null
+      ? null
+      : ChartFormatterDescriptor(
+          id: 'braven.pub-media.category-labels',
+          arguments: {
+            'labels': JsonArrayValue([
+              for (final label in categoryLabels) JsonStringValue(label),
+            ]),
+          },
+        ).toDocument();
   final captureFuture = controller.capturePreview(
-    const ChartPreviewOptions(
+    ChartPreviewOptions(
       pixelRatio: pixelRatio,
-      includeTransientInteractions: true,
+      includeTransientInteractions: includeTransientInteraction,
+      documentOptions: ChartDocumentExtractOptions(
+        documentId: 'pub-media-$fileName',
+        xAxisFormatterDescriptor: xAxisFormatterDescriptor,
+      ),
     ),
   );
   for (var frame = 0; frame < 3; frame++) {
