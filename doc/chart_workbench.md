@@ -287,6 +287,8 @@ The workbench enables safe row linking by default:
 - Ctrl/Command+Shift activation additively selects that sorted row range;
 - Ctrl/Command+A selects every point in the current sorted table projection,
   while Escape clears durable selection and keeps row focus in place;
+- Home and End move focus to the first or last displayed row, while Page Up
+  and Page Down move by the current virtualized viewport height;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
 - the table summary reports the selected point count and exposes a compact

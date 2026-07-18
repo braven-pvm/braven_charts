@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -262,6 +264,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('collapses summary actions without overflowing narrow panes', (
+    tester,
+  ) async {
+    var clearCalls = 0;
+    final model = _model(points: [_point(0, 10)]);
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          selectedPointRefs: {
+            const ChartPointRef(seriesId: 'series', pointIndex: 0),
+          },
+          onClearSelection: () => clearCalls++,
+        ),
+        width: 150,
+      ),
+    );
+
+    expect(find.byTooltip('Table actions'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Table actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear selection'));
+    await tester.pumpAndSettle();
+    expect(clearCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Ctrl+A selects sorted displayed points and Escape clears them', (
     tester,
   ) async {
@@ -436,6 +467,59 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(selected, hasLength(1000));
+    expect(list.controller!.offset, 0);
+  });
+
+  testWidgets('page and boundary keys navigate virtualized rows', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble()),
+      ],
+    );
+
+    await tester.pumpWidget(_host(ChartDataTable(model: model)));
+    final list = tester.widget<ListView>(find.byType(ListView));
+    final rowsPerPage = math.max(
+      1,
+      (list.controller!.position.viewportDimension / 36).floor(),
+    );
+
+    Finder rowAt(int index) =>
+        find.byKey(ValueKey(model.longRows[index].rowId));
+    FocusableActionDetector detectorAt(int index) =>
+        tester.widget<FocusableActionDetector>(
+          find.descendant(
+            of: rowAt(index),
+            matching: find.byType(FocusableActionDetector),
+          ),
+        );
+
+    detectorAt(0).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pump();
+    expect(rowAt(rowsPerPage), findsOneWidget);
+    expect(detectorAt(rowsPerPage).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, greaterThan(0));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+    await tester.pump();
+    expect(detectorAt(0).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump();
+    expect(rowAt(999), findsOneWidget);
+    expect(detectorAt(999).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, list.controller!.position.maxScrollExtent);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pump();
+    expect(rowAt(0), findsOneWidget);
+    expect(detectorAt(0).focusNode!.hasFocus, isTrue);
     expect(list.controller!.offset, 0);
   });
 

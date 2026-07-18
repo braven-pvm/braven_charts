@@ -898,6 +898,25 @@ class _ChartDataTableState extends State<ChartDataTable> {
           delta,
           theme.rowHeight,
         ),
+        onMovePage: (direction) => _moveRowFocusByPage(
+          pieRows.length,
+          (targetIndex) => pieRows[targetIndex].rowId,
+          index,
+          direction,
+          theme.rowHeight,
+        ),
+        onMoveToStart: () => _focusRowAt(
+          pieRows.length,
+          (targetIndex) => pieRows[targetIndex].rowId,
+          0,
+          theme.rowHeight,
+        ),
+        onMoveToEnd: () => _focusRowAt(
+          pieRows.length,
+          (targetIndex) => pieRows[targetIndex].rowId,
+          pieRows.length - 1,
+          theme.rowHeight,
+        ),
         onMoveHorizontal: (delta) =>
             _moveHorizontal(delta, theme.seriesColumnWidth),
         onFocused: widget.onRowFocused,
@@ -979,6 +998,25 @@ class _ChartDataTableState extends State<ChartDataTable> {
           delta,
           theme.rowHeight,
         ),
+        onMovePage: (direction) => _moveRowFocusByPage(
+          wideRows.length,
+          (targetIndex) => wideRows[targetIndex].rowId,
+          index,
+          direction,
+          theme.rowHeight,
+        ),
+        onMoveToStart: () => _focusRowAt(
+          wideRows.length,
+          (targetIndex) => wideRows[targetIndex].rowId,
+          0,
+          theme.rowHeight,
+        ),
+        onMoveToEnd: () => _focusRowAt(
+          wideRows.length,
+          (targetIndex) => wideRows[targetIndex].rowId,
+          wideRows.length - 1,
+          theme.rowHeight,
+        ),
         onMoveHorizontal: (delta) =>
             _moveHorizontal(delta, theme.seriesColumnWidth),
         onFocused: widget.onRowFocused,
@@ -1040,6 +1078,25 @@ class _ChartDataTableState extends State<ChartDataTable> {
         (targetIndex) => longRows[targetIndex].rowId,
         index,
         delta,
+        theme.rowHeight,
+      ),
+      onMovePage: (direction) => _moveRowFocusByPage(
+        longRows.length,
+        (targetIndex) => longRows[targetIndex].rowId,
+        index,
+        direction,
+        theme.rowHeight,
+      ),
+      onMoveToStart: () => _focusRowAt(
+        longRows.length,
+        (targetIndex) => longRows[targetIndex].rowId,
+        0,
+        theme.rowHeight,
+      ),
+      onMoveToEnd: () => _focusRowAt(
+        longRows.length,
+        (targetIndex) => longRows[targetIndex].rowId,
+        longRows.length - 1,
         theme.rowHeight,
       ),
       onMoveHorizontal: (delta) =>
@@ -1160,6 +1217,39 @@ class _ChartDataTableState extends State<ChartDataTable> {
     if (rowCount == 0) return;
     final targetIndex = (currentIndex + delta).clamp(0, rowCount - 1);
     if (targetIndex == currentIndex) return;
+    _focusRowAt(rowCount, rowIdAt, targetIndex, rowHeight);
+  }
+
+  void _moveRowFocusByPage(
+    int rowCount,
+    String Function(int index) rowIdAt,
+    int currentIndex,
+    int direction,
+    double rowHeight,
+  ) {
+    if (rowCount == 0 || direction == 0) return;
+    final rowsPerPage = _verticalController.hasClients
+        ? math.max(
+            1,
+            (_verticalController.position.viewportDimension / rowHeight)
+                .floor(),
+          )
+        : 10;
+    final targetIndex = (currentIndex + direction * rowsPerPage).clamp(
+      0,
+      rowCount - 1,
+    );
+    if (targetIndex == currentIndex) return;
+    _focusRowAt(rowCount, rowIdAt, targetIndex, rowHeight);
+  }
+
+  void _focusRowAt(
+    int rowCount,
+    String Function(int index) rowIdAt,
+    int targetIndex,
+    double rowHeight,
+  ) {
+    if (rowCount == 0 || targetIndex < 0 || targetIndex >= rowCount) return;
     final targetNode = _focusNodeFor(rowIdAt(targetIndex));
     if (_verticalController.hasClients) {
       final position = _verticalController.position;
@@ -1279,7 +1369,31 @@ class _TableSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final compactActions = constraints.maxWidth < 520;
+      final actions = <_TableSummaryAction>[
+        if (onClearSelection != null)
+          _TableSummaryAction(
+            label: 'Clear selection',
+            icon: Icons.close,
+            onPressed: onClearSelection!,
+          ),
+        if (onCopyDataset != null)
+          _TableSummaryAction(
+            label: 'Copy data',
+            icon: Icons.content_copy_outlined,
+            onPressed: onCopyDataset!,
+          ),
+        if (onExportCsv != null)
+          _TableSummaryAction(
+            label: 'Export CSV',
+            icon: Icons.download_outlined,
+            onPressed: onExportCsv!,
+          ),
+      ];
+      final compactActions =
+          constraints.maxWidth < (actions.length >= 3 ? 600 : 520);
+      final collapseActions =
+          constraints.maxWidth < 96 + (actions.length * 48) &&
+          actions.length > 1;
       Widget action({
         required String label,
         required IconData icon,
@@ -1316,29 +1430,49 @@ class _TableSummary extends StatelessWidget {
                 ),
               ),
             ),
-            if (onClearSelection != null)
-              action(
-                label: 'Clear selection',
-                icon: Icons.close,
-                onPressed: onClearSelection!,
-              ),
-            if (onCopyDataset != null)
-              action(
-                label: 'Copy data',
-                icon: Icons.content_copy_outlined,
-                onPressed: onCopyDataset!,
-              ),
-            if (onExportCsv != null)
-              action(
-                label: 'Export CSV',
-                icon: Icons.download_outlined,
-                onPressed: onExportCsv!,
-              ),
+            if (collapseActions)
+              PopupMenuButton<int>(
+                tooltip: 'Table actions',
+                icon: const Icon(Icons.more_horiz, size: 18),
+                onSelected: (index) => actions[index].onPressed(),
+                itemBuilder: (context) => [
+                  for (var index = 0; index < actions.length; index++)
+                    PopupMenuItem<int>(
+                      value: index,
+                      child: Row(
+                        children: [
+                          Icon(actions[index].icon, size: 18),
+                          const SizedBox(width: 12),
+                          Text(actions[index].label),
+                        ],
+                      ),
+                    ),
+                ],
+              )
+            else
+              for (final item in actions)
+                action(
+                  label: item.label,
+                  icon: item.icon,
+                  onPressed: item.onPressed,
+                ),
           ],
         ),
       );
     },
   );
+}
+
+class _TableSummaryAction {
+  const _TableSummaryAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
 }
 
 class _TableWarningBanner extends StatelessWidget {
@@ -1544,10 +1678,17 @@ class _CopyRowButton extends StatelessWidget {
 }
 
 class _MoveTableFocusIntent extends Intent {
-  const _MoveTableFocusIntent({this.vertical = 0, this.horizontal = 0});
+  const _MoveTableFocusIntent({
+    this.vertical = 0,
+    this.horizontal = 0,
+    this.page = 0,
+    this.boundary = 0,
+  });
 
   final int vertical;
   final int horizontal;
+  final int page;
+  final int boundary;
 }
 
 class _SelectAllTablePointsIntent extends Intent {
@@ -1579,6 +1720,9 @@ class _FocusableTableRow extends StatefulWidget {
     required this.theme,
     required this.focusNode,
     required this.onMoveVertical,
+    required this.onMovePage,
+    required this.onMoveToStart,
+    required this.onMoveToEnd,
     required this.onMoveHorizontal,
     this.onFocused,
     this.onFocusCleared,
@@ -1599,6 +1743,9 @@ class _FocusableTableRow extends StatefulWidget {
   final _ResolvedTableTheme theme;
   final FocusNode focusNode;
   final ValueChanged<int> onMoveVertical;
+  final ValueChanged<int> onMovePage;
+  final VoidCallback onMoveToStart;
+  final VoidCallback onMoveToEnd;
   final ValueChanged<int> onMoveHorizontal;
   final ChartTableRowCallback? onFocused;
   final VoidCallback? onFocusCleared;
@@ -1650,6 +1797,14 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
               const _MoveTableFocusIntent(horizontal: -1),
           const SingleActivator(LogicalKeyboardKey.arrowRight):
               const _MoveTableFocusIntent(horizontal: 1),
+          const SingleActivator(LogicalKeyboardKey.pageUp):
+              const _MoveTableFocusIntent(page: -1),
+          const SingleActivator(LogicalKeyboardKey.pageDown):
+              const _MoveTableFocusIntent(page: 1),
+          const SingleActivator(LogicalKeyboardKey.home):
+              const _MoveTableFocusIntent(boundary: -1),
+          const SingleActivator(LogicalKeyboardKey.end):
+              const _MoveTableFocusIntent(boundary: 1),
           const SingleActivator(LogicalKeyboardKey.enter):
               const ActivateIntent(),
           const SingleActivator(LogicalKeyboardKey.enter, control: true):
@@ -1686,6 +1841,14 @@ class _FocusableTableRowState extends State<_FocusableTableRow> {
               }
               if (intent.horizontal != 0) {
                 widget.onMoveHorizontal(intent.horizontal);
+              }
+              if (intent.page != 0) {
+                widget.onMovePage(intent.page);
+              }
+              if (intent.boundary < 0) {
+                widget.onMoveToStart();
+              } else if (intent.boundary > 0) {
+                widget.onMoveToEnd();
               }
               return null;
             },

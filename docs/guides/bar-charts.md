@@ -526,6 +526,8 @@ The table summary reports the selected point count and keeps a compact Clear
 selection action beside Copy and Export, including at narrow Split widths.
 With a row focused, Ctrl/Command+A selects every point in the current sorted
 table projection and Escape clears selection without moving keyboard focus.
+Home and End jump to the first or last displayed row; Page Up and Page Down
+move focus by one visible table page while preserving chart-point linking.
 
 ## Current boundary
 

@@ -1007,6 +1007,65 @@ void main() {
     expect(find.textContaining('8 selected'), findsOneWidget);
   });
 
+  testWidgets('boundary keys navigate linked virtualized chart points', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        height: 360,
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: [
+            LineChartSeries(
+              id: 'signal',
+              points: [
+                for (var index = 0; index < 100; index++)
+                  ChartDataPoint(x: index.toDouble(), y: index.toDouble()),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final model = workbenchController.tableModel!;
+    Finder rowAt(int index) =>
+        find.byKey(ValueKey(model.wideRows[index].rowId));
+    FocusableActionDetector detectorAt(int index) =>
+        tester.widget<FocusableActionDetector>(
+          find.descendant(
+            of: rowAt(index),
+            matching: find.byType(FocusableActionDetector),
+          ),
+        );
+
+    detectorAt(0).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump();
+    expect(rowAt(99), findsOneWidget);
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 99),
+    });
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pump();
+    expect(rowAt(0), findsOneWidget);
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+  });
+
   testWidgets('row hover temporarily overrides and restores keyboard focus', (
     tester,
   ) async {
