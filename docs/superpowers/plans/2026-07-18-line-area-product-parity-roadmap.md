@@ -417,3 +417,17 @@ catalogue.
   the showcase analyzer is clean and the root-path release web build succeeds.
   Both direct routes were inspected at 1600 x 1000 and 430 x 900 from the
   release bundle served on port 8097.
+
+### Promotion verification
+
+- Rebased the six approved Sprint 9 and Sprint 10 commits onto the current
+  `origin/master` 0.7.0 release tip. The generated-source showcase coverage and
+  expanded Bar API documentation added on `master` are both retained.
+- `flutter analyze lib` and the showcase analyzer pass. The complete package
+  suite passes with 1,932 tests and the complete showcase suite passes with 159
+  tests. The root-path release web build succeeds.
+- The clean-tree pub.dev dry run reports zero warnings. Dartdoc 9.0.4 still
+  reproduces its previously recorded internal
+  `DocumentationComment._stripDocImports` range error before diagnostics.
+- The refreshed Line Spotlight and Area Pulse routes and compiled application
+  script return HTTP 200 from the release bundle on port 8097.
