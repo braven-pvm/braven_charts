@@ -11,8 +11,8 @@ is added to package marketing.
 | Tooltips | `TooltipConfig`, `TooltipStyle`, callbacks | Gallery, Interaction, Tracking Lab |
 | Crosshair tracking | `CrosshairConfig`, `CrosshairMode`, `CrosshairDisplayMode` | Tracking Lab, Gallery |
 | Annotations | `ChartAnnotation` subtypes, `AnnotationController`, editing dialogs | Annotations, Lactate Threshold, Gallery |
-| Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
-| Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
+| Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, explicit per-series entrance/update timing, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
+| Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, `rangeStartValues`, `BarLayoutMode`, `BarChartStyle`, `BarTrackStyle`, `BarLabelStyle`, `BarGroupInfo` | Bar Lab, Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |

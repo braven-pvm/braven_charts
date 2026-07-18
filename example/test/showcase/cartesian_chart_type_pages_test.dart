@@ -146,9 +146,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final motionSeries = chart.series.whereType<LineChartSeries>().toList();
+    expect(motionSeries.map((series) => series.id), [
+      'motion-observed',
+      'motion-plan',
+      'motion-capacity',
+    ]);
     expect(
-      chart.series.whereType<LineChartSeries>().every(
+      motionSeries.every(
         (series) =>
             series.pathAnimation.entranceMode ==
                 PathEntranceAnimationMode.reveal &&
@@ -157,6 +163,50 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      motionSeries.map((series) => series.pathAnimation.entranceTiming.delay),
+      const [
+        Duration.zero,
+        Duration(milliseconds: 80),
+        Duration(milliseconds: 160),
+      ],
+    );
+    expect(
+      motionSeries.map((series) => series.pathAnimation.dataUpdateTiming.delay),
+      const [
+        Duration.zero,
+        Duration(milliseconds: 80),
+        Duration(milliseconds: 160),
+      ],
+    );
+
+    final delayControl = find.byKey(const ValueKey('line-series-delay'));
+    final delaySlider = tester.widget<Slider>(
+      find.descendant(of: delayControl, matching: find.byType(Slider)),
+    );
+    delaySlider.onChanged!(120);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(
+      chart.series.whereType<LineChartSeries>().map(
+        (series) => series.pathAnimation.entranceTiming.delay,
+      ),
+      const [
+        Duration.zero,
+        Duration(milliseconds: 120),
+        Duration(milliseconds: 240),
+      ],
+    );
+    final timingOnlyRenderBox = tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single;
+    expect(
+      timingOnlyRenderBox.debugElements.whereType<SeriesElement>().map(
+        (element) => element.revealProgress,
+      ),
+      everyElement(1),
+    );
+    await tester.pumpAndSettle();
 
     final update = find.byKey(const ValueKey('line-update-values'));
     await tester.ensureVisible(update);
@@ -258,6 +308,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final motionSeries = chart.series.whereType<AreaChartSeries>().toList();
+    expect(motionSeries.map((series) => series.id), [
+      'motion-volume',
+      'motion-plan',
+    ]);
+    expect(
+      motionSeries.map((series) => series.pathAnimation.entranceTiming.delay),
+      const [Duration.zero, Duration(milliseconds: 120)],
+    );
+    expect(motionSeries.map((series) => series.fillOpacity), [
+      0.24,
+      closeTo(0.132, 0.001),
+    ]);
+
     expect(find.byKey(const ValueKey('area-add-point')), findsOneWidget);
     expect(find.byKey(const ValueKey('area-remove-point')), findsOneWidget);
     final rollWindow = find.byKey(const ValueKey('area-roll-window'));
@@ -295,6 +360,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(BravenChartPlus), findsOneWidget);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
+      final viewportWidth = tester.view.physicalSize.width;
+      for (final surface in [
+        find.text('Reset example'),
+        find.byKey(const ValueKey('chart-page-options-button')),
+        find.byType(BravenChartWorkbench),
+      ]) {
+        final rect = tester.getRect(surface);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(viewportWidth));
+      }
       expect(tester.takeException(), isNull);
     }
   });

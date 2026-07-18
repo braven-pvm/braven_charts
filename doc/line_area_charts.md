@@ -36,6 +36,12 @@ streaming, and very large charts therefore preserve their current behavior.
 const motion = PathAnimationStyle(
   entranceMode: PathEntranceAnimationMode.reveal,
   dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+  entranceTiming: PathAnimationTiming(
+    delay: Duration(milliseconds: 80),
+  ),
+  dataUpdateTiming: PathAnimationTiming(
+    delay: Duration(milliseconds: 80),
+  ),
 );
 
 final series = AreaChartSeries(
@@ -49,8 +55,12 @@ final series = AreaChartSeries(
 
 Entrance reveal follows the leading edge of the plot for linear, Bezier,
 monotone, and stepped paths. Area fill, stroke, glow, markers, and labels share
-the same reveal boundary. Timing and easing come from
-`ChartTheme.animationTheme`.
+the same reveal boundary. A null `PathAnimationTiming.duration` inherits the
+chart theme's data-update duration. A series may instead declare a
+non-negative phase delay and duration. Configure these values explicitly on
+stable series IDs; Braven Charts does not infer staggering from list or paint
+order. All participating series still share one orchestration clock, and the
+theme curve is applied independently within each local window.
 
 Mounted data updates interpolate when the old and new series keep the same
 stable series identity and ordered point identities. Equal-length values move
@@ -79,7 +89,9 @@ controller.replaySeriesEntrance();
 ```
 
 When the platform requests reduced motion, or the theme duration is zero, the
-chart renders its final frame synchronously.
+chart renders its final frame synchronously even if a series has an explicit
+override. An explicit zero series duration also ignores its delay and renders
+that series immediately.
 
 ## Streaming boundary
 
@@ -121,6 +133,7 @@ families. See [Chart Workbench](chart_workbench.md) and
 - [Line chart family](https://braven-pvm.github.io/braven_charts/?page=line-charts)
 - [Area chart family](https://braven-pvm.github.io/braven_charts/?page=area-charts)
 
-The motion routes include replay, value update, add, remove, and rolling-window
-controls. Switch between Chart, Data, and Split to verify that visual
-interpolation never changes the target data exposed by the table or artifact.
+The motion routes include an explicit series-delay control plus replay, value
+update, add, remove, and rolling-window controls. Switch between Chart, Data,
+and Split to verify that visual interpolation never changes the target data
+exposed by the table or artifact.

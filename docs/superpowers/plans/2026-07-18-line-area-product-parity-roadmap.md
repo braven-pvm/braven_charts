@@ -172,7 +172,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 8 — Per-series motion timing
 
-**Status:** Review needed
+**Status:** Local review
 
 ### Product outcome
 
@@ -232,3 +232,27 @@ The detailed proposal is recorded in
   Dartdoc, pub.dev dry run, deployment-base and root release builds, direct
   browser routes, console checks, and local product review pass before PR
   promotion.
+
+### Sprint 8 local verification record
+
+- Added immutable per-series entrance and update timing, one shared elapsed-time
+  timeline per phase, artifact persistence, and the dedicated
+  `series.path-motion-timing.v1` capability without changing default motion.
+- Real Line and Area render-path coverage passes for staggered entrance,
+  independent compatible updates, topology changes, interruption, replay,
+  canonical bounds and identity, reduced motion, zero theme/series durations,
+  and controller-fed streaming exclusion.
+- The Line Motion preset now uses explicit `0/80/160 ms` timing across three
+  stable series. Area uses two translucent layers at `0/120 ms`. Their compact
+  control changes explicit sample timing without implying automatic ordering.
+- `flutter analyze lib`, the full showcase analyzer, the complete package test
+  suite, and the complete showcase test suite pass. Dartdoc reports zero
+  warnings and zero errors; the committed pub.dev dry run reports zero
+  warnings.
+- Deployment-base and root-path release web builds pass. Chrome release
+  captures for both direct Motion Split routes are nonblank; filtered console
+  checks and the local asset log show no severe output, controller error, or
+  404 response. Compact widget coverage asserts the header actions and
+  workbench remain inside a 390 px viewport.
+- The root release build is available for joint review on port 8097. No push,
+  PR, or merge has been performed.

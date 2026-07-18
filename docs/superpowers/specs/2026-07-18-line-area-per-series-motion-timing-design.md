@@ -1,6 +1,6 @@
 # Line and Area Per-Series Motion Timing
 
-**Status:** Review needed
+**Status:** Local review
 **Roadmap:** Sprint 8 of Line and Area Product Parity
 **Proposed implementation lane:** `feature/line-area-motion-orchestration`
 **Prerequisite:** PR #37 merged
@@ -38,8 +38,7 @@ class PathAnimationTiming {
   const PathAnimationTiming({
     this.delay = Duration.zero,
     this.duration,
-  }) : assert(!delay.isNegative),
-       assert(duration == null || !duration!.isNegative);
+  });
 
   final Duration delay;
 
@@ -71,6 +70,8 @@ Bar or radial styles in this sprint.
 
 - Delay must be non-negative.
 - An explicit duration must be non-negative.
+- Validation occurs when the immutable timing is resolved so the public model
+  remains usable in const Line and Area series declarations.
 - `duration == null` inherits the theme data-update duration.
 - Default timing has zero delay and inherited duration, reproducing current
   simultaneous motion.

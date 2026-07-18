@@ -26,15 +26,65 @@ enum PathDataUpdateAnimationMode {
   interpolate,
 }
 
+/// Timing for one path-animation phase on a single series.
+///
+/// A null [duration] inherits
+/// `ChartTheme.animationTheme.dataUpdateDuration`. Delays and explicit
+/// durations are non-negative. Reduced motion and a zero-duration chart theme
+/// still render the final series synchronously.
+@immutable
+class PathAnimationTiming {
+  const PathAnimationTiming({this.delay = Duration.zero, this.duration});
+
+  /// Time to hold the valid phase-start geometry before motion begins.
+  final Duration delay;
+
+  /// Per-series duration, or null to inherit the chart theme duration.
+  final Duration? duration;
+
+  PathAnimationTiming copyWith({
+    Duration? delay,
+    Duration? duration,
+    bool inheritDuration = false,
+  }) {
+    assert(
+      !inheritDuration || duration == null,
+      'duration cannot be supplied when inheritDuration is true',
+    );
+    return PathAnimationTiming(
+      delay: delay ?? this.delay,
+      duration: inheritDuration ? null : duration ?? this.duration,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PathAnimationTiming &&
+          delay == other.delay &&
+          duration == other.duration;
+
+  @override
+  int get hashCode => Object.hash(delay, duration);
+
+  @override
+  String toString() =>
+      'PathAnimationTiming(delay: $delay, duration: $duration)';
+}
+
 /// Motion configuration shared by Line and Area series.
 ///
 /// Motion is opt-in so existing, streaming, and very large charts keep their
-/// current behavior. Timing and easing come from `ChartTheme.animationTheme`.
+/// current behavior. Each phase inherits the chart theme duration unless its
+/// [PathAnimationTiming.duration] overrides it. The chart theme supplies the
+/// easing curve and remains the reduced-motion and zero-duration authority.
 @immutable
 class PathAnimationStyle {
   const PathAnimationStyle({
     this.entranceMode = PathEntranceAnimationMode.none,
     this.dataUpdateMode = PathDataUpdateAnimationMode.none,
+    this.entranceTiming = const PathAnimationTiming(),
+    this.dataUpdateTiming = const PathAnimationTiming(),
   });
 
   final PathEntranceAnimationMode entranceMode;
@@ -42,12 +92,22 @@ class PathAnimationStyle {
   /// How mounted snapshot updates animate after the entrance phase.
   final PathDataUpdateAnimationMode dataUpdateMode;
 
+  /// Per-series entrance delay and duration.
+  final PathAnimationTiming entranceTiming;
+
+  /// Per-series compatible-update delay and duration.
+  final PathAnimationTiming dataUpdateTiming;
+
   PathAnimationStyle copyWith({
     PathEntranceAnimationMode? entranceMode,
     PathDataUpdateAnimationMode? dataUpdateMode,
+    PathAnimationTiming? entranceTiming,
+    PathAnimationTiming? dataUpdateTiming,
   }) => PathAnimationStyle(
     entranceMode: entranceMode ?? this.entranceMode,
     dataUpdateMode: dataUpdateMode ?? this.dataUpdateMode,
+    entranceTiming: entranceTiming ?? this.entranceTiming,
+    dataUpdateTiming: dataUpdateTiming ?? this.dataUpdateTiming,
   );
 
   @override
@@ -55,12 +115,21 @@ class PathAnimationStyle {
       identical(this, other) ||
       other is PathAnimationStyle &&
           entranceMode == other.entranceMode &&
-          dataUpdateMode == other.dataUpdateMode;
+          dataUpdateMode == other.dataUpdateMode &&
+          entranceTiming == other.entranceTiming &&
+          dataUpdateTiming == other.dataUpdateTiming;
 
   @override
-  int get hashCode => Object.hash(entranceMode, dataUpdateMode);
+  int get hashCode => Object.hash(
+    entranceMode,
+    dataUpdateMode,
+    entranceTiming,
+    dataUpdateTiming,
+  );
 
   @override
   String toString() =>
-      'PathAnimationStyle(entranceMode: $entranceMode, dataUpdateMode: $dataUpdateMode)';
+      'PathAnimationStyle(entranceMode: $entranceMode, '
+      'dataUpdateMode: $dataUpdateMode, entranceTiming: $entranceTiming, '
+      'dataUpdateTiming: $dataUpdateTiming)';
 }

@@ -168,6 +168,9 @@ abstract final class ChartSeriesDocumentCodec {
             if ((series is LineChartSeries || series is AreaChartSeries) &&
                 _pathAnimationFor(series) != const PathAnimationStyle())
               'series.path-motion.v1',
+            if ((series is LineChartSeries || series is AreaChartSeries) &&
+                _hasNonDefaultPathTiming(_pathAnimationFor(series)!))
+              'series.path-motion-timing.v1',
           },
         ),
       );
@@ -773,6 +776,20 @@ PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
 Map<String, Object?> _encodePathAnimation(PathAnimationStyle style) => {
   'entranceMode': style.entranceMode.name,
   'dataUpdateMode': style.dataUpdateMode.name,
+  if (style.entranceTiming != const PathAnimationTiming())
+    'entranceTiming': _encodePathAnimationTiming(style.entranceTiming),
+  if (style.dataUpdateTiming != const PathAnimationTiming())
+    'dataUpdateTiming': _encodePathAnimationTiming(style.dataUpdateTiming),
+};
+
+bool _hasNonDefaultPathTiming(PathAnimationStyle style) =>
+    style.entranceTiming != const PathAnimationTiming() ||
+    style.dataUpdateTiming != const PathAnimationTiming();
+
+Map<String, Object?> _encodePathAnimationTiming(PathAnimationTiming timing) => {
+  if (timing.delay != Duration.zero) 'delayMicros': timing.delay.inMicroseconds,
+  if (timing.duration case final duration?)
+    'durationMicros': duration.inMicroseconds,
 };
 
 PathAnimationStyle _decodePathAnimation(Map<String, Object?>? value) {
@@ -792,6 +809,39 @@ PathAnimationStyle _decodePathAnimation(Map<String, Object?>? value) {
           r'$.style.pathAnimation.dataUpdateMode',
         ) ??
         PathDataUpdateAnimationMode.none,
+    entranceTiming: _decodePathAnimationTiming(
+      _optionalMap(value, 'entranceTiming'),
+      r'$.style.pathAnimation.entranceTiming',
+    ),
+    dataUpdateTiming: _decodePathAnimationTiming(
+      _optionalMap(value, 'dataUpdateTiming'),
+      r'$.style.pathAnimation.dataUpdateTiming',
+    ),
+  );
+}
+
+PathAnimationTiming _decodePathAnimationTiming(
+  Map<String, Object?>? value,
+  String path,
+) {
+  if (value == null) return const PathAnimationTiming();
+  final delayMicros = _optionalInt(value['delayMicros']) ?? 0;
+  final durationMicros = _optionalInt(value['durationMicros']);
+  if (delayMicros < 0) {
+    throw FormatException(
+      'Expected non-negative integer at $path.delayMicros.',
+    );
+  }
+  if (durationMicros != null && durationMicros < 0) {
+    throw FormatException(
+      'Expected non-negative integer at $path.durationMicros.',
+    );
+  }
+  return PathAnimationTiming(
+    delay: Duration(microseconds: delayMicros),
+    duration: durationMicros == null
+        ? null
+        : Duration(microseconds: durationMicros),
   );
 }
 

@@ -58,6 +58,16 @@ Defines a series of data points with optional styling and axis configuration.
 Concrete series are `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
 `ScatterChartSeries`, `PieChartSeries`, and `DonutChartSeries`.
 
+### `LineChartSeries` and `AreaChartSeries`
+
+Path-based Cartesian series expose `pathAnimation: PathAnimationStyle`.
+Entrance reveal and compatible data updates are opt-in. The
+`entranceTiming` and `dataUpdateTiming` fields use `PathAnimationTiming` to set
+an explicit non-negative delay and optional duration per stable series ID. A
+null duration inherits `ChartTheme.animationTheme.dataUpdateDuration`.
+Reduced motion and a zero-duration chart theme override every series timing;
+an explicit zero series duration renders that series immediately.
+
 ### `PieChartSeries`
 
 Represents one insertion-ordered set of category contributions. A pie chart

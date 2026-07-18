@@ -35,8 +35,8 @@ flutter build web --release --base-href /braven_charts/
 | --- | --- |
 | Gallery | Start with a native-rendered six-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Cartesian, and mixed-series examples |
 | Chart Types | Choose between line, area, bar, scatter, Pie, and Donut from a concise visual overview; each family links to its own runnable guide |
-| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and opt-in entrance/value/append/remove/rolling-window motion; inspect the same mounted chart in resizable Chart/Data/Split views |
-| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and synchronized fill/outline value and boundary-topology motion; inspect target data and artifacts in resizable Chart/Data/Split views |
+| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split views |
+| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect target data and artifacts in resizable Chart/Data/Split views |
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API |
 | Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |

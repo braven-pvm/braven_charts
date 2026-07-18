@@ -63,6 +63,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _showBaselineFill = true;
   bool _animatePaths = true;
   double _motionDurationMs = 650;
+  late double _motionSeriesDelayMs;
   int _motionValueRevision = 0;
   late List<ChartDataPoint> _motionPrimaryPoints;
   late List<ChartDataPoint> _motionSecondaryPoints;
@@ -71,6 +72,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   @override
   void initState() {
     super.initState();
+    _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
     _resetMotionData();
     final requestedPreset = Uri.base.queryParameters['preset']?.toLowerCase();
     if (requestedPreset != null) {
@@ -466,6 +468,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _motionDurationMs = value),
             ),
+            SliderOption(
+              key: ValueKey('${widget.family.name}-series-delay'),
+              label: 'Series delay',
+              value: _motionSeriesDelayMs,
+              min: 0,
+              max: 240,
+              divisions: 12,
+              suffix: 'ms',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _motionSeriesDelayMs = value),
+            ),
             BoolOption(
               label: 'Animate paths',
               value: _animatePaths,
@@ -529,7 +543,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
             Text(
               _animatePaths
-                  ? '${_motionPrimaryPoints.length} points · edge changes keep the path and points in sync'
+                  ? '${_motionPrimaryPoints.length} points · ${_motionSeriesDelayMs.round()} ms explicit series delay'
                   : 'Path animation is off · updates apply immediately',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -559,6 +573,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           unit: 'W',
           points: _motionPrimaryPoints,
           color: const Color(0xFF2563EB),
+          motionSequence: 0,
         ),
         if (_showSecondSeries)
           _line(
@@ -567,6 +582,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             unit: 'W',
             points: _motionSecondaryPoints,
             color: const Color(0xFFF97316),
+            motionSequence: 1,
+          ),
+        if (_showSecondSeries)
+          _line(
+            id: 'motion-capacity',
+            name: 'Capacity',
+            unit: 'W',
+            points: _motionCapacityPoints,
+            color: const Color(0xFF0F9F8F),
+            motionSequence: 2,
           ),
       ];
     }
@@ -663,6 +688,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     required List<ChartDataPoint> points,
     required Color color,
     YAxisConfig? axis,
+    int motionSequence = 0,
   }) {
     return LineChartSeries(
       id: id,
@@ -680,7 +706,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         showUnit: true,
       ),
       yAxisConfig: axis,
-      pathAnimation: _pathAnimation,
+      pathAnimation: _pathAnimationFor(motionSequence),
     );
   }
 
@@ -692,14 +718,17 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           name: 'Volume',
           points: _motionPrimaryPoints,
           color: const Color(0xFF4F46E5),
+          fillOpacity: _fillOpacity,
+          motionSequence: 0,
         ),
         if (_showSecondSeries)
-          _line(
+          _area(
             id: 'motion-plan',
             name: 'Plan',
-            unit: 'k',
             points: _motionSecondaryPoints,
             color: const Color(0xFF0891B2),
+            fillOpacity: (_fillOpacity * 0.55).clamp(0.06, 0.22),
+            motionSequence: 1,
           ),
       ];
     }
@@ -769,6 +798,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     required String name,
     required List<ChartDataPoint> points,
     required Color color,
+    double? fillOpacity,
+    int motionSequence = 0,
   }) {
     return AreaChartSeries(
       id: id,
@@ -777,20 +808,44 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       color: color,
       interpolation: _interpolation,
       strokeWidth: _strokeWidth,
-      fillOpacity: _fillOpacity,
+      fillOpacity: fillOpacity ?? _fillOpacity,
       lineGlow: _lineGlow,
       showDataPointMarkers: _optionsController.showDataMarkers,
       dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
-      pathAnimation: _pathAnimation,
+      pathAnimation: _pathAnimationFor(motionSequence),
     );
   }
 
-  PathAnimationStyle get _pathAnimation => _animatePaths && _presetIndex == 3
-      ? const PathAnimationStyle(
+  PathAnimationStyle _pathAnimationFor(int motionSequence) =>
+      _animatePaths && _presetIndex == 3
+      ? PathAnimationStyle(
           entranceMode: PathEntranceAnimationMode.reveal,
           dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(
+              milliseconds: _motionSeriesDelayMs.round() * motionSequence,
+            ),
+          ),
+          dataUpdateTiming: PathAnimationTiming(
+            delay: Duration(
+              milliseconds: _motionSeriesDelayMs.round() * motionSequence,
+            ),
+          ),
         )
       : const PathAnimationStyle();
+
+  double get _defaultMotionSeriesDelayMs =>
+      widget.family == _CartesianFamily.area ? 120 : 80;
+
+  List<ChartDataPoint> get _motionCapacityPoints => [
+    for (var index = 0; index < _motionPrimaryPoints.length; index++)
+      _motionPrimaryPoints[index].copyWith(
+        y:
+            ((_motionPrimaryPoints[index].y + _motionSecondaryPoints[index].y) /
+                2) +
+            12,
+      ),
+  ];
 
   List<ChartSeries> _buildScatterSeries() {
     final primary = ScatterChartSeries(
@@ -877,6 +932,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _showBaselineFill = true;
       _animatePaths = true;
       _motionDurationMs = 650;
+      _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
       _resetMotionData();
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));

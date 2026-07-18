@@ -92,6 +92,13 @@ void main() {
         pathAnimation: const PathAnimationStyle(
           entranceMode: PathEntranceAnimationMode.reveal,
           dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+          entranceTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 80),
+            duration: Duration(milliseconds: 500),
+          ),
+          dataUpdateTiming: PathAnimationTiming(
+            delay: Duration(milliseconds: 120),
+          ),
         ),
       );
 
@@ -893,6 +900,49 @@ void main() {
         staticLine.requiredCapabilities,
         isNot(contains('series.path-motion.v1')),
       );
+    });
+
+    test('round-trips timing and advertises its dedicated capability', () {
+      const motion = PathAnimationStyle(
+        entranceMode: PathEntranceAnimationMode.reveal,
+        dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+        entranceTiming: PathAnimationTiming(
+          delay: Duration(milliseconds: 80),
+          duration: Duration(milliseconds: 500),
+        ),
+        dataUpdateTiming: PathAnimationTiming(
+          delay: Duration(milliseconds: 120),
+          duration: Duration(milliseconds: 300),
+        ),
+      );
+
+      for (final source in const <ChartSeries>[
+        LineChartSeries(id: 'line', points: [], pathAnimation: motion),
+        AreaChartSeries(id: 'area', points: [], pathAnimation: motion),
+      ]) {
+        final encoded =
+            (ChartSeriesDocumentCodec.encode(source)
+                    as ChartArtifactSuccess<ChartSeriesDocument>)
+                .value;
+        final decoded =
+            (ChartSeriesDocumentCodec.decode(encoded)
+                    as ChartArtifactSuccess<ChartSeries>)
+                .value;
+
+        expect(
+          encoded.requiredCapabilities,
+          containsAll({
+            'series.path-motion.v1',
+            'series.path-motion-timing.v1',
+          }),
+        );
+        final decodedMotion = switch (decoded) {
+          LineChartSeries() => decoded.pathAnimation,
+          AreaChartSeries() => decoded.pathAnimation,
+          _ => throw StateError('Expected a Line or Area series.'),
+        };
+        expect(decodedMotion, motion);
+      }
     });
 
     test('encodes and hydrates every point field through inline columns', () {

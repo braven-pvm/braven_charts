@@ -109,6 +109,71 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('entrance reveal uses independent per-series timing windows', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: BravenChartPlus(
+            showLegend: false,
+            theme: theme,
+            series: const [
+              LineChartSeries(
+                id: 'observed',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 1, y: 20),
+                ],
+                pathAnimation: PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                  entranceTiming: PathAnimationTiming(
+                    duration: Duration(milliseconds: 200),
+                  ),
+                ),
+              ),
+              LineChartSeries(
+                id: 'plan',
+                points: [
+                  ChartDataPoint(x: 0, y: 30),
+                  ChartDataPoint(x: 1, y: 40),
+                ],
+                pathAnimation: PathAnimationStyle(
+                  entranceMode: PathEntranceAnimationMode.reveal,
+                  entranceTiming: PathAnimationTiming(
+                    delay: Duration(milliseconds: 200),
+                    duration: Duration(milliseconds: 400),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    Map<String, double> progress() => {
+      for (final element in renderedElements(tester))
+        element.series.id: element.revealProgress,
+    };
+
+    expect(progress(), {'observed': 0, 'plan': 0});
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(progress()['observed'], closeTo(0.5, 0.01));
+    expect(progress()['plan'], 0);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(progress(), {'observed': 1, 'plan': 0});
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(progress()['observed'], 1);
+    expect(progress()['plan'], closeTo(0.5, 0.01));
+    await tester.pumpAndSettle();
+    expect(progress(), {'observed': 1, 'plan': 1});
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Area data updates use interpolated in-flight geometry', (
     tester,
   ) async {
@@ -142,6 +207,40 @@ void main() {
     await tester.pumpAndSettle();
     final finalSeries = renderedElement(tester).series as AreaChartSeries;
     expect(finalSeries.points.map((point) => point.y), [30, 50]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Line and Area updates complete on independent timing windows', (
+    tester,
+  ) async {
+    final key = GlobalKey<_StaggeredPathHarnessState>();
+    await tester.pumpWidget(_StaggeredPathHarness(key: key, theme: theme));
+    await tester.pumpAndSettle();
+
+    key.currentState!.useTargetValues();
+    await tester.pump();
+    await tester.pump();
+
+    Map<String, ChartSeries> series() => {
+      for (final element in renderedElements(tester))
+        element.series.id: element.series,
+    };
+
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(series()['observed']!.points.map((point) => point.y), [20, 30]);
+    expect(series()['plan']!.points.map((point) => point.y), [20, 30]);
+
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(series()['observed']!.points.map((point) => point.y), [30, 40]);
+    expect(series()['plan']!.points.map((point) => point.y), [20, 30]);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(series()['observed']!.points.map((point) => point.y), [30, 40]);
+    expect(series()['plan']!.points.map((point) => point.y), [30, 40]);
+
+    await tester.pumpAndSettle();
+    expect(series()['observed']!.points.map((point) => point.y), [30, 40]);
+    expect(series()['plan']!.points.map((point) => point.y), [40, 50]);
     expect(tester.takeException(), isNull);
   });
 
@@ -413,6 +512,10 @@ void main() {
           pathAnimation: PathAnimationStyle(
             entranceMode: PathEntranceAnimationMode.reveal,
             dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+            entranceTiming: PathAnimationTiming(
+              delay: Duration(seconds: 1),
+              duration: Duration(milliseconds: 500),
+            ),
           ),
         ),
       ),
@@ -421,6 +524,45 @@ void main() {
 
     expect(tester.hasRunningAnimations, isFalse);
     expect(renderedElement(tester).revealProgress, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('zero-duration theme completes an active staggered phase', (
+    tester,
+  ) async {
+    final key = GlobalKey<_StaggeredPathHarnessState>();
+    await tester.pumpWidget(_StaggeredPathHarness(key: key, theme: theme));
+    await tester.pumpAndSettle();
+
+    key.currentState!.useTargetValues();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.hasRunningAnimations, isTrue);
+
+    final zeroTheme = theme.copyWith(
+      animationTheme: theme.animationTheme.copyWith(
+        dataUpdateDuration: Duration.zero,
+      ),
+    );
+    await tester.pumpWidget(_StaggeredPathHarness(key: key, theme: zeroTheme));
+    await tester.pump();
+
+    final seriesById = {
+      for (final element in renderedElements(tester))
+        element.series.id: element.series,
+    };
+    expect(
+      (seriesById['observed']! as LineChartSeries).points.map(
+        (point) => point.y,
+      ),
+      [30, 40],
+    );
+    expect(
+      (seriesById['plan']! as AreaChartSeries).points.map((point) => point.y),
+      [40, 50],
+    );
+    expect(tester.hasRunningAnimations, isFalse);
     expect(tester.takeException(), isNull);
   });
 
@@ -571,6 +713,74 @@ class _AnimatedAreaHarness extends StatefulWidget {
 
   @override
   State<_AnimatedAreaHarness> createState() => _AnimatedAreaHarnessState();
+}
+
+class _StaggeredPathHarness extends StatefulWidget {
+  const _StaggeredPathHarness({super.key, required this.theme});
+
+  final ChartTheme theme;
+
+  @override
+  State<_StaggeredPathHarness> createState() => _StaggeredPathHarnessState();
+}
+
+class _StaggeredPathHarnessState extends State<_StaggeredPathHarness> {
+  var target = false;
+
+  void useTargetValues() => setState(() => target = true);
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    home: SizedBox(
+      width: 520,
+      height: 360,
+      child: BravenChartPlus(
+        showLegend: false,
+        theme: widget.theme,
+        xAxisConfig: const XAxisConfig(min: 0, max: 1),
+        yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 60),
+        series: [
+          LineChartSeries(
+            id: 'observed',
+            points: target
+                ? const [
+                    ChartDataPoint(x: 0, y: 30),
+                    ChartDataPoint(x: 1, y: 40),
+                  ]
+                : const [
+                    ChartDataPoint(x: 0, y: 10),
+                    ChartDataPoint(x: 1, y: 20),
+                  ],
+            pathAnimation: const PathAnimationStyle(
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+              dataUpdateTiming: PathAnimationTiming(
+                duration: Duration(milliseconds: 200),
+              ),
+            ),
+          ),
+          AreaChartSeries(
+            id: 'plan',
+            points: target
+                ? const [
+                    ChartDataPoint(x: 0, y: 40),
+                    ChartDataPoint(x: 1, y: 50),
+                  ]
+                : const [
+                    ChartDataPoint(x: 0, y: 20),
+                    ChartDataPoint(x: 1, y: 30),
+                  ],
+            pathAnimation: const PathAnimationStyle(
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+              dataUpdateTiming: PathAnimationTiming(
+                delay: Duration(milliseconds: 200),
+                duration: Duration(milliseconds: 400),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _AnimatedAreaHarnessState extends State<_AnimatedAreaHarness> {

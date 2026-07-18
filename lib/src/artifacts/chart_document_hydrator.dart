@@ -247,6 +247,7 @@ abstract final class ChartDocumentHydrator {
     'series.area',
     'series.bar',
     'series.path-motion.v1',
+    'series.path-motion-timing.v1',
     'series.pie',
     'series.pie.style.v2',
     'series.pie.corner-treatment.v1',
