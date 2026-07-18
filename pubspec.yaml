@@ -21,9 +21,17 @@ screenshots:
       stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
-      Dark power-duration model with six curves, positive and negative
-      baseline fills, range sections, glow, annotations, and a scrollbar.
-    path: doc/screenshots/hero_power_duration.png
+      Grouped Bar chart with gradients, targets, uncertainty intervals,
+      tracking tooltip, and durable point interaction.
+    path: doc/screenshots/bar_targets_interaction.png
+  - description: >-
+      Waterfall Bar chart with positive and negative deltas, connector lines,
+      and a resolved total.
+    path: doc/screenshots/bar_waterfall.png
+  - description: >-
+      Horizontal Bar chart comparing revenue, orders, conversion, and margin
+      across four independently scaled and colored axes.
+    path: doc/screenshots/bar_axes.png
   - description: >-
       Pie allocation chart with radial gradients, rounded separated slices,
       elevation, inside percentages, and a positioned legend.
@@ -32,13 +40,6 @@ screenshots:
       Dark partial-sweep Donut with center content, compact labels, gradients,
       rounded slices, and a release-readiness status treatment.
     path: doc/screenshots/donut_release_progress.png
-  - description: >-
-      Grouped Bar chart with gradients, targets, uncertainty intervals,
-      tracking tooltip, and durable point interaction.
-    path: doc/screenshots/bar_targets_interaction.png
-  - description: >-
-      Two scatter cohorts with distinct marker sets and crosshair tracking.
-    path: doc/screenshots/gallery_experiment_cohorts.png
   - description: >-
       Point, range, and threshold annotations applied to a focused analysis.
     path: doc/screenshots/gallery_annotated.png

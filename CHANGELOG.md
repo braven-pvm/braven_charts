@@ -29,10 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Replaced repeated pub.dev contact sheets and oversized caption overlays with
-  a three-column visual index of 30 individually linked chart captures. The
+  a three-column visual index of 42 individually linked chart captures. The
   index covers every curated Gallery composition alongside concise tracking,
   zoom/pan, Donut selection, and live-buffering animations generated from
   reusable showcase compositions.
+- Added a dedicated thirteen-composition Bar Gallery covering target and
+  uncertainty markers, capacity tracks, waterfall bridges, floating ranges,
+  horizontal rankings, normalized and absolute stacks, overlaid plan/actual
+  values, capsule rods, gradient groups, signed values, offset comparisons,
+  and four-axis normalization. Twelve new native chart captures link directly
+  to their corresponding Bar presets from the README and expand the pub.dev
+  screenshot catalogue.
 
 ## 0.5.0 - 2026-07-17
 
