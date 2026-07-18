@@ -13,6 +13,7 @@ void main() {
 
     await tester.pumpWidget(const ShowcaseApp());
     await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.takeException(), isNull);
 
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(AppBar), findsOneWidget);
@@ -42,6 +43,7 @@ void main() {
 
     await tester.pumpWidget(const ShowcaseApp());
     await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.takeException(), isNull);
 
     expect(find.byType(NavigationDrawer), findsNothing);
     expect(find.byType(NavigationBar), findsNothing);
@@ -71,6 +73,7 @@ void main() {
 
     await tester.tap(find.text('Line Charts'));
     await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
 
     expect(find.text('Choose a line charts example'), findsOneWidget);
     expect(find.text('Workhorse'), findsWidgets);
@@ -89,17 +92,20 @@ void main() {
 
     await tester.tap(find.text('Pie Charts'));
     await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
 
     expect(find.text('Choose a category story'), findsOneWidget);
     expect(find.byKey(const ValueKey('pie-showcase-chart')), findsOneWidget);
 
     await tester.tap(find.text('Donut Charts'));
     await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
 
     expect(find.text('Contribution ring'), findsOneWidget);
 
     await tester.tap(find.text('Performance'));
     await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
 
     expect(find.text('Performance Lab'), findsOneWidget);
     expect(find.text('Needs review'), findsNothing);

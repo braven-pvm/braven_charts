@@ -143,8 +143,10 @@ and accessibility contracts. See [Donut charts](donut_charts.md).
 
 - `BravenChartWorkbench`, `ChartWorkbenchController`, and
   `ChartWorkbenchHandle` — one mounted Chart/Data/Split product surface with
-  responsive fallback, snapshot freshness, independent operation state, and
-  host-defined artifact actions.
+  responsive fallback, content-aware/resizable Split panes, snapshot freshness,
+  independent operation state, and host-defined artifact actions.
+- `ChartDataTable.preferredWidthFor` — projection-aware native column width for
+  host-owned Split sizing.
 - `ChartDocumentRevision` and `ChartPointRef` — opaque snapshot freshness and
   canonical series/index identity for revision-safe table focus and durable
   point selection.

@@ -243,6 +243,7 @@ abstract final class ChartDocumentHydrator {
     'series.donut.style.v1',
     'series.donut.center-content.v1',
     'series.donut.variable-radius.v1',
+    'series.radial.grouping.v1',
     'annotation.point',
     'annotation.range',
     'annotation.text',

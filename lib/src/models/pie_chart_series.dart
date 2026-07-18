@@ -26,6 +26,7 @@ class PieChartSeries extends RadialCategorySeries {
     PieChartStyle pieStyle = const PieChartStyle(),
     super.dataLabels = const PieDataLabelConfig(),
     super.sliceRadiusConfig,
+    super.sliceGroupingConfig,
   }) : super(style: SeriesStyle.pie, radialStyle: pieStyle) {
     validateRadialConfiguration(chartName: 'Pie');
   }
@@ -43,6 +44,7 @@ class PieChartSeries extends RadialCategorySeries {
     Map<String, Color> sliceColors = const {},
     Map<String, num> radiusValues = const {},
     PieSliceRadiusConfig? sliceRadiusConfig,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
     Color? color,
     Map<String, dynamic>? metadata,
     String? unit,
@@ -93,6 +95,7 @@ class PieChartSeries extends RadialCategorySeries {
       sliceRadiusConfig: radiusValues.isEmpty
           ? null
           : (sliceRadiusConfig ?? const PieSliceRadiusConfig()),
+      sliceGroupingConfig: sliceGroupingConfig,
     );
   }
 
@@ -123,6 +126,8 @@ class PieChartSeries extends RadialCategorySeries {
     PieDataLabelConfig? dataLabels,
     PieSliceRadiusConfig? sliceRadiusConfig,
     bool clearSliceRadiusConfig = false,
+    RadialSliceGroupingConfig? sliceGroupingConfig,
+    bool clearSliceGroupingConfig = false,
   }) {
     if (style != null && style != SeriesStyle.pie) {
       throw ArgumentError.value(style, 'style', 'Pie series style is fixed');
@@ -157,6 +162,9 @@ class PieChartSeries extends RadialCategorySeries {
       sliceRadiusConfig: clearSliceRadiusConfig
           ? null
           : (sliceRadiusConfig ?? this.sliceRadiusConfig),
+      sliceGroupingConfig: clearSliceGroupingConfig
+          ? null
+          : (sliceGroupingConfig ?? this.sliceGroupingConfig),
     );
   }
 
@@ -167,11 +175,17 @@ class PieChartSeries extends RadialCategorySeries {
           super == other &&
           pieStyle == other.pieStyle &&
           dataLabels == other.dataLabels &&
-          sliceRadiusConfig == other.sliceRadiusConfig;
+          sliceRadiusConfig == other.sliceRadiusConfig &&
+          sliceGroupingConfig == other.sliceGroupingConfig;
 
   @override
-  int get hashCode =>
-      Object.hash(super.hashCode, pieStyle, dataLabels, sliceRadiusConfig);
+  int get hashCode => Object.hash(
+    super.hashCode,
+    pieStyle,
+    dataLabels,
+    sliceRadiusConfig,
+    sliceGroupingConfig,
+  );
 
   @override
   String toString() =>

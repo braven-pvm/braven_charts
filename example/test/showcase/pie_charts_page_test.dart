@@ -233,6 +233,139 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('replays each public Pie entrance mode without remounting', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final animationOption = find.byKey(const ValueKey('pie-animation-mode'));
+    await tester.scrollUntilVisible(
+      animationOption,
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    final dropdown = find.descendant(
+      of: animationOption,
+      matching: find.byType(DropdownButtonFormField<PieAnimationMode>),
+    );
+    tester
+        .widget<DropdownButtonFormField<PieAnimationMode>>(dropdown)
+        .onChanged!(PieAnimationMode.sweep);
+    await tester.pumpAndSettle();
+
+    final chartBeforeReplay = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    expect(
+      chartBeforeReplay.theme?.pieChartTheme.animationMode,
+      PieAnimationMode.sweep,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('replay-pie-entrance')));
+    await tester.pump();
+
+    expect(tester.hasRunningAnimations, isTrue);
+    expect(
+      tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('pie-showcase-chart')),
+      ),
+      same(chartBeforeReplay),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'groups small Pie slices while retaining and linking source table rows',
+    (tester) async {
+      tester.view.physicalSize = const Size(1800, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PieChartsPage())),
+      );
+      await tester.pumpAndSettle();
+
+      final groupingOption = find.byKey(
+        const ValueKey('pie-group-small-slices'),
+      );
+      await tester.scrollUntilVisible(
+        groupingOption,
+        400,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      tester
+          .widget<Switch>(
+            find.descendant(of: groupingOption, matching: find.byType(Switch)),
+          )
+          .onChanged!(true);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('pie-showcase-chart')),
+      );
+      final series = chart.series.single as PieChartSeries;
+      expect(series.points, hasLength(5));
+      expect(series.visibleSlices, hasLength(4));
+      expect(series.visibleSlices.last.point.label, 'Other');
+      expect(series.visibleSlices.last.sourcePointIndices, [3, 4]);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('pie-display-mode')),
+          matching: find.text('Split'),
+        ),
+      );
+      await _settleCapture(tester);
+
+      var table = tester.widget<ChartDataTable>(
+        find.byKey(const ValueKey('pie-showcase-table')),
+      );
+      expect(table.model?.pieRows, hasLength(5));
+      expect(
+        table.model?.pieRows.map((row) => row.category),
+        containsAll(<String>['Training', 'Other']),
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('pie-showcase-table')),
+          matching: find.text('Training'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      table = tester.widget<ChartDataTable>(
+        find.byKey(const ValueKey('pie-showcase-table')),
+      );
+      expect(table.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'pie-showcase-revenue', pointIndex: 3),
+        const ChartPointRef(seriesId: 'pie-showcase-revenue', pointIndex: 4),
+      });
+      expect(find.text('Selected: Other'), findsOneWidget);
+      expect(find.textContaining('all 2 original source rows'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('shows native pie data and restores a captured artifact', (
     tester,
   ) async {

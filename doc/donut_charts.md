@@ -93,6 +93,46 @@ Use `PieCornerTreatment.circularCenter` when rounded outer slices must retain a
 perfect circular opening. `outerOnly` keeps inner corners sharp, while
 `roundAll` preserves independent rounding on every corner.
 
+## Entrance motion
+
+`DonutChartStyle.animationMode` overrides the shared
+`ChartTheme.pieChartTheme.animationMode` for one series. The available
+`PieAnimationMode` values are:
+
+| Mode | Behavior |
+| --- | --- |
+| `none` | Render the final ring immediately |
+| `grow` | Grow the ring radially from its shared center; this remains the compatibility default |
+| `sweep` | Reveal categories in source order from `startAngleDegrees`, following `clockwise` and the configured sweep span |
+| `fade` | Fade the complete final geometry into view without changing its radii |
+
+```dart
+final controller = BravenChartController();
+
+BravenChartPlus(
+  bravenChartController: controller,
+  series: [
+    DonutChartSeries.fromMap(
+      id: 'delivery-mix',
+      values: const {'Build': 46, 'Discovery': 18, 'Design': 14},
+      donutStyle: const DonutChartStyle(
+        innerRadiusFactor: 0.62,
+        animationMode: PieAnimationMode.sweep,
+      ),
+    ),
+  ],
+);
+
+controller.replayRadialEntrance();
+```
+
+The data-update duration and curve come from `ChartTheme.animationTheme`.
+`MediaQuery.disableAnimationsOf`, `PieAnimationMode.none`, and a zero duration
+always render the final frame immediately, including controller-triggered
+replays. Labels wait until the entrance lifecycle completes so elastic curves
+cannot flash them on and off. Entrance modes do not change source data,
+selection identity, artifact content, or the native table.
+
 ## Center content
 
 Center content is text-first and portable. It is painted into the measured
@@ -171,11 +211,51 @@ tooltips, the native table, row copy, CSV export, AI input, and artifacts.
 `area` is the perceptual default; use `linear` only when literal radial length
 is the intended encoding.
 
+## Group small categories without collapsing data
+
+Use `RadialSliceGroupingConfig` when many small categories would make the ring
+and legend noisy:
+
+```dart
+DonutChartSeries.fromMap(
+  id: 'support-channels',
+  unit: 'tickets',
+  values: const {
+    'Portal': 64,
+    'Phone': 12,
+    'Partners': 9,
+    'Email': 6,
+    'Chat': 4,
+    'Events': 3,
+    'Other source': 2,
+  },
+  sliceGroupingConfig: const RadialSliceGroupingConfig(
+    minimumShare: 0.07,
+    minimumSourceCount: 2,
+    label: 'Other',
+  ),
+);
+```
+
+The renderer appends one aggregate slice after the retained categories. The
+series still stores all seven source points. Tables, copy/CSV, selection
+callbacks, artifacts, and hydration therefore keep their original rows and
+values. The point-tap callback receives the visible aggregate point; read the
+expanded originals from `BravenChartController.selectedPointRefs` or
+`InteractionConfig.onSelectionChanged`.
+Activating the aggregate selects all represented `ChartPointRef` values;
+activating any grouped table row selects the same visible aggregate. The
+controller exposes the original refs, not a synthetic index.
+
+Grouping and variable radii are mutually exclusive until the host chooses a
+defined aggregation rule for the radius metric.
+
 ## Selection and controllers
 
 Slice, legend, data-table, keyboard, and controller selection all resolve the
-same `ChartPointRef(seriesId, pointIndex)`. The selected center value and
-tooltip therefore update no matter where selection began.
+same source `ChartPointRef(seriesId, pointIndex)` values. Ungrouped slices map
+to one ref; a grouped slice maps to every represented ref. The selected center
+value and tooltip therefore update no matter where selection began.
 
 ```dart
 final controller = BravenChartController();
@@ -223,6 +303,11 @@ copy, CSV export, sorting, virtualization, and row activation. Pass
 `selectedPointRefs` and route `onRowActivated` through the controller to keep
 the row, slice, tooltip, and center synchronized.
 
+For a complete Chart/Data/Split surface, use `BravenChartWorkbench`. Its
+horizontal Split auto-fits the radial `Category | Value | Radius? | Share`
+projection, preserves the mounted chart while the divider moves, and supports
+pointer drag, arrow-key resizing, and Escape/double-click auto-fit reset.
+
 ## Capture, transport, and restore
 
 ```dart
@@ -247,7 +332,8 @@ if (captured case ChartArtifactSuccess<ChartArtifact>()) {
 
 Donut documents declare `series.donut` and `series.donut.style.v1`.
 Center content adds `series.donut.center-content.v1`; variable radius adds
-`series.donut.variable-radius.v1`. Unsupported readers fail with a capability
+`series.donut.variable-radius.v1`; source-preserving grouping adds
+`series.radial.grouping.v1`. Unsupported readers fail with a capability
 diagnostic instead of silently rendering a different chart.
 
 ## AI tool input
@@ -301,7 +387,8 @@ the shared `LegendStyle` and `InteractionTheme` contracts.
   crosshairs, scrollbars, pan, or zoom.
 - The center accepts portable text configuration, not an arbitrary Widget or
   builder.
-- Multiple concentric rings, grouping into “Other”, drill-down, center actions,
-  3D effects, and image shaders are not V1 features.
+- Multiple concentric rings, drill-down, center actions,
+  data-to-data morphing, per-slice staggering, spring choreography, 3D effects,
+  and image shaders are not V1 features.
 - Prefer bars when precise comparison matters more than part-to-whole meaning
   or when categories are too dense for readable slices.

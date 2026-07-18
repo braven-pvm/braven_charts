@@ -10,6 +10,7 @@ import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/radial_category_series.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
@@ -115,6 +116,9 @@ abstract final class ChartSeriesDocumentCodec {
               'series.donut.center-content.v1',
             if (series is DonutChartSeries && series.hasVariableSliceRadius)
               'series.donut.variable-radius.v1',
+            if (series is RadialCategorySeries &&
+                series.sliceGroupingConfig != null)
+              'series.radial.grouping.v1',
           },
         ),
       );
@@ -378,6 +382,12 @@ abstract final class ChartSeriesDocumentCodec {
           sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
               ? null
               : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
+          sliceGroupingConfig:
+              _optionalMap(style, 'sliceGroupingConfig') == null
+              ? null
+              : _decodeRadialSliceGroupingConfig(
+                  _map(style, 'sliceGroupingConfig'),
+                ),
         ),
         'donut' => DonutChartSeries(
           id: document.id,
@@ -394,6 +404,12 @@ abstract final class ChartSeriesDocumentCodec {
           sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
               ? null
               : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
+          sliceGroupingConfig:
+              _optionalMap(style, 'sliceGroupingConfig') == null
+              ? null
+              : _decodeRadialSliceGroupingConfig(
+                  _map(style, 'sliceGroupingConfig'),
+                ),
         ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
@@ -612,6 +628,11 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
       if (series.sliceRadiusConfig case final radiusConfig?) {
         result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
       }
+      if (series.sliceGroupingConfig case final groupingConfig?) {
+        result['sliceGroupingConfig'] = _encodeRadialSliceGroupingConfig(
+          groupingConfig,
+        );
+      }
     case DonutChartSeries():
       result
         ..['donutStyle'] = _encodeDonutStyle(series.donutStyle)
@@ -619,6 +640,11 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
         ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
       if (series.sliceRadiusConfig case final radiusConfig?) {
         result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
+      }
+      if (series.sliceGroupingConfig case final groupingConfig?) {
+        result['sliceGroupingConfig'] = _encodeRadialSliceGroupingConfig(
+          groupingConfig,
+        );
       }
     case ChartSeries():
       break;
@@ -1122,6 +1148,24 @@ PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
               ),
             ),
     );
+
+Map<String, Object?> _encodeRadialSliceGroupingConfig(
+  RadialSliceGroupingConfig config,
+) => {
+  'minimumShare': _number(config.minimumShare),
+  'minimumSourceCount': config.minimumSourceCount,
+  'label': config.label,
+  if (config.color != null) 'color': config.color!.toARGB32(),
+};
+
+RadialSliceGroupingConfig _decodeRadialSliceGroupingConfig(
+  Map<String, Object?> value,
+) => RadialSliceGroupingConfig(
+  minimumShare: _double(value, 'minimumShare'),
+  minimumSourceCount: _int(value, 'minimumSourceCount'),
+  label: _string(value, 'label'),
+  color: _optionalColor(value['color'], r'$.style.sliceGroupingConfig.color'),
+);
 
 Map<String, Object?> _encodeLineStyle({
   required LineInterpolation interpolation,

@@ -168,6 +168,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('legend selection keeps every item and wrap run stable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const _LegendSelectionHarness());
+    await tester.pumpAndSettle();
+
+    final legendBefore = tester.getRect(find.byType(PieChartLegend));
+    final itemKeys = [
+      for (var index = 0; index < 4; index++)
+        ValueKey<String>('pie-legend-item-$index'),
+    ];
+    final itemsBefore = [
+      for (final key in itemKeys) tester.getRect(find.byKey(key)),
+    ];
+
+    await tester.tap(find.byKey(itemKeys[2]));
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(find.byType(PieChartLegend)), legendBefore);
+    for (final (index, key) in itemKeys.indexed) {
+      expect(
+        tester.getRect(find.byKey(key)),
+        itemsBefore[index],
+        reason: 'legend item $index changed its layout footprint',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Pie grow animation runs and respects reduced motion', (
     tester,
   ) async {
@@ -493,4 +522,45 @@ Widget _host(PieChartSeries series) {
       ),
     ),
   );
+}
+
+class _LegendSelectionHarness extends StatefulWidget {
+  const _LegendSelectionHarness();
+
+  @override
+  State<_LegendSelectionHarness> createState() =>
+      _LegendSelectionHarnessState();
+}
+
+class _LegendSelectionHarnessState extends State<_LegendSelectionHarness> {
+  Set<int> selected = const {};
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 520,
+            child: PieChartLegend(
+              series: PieChartSeries.fromMap(
+                id: 'stable-legend',
+                values: const {
+                  'Portal': 64,
+                  'Phone': 12,
+                  'Partners': 9,
+                  'Other': 15,
+                },
+              ),
+              chartTheme: ChartTheme.light,
+              selectedPointIndices: selected,
+              disableAnimations: true,
+              onSliceTap: (index) => setState(() => selected = {index}),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

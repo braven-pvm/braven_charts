@@ -4,13 +4,23 @@ import 'package:flutter/foundation.dart';
 
 import '../theming/styles/label_style.dart';
 
-/// Entrance animation used when a pie first mounts or receives new data.
+/// Entrance animation used when a Pie or Donut first mounts or receives new
+/// data.
 enum PieAnimationMode {
   /// Render the final geometry immediately.
   none,
 
   /// Grow every slice radially from the shared center.
   grow,
+
+  /// Reveal slices progressively through the configured angular sweep.
+  ///
+  /// The reveal starts at [RadialChartStyle.startAngleDegrees] and follows
+  /// [RadialChartStyle.clockwise].
+  sweep,
+
+  /// Fade the complete radial geometry into view.
+  fade,
 }
 
 /// Policy used when a Pie slice does not provide an explicit border color.
@@ -289,7 +299,7 @@ class PieChartTheme {
   /// Optional theme-level appearance for a Donut center value.
   final LabelStyle? centerValueStyle;
 
-  /// Default Pie entrance animation.
+  /// Default Pie and Donut entrance animation.
   final PieAnimationMode animationMode;
 
   /// Returns a copy with selected fields replaced.

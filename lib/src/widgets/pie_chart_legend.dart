@@ -40,22 +40,24 @@ class PieChartLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = chartTheme.legendStyle;
-    final visibleIndices = series.visiblePointIndices;
+    final visibleSlices = series.visibleSlices;
     final total = series.total;
-    if (visibleIndices.isEmpty || total <= 0) return const SizedBox.shrink();
+    if (visibleSlices.isEmpty || total <= 0) return const SizedBox.shrink();
 
     final items = [
-      for (final (visibleIndex, pointIndex) in visibleIndices.indexed)
+      for (final (visibleIndex, slice) in visibleSlices.indexed)
         _PieLegendItem(
-          key: ValueKey<String>('pie-legend-item-$pointIndex'),
-          category: series.points[pointIndex].label!.trim(),
-          value: series.points[pointIndex].y,
+          key: ValueKey<String>(
+            'pie-legend-item-${slice.sourcePointIndices.join('-')}',
+          ),
+          category: slice.point.label!.trim(),
+          value: slice.point.y,
           unit: series.unit,
-          share: series.points[pointIndex].y / total,
+          share: slice.point.y / total,
           color: PieSliceColorResolver.resolve(
             series: series,
             theme: chartTheme,
-            point: series.points[pointIndex],
+            point: slice.point,
             visibleIndex: visibleIndex,
           ),
           selectionColor: chartTheme.focusBorderColor,
@@ -64,11 +66,13 @@ class PieChartLegend extends StatelessWidget {
           markerSize: style.markerSize,
           markerLineWidth: style.markerLineWidth,
           markerLabelSpacing: style.markerLabelSpacing,
-          selected: selectedPointIndices.contains(pointIndex),
+          selected: slice.sourcePointIndices.every(
+            selectedPointIndices.contains,
+          ),
           duration: disableAnimations
               ? Duration.zero
               : chartTheme.animationTheme.interactionDuration,
-          onTap: () => onSliceTap(pointIndex),
+          onTap: () => onSliceTap(slice.pointIndex),
         ),
     ];
     final itemLayout = style.orientation == LegendOrientation.vertical
@@ -185,9 +189,11 @@ class _PieLegendItem extends StatelessWidget {
                 _PieLegendMarker(
                   color: color,
                   borderColor: textStyle.color ?? Colors.black87,
+                  selectionColor: selectionColor,
                   shape: markerShape,
                   size: markerSize,
                   lineWidth: markerLineWidth,
+                  selected: selected,
                 ),
                 SizedBox(width: markerLabelSpacing),
                 Flexible(
@@ -212,10 +218,6 @@ class _PieLegendItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (selected) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.check_circle, size: 18, color: selectionColor),
-                ],
               ],
             ),
           ),
@@ -229,62 +231,104 @@ class _PieLegendMarker extends StatelessWidget {
   const _PieLegendMarker({
     required this.color,
     required this.borderColor,
+    required this.selectionColor,
     required this.shape,
     required this.size,
     required this.lineWidth,
+    required this.selected,
   });
 
   final Color color;
   final Color borderColor;
+  final Color selectionColor;
   final LegendMarkerShape shape;
   final double size;
   final double lineWidth;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final dimension = math.max(8, size).toDouble();
+    final dimension = math.max(14, size).toDouble();
     return SizedBox.square(
       dimension: dimension,
-      child: switch (shape) {
-        LegendMarkerShape.circle => DecoratedBox(
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: borderColor, width: 1),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: switch (shape) {
+              LegendMarkerShape.circle => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1),
+                ),
+              ),
+              LegendMarkerShape.square => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color,
+                  border: Border.all(color: borderColor, width: 1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              LegendMarkerShape.line => Center(
+                child: Container(
+                  width: dimension,
+                  height: math.max(2, lineWidth).toDouble(),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(lineWidth),
+                  ),
+                ),
+              ),
+              LegendMarkerShape.diamond => Transform.rotate(
+                angle: math.pi / 4,
+                child: FractionallySizedBox(
+                  widthFactor: 0.72,
+                  heightFactor: 0.72,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color,
+                      border: Border.all(color: borderColor, width: 1),
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ),
+              ),
+            },
           ),
-        ),
-        LegendMarkerShape.square => DecoratedBox(
-          decoration: BoxDecoration(
-            color: color,
-            border: Border.all(color: borderColor, width: 1),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        LegendMarkerShape.line => Center(
-          child: Container(
-            width: dimension,
-            height: math.max(2, lineWidth).toDouble(),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(lineWidth),
-            ),
-          ),
-        ),
-        LegendMarkerShape.diamond => Transform.rotate(
-          angle: math.pi / 4,
-          child: FractionallySizedBox(
-            widthFactor: 0.72,
-            heightFactor: 0.72,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: color,
-                border: Border.all(color: borderColor, width: 1),
-                borderRadius: BorderRadius.circular(1),
+          if (selected)
+            Positioned(
+              right: -3,
+              bottom: -3,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: selectionColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color:
+                        ThemeData.estimateBrightnessForColor(selectionColor) ==
+                            Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                    width: 1,
+                  ),
+                ),
+                child: SizedBox.square(
+                  dimension: 11,
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 9,
+                    color:
+                        ThemeData.estimateBrightnessForColor(selectionColor) ==
+                            Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      },
+        ],
+      ),
     );
   }
 }
