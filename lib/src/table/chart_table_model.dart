@@ -6,11 +6,59 @@ import '../artifacts/chart_document.dart';
 import '../artifacts/chart_runtime_bindings.dart';
 import '../artifacts/chart_view_state.dart';
 import '../artifacts/json_value.dart';
+import '../models/data_point_label_config.dart';
 import 'chart_table_options.dart';
 
 /// Deprecated table-specific name for the canonical chart point identity.
 @Deprecated('Use ChartPointRef instead.')
 typedef ChartTablePointReference = ChartPointRef;
+
+/// Additional numeric fields that belong to a Cartesian point without
+/// becoming independent chart series.
+enum ChartTableAuxiliaryField {
+  rangeStart,
+  target,
+  errorLower,
+  errorUpper,
+  stackStart,
+  stackEnd,
+  waterfallCumulative,
+  normalizedShare,
+}
+
+extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
+  /// Short human-readable heading used by native table and export surfaces.
+  String get label => switch (this) {
+    ChartTableAuxiliaryField.rangeStart => 'Start',
+    ChartTableAuxiliaryField.target => 'Target',
+    ChartTableAuxiliaryField.errorLower => 'Lower',
+    ChartTableAuxiliaryField.errorUpper => 'Upper',
+    ChartTableAuxiliaryField.stackStart => 'Stack start',
+    ChartTableAuxiliaryField.stackEnd => 'Stack end',
+    ChartTableAuxiliaryField.waterfallCumulative => 'Running total',
+    ChartTableAuxiliaryField.normalizedShare => 'Share',
+  };
+
+  /// Unit that replaces the source series unit for this derived measure.
+  String? get unitOverride => switch (this) {
+    ChartTableAuxiliaryField.normalizedShare => '%',
+    _ => null,
+  };
+}
+
+/// One display-ready auxiliary value attached to a canonical chart point.
+@immutable
+class ChartTableAuxiliaryValue {
+  const ChartTableAuxiliaryValue({
+    required this.raw,
+    required this.display,
+    required this.isValid,
+  });
+
+  final double raw;
+  final String display;
+  final bool isValid;
+}
 
 @immutable
 class ChartTableSeriesColumn {
@@ -20,6 +68,7 @@ class ChartTableSeriesColumn {
     required this.hidden,
     this.unit,
     this.colorValue,
+    this.auxiliaryFields = const {},
   });
 
   final String seriesId;
@@ -33,6 +82,9 @@ class ChartTableSeriesColumn {
   /// theme palette. Keeping the value as an integer preserves the table model's
   /// portable boundary while allowing widgets to render the same visual cue.
   final int? colorValue;
+
+  /// Point-aligned passive measures exposed next to this series' main value.
+  final Set<ChartTableAuxiliaryField> auxiliaryFields;
 }
 
 /// Canonical, lossless long-form row for one logical chart point.
@@ -52,6 +104,7 @@ class ChartTableLongRow {
     this.timestamp,
     this.label,
     this.metadata,
+    this.auxiliaryValues = const {},
   });
 
   final String rowId;
@@ -67,6 +120,7 @@ class ChartTableLongRow {
   final bool isValid;
   final bool hiddenSeries;
   final JsonObjectValue? metadata;
+  final Map<ChartTableAuxiliaryField, ChartTableAuxiliaryValue> auxiliaryValues;
 }
 
 @immutable
@@ -81,6 +135,7 @@ class ChartTableWideCell {
     this.label,
     this.metadata,
     this.isDerived = false,
+    this.auxiliaryValues = const {},
   });
 
   final ChartTablePointReference reference;
@@ -92,6 +147,7 @@ class ChartTableWideCell {
   final bool isValid;
   final JsonObjectValue? metadata;
   final bool isDerived;
+  final Map<ChartTableAuxiliaryField, ChartTableAuxiliaryValue> auxiliaryValues;
 }
 
 @immutable
@@ -226,6 +282,7 @@ class ChartTableModel {
     );
     final axesById = {for (final axis in document.axes) axis.id: axis};
     final themeSeriesColors = _themeSeriesColors(document);
+    final stackComposition = _stackCompositionValues(document, hiddenIds);
     final seriesColumns = <ChartTableSeriesColumn>[];
     final longRows = <ChartTableLongRow>[];
     final pieRows = <ChartTablePieRow>[];
@@ -267,6 +324,7 @@ class ChartTableModel {
             document.series.indexOf(series),
             themeSeriesColors,
           ),
+          auxiliaryFields: _auxiliaryFieldsForSeries(series),
         ),
       );
       final payload = series.data;
@@ -313,6 +371,12 @@ class ChartTableModel {
             isValid: x.isFinite && y.isFinite,
             hiddenSeries: hidden,
             metadata: options.includeMetadata ? point.metadata : null,
+            auxiliaryValues: _auxiliaryValuesForPoint(
+              series,
+              pointIndex,
+              formatter: yFormatter,
+              stackValue: stackComposition[(series.id, pointIndex)],
+            ),
           ),
         );
       }
@@ -351,6 +415,11 @@ class ChartTableModel {
   final List<ChartTableWideRow> wideRows;
   final List<ChartTablePieRow> pieRows;
   final List<ChartArtifactWarning> warnings;
+
+  /// Auxiliary fields present in at least one projected Cartesian series.
+  Set<ChartTableAuxiliaryField> get auxiliaryFields => Set.unmodifiable({
+    for (final column in series) ...column.auxiliaryFields,
+  });
 
   int get rowCount => switch (projectionKind) {
     ChartTableProjectionKind.cartesianLong => longRows.length,
@@ -604,6 +673,224 @@ String _xColumnLabel(ChartAxisDocument axis) {
   return unit == null || unit.isEmpty ? 'X value' : unit;
 }
 
+Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
+  ChartSeriesDocument series,
+) {
+  if (series.type != 'bar') return const {};
+  final style = series.style?.values;
+  if (style == null) return const {};
+  return Set.unmodifiable({
+    if (style['barRangeStartValues'] is JsonArrayValue)
+      ChartTableAuxiliaryField.rangeStart,
+    if (style['barTargetValues'] is JsonArrayValue)
+      ChartTableAuxiliaryField.target,
+    if (style['barErrorLowerValues'] is JsonArrayValue)
+      ChartTableAuxiliaryField.errorLower,
+    if (style['barErrorUpperValues'] is JsonArrayValue)
+      ChartTableAuxiliaryField.errorUpper,
+    if (style['barLayoutMode'] case final JsonStringValue mode
+        when mode.value == 'stacked') ...{
+      ChartTableAuxiliaryField.stackStart,
+      ChartTableAuxiliaryField.stackEnd,
+    },
+    if (style['barLayoutMode'] case final JsonStringValue mode
+        when mode.value == 'waterfall')
+      ChartTableAuxiliaryField.waterfallCumulative,
+    if (style['barLayoutMode'] case final JsonStringValue mode
+        when mode.value == 'normalizedStacked')
+      ChartTableAuxiliaryField.normalizedShare,
+  });
+}
+
+Map<ChartTableAuxiliaryField, ChartTableAuxiliaryValue>
+_auxiliaryValuesForPoint(
+  ChartSeriesDocument series,
+  int pointIndex, {
+  required String Function(double)? formatter,
+  _BarStackTableValue? stackValue,
+}) {
+  if (series.type != 'bar') return const {};
+  final style = series.style?.values;
+  if (style == null) return const {};
+  final values = <ChartTableAuxiliaryField, ChartTableAuxiliaryValue>{};
+
+  void add(
+    ChartTableAuxiliaryField field,
+    String styleKey, {
+    bool useBaselineForNull = false,
+  }) {
+    final array = style[styleKey];
+    if (array is! JsonArrayValue || pointIndex >= array.values.length) return;
+    var raw = _chartNumber(array.values[pointIndex]);
+    if (raw == null && useBaselineForNull) {
+      raw = _chartNumber(style['baselineValue']);
+    }
+    if (raw == null) return;
+    values[field] = ChartTableAuxiliaryValue(
+      raw: raw,
+      display: _displayNumber(raw, formatter),
+      isValid: raw.isFinite,
+    );
+  }
+
+  add(
+    ChartTableAuxiliaryField.rangeStart,
+    'barRangeStartValues',
+    useBaselineForNull: true,
+  );
+  add(ChartTableAuxiliaryField.target, 'barTargetValues');
+  add(ChartTableAuxiliaryField.errorLower, 'barErrorLowerValues');
+  add(ChartTableAuxiliaryField.errorUpper, 'barErrorUpperValues');
+  final mode = style['barLayoutMode'];
+  if (mode is JsonStringValue &&
+      mode.value == 'stacked' &&
+      stackValue != null) {
+    values[ChartTableAuxiliaryField.stackStart] = ChartTableAuxiliaryValue(
+      raw: stackValue.start,
+      display: _displayNumber(stackValue.start, formatter),
+      isValid: stackValue.start.isFinite,
+    );
+    values[ChartTableAuxiliaryField.stackEnd] = ChartTableAuxiliaryValue(
+      raw: stackValue.end,
+      display: _displayNumber(stackValue.end, formatter),
+      isValid: stackValue.end.isFinite,
+    );
+  }
+  if (_waterfallCumulativeValue(series, pointIndex, style) case final raw?) {
+    values[ChartTableAuxiliaryField.waterfallCumulative] =
+        ChartTableAuxiliaryValue(
+          raw: raw,
+          display: _displayNumber(raw, formatter),
+          isValid: raw.isFinite,
+        );
+  }
+  if (stackValue?.share case final raw?) {
+    values[ChartTableAuxiliaryField.normalizedShare] = ChartTableAuxiliaryValue(
+      raw: raw,
+      display: DataPointLabelConfig.autoFormatLabelValue(raw, null),
+      isValid: raw.isFinite,
+    );
+  }
+  return Map.unmodifiable(values);
+}
+
+typedef _BarStackTableValue = ({double start, double end, double? share});
+
+Map<(String, int), _BarStackTableValue> _stackCompositionValues(
+  ChartDocument document,
+  Set<String> hiddenSeriesIds,
+) {
+  final stacks =
+      <
+        (String, String, double, String),
+        List<(ChartSeriesDocument, InlineChartDataPayload)>
+      >{};
+  for (final series in document.series) {
+    if (series.type != 'bar' || hiddenSeriesIds.contains(series.id)) continue;
+    final style = series.style?.values;
+    final payload = series.data;
+    if (style == null || payload is! InlineChartDataPayload) continue;
+    final mode = style['barLayoutMode'];
+    if (mode is! JsonStringValue ||
+        (mode.value != 'stacked' && mode.value != 'normalizedStacked')) {
+      continue;
+    }
+    final inlineAxisId = series.inlineAxis?.values['id']?.toJson();
+    final axisId =
+        series.axisId ??
+        (inlineAxisId is String ? inlineAxisId : '__default__');
+    final baseline = _chartNumber(style['baselineValue']) ?? 0;
+    final groupValue = style['barGroupId']?.toJson();
+    final groupId = groupValue is String ? groupValue : '__default__';
+    stacks.putIfAbsent((mode.value, axisId, baseline, groupId), () => []).add((
+      series,
+      payload,
+    ));
+  }
+
+  final values = <(String, int), _BarStackTableValue>{};
+  for (final entry in stacks.entries) {
+    final normalized = entry.key.$1 == 'normalizedStacked';
+    final baseline = entry.key.$3;
+    final positiveTotals = <double, double>{};
+    final negativeTotals = <double, double>{};
+    if (normalized) {
+      for (final item in entry.value) {
+        for (final point in item.$2.points) {
+          final x = point.x.asDouble;
+          final delta = point.y.asDouble - baseline;
+          final totals = delta >= 0 ? positiveTotals : negativeTotals;
+          totals[x] = (totals[x] ?? 0) + delta.abs();
+        }
+      }
+    }
+    final positiveOffsets = <double, double>{};
+    final negativeOffsets = <double, double>{};
+    for (final item in entry.value) {
+      for (final (pointIndex, point) in item.$2.points.indexed) {
+        final x = point.x.asDouble;
+        final rawDelta = point.y.asDouble - baseline;
+        double? share;
+        var displayDelta = rawDelta;
+        if (normalized) {
+          final total = rawDelta >= 0
+              ? positiveTotals[x] ?? 0
+              : negativeTotals[x] ?? 0;
+          share = total == 0 ? 0 : rawDelta / total * 100;
+          displayDelta = share;
+        }
+        final offsets = displayDelta >= 0 ? positiveOffsets : negativeOffsets;
+        final start = baseline + (offsets[x] ?? 0);
+        final end = start + displayDelta;
+        offsets[x] = end - baseline;
+        values[(item.$1.id, pointIndex)] = (
+          start: start,
+          end: end,
+          share: share,
+        );
+      }
+    }
+  }
+  return values;
+}
+
+double? _waterfallCumulativeValue(
+  ChartSeriesDocument series,
+  int pointIndex,
+  Map<String, JsonValue> style,
+) {
+  final mode = style['barLayoutMode'];
+  if (mode is! JsonStringValue || mode.value != 'waterfall') return null;
+  final payload = series.data;
+  if (payload is! InlineChartDataPayload ||
+      pointIndex >= payload.points.length) {
+    return null;
+  }
+  final totalIndices = <int>{};
+  if (style['barWaterfallTotalIndices'] case final JsonArrayValue indices) {
+    for (final value in indices.values) {
+      final raw = value.toJson();
+      if (raw is int) totalIndices.add(raw);
+    }
+  }
+  var running = _chartNumber(style['baselineValue']) ?? 0;
+  for (var index = 0; index <= pointIndex; index++) {
+    if (!totalIndices.contains(index)) {
+      running += payload.points[index].y.asDouble;
+    }
+  }
+  return running;
+}
+
+double? _chartNumber(JsonValue? value) {
+  if (value == null || value is JsonNullValue) return null;
+  try {
+    return ChartNumberDocument.fromJson(value.toJson()).asDouble;
+  } on FormatException {
+    return null;
+  }
+}
+
 List<ChartTableWideRow> _pivotExactX(
   List<ChartTableLongRow> longRows,
   List<ChartTableSeriesColumn> columns,
@@ -641,6 +928,7 @@ List<ChartTableWideRow> _pivotExactX(
       label: row.label,
       isValid: row.isValid,
       metadata: row.metadata,
+      auxiliaryValues: row.auxiliaryValues,
     );
   }
   final knownIds = columns.map((column) => column.seriesId).toSet();

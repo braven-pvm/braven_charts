@@ -275,11 +275,28 @@ row collection or null independently for standalone table experiences.
 
 The workbench enables safe row linking by default:
 
+- pointer hover temporarily applies the row's chart focus ring;
 - keyboard focus applies a transient chart focus ring;
-- focus loss clears it;
+- pointer exit restores keyboard-driven focus when present;
+- focus loss clears the ring when no row remains hovered;
 - click or Enter replaces the durable point selection;
+- Ctrl/Command-click or Ctrl/Command-Enter additively selects an unselected
+  row and removes every point represented by an already selected row;
+- Shift-click or Shift-Enter replaces selection with the contiguous row range
+  from the last unmodified activation, following the current table sort;
+- Ctrl/Command+Shift activation additively selects that sorted row range;
+- Ctrl/Command+A selects every point in the current sorted table projection,
+  while Escape clears durable selection and keeps row focus in place;
+- Home and End move focus to the first or last displayed row, while Page Up
+  and Page Down move by the current virtualized viewport height;
 - selected chart points are mirrored into the table with a themed row fill,
   persistent leading indicator, and selected semantics; and
+- the table summary reports the selected point count and exposes a compact
+  Clear selection action that keeps subsequent row references current;
+- chart-controller point focus is mirrored into the table with the focused-row
+  treatment and reveals the matching row without taking keyboard focus;
+- a newly selected chart point is scrolled into the table viewport once,
+  without taking keyboard focus or overriding later manual scrolling; and
 - a wide row focuses or selects every point it represents.
 
 Because durable selection is captured document state, it advances the mounted
@@ -299,6 +316,26 @@ selected when its point is present. A shared-X row is selected only when every
 populated series point represented by that row is present. Override the fill
 with `ChartDataTableTheme.selectedRowColor`; the leading indicator and
 accessibility semantics remain package-owned.
+
+Supply `ChartDataTable.onClearSelection` to expose the summary toolbar's Clear
+selection action for standalone tables. The table reports point count rather
+than row count because a shared-X row can represent several selected points.
+
+Pass `ChartDataTable.focusedPointRefs` to mirror transient chart focus in a
+standalone table. A long row matches its point; a shared-X row matches when any
+represented point is focused. This uses the focused-row visual treatment but
+does not claim keyboard or accessibility focus for the table row.
+
+`ChartDataTable.autoRevealFocusedPoints` defaults to true and scrolls only when
+the focused point or projected model changes. Set it to false when the host
+owns vertical navigation or maps high-frequency chart hover into controller
+focus. Package-owned table hover remains stable because its row is already in
+the visible viewport.
+
+`ChartDataTable.autoRevealSelectedPoints` defaults to true. Set it to false
+when the host owns vertical table navigation. In a wide table, a partial
+series selection still reveals its shared-X row, but the row receives complete
+selection styling only when all populated points in that row are selected.
 
 Hosts can drive the same behavior directly, but must supply the revision that
 issued the references:
@@ -335,8 +372,14 @@ If chart data changes, refresh the table and use references from the new
 snapshot instead of retrying an old reference against a new revision.
 
 Set `linkTableRowsToChart: false` to disable the workbench defaults. Supply
-`onTableRowFocused`, `onTableRowFocusCleared`, or `onTableRowActivated` to
-replace individual defaults with product-specific behavior. Use
+`onTableRowFocused`, `onTableRowFocusCleared`, `onTableRowHoverChanged`, or
+`onTableRowActivation` to replace individual defaults with product-specific
+behavior. `onTableRowActivation` receives modifier-aware
+`ChartTableRowActivationDetails`; Shift ranges arrive as the complete ordered
+point collection and take precedence over the legacy
+`onTableRowActivated` callback when both are supplied. Override
+`onTableSelectAllPoints` or `onTableSelectionCleared` when the host owns those
+keyboard selection commands. Use
 `onPointLinkError` to observe the same structured error shown by the workbench.
 
 ## Configure the data table

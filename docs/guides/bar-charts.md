@@ -273,6 +273,10 @@ value, while ordinary steps retain their source delta. Connector lines render
 behind columns and can be hidden or restyled. Waterfall points must have
 strictly increasing X values because list order defines the bridge.
 
+In Chart/Data/Split presentations, the primary value column preserves each
+source delta or total placeholder and an adjacent `Running total` column shows
+the cumulative value used by the rendered bridge.
+
 Use `groupId` to create several named stacks side-by-side:
 
 ```dart
@@ -309,10 +313,16 @@ continuous. With `BarCornerRadiusPolicy.all`, every segment receives four
 rounded corners. Series with different axes or baselines are intentionally
 placed in separate stacks.
 
+Chart/Data/Split tables retain each regular stack contribution as the primary
+value and add `Stack start` and `Stack end` columns for the cumulative segment
+bounds rendered by the chart.
+
 For normalized stacks, use
 `BarLabelStyle(valueMode: BarLabelValueMode.percentage)` to show the resolved
 segment share. Tooltips, crosshairs, data tables, and portable artifacts retain
-the original source value.
+the original source value. Chart/Data/Split tables add an adjacent `Share (%)`
+column so the normalized value rendered by the chart remains visible without
+replacing that source value.
 
 ## Width and spacing
 
@@ -479,6 +489,46 @@ All declarative bar options round-trip through `ChartSeriesDocumentCodec`.
 Runtime label formatter callbacks require a runtime binding and intentionally
 fail closed during portable artifact extraction.
 
+### Chart, Data, and Split views
+
+`BravenChartWorkbench` keeps the mounted bar chart linked to its native data
+table. The table preserves one canonical row reference per chart point while
+exposing passive bar measures as adjacent sortable columns:
+
+- floating bars add `Start`;
+- benchmark markers add `Target`;
+- uncertainty intervals add `Lower bound` and `Upper bound`.
+- regular stacks add `Stack start` and `Stack end`.
+- normalized stacks add `Share (%)`.
+- waterfalls add `Running total`.
+
+These fields flow through row copy and CSV export without creating synthetic
+chart series, so legends, selection, focus, and series counts continue to
+describe only the rendered data series. Null target or interval entries appear
+as `No value`; a null floating-range start resolves to the series baseline,
+matching the renderer.
+
+The linked views are bidirectional. Table hover and keyboard focus apply the
+chart's transient point-focus treatment, while chart-controller focus reveals
+and highlights the matching virtualized row without claiming table keyboard
+focus. Durable chart selection separately reveals the row and uses selected
+styling and semantics. Either automatic reveal policy can be disabled on a
+standalone `ChartDataTable` when its host owns scrolling.
+
+Data and Split rows use the same multi-selection convention as bars:
+Ctrl/Command-click or Ctrl/Command-Enter adds a row's points to the durable
+selection, and repeating the modified activation removes the complete row.
+For shared-X rows this toggles every populated series point together.
+Shift-click or Shift-Enter selects the contiguous range from the last ordinary
+activation in the current sorted order. Add Ctrl/Command to preserve the
+existing selection while applying that complete range.
+The table summary reports the selected point count and keeps a compact Clear
+selection action beside Copy and Export, including at narrow Split widths.
+With a row focused, Ctrl/Command+A selects every point in the current sorted
+table projection and Escape clears selection without moving keyboard focus.
+Home and End jump to the first or last displayed row; Page Up and Page Down
+move focus by one visible table page while preserving chart-point linking.
+
 ## Current boundary
 
 Horizontal orientation is a chart-level transform, so it cannot currently be
@@ -498,3 +548,5 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=targets`, `?page=bar-lab&preset=uncertainty`,
 `?page=bar-lab&preset=motion`, `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.
+Append `&view=data` or `&view=split` to open the corresponding workbench
+presentation directly.

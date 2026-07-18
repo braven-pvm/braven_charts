@@ -75,6 +75,7 @@ class BarLabPage extends StatefulWidget {
 }
 
 class _BarLabPageState extends State<BarLabPage> {
+  static const _categoryFormatterId = 'braven.showcase.bar-category';
   final BravenChartController _chartController = BravenChartController();
   final ChartWorkbenchController _workbenchController =
       ChartWorkbenchController();
@@ -155,11 +156,19 @@ class _BarLabPageState extends State<BarLabPage> {
   bool _showUncertainty = false;
   double _errorBarWidth = 1.5;
   double _errorCapLength = 0.6;
+  ChartDisplayMode _initialDisplayMode = ChartDisplayMode.chart;
 
   @override
   void initState() {
     super.initState();
     _chartController.addListener(_onChartInteractionChanged);
+    final requestedView = Uri.base.queryParameters['view'];
+    for (final mode in ChartDisplayMode.values) {
+      if (mode.name == requestedView) {
+        _initialDisplayMode = mode;
+        break;
+      }
+    }
     final requestedPreset = Uri.base.queryParameters['preset'];
     for (final preset in _BarLabPreset.values) {
       if (preset.name == requestedPreset) {
@@ -207,6 +216,41 @@ class _BarLabPageState extends State<BarLabPage> {
 
   void _onChartInteractionChanged() {
     if (mounted && _preset == _BarLabPreset.states) setState(() {});
+  }
+
+  ChartDocumentExtractOptions get _documentOptions =>
+      ChartDocumentExtractOptions(
+        documentId: 'bar-lab-${_preset.name}',
+        includeViewState: true,
+        xAxisFormatterDescriptor: ChartFormatterDescriptor(
+          id: _categoryFormatterId,
+          arguments: {
+            'labels': JsonArrayValue([
+              for (final label in _categories) JsonStringValue(label),
+            ]),
+          },
+        ).toDocument(),
+      );
+
+  ChartTableOptions get _tableOptions => const ChartTableOptions(
+    formatters: ChartFormatterRegistry(
+      customFormatters: {_categoryFormatterId: _formatCategory},
+    ),
+  );
+
+  static String _formatCategory(
+    double value,
+    Map<String, JsonValue> arguments,
+  ) {
+    final labels = arguments['labels'];
+    final index = value.round();
+    if (labels is! JsonArrayValue ||
+        index < 0 ||
+        index >= labels.values.length) {
+      return value.toString();
+    }
+    final label = labels.values[index];
+    return label is JsonStringValue ? label.value : value.toString();
   }
 
   @override
@@ -302,20 +346,28 @@ class _BarLabPageState extends State<BarLabPage> {
       child: BravenChartWorkbench(
         chartController: _chartController,
         workbenchController: _workbenchController,
+        initialDisplayMode: _initialDisplayMode,
+        documentOptions: _documentOptions,
+        tableOptions: _tableOptions,
         splitBreakpoint: 760,
         tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
         chartBuilder: (context, controller) {
           final chart = _buildChart(controller);
-          return _preset == _BarLabPreset.waterfall
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildWaterfallLegend(),
-                    const SizedBox(height: 8),
-                    Expanded(child: chart),
-                  ],
-                )
-              : chart;
+          final showWaterfallLegend = _preset == _BarLabPreset.waterfall;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: showWaterfallLegend ? 20 : 0,
+                child: Offstage(
+                  offstage: !showWaterfallLegend,
+                  child: _buildWaterfallLegend(),
+                ),
+              ),
+              SizedBox(height: showWaterfallLegend ? 8 : 0),
+              Expanded(child: chart),
+            ],
+          );
         },
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -769,6 +770,469 @@ void main() {
     await tester.pump();
     expect(chartController.focusedPointRefs, isEmpty);
   });
+
+  testWidgets('Ctrl activation additively toggles complete wide rows', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [
+                ChartDataPoint(x: 0, y: 220),
+                ChartDataPoint(x: 1, y: 240),
+              ],
+            ),
+            LineChartSeries(
+              id: 'heart-rate',
+              points: [
+                ChartDataPoint(x: 0, y: 130),
+                ChartDataPoint(x: 1, y: 135),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Finder rowAt(int index) => find.byKey(
+      ValueKey(workbenchController.tableModel!.wideRows[index].rowId),
+    );
+
+    await tester.tap(rowAt(0));
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(rowAt(1));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+      const ChartPointRef(seriesId: 'power', pointIndex: 1),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+    });
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(rowAt(0));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 1),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+    });
+    expect(find.textContaining('2 selected'), findsOneWidget);
+
+    await tester.tap(find.text('Clear selection'));
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, isEmpty);
+    expect(find.textContaining('selected'), findsNothing);
+    expect(workbenchController.tableIsStale, isFalse);
+
+    await tester.tap(rowAt(0));
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    });
+  });
+
+  testWidgets('Ctrl+A selects the displayed dataset and Escape clears it', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [
+                ChartDataPoint(x: 0, y: 220),
+                ChartDataPoint(x: 1, y: 240),
+              ],
+            ),
+            LineChartSeries(
+              id: 'heart-rate',
+              points: [
+                ChartDataPoint(x: 0, y: 130),
+                ChartDataPoint(x: 1, y: 135),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstRow = find.byKey(
+      ValueKey(workbenchController.tableModel!.wideRows.first.rowId),
+    );
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+      const ChartPointRef(seriesId: 'power', pointIndex: 1),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+    });
+    expect(find.textContaining('4 selected'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, isEmpty);
+    expect(workbenchController.tableIsStale, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(chartController.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'power', pointIndex: 0),
+      const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    });
+  });
+
+  testWidgets('Shift activation selects a range across snapshot refreshes', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: const [
+            LineChartSeries(
+              id: 'power',
+              points: [
+                ChartDataPoint(x: 0, y: 220),
+                ChartDataPoint(x: 1, y: 230),
+                ChartDataPoint(x: 2, y: 240),
+                ChartDataPoint(x: 3, y: 250),
+              ],
+            ),
+            LineChartSeries(
+              id: 'heart-rate',
+              points: [
+                ChartDataPoint(x: 0, y: 130),
+                ChartDataPoint(x: 1, y: 135),
+                ChartDataPoint(x: 2, y: 140),
+                ChartDataPoint(x: 3, y: 145),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Finder rowAt(int index) => find.byKey(
+      ValueKey(workbenchController.tableModel!.wideRows[index].rowId),
+    );
+
+    await tester.tap(rowAt(0));
+    await tester.pumpAndSettle();
+    final targetDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: rowAt(2),
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    targetDetector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, {
+      for (final seriesId in const ['power', 'heart-rate'])
+        for (var pointIndex = 0; pointIndex <= 2; pointIndex++)
+          ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
+    });
+    expect(find.textContaining('6 selected'), findsOneWidget);
+    expect(workbenchController.tableIsStale, isFalse);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(rowAt(3));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(chartController.selectedPointRefs, hasLength(8));
+    expect(find.textContaining('8 selected'), findsOneWidget);
+  });
+
+  testWidgets('boundary keys navigate linked virtualized chart points', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        height: 360,
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+        chartBuilder: (context, controller) => BravenChartPlus(
+          bravenChartController: controller,
+          showLegend: false,
+          series: [
+            LineChartSeries(
+              id: 'signal',
+              points: [
+                for (var index = 0; index < 100; index++)
+                  ChartDataPoint(x: index.toDouble(), y: index.toDouble()),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final model = workbenchController.tableModel!;
+    Finder rowAt(int index) =>
+        find.byKey(ValueKey(model.wideRows[index].rowId));
+    FocusableActionDetector detectorAt(int index) =>
+        tester.widget<FocusableActionDetector>(
+          find.descendant(
+            of: rowAt(index),
+            matching: find.byType(FocusableActionDetector),
+          ),
+        );
+
+    detectorAt(0).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump();
+    expect(rowAt(99), findsOneWidget);
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 99),
+    });
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pump();
+    expect(rowAt(0), findsOneWidget);
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+  });
+
+  testWidgets('row hover temporarily overrides and restores keyboard focus', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.data,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final model = workbenchController.tableModel!;
+    final firstRow = find.byKey(ValueKey(model.wideRows.first.rowId));
+    final secondRow = find.byKey(ValueKey(model.wideRows[1].rowId));
+    final firstDetector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    firstDetector.focusNode!.requestFocus();
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(secondRow));
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 1),
+    });
+
+    await mouse.moveTo(
+      tester.getCenter(
+        find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      ),
+    );
+    await tester.pump();
+    expect(chartController.focusedPointRefs, {
+      const ChartPointRef(seriesId: 'signal', pointIndex: 0),
+    });
+
+    firstDetector.focusNode!.unfocus();
+    await tester.pump();
+    expect(chartController.focusedPointRefs, isEmpty);
+  });
+
+  testWidgets(
+    'reveals a point selected directly through the chart controller',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          height: 360,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.data,
+          chartBuilder: (context, controller) => BravenChartPlus(
+            bravenChartController: controller,
+            showLegend: false,
+            series: [
+              LineChartSeries(
+                id: 'signal',
+                points: [
+                  for (var index = 0; index < 100; index++)
+                    ChartDataPoint(x: index.toDouble(), y: index.toDouble()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final model = workbenchController.tableModel!;
+      final targetRow = find.byKey(ValueKey(model.wideRows[90].rowId));
+      expect(targetRow, findsNothing);
+      final result = chartController.selectPoint(
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+        revision: workbenchController.tableSnapshot!.revision,
+      );
+      expect(result, isA<ChartArtifactSuccess<void>>());
+      await tester.pumpAndSettle();
+
+      final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+      expect(table.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+      });
+      final list = tester.widget<ListView>(find.byType(ListView));
+      expect(list.controller!.offset, greaterThan(3000));
+      expect(targetRow, findsOneWidget);
+      expect(chartController.selectedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 90),
+      });
+    },
+  );
+
+  testWidgets(
+    'reveals transient chart focus in the table without selecting the row',
+    (tester) async {
+      final chartController = BravenChartController();
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(chartController.dispose);
+      addTearDown(workbenchController.dispose);
+
+      await tester.pumpWidget(
+        _host(
+          height: 360,
+          chartController: chartController,
+          workbenchController: workbenchController,
+          initialDisplayMode: ChartDisplayMode.data,
+          chartBuilder: (context, controller) => BravenChartPlus(
+            bravenChartController: controller,
+            showLegend: false,
+            series: [
+              LineChartSeries(
+                id: 'signal',
+                points: [
+                  for (var index = 0; index < 100; index++)
+                    ChartDataPoint(x: index.toDouble(), y: index.toDouble()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final model = workbenchController.tableModel!;
+      final targetRow = find.byKey(ValueKey(model.wideRows[80].rowId));
+      expect(targetRow, findsNothing);
+      final result = chartController.focusPoint(
+        const ChartPointRef(seriesId: 'signal', pointIndex: 80),
+        revision: workbenchController.tableSnapshot!.revision,
+      );
+      expect(result, isA<ChartArtifactSuccess<void>>());
+      await tester.pumpAndSettle();
+
+      final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+      expect(table.focusedPointRefs, {
+        const ChartPointRef(seriesId: 'signal', pointIndex: 80),
+      });
+      expect(table.selectedPointRefs, isEmpty);
+      final list = tester.widget<ListView>(find.byType(ListView));
+      expect(list.controller!.offset, greaterThan(2500));
+      expect(targetRow, findsOneWidget);
+      expect(chartController.selectedPointRefs, isEmpty);
+      final semantics = tester.widget<Semantics>(
+        find.descendant(of: targetRow, matching: find.byType(Semantics)).first,
+      );
+      expect(semantics.properties.focused, isFalse);
+      expect(semantics.properties.selected, isFalse);
+    },
+  );
 
   testWidgets('links one long table row to exactly one chart point', (
     tester,

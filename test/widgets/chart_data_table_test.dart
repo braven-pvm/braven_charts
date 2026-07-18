@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -101,6 +103,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('renders and sorts passive bar measure columns', (tester) async {
+    final controller = ChartTableController();
+    addTearDown(controller.dispose);
+    final model = _barTableModel();
+
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, controller: controller), width: 1400),
+    );
+
+    expect(find.text('Estimate (%)'), findsOneWidget);
+    expect(find.text('Estimate start (%)'), findsOneWidget);
+    expect(find.text('Estimate target (%)'), findsOneWidget);
+    expect(find.text('Estimate lower (%)'), findsOneWidget);
+    expect(find.text('Estimate upper (%)'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.text('8'), findsOneWidget);
+    expect(find.text('13'), findsOneWidget);
+
+    await tester.tap(find.text('Estimate target (%)'));
+    await tester.pump();
+
+    expect(controller.sortColumnId, 'series:estimate:aux:target');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('wide row activation reports every populated point reference', (
     tester,
   ) async {
@@ -126,6 +153,44 @@ void main() {
       ChartPointRef(seriesId: 'power', pointIndex: 0),
       ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
     ]);
+  });
+
+  testWidgets('reports Ctrl activation details without breaking legacy taps', (
+    tester,
+  ) async {
+    final activations = <ChartTableRowActivationDetails>[];
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+    final row = find.byKey(ValueKey(model.wideRows.single.rowId));
+
+    await tester.pumpWidget(
+      _host(ChartDataTable(model: model, onRowActivation: activations.add)),
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(row);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(activations.single.additive, isTrue);
+    expect(activations.single.points, const [
+      ChartPointRef(seriesId: 'power', pointIndex: 0),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    ]);
+
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(of: row, matching: find.byType(FocusableActionDetector)),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(activations, hasLength(2));
+    expect(activations.last.additive, isTrue);
   });
 
   testWidgets('mirrors complete point selection into a themed table row', (
@@ -166,6 +231,398 @@ void main() {
     );
     expect(semantics.properties.selected, isTrue);
   });
+
+  testWidgets('summarizes selected points and exposes a compact clear action', (
+    tester,
+  ) async {
+    var clearCalls = 0;
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(7, 241.44)]),
+        _series('heart-rate', [_point(7, 133.75)]),
+      ]),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          selectedPointRefs: {
+            const ChartPointRef(seriesId: 'power', pointIndex: 0),
+            const ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+          },
+          onClearSelection: () => clearCalls++,
+        ),
+        width: 360,
+      ),
+    );
+
+    expect(find.textContaining('2 selected'), findsOneWidget);
+    expect(find.byTooltip('Clear selection'), findsOneWidget);
+    await tester.tap(find.byTooltip('Clear selection'));
+    expect(clearCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collapses summary actions without overflowing narrow panes', (
+    tester,
+  ) async {
+    var clearCalls = 0;
+    final model = _model(points: [_point(0, 10)]);
+
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          selectedPointRefs: {
+            const ChartPointRef(seriesId: 'series', pointIndex: 0),
+          },
+          onClearSelection: () => clearCalls++,
+        ),
+        width: 150,
+      ),
+    );
+
+    expect(find.byTooltip('Table actions'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byTooltip('Table actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear selection'));
+    await tester.pumpAndSettle();
+    expect(clearCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Ctrl+A selects sorted displayed points and Escape clears them', (
+    tester,
+  ) async {
+    final controller = ChartTableController()
+      ..sortBy('x')
+      ..sortBy('x');
+    addTearDown(controller.dispose);
+    final model = ChartTableModel.fromDocument(
+      _document([
+        _series('power', [_point(0, 220), _point(1, 240)]),
+        _series('heart-rate', [_point(0, 130), _point(1, 135)]),
+      ]),
+    );
+    var selected = <ChartPointRef>{};
+    List<ChartPointRef>? selectedInOrder;
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return ChartDataTable(
+              model: model,
+              controller: controller,
+              selectedPointRefs: selected,
+              onSelectAllPoints: (points) {
+                selectedInOrder = points;
+                setState(() => selected = points.toSet());
+              },
+              onClearSelection: () => setState(selected.clear),
+            );
+          },
+        ),
+      ),
+    );
+
+    final firstDisplayedRow = find.byKey(ValueKey(model.wideRows[1].rowId));
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstDisplayedRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+
+    expect(selectedInOrder, const [
+      ChartPointRef(seriesId: 'power', pointIndex: 1),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+      ChartPointRef(seriesId: 'power', pointIndex: 0),
+      ChartPointRef(seriesId: 'heart-rate', pointIndex: 0),
+    ]);
+    expect(find.textContaining('4 selected'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(selected, isEmpty);
+    expect(find.textContaining('selected'), findsNothing);
+  });
+
+  testWidgets(
+    'Shift activation spans sorted shared-X rows and preserves additivity',
+    (tester) async {
+      final controller = ChartTableController()
+        ..sortBy('x')
+        ..sortBy('x');
+      addTearDown(controller.dispose);
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _series('power', [
+            _point(0, 220),
+            _point(1, 230),
+            _point(2, 240),
+            _point(3, 250),
+          ]),
+          _series('heart-rate', [
+            _point(0, 130),
+            _point(1, 135),
+            _point(2, 140),
+            _point(3, 145),
+          ]),
+        ]),
+      );
+      final activations = <ChartTableRowActivationDetails>[];
+
+      await tester.pumpWidget(
+        _host(
+          ChartDataTable(
+            model: model,
+            controller: controller,
+            onRowActivation: activations.add,
+          ),
+        ),
+      );
+
+      Finder rowAtSourceIndex(int index) =>
+          find.byKey(ValueKey(model.wideRows[index].rowId));
+
+      await tester.tap(rowAtSourceIndex(3));
+      await tester.pump();
+      expect(activations.single.points, const [
+        ChartPointRef(seriesId: 'power', pointIndex: 3),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 3),
+      ]);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tap(rowAtSourceIndex(1));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(activations.last.additive, isFalse);
+      expect(activations.last.points, const [
+        ChartPointRef(seriesId: 'power', pointIndex: 3),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 3),
+        ChartPointRef(seriesId: 'power', pointIndex: 2),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 2),
+        ChartPointRef(seriesId: 'power', pointIndex: 1),
+        ChartPointRef(seriesId: 'heart-rate', pointIndex: 1),
+      ]);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.tap(rowAtSourceIndex(0));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(activations.last.additive, isTrue);
+      expect(activations.last.points, hasLength(8));
+    },
+  );
+
+  testWidgets('selecting all virtualized rows keeps the viewport in place', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble()),
+      ],
+    );
+    var selected = <ChartPointRef>{};
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) => ChartDataTable(
+            model: model,
+            selectedPointRefs: selected,
+            onSelectAllPoints: (points) =>
+                setState(() => selected = points.toSet()),
+          ),
+        ),
+      ),
+    );
+    final firstRow = find.byKey(ValueKey(model.longRows.first.rowId));
+    final detector = tester.widget<FocusableActionDetector>(
+      find.descendant(
+        of: firstRow,
+        matching: find.byType(FocusableActionDetector),
+      ),
+    );
+    detector.focusNode!.requestFocus();
+    await tester.pump();
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.controller!.offset, 0);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(selected, hasLength(1000));
+    expect(list.controller!.offset, 0);
+  });
+
+  testWidgets('page and boundary keys navigate virtualized rows', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble()),
+      ],
+    );
+
+    await tester.pumpWidget(_host(ChartDataTable(model: model)));
+    final list = tester.widget<ListView>(find.byType(ListView));
+    final rowsPerPage = math.max(
+      1,
+      (list.controller!.position.viewportDimension / 36).floor(),
+    );
+
+    Finder rowAt(int index) =>
+        find.byKey(ValueKey(model.longRows[index].rowId));
+    FocusableActionDetector detectorAt(int index) =>
+        tester.widget<FocusableActionDetector>(
+          find.descendant(
+            of: rowAt(index),
+            matching: find.byType(FocusableActionDetector),
+          ),
+        );
+
+    detectorAt(0).focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pump();
+    expect(rowAt(rowsPerPage), findsOneWidget);
+    expect(detectorAt(rowsPerPage).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, greaterThan(0));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+    await tester.pump();
+    expect(detectorAt(0).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pump();
+    expect(rowAt(999), findsOneWidget);
+    expect(detectorAt(999).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, list.controller!.position.maxScrollExtent);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pump();
+    expect(rowAt(0), findsOneWidget);
+    expect(detectorAt(0).focusNode!.hasFocus, isTrue);
+    expect(list.controller!.offset, 0);
+  });
+
+  testWidgets('reveals a newly selected point without taking over scrolling', (
+    tester,
+  ) async {
+    final model = _model(
+      points: [
+        for (var index = 0; index < 1000; index++)
+          _point(index.toDouble(), index.toDouble(), label: 'Row $index'),
+      ],
+    );
+    Set<ChartPointRef> selected = const {};
+    late StateSetter update;
+
+    await tester.pumpWidget(
+      _host(
+        StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            return ChartDataTable(model: model, selectedPointRefs: selected);
+          },
+        ),
+      ),
+    );
+    final target = find.byKey(ValueKey(model.longRows.last.rowId));
+    expect(target, findsNothing);
+
+    update(() {
+      selected = {const ChartPointRef(seriesId: 'series', pointIndex: 999)};
+    });
+    await tester.pumpAndSettle();
+
+    expect(target, findsOneWidget);
+    final list = tester.widget<ListView>(find.byType(ListView));
+    expect(list.controller!.offset, greaterThan(0));
+
+    list.controller!.jumpTo(0);
+    await tester.pump();
+    update(() {});
+    await tester.pumpAndSettle();
+
+    expect(list.controller!.offset, 0);
+    expect(target, findsNothing);
+  });
+
+  testWidgets(
+    'mirrors and reveals chart focus without claiming keyboard focus',
+    (tester) async {
+      const focusedColor = Color(0xFFDBEAFE);
+      final model = _model(
+        points: [
+          for (var index = 0; index < 1000; index++)
+            _point(index.toDouble(), index.toDouble(), label: 'Row $index'),
+        ],
+      );
+      Set<ChartPointRef> focused = const {};
+      late StateSetter update;
+
+      await tester.pumpWidget(
+        _host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return ChartDataTable(
+                model: model,
+                focusedPointRefs: focused,
+                theme: const ChartDataTableTheme(focusedRowColor: focusedColor),
+              );
+            },
+          ),
+        ),
+      );
+      final target = find.byKey(ValueKey(model.longRows.last.rowId));
+      expect(target, findsNothing);
+
+      update(() {
+        focused = {const ChartPointRef(seriesId: 'series', pointIndex: 999)};
+      });
+      await tester.pumpAndSettle();
+
+      expect(target, findsOneWidget);
+      final list = tester.widget<ListView>(find.byType(ListView));
+      expect(list.controller!.offset, greaterThan(0));
+      final surface = tester.widget<Container>(
+        find.descendant(of: target, matching: find.byType(Container)).first,
+      );
+      expect((surface.decoration! as BoxDecoration).color, focusedColor);
+      final semantics = tester.widget<Semantics>(
+        find.descendant(of: target, matching: find.byType(Semantics)).first,
+      );
+      expect(semantics.properties.focused, isFalse);
+      expect(semantics.properties.selected, isFalse);
+
+      list.controller!.jumpTo(0);
+      await tester.pump();
+      update(() {});
+      await tester.pumpAndSettle();
+
+      expect(list.controller!.offset, 0);
+      expect(target, findsNothing);
+    },
+  );
 
   testWidgets(
     'uses compact themed rows, aligned numbers, indexes, and series colors',
@@ -570,6 +1027,24 @@ ChartTableModel _model({
   _document([_series('series', points)], xFormatter: xFormatter),
   options: const ChartTableOptions(rowLayout: ChartTableRowLayout.long),
 );
+
+ChartTableModel _barTableModel() {
+  const bar = BarChartSeries(
+    id: 'estimate',
+    name: 'Estimate',
+    unit: '%',
+    barWidthPercent: 0.7,
+    baselineValue: 2,
+    points: [ChartDataPoint(x: 0, y: 10)],
+    rangeStartValues: [null],
+    targetValues: [12],
+    errorLowerValues: [8],
+    errorUpperValues: [13],
+  );
+  return ChartTableModel.fromDocument(
+    _document([_success(ChartSeriesDocumentCodec.encode(bar)).value]),
+  );
+}
 
 ChartSeriesDocument _series(
   String id,
