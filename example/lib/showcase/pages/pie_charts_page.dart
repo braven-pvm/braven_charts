@@ -9,6 +9,7 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/radial_legend_value_card.dart';
 import '../widgets/standard_options.dart';
 
 /// Public showcase for categorical contribution charts.
@@ -22,6 +23,8 @@ class PieChartsPage extends StatefulWidget {
 class _PieChartsPageState extends State<PieChartsPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
   final BravenChartController _chartController = BravenChartController();
+  final ChartWorkbenchController _workbenchController =
+      ChartWorkbenchController();
   final math.Random _random = math.Random();
 
   _PieDataset _dataset = _PieDataset.revenue;
@@ -61,21 +64,19 @@ class _PieChartsPageState extends State<PieChartsPage> {
   _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
   _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
   _PieLegendPreset _legendPreset = _PieLegendPreset.theme;
+  _PieLegendContent _legendContent = _PieLegendContent.standard;
   bool _showLegend = true;
   LegendPosition _legendPosition = LegendPosition.bottomCenter;
   LegendOrientation _legendOrientation = LegendOrientation.horizontal;
   bool _showTooltips = true;
   String? _selectedCategory;
   ChartDisplayMode _displayMode = ChartDisplayMode.chart;
-  ChartTableModel? _tableModel;
-  ChartDocumentRevision? _tableRevision;
   ChartArtifact? _capturedArtifact;
   HydratedChartConfiguration? _restoredConfiguration;
   String? _portableJson;
   String? _captureError;
   bool _isCapturing = false;
   bool _showRestoredCopy = false;
-  int _tableRefreshAttempts = 0;
 
   @override
   void initState() {
@@ -84,12 +85,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _radiusValues = Map<String, num>.of(
       _dataset.radiusValues ?? const <String, num>{},
     );
-    _scheduleTableRefresh();
   }
 
   @override
   void dispose() {
     _optionsController.dispose();
+    _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
   }
@@ -107,7 +108,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _clearPortableState();
     });
     _chartController.clearPointSelection();
-    _scheduleTableRefresh();
   }
 
   void _applyShowcasePreset(_PieShowcasePreset preset) {
@@ -144,6 +144,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _calloutPreset = _PieCalloutPreset.simpleValues;
           _tooltipPreset = _PieTooltipPreset.contrast;
           _legendPreset = _PieLegendPreset.compact;
+          _legendContent = _PieLegendContent.standard;
           _showLegend = false;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
@@ -175,6 +176,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _calloutPreset = _PieCalloutPreset.none;
           _tooltipPreset = _PieTooltipPreset.theme;
           _legendPreset = _PieLegendPreset.theme;
+          _legendContent = _PieLegendContent.standard;
           _showLegend = true;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
@@ -202,6 +204,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _calloutPreset = _PieCalloutPreset.none;
           _tooltipPreset = _PieTooltipPreset.contrast;
           _legendPreset = _PieLegendPreset.compact;
+          _legendContent = _PieLegendContent.valueCards;
           _showLegend = true;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
@@ -233,6 +236,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _calloutPreset = _PieCalloutPreset.surface;
           _tooltipPreset = _PieTooltipPreset.elevated;
           _legendPreset = _PieLegendPreset.surface;
+          _legendContent = _PieLegendContent.standard;
           _showLegend = true;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
@@ -264,6 +268,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _calloutPreset = _PieCalloutPreset.highContrast;
           _tooltipPreset = _PieTooltipPreset.contrast;
           _legendPreset = _PieLegendPreset.surface;
+          _legendContent = _PieLegendContent.standard;
           _showLegend = true;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
@@ -278,7 +283,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _PieShowcasePreset.elevated => ChartTheme.vibrant,
       _PieShowcasePreset.highContrast => ChartTheme.highContrast,
     };
-    _scheduleTableRefresh();
   }
 
   void _regenerateValues() {
@@ -302,7 +306,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
           ),
       };
     });
-    _scheduleTableRefresh();
   }
 
   void _clearPortableState() {
@@ -313,45 +316,8 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _showRestoredCopy = false;
   }
 
-  void _scheduleTableRefresh({bool resetAttempts = true}) {
-    if (resetAttempts) _tableRefreshAttempts = 0;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _refreshTableFromChart();
-    });
-  }
-
-  void _refreshTableFromChart() {
-    final result = _chartController.extractDocument(
-      ChartDocumentExtractOptions(documentId: 'pie-showcase-${_dataset.name}'),
-    );
-    if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
-      final snapshot = result.value;
-      final model = ChartTableModel.fromDocument(
-        snapshot.document,
-        viewState: snapshot.viewState,
-      );
-      if (!mounted) return;
-      setState(() {
-        _tableModel = model;
-        _tableRevision = snapshot.revision;
-      });
-      _tableRefreshAttempts = 0;
-      return;
-    }
-    if (_tableRefreshAttempts < 3) {
-      _tableRefreshAttempts++;
-      _scheduleTableRefresh(resetAttempts: false);
-    }
-  }
-
   Future<void> _capturePortableCopy() async {
     if (_isCapturing) return;
-    final previousMode = _displayMode;
-    if (previousMode == ChartDisplayMode.data) {
-      setState(() => _displayMode = ChartDisplayMode.chart);
-      await WidgetsBinding.instance.endOfFrame;
-    }
-    if (!mounted) return;
     setState(() {
       _isCapturing = true;
       _captureError = null;
@@ -373,7 +339,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
         _isCapturing = false;
         _captureError =
             '${captured.error.message} Try again after the chart finishes rendering.';
-        _displayMode = previousMode;
       });
       return;
     }
@@ -383,7 +348,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       setState(() {
         _isCapturing = false;
         _captureError = encoded.error.message;
-        _displayMode = previousMode;
       });
       return;
     }
@@ -393,7 +357,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       setState(() {
         _isCapturing = false;
         _captureError = hydrated.error.message;
-        _displayMode = previousMode;
       });
       return;
     }
@@ -403,7 +366,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _portableJson = json;
       _restoredConfiguration =
           (hydrated as ChartArtifactSuccess<HydratedChartConfiguration>).value;
-      _displayMode = previousMode;
     });
   }
 
@@ -749,6 +711,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
               labelBuilder: _legendPresetName,
               onChanged: (value) => setState(() => _legendPreset = value),
             ),
+            EnumOption<_PieLegendContent>(
+              key: const ValueKey('pie-legend-content'),
+              label: 'Item content',
+              value: _legendContent,
+              values: _PieLegendContent.values,
+              labelBuilder: _legendContentName,
+              onChanged: (value) => setState(() => _legendContent = value),
+            ),
             EnumOption<LegendPosition>(
               label: 'Position',
               value: _legendPosition,
@@ -890,57 +860,50 @@ class _PieChartsPageState extends State<PieChartsPage> {
         ],
         selected: {_displayMode},
         onSelectionChanged: (selected) {
-          setState(() => _displayMode = selected.single);
-          if (_tableModel == null) _scheduleTableRefresh();
+          final mode = selected.single;
+          setState(() => _displayMode = mode);
+          _workbenchController.setDisplayMode(mode);
         },
       ),
     );
   }
 
   Widget _buildDataSurface({required bool compact}) {
-    final chart = _buildLiveChart();
-    final table = _buildLiveTable();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 8.0;
-        final split = _displayMode == ChartDisplayMode.split;
-        final showChart = _displayMode != ChartDisplayMode.data;
-        final showTable = _displayMode != ChartDisplayMode.chart;
-        final splitWidth = (constraints.maxWidth - gap) / 2;
-        final splitHeight = (constraints.maxHeight - gap) / 2;
-
-        // Keep both surfaces in stable slots so changing the view never
-        // remounts the chart or detaches its controller.
-        return Stack(
-          children: [
-            Positioned(
-              left: 0,
-              top: 0,
-              width: split && !compact ? splitWidth : constraints.maxWidth,
-              height: split && compact ? splitHeight : constraints.maxHeight,
-              child: Offstage(offstage: !showChart, child: chart),
-            ),
-            Positioned(
-              left: split && !compact ? splitWidth + gap : 0,
-              top: split && compact ? splitHeight + gap : 0,
-              width: split && !compact ? splitWidth : constraints.maxWidth,
-              height: split && compact ? splitHeight : constraints.maxHeight,
-              child: Offstage(offstage: !showTable, child: table),
-            ),
-          ],
-        );
-      },
+    return BravenChartWorkbench(
+      chartController: _chartController,
+      workbenchController: _workbenchController,
+      initialDisplayMode: _displayMode,
+      showModeSwitcher: false,
+      splitBreakpoint: 1,
+      splitAxis: compact ? Axis.vertical : Axis.horizontal,
+      splitGap: 8,
+      minimumChartPaneExtent: compact ? 240 : 360,
+      minimumTablePaneExtent: compact ? 240 : 420,
+      maximumAutoTablePaneExtent: 620,
+      autoFitTablePane: true,
+      isSplitResizable: true,
+      tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+      onTableRowFocused: _focusTablePoints,
+      onTableRowFocusCleared: _chartController.clearPointFocus,
+      onTableRowHoverChanged: (points) => points == null
+          ? _chartController.clearPointFocus()
+          : _focusTablePoints(points),
+      onTableRowActivated: _selectTablePoints,
+      chartBuilder: (context, controller) => _buildLiveChart(controller),
     );
   }
 
-  Widget _buildLiveChart() {
+  Widget _buildLiveChart(BravenChartController controller) {
     final theme = _buildPieTheme();
     return BravenChartPlus(
       key: const ValueKey('pie-showcase-chart'),
       title: _dataset.chartTitle,
       subtitle: _dataset.chartSubtitle,
-      bravenChartController: _chartController,
+      bravenChartController: controller,
       showLegend: _showLegend,
+      radialLegendItemBuilder: _legendContent == _PieLegendContent.valueCards
+          ? _buildValueCardLegendItem
+          : null,
       theme: theme,
       interactionConfig: InteractionConfig(
         crosshair: const CrosshairConfig(enabled: false),
@@ -958,35 +921,26 @@ class _PieChartsPageState extends State<PieChartsPage> {
     );
   }
 
-  Widget _buildLiveTable() {
-    final model = _tableModel;
-    if (model == null) {
-      return const ChartDataTable(isLoading: true);
-    }
-    return ChartDataTable(
-      key: const ValueKey('pie-showcase-table'),
-      model: model,
-      selectedPointRefs: _chartController.selectedPointRefs,
-      csvFileName: 'pie-${_dataset.name}.csv',
-      onRowFocused: _focusTablePoints,
-      onRowFocusCleared: _chartController.clearPointFocus,
-      onRowHoverChanged: (points) => points == null
-          ? _chartController.clearPointFocus()
-          : _focusTablePoints(points),
-      onRowActivated: _selectTablePoints,
-    );
-  }
+  Widget _buildValueCardLegendItem(
+    BuildContext context,
+    RadialLegendItemData item,
+  ) => RadialLegendValueCard(
+    key: ValueKey('pie-custom-legend-item-${item.visibleIndex}'),
+    item: item,
+  );
 
   void _focusTablePoints(List<ChartPointRef> points) {
     final revision =
-        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+        _chartController.effectiveDocumentRevision.value ??
+        _workbenchController.tableSnapshot?.revision;
     if (revision == null) return;
     _chartController.focusPoints(points, revision: revision);
   }
 
   void _selectTablePoints(List<ChartPointRef> points) {
     final revision =
-        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+        _chartController.effectiveDocumentRevision.value ??
+        _workbenchController.tableSnapshot?.revision;
     if (revision == null) return;
     final selectedPoints = _chartController.selectedPointRefs;
     final targetPoints = _expandedVisibleSliceRefs(points);
@@ -995,7 +949,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
         selectedPoints.containsAll(targetPoints)) {
       _chartController.clearPointSelection();
       setState(() => _selectedCategory = null);
-      _scheduleTableRefresh();
       return;
     }
     final result = _chartController.selectPoints(points, revision: revision);
@@ -1007,7 +960,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
               _buildPieTheme(),
             ).visibleSliceForSourcePointIndex(selected.pointIndex)?.point.label;
       setState(() => _selectedCategory = category);
-      _scheduleTableRefresh();
     }
   }
 
@@ -1035,7 +987,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _selectedCategory = null;
       _clearPortableState();
     });
-    _scheduleTableRefresh();
   }
 
   void _setGroupingThreshold(double value) {
@@ -1045,7 +996,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _selectedCategory = null;
       _clearPortableState();
     });
-    _scheduleTableRefresh();
   }
 
   Widget _buildPortableWorkflow({required bool compact}) {
@@ -1710,6 +1660,13 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 ),
                 _FeatureCard(
                   width: cardWidth,
+                  icon: Icons.widgets_outlined,
+                  title: 'Host-built legend items',
+                  description:
+                      'Return any Flutter widget for each Pie or Donut category while the chart retains selection, semantics, and responsive legend layout.',
+                ),
+                _FeatureCard(
+                  width: cardWidth,
                   icon: Icons.inventory_2_outlined,
                   title: 'Portable by default',
                   description:
@@ -2230,6 +2187,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _PieLegendPreset.surface => 'Raised surface',
   };
 
+  String _legendContentName(_PieLegendContent value) => switch (value) {
+    _PieLegendContent.standard => 'Standard details',
+    _PieLegendContent.valueCards => 'Custom value cards',
+  };
+
   String _legendPositionName(LegendPosition value) => switch (value) {
     LegendPosition.topLeft => 'Top left',
     LegendPosition.topCenter => 'Top center',
@@ -2263,6 +2225,8 @@ enum _PieGradientPreset { solid, linear, radial }
 enum _PieGlowColor { slice, accent, neutral }
 
 enum _PieLegendPreset { theme, compact, surface }
+
+enum _PieLegendContent { standard, valueCards }
 
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({

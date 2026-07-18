@@ -1,6 +1,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -48,6 +49,18 @@ void main() {
     );
     expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('pie-preset-compact')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final compactChart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    expect(compactChart.radialLegendItemBuilder, isNotNull);
+    expect(
+      find.byKey(const ValueKey('pie-custom-legend-item-0')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('pie-preset-simple')));
     await tester.pump(const Duration(milliseconds: 300));
@@ -190,7 +203,7 @@ void main() {
     );
     await _settleCapture(tester);
     final variableTable = tester.widget<ChartDataTable>(
-      find.byKey(const ValueKey('pie-showcase-table')),
+      find.byKey(const ValueKey('chart-workbench-data-table')),
     );
     expect(variableTable.model?.pieRadiusColumnLabel, 'Total area (km²)');
     expect(find.text('Total area (km²)'), findsOneWidget);
@@ -230,6 +243,49 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chart-page-options-button')));
     await tester.pumpAndSettle();
     expect(find.text('Chart options'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('auto-fits and resizes the native Pie Split surface', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await _settleCapture(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('pie-display-mode')),
+        matching: find.text('Split'),
+      ),
+    );
+    await _settleCapture(tester);
+
+    final chartFinder = find.byKey(const ValueKey('pie-showcase-chart'));
+    final tableFinder = find.byKey(
+      const ValueKey('chart-workbench-data-table'),
+    );
+    final handleFinder = find.byKey(
+      const ValueKey('chart-workbench-split-handle'),
+    );
+    final initialChartWidth = tester.getSize(chartFinder).width;
+    final initialTableWidth = tester.getSize(tableFinder).width;
+
+    expect(initialChartWidth, greaterThan(initialTableWidth));
+    await tester.drag(handleFinder, const Offset(120, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(chartFinder).width, greaterThan(initialChartWidth));
+    expect(tester.getSize(tableFinder).width, lessThan(initialTableWidth));
+
+    await tester.tap(handleFinder);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(chartFinder).width, closeTo(initialChartWidth, 0.1));
     expect(tester.takeException(), isNull);
   });
 
@@ -337,7 +393,7 @@ void main() {
       await _settleCapture(tester);
 
       var table = tester.widget<ChartDataTable>(
-        find.byKey(const ValueKey('pie-showcase-table')),
+        find.byKey(const ValueKey('chart-workbench-data-table')),
       );
       expect(table.model?.pieRows, hasLength(5));
       expect(
@@ -347,14 +403,14 @@ void main() {
 
       await tester.tap(
         find.descendant(
-          of: find.byKey(const ValueKey('pie-showcase-table')),
+          of: find.byKey(const ValueKey('chart-workbench-data-table')),
           matching: find.text('Training'),
         ),
       );
       await tester.pumpAndSettle();
 
       table = tester.widget<ChartDataTable>(
-        find.byKey(const ValueKey('pie-showcase-table')),
+        find.byKey(const ValueKey('chart-workbench-data-table')),
       );
       expect(table.selectedPointRefs, {
         const ChartPointRef(seriesId: 'pie-showcase-revenue', pointIndex: 3),
@@ -387,7 +443,7 @@ void main() {
     );
     await _settleCapture(tester);
     final initialTable = tester.widget<ChartDataTable>(
-      find.byKey(const ValueKey('pie-showcase-table')),
+      find.byKey(const ValueKey('chart-workbench-data-table')),
     );
     expect(initialTable.model?.projectionKind, ChartTableProjectionKind.pie);
     expect(initialTable.model?.pieRows.first.category, 'Subscriptions');
@@ -397,14 +453,14 @@ void main() {
     expect(find.text('Share'), findsOneWidget);
 
     final hardwareCell = find.descendant(
-      of: find.byKey(const ValueKey('pie-showcase-table')),
+      of: find.byKey(const ValueKey('chart-workbench-data-table')),
       matching: find.text('Hardware'),
     );
     await tester.tap(hardwareCell);
     await tester.pumpAndSettle();
     expect(find.text('Selected: Hardware'), findsOneWidget);
     final selectedTable = tester.widget<ChartDataTable>(
-      find.byKey(const ValueKey('pie-showcase-table')),
+      find.byKey(const ValueKey('chart-workbench-data-table')),
     );
     expect(selectedTable.selectedPointRefs, {
       const ChartPointRef(seriesId: 'pie-showcase-revenue', pointIndex: 2),
@@ -422,7 +478,7 @@ void main() {
     expect(
       tester
           .widget<ChartDataTable>(
-            find.byKey(const ValueKey('pie-showcase-table')),
+            find.byKey(const ValueKey('chart-workbench-data-table')),
           )
           .selectedPointRefs,
       isEmpty,
@@ -465,6 +521,9 @@ Future<void> _settleCapture(WidgetTester tester) async {
   for (var index = 0; index < 8; index++) {
     await tester.pump();
   }
+  // Advance zero-delay extraction and the bounded revision refresh timer
+  // without waiting for the showcase's intentionally replayable animation.
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.runAsync(
     () => Future<void>.delayed(const Duration(milliseconds: 100)),
   );

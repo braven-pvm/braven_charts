@@ -40,7 +40,7 @@ flutter build web --release --base-href /braven_charts/
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API |
 | Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
-| Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split views; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
+| Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
 | Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |

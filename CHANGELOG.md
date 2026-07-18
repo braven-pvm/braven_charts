@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- Host-built Pie and Donut legend items through
+  `BravenChartPlus.radialLegendItemBuilder`, with resolved radial data,
+  package-owned responsive layout and selection, stable accessibility
+  semantics, and public Pie/Donut showcase examples.
 - Angular `sweep` and geometry-preserving `fade` Pie/Donut entrance modes,
   retaining radial `grow` as the default and honoring reduced motion across
   initial mounts, data changes, and explicit controller replays.

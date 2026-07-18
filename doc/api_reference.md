@@ -70,7 +70,11 @@ re-anchors after geometry or responsive layout changes.
 
 Donut is single-series, has no Cartesian axes/pan/zoom/crosshair, and shares
 the Pie category table, CSV, tooltip, legend, selection, controller, artifact,
-and accessibility contracts. See [Donut charts](donut_charts.md).
+and accessibility contracts. Pie and Donut also accept the runtime-only
+`BravenChartPlus.radialLegendItemBuilder`, whose `RadialLegendItemData` gives
+host widgets resolved category, value, share, color, selected state, and
+grouped source points while the package retains layout, activation, and
+semantics. See [Donut charts](donut_charts.md).
 
 ## Axes, normalization, and layout
 
