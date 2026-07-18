@@ -48,6 +48,7 @@ class DataConverter {
     ChartTheme? theme,
     Set<ChartPointRef> focusedPointRefs = const {},
     Set<ChartPointRef> selectedPointRefs = const {},
+    Map<String, double> pathRevealProgressBySeries = const {},
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
   }) {
@@ -83,6 +84,7 @@ class DataConverter {
         pointSelectionColor: theme?.interactionTheme.selectionColor,
         fontFamily: theme?.typographyTheme.fontFamily,
         hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
+        revealProgress: pathRevealProgressBySeries[s.id] ?? 1,
       );
     }).toList();
   }

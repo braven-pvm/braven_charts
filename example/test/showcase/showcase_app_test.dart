@@ -75,7 +75,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
 
-    expect(find.text('Choose a line charts example'), findsOneWidget);
+    expect(find.text('Choose a line chart example'), findsOneWidget);
     expect(find.text('Workhorse'), findsWidgets);
     final selectedRailItem = tester.widget<AnimatedContainer>(
       find

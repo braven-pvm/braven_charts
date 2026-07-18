@@ -54,6 +54,7 @@ import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
+import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
 import 'models/streaming_config.dart';
@@ -67,6 +68,7 @@ import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'utils/bar_series_transition.dart';
 import 'utils/radial_series_transition.dart';
+import 'utils/path_series_transition.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/chord_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
@@ -1044,8 +1046,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   final Map<String, _ActiveBarSeriesTransition> _barSeriesTransitions =
       <String, _ActiveBarSeriesTransition>{};
   _ActiveRadialSeriesTransition? _radialSeriesTransition;
+  final Map<String, _ActivePathSeriesTransition> _pathSeriesTransitions =
+      <String, _ActivePathSeriesTransition>{};
+  final Set<String> _pathRevealSeriesIds = <String>{};
   late final AnimationController _incomingDataAnimationController;
   late final AnimationController _barDataAnimationController;
+  late final AnimationController _pathDataAnimationController;
+  late final AnimationController _pathRevealAnimationController;
   late final AnimationController _radialRevealAnimationController;
   late final AnimationController _radialDataAnimationController;
   late final AnimationController _radialSelectionAnimationController;
@@ -1203,6 +1210,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _barDataAnimationController = AnimationController(vsync: this, value: 1)
       ..addListener(_handleBarDataAnimationTick)
       ..addStatusListener(_handleBarDataAnimationStatus);
+    _pathDataAnimationController = AnimationController(vsync: this, value: 1)
+      ..addListener(_handlePathDataAnimationTick)
+      ..addStatusListener(_handlePathDataAnimationStatus);
+    _pathRevealAnimationController = AnimationController(vsync: this, value: 1)
+      ..addListener(_handlePathRevealAnimationTick)
+      ..addStatusListener(_handlePathRevealAnimationStatus);
     _radialRevealAnimationController = AnimationController(
       vsync: this,
       value: 1,
@@ -1231,6 +1244,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     _rebuildElements();
     _startBarEntranceAnimation();
+    _startPathEntranceAnimation();
     _startRadialRevealAnimation();
 
     // Initialize cached bounds from existing series data for pan constraints
@@ -1265,6 +1279,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       onClearPointFocus: _clearPointFocus,
       onClearPointSelection: _clearPointSelection,
       onReplayRadialEntrance: _startRadialRevealAnimation,
+      onReplaySeriesEntrance: _replaySeriesEntrance,
       effectiveDocumentRevision: _effectiveDocumentRevision,
       onClear: () {
         _captureStateRevision++;
@@ -1293,6 +1308,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
         _barSeriesTransitions.clear();
+        _pathDataAnimationController
+          ..stop()
+          ..value = 1;
+        _pathSeriesTransitions.clear();
+        _pathRevealAnimationController
+          ..stop()
+          ..value = 1;
+        _pathRevealSeriesIds.clear();
         _radialRevealAnimationController
           ..stop()
           ..value = 1;
@@ -1396,6 +1419,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         onClearPointFocus: _clearPointFocus,
         onClearPointSelection: _clearPointSelection,
         onReplayRadialEntrance: _startRadialRevealAnimation,
+        onReplaySeriesEntrance: _replaySeriesEntrance,
         effectiveDocumentRevision: _effectiveDocumentRevision,
         onClear: () {
           _captureStateRevision++;
@@ -1434,6 +1458,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
         detectBarAnimations: seriesChanged,
+        detectPathAnimations: seriesChanged,
         detectRadialAnimations:
             radialDataChanged && !radialAnimationModeChanged,
       );
@@ -1473,6 +1498,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _barDataAnimationController
       ..removeListener(_handleBarDataAnimationTick)
       ..removeStatusListener(_handleBarDataAnimationStatus)
+      ..dispose();
+    _pathDataAnimationController
+      ..removeListener(_handlePathDataAnimationTick)
+      ..removeStatusListener(_handlePathDataAnimationStatus)
+      ..dispose();
+    _pathRevealAnimationController
+      ..removeListener(_handlePathRevealAnimationTick)
+      ..removeStatusListener(_handlePathRevealAnimationStatus)
       ..dispose();
     _radialRevealAnimationController
       ..removeListener(_handleRadialAnimationTick)
@@ -2069,6 +2102,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool detectIncomingAnimations = false,
     bool detectBarAnimations = false,
     bool detectRadialAnimations = false,
+    bool detectPathAnimations = false,
   }) {
     _spatialIndex.clear();
 
@@ -2134,6 +2168,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (detectRadialAnimations) {
       _updateRadialSeriesTransition(
+        previousSeriesById: previousRenderSeriesById,
+        nextSeries: _effectiveDataSeries,
+      );
+    }
+    if (detectPathAnimations) {
+      _updatePathSeriesAnimations(
         previousSeriesById: previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
@@ -2341,6 +2381,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           coordinator: _coordinator,
           focusedPointRefs: _focusedPointRefs,
           selectedPointRefs: _selectedPointRefs,
+          pathRevealProgressBySeries: {
+            for (final id in _pathRevealSeriesIds) id: _pathRevealProgress,
+          },
         ).cast<ChartElement>().toList();
       }
 
@@ -2487,11 +2530,41 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  void _handlePathDataAnimationTick() {
+    if (!mounted || _pathSeriesTransitions.isEmpty) return;
+    setState(() {
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
   void _handleRadialDataAnimationStatus(AnimationStatus status) {
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _radialSeriesTransition = null;
       _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _handlePathDataAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() {
+      _pathSeriesTransitions.clear();
+      _refreshAnimatedRenderSeries();
+      _elementGeneratorVersion++;
+    });
+  }
+
+  void _handlePathRevealAnimationTick() {
+    if (!mounted || _pathRevealSeriesIds.isEmpty) return;
+    setState(() => _elementGeneratorVersion++);
+  }
+
+  void _handlePathRevealAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() {
+      _pathRevealSeriesIds.clear();
       _elementGeneratorVersion++;
     });
   }
@@ -2538,6 +2611,129 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _barDataAnimationDuration > Duration.zero &&
       series.radialStyle.dataTransitionMode ==
           RadialDataTransitionMode.automatic;
+
+  Duration get _pathAnimationDuration =>
+      (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateDuration;
+
+  double get _pathDataAnimationProgress {
+    final curve =
+        (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
+    return curve.transform(_pathDataAnimationController.value).clamp(0.0, 1.0);
+  }
+
+  double get _pathRevealProgress {
+    final curve =
+        (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
+    return curve
+        .transform(_pathRevealAnimationController.value)
+        .clamp(0.0, 1.0);
+  }
+
+  bool get _canAnimatePaths =>
+      !_disableAnimations && _pathAnimationDuration > Duration.zero;
+
+  PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
+    LineChartSeries() => series.pathAnimation,
+    AreaChartSeries() => series.pathAnimation,
+    _ => null,
+  };
+
+  void _replaySeriesEntrance() {
+    if (_layoutKind == ChartLayoutKind.radial) {
+      _startRadialRevealAnimation();
+    } else {
+      _startPathEntranceAnimation();
+    }
+  }
+
+  void _startPathEntranceAnimation() {
+    final ids = <String>{
+      for (final series in _effectiveDataSeries)
+        if (_pathAnimationFor(series)?.entranceMode ==
+            PathEntranceAnimationMode.reveal)
+          series.id,
+    };
+    _startPathReveal(ids);
+  }
+
+  void _startPathReveal(Set<String> seriesIds) {
+    _pathRevealAnimationController.stop();
+    _pathRevealSeriesIds
+      ..clear()
+      ..addAll(seriesIds);
+    if (!_canAnimatePaths || _pathRevealSeriesIds.isEmpty) {
+      _pathRevealAnimationController.value = 1;
+      _pathRevealSeriesIds.clear();
+      return;
+    }
+    _pathRevealAnimationController
+      ..duration = _pathAnimationDuration
+      ..value = 0;
+    _elementGeneratorVersion++;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pathRevealSeriesIds.isEmpty) return;
+      _pathRevealAnimationController.forward();
+    });
+  }
+
+  void _updatePathSeriesAnimations({
+    required Map<String, ChartSeries> previousSeriesById,
+    required List<ChartSeries> nextSeries,
+  }) {
+    _pathSeriesTransitions.clear();
+    _pathDataAnimationController.stop();
+    final revealIds = <String>{};
+    if (!_canAnimatePaths || _layoutKind != ChartLayoutKind.cartesian) {
+      _pathDataAnimationController.value = 1;
+      _startPathReveal(const <String>{});
+      return;
+    }
+
+    for (final next in nextSeries) {
+      final style = _pathAnimationFor(next);
+      if (style == null) continue;
+      final previous = previousSeriesById[next.id];
+      if (previous == null) {
+        if (style.entranceMode == PathEntranceAnimationMode.reveal) {
+          revealIds.add(next.id);
+        }
+        continue;
+      }
+      final pointsChanged = !listEquals(previous.points, next.points);
+      final previousStyle = _pathAnimationFor(previous);
+      final entranceModeChanged =
+          previousStyle?.entranceMode != style.entranceMode;
+      if (!pointsChanged) {
+        if (entranceModeChanged &&
+            style.entranceMode == PathEntranceAnimationMode.reveal) {
+          revealIds.add(next.id);
+        }
+        continue;
+      }
+      if (style.dataUpdateMode == PathDataUpdateAnimationMode.interpolate &&
+          PathSeriesTransition.isCompatible(previous, next)) {
+        _pathSeriesTransitions[next.id] = _ActivePathSeriesTransition(
+          from: previous,
+          to: next,
+        );
+      } else if (style.entranceMode == PathEntranceAnimationMode.reveal) {
+        revealIds.add(next.id);
+      }
+    }
+
+    if (_pathSeriesTransitions.isEmpty) {
+      _pathDataAnimationController.value = 1;
+    } else {
+      _pathDataAnimationController
+        ..duration = _pathAnimationDuration
+        ..value = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _pathSeriesTransitions.isEmpty) return;
+        _pathDataAnimationController.forward();
+      });
+    }
+    _startPathReveal(revealIds);
+  }
 
   void _startBarEntranceAnimation() {
     _updateBarSeriesTransitions(
@@ -2838,6 +3034,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             final transition = _barSeriesTransitions[series.id];
             if (transition == null) return series;
             return BarSeriesTransition.interpolate(
+              from: transition.from,
+              to: transition.to,
+              progress: progress,
+            );
+          })
+          .toList(growable: false);
+    }
+    if (_pathSeriesTransitions.isNotEmpty) {
+      final progress = _pathDataAnimationProgress;
+      renderSeries = renderSeries
+          .map((series) {
+            final transition = _pathSeriesTransitions[series.id];
+            if (transition == null) return series;
+            return PathSeriesTransition.interpolate(
               from: transition.from,
               to: transition.to,
               progress: progress,
@@ -5766,6 +5976,13 @@ class _ActiveRadialSeriesTransition {
 
   final RadialCategorySeries from;
   final RadialCategorySeries to;
+}
+
+class _ActivePathSeriesTransition {
+  const _ActivePathSeriesTransition({required this.from, required this.to});
+
+  final ChartSeries from;
+  final ChartSeries to;
 }
 
 class _ChartEffectiveRevisionToken {

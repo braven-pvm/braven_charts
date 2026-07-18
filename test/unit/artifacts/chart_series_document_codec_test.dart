@@ -89,6 +89,10 @@ void main() {
             borderWidth: 2,
           ),
         ),
+        pathAnimation: const PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+        ),
       );
 
       final decoded = _roundTrip(source) as LineChartSeries;
@@ -115,6 +119,7 @@ void main() {
       expect(decoded.lineGlow, source.lineGlow);
       expect(decoded.dataPointLabels, source.dataPointLabels);
       expect(decoded.inlineLabel, source.inlineLabel);
+      expect(decoded.pathAnimation, source.pathAnimation);
       expect(decoded.points.single.x.isNaN, isTrue);
       expect(decoded.points.single.y, double.infinity);
       expect(decoded.points.single.timestamp, source.points.single.timestamp);
@@ -147,6 +152,10 @@ void main() {
         baselineValue: 0,
         aboveBaselineFillColor: Color(0xFF00AA00),
         belowBaselineFillColor: Color(0xFFAA0000),
+        pathAnimation: PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+        ),
       );
 
       final decoded = _roundTrip(source) as AreaChartSeries;
@@ -166,6 +175,7 @@ void main() {
       expect(decoded.baselineValue, 0);
       expect(decoded.aboveBaselineFillColor, const Color(0xFF00AA00));
       expect(decoded.belowBaselineFillColor, const Color(0xFFAA0000));
+      expect(decoded.pathAnimation, source.pathAnimation);
     });
 
     test('round-trips every pie-series field', () {
@@ -855,6 +865,34 @@ void main() {
           if (series is DonutChartSeries) 'series.radial.data-transitions.v1',
         });
       }
+    });
+
+    test('advertises path motion only when Line or Area opts in', () {
+      const motion = PathAnimationStyle(
+        entranceMode: PathEntranceAnimationMode.reveal,
+        dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+      );
+      for (final series in const <ChartSeries>[
+        LineChartSeries(id: 'line', points: [], pathAnimation: motion),
+        AreaChartSeries(id: 'area', points: [], pathAnimation: motion),
+      ]) {
+        final encoded =
+            (ChartSeriesDocumentCodec.encode(series)
+                    as ChartArtifactSuccess<ChartSeriesDocument>)
+                .value;
+        expect(encoded.requiredCapabilities, contains('series.path-motion.v1'));
+      }
+
+      final staticLine =
+          (ChartSeriesDocumentCodec.encode(
+                    const LineChartSeries(id: 'static', points: []),
+                  )
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+      expect(
+        staticLine.requiredCapabilities,
+        isNot(contains('series.path-motion.v1')),
+      );
     });
 
     test('encodes and hydrates every point field through inline columns', () {

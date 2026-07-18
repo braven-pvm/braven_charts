@@ -22,6 +22,27 @@ types and where to begin.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
 
+### Line and Area charts
+
+- `PathAnimationStyle` opts a Line or Area series into leading-edge entrance
+  reveal and compatible mounted data-update interpolation. Both behaviors are
+  disabled by default.
+- `PathEntranceAnimationMode` and `PathDataUpdateAnimationMode` select the two
+  independent motion phases; timing and easing come from
+  `ChartTheme.animationTheme`.
+- `BravenChartController.replaySeriesEntrance()` replays the entrance phase for
+  mounted Line and Area series without changing their data.
+- Path motion uses the final chart bounds and standard renderer throughout,
+  keeps Area fill and outline synchronized, and yields immediately to reduced
+  motion or zero-duration themes.
+
+Line and Area work with `BravenChartWorkbench` for package-owned
+Chart/Data/Split presentation, including a pointer- and keyboard-resizable
+wide Split divider. Tables and artifacts always expose target data rather than
+transient animation frames. Controller-fed streaming tails retain their
+dedicated animation and do not also run path interpolation. See
+[Line and Area charts](line_area_charts.md).
+
 ### Pie charts
 
 - `PieChartSeries.fromMap` converts insertion-ordered category/value pairs into

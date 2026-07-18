@@ -147,6 +147,7 @@ class SeriesElement implements DataHitElement {
     this.pointSelectionColor,
     this.fontFamily,
     this.hasAnySelectedPoints = false,
+    this.revealProgress = 1,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -184,6 +185,18 @@ class SeriesElement implements DataHitElement {
   /// Bar series use this to de-emphasize non-selected bars consistently across
   /// series without coupling the renderer to widget state.
   final bool hasAnySelectedPoints;
+
+  /// Leading-edge reveal progress for Line and Area series.
+  final double revealProgress;
+
+  bool get _isPathSeries =>
+      series is LineChartSeries || series is AreaChartSeries;
+
+  double get _effectiveRevealProgress =>
+      _isPathSeries ? revealProgress.clamp(0.0, 1.0) : 1;
+
+  double get _revealEdge =>
+      _currentTransform.plotWidth * _effectiveRevealProgress;
 
   /// Bar group positioning metadata (only used for BarChartSeries).
   ///
@@ -427,7 +440,12 @@ class SeriesElement implements DataHitElement {
   String get id => series.id;
 
   @override
-  Rect get bounds => _bounds;
+  Rect get bounds {
+    if (_effectiveRevealProgress >= 1) return _bounds;
+    return _bounds.intersect(
+      Rect.fromLTRB(0, -double.maxFinite, _revealEdge, double.maxFinite),
+    );
+  }
 
   @override
   ChartElementType get elementType => ChartElementType.series;
@@ -448,6 +466,7 @@ class SeriesElement implements DataHitElement {
   @override
   bool hitTest(Offset position) {
     if (series.isEmpty) return false;
+    if (_isPathSeries && position.dx > _revealEdge) return false;
 
     if (series is BarChartSeries) {
       return _resolveBarGeometries().any(
@@ -507,6 +526,7 @@ class SeriesElement implements DataHitElement {
     final point = series.points[pointIndex];
     if (!point.isValid) return null;
     final position = _currentTransform.dataToPlot(point.x, point.y);
+    if (_isPathSeries && position.dx > _revealEdge) return null;
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: pointIndex,
@@ -555,6 +575,13 @@ class SeriesElement implements DataHitElement {
   void paint(Canvas canvas, Size size) {
     if (series.isEmpty) return;
 
+    final reveal = _effectiveRevealProgress;
+    if (reveal <= 0) return;
+    if (reveal < 1) {
+      canvas.save();
+      canvas.clipRect(Rect.fromLTWH(0, 0, size.width * reveal, size.height));
+    }
+
     // Use theme color from getter (theme -> deprecated -> series -> default)
     final baseColor = themeColor;
 
@@ -574,6 +601,7 @@ class SeriesElement implements DataHitElement {
         break;
     }
     _paintLinkedPoints(canvas, baseColor);
+    if (reveal < 1) canvas.restore();
   }
 
   void _paintLinkedPoints(Canvas canvas, Color baseColor) {

@@ -55,6 +55,7 @@ class BravenChartController extends ChangeNotifier {
   void Function()? _clearPointFocusHandler;
   void Function()? _clearPointSelectionHandler;
   void Function()? _replayRadialEntranceHandler;
+  void Function()? _replaySeriesEntranceHandler;
   final ValueNotifier<ChartDocumentRevision?> _effectiveDocumentRevision =
       ValueNotifier(null);
   bool _disposed = false;
@@ -189,6 +190,13 @@ class BravenChartController extends ChangeNotifier {
   /// radial.
   void replayRadialEntrance() => _replayRadialEntranceHandler?.call();
 
+  /// Replays the configured entrance animation for Line, Area, Pie, or Donut.
+  ///
+  /// Reduced-motion preferences, a disabled series entrance mode, and
+  /// zero-duration animation themes still render the final frame immediately.
+  /// This is a no-op when the controller is detached.
+  void replaySeriesEntrance() => _replaySeriesEntranceHandler?.call();
+
   /// Captures the chart's effective document and optional current view state.
   ChartArtifactResult<ChartDocumentSnapshot> extractDocument([
     ChartDocumentExtractOptions options = const ChartDocumentExtractOptions(),
@@ -271,6 +279,7 @@ class BravenChartController extends ChangeNotifier {
     void Function()? onClearPointFocus,
     void Function()? onClearPointSelection,
     void Function()? onReplayRadialEntrance,
+    void Function()? onReplaySeriesEntrance,
     ChartDocumentRevision? effectiveDocumentRevision,
   }) {
     _selectHandler = onSelect;
@@ -285,6 +294,7 @@ class BravenChartController extends ChangeNotifier {
     _clearPointFocusHandler = onClearPointFocus;
     _clearPointSelectionHandler = onClearPointSelection;
     _replayRadialEntranceHandler = onReplayRadialEntrance;
+    _replaySeriesEntranceHandler = onReplaySeriesEntrance;
     if (!_disposed) {
       _effectiveDocumentRevision.value = effectiveDocumentRevision;
     }
@@ -304,6 +314,7 @@ class BravenChartController extends ChangeNotifier {
     _clearPointFocusHandler = null;
     _clearPointSelectionHandler = null;
     _replayRadialEntranceHandler = null;
+    _replaySeriesEntranceHandler = null;
     if (!_disposed) _effectiveDocumentRevision.value = null;
   }
 

@@ -40,7 +40,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Time series and analytical workhorses',
     icon: Icons.show_chart,
     accent: Color(0xFF2563EB),
-    highlights: ['4 interpolations', 'Multi-axis', 'Tracking'],
+    highlights: ['4 interpolations', 'Motion', 'Chart + data'],
   ),
   ShowcaseChartType(
     type: ChartType.area,
@@ -50,7 +50,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Volume, ranges, and baseline comparison',
     icon: Icons.area_chart_outlined,
     accent: Color(0xFF06B6D4),
-    highlights: ['Layered fills', 'Baselines', 'Glow'],
+    highlights: ['Layered fills', 'Baselines', 'Motion + data'],
   ),
   ShowcaseChartType(
     type: ChartType.bar,

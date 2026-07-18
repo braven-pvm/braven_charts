@@ -45,6 +45,9 @@ class _CartesianChartTypePage extends StatefulWidget {
 }
 
 class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
+  final BravenChartController _chartController = BravenChartController();
+  final ChartWorkbenchController _workbenchController =
+      ChartWorkbenchController();
   final ChartOptionsController _optionsController = ChartOptionsController(
     const ChartOptions(showDataMarkers: true),
   );
@@ -58,9 +61,34 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
+  bool _animatePaths = true;
+  double _motionDurationMs = 650;
+  int _motionRevision = 0;
+  ChartDisplayMode _initialDisplayMode = ChartDisplayMode.chart;
+
+  @override
+  void initState() {
+    super.initState();
+    final requestedPreset = Uri.base.queryParameters['preset']?.toLowerCase();
+    if (requestedPreset != null) {
+      final index = _presets.indexWhere(
+        (preset) => preset.label.toLowerCase() == requestedPreset,
+      );
+      if (index >= 0) _presetIndex = index;
+    }
+    final requestedView = Uri.base.queryParameters['view'];
+    for (final mode in ChartDisplayMode.values) {
+      if (mode.name == requestedView) {
+        _initialDisplayMode = mode;
+        break;
+      }
+    }
+  }
 
   @override
   void dispose() {
+    _chartController.dispose();
+    _workbenchController.dispose();
     _optionsController.dispose();
     super.dispose();
   }
@@ -78,15 +106,22 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ],
       optionsChildren: _buildOptions(),
-      chart: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildPresetPicker(),
-          const SizedBox(height: 16),
-          Expanded(child: _buildChartCard()),
-          const SizedBox(height: 16),
-          _FeatureCoverage(family: widget.family),
-        ],
+      chart: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 600;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPresetPicker(compact: compact),
+              SizedBox(height: compact ? 8 : 16),
+              Expanded(child: _buildChartCard()),
+              if (!compact) ...[
+                const SizedBox(height: 16),
+                _FeatureCoverage(family: widget.family),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -95,6 +130,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _CartesianFamily.line => 'Line Charts',
     _CartesianFamily.area => 'Area Charts',
     _CartesianFamily.scatter => 'Scatter Charts',
+  };
+
+  String get _presetPickerTitle => switch (widget.family) {
+    _CartesianFamily.line => 'Choose a line chart example',
+    _CartesianFamily.area => 'Choose an area chart example',
+    _CartesianFamily.scatter => 'Choose a scatter chart example',
   };
 
   String get _pageSubtitle => switch (widget.family) {
@@ -123,6 +164,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.align_vertical_bottom_outlined,
         description: 'Independent units remain readable in one plot.',
       ),
+      _ChartTypePreset(
+        label: 'Motion',
+        icon: Icons.animation,
+        description: 'Reveal paths, then interpolate real value updates.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -139,6 +185,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         label: 'Forecast',
         icon: Icons.cloud_outlined,
         description: 'A contextual range sits behind the observed line.',
+      ),
+      _ChartTypePreset(
+        label: 'Motion',
+        icon: Icons.animation,
+        description: 'Fill and stroke reveal and update as one geometry.',
       ),
     ],
     _CartesianFamily.scatter => const [
@@ -160,22 +211,22 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     ],
   };
 
-  Widget _buildPresetPicker() {
+  Widget _buildPresetPicker({required bool compact}) {
     final theme = Theme.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose a ${_pageTitle.toLowerCase()} example',
+              _presetPickerTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 8 : 10),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<int>(
@@ -191,7 +242,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 ],
                 selected: {_presetIndex},
                 onSelectionChanged: (selection) {
-                  setState(() => _presetIndex = selection.single);
+                  setState(() {
+                    _presetIndex = selection.single;
+                    _motionRevision = 0;
+                  });
                 },
               ),
             ),
@@ -213,51 +267,79 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       listenable: _optionsController,
       builder: (context, _) {
         final options = _optionsController.options;
+        final chart = _buildChart(options, _chartController);
         return ChartCard(
           title: _presets[_presetIndex].label,
           subtitle: _chartSummary,
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          child: BravenChartPlus(
-            key: ValueKey('${widget.family.name}-chart-preset-$_presetIndex'),
-            series: _buildSeries(),
-            annotations: _buildAnnotations(),
-            theme: options.theme ?? ChartTheme.light,
-            showLegend: options.showLegend,
-            showXScrollbar: options.showXScrollbar,
-            showYScrollbar: options.showYScrollbar,
-            grid: GridConfig(
-              horizontal: options.showGrid,
-              vertical: options.showGrid,
-            ),
-            xAxisConfig: XAxisConfig(
-              label: _xAxisLabel,
-              showAxisLine: options.showAxisLines,
-            ),
-            yAxis: YAxisConfig(
-              position: YAxisPosition.left,
-              label: _yAxisLabel,
-              showAxisLine: options.showAxisLines,
-            ),
-            normalizationMode:
-                _presetIndex == 2 && widget.family == _CartesianFamily.line
-                ? NormalizationMode.perSeries
-                : NormalizationMode.none,
-            interactionConfig: InteractionConfig(
-              enableZoom: options.enableZoom,
-              enablePan: options.enablePan,
-              showXScrollbar: options.showXScrollbar,
-              showYScrollbar: options.showYScrollbar,
-              crosshair: const CrosshairConfig(
-                enabled: true,
-                mode: CrosshairMode.both,
-                snapToDataPoint: true,
-                displayMode: CrosshairDisplayMode.tracking,
-              ),
-              tooltip: const TooltipConfig(enabled: true),
-            ),
-          ),
+          padding: const EdgeInsets.all(8),
+          child: widget.family == _CartesianFamily.scatter
+              ? chart
+              : BravenChartWorkbench(
+                  key: ValueKey('${widget.family.name}-workbench'),
+                  chartController: _chartController,
+                  workbenchController: _workbenchController,
+                  initialDisplayMode: _initialDisplayMode,
+                  splitBreakpoint: 760,
+                  autoFitTablePane: true,
+                  minimumChartPaneExtent: 360,
+                  minimumTablePaneExtent: 360,
+                  maximumAutoTablePaneExtent: 520,
+                  tableRefreshPolicy:
+                      ChartTableRefreshPolicy.onDocumentRevision,
+                  chartBuilder: (context, controller) =>
+                      _buildChart(options, controller),
+                ),
         );
       },
+    );
+  }
+
+  Widget _buildChart(ChartOptions options, BravenChartController controller) {
+    final baseTheme = options.theme ?? ChartTheme.light;
+    return BravenChartPlus(
+      key: ValueKey('${widget.family.name}-chart'),
+      bravenChartController: controller,
+      series: _buildSeries(),
+      annotations: _buildAnnotations(),
+      theme: baseTheme.copyWith(
+        animationTheme: baseTheme.animationTheme.copyWith(
+          dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
+          dataUpdateCurve: Curves.easeInOutCubic,
+        ),
+      ),
+      showLegend: options.showLegend,
+      showXScrollbar: options.showXScrollbar,
+      showYScrollbar: options.showYScrollbar,
+      grid: GridConfig(
+        horizontal: options.showGrid,
+        vertical: options.showGrid,
+      ),
+      xAxisConfig: XAxisConfig(
+        label: _xAxisLabel,
+        showAxisLine: options.showAxisLines,
+      ),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.left,
+        label: _yAxisLabel,
+        showAxisLine: options.showAxisLines,
+      ),
+      normalizationMode:
+          _presetIndex == 2 && widget.family == _CartesianFamily.line
+          ? NormalizationMode.perSeries
+          : NormalizationMode.none,
+      interactionConfig: InteractionConfig(
+        enableZoom: options.enableZoom,
+        enablePan: options.enablePan,
+        showXScrollbar: options.showXScrollbar,
+        showYScrollbar: options.showYScrollbar,
+        crosshair: const CrosshairConfig(
+          enabled: true,
+          mode: CrosshairMode.both,
+          snapToDataPoint: true,
+          displayMode: CrosshairDisplayMode.tracking,
+        ),
+        tooltip: const TooltipConfig(enabled: true),
+      ),
     );
   }
 
@@ -366,6 +448,53 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         },
         children: typeOptions,
       ),
+      if (widget.family != _CartesianFamily.scatter && _presetIndex == 3)
+        OptionSection(
+          title: 'Motion',
+          icon: Icons.animation,
+          children: [
+            SliderOption(
+              label: 'Duration',
+              value: _motionDurationMs,
+              min: 150,
+              max: 1200,
+              divisions: 21,
+              suffix: 'ms',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _motionDurationMs = value),
+            ),
+            BoolOption(
+              label: 'Animate paths',
+              value: _animatePaths,
+              subtitle: 'Reduced-motion settings always take priority',
+              onChanged: (value) => setState(() => _animatePaths = value),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-replay-entrance'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: _chartController.replaySeriesEntrance,
+                  icon: const Icon(Icons.replay, size: 18),
+                  label: const Text('Replay entrance'),
+                ),
+                OutlinedButton.icon(
+                  key: ValueKey('${widget.family.name}-update-values'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  onPressed: () => setState(() => _motionRevision++),
+                  icon: const Icon(Icons.swap_vert, size: 18),
+                  label: const Text('Update data'),
+                ),
+              ],
+            ),
+          ],
+        ),
       StandardChartOptions(
         controller: _optionsController,
         showLineStyleOption: false,
@@ -380,6 +509,31 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   };
 
   List<ChartSeries> _buildLineSeries() {
+    if (_presetIndex == 3) {
+      final first = _motionRevision.isEven
+          ? _primaryPoints
+          : _motionPrimaryUpdated;
+      final second = _motionRevision.isEven
+          ? _secondaryPoints
+          : _motionSecondaryUpdated;
+      return [
+        _line(
+          id: 'motion-observed',
+          name: 'Observed',
+          unit: 'W',
+          points: first,
+          color: const Color(0xFF2563EB),
+        ),
+        if (_showSecondSeries)
+          _line(
+            id: 'motion-plan',
+            name: 'Plan',
+            unit: 'W',
+            points: second,
+            color: const Color(0xFFF97316),
+          ),
+      ];
+    }
     if (_presetIndex == 1) {
       final modes = LineInterpolation.values;
       const colors = [
@@ -490,10 +644,35 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         showUnit: true,
       ),
       yAxisConfig: axis,
+      pathAnimation: _pathAnimation,
     );
   }
 
   List<ChartSeries> _buildAreaSeries() {
+    if (_presetIndex == 3) {
+      final observed = _motionRevision.isEven
+          ? _primaryPoints
+          : _motionPrimaryUpdated;
+      final plan = _motionRevision.isEven
+          ? _secondaryPoints
+          : _motionSecondaryUpdated;
+      return [
+        _area(
+          id: 'motion-volume',
+          name: 'Volume',
+          points: observed,
+          color: const Color(0xFF4F46E5),
+        ),
+        if (_showSecondSeries)
+          _line(
+            id: 'motion-plan',
+            name: 'Plan',
+            unit: 'k',
+            points: plan,
+            color: const Color(0xFF0891B2),
+          ),
+      ];
+    }
     if (_presetIndex == 1) {
       return [
         AreaChartSeries(
@@ -572,8 +751,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       lineGlow: _lineGlow,
       showDataPointMarkers: _optionsController.showDataMarkers,
       dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
+      pathAnimation: _pathAnimation,
     );
   }
+
+  PathAnimationStyle get _pathAnimation => _animatePaths && _presetIndex == 3
+      ? const PathAnimationStyle(
+          entranceMode: PathEntranceAnimationMode.reveal,
+          dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+        )
+      : const PathAnimationStyle();
 
   List<ChartSeries> _buildScatterSeries() {
     final primary = ScatterChartSeries(
@@ -658,6 +845,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
+      _animatePaths = true;
+      _motionDurationMs = 650;
+      _motionRevision = 0;
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));
   }
@@ -694,6 +884,9 @@ class _FeatureCoverage extends StatelessWidget {
         'Point labels',
         'Glow',
         'Multi-axis',
+        'Entrance reveal',
+        'Data-update motion',
+        'Chart/data workbench',
       ],
       _CartesianFamily.area => const [
         'Layering',
@@ -702,6 +895,9 @@ class _FeatureCoverage extends StatelessWidget {
         'Interpolation',
         'Markers',
         'Glow',
+        'Entrance reveal',
+        'Data-update motion',
+        'Chart/data workbench',
       ],
       _CartesianFamily.scatter => const [
         'Multiple cohorts',
@@ -775,6 +971,28 @@ const _secondaryPoints = [
   ChartDataPoint(x: 5, y: 51),
   ChartDataPoint(x: 6, y: 55),
   ChartDataPoint(x: 7, y: 59),
+];
+
+const _motionPrimaryUpdated = [
+  ChartDataPoint(x: 0, y: 36),
+  ChartDataPoint(x: 1, y: 44),
+  ChartDataPoint(x: 2, y: 41),
+  ChartDataPoint(x: 3, y: 56),
+  ChartDataPoint(x: 4, y: 51),
+  ChartDataPoint(x: 5, y: 63),
+  ChartDataPoint(x: 6, y: 58),
+  ChartDataPoint(x: 7, y: 68),
+];
+
+const _motionSecondaryUpdated = [
+  ChartDataPoint(x: 0, y: 31),
+  ChartDataPoint(x: 1, y: 40),
+  ChartDataPoint(x: 2, y: 45),
+  ChartDataPoint(x: 3, y: 47),
+  ChartDataPoint(x: 4, y: 52),
+  ChartDataPoint(x: 5, y: 56),
+  ChartDataPoint(x: 6, y: 61),
+  ChartDataPoint(x: 7, y: 64),
 ];
 
 const _powerPoints = [
