@@ -1,6 +1,6 @@
 # Line and Area Product Parity — Design Spec
 
-**Status:** Sprints 1–3 complete; consolidated E2E in progress
+**Status:** All sprints and consolidated E2E complete; awaiting merge approval
 **Lane:** `feature/line-area-product-parity`
 **Review gate:** PR #35 remains unmerged until the sprint roadmap and final E2E gate are complete.
 

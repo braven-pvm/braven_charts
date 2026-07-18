@@ -40,7 +40,7 @@ the consolidated E2E gate passes, and the user gives final merge approval.
 
 ## Sprint 4 — Consolidated E2E and merge readiness
 
-**Status:** In progress
+**Status:** Complete
 
 - Run full package and showcase tests and analyzers from a clean tree.
 - Build the release web app and validate the pub.dev archive.
@@ -50,3 +50,22 @@ the consolidated E2E gate passes, and the user gives final merge approval.
 - Check browser console output, PR scope, generated docs, screenshots, and CI.
 - Record residual risks and request final merge approval. Do not merge as part
   of the E2E run without that approval.
+
+### E2E record
+
+- `flutter analyze lib`: clean.
+- Full package suite: 1,779 tests passed.
+- Showcase analyzer: clean; full showcase suite: 133 tests passed.
+- Browser release run: 21 checkpoints passed across Line and Area direct
+  routes, Chart/Data/Split transitions, pointer resizing, preset switching,
+  entrance replay, compatible updates, reduced motion, compact fallback, and
+  severe-console/controller-error checks.
+- `flutter build web --release --base-href /braven_charts/`: passed with the
+  deployment base verified; the root-path release build was then restored for
+  local review on port 8097.
+- Dartdoc: 0 warnings and 0 errors. Pub.dev dry run: 0 warnings.
+- The repository-wide formatter audit reports 132 pre-existing files that do
+  not match the current Dart formatter. This PR does not mass-format unrelated
+  code; every Dart file changed by this lane passes the formatter check.
+
+PR #35 remains unmerged pending green head CI and explicit user approval.
