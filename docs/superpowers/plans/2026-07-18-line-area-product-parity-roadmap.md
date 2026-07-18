@@ -2,7 +2,9 @@
 
 **Original branch:** `feature/line-area-product-parity`
 **Original PR:** #35 (merged)
-**Current continuation:** `feature/line-area-topology-motion`
+**Topology continuation:** `feature/line-area-topology-motion`
+**Continuation PR:** #37 (merged)
+**Next lane:** Per-series motion timing (Sprint 8; review needed)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -130,7 +132,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 7 — Continuation E2E and promotion readiness
 
-**Status:** Approved for PR promotion
+**Status:** Complete
 
 - Re-run every package, showcase, documentation, archive, and release-build
   gate after rebasing the topology and identity commits onto current master.
@@ -165,5 +167,92 @@ The locked interaction contract and exclusions are recorded in
 - Residual promotion gates are intentionally external to the local E2E slice:
   cross-browser coverage and hosted CI run during PR promotion. No push, PR,
   or merge had been performed when the E2E record was captured.
-- Final local review was approved on 2026-07-18. The continuation may be pushed
-  and opened as a PR; merge remains a separate explicit approval gate.
+- Final local review was approved on 2026-07-18. PR #37 then passed hosted
+  package-quality CI, received final approval, and merged into `master`.
+
+## Sprint 8 — Per-series motion timing
+
+**Status:** Local review
+
+### Product outcome
+
+Multi-series Line and Area charts can sequence entrance and compatible data
+updates deliberately. Each series may inherit the chart theme's duration or
+declare an explicit delay and duration for entrance and update motion. Existing
+charts retain their current simultaneous, theme-timed behavior by default.
+
+The detailed proposal is recorded in
+`../specs/2026-07-18-line-area-per-series-motion-timing-design.md`.
+
+### Scope
+
+- Add immutable, non-negative entrance and data-update timing values to
+  `PathAnimationStyle` through a reusable `PathAnimationTiming` value object.
+- Resolve every participating series onto one elapsed-time orchestration
+  timeline per phase; do not add one controller or timer per series.
+- Apply the existing theme curve to each series' local progress window while
+  preserving theme timing as the default and theme zero-duration as a global
+  synchronous-motion override.
+- Preserve canonical target bounds, identity mapping, interaction state,
+  annotations, artifacts, rapid interruption, and the streaming-tail
+  exclusion throughout delayed and active windows.
+- Persist non-default timing configuration additively in chart documents while
+  keeping animation progress itself transient.
+- Upgrade the Line and Area Motion examples with restrained, explicit timing
+  sequences and controls that remain usable in wide and compact workbenches.
+
+### Explicit exclusions
+
+- Automatic staggering derived from list position or paint order.
+- Per-series easing curves, spring physics, or path-shape morphing.
+- Axis-domain interpolation or animated normalization bounds.
+- Interior insertion/removal, arbitrary reordering, or interpolation-mode
+  morphing.
+- Scatter, Bar, Pie, Donut, or polar-family timing changes.
+- Persistence or restoration of in-flight animation progress.
+
+### Acceptance gates
+
+- Defaults remain bit-for-bit simultaneous and theme-timed; motion stays
+  opt-in and backwards compatible.
+- Delayed series remain on their valid phase-start geometry and canonical
+  target identity until their local window begins; completed series resolve to
+  the exact target while later series continue.
+- Reduced motion, a zero-duration theme, and a zero-duration series override
+  render the final state immediately without honoring delay.
+- A rapid compatible snapshot restarts from each series' currently rendered
+  geometry and uses the newest target timing configuration.
+- Pure timing-window tests and real Line/Area render-path tests cover before,
+  during, between, and after per-series windows, including replay, updates,
+  topology changes, multi-axis bounds, interaction mapping, and artifacts.
+- Artifact round trips preserve timing; documents without timing decode to the
+  current inherited defaults; a dedicated timing capability marks documents
+  that require the new semantics.
+- Wide and compact showcase tests, package/showcase analyzers and suites,
+  Dartdoc, pub.dev dry run, deployment-base and root release builds, direct
+  browser routes, console checks, and local product review pass before PR
+  promotion.
+
+### Sprint 8 local verification record
+
+- Added immutable per-series entrance and update timing, one shared elapsed-time
+  timeline per phase, artifact persistence, and the dedicated
+  `series.path-motion-timing.v1` capability without changing default motion.
+- Real Line and Area render-path coverage passes for staggered entrance,
+  independent compatible updates, topology changes, interruption, replay,
+  canonical bounds and identity, reduced motion, zero theme/series durations,
+  and controller-fed streaming exclusion.
+- The Line Motion preset now uses explicit `0/80/160 ms` timing across three
+  stable series. Area uses two translucent layers at `0/120 ms`. Their compact
+  control changes explicit sample timing without implying automatic ordering.
+- `flutter analyze lib`, the full showcase analyzer, the complete package test
+  suite, and the complete showcase test suite pass. Dartdoc reports zero
+  warnings and zero errors; the committed pub.dev dry run reports zero
+  warnings.
+- Deployment-base and root-path release web builds pass. Chrome release
+  captures for both direct Motion Split routes are nonblank; filtered console
+  checks and the local asset log show no severe output, controller error, or
+  404 response. Compact widget coverage asserts the header actions and
+  workbench remain inside a 390 px viewport.
+- The root release build is available for joint review on port 8097. No push,
+  PR, or merge has been performed.

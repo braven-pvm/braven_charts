@@ -62,6 +62,12 @@ BravenChartPlus(
       pathAnimation: PathAnimationStyle(
         entranceMode: PathEntranceAnimationMode.reveal,
         dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+        entranceTiming: PathAnimationTiming(
+          delay: Duration(milliseconds: 80),
+        ),
+        dataUpdateTiming: PathAnimationTiming(
+          delay: Duration(milliseconds: 80),
+        ),
       ),
     ),
   ],
@@ -76,16 +82,21 @@ are useful for small datasets but add visual and rendering cost at scale.
 
 Path motion is opt-in. `reveal` clips the normal Line renderer from the leading
 edge, while `interpolate` moves compatible point updates through the same
-geometry used for hit testing, tooltips, crosshairs, and labels. Timing and
-easing come from `ChartTheme.animationTheme.dataUpdateDuration` and
-`dataUpdateCurve`.
+geometry used for hit testing, tooltips, crosshairs, and labels. A null
+`PathAnimationTiming.duration` inherits
+`ChartTheme.animationTheme.dataUpdateDuration`; a series may add an explicit
+non-negative delay and duration for each phase. The theme curve is applied to
+each local series window. Configure each stable series ID directly rather than
+deriving timing from list or paint order.
 
 Updates interpolate only when the series ID, series type, interpolation mode,
 and ordered point identities remain compatible. Equal-length values move in
 place. Stable-identity appends, boundary removals, and rolling windows grow or
 collapse at the nearest retained edge. Interior edits and reordered identities
 fall back to the configured entrance reveal. Reduced-motion preferences and a
-zero-duration theme always render the final frame immediately.
+zero-duration theme always render the final frame immediately, even when a
+series declares a non-zero delay or duration. An explicit zero series duration
+also renders that series immediately and ignores its delay.
 
 Attach a `BravenChartController` to replay the configured entrance:
 
@@ -128,6 +139,8 @@ overlap makes individual series hard to read.
 Area fill, stroke, glow, markers, and labels share one reveal boundary. During
 compatible value or boundary-topology updates, the fill and outline
 interpolate as one canonical series rather than as independent paint effects.
+Multiple Area layers can use independent `entranceTiming` and
+`dataUpdateTiming` windows while sharing one chart-level orchestration clock.
 
 ## Chart and data workbench
 

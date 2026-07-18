@@ -1,9 +1,9 @@
 # Line and Area Product Parity — Implementation Plan
 
-**Branch:** `feature/line-area-product-parity`  
-**Base:** current `origin/master`  
-**Promotion:** local review passed; PR #35 is open and remains unmerged until
-the sprint roadmap and consolidated E2E gate are complete.
+**Original branch:** `feature/line-area-product-parity`
+**Status:** Complete; PR #35 and continuation PR #37 merged
+**Next work:** Sprint 8 is tracked in the
+[product-parity roadmap](2026-07-18-line-area-product-parity-roadmap.md).
 
 ## Lane 1 — Core path motion
 
@@ -43,6 +43,6 @@ the sprint roadmap and consolidated E2E gate are complete.
   tests without layout exceptions.
 - The branch debug server is available on port 8097 with direct Motion/Split
   routes for joint review.
-- Local visual review was accepted and PR #35 was opened with green package
-  quality CI. Merge remains deliberately deferred until the remaining sprints
-  and consolidated E2E gate are complete.
+- Local visual review was accepted and PR #35 merged with green package-quality
+  CI. Topology motion, identity continuity, and consolidated continuation E2E
+  subsequently completed in Sprints 5-7 and merged through PR #37.

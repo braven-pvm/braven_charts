@@ -68,6 +68,7 @@ import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'utils/bar_series_transition.dart';
 import 'utils/radial_series_transition.dart';
+import 'utils/path_animation_timeline.dart';
 import 'utils/path_series_transition.dart';
 import 'widgets/dialogs/pin_annotation_dialog.dart';
 import 'widgets/dialogs/chord_annotation_dialog.dart';
@@ -1050,7 +1051,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       <String, _ActivePathSeriesTransition>{};
   final Map<String, PathSeriesPointMap> _pathPointMapsBySeries =
       <String, PathSeriesPointMap>{};
-  final Set<String> _pathRevealSeriesIds = <String>{};
+  final Map<String, PathAnimationWindow> _pathRevealWindows =
+      <String, PathAnimationWindow>{};
+  Duration _pathDataTimelineDuration = Duration.zero;
+  Duration _pathRevealTimelineDuration = Duration.zero;
   late final AnimationController _incomingDataAnimationController;
   late final AnimationController _barDataAnimationController;
   late final AnimationController _pathDataAnimationController;
@@ -1310,14 +1314,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
         _barSeriesTransitions.clear();
-        _pathDataAnimationController
-          ..stop()
-          ..value = 1;
-        _pathSeriesTransitions.clear();
-        _pathRevealAnimationController
-          ..stop()
-          ..value = 1;
-        _pathRevealSeriesIds.clear();
+        _finishPathAnimationsImmediately();
         _radialRevealAnimationController
           ..stop()
           ..value = 1;
@@ -1437,6 +1434,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     final seriesChanged = !listEquals(widget.series, oldWidget.series);
+    if (_pathAnimationDuration == Duration.zero) {
+      _finishPathAnimationsImmediately();
+    }
     final radialDataChanged = _radialDataChanged(
       oldWidget.series,
       widget.series,
@@ -2387,7 +2387,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           focusedPointRefs: _focusedPointRefs,
           selectedPointRefs: _selectedPointRefs,
           pathRevealProgressBySeries: {
-            for (final id in _pathRevealSeriesIds) id: _pathRevealProgress,
+            for (final id in _pathRevealWindows.keys)
+              id: _pathRevealProgressFor(id),
           },
           pathPointMapsBySeries: _pathPointMapsBySeries,
         ).cast<ChartElement>().toList();
@@ -2557,20 +2558,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _pathSeriesTransitions.clear();
+      _pathDataTimelineDuration = Duration.zero;
       _refreshAnimatedRenderSeries();
       _elementGeneratorVersion++;
     });
   }
 
   void _handlePathRevealAnimationTick() {
-    if (!mounted || _pathRevealSeriesIds.isEmpty) return;
+    if (!mounted || _pathRevealWindows.isEmpty) return;
     setState(() => _elementGeneratorVersion++);
   }
 
   void _handlePathRevealAnimationStatus(AnimationStatus status) {
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
-      _pathRevealSeriesIds.clear();
+      _pathRevealWindows.clear();
+      _pathRevealTimelineDuration = Duration.zero;
       _elementGeneratorVersion++;
     });
   }
@@ -2621,22 +2624,45 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   Duration get _pathAnimationDuration =>
       (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateDuration;
 
-  double get _pathDataAnimationProgress {
+  double _pathDataAnimationProgressFor(_ActivePathSeriesTransition transition) {
     final curve =
         (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
-    return curve.transform(_pathDataAnimationController.value).clamp(0.0, 1.0);
+    return PathAnimationTimeline.progress(
+      controllerValue: _pathDataAnimationController.value,
+      timelineDuration: _pathDataTimelineDuration,
+      window: transition.window,
+      curve: curve,
+    );
   }
 
-  double get _pathRevealProgress {
+  double _pathRevealProgressFor(String seriesId) {
+    final window = _pathRevealWindows[seriesId];
+    if (window == null) return 1;
     final curve =
         (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
-    return curve
-        .transform(_pathRevealAnimationController.value)
-        .clamp(0.0, 1.0);
+    return PathAnimationTimeline.progress(
+      controllerValue: _pathRevealAnimationController.value,
+      timelineDuration: _pathRevealTimelineDuration,
+      window: window,
+      curve: curve,
+    );
   }
 
   bool get _canAnimatePaths =>
       !_disableAnimations && _pathAnimationDuration > Duration.zero;
+
+  void _finishPathAnimationsImmediately() {
+    _pathDataAnimationController
+      ..stop()
+      ..value = 1;
+    _pathSeriesTransitions.clear();
+    _pathDataTimelineDuration = Duration.zero;
+    _pathRevealAnimationController
+      ..stop()
+      ..value = 1;
+    _pathRevealWindows.clear();
+    _pathRevealTimelineDuration = Duration.zero;
+  }
 
   PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
     LineChartSeries() => series.pathAnimation,
@@ -2664,20 +2690,43 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _startPathReveal(Set<String> seriesIds) {
     _pathRevealAnimationController.stop();
-    _pathRevealSeriesIds
-      ..clear()
-      ..addAll(seriesIds);
-    if (!_canAnimatePaths || _pathRevealSeriesIds.isEmpty) {
+    _pathRevealWindows.clear();
+    _pathRevealTimelineDuration = Duration.zero;
+    if (!_canAnimatePaths || seriesIds.isEmpty) {
       _pathRevealAnimationController.value = 1;
-      _pathRevealSeriesIds.clear();
+      return;
+    }
+    final seriesById = <String, ChartSeries>{
+      for (final series in _effectiveDataSeries) series.id: series,
+    };
+    final timings = <String, PathAnimationTiming>{
+      for (final id in seriesIds)
+        if (seriesById[id] case final series?)
+          id: _pathAnimationFor(series)!.entranceTiming,
+    };
+    final windows = PathAnimationTimeline.resolve(
+      timings: timings,
+      themeDuration: _pathAnimationDuration,
+    );
+    _pathRevealWindows.addAll({
+      for (final entry in windows.entries)
+        if (!entry.value.isImmediate) entry.key: entry.value,
+    });
+    _pathRevealTimelineDuration = PathAnimationTimeline.totalDuration(
+      _pathRevealWindows.values,
+    );
+    if (_pathRevealWindows.isEmpty ||
+        _pathRevealTimelineDuration == Duration.zero) {
+      _pathRevealAnimationController.value = 1;
+      _pathRevealWindows.clear();
       return;
     }
     _pathRevealAnimationController
-      ..duration = _pathAnimationDuration
+      ..duration = _pathRevealTimelineDuration
       ..value = 0;
     _elementGeneratorVersion++;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _pathRevealSeriesIds.isEmpty) return;
+      if (!mounted || _pathRevealWindows.isEmpty) return;
       _pathRevealAnimationController.forward();
     });
   }
@@ -2687,6 +2736,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required List<ChartSeries> nextSeries,
   }) {
     _pathSeriesTransitions.clear();
+    _pathDataTimelineDuration = Duration.zero;
     _pathDataAnimationController.stop();
     final revealIds = <String>{};
     if (!_canAnimatePaths || _layoutKind != ChartLayoutKind.cartesian) {
@@ -2695,6 +2745,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       return;
     }
 
+    final pendingTransitions = <String, _PendingPathSeriesTransition>{};
+    final transitionTimings = <String, PathAnimationTiming>{};
     for (final next in nextSeries) {
       final style = _pathAnimationFor(next);
       if (style == null) continue;
@@ -2718,20 +2770,38 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
       if (style.dataUpdateMode == PathDataUpdateAnimationMode.interpolate &&
           PathSeriesTransition.isCompatible(previous, next)) {
-        _pathSeriesTransitions[next.id] = _ActivePathSeriesTransition(
+        pendingTransitions[next.id] = _PendingPathSeriesTransition(
           from: previous,
           to: next,
         );
+        transitionTimings[next.id] = style.dataUpdateTiming;
       } else if (style.entranceMode == PathEntranceAnimationMode.reveal) {
         revealIds.add(next.id);
       }
     }
 
+    final transitionWindows = PathAnimationTimeline.resolve(
+      timings: transitionTimings,
+      themeDuration: _pathAnimationDuration,
+    );
+    for (final entry in pendingTransitions.entries) {
+      final window = transitionWindows[entry.key]!;
+      if (window.isImmediate) continue;
+      _pathSeriesTransitions[entry.key] = _ActivePathSeriesTransition(
+        from: entry.value.from,
+        to: entry.value.to,
+        window: window,
+      );
+    }
+    _pathDataTimelineDuration = PathAnimationTimeline.totalDuration(
+      _pathSeriesTransitions.values.map((transition) => transition.window),
+    );
+
     if (_pathSeriesTransitions.isEmpty) {
       _pathDataAnimationController.value = 1;
     } else {
       _pathDataAnimationController
-        ..duration = _pathAnimationDuration
+        ..duration = _pathDataTimelineDuration
         ..value = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _pathSeriesTransitions.isEmpty) return;
@@ -3099,7 +3169,6 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           .toList(growable: false);
     }
     if (_pathSeriesTransitions.isNotEmpty) {
-      final progress = _pathDataAnimationProgress;
       renderSeries = renderSeries
           .map((series) {
             final transition = _pathSeriesTransitions[series.id];
@@ -3107,7 +3176,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             final frame = PathSeriesTransition.frame(
               from: transition.from,
               to: transition.to,
-              progress: progress,
+              progress: _pathDataAnimationProgressFor(transition),
             );
             _pathPointMapsBySeries[series.id] = frame.pointMap;
             return frame.series;
@@ -6039,7 +6108,19 @@ class _ActiveRadialSeriesTransition {
 }
 
 class _ActivePathSeriesTransition {
-  const _ActivePathSeriesTransition({required this.from, required this.to});
+  const _ActivePathSeriesTransition({
+    required this.from,
+    required this.to,
+    required this.window,
+  });
+
+  final ChartSeries from;
+  final ChartSeries to;
+  final PathAnimationWindow window;
+}
+
+class _PendingPathSeriesTransition {
+  const _PendingPathSeriesTransition({required this.from, required this.to});
 
   final ChartSeries from;
   final ChartSeries to;
