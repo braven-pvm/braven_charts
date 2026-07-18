@@ -130,14 +130,38 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 7 — Continuation E2E and promotion readiness
 
-**Status:** In progress
+**Status:** Ready for final local review
 
 - Re-run every package, showcase, documentation, archive, and release-build
   gate after rebasing the topology and identity commits onto current master.
 - Exercise Line and Area direct routes, Chart/Data/Split, resizing, linked
   selection, append/remove/rolling motion, rapid interruption, reduced motion,
   annotations, and multi-axis behavior against the final release bundle.
-- Review the complete two-commit continuation diff for cross-family regression
+- Review the complete three-commit continuation diff for cross-family regression
   risk after the radial-family foundation merge.
 - Record residual risks and leave a refreshed local review route available.
   Do not push, open a PR, or merge without explicit user approval.
+
+### Sprint 7 E2E record
+
+- Rebased the topology and identity work onto the radial-family foundation.
+  The rebase exposed the foundation's `radial` to `partitionRadial` layout-kind
+  rename in generic entrance replay; the dispatch was corrected and covered by
+  the existing Donut controller test through the generic replay API.
+- `flutter analyze lib` and the full showcase analyzer pass with zero issues.
+  The full package suite passes with 1,796 tests; the full showcase suite passes
+  with 134 tests.
+- Dartdoc reports zero warnings and zero errors. The pub.dev dry run reports
+  zero warnings; constrained dependency update notices remain informational.
+- Deployment-base and root-path release web builds pass. The deployment build's
+  `/braven_charts/` base href was verified before restoring the root build for
+  local review.
+- Chrome release-browser checks pass for refreshed Line and Area Motion direct
+  routes, Chart/Data/Split composition, divider resizing, linked table
+  selection, value updates, rapid rolling-window interruption, reduced motion,
+  compact layouts, Line multi-axis and workhorse presets, and the Area baseline
+  preset. Every checked route rendered nonblank with no severe console output,
+  controller error, or visible overflow.
+- Residual promotion gates are intentionally external to this local slice:
+  cross-browser coverage and hosted CI will run after approval to push and open
+  the continuation PR. No push, PR, or merge has been performed.
