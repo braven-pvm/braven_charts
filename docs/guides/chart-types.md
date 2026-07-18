@@ -16,7 +16,7 @@ import 'package:braven_charts/braven_charts.dart';
 | Series | Use it for | Key configuration |
 | --- | --- | --- |
 | `LineChartSeries` | Trends and ordered measurements | interpolation, stroke, markers, labels, glow, path motion |
-| `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, fill opacity, baseline colors, path motion |
+| `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, solid or gradient fill, baseline colors, path motion |
 | `BarChartSeries` | Discrete comparisons and grouped values | relative or fixed bar width |
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
@@ -132,6 +132,11 @@ AreaChartSeries(
   ),
 )
 ```
+
+For a graduated fill, set `fillGradient: AreaGradient(...)`. Its `colors`,
+optional normalized `stops`, and `begin`/`end` alignments are portable through
+chart artifacts. `fillOpacity` multiplies each stop's alpha. Baseline fills
+remain the higher-precedence mode when `baselineValue` is configured.
 
 Avoid overlapping many opaque areas. Lower the opacity or use a line when the
 overlap makes individual series hard to read.

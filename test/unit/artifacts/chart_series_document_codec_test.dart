@@ -149,6 +149,12 @@ void main() {
         strokeWidth: 3,
         tension: 0.45,
         fillOpacity: 0.55,
+        fillGradient: AreaGradient(
+          colors: [Color(0xFF335577), Color(0x00335577)],
+          stops: [0.15, 1],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         showDataPointMarkers: true,
         dataPointMarkerRadius: 6,
         dataPointMarkerStyle: DataPointMarkerStyle.hollow,
@@ -172,6 +178,7 @@ void main() {
       expect(decoded.strokeWidth, 3);
       expect(decoded.tension, 0.45);
       expect(decoded.fillOpacity, 0.55);
+      expect(decoded.fillGradient, source.fillGradient);
       expect(decoded.showDataPointMarkers, isTrue);
       expect(decoded.dataPointMarkerRadius, 6);
       expect(decoded.dataPointMarkerStyle, DataPointMarkerStyle.hollow);
@@ -183,6 +190,35 @@ void main() {
       expect(decoded.aboveBaselineFillColor, const Color(0xFF00AA00));
       expect(decoded.belowBaselineFillColor, const Color(0xFFAA0000));
       expect(decoded.pathAnimation, source.pathAnimation);
+    });
+
+    test('advertises the Area gradient capability only when configured', () {
+      const gradientSeries = AreaChartSeries(
+        id: 'gradient-area',
+        points: [],
+        fillGradient: AreaGradient(
+          colors: [Color(0xFF2563EB), Color(0x002563EB)],
+        ),
+      );
+      const solidSeries = AreaChartSeries(id: 'solid-area', points: []);
+
+      final gradientDocument =
+          (ChartSeriesDocumentCodec.encode(gradientSeries)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+      final solidDocument =
+          (ChartSeriesDocumentCodec.encode(solidSeries)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value;
+
+      expect(
+        gradientDocument.requiredCapabilities,
+        contains('series.area.gradient.v1'),
+      );
+      expect(
+        solidDocument.requiredCapabilities,
+        isNot(contains('series.area.gradient.v1')),
+      );
     });
 
     test('round-trips every pie-series field', () {

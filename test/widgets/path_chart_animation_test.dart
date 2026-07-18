@@ -244,6 +244,155 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'interior Line insertion and Area removal share canonical timed geometry',
+    (tester) async {
+      final key = GlobalKey<_InteriorTopologyHarnessState>();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _InteriorTopologyHarness(
+          key: key,
+          theme: theme,
+          controller: controller,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final revision = controller.effectiveDocumentRevision.value!;
+      controller.selectPoint(
+        const ChartPointRef(seriesId: 'area', pointIndex: 1),
+        revision: revision,
+      );
+      controller.focusPoint(
+        const ChartPointRef(seriesId: 'area', pointIndex: 1),
+        revision: revision,
+      );
+      await tester.pump();
+
+      key.currentState!.applyInteriorChanges();
+      await tester.pump();
+      await tester.pump();
+
+      Map<String, SeriesElement> elements() => {
+        for (final element in renderedElements(tester))
+          element.series.id: element,
+      };
+
+      expect(controller.selectedPointRefs, isEmpty);
+      expect(controller.focusedPointRefs, isEmpty);
+      var current = elements();
+      expect(current['line']!.series.points.map((point) => point.y), [
+        10,
+        15,
+        20,
+      ]);
+      expect(current['area']!.series.points.map((point) => point.y), [
+        15,
+        55,
+        25,
+      ]);
+
+      final snapshot =
+          (controller.extractDocument()
+                  as ChartArtifactSuccess<ChartDocumentSnapshot>)
+              .value;
+      final targets = [
+        for (final document in snapshot.document.series)
+          (ChartSeriesDocumentCodec.decode(document)
+                  as ChartArtifactSuccess<ChartSeries>)
+              .value,
+      ];
+      expect(targets[0].points.map((point) => point.label), ['A', 'X', 'B']);
+      expect(targets[1].points.map((point) => point.label), ['A', 'B']);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      current = elements();
+      expect(current['line']!.series.points.map((point) => point.y), [
+        15,
+        32.5,
+        25,
+      ]);
+      expect(current['area']!.series.points.map((point) => point.y), [
+        15,
+        55,
+        25,
+      ]);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      current = elements();
+      expect(current['line']!.series.points.map((point) => point.y), [
+        20,
+        50,
+        30,
+      ]);
+      expect(current['area']!.series.points.map((point) => point.y), [
+        15,
+        55,
+        25,
+      ]);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      current = elements();
+      final areaElement = current['area']!;
+      final area = areaElement.series as AreaChartSeries;
+      expect(area.points.map((point) => point.y), [20, 42.5, 30]);
+      final exit = area.points[1];
+      expect(
+        areaElement.dataHitAt(
+          areaElement.transform.dataToPlot(exit.x, exit.y),
+          maxDistance: 1,
+        ),
+        isNull,
+      );
+
+      await tester.pumpAndSettle();
+      current = elements();
+      expect(current['area']!.series.points.map((point) => point.label), [
+        'A',
+        'B',
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('interior topology interruption resumes from rendered geometry', (
+    tester,
+  ) async {
+    final key = GlobalKey<_InteriorTopologyHarnessState>();
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _InteriorTopologyHarness(key: key, theme: theme, controller: controller),
+    );
+    await tester.pumpAndSettle();
+
+    key.currentState!.applyInteriorChanges();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    LineChartSeries line() =>
+        renderedElements(
+              tester,
+            ).firstWhere((element) => element.series.id == 'line').series
+            as LineChartSeries;
+
+    expect(line().points.map((point) => point.y), [15, 32.5, 25]);
+
+    key.currentState!.revertInteriorChanges();
+    await tester.pump();
+    await tester.pump();
+    expect(line().points.map((point) => point.y), [15, 32.5, 25]);
+
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(line().points.map((point) => point.y), [12.5, 23.75, 22.5]);
+    await tester.pumpAndSettle();
+    expect(line().points.map((point) => point.label), ['A', 'B']);
+    expect(line().points.map((point) => point.y), [10, 20]);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Line append grows from the rendered tail without reveal', (
     tester,
   ) async {
@@ -722,6 +871,85 @@ class _StaggeredPathHarness extends StatefulWidget {
 
   @override
   State<_StaggeredPathHarness> createState() => _StaggeredPathHarnessState();
+}
+
+class _InteriorTopologyHarness extends StatefulWidget {
+  const _InteriorTopologyHarness({
+    super.key,
+    required this.theme,
+    required this.controller,
+  });
+
+  final ChartTheme theme;
+  final BravenChartController controller;
+
+  @override
+  State<_InteriorTopologyHarness> createState() =>
+      _InteriorTopologyHarnessState();
+}
+
+class _InteriorTopologyHarnessState extends State<_InteriorTopologyHarness> {
+  var changed = false;
+
+  void applyInteriorChanges() => setState(() => changed = true);
+
+  void revertInteriorChanges() => setState(() => changed = false);
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    home: SizedBox(
+      width: 520,
+      height: 360,
+      child: BravenChartPlus(
+        bravenChartController: widget.controller,
+        showLegend: false,
+        theme: widget.theme,
+        xAxisConfig: const XAxisConfig(min: 0, max: 1),
+        yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 60),
+        series: [
+          LineChartSeries(
+            id: 'line',
+            points: changed
+                ? const [
+                    ChartDataPoint(x: 0, y: 20, label: 'A'),
+                    ChartDataPoint(x: 0.5, y: 50, label: 'X'),
+                    ChartDataPoint(x: 1, y: 30, label: 'B'),
+                  ]
+                : const [
+                    ChartDataPoint(x: 0, y: 10, label: 'A'),
+                    ChartDataPoint(x: 1, y: 20, label: 'B'),
+                  ],
+            pathAnimation: const PathAnimationStyle(
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+              dataUpdateTiming: PathAnimationTiming(
+                duration: Duration(milliseconds: 200),
+              ),
+            ),
+          ),
+          AreaChartSeries(
+            id: 'area',
+            points: changed
+                ? const [
+                    ChartDataPoint(x: 0, y: 25, label: 'A'),
+                    ChartDataPoint(x: 1, y: 35, label: 'B'),
+                  ]
+                : const [
+                    ChartDataPoint(x: 0, y: 15, label: 'A'),
+                    ChartDataPoint(x: 0.5, y: 55, label: 'X'),
+                    ChartDataPoint(x: 1, y: 25, label: 'B'),
+                  ],
+            pathAnimation: const PathAnimationStyle(
+              dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+              dataUpdateTiming: PathAnimationTiming(
+                delay: Duration(milliseconds: 200),
+                duration: Duration(milliseconds: 200),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _StaggeredPathHarnessState extends State<_StaggeredPathHarness> {

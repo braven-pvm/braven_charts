@@ -102,6 +102,10 @@ percentage, and density point sets for ordinary categorical bars.
 magnitudes around one centered neutral segment. `BarDivergingStyle` controls
 the shared midpoint line; normalized shares, centered bounds, raw values,
 roles, and styling survive tool and artifact round-trips.
+`AreaChartSeries.fillGradient` accepts an `AreaGradient` with colors, optional
+stops, and plot-relative begin/end alignments. The solid fill remains the
+default; `fillOpacity` composes with gradient alpha, while configured baseline
+fills take precedence.
 
 ### `PieChartSeries`
 

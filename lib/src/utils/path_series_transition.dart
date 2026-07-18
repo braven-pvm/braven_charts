@@ -3,6 +3,7 @@
 
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import 'interpolation_geometry.dart';
 
 /// Pure transition helpers for Line and Area series.
 ///
@@ -13,8 +14,10 @@ abstract final class PathSeriesTransition {
   ///
   /// In addition to equal-length ordered updates, Line and Area series may add
   /// or remove points at either boundary when at least one retained point can
-  /// be matched by timestamp or `x + label` identity. Interior edits and
-  /// reordered retained identities are deliberately incompatible.
+  /// be matched by timestamp or `x + label` identity. Insertion-only and
+  /// removal-only interior edits are also compatible when every edit is
+  /// bracketed by retained identities. Reordered retained identities remain
+  /// deliberately incompatible.
   static bool isCompatible(ChartSeries from, ChartSeries to) {
     return _plan(from, to) != null;
   }
@@ -144,10 +147,146 @@ abstract final class PathSeriesTransition {
     final matchedTargetIndices = matches
         .map((match) => match.targetIndex)
         .toSet();
+    final hasSourceExits = matchedSourceIndices.length != source.length;
+    final hasTargetEntries = matchedTargetIndices.length != target.length;
+
+    if (!hasSourceExits && hasTargetEntries) {
+      return _planInsertions(from, to, matches);
+    }
+    if (hasSourceExits && !hasTargetEntries) {
+      return _planRemovals(from, to, matches);
+    }
     if (!_containsOnlyBoundaryGaps(source.length, matchedSourceIndices) ||
         !_containsOnlyBoundaryGaps(target.length, matchedTargetIndices)) {
       return null;
     }
+
+    return _planBoundaryChanges(from, to, matches);
+  }
+
+  static _PathTransitionPlan? _planInsertions(
+    ChartSeries from,
+    ChartSeries to,
+    List<_PointMatch> matches,
+  ) {
+    final source = from.points;
+    final target = to.points;
+    final matchByTarget = <int, _PointMatch>{
+      for (final match in matches) match.targetIndex: match,
+    };
+    final points = <_PathTransitionPoint>[];
+
+    for (var targetIndex = 0; targetIndex < target.length; targetIndex++) {
+      final match = matchByTarget[targetIndex];
+      if (match != null) {
+        points.add(
+          _PathTransitionPoint(
+            from: source[match.sourceIndex],
+            to: target[targetIndex],
+            targetIndex: targetIndex,
+          ),
+        );
+        continue;
+      }
+
+      final previous = _previousTargetMatch(matches, targetIndex);
+      final next = _nextTargetMatch(matches, targetIndex);
+      final origin = switch ((previous, next)) {
+        (null, final next?) => source[next.sourceIndex],
+        (final previous?, null) => source[previous.sourceIndex],
+        (final previous?, final next?) => _samplePathAtX(
+          series: from,
+          startIndex: previous.sourceIndex,
+          endIndex: next.sourceIndex,
+          x: target[targetIndex].x,
+          template: target[targetIndex],
+        ),
+        _ => null,
+      };
+      if (origin == null) return null;
+      points.add(
+        _PathTransitionPoint(
+          from: origin,
+          to: target[targetIndex],
+          targetIndex: targetIndex,
+        ),
+      );
+    }
+
+    return _PathTransitionPlan(
+      points,
+      sourceTargetIndices: _sourceTargetIndices(source.length, matches),
+    );
+  }
+
+  static _PathTransitionPlan? _planRemovals(
+    ChartSeries from,
+    ChartSeries to,
+    List<_PointMatch> matches,
+  ) {
+    final source = from.points;
+    final target = to.points;
+    final matchBySource = <int, _PointMatch>{
+      for (final match in matches) match.sourceIndex: match,
+    };
+    final points = <_PathTransitionPoint>[];
+
+    for (var sourceIndex = 0; sourceIndex < source.length; sourceIndex++) {
+      final match = matchBySource[sourceIndex];
+      if (match != null) {
+        points.add(
+          _PathTransitionPoint(
+            from: source[sourceIndex],
+            to: target[match.targetIndex],
+            targetIndex: match.targetIndex,
+          ),
+        );
+        continue;
+      }
+
+      final previous = _previousSourceMatch(matches, sourceIndex);
+      final next = _nextSourceMatch(matches, sourceIndex);
+      final destination = switch ((previous, next)) {
+        (null, final next?) => source[sourceIndex].copyWith(
+          x: target[next.targetIndex].x,
+          y: target[next.targetIndex].y,
+        ),
+        (final previous?, null) => source[sourceIndex].copyWith(
+          x: target[previous.targetIndex].x,
+          y: target[previous.targetIndex].y,
+        ),
+        (final previous?, final next?) => _samplePathAtX(
+          series: to,
+          startIndex: previous.targetIndex,
+          endIndex: next.targetIndex,
+          x: source[sourceIndex].x,
+          template: source[sourceIndex],
+        ),
+        _ => null,
+      };
+      if (destination == null) return null;
+      points.add(
+        _PathTransitionPoint(
+          from: source[sourceIndex],
+          to: destination,
+          targetIndex: null,
+        ),
+      );
+    }
+
+    return _PathTransitionPlan(
+      points,
+      sourceTargetIndices: _sourceTargetIndices(source.length, matches),
+    );
+  }
+
+  static _PathTransitionPlan _planBoundaryChanges(
+    ChartSeries from,
+    ChartSeries to,
+    List<_PointMatch> matches,
+  ) {
+    final source = from.points;
+    final target = to.points;
 
     final firstMatch = matches.first;
     final lastMatch = matches.last;
@@ -216,6 +355,87 @@ abstract final class PathSeriesTransition {
       points,
       sourceTargetIndices: _sourceTargetIndices(source.length, matches),
     );
+  }
+
+  static ChartDataPoint? _samplePathAtX({
+    required ChartSeries series,
+    required int startIndex,
+    required int endIndex,
+    required double x,
+    required ChartDataPoint template,
+  }) {
+    if (endIndex != startIndex + 1) return null;
+    final startX = series.points[startIndex].x;
+    final endX = series.points[endIndex].x;
+    final minimumX = startX < endX ? startX : endX;
+    final maximumX = startX > endX ? startX : endX;
+    if (x < minimumX || x > maximumX) return null;
+
+    final interpolation = switch (series) {
+      LineChartSeries() => series.interpolation,
+      AreaChartSeries() => series.interpolation,
+      _ => null,
+    };
+    final tension = switch (series) {
+      LineChartSeries() => series.tension,
+      AreaChartSeries() => series.tension,
+      _ => 0.25,
+    };
+    if (interpolation == null) return null;
+    final y = InterpolationGeometry.interpolateYForX(
+      points: series.points,
+      startIndex: startIndex,
+      targetX: x,
+      interpolation: interpolation,
+      getX: (point) => point.x,
+      getY: (point) => point.y,
+      tension: tension,
+    );
+    return template.copyWith(x: x, y: y);
+  }
+
+  static _PointMatch? _previousTargetMatch(
+    List<_PointMatch> matches,
+    int targetIndex,
+  ) {
+    _PointMatch? result;
+    for (final match in matches) {
+      if (match.targetIndex >= targetIndex) break;
+      result = match;
+    }
+    return result;
+  }
+
+  static _PointMatch? _nextTargetMatch(
+    List<_PointMatch> matches,
+    int targetIndex,
+  ) {
+    for (final match in matches) {
+      if (match.targetIndex > targetIndex) return match;
+    }
+    return null;
+  }
+
+  static _PointMatch? _previousSourceMatch(
+    List<_PointMatch> matches,
+    int sourceIndex,
+  ) {
+    _PointMatch? result;
+    for (final match in matches) {
+      if (match.sourceIndex >= sourceIndex) break;
+      result = match;
+    }
+    return result;
+  }
+
+  static _PointMatch? _nextSourceMatch(
+    List<_PointMatch> matches,
+    int sourceIndex,
+  ) {
+    for (final match in matches) {
+      if (match.sourceIndex > sourceIndex) return match;
+    }
+    return null;
   }
 
   static List<int?> _sourceTargetIndices(

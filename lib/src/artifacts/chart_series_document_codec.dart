@@ -180,6 +180,8 @@ abstract final class ChartSeriesDocumentCodec {
             if ((series is LineChartSeries || series is AreaChartSeries) &&
                 _hasNonDefaultPathTiming(_pathAnimationFor(series)!))
               'series.path-motion-timing.v1',
+            if (series is AreaChartSeries && series.fillGradient != null)
+              'series.area.gradient.v1',
           },
         ),
       );
@@ -346,6 +348,9 @@ abstract final class ChartSeriesDocumentCodec {
           strokeWidth: _double(style, 'strokeWidth'),
           tension: _double(style, 'tension'),
           fillOpacity: _double(style, 'fillOpacity'),
+          fillGradient: _decodeAreaGradient(
+            _optionalMap(style, 'fillGradient'),
+          ),
           showDataPointMarkers: _bool(style, 'showDataPointMarkers'),
           dataPointMarkerRadius: _double(style, 'dataPointMarkerRadius'),
           dataPointMarkerStyle: _enum(
@@ -674,6 +679,9 @@ Map<String, Object?> _encodeSeriesStyle(
           ),
         )
         ..['fillOpacity'] = _number(series.fillOpacity)
+        ..['fillGradient'] = series.fillGradient == null
+            ? null
+            : _encodeAreaGradient(series.fillGradient!)
         ..['baselineValue'] = series.baselineValue == null
             ? null
             : _number(series.baselineValue!)
@@ -820,6 +828,88 @@ Map<String, Object?> _encodePathAnimation(PathAnimationStyle style) => {
 bool _hasNonDefaultPathTiming(PathAnimationStyle style) =>
     style.entranceTiming != const PathAnimationTiming() ||
     style.dataUpdateTiming != const PathAnimationTiming();
+
+Map<String, Object?> _encodeAreaGradient(AreaGradient gradient) => {
+  'colors': [for (final color in gradient.colors) color.toARGB32()],
+  if (gradient.stops != null)
+    'stops': [for (final stop in gradient.stops!) _number(stop)],
+  'begin': {'x': _number(gradient.begin.x), 'y': _number(gradient.begin.y)},
+  'end': {'x': _number(gradient.end.x), 'y': _number(gradient.end.y)},
+};
+
+AreaGradient? _decodeAreaGradient(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final colorsValue = value['colors'];
+  if (colorsValue is! List) {
+    throw const FormatException('Expected Area gradient colors list.');
+  }
+  final colors = [
+    for (var index = 0; index < colorsValue.length; index++)
+      _optionalColor(colorsValue[index], r'$.style.fillGradient.colors') ??
+          (throw const FormatException('Expected Area gradient color.')),
+  ];
+  if (colors.length < 2) {
+    throw const FormatException(
+      'An Area gradient requires at least two colors.',
+    );
+  }
+
+  final stopsValue = value['stops'];
+  final stops = stopsValue == null
+      ? null
+      : stopsValue is List
+      ? [
+          for (final stop in stopsValue)
+            _optionalDouble(stop) ??
+                (throw const FormatException(
+                  'Expected numeric Area gradient stop.',
+                )),
+        ]
+      : throw const FormatException('Expected Area gradient stops list.');
+  if (stops != null && stops.length != colors.length) {
+    throw const FormatException(
+      'Area gradient stops must match the number of colors.',
+    );
+  }
+  if (stops != null) {
+    for (var index = 0; index < stops.length; index++) {
+      final stop = stops[index];
+      if (stop < 0 || stop > 1 || (index > 0 && stop < stops[index - 1])) {
+        throw const FormatException(
+          'Area gradient stops must be ordered between 0 and 1.',
+        );
+      }
+    }
+  }
+
+  return AreaGradient(
+    colors: colors,
+    stops: stops,
+    begin: _decodeAreaGradientAlignment(
+      _optionalMap(value, 'begin'),
+      fallback: Alignment.topCenter,
+    ),
+    end: _decodeAreaGradientAlignment(
+      _optionalMap(value, 'end'),
+      fallback: Alignment.bottomCenter,
+    ),
+  );
+}
+
+Alignment _decodeAreaGradientAlignment(
+  Map<String, Object?>? value, {
+  required Alignment fallback,
+}) {
+  if (value == null) return fallback;
+  final x = _optionalDouble(value['x']);
+  final y = _optionalDouble(value['y']);
+  if (x == null || y == null) {
+    throw const FormatException(
+      'Area gradient alignment requires numeric x and y values.',
+    );
+  }
+  return Alignment(x, y);
+}
 
 Map<String, Object?> _encodePathAnimationTiming(PathAnimationTiming timing) => {
   if (timing.delay != Duration.zero) 'delayMicros': timing.delay.inMicroseconds,

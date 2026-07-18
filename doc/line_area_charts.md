@@ -27,6 +27,24 @@ positive/negative baseline fill can assign distinct styles above and below
 zero or another target. Keep overlapping fills translucent so individual
 series remain readable.
 
+Area fills are solid by default and can opt into a plot-bound linear gradient:
+
+```dart
+const area = AreaChartSeries(
+  id: 'throughput',
+  points: points,
+  fillOpacity: 0.32,
+  fillGradient: AreaGradient(
+    colors: [Color(0xFF4F46E5), Color(0x1A06B6D4)],
+    stops: [0, 1],
+  ),
+);
+```
+
+`fillOpacity` multiplies the alpha of every gradient stop. The gradient is
+resolved against stable plot bounds rather than the animated path bounds.
+When `baselineValue` is set, the above/below baseline fills take precedence.
+
 ## Opt in to motion
 
 Path motion is intentionally disabled by default. Existing analytical,
@@ -130,6 +148,8 @@ families. See [Chart Workbench](chart_workbench.md) and
 
 - [Line motion workbench](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split)
 - [Area motion workbench](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split)
+- [Area gradient](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=gradient)
+- [Line and Area composition](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=envelope)
 - [Line chart family](https://braven-pvm.github.io/braven_charts/?page=line-charts)
 - [Area chart family](https://braven-pvm.github.io/braven_charts/?page=area-charts)
 

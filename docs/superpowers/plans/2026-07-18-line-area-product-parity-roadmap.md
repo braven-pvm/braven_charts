@@ -4,7 +4,9 @@
 **Original PR:** #35 (merged)
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
-**Next lane:** Per-series motion timing (Sprint 8; review needed)
+**Sprint 8 promotion:** PR #38 (merged)
+**Sprint 9 lane:** Stable-identity interior topology motion (review approved)
+**Next lane:** Showcase polish and Area gradients (Sprint 10; local review ready)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -172,7 +174,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 8 — Per-series motion timing
 
-**Status:** Local review
+**Status:** Complete
 
 ### Product outcome
 
@@ -255,4 +257,177 @@ The detailed proposal is recorded in
   404 response. Compact widget coverage asserts the header actions and
   workbench remain inside a 390 px viewport.
 - The root release build is available for joint review on port 8097. No push,
-  PR, or merge has been performed.
+  PR, or merge had been performed when the local record was captured.
+- Local review was approved on 2026-07-18. PR #38 was opened against `master`
+  with the hosted package-quality gate in progress.
+
+## Sprint 9 — Stable-identity interior topology motion
+
+**Status:** Local review approved
+
+### Product outcome
+
+Line and Area snapshot updates can animate ordered points inserted into or
+removed from the interior of a path. This covers late-arriving and corrected
+samples without replaying the whole series, while retaining the existing
+canonical target-data and interaction contracts.
+
+The detailed contract is recorded in
+`../specs/2026-07-18-line-area-interior-topology-motion-design.md`.
+
+### Scope
+
+- Extend the private `PathSeriesTransition` plan; add no new public model or
+  animation controller.
+- Support insertion-only or removal-only interior edits with at least two
+  ordered retained stable identities bracketing every interior edit.
+- Start inserted points on the phase-start path at their target X and collapse
+  removed points onto the target path at their source X, using the configured
+  interpolation geometry.
+- Preserve render-to-target point maps, target bounds, focus and selection,
+  linked workbench identity, artifacts, interruption continuity, reduced
+  motion, streaming exclusion, and Sprint 8 per-series timing windows.
+- Add one compact backfill action to the existing Line and Area Motion presets
+  while retaining 48 px targets, 8 px action spacing, and chart-first layout.
+
+### Explicit exclusions
+
+- A single snapshot that both inserts and removes interior identities.
+- Arbitrary retained-identity reordering or duplicate/ambiguous identities.
+- Interpolation-mode morphing, axis-domain animation, or path-shape tween APIs.
+- Scatter, Bar, Pie, Donut, polar families, or controller-fed streaming tails.
+- New artifact schema: artifacts continue to persist canonical target data.
+
+### Acceptance gates
+
+- Pure frames prove exact start anchors, intermediate geometry, exact targets,
+  canonical maps, and fallback for mixed/reordered edits across Line and Area.
+- Real render-path tests prove interpolation-aware interior insertion/removal,
+  delayed series timing, interruption continuity, non-interactive exits,
+  retained focus/selection, target bounds, reduced motion, and artifacts.
+- Motion showcase actions exercise actual backfill insertion and removal in
+  wide and compact Chart/Data/Split compositions.
+- Package/showcase analyzers and complete suites, Dartdoc, pub.dev dry run,
+  deployment-base and root release builds, and direct browser review pass
+  before promotion.
+
+### Sprint 9 verification record
+
+- Pure transition coverage passes for linear, stepped, Bezier, and monotone
+  insertion sampling, multiple interior entries, removal collapse, canonical
+  maps, exact targets, and explicit mixed/reordered/invalid fallbacks.
+- Real Line and Area render-path coverage passes for independent timing,
+  visual-only exits, canonical artifacts, cleared exiting state, and in-flight
+  interruption from the exact rendered geometry.
+- Package analyzer: clean; complete package suite: 1,813 tests passed.
+  Showcase analyzer: clean; complete showcase suite: 135 tests passed.
+- Dartdoc 9.0.8 generated the public library with zero warnings and errors.
+  The Flutter-bundled Dartdoc 9.0.4 has a reproducible internal `RangeError`
+  on the unchanged Sprint 8 branch, so the newer installed patch was used.
+- The pub.dev dry run reports zero warnings. Deployment-base and root release
+  builds pass with `/braven_charts/` and `/` verified respectively.
+- Wide release captures render both direct Motion/Split routes nonblank. Widget
+  coverage runs the backfill action for Line and Area in both wide and 390 px
+  compact option surfaces, with 48 px actions kept inside the viewport.
+- The root release build is available on port 8097 for joint review. This lane
+  remains local and stacked on Sprint 8 / PR #38; it has not been pushed or
+  opened as a PR.
+
+## Sprint 10 — Showcase polish and Area gradients
+
+**Status:** Local review ready
+
+### Product outcome
+
+The Line and Area family pages expose a broader set of immediately useful
+compositions, while Area charts gain a first-class portable linear fill
+gradient. The page remains a chart-first guide rather than a configuration
+catalogue.
+
+### Scope
+
+- Add two concise Line presets and two concise Area presets, including mixed
+  Line/Area compositions that reuse the existing Workbench and controller.
+- Keep seven choices per family in the existing segmented selector. Wide layouts
+  fit the choices in one group; compact layouts retain horizontal scrolling.
+- Add a serializable `AreaGradient` model with colors, optional stops, and
+  begin/end alignment, applied across the stable plot bounds.
+- Preserve the solid-fill default and baseline-fill precedence. Gradient
+  opacity composes with the existing `fillOpacity`.
+- Round-trip non-default gradients through chart artifacts and advertise a
+  dedicated capability.
+
+### Explicit exclusions
+
+- Radial gradients, per-point gradients, animated gradient stops, or a general
+  cross-family gradient abstraction.
+- Gradient baseline-above/below pairs or gradient interpolation during motion.
+- A new options panel, preset editor, gallery page, or chart family.
+
+### Acceptance gates
+
+- Pixel-backed render tests prove vertical and directional gradient fills,
+  opacity composition, solid fallback, and unchanged baseline behavior.
+- Artifact tests prove exact gradient round-trip and capability hydration.
+- Showcase tests prove all new presets, mixed family compositions, interactive
+  gradient toggling, and bounded wide/390 px selectors and option surfaces.
+- Complete analyzers/suites, Dartdoc, pub.dev dry run, deployment/root release
+  builds, and direct Line/Area route review pass before promotion.
+
+### Delivered local slice
+
+- Added `Comparison` and mixed `Envelope` Line presets plus `Gradient` and
+  mixed `Composition` Area presets. The existing segmented selector remains a
+  single group on wide layouts and horizontally scrollable at 390 px.
+- Added public `AreaGradient` colors, stops, and begin/end alignment with a
+  stable plot-bound shader, `fillOpacity` composition, solid fallback, and
+  baseline-fill precedence.
+- Added `series.area.gradient.v1` artifact encoding, decoding, capability
+  advertisement, and built-in hydration support.
+- Pixel-backed renderer tests cover solid fallback, vertical/directional
+  blends, alpha composition, and baseline precedence. Artifact, hydration,
+  wide, compact, mixed-series, controller, and toggle coverage is green.
+- `flutter analyze lib` and the showcase analyzer are clean. Complete package
+  and 137-test showcase suites pass, as does the release web build. Direct
+  Envelope, Gradient, and Composition routes return HTTP 200 and were reviewed
+  at 1600 px and 390 px.
+- The clean-tree pub.dev dry run passes with zero warnings. Dartdoc 9.0.4
+  currently crashes inside
+  `DocumentationComment._stripDocImports` with an internal range error before
+  emitting diagnostics; this publication gate remains recorded for the final
+  promotion pass.
+- The current release build is served on port 8097 from the dedicated Sprint
+  10 worktree. This slice remains local and has no PR.
+
+### Review amendment
+
+- Add exactly one restrained hero preset per family: a dark Line spotlight
+  combining a luminous focus line, gradient context area, inline identity, and
+  one threshold; and an Area pulse combining a gradient magnitude, target
+  window, reference line, inline identity, and highlighted peak.
+- Reuse existing public series, annotation, theme, Workbench, and artifact
+  surfaces. Do not add another option panel, new chart API, or dense multi-axis
+  composition.
+- Delivered `Spotlight` for Line with a fixed dark chart surface, luminous focus
+  line, soft gradient context, inline identity, and one styled threshold.
+- Delivered `Pulse` for Area with a gradient magnitude, stepped target, target
+  window, inline identities, and one peak marker. Its legend is intentionally
+  suppressed to keep the peak and right-edge labels clear.
+- The focused 13-test page suite and complete 139-test showcase suite pass;
+  the showcase analyzer is clean and the root-path release web build succeeds.
+  Both direct routes were inspected at 1600 x 1000 and 430 x 900 from the
+  release bundle served on port 8097.
+
+### Promotion verification
+
+- Rebased the six approved Sprint 9 and Sprint 10 commits onto the current
+  `origin/master` 0.7.0 release tip. The generated-source showcase coverage and
+  expanded Bar API documentation added on `master` are both retained.
+- `flutter analyze lib` and the showcase analyzer pass. The complete package
+  suite passes with 1,932 tests and the complete showcase suite passes with 159
+  tests. The root-path release web build succeeds.
+- The clean-tree pub.dev dry run reports zero warnings. Dartdoc 9.0.4 still
+  reproduces its previously recorded internal
+  `DocumentationComment._stripDocImports` range error before diagnostics.
+- The refreshed Line Spotlight and Area Pulse routes and compiled application
+  script return HTTP 200 from the release bundle on port 8097.
