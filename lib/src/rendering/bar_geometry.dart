@@ -166,20 +166,130 @@ class BarGeometry {
   }
 }
 
+/// Immutable category-domain index used to virtualize dense bar series.
+///
+/// Entries retain their original point indices after sorting by X. Viewport
+/// queries are therefore logarithmic while selection, stacking, Waterfall,
+/// artifact, and Workbench identity continue to use the source-series index.
+class BarViewportIndex {
+  BarViewportIndex(List<ChartDataPoint> points, {bool isXOrdered = false})
+    : _entries = <_BarViewportEntry>[
+        for (var index = 0; index < points.length; index++)
+          if (points[index].x.isFinite)
+            _BarViewportEntry(x: points[index].x, pointIndex: index),
+      ] {
+    if (!isXOrdered) {
+      _entries.sort((left, right) {
+        final byX = left.x.compareTo(right.x);
+        return byX != 0 ? byX : left.pointIndex.compareTo(right.pointIndex);
+      });
+    }
+    var minimumSpacing = double.infinity;
+    for (var index = 0; index < _entries.length - 1; index++) {
+      final spacing = _entries[index + 1].x - _entries[index].x;
+      if (spacing > 0 && spacing < minimumSpacing) {
+        minimumSpacing = spacing;
+      }
+    }
+    _minimumDataSpacing = minimumSpacing;
+  }
+
+  final List<_BarViewportEntry> _entries;
+  late final double _minimumDataSpacing;
+
+  int get pointCount => _entries.length;
+
+  /// Resolves the category-slot spacing without rescanning or sorting points.
+  double categorySpacingPixels(ChartTransform transform) {
+    if (_entries.length == 1) {
+      return (transform.transposed
+              ? transform.plotHeight
+              : transform.plotWidth) *
+          0.6;
+    }
+    if (_minimumDataSpacing.isFinite) {
+      return _minimumDataSpacing * transform.pixelsPerDataX;
+    }
+    return 40;
+  }
+
+  /// Returns original point indices whose category centers can affect a
+  /// viewport, with optional data-space padding and neighbouring entries.
+  List<int> pointIndicesForViewport({
+    required double minX,
+    required double maxX,
+    double paddingData = 0,
+    int adjacentPointCount = 0,
+  }) {
+    if (_entries.isEmpty) return const [];
+    final safeMin = math.min(minX, maxX) - math.max(0, paddingData);
+    final safeMax = math.max(minX, maxX) + math.max(0, paddingData);
+    var start = _lowerBound(safeMin);
+    var end = _upperBound(safeMax);
+    start = math.max(0, start - adjacentPointCount);
+    end = math.min(_entries.length, end + adjacentPointCount);
+    return [
+      for (var index = start; index < end; index++) _entries[index].pointIndex,
+    ];
+  }
+
+  int _lowerBound(double value) {
+    var low = 0;
+    var high = _entries.length;
+    while (low < high) {
+      final middle = (low + high) >> 1;
+      if (_entries[middle].x < value) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  int _upperBound(double value) {
+    var low = 0;
+    var high = _entries.length;
+    while (low < high) {
+      final middle = (low + high) >> 1;
+      if (_entries[middle].x <= value) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+}
+
+class _BarViewportEntry {
+  const _BarViewportEntry({required this.x, required this.pointIndex});
+
+  final double x;
+  final int pointIndex;
+}
+
 /// Resolves [BarChartSeries] data into reusable plot-space geometry.
 abstract final class BarGeometryEngine {
   static List<BarGeometry> layout({
     required BarChartSeries series,
     required ChartTransform transform,
     BarGroupInfo? groupInfo,
+    Iterable<int>? pointIndices,
+    double? categorySpacingPixels,
+    bool validate = true,
   }) {
-    series.validateRangeConfiguration();
+    if (validate) series.validateRangeConfiguration();
     if (series.points.isEmpty) return const [];
     final effectiveTransform = transform.copyWith(
       transposed: series.orientation == BarOrientation.horizontal,
     );
 
-    var groupWidth = _resolveGroupWidth(series, effectiveTransform);
+    var groupWidth = _resolveGroupWidth(
+      series,
+      effectiveTransform,
+      categorySpacingPixels: categorySpacingPixels,
+    );
     final groupCount = groupInfo?.count ?? 1;
     final totalGap = (groupInfo?.gap ?? 0) * (groupCount - 1);
     groupWidth = math.max(groupWidth, totalGap + groupCount * 4.0);
@@ -193,8 +303,10 @@ abstract final class BarGeometryEngine {
         : 0.0;
     final categoryOffset = compositionOffset + overlayOffset;
 
+    final indices =
+        pointIndices ?? Iterable<int>.generate(series.points.length);
     return [
-      for (var index = 0; index < series.points.length; index++)
+      for (final index in indices)
         _layoutPoint(
           series: series,
           point: series.points[index],
@@ -209,13 +321,16 @@ abstract final class BarGeometryEngine {
 
   static double _resolveGroupWidth(
     BarChartSeries series,
-    ChartTransform transform,
-  ) {
+    ChartTransform transform, {
+    double? categorySpacingPixels,
+  }) {
     if (series.barWidthPixels case final pixels?) {
       return pixels.clamp(series.minWidth, series.maxWidth);
     }
 
-    final spacing = _calculateCategorySpacing(series.points, transform);
+    final spacing =
+        categorySpacingPixels ??
+        _calculateCategorySpacing(series.points, transform);
     return (spacing * series.barWidthPercent!).clamp(
       series.minWidth,
       series.maxWidth,

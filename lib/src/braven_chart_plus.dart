@@ -117,6 +117,7 @@ class BravenChartPlus extends StatefulWidget {
     this.annotations = const [],
     this.annotationController,
     this.theme,
+    this.transitionKey,
     this.xAxisConfig,
     this.yAxis,
     this.grid,
@@ -635,6 +636,17 @@ class BravenChartPlus extends StatefulWidget {
   final AnnotationController? annotationController;
 
   final ChartTheme? theme;
+
+  /// Identifies the semantic chart represented by this widget for animation.
+  ///
+  /// When this value changes, data-update interpolation history is discarded
+  /// and the destination series run their entrance animations from a clean
+  /// state. The chart widget and its controllers remain mounted, so surrounding
+  /// Workbench presentation state is preserved.
+  ///
+  /// Keep this value stable for ordinary data and style updates that should
+  /// interpolate from the currently rendered chart.
+  final Object? transitionKey;
 
   /// Modern X-axis configuration using XAxisConfig.
   ///
@@ -1341,6 +1353,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
     _captureStateRevision++;
+    final transitionKeyChanged =
+        widget.transitionKey != oldWidget.transitionKey;
     // Removed excessive debugPrints (didUpdateWidget details)
 
     // Handle controller changes (matches BravenChart pattern)
@@ -1461,17 +1475,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _remapRadialPointState(oldWidget.series, widget.series);
     }
     if (seriesChanged ||
+        transitionKeyChanged ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
-        detectBarAnimations: seriesChanged,
-        detectPathAnimations: seriesChanged,
+        detectBarAnimations: seriesChanged || transitionKeyChanged,
+        detectPathAnimations: seriesChanged || transitionKeyChanged,
         detectRadialAnimations:
-            radialDataChanged && !radialAnimationModeChanged,
+            radialDataChanged &&
+            !radialAnimationModeChanged &&
+            !transitionKeyChanged,
+        restartSeriesAnimations: transitionKeyChanged,
       );
-      if (radialAnimationModeChanged) {
+      if (radialAnimationModeChanged || transitionKeyChanged) {
         _startRadialRevealAnimation();
       }
       // Focus will be acquired on next mouse enter — no need to grab it here.
@@ -2135,6 +2153,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool detectBarAnimations = false,
     bool detectRadialAnimations = false,
     bool detectPathAnimations = false,
+    bool restartSeriesAnimations = false,
   }) {
     _spatialIndex.clear();
 
@@ -2197,19 +2216,25 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     if (detectBarAnimations) {
       _updateBarSeriesTransitions(
-        previousSeriesById: previousRenderSeriesById,
+        previousSeriesById: restartSeriesAnimations
+            ? const <String, ChartSeries>{}
+            : previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
     }
     if (detectRadialAnimations) {
       _updateRadialSeriesTransition(
-        previousSeriesById: previousRenderSeriesById,
+        previousSeriesById: restartSeriesAnimations
+            ? const <String, ChartSeries>{}
+            : previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
     }
     if (detectPathAnimations) {
       _updatePathSeriesAnimations(
-        previousSeriesById: previousRenderSeriesById,
+        previousSeriesById: restartSeriesAnimations
+            ? const <String, ChartSeries>{}
+            : previousRenderSeriesById,
         nextSeries: _effectiveDataSeries,
       );
     }
