@@ -6,7 +6,7 @@
 **Continuation PR:** #37 (merged)
 **Sprint 8 promotion:** PR #38 (merged)
 **Sprint 9 lane:** Stable-identity interior topology motion (review approved)
-**Next lane:** Showcase polish and Area gradients (Sprint 10; in progress)
+**Next lane:** Showcase polish and Area gradients (Sprint 10; local review ready)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -348,7 +348,7 @@ catalogue.
 
 - Add two concise Line presets and two concise Area presets, including mixed
   Line/Area compositions that reuse the existing Workbench and controller.
-- Keep six choices per family in the existing segmented selector. Wide layouts
+- Keep seven choices per family in the existing segmented selector. Wide layouts
   fit the choices in one group; compact layouts retain horizontal scrolling.
 - Add a serializable `AreaGradient` model with colors, optional stops, and
   begin/end alignment, applied across the stable plot bounds.
@@ -398,3 +398,22 @@ catalogue.
   promotion pass.
 - The current release build is served on port 8097 from the dedicated Sprint
   10 worktree. This slice remains local and has no PR.
+
+### Review amendment
+
+- Add exactly one restrained hero preset per family: a dark Line spotlight
+  combining a luminous focus line, gradient context area, inline identity, and
+  one threshold; and an Area pulse combining a gradient magnitude, target
+  window, reference line, inline identity, and highlighted peak.
+- Reuse existing public series, annotation, theme, Workbench, and artifact
+  surfaces. Do not add another option panel, new chart API, or dense multi-axis
+  composition.
+- Delivered `Spotlight` for Line with a fixed dark chart surface, luminous focus
+  line, soft gradient context, inline identity, and one styled threshold.
+- Delivered `Pulse` for Area with a gradient magnitude, stepped target, target
+  window, inline identities, and one peak marker. Its legend is intentionally
+  suppressed to keep the peak and right-edge labels clear.
+- The focused 13-test page suite and complete 139-test showcase suite pass;
+  the showcase analyzer is clean and the root-path release web build succeeds.
+  Both direct routes were inspected at 1600 x 1000 and 430 x 900 from the
+  release bundle served on port 8097.

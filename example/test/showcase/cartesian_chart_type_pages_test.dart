@@ -144,6 +144,7 @@ void main() {
       expect(find.text('Motion'), findsWidgets);
       expect(find.text('Comparison'), findsWidgets);
       expect(find.text('Envelope'), findsWidgets);
+      expect(find.text('Spotlight'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -175,6 +176,7 @@ void main() {
       expect(find.text('Motion'), findsWidgets);
       expect(find.text('Gradient'), findsWidgets);
       expect(find.text('Composition'), findsWidgets);
+      expect(find.text('Pulse'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
 
       await tester.tap(find.text('Baseline'));
@@ -259,6 +261,64 @@ void main() {
     expect(chart.series.whereType<AreaChartSeries>(), hasLength(2));
     expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
   });
+
+  testWidgets(
+    'Line Spotlight stays focused while showcasing luminous identity',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final spotlight = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Spotlight'),
+      );
+      await tester.ensureVisible(spotlight);
+      await tester.pumpAndSettle();
+      await tester.tap(spotlight);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final focus = chart.series.whereType<LineChartSeries>().single;
+      final context = chart.series.whereType<AreaChartSeries>().single;
+      expect(focus.name, 'Live signal');
+      expect(focus.lineGlow, 8);
+      expect(focus.inlineLabel?.text, 'Live signal');
+      expect(context.fillGradient, isNotNull);
+      expect(chart.annotations.whereType<ThresholdAnnotation>(), hasLength(1));
+      expect(chart.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
+      expect(chart.showLegend, isFalse);
+      expect(find.text('Theme'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Area Pulse combines gradient, target window, and peak emphasis',
+    (tester) async {
+      await pumpPage(tester, const AreaChartsPage());
+      final pulse = find.descendant(
+        of: find.byKey(const ValueKey('area-preset-picker')),
+        matching: find.text('Pulse'),
+      );
+      await tester.ensureVisible(pulse);
+      await tester.pumpAndSettle();
+      await tester.tap(pulse);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final area = chart.series.whereType<AreaChartSeries>().single;
+      expect(area.name, 'Live load');
+      expect(area.fillGradient, isNotNull);
+      expect(area.lineGlow, 3);
+      expect(area.inlineLabel?.text, 'Live load');
+      final target = chart.series.whereType<LineChartSeries>().single;
+      expect(target.inlineLabel?.text, 'Target');
+      expect(chart.showLegend, isFalse);
+      expect(chart.annotations.whereType<RangeAnnotation>(), hasLength(1));
+      expect(chart.annotations.whereType<PointAnnotation>(), hasLength(1));
+    },
+  );
 
   testWidgets('scatter guide demonstrates a trend annotation', (tester) async {
     await pumpPage(tester, const ScatterChartsPage());
@@ -645,9 +705,7 @@ void main() {
                 : 'area-preset-picker',
           ),
         ),
-        matching: find.text(
-          page is LineChartsPage ? 'Envelope' : 'Composition',
-        ),
+        matching: find.text(page is LineChartsPage ? 'Spotlight' : 'Pulse'),
       );
       await tester.ensureVisible(finalPreset);
       await tester.pumpAndSettle();

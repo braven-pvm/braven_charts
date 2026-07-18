@@ -185,6 +185,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.area_chart_outlined,
         description: 'A gradient capacity envelope supports the observed line.',
       ),
+      _ChartTypePreset(
+        label: 'Spotlight',
+        icon: Icons.blur_on,
+        description: 'A luminous focus line stands over soft gradient context.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -216,6 +221,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         label: 'Composition',
         icon: Icons.stacked_line_chart,
         description: 'Two area layers combine with a crisp reference line.',
+      ),
+      _ChartTypePreset(
+        label: 'Pulse',
+        icon: Icons.auto_graph,
+        description:
+            'Gradient magnitude meets a target window and marked peak.',
       ),
     ],
     _CartesianFamily.scatter => const [
@@ -327,18 +338,21 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   Widget _buildChart(ChartOptions options, BravenChartController controller) {
     final baseTheme = options.theme ?? ChartTheme.light;
+    final effectiveTheme = _isLineSpotlight ? ChartTheme.dark : baseTheme;
     return BravenChartPlus(
       key: ValueKey('${widget.family.name}-chart'),
       bravenChartController: controller,
       series: _buildSeries(),
       annotations: _buildAnnotations(),
-      theme: baseTheme.copyWith(
-        animationTheme: baseTheme.animationTheme.copyWith(
+      theme: effectiveTheme.copyWith(
+        animationTheme: effectiveTheme.animationTheme.copyWith(
           dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
           dataUpdateCurve: Curves.easeInOutCubic,
         ),
       ),
-      showLegend: options.showLegend,
+      showLegend: (_isLineSpotlight || _isAreaPulse)
+          ? false
+          : options.showLegend,
       showXScrollbar: options.showXScrollbar,
       showYScrollbar: options.showYScrollbar,
       grid: GridConfig(
@@ -397,14 +411,18 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   List<Widget> _buildOptions() {
     final typeOptions = <Widget>[
-      if (widget.family != _CartesianFamily.scatter)
+      if (widget.family != _CartesianFamily.scatter &&
+          !_isLineSpotlight &&
+          !_isAreaPulse)
         EnumOption<LineInterpolation>(
           label: 'Interpolation',
           value: _interpolation,
           values: LineInterpolation.values,
           onChanged: (value) => setState(() => _interpolation = value),
         ),
-      if (widget.family != _CartesianFamily.scatter)
+      if (widget.family != _CartesianFamily.scatter &&
+          !_isLineSpotlight &&
+          !_isAreaPulse)
         SliderOption(
           label: 'Stroke width',
           value: _strokeWidth,
@@ -415,7 +433,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 1,
           onChanged: (value) => setState(() => _strokeWidth = value),
         ),
-      if (widget.family != _CartesianFamily.scatter)
+      if (widget.family != _CartesianFamily.scatter &&
+          !_isLineSpotlight &&
+          !_isAreaPulse)
         SliderOption(
           label: 'Line glow',
           value: _lineGlow,
@@ -603,6 +623,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       StandardChartOptions(
         controller: _optionsController,
+        showThemeOption: !_isLineSpotlight,
+        showLegendOption: !_isLineSpotlight && !_isAreaPulse,
         showLineStyleOption: false,
       ),
     ];
@@ -757,6 +779,42 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           unit: 'W',
           points: _primaryPoints,
           color: const Color(0xFF0F9F8F),
+        ),
+      ];
+    }
+    if (_presetIndex == 6) {
+      return [
+        if (_showSecondSeries)
+          const AreaChartSeries(
+            id: 'spotlight-context',
+            name: 'Expected range',
+            points: _spotlightContextPoints,
+            color: Color(0xFF22D3EE),
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 1.2,
+            fillOpacity: 0.16,
+            fillGradient: AreaGradient(
+              colors: [Color(0xFF22D3EE), Color(0x3322D3EE)],
+            ),
+          ),
+        LineChartSeries(
+          id: 'spotlight-signal',
+          name: 'Live signal',
+          points: _spotlightSignalPoints,
+          color: const Color(0xFFA78BFA),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 3,
+          lineGlow: 8,
+          showDataPointMarkers: _optionsController.showDataMarkers,
+          dataPointMarkerRadius: 3,
+          dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
+          inlineLabel: const SeriesInlineLabelConfig(
+            text: 'Live signal',
+            position: SeriesLabelPosition.right,
+            offsetY: -10,
+            color: Color(0xFFC4B5FD),
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ];
     }
@@ -927,6 +985,58 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ];
     }
+    if (_presetIndex == 6) {
+      return [
+        AreaChartSeries(
+          id: 'pulse-live-load',
+          name: 'Live load',
+          unit: 'k',
+          points: _pulseLivePoints,
+          color: const Color(0xFF6366F1),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 2.5,
+          fillOpacity: _fillOpacity,
+          fillGradient: _useAreaGradient
+              ? const AreaGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF22D3EE)],
+                  stops: [0, 1],
+                )
+              : null,
+          lineGlow: 3,
+          showDataPointMarkers: _optionsController.showDataMarkers,
+          dataPointMarkerRadius: 3,
+          dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
+          inlineLabel: const SeriesInlineLabelConfig(
+            text: 'Live load',
+            position: SeriesLabelPosition.right,
+            offsetY: -10,
+            color: Color(0xFF4F46E5),
+            fontWeight: FontWeight.w700,
+            background: SeriesLabelBackground(
+              color: Color(0xEFFFFFFF),
+              borderColor: Color(0x556366F1),
+            ),
+          ),
+        ),
+        if (_showSecondSeries)
+          const LineChartSeries(
+            id: 'pulse-target',
+            name: 'Target',
+            unit: 'k',
+            points: _pulseTargetPoints,
+            color: Color(0xFFF97316),
+            interpolation: LineInterpolation.stepped,
+            strokeWidth: 2,
+            inlineLabel: SeriesInlineLabelConfig(
+              text: 'Target',
+              position: SeriesLabelPosition.center,
+              offsetY: 10,
+              color: Color(0xFFF97316),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ];
+    }
     return [
       _area(
         id: 'sessions',
@@ -1055,6 +1165,58 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ];
     }
+    if (_isLineSpotlight) {
+      return [
+        ThresholdAnnotation(
+          id: 'spotlight-threshold',
+          axis: AnnotationAxis.y,
+          value: 60,
+          label: 'Upper threshold',
+          lineColor: const Color(0xFFFBBF24),
+          lineWidth: 1.5,
+          dashPattern: const [5, 4],
+          elevation: 5,
+          style: const AnnotationStyle(
+            textStyle: TextStyle(
+              color: Color(0xFFFDE68A),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            backgroundColor: Color(0xCC111827),
+            borderColor: Color(0x66FBBF24),
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          ),
+          allowDragging: false,
+          allowEditing: false,
+        ),
+      ];
+    }
+    if (_isAreaPulse) {
+      return [
+        RangeAnnotation(
+          id: 'pulse-target-window',
+          startX: 2.5,
+          endX: 5.5,
+          startY: 42,
+          endY: 58,
+          label: 'Target window',
+          fillColor: const Color(0x1422D3EE),
+          borderColor: const Color(0x5522D3EE),
+          allowDragging: false,
+          allowEditing: false,
+        ),
+        PointAnnotation(
+          id: 'pulse-peak',
+          seriesId: 'pulse-live-load',
+          dataPointIndex: 6,
+          label: 'Peak',
+          markerShape: MarkerShape.star,
+          markerColor: const Color(0xFF6366F1),
+          allowDragging: false,
+          allowEditing: false,
+        ),
+      ];
+    }
     if (widget.family == _CartesianFamily.scatter && _presetIndex == 1) {
       return [
         TrendAnnotation(
@@ -1071,6 +1233,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     }
     return const [];
   }
+
+  bool get _isLineSpotlight =>
+      widget.family == _CartesianFamily.line && _presetIndex == 6;
+
+  bool get _isAreaPulse =>
+      widget.family == _CartesianFamily.area && _presetIndex == 6;
 
   void _reset() {
     setState(() {
@@ -1395,6 +1563,60 @@ const _baselinePoints = [
   ChartDataPoint(x: 5, y: -16),
   ChartDataPoint(x: 6, y: -8),
   ChartDataPoint(x: 7, y: 4),
+];
+
+const _spotlightSignalPoints = [
+  ChartDataPoint(x: 0, y: 52),
+  ChartDataPoint(x: 1, y: 66),
+  ChartDataPoint(x: 2, y: 59),
+  ChartDataPoint(x: 3, y: 43),
+  ChartDataPoint(x: 4, y: 34),
+  ChartDataPoint(x: 5, y: 38),
+  ChartDataPoint(x: 6, y: 51),
+  ChartDataPoint(x: 7, y: 56),
+  ChartDataPoint(x: 8, y: 48),
+  ChartDataPoint(x: 9, y: 31),
+  ChartDataPoint(x: 10, y: 25),
+  ChartDataPoint(x: 11, y: 40),
+  ChartDataPoint(x: 12, y: 54),
+];
+
+const _spotlightContextPoints = [
+  ChartDataPoint(x: 0, y: 48),
+  ChartDataPoint(x: 1, y: 52),
+  ChartDataPoint(x: 2, y: 54),
+  ChartDataPoint(x: 3, y: 55),
+  ChartDataPoint(x: 4, y: 53),
+  ChartDataPoint(x: 5, y: 49),
+  ChartDataPoint(x: 6, y: 45),
+  ChartDataPoint(x: 7, y: 42),
+  ChartDataPoint(x: 8, y: 43),
+  ChartDataPoint(x: 9, y: 47),
+  ChartDataPoint(x: 10, y: 51),
+  ChartDataPoint(x: 11, y: 54),
+  ChartDataPoint(x: 12, y: 52),
+];
+
+const _pulseLivePoints = [
+  ChartDataPoint(x: 0, y: 28),
+  ChartDataPoint(x: 1, y: 34),
+  ChartDataPoint(x: 2, y: 39),
+  ChartDataPoint(x: 3, y: 48),
+  ChartDataPoint(x: 4, y: 44),
+  ChartDataPoint(x: 5, y: 56),
+  ChartDataPoint(x: 6, y: 64),
+  ChartDataPoint(x: 7, y: 58),
+];
+
+const _pulseTargetPoints = [
+  ChartDataPoint(x: 0, y: 32),
+  ChartDataPoint(x: 1, y: 36),
+  ChartDataPoint(x: 2, y: 40),
+  ChartDataPoint(x: 3, y: 44),
+  ChartDataPoint(x: 4, y: 48),
+  ChartDataPoint(x: 5, y: 52),
+  ChartDataPoint(x: 6, y: 56),
+  ChartDataPoint(x: 7, y: 60),
 ];
 
 const _scatterPrimary = [
