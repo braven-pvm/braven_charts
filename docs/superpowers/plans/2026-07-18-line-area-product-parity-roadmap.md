@@ -130,7 +130,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 7 — Continuation E2E and promotion readiness
 
-**Status:** Ready for final local review
+**Status:** Approved for PR promotion
 
 - Re-run every package, showcase, documentation, archive, and release-build
   gate after rebasing the topology and identity commits onto current master.
@@ -162,6 +162,8 @@ The locked interaction contract and exclusions are recorded in
   compact layouts, Line multi-axis and workhorse presets, and the Area baseline
   preset. Every checked route rendered nonblank with no severe console output,
   controller error, or visible overflow.
-- Residual promotion gates are intentionally external to this local slice:
-  cross-browser coverage and hosted CI will run after approval to push and open
-  the continuation PR. No push, PR, or merge has been performed.
+- Residual promotion gates are intentionally external to the local E2E slice:
+  cross-browser coverage and hosted CI run during PR promotion. No push, PR,
+  or merge had been performed when the E2E record was captured.
+- Final local review was approved on 2026-07-18. The continuation may be pushed
+  and opened as a PR; merge remains a separate explicit approval gate.
