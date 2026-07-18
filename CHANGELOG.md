@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.6.0 - 2026-07-18
+
 ### Added
+- Native Bar projection in `BravenChartWorkbench` Chart, Data, and Split
+  presentations. Tables preserve source values while exposing the resolved
+  target, uncertainty, range, stack-bound, normalized-share, and waterfall
+  running-total fields used by the renderer; row copy and CSV export include
+  those fields without creating synthetic chart series.
+- Bidirectional point linking between charts and virtualized data tables.
+  Table hover and keyboard focus apply transient chart focus, while
+  controller-driven chart focus and durable selection reveal and highlight
+  the matching table row without stealing keyboard focus.
+- Modifier-aware table selection matching desktop data tools: Ctrl/Command
+  toggles rows additively, Shift selects a contiguous range in current sorted
+  order, and Ctrl/Command+Shift adds that range to the existing selection.
+  Shared-X rows select every populated point they represent.
+- Complete keyboard table selection and navigation, including Enter row
+  activation, Ctrl/Command+A select-all, Escape clear, Home/End boundary
+  navigation, and viewport-sized Page Up/Page Down movement. Selection
+  summaries report point counts and expose a compact Clear action.
 - Host-built Pie and Donut legend items through
   `BravenChartPlus.radialLegendItemBuilder`, with resolved radial data,
   package-owned responsive layout and selection, stable accessibility
@@ -24,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CSV, selection callbacks, and hydration retain the uncollapsed source data.
 - Content-aware, user-resizable Chart/Data Split panes in
   `BravenChartWorkbench`, including a focused divider with a 12-pixel pointer
-  strip, keyboard resizing, Escape/double-click reset, and stable Pie/Donut legend footprints
-  when selection changes.
+  strip, keyboard resizing, Escape/double-click reset, and stable Pie/Donut
+  legend footprints when selection changes.
 
 ### Changed
 - Replaced repeated pub.dev contact sheets and oversized caption overlays with
