@@ -16,19 +16,25 @@ void main() {
       );
     });
 
-    test('uses radial layout for exactly one PieChartSeries', () {
+    test('uses partition-radial layout for exactly one PieChartSeries', () {
       final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
 
-      expect(ChartLayoutResolver.resolve([pie]), ChartLayoutKind.radial);
+      expect(
+        ChartLayoutResolver.resolve([pie]),
+        ChartLayoutKind.partitionRadial,
+      );
     });
 
-    test('uses radial layout for exactly one DonutChartSeries', () {
+    test('uses partition-radial layout for exactly one DonutChartSeries', () {
       final donut = DonutChartSeries.fromMap(
         id: 'donut',
         values: const {'A': 1},
       );
 
-      expect(ChartLayoutResolver.resolve([donut]), ChartLayoutKind.radial);
+      expect(
+        ChartLayoutResolver.resolve([donut]),
+        ChartLayoutKind.partitionRadial,
+      );
     });
 
     test('rejects mixed radial and Cartesian series', () {
@@ -63,6 +69,47 @@ void main() {
             (error) => error.message,
             'message',
             contains('exactly one PieChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test('keeps multiple Donut series unavailable before Phase 1', () {
+      final current = DonutChartSeries.fromMap(
+        id: 'current',
+        values: const {'A': 1},
+      );
+      final previous = DonutChartSeries.fromMap(
+        id: 'previous',
+        values: const {'A': 2},
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([current, previous]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('exactly one PieChartSeries or DonutChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test('keeps mixed Pie and Donut composition unavailable', () {
+      final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
+      final donut = DonutChartSeries.fromMap(
+        id: 'donut',
+        values: const {'A': 1},
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([pie, donut]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('exactly one PieChartSeries or DonutChartSeries'),
           ),
         ),
       );
