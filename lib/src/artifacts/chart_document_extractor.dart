@@ -25,6 +25,7 @@ import 'chart_series_document_codec.dart';
 import 'chart_theme_document_codec.dart';
 import 'chart_view_state.dart';
 import 'json_value.dart';
+import 'radial_formatter_document_descriptors.dart';
 
 /// Selects which resolved data projection is copied into a chart document.
 enum ChartDataScope {
@@ -60,6 +61,7 @@ class ChartDocumentExtractOptions {
     this.xAxisFormatterDescriptor,
     this.yAxisFormatterDescriptors = const {},
     this.interactionBindingDescriptors = const {},
+    this.radialFormatterDescriptors = const {},
     this.maxSnapshotAttempts = 3,
   }) : assert(documentId != ''),
        assert(maxSnapshotAttempts > 0);
@@ -91,6 +93,13 @@ class ChartDocumentExtractOptions {
 
   /// Stable IDs for interaction callbacks resolved during hydration.
   final Map<String, JsonObjectValue> interactionBindingDescriptors;
+
+  /// Portable numeric formatter descriptors keyed by radial series ID.
+  ///
+  /// A descriptor is required for each custom radial formatter present on the
+  /// source series. Extraction fails closed instead of serializing callbacks.
+  final Map<String, RadialFormatterDocumentDescriptors>
+  radialFormatterDescriptors;
 
   /// Maximum stable-snapshot attempts before returning an unstable revision.
   final int maxSnapshotAttempts;
@@ -231,6 +240,8 @@ abstract final class ChartDocumentExtractor {
             ChartSeriesDocumentCodec.encode(
               series,
               inlineAxisFormatter: _seriesAxisFormatter(series, options),
+              radialFormatterDescriptors:
+                  options.radialFormatterDescriptors[series.id],
               dataStorage: options.dataStorage,
             ),
             warnings,

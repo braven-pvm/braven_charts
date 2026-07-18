@@ -164,6 +164,94 @@ void main() {
   );
 
   testWidgets(
+    'runtime center builder receives selection and package-owned activation',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      DonutCenterData? activated;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox.square(
+              dimension: 420,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: true,
+                theme: ChartTheme.light.copyWith(
+                  pieChartTheme: const PieChartTheme(
+                    animationMode: PieAnimationMode.none,
+                  ),
+                ),
+                donutCenterBuilder: (context, center) => Center(
+                  key: const ValueKey('custom-donut-center'),
+                  child: Text(
+                    center.selectedCategory ?? 'All categories',
+                    style: center.defaultValueStyle.copyWith(fontSize: 14),
+                  ),
+                ),
+                onDonutCenterTap: (center) => activated = center,
+                series: [
+                  DonutChartSeries.fromMap(
+                    id: 'custom-center',
+                    unit: 'USD',
+                    values: const {'Subscriptions': 42, 'Services': 58},
+                    centerContent: const DonutCenterContent(
+                      label: 'Current',
+                      valueMode: DonutCenterValueMode.selectedOrTotal,
+                    ),
+                    donutStyle: const DonutChartStyle(
+                      innerRadiusFactor: 0.64,
+                      sliceGap: 0,
+                      animationMode: PieAnimationMode.none,
+                    ),
+                    dataLabels: const PieDataLabelConfig(isVisible: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('custom-donut-center')), findsOneWidget);
+      expect(find.text('All categories'), findsOneWidget);
+      expect(find.semantics.byLabel(RegExp(r'^Donut center,')), findsOne);
+      final summary = find.semantics.byLabel(
+        'Donut center, Current, 100 USD, total fallback',
+      );
+      expect(
+        summary.evaluate().single.getSemanticsData().hasAction(
+          SemanticsAction.tap,
+        ),
+        isTrue,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('custom-donut-center')));
+      await tester.pump();
+      expect(activated?.seriesId, 'custom-center');
+      expect(activated?.total, 100);
+      expect(activated?.hasSelection, isFalse);
+      expect(activated?.availableDiameter, greaterThan(0));
+
+      await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('Subscriptions'), findsWidgets);
+
+      await tester.tap(find.byKey(const ValueKey('custom-donut-center')));
+      await tester.pump();
+      expect(activated?.selectedCategory, 'Subscriptions');
+      expect(activated?.selectedValue, 42);
+      expect(activated?.selectedShare, closeTo(0.42, 0.0001));
+      expect(activated?.selectedSourcePointIndices, [0]);
+      expect(activated?.selectedSourcePoints.single.label, 'Subscriptions');
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
     'large-text high-contrast Donut stays bounded and keeps semantic meaning',
     (tester) async {
       tester.view.physicalSize = const Size(520, 420);

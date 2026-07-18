@@ -7,6 +7,7 @@ import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/donut_center_builder.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
@@ -114,10 +115,14 @@ class HydratedChartConfiguration {
   HydratedBravenChart build({
     Key? key,
     BravenChartController? bravenChartController,
+    DonutCenterBuilder? donutCenterBuilder,
+    DonutCenterTapCallback? onDonutCenterTap,
   }) => HydratedBravenChart(
     key: key,
     configuration: this,
     bravenChartController: bravenChartController,
+    donutCenterBuilder: donutCenterBuilder,
+    onDonutCenterTap: onDonutCenterTap,
   );
 }
 
@@ -127,10 +132,14 @@ class HydratedBravenChart extends StatefulWidget {
     super.key,
     required this.configuration,
     this.bravenChartController,
+    this.donutCenterBuilder,
+    this.onDonutCenterTap,
   });
 
   final HydratedChartConfiguration configuration;
   final BravenChartController? bravenChartController;
+  final DonutCenterBuilder? donutCenterBuilder;
+  final DonutCenterTapCallback? onDonutCenterTap;
 
   @override
   State<HydratedBravenChart> createState() => _HydratedBravenChartState();
@@ -204,6 +213,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       grid: config.grid,
       legendStyle: config.legendStyle,
       showLegend: config.showLegend,
+      donutCenterBuilder: widget.donutCenterBuilder,
+      onDonutCenterTap: widget.onDonutCenterTap,
       showToolbar: config.showToolbar,
       interactiveAnnotations: config.interactiveAnnotations,
       maxAxesPerSide: config.maxAxesPerSide,
@@ -244,6 +255,9 @@ abstract final class ChartDocumentHydrator {
     'series.donut.center-content.v1',
     'series.donut.variable-radius.v1',
     'series.radial.grouping.v1',
+    'series.radial.grouped-variable-radius.v1',
+    'series.radial.formatters.v1',
+    'series.radial.data-transitions.v1',
     'annotation.point',
     'annotation.range',
     'annotation.text',
@@ -653,10 +667,61 @@ abstract final class ChartDocumentHydrator {
       warnings,
       '\$.document.series[$index].inlineAxis.formatter',
     );
+    final radialValueFormatter = _resolveFormatter(
+      _nestedFormatterDescriptor(document, 'dataLabels', 'valueFormatter'),
+      registry,
+      warnings,
+      '\$.document.series[$index].style.dataLabels.valueFormatter',
+    );
+    final radialPercentageFormatter = _resolveFormatter(
+      _nestedFormatterDescriptor(document, 'dataLabels', 'percentageFormatter'),
+      registry,
+      warnings,
+      '\$.document.series[$index].style.dataLabels.percentageFormatter',
+    );
+    final radialRadiusFormatter = _resolveFormatter(
+      _nestedFormatterDescriptor(document, 'sliceRadiusConfig', 'formatter'),
+      registry,
+      warnings,
+      '\$.document.series[$index].style.sliceRadiusConfig.formatter',
+    );
+    final donutCenterFormatter = _resolveFormatter(
+      _nestedFormatterDescriptor(document, 'centerContent', 'valueFormatter'),
+      registry,
+      warnings,
+      '\$.document.series[$index].style.centerContent.valueFormatter',
+    );
     return _requireValue(
-      ChartSeriesDocumentCodec.decode(document, inlineAxisFormatter: formatter),
+      ChartSeriesDocumentCodec.decode(
+        document,
+        inlineAxisFormatter: formatter,
+        radialValueFormatter: radialValueFormatter,
+        radialPercentageFormatter: radialPercentageFormatter,
+        radialRadiusFormatter: radialRadiusFormatter,
+        donutCenterFormatter: donutCenterFormatter,
+      ),
       warnings,
     );
+  }
+
+  static JsonObjectValue? _nestedFormatterDescriptor(
+    ChartSeriesDocument document,
+    String containerKey,
+    String formatterKey,
+  ) {
+    final container = document.style?.values[containerKey];
+    if (container == null) return null;
+    if (container is! JsonObjectValue) {
+      throw FormatException('Series style "$containerKey" must be an object.');
+    }
+    final formatter = container.values[formatterKey];
+    if (formatter == null) return null;
+    if (formatter is! JsonObjectValue) {
+      throw FormatException(
+        'Series formatter "$containerKey.$formatterKey" must be an object.',
+      );
+    }
+    return formatter;
   }
 
   static ChartAnnotation _decodeAnnotation(

@@ -58,8 +58,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _selectedGlowSpread = 2;
   double _selectedGlowOpacity = 0.48;
   PieAnimationMode _animationMode = PieAnimationMode.grow;
+  RadialDataTransitionMode _dataTransitionMode =
+      RadialDataTransitionMode.automatic;
   bool _groupSmallSlices = false;
   double _groupingMinimumShare = 0.1;
+  RadialSliceRadiusAggregation _radiusAggregation =
+      RadialSliceRadiusAggregation.weightedMean;
   _PiePalette _palette = _PiePalette.theme;
   _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
   _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
@@ -103,7 +107,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _radiusValues = Map<String, num>.of(
         dataset.radiusValues ?? const <String, num>{},
       );
-      if (dataset.hasVariableSliceRadius) _groupSmallSlices = false;
       _selectedCategory = null;
       _clearPortableState();
     });
@@ -117,7 +120,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _selectedCategory = null;
       _clearPortableState();
       _animationMode = PieAnimationMode.grow;
-      if (_dataset.hasVariableSliceRadius) _groupSmallSlices = false;
       _showTooltips = true;
       switch (preset) {
         case _PieShowcasePreset.simple:
@@ -329,6 +331,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
         includePreview: true,
         documentOptions: ChartDocumentExtractOptions(
           documentId: 'pie-showcase-${_dataset.name}',
+          radialFormatterDescriptors: {
+            'pie-showcase-${_dataset.name}': _radialFormatterDescriptors,
+          },
         ),
         previewOptions: const ChartPreviewOptions(pixelRatio: 0.75),
       ),
@@ -651,6 +656,18 @@ class _PieChartsPageState extends State<PieChartsPage> {
             onChanged: _setAnimationMode,
             subtitle: 'Grow, reveal around the pie, fade, or render instantly',
           ),
+          EnumOption<RadialDataTransitionMode>(
+            key: const ValueKey('pie-data-transition-mode'),
+            label: 'Data updates',
+            value: _dataTransitionMode,
+            values: RadialDataTransitionMode.values,
+            labelBuilder: (value) => switch (value) {
+              RadialDataTransitionMode.none => 'Instant',
+              RadialDataTransitionMode.automatic => 'Identity-aware',
+            },
+            onChanged: (value) => setState(() => _dataTransitionMode = value),
+            subtitle: 'Morph stable categories; fade structural changes',
+          ),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -672,14 +689,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
             key: const ValueKey('pie-group-small-slices'),
             label: 'Group small slices',
             value: _groupSmallSlices,
-            onChanged: _dataset.hasVariableSliceRadius
-                ? (_) {}
-                : _setGroupingEnabled,
+            onChanged: _setGroupingEnabled,
             subtitle: _dataset.hasVariableSliceRadius
-                ? 'Variable radii need an explicit second-metric aggregation policy'
+                ? 'Group angle and aggregate radius by the policy below'
                 : 'Render one Other slice while preserving every source row',
           ),
-          if (_groupSmallSlices)
+          if (_groupSmallSlices) ...[
             SliderOption(
               key: const ValueKey('pie-grouping-threshold'),
               label: 'Share threshold',
@@ -691,6 +706,20 @@ class _PieChartsPageState extends State<PieChartsPage> {
               decimalPlaces: 0,
               onChanged: _setGroupingThreshold,
             ),
+            if (_dataset.hasVariableSliceRadius)
+              EnumOption<RadialSliceRadiusAggregation>(
+                key: const ValueKey('pie-radius-aggregation'),
+                label: 'Radius aggregation',
+                value: _radiusAggregation,
+                values: RadialSliceRadiusAggregation.values,
+                labelBuilder: _radiusAggregationName,
+                onChanged: (value) => setState(() {
+                  _radiusAggregation = value;
+                  _clearPortableState();
+                }),
+                subtitle: 'Explicit policy for the grouped second metric',
+              ),
+          ],
         ],
       ),
       OptionSection(
@@ -882,6 +911,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
       maximumAutoTablePaneExtent: 620,
       autoFitTablePane: true,
       isSplitResizable: true,
+      documentOptions: ChartDocumentExtractOptions(
+        includeViewState: true,
+        radialFormatterDescriptors: {
+          'pie-showcase-${_dataset.name}': _radialFormatterDescriptors,
+        },
+      ),
       tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
       onTableRowFocused: _focusTablePoints,
       onTableRowFocusCleared: _chartController.clearPointFocus,
@@ -1824,12 +1859,17 @@ class _PieChartsPageState extends State<PieChartsPage> {
               scale: _sliceRadiusScale,
               label: _dataset.radiusLabel!,
               unit: _dataset.radiusUnit,
+              formatter: (value) =>
+                  '${value.toStringAsFixed(0)} ${_dataset.radiusUnit}',
             )
           : null,
-      sliceGroupingConfig: _groupSmallSlices && !_dataset.hasVariableSliceRadius
+      sliceGroupingConfig: _groupSmallSlices
           ? RadialSliceGroupingConfig(
               minimumShare: _groupingMinimumShare,
               label: 'Other',
+              radiusAggregation: _dataset.hasVariableSliceRadius
+                  ? _radiusAggregation
+                  : null,
             )
           : null,
       pieStyle: PieChartStyle(
@@ -1858,6 +1898,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
         },
         selectionExplodeOffset: _selectionExplodeOffset,
         cornerTreatment: _cornerTreatment,
+        dataTransitionMode: _dataTransitionMode,
       ),
       dataLabels: PieDataLabelConfig(
         isVisible: _showLabels,
@@ -1866,6 +1907,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
         minimumShare: _minimumShare,
         outsideOffset: _outsideLabelOffset,
         collisionStrategy: _collisionStrategy,
+        valueFormatter: (value) =>
+            '${value.toStringAsFixed(1)} ${_dataset.unit}',
+        percentageFormatter: (share) => '${(share * 100).toStringAsFixed(0)}%',
       ),
     );
   }
@@ -1952,6 +1996,39 @@ class _PieChartsPageState extends State<PieChartsPage> {
   void _setAnimationMode(PieAnimationMode mode) {
     setState(() => _animationMode = mode);
   }
+
+  String _radiusAggregationName(RadialSliceRadiusAggregation value) =>
+      switch (value) {
+        RadialSliceRadiusAggregation.sum => 'Sum',
+        RadialSliceRadiusAggregation.mean => 'Mean',
+        RadialSliceRadiusAggregation.weightedMean => 'Weighted mean',
+        RadialSliceRadiusAggregation.minimum => 'Minimum',
+        RadialSliceRadiusAggregation.maximum => 'Maximum',
+      };
+
+  RadialFormatterDocumentDescriptors get _radialFormatterDescriptors =>
+      RadialFormatterDocumentDescriptors(
+        value: ChartFormatterDescriptor(
+          id: 'braven.number.fixed',
+          arguments: {
+            'decimals': JsonNumberValue(1),
+            'suffix': JsonStringValue(' ${_dataset.unit}'),
+          },
+        ).toDocument(),
+        percentage: ChartFormatterDescriptor(
+          id: 'braven.number.percent',
+          arguments: {'decimals': JsonNumberValue(0)},
+        ).toDocument(),
+        radius: _dataset.hasVariableSliceRadius
+            ? ChartFormatterDescriptor(
+                id: 'braven.number.fixed',
+                arguments: {
+                  'decimals': JsonNumberValue(0),
+                  'suffix': JsonStringValue(' ${_dataset.radiusUnit}'),
+                },
+              ).toDocument()
+            : null,
+      );
 
   List<Color>? get _paletteColors => switch (_palette) {
     _PiePalette.theme => null,

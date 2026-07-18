@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:typed_data';
+import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
@@ -24,6 +25,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       ChartWorkbenchController();
 
   _DonutStory _story = _DonutStory.contribution;
+  late Map<String, num> _values;
+  late Map<String, num> _radiusValues;
   double _innerRadiusFactor = 0.58;
   double _sweepAngleDegrees = 360;
   double _startAngleDegrees = -90;
@@ -31,6 +34,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   double _sliceGap = 3;
   double _cornerRadius = 8;
   PieAnimationMode _animationMode = PieAnimationMode.grow;
+  RadialDataTransitionMode _dataTransitionMode =
+      RadialDataTransitionMode.automatic;
   bool _clockwise = true;
   bool _showLabels = true;
   bool _showLegend = true;
@@ -38,6 +43,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   bool _showCenterContent = true;
   bool _groupSmallSlices = false;
   double _groupingMinimumShare = 0.07;
+  RadialSliceRadiusAggregation _radiusAggregation =
+      RadialSliceRadiusAggregation.weightedMean;
   DonutCenterValueMode _centerValueMode = DonutCenterValueMode.selectedOrTotal;
   _DonutCenterStyle _centerStyle = _DonutCenterStyle.theme;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
@@ -48,6 +55,14 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   String? _selectedCategory;
   bool _isCapturing = false;
   bool _showRestoredCopy = false;
+  int _centerActionCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _values = Map<String, num>.of(_story.values);
+    _radiusValues = Map<String, num>.of(_story.radiusValues);
+  }
 
   @override
   void dispose() {
@@ -332,6 +347,14 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       maximumAutoTablePaneExtent: 620,
       autoFitTablePane: true,
       isSplitResizable: true,
+      documentOptions: ChartDocumentExtractOptions(
+        includeViewState: true,
+        radialFormatterDescriptors: {
+          'donut-${_story.name}': _radialFormatterDescriptors(
+            includeRadius: _radiusValues.isNotEmpty,
+          ),
+        },
+      ),
       tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
       onTableRowFocused: _focusTablePoints,
       onTableRowFocusCleared: _chartController.clearPointFocus,
@@ -352,6 +375,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       showLegend: _showLegend,
       radialLegendItemBuilder: _legendContent == _DonutLegendContent.valueCards
           ? _buildValueCardLegendItem
+          : null,
+      donutCenterBuilder: _centerStyle == _DonutCenterStyle.customWidget
+          ? _buildRuntimeCenter
+          : null,
+      onDonutCenterTap: _centerStyle == _DonutCenterStyle.customWidget
+          ? _handleCenterAction
           : null,
       theme: ChartTheme.light,
       interactionConfig: const InteractionConfig(
@@ -378,25 +407,70 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     item: item,
   );
 
+  Widget _buildRuntimeCenter(BuildContext context, DonutCenterData data) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            data.hasSelection
+                ? Icons.check_circle_outline
+                : Icons.touch_app_outlined,
+            size: math.max(16, data.availableDiameter * .14),
+            color: colors.primary,
+          ),
+          const SizedBox(height: 3),
+          Text(
+            data.label ?? 'Interactive center',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: data.defaultLabelStyle,
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(data.valueLabel, style: data.defaultValueStyle),
+          ),
+          Text(
+            'Center actions: $_centerActionCount',
+            maxLines: 1,
+            style: data.defaultLabelStyle.copyWith(
+              color: colors.onSurfaceVariant,
+              fontSize: math.max(8, data.defaultLabelStyle.fontSize! * .78),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleCenterAction(DonutCenterData data) {
+    setState(() => _centerActionCount++);
+  }
+
   DonutChartSeries _buildSeries() {
     return DonutChartSeries.fromMap(
       id: 'donut-${_story.name}',
       name: _story.seriesName,
       unit: _story.unit,
-      values: _story.values,
-      radiusValues: _story.radiusValues,
-      sliceRadiusConfig: _story.radiusValues.isEmpty
+      values: _values,
+      radiusValues: _radiusValues,
+      sliceRadiusConfig: _radiusValues.isEmpty
           ? null
-          : const RadialSliceRadiusConfig(
+          : RadialSliceRadiusConfig(
               minimumFactor: 0.42,
               scale: PieSliceRadiusScale.area,
               label: 'Audience reach',
               unit: 'k users',
+              formatter: (value) => '${value.toStringAsFixed(0)} k users',
             ),
       sliceGroupingConfig: _groupSmallSlices
           ? RadialSliceGroupingConfig(
               minimumShare: _groupingMinimumShare,
               label: 'Other',
+              radiusAggregation: _radiusValues.isEmpty
+                  ? null
+                  : _radiusAggregation,
             )
           : null,
       donutStyle: DonutChartStyle(
@@ -413,6 +487,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         cornerRadius: _cornerRadius,
         cornerTreatment: PieCornerTreatment.roundAll,
         animationMode: _animationMode,
+        dataTransitionMode: _dataTransitionMode,
         gradient: const PieGradientStyle(
           type: PieGradientType.radial,
           startLightnessShift: 0.14,
@@ -433,6 +508,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             : null,
         labelStyle: _centerLabelStyle,
         valueStyle: _centerValueStyle,
+        valueFormatter: (value) => '${value.toStringAsFixed(0)} ${_story.unit}',
       ),
       dataLabels: PieDataLabelConfig(
         isVisible: _showLabels,
@@ -441,6 +517,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         outsideOffset: 4,
         minimumShare: 0.04,
         collisionStrategy: PieDataLabelCollisionStrategy.shiftAndHide,
+        valueFormatter: (value) => '${value.toStringAsFixed(1)} ${_story.unit}',
+        percentageFormatter: (share) => '${(share * 100).toStringAsFixed(0)}%',
       ),
     );
   }
@@ -536,6 +614,11 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         includePreview: true,
         documentOptions: ChartDocumentExtractOptions(
           documentId: 'donut-${_story.name}',
+          radialFormatterDescriptors: {
+            'donut-${_story.name}': _radialFormatterDescriptors(
+              includeRadius: _radiusValues.isNotEmpty,
+            ),
+          },
         ),
         previewOptions: const ChartPreviewOptions(pixelRatio: 0.75),
       ),
@@ -663,6 +746,27 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             onChanged: _setAnimationMode,
             subtitle: 'Grow, reveal around the ring, fade, or render instantly',
           ),
+          EnumOption<RadialDataTransitionMode>(
+            key: const ValueKey('donut-data-transition-mode'),
+            label: 'Data updates',
+            value: _dataTransitionMode,
+            values: RadialDataTransitionMode.values,
+            labelBuilder: (value) => switch (value) {
+              RadialDataTransitionMode.none => 'Instant',
+              RadialDataTransitionMode.automatic => 'Identity-aware',
+            },
+            onChanged: (value) => setState(() => _dataTransitionMode = value),
+            subtitle: 'Morph stable categories; fade structural changes',
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('regenerate-donut-values'),
+              onPressed: _regenerateValues,
+              icon: const Icon(Icons.casino_outlined, size: 18),
+              label: const Text('Regenerate values'),
+            ),
+          ),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -695,6 +799,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               onChanged: (value) => setState(() => _centerValueMode = value),
             ),
             EnumOption<_DonutCenterStyle>(
+              key: const ValueKey('donut-center-style'),
               label: 'Center style',
               value: _centerStyle,
               values: _DonutCenterStyle.values,
@@ -702,6 +807,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 _DonutCenterStyle.theme => 'Theme default',
                 _DonutCenterStyle.compact => 'Compact',
                 _DonutCenterStyle.accent => 'Accent',
+                _DonutCenterStyle.customWidget => 'Custom widget + action',
               },
               onChanged: (value) => setState(() => _centerStyle = value),
             ),
@@ -716,14 +822,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             key: const ValueKey('donut-group-small-slices'),
             label: 'Group small slices',
             value: _groupSmallSlices,
-            onChanged: _story == _DonutStory.reach
-                ? (_) {}
-                : _setGroupingEnabled,
-            subtitle: _story == _DonutStory.reach
-                ? 'Variable radii need an explicit second-metric aggregation policy'
+            onChanged: _setGroupingEnabled,
+            subtitle: _radiusValues.isNotEmpty
+                ? 'Group angle and aggregate radius by the policy below'
                 : 'Render one Other slice while preserving every source row',
           ),
-          if (_groupSmallSlices)
+          if (_groupSmallSlices) ...[
             SliderOption(
               key: const ValueKey('donut-grouping-threshold'),
               label: 'Share threshold',
@@ -742,6 +846,20 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 });
               },
             ),
+            if (_radiusValues.isNotEmpty)
+              EnumOption<RadialSliceRadiusAggregation>(
+                key: const ValueKey('donut-radius-aggregation'),
+                label: 'Radius aggregation',
+                value: _radiusAggregation,
+                values: RadialSliceRadiusAggregation.values,
+                labelBuilder: _radiusAggregationName,
+                onChanged: (value) => setState(() {
+                  _radiusAggregation = value;
+                  _clearPortableState();
+                }),
+                subtitle: 'Explicit policy for the grouped second metric',
+              ),
+          ],
         ],
       ),
       OptionSection(
@@ -899,6 +1017,13 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               height: compact ? 440 : 420,
               child: _restoredConfiguration!.build(
                 key: ValueKey('restored-${artifact?.artifactId}'),
+                donutCenterBuilder:
+                    _centerStyle == _DonutCenterStyle.customWidget
+                    ? _buildRuntimeCenter
+                    : null,
+                onDonutCenterTap: _centerStyle == _DonutCenterStyle.customWidget
+                    ? _handleCenterAction
+                    : null,
               ),
             ),
           ],
@@ -1184,7 +1309,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     _chartController.clearPointSelection();
     setState(() {
       _story = story;
+      _values = Map<String, num>.of(story.values);
+      _radiusValues = Map<String, num>.of(story.radiusValues);
       _selectedCategory = null;
+      _centerActionCount = 0;
       _clearPortableState();
       switch (story) {
         case _DonutStory.contribution:
@@ -1259,12 +1387,77 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     _DonutLegendContent.valueCards => 'Custom value cards',
   };
 
+  String _radiusAggregationName(RadialSliceRadiusAggregation value) =>
+      switch (value) {
+        RadialSliceRadiusAggregation.sum => 'Sum',
+        RadialSliceRadiusAggregation.mean => 'Mean',
+        RadialSliceRadiusAggregation.weightedMean => 'Weighted mean',
+        RadialSliceRadiusAggregation.minimum => 'Minimum',
+        RadialSliceRadiusAggregation.maximum => 'Maximum',
+      };
+
+  RadialFormatterDocumentDescriptors _radialFormatterDescriptors({
+    required bool includeRadius,
+  }) => RadialFormatterDocumentDescriptors(
+    value: ChartFormatterDescriptor(
+      id: 'braven.number.fixed',
+      arguments: {
+        'decimals': JsonNumberValue(1),
+        'suffix': JsonStringValue(' ${_story.unit}'),
+      },
+    ).toDocument(),
+    percentage: ChartFormatterDescriptor(
+      id: 'braven.number.percent',
+      arguments: {'decimals': JsonNumberValue(0)},
+    ).toDocument(),
+    radius: includeRadius
+        ? ChartFormatterDescriptor(
+            id: 'braven.number.fixed',
+            arguments: {
+              'decimals': JsonNumberValue(0),
+              'suffix': const JsonStringValue(' k users'),
+            },
+          ).toDocument()
+        : null,
+    center: ChartFormatterDescriptor(
+      id: 'braven.number.fixed',
+      arguments: {
+        'decimals': JsonNumberValue(0),
+        'suffix': JsonStringValue(' ${_story.unit}'),
+      },
+    ).toDocument(),
+  );
+
+  void _regenerateValues() {
+    final random = math.Random();
+    setState(() {
+      _values = {
+        for (final entry in _values.entries)
+          entry.key: math.max(
+            1,
+            entry.value * (.72 + random.nextDouble() * .56),
+          ),
+      };
+      if (_radiusValues.isNotEmpty) {
+        _radiusValues = {
+          for (final entry in _radiusValues.entries)
+            entry.key: math.max(
+              1,
+              entry.value * (.75 + random.nextDouble() * .5),
+            ),
+        };
+      }
+      _clearPortableState();
+    });
+  }
+
   void _setAnimationMode(PieAnimationMode mode) {
     setState(() => _animationMode = mode);
   }
 
   LabelStyle? get _centerLabelStyle => switch (_centerStyle) {
     _DonutCenterStyle.theme => null,
+    _DonutCenterStyle.customWidget => null,
     _DonutCenterStyle.compact => const LabelStyle(
       textStyle: TextStyle(color: Color(0xFF64748B), fontSize: 10),
       backgroundColor: Color(0x00000000),
@@ -1285,6 +1478,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
 
   LabelStyle? get _centerValueStyle => switch (_centerStyle) {
     _DonutCenterStyle.theme => null,
+    _DonutCenterStyle.customWidget => null,
     _DonutCenterStyle.compact => const LabelStyle(
       textStyle: TextStyle(
         color: Color(0xFF1E293B),
@@ -1314,7 +1508,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
 
 enum _DonutStory { contribution, progress, reach, grouping }
 
-enum _DonutCenterStyle { theme, compact, accent }
+enum _DonutCenterStyle { theme, compact, accent, customWidget }
 
 enum _DonutLegendContent { standard, valueCards }
 

@@ -37,9 +37,16 @@ types and where to begin.
 - `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
   theme-level radial styling, independently configurable shadows/glows,
   callouts, and motion defaults.
+- `RadialDataTransitionMode` separates identity-aware mounted data changes
+  from first-mount/replay entrance motion.
 - `PieDataLabelConfig`, `PieDataLabelPosition`, `PieDataLabelContent`, and
   `PieDataLabelCollisionStrategy` control label eligibility, placement, and
   optional shared-`LabelStyle` callouts.
+- `RadialValueFormatter` supplies complete value/share/radius text reused by
+  labels, legends, tooltips, center content, and accessibility as applicable.
+- `RadialSliceGroupingConfig` keeps source rows while projecting small slices;
+  `RadialSliceRadiusAggregation` makes grouped second-metric semantics
+  explicit when variable radius is also enabled.
 
 A chart accepts exactly one pie series and cannot mix radial and Cartesian
 series. Pie charts do not use axes, crosshairs, scrollbars, pan, zoom, or
@@ -65,6 +72,9 @@ re-anchors after geometry or responsive layout changes.
   `custom`, with series-level `LabelStyle` overrides.
 - `PieChartTheme.centerLabelStyle` and `centerValueStyle` provide theme
   defaults for measured center text.
+- `BravenChartPlus.donutCenterBuilder`, `onDonutCenterTap`, and
+  `DonutCenterData` provide runtime Flutter composition and an accessible
+  center action inside the package-owned circular interaction shell.
 - Optional radius values use `RadialSliceRadiusConfig` and never cross the
   shared circular opening.
 
@@ -74,7 +84,9 @@ and accessibility contracts. Pie and Donut also accept the runtime-only
 `BravenChartPlus.radialLegendItemBuilder`, whose `RadialLegendItemData` gives
 host widgets resolved category, value, share, color, selected state, and
 grouped source points while the package retains layout, activation, and
-semantics. See [Donut charts](donut_charts.md).
+semantics. Runtime legend and center builders/actions must be rebound after
+artifact hydration; portable legend style and `DonutCenterContent` remain the
+preview/restoration fallback. See [Donut charts](donut_charts.md).
 
 ## Axes, normalization, and layout
 
@@ -169,9 +181,13 @@ semantics. See [Donut charts](donut_charts.md).
   `HydratedBravenChart` — validated restoration into fresh public chart models.
 - `ChartDataScope` and `ChartDataStorage` — choose the effective data
   projection and inline point/column storage strategy.
+- `RadialFormatterDocumentDescriptors` — series-keyed portable descriptions
+  for Pie/Donut value, share, radius, and center callbacks. Extraction fails
+  closed when a runtime radial formatter has no descriptor.
 - `ChartTableModel`, `ChartTableOptions`, and `ChartDataTable` — exact-X wide
   rows (one X value with one column per series), lossless long rows, or native
-  pie `Category | Value | Share` rows; plus sorting, virtualization, theming,
+  radial `Category | Value | Radius? | Share` rows; plus sorting,
+  virtualization, theming,
   bounded dataset/row clipboard copy, and raw-value CSV export with automatic
   web download or host delivery callbacks. Pass `selectedPointRefs` to mirror
   durable chart or slice selection into rows.

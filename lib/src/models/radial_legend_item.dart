@@ -34,8 +34,14 @@ class RadialLegendItemData {
     required this.defaultTextStyle,
     required this.selected,
     required this.animationDuration,
+    String? valueLabel,
+    String? shareLabel,
   }) : sourcePointIndices = List<int>.unmodifiable(sourcePointIndices),
-       sourcePoints = List<ChartDataPoint>.unmodifiable(sourcePoints);
+       sourcePoints = List<ChartDataPoint>.unmodifiable(sourcePoints),
+       valueLabel =
+           valueLabel ??
+           '${value.toStringAsFixed(2)}${unit == null || unit.isEmpty ? '' : ' $unit'}',
+       shareLabel = shareLabel ?? '${(share * 100).toStringAsFixed(1)}%';
 
   /// Stable series identity used by controller and artifact point references.
   final String seriesId;
@@ -87,14 +93,17 @@ class RadialLegendItemData {
   final Duration animationDuration;
 
   /// Default package value formatting offered as a builder convenience.
-  String get valueLabel =>
-      '${value.toStringAsFixed(2)}${unit == null || unit!.isEmpty ? '' : ' $unit'}';
+  final String valueLabel;
 
   /// Default package percentage formatting offered as a builder convenience.
-  String get shareLabel => '${(share * 100).toStringAsFixed(1)}%';
+  final String shareLabel;
 
   /// Package-owned accessible description retained around custom content.
-  String get semanticLabel =>
-      '$category, $valueLabel, ${(share * 100).toStringAsFixed(1)} percent, '
-      '${selected ? 'selected' : 'not selected'}';
+  String get semanticLabel {
+    final semanticShare = shareLabel.endsWith('%')
+        ? '${shareLabel.substring(0, shareLabel.length - 1)} percent'
+        : shareLabel;
+    return '$category, $valueLabel, $semanticShare, '
+        '${selected ? 'selected' : 'not selected'}';
+  }
 }

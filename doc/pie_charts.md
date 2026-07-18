@@ -224,9 +224,26 @@ PieChartSeries.fromMap(
 The threshold is exclusive. The aggregate appears only when at least
 `minimumSourceCount` positive points qualify. Selecting the aggregate expands
 to every represented `ChartPointRef`; selecting any represented table row
-selects the same visible aggregate. Grouping cannot currently be combined with
-variable slice radii because that requires an explicit second-metric
-aggregation policy.
+selects the same visible aggregate.
+
+Grouping can be combined with variable slice radii only when the host declares
+the second-metric aggregation policy:
+
+```dart
+sliceGroupingConfig: const RadialSliceGroupingConfig(
+  minimumShare: 0.1,
+  minimumSourceCount: 2,
+  label: 'Other',
+  radiusAggregation: RadialSliceRadiusAggregation.weightedMean,
+),
+```
+
+Choose `sum`, arithmetic `mean`, contribution-weighted `weightedMean`,
+`minimum`, or `maximum` according to the meaning of the radius measure. The
+policy affects only the synthetic visible slice. Every source radius remains
+unchanged in tables, copy/CSV, callbacks, artifacts, and hydration. Combining
+grouping and variable radius without a policy, or supplying a policy without a
+radius metric, fails validation rather than inventing semantics.
 
 The geometry preserves an internal inner-radius seam, but nested radial charts
 are not part of Pie. Variable-radius Pie is
@@ -297,6 +314,19 @@ a zero theme duration always win over every entrance mode. A mounted chart can
 replay its configured radial entrance through
 `BravenChartController.replayRadialEntrance()`.
 
+Entrance motion is independent from mounted data changes. Configure
+`PieChartStyle.dataTransitionMode` with `RadialDataTransitionMode.automatic`
+to interpolate values and optional radius metrics while stable categories keep
+the same identity and order. Category insertion, removal, reordering, or
+grouping uses a two-phase structural fade so one category never morphs into
+another. Use `RadialDataTransitionMode.none` for immediate updates. Data
+changes never replay the configured entrance.
+
+Radial identity prefers a unique trimmed category label. Duplicate labels are
+disambiguated by X value and then occurrence. Selection and keyboard focus are
+remapped through a reorder. Reduced motion and a zero duration always apply the
+final state immediately.
+
 The renderer reserves the maximum configured explode distance, border and
 focus stroke, base shadow, and selected elevation before calculating the Pie
 radius. Selection therefore does not reflow the chart, and an edge-facing
@@ -331,6 +361,32 @@ the plot. The complete legend and table remain available when a label is hidden.
 `minimumShare` uses the inclusive range 0–1. `minimumSweepDegrees` uses 0–360.
 Outside offset, connector length, width, and label padding must be finite and
 non-negative.
+
+## Numeric formatting
+
+Use one set of radial formatters to keep labels, legends, tooltips, and
+accessibility consistent:
+
+```dart
+PieChartSeries.fromMap(
+  id: 'revenue-share',
+  values: const {'Subscriptions': 42, 'Services': 31},
+  dataLabels: PieDataLabelConfig(
+    valueFormatter: (value) => '\$${value.toStringAsFixed(1)}',
+    percentageFormatter: (share) =>
+        '${(share * 100).toStringAsFixed(0)}%',
+  ),
+  sliceRadiusConfig: PieSliceRadiusConfig(
+    formatter: (value) => '${value.toStringAsFixed(0)} k users',
+  ),
+)
+```
+
+`RadialValueFormatter` owns the complete returned text, including units and
+prefixes. `percentageFormatter` receives a fractional share from `0` to `1`.
+The resolved value/share text is reused across data labels, legends, tooltips,
+and semantic descriptions; the radius formatter owns the optional second
+metric display.
 
 ### Callout styling
 
@@ -586,6 +642,24 @@ final captured = await controller.extractArtifact(
   ChartArtifactExtractOptions(
     artifactId: 'revenue-share-2026-07',
     includePreview: true,
+    documentOptions: ChartDocumentExtractOptions(
+      documentId: 'revenue-share',
+      radialFormatterDescriptors: {
+        'revenue-share': RadialFormatterDocumentDescriptors(
+          value: ChartFormatterDescriptor(
+            id: 'braven.number.fixed',
+            arguments: {
+              'decimals': JsonNumberValue(1),
+              'prefix': JsonStringValue(r'$'),
+            },
+          ).toDocument(),
+          percentage: ChartFormatterDescriptor(
+            id: 'braven.number.percent',
+            arguments: {'decimals': JsonNumberValue(0)},
+          ).toDocument(),
+        ),
+      },
+    ),
   ),
 );
 
@@ -621,6 +695,19 @@ A Pie using the second radius metric additionally requires
 `series.pie.variable-radius.v1`. Uniform Pie artifacts do not require that
 capability, while readers that do not understand the radius mapping reject a
 variable-radius document instead of flattening it into a misleading Pie.
+
+Source-preserving grouping declares `series.radial.grouping.v1`; grouped
+variable radius adds `series.radial.grouped-variable-radius.v1`; portable
+formatter descriptors add `series.radial.formatters.v1`; and automatic data
+updates add `series.radial.data-transitions.v1`.
+
+Numeric callbacks are executable behavior and cannot be serialized. If a Pie
+uses `valueFormatter`, `percentageFormatter`, or a radius formatter,
+extraction fails closed unless the matching series-keyed
+`RadialFormatterDocumentDescriptors` entry is supplied. The built-in registry
+supports `braven.number.fixed` (`decimals`, `prefix`, and `suffix`) and
+`braven.number.percent` (`decimals`). Custom stable IDs can be registered
+through `ChartRuntimeBindings.formatters` and are resolved during hydration.
 
 ## AI and tool configuration
 

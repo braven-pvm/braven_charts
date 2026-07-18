@@ -108,6 +108,39 @@ void main() {
       expect(custom.centerPresentation?.value, 'Ready');
     });
 
+    test('shares radial numeric formatting across center and data hits', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'formatted-radial',
+        unit: 'USD',
+        values: const {'Subscriptions': 42, 'Services': 58},
+        radiusValues: const {'Subscriptions': 8, 'Services': 12},
+        dataLabels: PieDataLabelConfig(
+          valueFormatter: (value) => '\$${value.toStringAsFixed(0)}',
+          percentageFormatter: (share) =>
+              '${(share * 100).toStringAsFixed(0)} pct',
+        ),
+        sliceRadiusConfig: PieSliceRadiusConfig(
+          formatter: (value) => '${value.toStringAsFixed(0)} km',
+        ),
+        centerContent: DonutCenterContent(
+          isVisible: true,
+          valueFormatter: (value) => '\$${value.toStringAsFixed(0)} total',
+        ),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(240),
+        theme: ChartTheme.light,
+      );
+      final hit = element.dataHitForPointIndex(0)!;
+
+      expect(hit.formattedValue, r'$42');
+      expect(hit.formattedShare, '42 pct');
+      expect(hit.formattedRadiusValue, '8 km');
+      expect(hit.semanticLabel, contains('42 pct'));
+      expect(element.centerPresentation?.value, r'$100 total');
+    });
+
     test('paints styled center content inside the measured opening', () async {
       const centerRed = Color(0xFFFF1744);
       final element = PieSeriesElement(

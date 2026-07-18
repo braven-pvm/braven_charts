@@ -39,14 +39,15 @@ void main() {
     final initialChart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('pie-showcase-chart')),
     );
+    final initialSeries = initialChart.series.single as PieChartSeries;
     expect(
-      (initialChart.series.single as PieChartSeries).pieStyle.gradient?.type,
-      PieGradientType.radial,
+      initialSeries.pieStyle.dataTransitionMode,
+      RadialDataTransitionMode.automatic,
     );
-    expect(
-      (initialChart.series.single as PieChartSeries).pieStyle.cornerTreatment,
-      PieCornerTreatment.roundAll,
-    );
+    expect(initialSeries.dataLabels.valueFormatter, isNotNull);
+    expect(initialSeries.dataLabels.percentageFormatter, isNotNull);
+    expect(initialSeries.pieStyle.gradient?.type, PieGradientType.radial);
+    expect(initialSeries.pieStyle.cornerTreatment, PieCornerTreatment.roundAll);
     expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
 
@@ -467,7 +468,7 @@ void main() {
     });
     expect(
       find.semantics.byLabel(
-        'Hardware, 16.00 USD, 16.0 percent, slice 3 of 5, selected',
+        'Hardware, 16.0 USD, 16 percent, slice 3 of 5, selected',
       ),
       findsOne,
     );

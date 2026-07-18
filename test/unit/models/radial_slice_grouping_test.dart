@@ -58,6 +58,56 @@ void main() {
       expect(series.visibleSlices.last.point.label, 'Small');
     });
 
+    test('aggregates grouped variable radii only by the declared policy', () {
+      DonutChartSeries build(RadialSliceRadiusAggregation aggregation) =>
+          DonutChartSeries.fromMap(
+            id: 'radius-$aggregation',
+            values: const {'Core': 80, 'A': 8, 'B': 7, 'C': 5},
+            radiusValues: const {'Core': 50, 'A': 10, 'B': 20, 'C': 30},
+            sliceGroupingConfig: RadialSliceGroupingConfig(
+              minimumShare: 0.1,
+              radiusAggregation: aggregation,
+            ),
+          );
+
+      expect(
+        build(
+          RadialSliceRadiusAggregation.sum,
+        ).visibleSlices.last.point.pointStyle?.size,
+        60,
+      );
+      expect(
+        build(
+          RadialSliceRadiusAggregation.mean,
+        ).visibleSlices.last.point.pointStyle?.size,
+        20,
+      );
+      expect(
+        build(
+          RadialSliceRadiusAggregation.weightedMean,
+        ).visibleSlices.last.point.pointStyle?.size,
+        closeTo(18.5, 1e-9),
+      );
+      expect(
+        build(
+          RadialSliceRadiusAggregation.minimum,
+        ).visibleSlices.last.point.pointStyle?.size,
+        10,
+      );
+      expect(
+        build(
+          RadialSliceRadiusAggregation.maximum,
+        ).visibleSlices.last.point.pointStyle?.size,
+        30,
+      );
+      expect(
+        build(
+          RadialSliceRadiusAggregation.sum,
+        ).points.map((point) => point.pointStyle?.size),
+        orderedEquals(<double?>[50, 10, 20, 30]),
+      );
+    });
+
     test('validates threshold, source count, label, and radius ambiguity', () {
       expect(
         () => DonutChartSeries.fromMap(
@@ -91,6 +141,16 @@ void main() {
           values: const {'A': 8, 'B': 1, 'C': 1},
           radiusValues: const {'A': 3, 'B': 2, 'C': 1},
           sliceGroupingConfig: const RadialSliceGroupingConfig(),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => DonutChartSeries.fromMap(
+          id: 'aggregation-without-radius',
+          values: const {'A': 8, 'B': 1, 'C': 1},
+          sliceGroupingConfig: const RadialSliceGroupingConfig(
+            radiusAggregation: RadialSliceRadiusAggregation.sum,
+          ),
         ),
         throwsArgumentError,
       );

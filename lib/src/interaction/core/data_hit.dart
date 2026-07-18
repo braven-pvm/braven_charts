@@ -21,6 +21,7 @@ class ChartDataHit {
     this.category,
     this.total,
     this.share,
+    this.formattedShare,
     this.radiusValue,
     this.formattedRadiusValue,
     this.radiusLabel,
@@ -63,6 +64,9 @@ class ChartDataHit {
   /// Fractional contribution in the inclusive range 0–1.
   final double? share;
 
+  /// Optional visual formatting for [share], including its percent suffix.
+  final String? formattedShare;
+
   /// Optional raw second metric controlling radial extent.
   final double? radiusValue;
 
@@ -92,7 +96,12 @@ class ChartDataHit {
     final name = category ?? point.label ?? 'Data point';
     final parts = <String>[name, formattedValue];
     if (share != null) {
-      parts.add('${(share! * 100).toStringAsFixed(1)} percent');
+      final display = formattedShare ?? '${(share! * 100).toStringAsFixed(1)}%';
+      parts.add(
+        display.endsWith('%')
+            ? '${display.substring(0, display.length - 1)} percent'
+            : display,
+      );
     }
     if (formattedRadiusValue != null) {
       parts.add('${radiusLabel ?? 'Radius'} $formattedRadiusValue');

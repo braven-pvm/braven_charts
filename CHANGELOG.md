@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- Runtime Donut center builders and actions with package-owned circular
+  interaction, portable center-content fallback, and explicit rebinding after
+  artifact hydration.
+- Shared Pie and Donut value, percentage, radius, and center formatting across
+  labels, legends, tooltips, semantics, artifacts, and restored charts.
+- Explicit sum, mean, weighted-mean, minimum, and maximum radius aggregation
+  when variable-radius Pie or Donut slices are grouped, without collapsing the
+  source data carried by tables and artifacts.
+- Identity-aware Pie and Donut data transitions that preserve category
+  selection across keyed updates, fade structural changes safely, honor
+  reduced motion, and support per-series opt-out.
+
 ## 0.6.0 - 2026-07-18
 
 ### Added

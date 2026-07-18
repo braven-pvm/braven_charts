@@ -302,6 +302,71 @@ void main() {
       expect(series.sliceRadiusConfig?.label, 'Total area');
     });
 
+    test(
+      'radial formatters fail closed and round-trip through descriptors',
+      () {
+        final source = DonutChartSeries.fromMap(
+          id: 'formatted-donut',
+          values: const {'A': 60, 'B': 40},
+          radiusValues: const {'A': 10, 'B': 20},
+          dataLabels: PieDataLabelConfig(
+            valueFormatter: (value) => 'value:$value',
+            percentageFormatter: (value) => 'share:$value',
+          ),
+          sliceRadiusConfig: PieSliceRadiusConfig(
+            formatter: (value) => 'radius:$value',
+          ),
+          centerContent: DonutCenterContent(
+            isVisible: true,
+            valueFormatter: (value) => 'center:$value',
+          ),
+        );
+
+        final missing = ChartSeriesDocumentCodec.encode(source);
+        expect(missing, isA<ChartArtifactFailure<ChartSeriesDocument>>());
+        expect(
+          (missing as ChartArtifactFailure<ChartSeriesDocument>).error.code,
+          ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+        );
+
+        JsonObjectValue descriptor(String slot) => ChartFormatterDescriptor(
+          id: 'example.$slot',
+          fallbackPattern: '$slot:{value}',
+        ).toDocument();
+        final encoded =
+            ChartSeriesDocumentCodec.encode(
+                  source,
+                  radialFormatterDescriptors:
+                      RadialFormatterDocumentDescriptors(
+                        value: descriptor('value'),
+                        percentage: descriptor('percentage'),
+                        radius: descriptor('radius'),
+                        center: descriptor('center'),
+                      ),
+                )
+                as ChartArtifactSuccess<ChartSeriesDocument>;
+        expect(
+          encoded.value.requiredCapabilities,
+          contains('series.radial.formatters.v1'),
+        );
+
+        final decoded =
+            ChartSeriesDocumentCodec.decode(
+                  encoded.value,
+                  radialValueFormatter: (value) => 'v:$value',
+                  radialPercentageFormatter: (value) => 'p:$value',
+                  radialRadiusFormatter: (value) => 'r:$value',
+                  donutCenterFormatter: (value) => 'c:$value',
+                )
+                as ChartArtifactSuccess<ChartSeries>;
+        final restored = decoded.value as DonutChartSeries;
+        expect(restored.dataLabels.valueFormatter?.call(2), 'v:2.0');
+        expect(restored.dataLabels.percentageFormatter?.call(.5), 'p:0.5');
+        expect(restored.sliceRadiusConfig?.formatter?.call(4), 'r:4.0');
+        expect(restored.centerContent.valueFormatter?.call(9), 'c:9.0');
+      },
+    );
+
     test('round-trips radial grouping without collapsing source points', () {
       final source = DonutChartSeries.fromMap(
         id: 'grouped-donut',
@@ -334,6 +399,41 @@ void main() {
         orderedEquals(<int>[1, 2, 3]),
       );
       expect(restored.visibleSlices.last.point.y, 20);
+    });
+
+    test('round-trips grouped variable-radius aggregation policy', () {
+      final source = PieChartSeries.fromMap(
+        id: 'grouped-radius',
+        values: const {'Core': 80, 'A': 8, 'B': 7, 'C': 5},
+        radiusValues: const {'Core': 50, 'A': 10, 'B': 20, 'C': 30},
+        sliceGroupingConfig: const RadialSliceGroupingConfig(
+          minimumShare: 0.1,
+          radiusAggregation: RadialSliceRadiusAggregation.weightedMean,
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.radial.grouped-variable-radius.v1'),
+      );
+      final restored =
+          (ChartSeriesDocumentCodec.decode(encoded.value)
+                      as ChartArtifactSuccess<ChartSeries>)
+                  .value
+              as PieChartSeries;
+
+      expect(
+        restored.sliceGroupingConfig?.radiusAggregation,
+        RadialSliceRadiusAggregation.weightedMean,
+      );
+      expect(restored.points, source.points);
+      expect(
+        restored.visibleSlices.last.point.pointStyle?.size,
+        closeTo(18.5, 1e-9),
+      );
     });
 
     test('round-trips first-class Donut geometry and capabilities', () {
@@ -393,6 +493,7 @@ void main() {
         'series.donut.style.v1',
         'series.donut.center-content.v1',
         'series.donut.variable-radius.v1',
+        'series.radial.data-transitions.v1',
       });
 
       final decoded = ChartSeriesDocumentCodec.decode(document);
@@ -749,7 +850,9 @@ void main() {
           expected.$2,
           if (series is PieChartSeries) 'series.pie.style.v2',
           if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
+          if (series is PieChartSeries) 'series.radial.data-transitions.v1',
           if (series is DonutChartSeries) 'series.donut.style.v1',
+          if (series is DonutChartSeries) 'series.radial.data-transitions.v1',
         });
       }
     });

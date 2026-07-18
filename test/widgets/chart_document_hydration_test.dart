@@ -138,6 +138,67 @@ void main() {
     );
   });
 
+  testWidgets('rebinds every portable radial numeric formatter descriptor', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    final fixed = ChartFormatterDescriptor(
+      id: 'braven.number.fixed',
+      arguments: {'decimals': JsonNumberValue(1)},
+    ).toDocument();
+    final percent = ChartFormatterDescriptor(
+      id: 'braven.number.percent',
+      arguments: {'decimals': JsonNumberValue(0)},
+    ).toDocument();
+    final series = DonutChartSeries.fromMap(
+      id: 'formatted-radial',
+      values: const {'Ready': 75, 'Pending': 25},
+      radiusValues: const {'Ready': 8, 'Pending': 4},
+      dataLabels: PieDataLabelConfig(
+        valueFormatter: (value) => value.toStringAsFixed(1),
+        percentageFormatter: (value) => '${(value * 100).round()}%',
+      ),
+      sliceRadiusConfig: PieSliceRadiusConfig(
+        formatter: (value) => value.toStringAsFixed(1),
+      ),
+      centerContent: DonutCenterContent(
+        isVisible: true,
+        valueFormatter: (value) => value.toStringAsFixed(1),
+      ),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(bravenChartController: controller, series: [series]),
+      ),
+    );
+    await tester.pump();
+    final extracted = _success(
+      controller.extractDocument(
+        ChartDocumentExtractOptions(
+          radialFormatterDescriptors: {
+            series.id: RadialFormatterDocumentDescriptors(
+              value: fixed,
+              percentage: percent,
+              radius: fixed,
+              center: fixed,
+            ),
+          },
+        ),
+      ),
+    ).value;
+    final hydrated = _success(
+      ChartDocumentHydrator.hydrateDocument(extracted.document),
+    ).value;
+    final restored = hydrated.series.single as DonutChartSeries;
+
+    expect(restored.dataLabels.valueFormatter?.call(12.34), '12.3');
+    expect(restored.dataLabels.percentageFormatter?.call(.756), '76%');
+    expect(restored.sliceRadiusConfig?.formatter?.call(8.12), '8.1');
+    expect(restored.centerContent.valueFormatter?.call(100), '100.0');
+  });
+
   test('each hydration and widget build receives fresh runtime identity', () {
     final document = _portableDocument();
     final first = _success(
@@ -268,6 +329,51 @@ void main() {
     expect(find.byType(HydratedBravenChart), findsOneWidget);
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('restored Donut explicitly rebinds runtime center composition', (
+    tester,
+  ) async {
+    DonutCenterData? activated;
+    final configuration = _success(
+      ChartDocumentHydrator.hydrateDocument(
+        _portableDocument(
+          sourceSeries: DonutChartSeries.fromMap(
+            id: 'restored-donut',
+            unit: 'items',
+            values: const {'Ready': 75, 'Pending': 25},
+            centerContent: const DonutCenterContent(
+              label: 'Release',
+              valueMode: DonutCenterValueMode.total,
+            ),
+            donutStyle: const DonutChartStyle(
+              innerRadiusFactor: 0.64,
+              animationMode: PieAnimationMode.none,
+            ),
+            dataLabels: const PieDataLabelConfig(isVisible: false),
+          ),
+        ),
+      ),
+    ).value;
+
+    await tester.pumpWidget(
+      _host(
+        configuration.build(
+          donutCenterBuilder: (context, center) => Center(
+            key: const ValueKey('restored-custom-center'),
+            child: Text('${center.total.toStringAsFixed(0)} restored'),
+          ),
+          onDonutCenterTap: (center) => activated = center,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('100 restored'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('restored-custom-center')));
+    await tester.pump();
+    expect(activated?.seriesId, 'restored-donut');
+    expect(activated?.total, 100);
   });
 
   testWidgets('forwards every host interaction binding to the restored chart', (
@@ -527,14 +633,16 @@ ChartDocument _portableDocument({
   JsonObjectValue? xFormatter,
   ChartTheme? theme,
   ChartThemeDocument? themeDocument,
+  ChartSeries? sourceSeries,
 }) {
   final series = _success(
     ChartSeriesDocumentCodec.encode(
-      const LineChartSeries(
-        id: 'series',
-        name: 'Series',
-        points: [ChartDataPoint(x: 1, y: 10)],
-      ),
+      sourceSeries ??
+          const LineChartSeries(
+            id: 'series',
+            name: 'Series',
+            points: [ChartDataPoint(x: 1, y: 10)],
+          ),
     ),
   ).value;
   final xAxis = _success(

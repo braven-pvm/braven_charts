@@ -97,6 +97,7 @@ void main() {
         'series.pie',
         'series.pie.style.v2',
         'series.pie.corner-treatment.v1',
+        'series.radial.data-transitions.v1',
       });
       expect(source.preview?.bytes, isNotEmpty);
 

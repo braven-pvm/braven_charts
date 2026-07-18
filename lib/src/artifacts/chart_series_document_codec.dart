@@ -23,6 +23,7 @@ import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
 import 'chart_style_document_codec.dart';
 import 'json_value.dart';
+import 'radial_formatter_document_descriptors.dart';
 
 /// Audited adapter between public built-in series models and schema-v1
 /// [ChartSeriesDocument] values.
@@ -35,11 +36,13 @@ abstract final class ChartSeriesDocumentCodec {
   static ChartArtifactResult<ChartSeriesDocument> encode(
     ChartSeries series, {
     JsonObjectValue? inlineAxisFormatter,
+    RadialFormatterDocumentDescriptors? radialFormatterDescriptors,
     ChartDataStorage dataStorage = ChartDataStorage.inlinePoints,
   }) => encodeWithContext(
     series,
     ChartModelCodecContext(dataStorage: dataStorage),
     inlineAxisFormatter: inlineAxisFormatter,
+    radialFormatterDescriptors: radialFormatterDescriptors,
   );
 
   @internal
@@ -47,6 +50,7 @@ abstract final class ChartSeriesDocumentCodec {
     ChartSeries series,
     ChartModelCodecContext context, {
     JsonObjectValue? inlineAxisFormatter,
+    RadialFormatterDocumentDescriptors? radialFormatterDescriptors,
   }) {
     var entered = false;
     try {
@@ -77,6 +81,34 @@ abstract final class ChartSeriesDocumentCodec {
           r'$.style.barLabels.formatter',
         );
       }
+      if (series case final RadialCategorySeries radial) {
+        _requireRadialFormatterDescriptor(
+          formatter: radial.dataLabels.valueFormatter,
+          descriptor: radialFormatterDescriptors?.value,
+          path: r'$.style.dataLabels.valueFormatter',
+          label: 'Radial value',
+        );
+        _requireRadialFormatterDescriptor(
+          formatter: radial.dataLabels.percentageFormatter,
+          descriptor: radialFormatterDescriptors?.percentage,
+          path: r'$.style.dataLabels.percentageFormatter',
+          label: 'Radial percentage',
+        );
+        _requireRadialFormatterDescriptor(
+          formatter: radial.sliceRadiusConfig?.formatter,
+          descriptor: radialFormatterDescriptors?.radius,
+          path: r'$.style.sliceRadiusConfig.formatter',
+          label: 'Radial radius',
+        );
+        _requireRadialFormatterDescriptor(
+          formatter: radial is DonutChartSeries
+              ? radial.centerContent.valueFormatter
+              : null,
+          descriptor: radialFormatterDescriptors?.center,
+          path: r'$.style.centerContent.valueFormatter',
+          label: 'Donut center',
+        );
+      }
 
       final points = [
         for (var index = 0; index < series.points.length; index++)
@@ -93,7 +125,10 @@ abstract final class ChartSeriesDocumentCodec {
             series.yAxisConfig,
             formatter: inlineAxisFormatter,
           ),
-          style: _jsonObject(_encodeSeriesStyle(series), path: r'$.style'),
+          style: _jsonObject(
+            _encodeSeriesStyle(series, radialFormatterDescriptors),
+            path: r'$.style',
+          ),
           metadata: _jsonObjectOrNull(series.metadata, path: r'$.metadata'),
           annotations: [
             for (final annotation in series.annotations)
@@ -119,6 +154,16 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
+            if (series is RadialCategorySeries &&
+                series.sliceGroupingConfig?.radiusAggregation != null)
+              'series.radial.grouped-variable-radius.v1',
+            if (series is RadialCategorySeries &&
+                radialFormatterDescriptors?.isNotEmpty == true)
+              'series.radial.formatters.v1',
+            if (series is RadialCategorySeries &&
+                series.radialStyle.dataTransitionMode ==
+                    RadialDataTransitionMode.automatic)
+              'series.radial.data-transitions.v1',
           },
         ),
       );
@@ -170,6 +215,10 @@ abstract final class ChartSeriesDocumentCodec {
   static ChartArtifactResult<ChartSeries> decode(
     ChartSeriesDocument document, {
     YAxisLabelFormatter? inlineAxisFormatter,
+    RadialValueFormatter? radialValueFormatter,
+    RadialValueFormatter? radialPercentageFormatter,
+    RadialValueFormatter? radialRadiusFormatter,
+    RadialValueFormatter? donutCenterFormatter,
   }) {
     try {
       final payload = document.data;
@@ -378,10 +427,17 @@ abstract final class ChartSeriesDocumentCodec {
           metadata: metadata,
           unit: document.unit,
           pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
-          dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+          dataLabels: _decodePieDataLabels(
+            _map(style, 'dataLabels'),
+            valueFormatter: radialValueFormatter,
+            percentageFormatter: radialPercentageFormatter,
+          ),
           sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
               ? null
-              : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
+              : _decodePieSliceRadiusConfig(
+                  _map(style, 'sliceRadiusConfig'),
+                  formatter: radialRadiusFormatter,
+                ),
           sliceGroupingConfig:
               _optionalMap(style, 'sliceGroupingConfig') == null
               ? null
@@ -399,11 +455,21 @@ abstract final class ChartSeriesDocumentCodec {
           donutStyle: _decodeDonutStyle(_map(style, 'donutStyle')),
           centerContent: _optionalMap(style, 'centerContent') == null
               ? DonutCenterContent.hidden
-              : _decodeDonutCenterContent(_map(style, 'centerContent')),
-          dataLabels: _decodePieDataLabels(_map(style, 'dataLabels')),
+              : _decodeDonutCenterContent(
+                  _map(style, 'centerContent'),
+                  valueFormatter: donutCenterFormatter,
+                ),
+          dataLabels: _decodePieDataLabels(
+            _map(style, 'dataLabels'),
+            valueFormatter: radialValueFormatter,
+            percentageFormatter: radialPercentageFormatter,
+          ),
           sliceRadiusConfig: _optionalMap(style, 'sliceRadiusConfig') == null
               ? null
-              : _decodePieSliceRadiusConfig(_map(style, 'sliceRadiusConfig')),
+              : _decodePieSliceRadiusConfig(
+                  _map(style, 'sliceRadiusConfig'),
+                  formatter: radialRadiusFormatter,
+                ),
           sliceGroupingConfig:
               _optionalMap(style, 'sliceGroupingConfig') == null
               ? null
@@ -441,6 +507,20 @@ abstract final class ChartSeriesDocumentCodec {
         ),
       );
     }
+  }
+}
+
+void _requireRadialFormatterDescriptor({
+  required RadialValueFormatter? formatter,
+  required JsonObjectValue? descriptor,
+  required String path,
+  required String label,
+}) {
+  if (formatter != null && descriptor == null) {
+    throw _RuntimeBindingException(
+      '$label formatters must be represented by a runtime binding descriptor.',
+      path,
+    );
   }
 }
 
@@ -512,7 +592,10 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
   );
 }
 
-Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
+Map<String, Object?> _encodeSeriesStyle(
+  ChartSeries series,
+  RadialFormatterDocumentDescriptors? radialFormatters,
+) {
   if (series case final BarChartSeries barSeries) {
     barSeries.validateRangeConfiguration();
   }
@@ -624,9 +707,16 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
     case PieChartSeries():
       result
         ..['pieStyle'] = _encodePieStyle(series.pieStyle)
-        ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
+        ..['dataLabels'] = _encodePieDataLabels(
+          series.dataLabels,
+          valueFormatter: radialFormatters?.value,
+          percentageFormatter: radialFormatters?.percentage,
+        );
       if (series.sliceRadiusConfig case final radiusConfig?) {
-        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
+        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(
+          radiusConfig,
+          formatter: radialFormatters?.radius,
+        );
       }
       if (series.sliceGroupingConfig case final groupingConfig?) {
         result['sliceGroupingConfig'] = _encodeRadialSliceGroupingConfig(
@@ -636,10 +726,20 @@ Map<String, Object?> _encodeSeriesStyle(ChartSeries series) {
     case DonutChartSeries():
       result
         ..['donutStyle'] = _encodeDonutStyle(series.donutStyle)
-        ..['centerContent'] = _encodeDonutCenterContent(series.centerContent)
-        ..['dataLabels'] = _encodePieDataLabels(series.dataLabels);
+        ..['centerContent'] = _encodeDonutCenterContent(
+          series.centerContent,
+          valueFormatter: radialFormatters?.center,
+        )
+        ..['dataLabels'] = _encodePieDataLabels(
+          series.dataLabels,
+          valueFormatter: radialFormatters?.value,
+          percentageFormatter: radialFormatters?.percentage,
+        );
       if (series.sliceRadiusConfig case final radiusConfig?) {
-        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(radiusConfig);
+        result['sliceRadiusConfig'] = _encodePieSliceRadiusConfig(
+          radiusConfig,
+          formatter: radialFormatters?.radius,
+        );
       }
       if (series.sliceGroupingConfig case final groupingConfig?) {
         result['sliceGroupingConfig'] = _encodeRadialSliceGroupingConfig(
@@ -943,6 +1043,7 @@ Map<String, Object?> _encodePieStyle(RadialChartStyle style) => {
   if (style.selectedElevation != null)
     'selectedElevation': _encodePieElevation(style.selectedElevation!),
   if (style.animationMode != null) 'animationMode': style.animationMode!.name,
+  'dataTransitionMode': style.dataTransitionMode.name,
 };
 
 Map<String, Object?> _encodeDonutStyle(DonutChartStyle style) => {
@@ -951,7 +1052,10 @@ Map<String, Object?> _encodeDonutStyle(DonutChartStyle style) => {
   'sweepAngleDegrees': _number(style.sweepAngleDegrees),
 };
 
-Map<String, Object?> _encodeDonutCenterContent(DonutCenterContent content) => {
+Map<String, Object?> _encodeDonutCenterContent(
+  DonutCenterContent content, {
+  JsonObjectValue? valueFormatter,
+}) => {
   'isVisible': content.isVisible,
   if (content.label != null) 'label': content.label,
   'valueMode': content.valueMode.name,
@@ -964,47 +1068,57 @@ Map<String, Object?> _encodeDonutCenterContent(DonutCenterContent content) => {
     'valueStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       content.valueStyle!,
     ).toJson(),
+  if (valueFormatter != null) 'valueFormatter': valueFormatter.toJson(),
 };
 
-DonutCenterContent _decodeDonutCenterContent(Map<String, Object?> value) =>
-    DonutCenterContent(
-      isVisible: _bool(value, 'isVisible'),
-      label: _optionalString(value['label']),
-      valueMode: _enum(value, 'valueMode', DonutCenterValueMode.values),
-      customValue: _optionalString(value['customValue']),
-      labelStyle: _optionalMap(value, 'labelStyle') == null
-          ? null
-          : ChartStyleDocumentCodec.decodeLabelStyle(
-              _jsonObject(
-                _map(value, 'labelStyle'),
-                path: r'$.style.centerContent.labelStyle',
-              ),
-            ),
-      valueStyle: _optionalMap(value, 'valueStyle') == null
-          ? null
-          : ChartStyleDocumentCodec.decodeLabelStyle(
-              _jsonObject(
-                _map(value, 'valueStyle'),
-                path: r'$.style.centerContent.valueStyle',
-              ),
-            ),
-    );
+DonutCenterContent _decodeDonutCenterContent(
+  Map<String, Object?> value, {
+  RadialValueFormatter? valueFormatter,
+}) => DonutCenterContent(
+  isVisible: _bool(value, 'isVisible'),
+  label: _optionalString(value['label']),
+  valueMode: _enum(value, 'valueMode', DonutCenterValueMode.values),
+  customValue: _optionalString(value['customValue']),
+  labelStyle: _optionalMap(value, 'labelStyle') == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _jsonObject(
+            _map(value, 'labelStyle'),
+            path: r'$.style.centerContent.labelStyle',
+          ),
+        ),
+  valueStyle: _optionalMap(value, 'valueStyle') == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _jsonObject(
+            _map(value, 'valueStyle'),
+            path: r'$.style.centerContent.valueStyle',
+          ),
+        ),
+  valueFormatter: valueFormatter,
+);
 
-Map<String, Object?> _encodePieSliceRadiusConfig(PieSliceRadiusConfig config) =>
-    {
-      'minimumFactor': _number(config.minimumFactor),
-      'scale': config.scale.name,
-      'label': config.label,
-      if (config.unit != null) 'unit': config.unit,
-    };
+Map<String, Object?> _encodePieSliceRadiusConfig(
+  PieSliceRadiusConfig config, {
+  JsonObjectValue? formatter,
+}) => {
+  'minimumFactor': _number(config.minimumFactor),
+  'scale': config.scale.name,
+  'label': config.label,
+  if (config.unit != null) 'unit': config.unit,
+  if (formatter != null) 'formatter': formatter.toJson(),
+};
 
-PieSliceRadiusConfig _decodePieSliceRadiusConfig(Map<String, Object?> value) =>
-    PieSliceRadiusConfig(
-      minimumFactor: _double(value, 'minimumFactor'),
-      scale: _enum(value, 'scale', PieSliceRadiusScale.values),
-      label: _string(value, 'label'),
-      unit: _optionalString(value['unit']),
-    );
+PieSliceRadiusConfig _decodePieSliceRadiusConfig(
+  Map<String, Object?> value, {
+  RadialValueFormatter? formatter,
+}) => PieSliceRadiusConfig(
+  minimumFactor: _double(value, 'minimumFactor'),
+  scale: _enum(value, 'scale', PieSliceRadiusScale.values),
+  label: _string(value, 'label'),
+  unit: _optionalString(value['unit']),
+  formatter: formatter,
+);
 
 PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
   startAngleDegrees: _double(value, 'startAngleDegrees'),
@@ -1046,6 +1160,13 @@ PieChartStyle _decodePieStyle(Map<String, Object?> value) => PieChartStyle(
     PieAnimationMode.values,
     r'$.style.pieStyle.animationMode',
   ),
+  dataTransitionMode:
+      _optionalEnum(
+        value['dataTransitionMode'],
+        RadialDataTransitionMode.values,
+        r'$.style.pieStyle.dataTransitionMode',
+      ) ??
+      RadialDataTransitionMode.automatic,
 );
 
 DonutChartStyle _decodeDonutStyle(Map<String, Object?> value) =>
@@ -1100,7 +1221,11 @@ PieElevationStyle _decodePieElevation(Map<String, Object?> value) =>
       opacity: _double(value, 'opacity'),
     );
 
-Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
+Map<String, Object?> _encodePieDataLabels(
+  PieDataLabelConfig config, {
+  JsonObjectValue? valueFormatter,
+  JsonObjectValue? percentageFormatter,
+}) => {
   'isVisible': config.isVisible,
   'position': config.position.name,
   'content': config.content.name,
@@ -1117,37 +1242,45 @@ Map<String, Object?> _encodePieDataLabels(PieDataLabelConfig config) => {
     'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       config.calloutStyle!,
     ).toJson(),
+  if (valueFormatter != null) 'valueFormatter': valueFormatter.toJson(),
+  if (percentageFormatter != null)
+    'percentageFormatter': percentageFormatter.toJson(),
 };
 
-PieDataLabelConfig _decodePieDataLabels(Map<String, Object?> value) =>
-    PieDataLabelConfig(
-      isVisible: _bool(value, 'isVisible'),
-      position: _enum(value, 'position', PieDataLabelPosition.values),
-      content: _enum(value, 'content', PieDataLabelContent.values),
-      minimumShare: _double(value, 'minimumShare'),
-      minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
-      padding: _double(value, 'padding'),
-      outsideOffset: _optionalDouble(value['outsideOffset']) ?? 0,
-      connectorLength: _double(value, 'connectorLength'),
-      connectorWidth: _double(value, 'connectorWidth'),
-      connectorColor: _optionalColor(
-        value['connectorColor'],
-        r'$.style.dataLabels.connectorColor',
-      ),
-      collisionStrategy: _enum(
-        value,
-        'collisionStrategy',
-        PieDataLabelCollisionStrategy.values,
-      ),
-      calloutStyle: _optionalMap(value, 'calloutStyle') == null
-          ? null
-          : ChartStyleDocumentCodec.decodeLabelStyle(
-              _jsonObject(
-                _map(value, 'calloutStyle'),
-                path: r'$.style.dataLabels.calloutStyle',
-              ),
-            ),
-    );
+PieDataLabelConfig _decodePieDataLabels(
+  Map<String, Object?> value, {
+  RadialValueFormatter? valueFormatter,
+  RadialValueFormatter? percentageFormatter,
+}) => PieDataLabelConfig(
+  isVisible: _bool(value, 'isVisible'),
+  position: _enum(value, 'position', PieDataLabelPosition.values),
+  content: _enum(value, 'content', PieDataLabelContent.values),
+  minimumShare: _double(value, 'minimumShare'),
+  minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
+  padding: _double(value, 'padding'),
+  outsideOffset: _optionalDouble(value['outsideOffset']) ?? 0,
+  connectorLength: _double(value, 'connectorLength'),
+  connectorWidth: _double(value, 'connectorWidth'),
+  connectorColor: _optionalColor(
+    value['connectorColor'],
+    r'$.style.dataLabels.connectorColor',
+  ),
+  collisionStrategy: _enum(
+    value,
+    'collisionStrategy',
+    PieDataLabelCollisionStrategy.values,
+  ),
+  calloutStyle: _optionalMap(value, 'calloutStyle') == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _jsonObject(
+            _map(value, 'calloutStyle'),
+            path: r'$.style.dataLabels.calloutStyle',
+          ),
+        ),
+  valueFormatter: valueFormatter,
+  percentageFormatter: percentageFormatter,
+);
 
 Map<String, Object?> _encodeRadialSliceGroupingConfig(
   RadialSliceGroupingConfig config,
@@ -1156,6 +1289,8 @@ Map<String, Object?> _encodeRadialSliceGroupingConfig(
   'minimumSourceCount': config.minimumSourceCount,
   'label': config.label,
   if (config.color != null) 'color': config.color!.toARGB32(),
+  if (config.radiusAggregation != null)
+    'radiusAggregation': config.radiusAggregation!.name,
 };
 
 RadialSliceGroupingConfig _decodeRadialSliceGroupingConfig(
@@ -1165,6 +1300,11 @@ RadialSliceGroupingConfig _decodeRadialSliceGroupingConfig(
   minimumSourceCount: _int(value, 'minimumSourceCount'),
   label: _string(value, 'label'),
   color: _optionalColor(value['color'], r'$.style.sliceGroupingConfig.color'),
+  radiusAggregation: _optionalEnum(
+    value['radiusAggregation'],
+    RadialSliceRadiusAggregation.values,
+    r'$.style.sliceGroupingConfig.radiusAggregation',
+  ),
 );
 
 Map<String, Object?> _encodeLineStyle({
