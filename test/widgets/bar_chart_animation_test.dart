@@ -52,6 +52,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a new transition key starts destination bars fresh', (
+    tester,
+  ) async {
+    final key = GlobalKey<_AnimatedBarHarnessState>();
+    final base = ChartTheme.light;
+    final theme = base.copyWith(
+      animationTheme: base.animationTheme.copyWith(
+        dataUpdateDuration: const Duration(milliseconds: 400),
+        dataUpdateCurve: Curves.linear,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 360,
+          child: _AnimatedBarHarness(key: key, theme: theme),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    key.currentState!.startFresh(60);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final rendered = _renderedBarSeries(tester)['actual']!;
+    expect(rendered.points.single.y, closeTo(30, 0.01));
+    await tester.pumpAndSettle();
+    expect(_renderedBarSeries(tester)['actual']!.points.single.y, 60);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('reduced motion renders final bar geometry immediately', (
     tester,
   ) async {
@@ -215,12 +250,19 @@ class _AnimatedBarHarness extends StatefulWidget {
 
 class _AnimatedBarHarnessState extends State<_AnimatedBarHarness> {
   double value = 100;
+  Object transitionKey = 'initial';
 
   void setValue(double next) => setState(() => value = next);
+
+  void startFresh(double next) => setState(() {
+    value = next;
+    transitionKey = Object();
+  });
 
   @override
   Widget build(BuildContext context) {
     return BravenChartPlus(
+      transitionKey: transitionKey,
       showLegend: false,
       theme: widget.theme,
       yAxis: YAxisConfig(position: YAxisPosition.left, min: 0, max: 120),

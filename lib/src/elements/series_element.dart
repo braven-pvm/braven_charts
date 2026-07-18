@@ -302,7 +302,7 @@ class SeriesElement implements DataHitElement {
     _currentTransform = newTransform;
 
     if (transformChanged) {
-      _barGeometries = null;
+      _clearResolvedBarGeometry();
       _computeBounds();
     }
   }
@@ -322,7 +322,8 @@ class SeriesElement implements DataHitElement {
     final pointCountChanged = newSeries.points.length != series.points.length;
 
     series = newSeries;
-    _barGeometries = null;
+    _barViewportIndex = null;
+    _clearResolvedBarGeometry();
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -346,7 +347,8 @@ class SeriesElement implements DataHitElement {
     _cachedTransformedPoints = null;
     _cachedOriginalIndices = null;
     _cachedHasSegmentOverrides = null;
-    _barGeometries = null;
+    _barViewportIndex = null;
+    _clearResolvedBarGeometry();
     _labelPainterCache.clear();
   }
 
@@ -378,8 +380,25 @@ class SeriesElement implements DataHitElement {
 
   // TextPainter cache for data-point labels — keyed by formatted text string
   final Map<String, TextPainter> _labelPainterCache = {};
+  BarViewportIndex? _barViewportIndex;
   List<BarGeometry>? _barGeometries;
+  Map<int, BarGeometry> _barGeometryByPointIndex = const {};
+  Map<(int, int), List<BarGeometry>> _barHitGeometryByCell = const {};
+  int _barHitComparisonCount = 0;
   BarLabelLayoutCoordinator? _barLabelLayoutCoordinator;
+
+  static const double _barHitCellSize = 48;
+
+  /// Number of bar geometries materialized for the current viewport.
+  int get visibleBarGeometryCount => _resolveBarGeometries().length;
+
+  /// Original series indices represented by the current virtualized geometry.
+  List<int> get visibleBarPointIndices => [
+    for (final geometry in _resolveBarGeometries()) geometry.pointIndex,
+  ];
+
+  /// Exact rectangle comparisons performed by indexed bar hit testing.
+  int get barHitComparisonCount => _barHitComparisonCount;
 
   /// Shares one occupied-label registry across every bar series paint pass.
   void setBarLabelLayoutCoordinator(BarLabelLayoutCoordinator? coordinator) {
@@ -391,11 +410,83 @@ class SeriesElement implements DataHitElement {
     if (cached != null) return cached;
     final currentSeries = series;
     if (currentSeries is! BarChartSeries) return const [];
-    return _barGeometries = BarGeometryEngine.layout(
+    var viewportIndex = _barViewportIndex;
+    if (viewportIndex == null) {
+      currentSeries.validateRangeConfiguration();
+      viewportIndex = BarViewportIndex(
+        currentSeries.points,
+        isXOrdered:
+            currentSeries.isXOrdered ||
+            currentSeries.layoutMode == BarLayoutMode.waterfall,
+      );
+      _barViewportIndex = viewportIndex;
+    }
+    final effectiveTransform = _currentTransform.copyWith(
+      transposed: currentSeries.orientation == BarOrientation.horizontal,
+    );
+    final categorySpacing = viewportIndex.categorySpacingPixels(
+      effectiveTransform,
+    );
+    final passiveCategoryFactor = math.max(
+      1,
+      math.max(
+        currentSeries.targetMarkerStyle.lengthFactor,
+        currentSeries.errorBarStyle.capLengthFactor,
+      ),
+    );
+    final passiveCategoryExtent = math.max(
+      currentSeries.maxWidth * passiveCategoryFactor,
+      (currentSeries.lollipopStyle?.headRadius ?? 0) * 2,
+    );
+    final paddingPixels =
+        math.max(categorySpacing, passiveCategoryExtent) + currentSeries.barGap;
+    final pointIndices = viewportIndex.pointIndicesForViewport(
+      minX: effectiveTransform.dataXMin,
+      maxX: effectiveTransform.dataXMax,
+      paddingData: paddingPixels / effectiveTransform.pixelsPerDataX,
+      adjacentPointCount: currentSeries.layoutMode == BarLayoutMode.waterfall
+          ? 1
+          : 0,
+    );
+    final geometries = BarGeometryEngine.layout(
       series: currentSeries,
       transform: _currentTransform,
       groupInfo: barGroupInfo,
+      pointIndices: pointIndices,
+      categorySpacingPixels: categorySpacing,
+      validate: false,
     );
+    _barGeometries = geometries;
+    _indexResolvedBarGeometry(geometries);
+    return geometries;
+  }
+
+  void _clearResolvedBarGeometry() {
+    _barGeometries = null;
+    _barGeometryByPointIndex = const {};
+    _barHitGeometryByCell = const {};
+    _barHitComparisonCount = 0;
+  }
+
+  void _indexResolvedBarGeometry(List<BarGeometry> geometries) {
+    _barGeometryByPointIndex = {
+      for (final geometry in geometries) geometry.pointIndex: geometry,
+    };
+    final cells = <(int, int), List<BarGeometry>>{};
+    for (final geometry in geometries) {
+      final bounds = geometry.hitBounds;
+      final left = (bounds.left / _barHitCellSize).floor();
+      final right = (bounds.right / _barHitCellSize).floor();
+      final top = (bounds.top / _barHitCellSize).floor();
+      final bottom = (bounds.bottom / _barHitCellSize).floor();
+      for (var x = left; x <= right; x++) {
+        for (var y = top; y <= bottom; y++) {
+          (cells[(x, y)] ??= []).add(geometry);
+        }
+      }
+    }
+    _barHitGeometryByCell = cells;
+    _barHitComparisonCount = 0;
   }
 
   /// Returns the canonical rendered geometry for a bar point, when available.
@@ -404,15 +495,21 @@ class SeriesElement implements DataHitElement {
   /// transforming the raw Y value, which would be incorrect for stacks.
   BarGeometry? barGeometryForPoint(int pointIndex) {
     if (series is! BarChartSeries || pointIndex < 0) return null;
-    final geometries = _resolveBarGeometries();
-    if (pointIndex >= geometries.length) return null;
-    return geometries[pointIndex];
+    _resolveBarGeometries();
+    return _barGeometryByPointIndex[pointIndex];
   }
 
   /// Returns the topmost bar geometry whose interaction bounds contain [point].
   BarGeometry? barGeometryAt(Offset point) {
     if (series is! BarChartSeries) return null;
-    for (final geometry in _resolveBarGeometries().reversed) {
+    _resolveBarGeometries();
+    final cell = (
+      (point.dx / _barHitCellSize).floor(),
+      (point.dy / _barHitCellSize).floor(),
+    );
+    for (final geometry
+        in (_barHitGeometryByCell[cell] ?? const <BarGeometry>[]).reversed) {
+      _barHitComparisonCount++;
       if (geometry.hitBounds.contains(point)) return geometry;
     }
     return null;
@@ -429,18 +526,15 @@ class SeriesElement implements DataHitElement {
     }
 
     if (series is BarChartSeries) {
-      final geometries = _resolveBarGeometries();
-      if (geometries.isEmpty) {
-        _bounds = Rect.zero;
-        return;
-      }
-      var bounds = geometries.first.paintBounds;
-      for (final geometry in geometries.skip(1)) {
-        bounds = bounds.expandToInclude(geometry.paintBounds);
-      }
-      final borderWidth =
-          (series as BarChartSeries).barStyle.border?.width ?? 0;
-      _bounds = bounds.inflate(math.max(1, borderWidth / 2));
+      // Bar points are virtualized by category viewport. Keep the series
+      // eligible for plot-level hit routing without materializing every bar
+      // merely to compute one aggregate element rectangle.
+      _bounds = Rect.fromLTWH(
+        0,
+        0,
+        _currentTransform.plotWidth,
+        _currentTransform.plotHeight,
+      );
       return;
     }
 
@@ -501,9 +595,7 @@ class SeriesElement implements DataHitElement {
     if (_isPathSeries && position.dx > _revealEdge) return false;
 
     if (series is BarChartSeries) {
-      return _resolveBarGeometries().any(
-        (geometry) => geometry.hitBounds.contains(position),
-      );
+      return barGeometryAt(position) != null;
     }
 
     // For line series: check if position is near any line segment
@@ -537,6 +629,10 @@ class SeriesElement implements DataHitElement {
     final source = series;
     if (source is LineChartSeries && !source.showDataPointMarkers) return null;
     if (source is AreaChartSeries && !source.showDataPointMarkers) return null;
+    if (source is BarChartSeries) {
+      final geometry = barGeometryAt(position);
+      return geometry == null ? null : _barDataHit(geometry);
+    }
 
     ChartDataHit? nearest;
     var nearestDistance = maxDistance;
@@ -558,9 +654,30 @@ class SeriesElement implements DataHitElement {
 
   @override
   ChartDataHit? dataHitForPointIndex(int pointIndex) {
+    if (series is BarChartSeries) {
+      final geometry = barGeometryForPoint(pointIndex);
+      if (geometry != null) return _barDataHit(geometry);
+    }
     final renderIndex = _renderIndexForTargetIndex(pointIndex);
     if (renderIndex == null) return null;
     return _dataHitForRenderPointIndex(renderIndex);
+  }
+
+  ChartDataHit _barDataHit(BarGeometry geometry) {
+    final point = geometry.point;
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: geometry.pointIndex,
+      plotPosition: geometry.valueEndPoint,
+      semanticBounds: geometry.hitBounds,
+      point: point,
+      formattedValue:
+          '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      ordinal: geometry.pointIndex + 1,
+      count: pointCount,
+      isSelected: selectedPointIndices.contains(geometry.pointIndex),
+      isFocused: focusedPointIndices.contains(geometry.pointIndex),
+    );
   }
 
   ChartDataHit? _dataHitForRenderPointIndex(int renderIndex) {

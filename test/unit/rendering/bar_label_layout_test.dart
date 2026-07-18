@@ -144,6 +144,26 @@ void main() {
 
       expect(result?.rect, const Rect.fromLTWH(0, 90, 20, 10));
     });
+
+    test('indexes dense labels without scanning every occupied rectangle', () {
+      final denseCoordinator = BarLabelLayoutCoordinator(
+        plotBounds: const Rect.fromLTWH(0, 0, 100000, 100),
+        collisionCellSize: 32,
+      );
+
+      for (var index = 0; index < 2000; index++) {
+        final result = denseCoordinator.place(
+          candidates: [Rect.fromLTWH(index * 40.0, 20, 18, 10)],
+          collisionPolicy: BarLabelCollisionPolicy.hide,
+          plotEdgeAware: true,
+          collisionPadding: 2,
+        );
+        expect(result, isNotNull);
+      }
+
+      expect(denseCoordinator.occupiedBounds, hasLength(2000));
+      expect(denseCoordinator.collisionComparisonCount, lessThan(5000));
+    });
   });
 }
 

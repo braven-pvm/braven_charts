@@ -27,6 +27,7 @@ enum _BarLabPreset {
   horizontal,
   axes,
   categories,
+  stress,
   labels,
   config,
   patterns,
@@ -57,6 +58,7 @@ extension on _BarLabPreset {
     _BarLabPreset.horizontal => 'Horizontal',
     _BarLabPreset.axes => 'Axes',
     _BarLabPreset.categories => 'Categories',
+    _BarLabPreset.stress => 'Stress',
     _BarLabPreset.labels => 'Labels',
     _BarLabPreset.config => 'Config',
     _BarLabPreset.patterns => 'Patterns',
@@ -86,6 +88,7 @@ extension on _BarLabPreset {
     _BarLabPreset.horizontal => Icons.align_horizontal_left,
     _BarLabPreset.axes => Icons.straighten,
     _BarLabPreset.categories => Icons.view_week_outlined,
+    _BarLabPreset.stress => Icons.speed,
     _BarLabPreset.labels => Icons.label_outline,
     _BarLabPreset.config => Icons.data_object,
     _BarLabPreset.patterns => Icons.texture,
@@ -241,6 +244,11 @@ class _BarLabPageState extends State<BarLabPage> {
     'Global Services',
     'Renewals & Retention',
   ];
+  static final _stressCategories = List<String>.unmodifiable([
+    for (var index = 0; index < 10000; index++)
+      'Region ${(index + 1).toString().padLeft(2, '0')} · '
+          'Segment ${String.fromCharCode(65 + index % 6)}',
+  ]);
   static const _medalColors = <Color>[
     Color(0xFF1F77B4),
     Color(0xFFC44FEA),
@@ -310,6 +318,7 @@ class _BarLabPageState extends State<BarLabPage> {
   double _categoryMinimumExtent = 72;
   int _categoryMaxLines = 2;
   double _categoryRotation = 0;
+  int _stressCategoryCount = 48;
   BarLabelCollisionPolicy _labelCollisionPolicy = BarLabelCollisionPolicy.none;
   bool _labelPlotEdgeAware = true;
   double _labelCollisionPadding = 2;
@@ -576,6 +585,7 @@ class _BarLabPageState extends State<BarLabPage> {
         ? _agentBuildResult
         : null;
     return BravenChartPlus(
+      transitionKey: _preset,
       bravenChartController: controller,
       theme: baseTheme.copyWith(
         animationTheme: baseTheme.animationTheme.copyWith(
@@ -584,14 +594,18 @@ class _BarLabPageState extends State<BarLabPage> {
         ),
       ),
       series: configured?.series ?? _buildSeries(),
-      showXScrollbar: _preset == _BarLabPreset.categories,
-      scrollbarTheme: _preset == _BarLabPreset.categories
+      showXScrollbar:
+          _preset == _BarLabPreset.categories ||
+          _preset == _BarLabPreset.stress,
+      scrollbarTheme:
+          _preset == _BarLabPreset.categories || _preset == _BarLabPreset.stress
           ? ScrollbarConfig.defaultLight.copyWith(autoHide: false)
           : null,
       showLegend:
           configured?.showLegend ??
           (_preset != _BarLabPreset.waterfall &&
               _preset != _BarLabPreset.labels &&
+              _preset != _BarLabPreset.stress &&
               _preset != _BarLabPreset.histogram &&
               _preset != _BarLabPreset.rtl),
       normalizationMode: _preset == _BarLabPreset.axes
@@ -609,6 +623,8 @@ class _BarLabPageState extends State<BarLabPage> {
           XAxisConfig(
             label: _preset == _BarLabPreset.categories
                 ? 'Market segment'
+                : _preset == _BarLabPreset.stress
+                ? 'Region and segment'
                 : _preset == _BarLabPreset.pareto
                 ? 'Issue cause'
                 : _preset == _BarLabPreset.histogram
@@ -638,7 +654,9 @@ class _BarLabPageState extends State<BarLabPage> {
             renderMin: _usesNativeCategoryAxis ? null : 0,
             renderMax: _usesNativeCategoryAxis ? null : lastCategory.toDouble(),
             tickCount: _categories.length,
-            maxHeight: _preset == _BarLabPreset.categories
+            maxHeight:
+                _preset == _BarLabPreset.categories ||
+                    _preset == _BarLabPreset.stress
                 ? 92
                 : _preset == _BarLabPreset.pareto
                 ? 76
@@ -914,11 +932,21 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         ],
       ),
-    if (_preset == _BarLabPreset.categories)
+    if (_preset == _BarLabPreset.categories || _preset == _BarLabPreset.stress)
       OptionSection(
         title: 'Category axis',
         icon: Icons.view_week_outlined,
         children: [
+          if (_preset == _BarLabPreset.stress)
+            IntSliderOption(
+              key: const ValueKey('bar-lab-stress-category-count'),
+              label: 'Category count',
+              value: _stressCategoryCount,
+              min: 12,
+              max: _stressCategories.length,
+              onChanged: (value) =>
+                  setState(() => _stressCategoryCount = value),
+            ),
           EnumOption<CategoryLabelDensity>(
             label: 'Label density',
             value: _categoryLabelDensity,
@@ -1208,7 +1236,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         if (_showLabels &&
             (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config))
+                _preset == _BarLabPreset.config ||
+                _preset == _BarLabPreset.stress))
           EnumOption<BarLabelCollisionPolicy>(
             label: 'Collisions',
             value: _labelCollisionPolicy,
@@ -1222,7 +1251,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         if (_showLabels &&
             (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config))
+                _preset == _BarLabPreset.config ||
+                _preset == _BarLabPreset.stress))
           BoolOption(
             label: 'Plot-edge aware',
             value: _labelPlotEdgeAware,
@@ -1231,7 +1261,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         if (_showLabels &&
             (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config) &&
+                _preset == _BarLabPreset.config ||
+                _preset == _BarLabPreset.stress) &&
             _labelCollisionPolicy != BarLabelCollisionPolicy.none)
           SliderOption(
             label: 'Collision gap',
@@ -1246,7 +1277,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         if (_showLabels &&
             (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config))
+                _preset == _BarLabPreset.config ||
+                _preset == _BarLabPreset.stress))
           BoolOption(
             label: 'Label background',
             value: _showLabelBackground,
@@ -1255,7 +1287,8 @@ class _BarLabPageState extends State<BarLabPage> {
           ),
         if (_showLabels &&
             (_preset == _BarLabPreset.labels ||
-                _preset == _BarLabPreset.config))
+                _preset == _BarLabPreset.config ||
+                _preset == _BarLabPreset.stress))
           BoolOption(
             label: 'Callout lines',
             value: _showLabelCallouts,
@@ -1641,6 +1674,11 @@ class _BarLabPageState extends State<BarLabPage> {
         75,
         82,
       ],
+      _BarLabPreset.stress => List<double>.generate(
+        _categories.length,
+        (index) => (12 + index * 11 % 32).toDouble(),
+        growable: false,
+      ),
       _BarLabPreset.labels => const <double>[88, 91, 86, 93, 89, 95, 87],
       _BarLabPreset.config => const <double>[],
       _BarLabPreset.patterns => const <double>[74, 58, 86, 67, 92, 79, 63],
@@ -1697,6 +1735,11 @@ class _BarLabPageState extends State<BarLabPage> {
         79,
         75,
       ],
+      _BarLabPreset.stress => List<double>.generate(
+        _categories.length,
+        (index) => (14 + index * 17 % 30).toDouble(),
+        growable: false,
+      ),
       _BarLabPreset.labels => const <double>[90, 87, 92, 89, 94, 88, 93],
       _BarLabPreset.config => const <double>[],
       _BarLabPreset.patterns => const <double>[62, 81, 71, 89, 68, 94, 76],
@@ -1956,7 +1999,8 @@ class _BarLabPageState extends State<BarLabPage> {
             : magnitude.toDouble();
       }
       if (_preset == _BarLabPreset.stacked ||
-          _preset == _BarLabPreset.normalized) {
+          _preset == _BarLabPreset.normalized ||
+          _preset == _BarLabPreset.stress) {
         return (12 + seed % 32).toDouble();
       }
       if (_preset == _BarLabPreset.likert) {
@@ -2085,6 +2129,7 @@ class _BarLabPageState extends State<BarLabPage> {
                 : null,
           ),
       ],
+      isXOrdered: true,
       color: color,
       unit:
           _preset == _BarLabPreset.bullet ||
@@ -2421,11 +2466,13 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.horizontal => _channelCategories,
     _BarLabPreset.axes => _channelCategories,
     _BarLabPreset.categories => _denseCategories,
+    _BarLabPreset.stress => _stressCategories.sublist(0, _stressCategoryCount),
     _ => _dayCategories,
   };
 
   bool get _usesNativeCategoryAxis =>
       _preset == _BarLabPreset.categories ||
+      _preset == _BarLabPreset.stress ||
       _preset == _BarLabPreset.pareto ||
       _preset == _BarLabPreset.histogram ||
       _preset == _BarLabPreset.rtl;
@@ -2750,6 +2797,29 @@ class _BarLabPageState extends State<BarLabPage> {
         _categoryMaxLines = 2;
         _categoryRotation = 0;
         _cornerPolicy = BarCornerRadiusPolicy.valueEnd;
+      case _BarLabPreset.stress:
+        _seriesCount = 8;
+        _stackGroupCount = 1;
+        _layoutMode = BarLayoutMode.normalizedStacked;
+        _orientation = BarOrientation.vertical;
+        _barWidth = 0.9;
+        _barGap = 1;
+        _cornerRadius = 2;
+        _showTracks = false;
+        _showGradient = false;
+        _showBorder = false;
+        _showLabels = true;
+        _labelPosition = BarLabelPosition.insideCenter;
+        _labelCollisionPolicy = BarLabelCollisionPolicy.hide;
+        _labelCollisionPadding = 2;
+        _showStackTotals = false;
+        _categoryLabelDensity = CategoryLabelDensity.auto;
+        _categoryLabelOverflow = CategoryLabelOverflow.ellipsis;
+        _categoryMinimumExtent = 48;
+        _categoryMaxLines = 1;
+        _categoryRotation = 0;
+        _stressCategoryCount = 48;
+        _cornerPolicy = BarCornerRadiusPolicy.all;
       case _BarLabPreset.labels:
         _seriesCount = 6;
         _stackGroupCount = 2;
@@ -2894,6 +2964,7 @@ class _BarLabPageState extends State<BarLabPage> {
     _BarLabPreset.horizontal => 'Revenue by channel',
     _BarLabPreset.axes => 'Independent channel metrics',
     _BarLabPreset.categories => 'Dense categorical comparison',
+    _BarLabPreset.stress => 'Dense category and label stress',
     _BarLabPreset.labels => 'Collision-aware value labels',
     _BarLabPreset.config => 'Tool-configured analytical bars',
     _BarLabPreset.patterns => 'Pattern-coded comparisons',
@@ -2942,6 +3013,8 @@ class _BarLabPageState extends State<BarLabPage> {
       'Independent value axes stack above and below one shared category plot.',
     _BarLabPreset.categories =>
       'A native category domain wraps, thins, scrolls, and persists long labels without a formatter callback.',
+    _BarLabPreset.stress =>
+      'Hundreds of normalized segments exercise category scrolling and chart-wide label collision indexing without sacrificing frame time.',
     _BarLabPreset.labels =>
       'Labels share one chart-wide layout pass, fall back inside the bar, and can use restrained boxes or callouts.',
     _BarLabPreset.config =>
@@ -2994,6 +3067,8 @@ class _BarLabPageState extends State<BarLabPage> {
       if (_preset == _BarLabPreset.axes) 'independent value axes',
       if (_preset == _BarLabPreset.categories)
         '${_categories.length} native categories',
+      if (_preset == _BarLabPreset.stress)
+        '${_categories.length * _seriesCount} labelled segments',
       if (_preset == _BarLabPreset.config) 'public tool JSON',
       if (_preset == _BarLabPreset.patterns && _showPatterns)
         '$_seriesCount pattern encodings',

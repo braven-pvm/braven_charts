@@ -768,6 +768,20 @@ orientation or layout mode replay in their new geometry instead of morphing
 between incompatible coordinate systems. Flutter's reduced-motion setting
 always renders the final geometry immediately.
 
+When one mounted chart switches between semantically different configurations,
+give each configuration a distinct `BravenChartPlus.transitionKey`. A changed
+key discards data-update interpolation history and runs only the destination
+series entrance animation, while keeping the chart controller and Workbench
+presentation mounted. Keep the key stable for ordinary values and style edits
+that should interpolate normally.
+
+```dart
+BravenChartPlus(
+  transitionKey: selectedPreset,
+  series: seriesFor(selectedPreset),
+)
+```
+
 `BarMotionStyle` can sequence categories while keeping one shared completion
 time. `staggerFraction` reserves the opening portion of that timeline for
 distributed starts; it does not multiply the total duration. Available orders
@@ -883,6 +897,29 @@ out correctly in both vertical and horizontal orientations.
 Use the maintained `?page=bar-lab&preset=rtl` preset to verify Arabic labels,
 interactions, and orientation changes together.
 
+## Dense labels and performance
+
+Dense bar rendering uses two complementary indexes. A persistent category
+index resolves only the points that intersect the current viewport, plus a
+small visual overscan for wide marks and Waterfall connectors. Those visible
+geometries retain their original point indices, so stacking, selection,
+crosshairs, artifacts, and Workbench rows keep stable identity while panning.
+Bar hit testing then queries plot-space cells instead of scanning the full
+series.
+
+Collision-aware labels share a separate spatial index for the complete visible
+chart paint pass. `BarLabelCollisionPolicy.hide` and `reposition` therefore
+compare a label only with nearby occupied cells instead of scanning every
+previously accepted label.
+
+The benchmark at
+`test/benchmarks/rendering/bar_label_layout_benchmark_test.dart` exercises
+5,000 collision-aware labels against the 16.67 ms frame budget. The geometry
+benchmark pans across 100,000 source points while materializing only the
+visible bars. Use the maintained `?page=bar-lab&preset=stress` route to review
+12–10,000 categories and up to 12 series with a native scrollable category
+axis.
+
 ## Current boundary
 
 Horizontal orientation is a chart-level transform, so it cannot currently be
@@ -902,7 +939,7 @@ bar capability. Presets can be linked directly with `preset`, for example
 `?page=bar-lab&preset=bullet`, `?page=bar-lab&preset=likert`,
 `?page=bar-lab&preset=targets`, `?page=bar-lab&preset=uncertainty`,
 `?page=bar-lab&preset=patterns`, `?page=bar-lab&preset=motion`,
-`?page=bar-lab&preset=rtl`,
+`?page=bar-lab&preset=rtl`, `?page=bar-lab&preset=stress`,
 `?page=bar-lab&preset=states`,
 `?page=bar-lab&preset=stacked`, or `?page=bar-lab&preset=normalized`.
 Append `&view=data` or `&view=split` to open the corresponding workbench

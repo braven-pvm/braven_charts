@@ -72,6 +72,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('stress-tests hundreds of labels on a scrollable category axis', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-stress')));
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    var bars = chart.series.whereType<BarChartSeries>().toList();
+    expect(find.text('Dense category and label stress'), findsOneWidget);
+    expect(find.text('Category count', skipOffstage: false), findsOneWidget);
+    expect(chart.showXScrollbar, isTrue);
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(48));
+    expect(bars, hasLength(8));
+    expect(bars.expand((series) => series.points), hasLength(384));
+    expect(
+      bars.every(
+        (series) =>
+            series.layoutMode == BarLayoutMode.normalizedStacked &&
+            series.labelStyle.collisionPolicy == BarLabelCollisionPolicy.hide &&
+            series.labelStyle.valueMode == BarLabelValueMode.percentage,
+      ),
+      isTrue,
+    );
+
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-lab-stress-category-count')),
+        )
+        .onChanged(1000);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    bars = chart.series.whereType<BarChartSeries>().toList();
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(1000));
+    expect(bars.expand((series) => series.points), hasLength(8000));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('inherits RTL direction across horizontal and vertical bars', (
     tester,
   ) async {
@@ -684,15 +729,40 @@ void main() {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Gradient').first);
+    final initialChartState = tester.state(find.byType(BravenChartPlus));
+    final initialTransitionKey = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .transitionKey;
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-gradient')));
     await tester.pumpAndSettle();
 
+    final gradientChartState = tester.state(find.byType(BravenChartPlus));
+    expect(gradientChartState, same(initialChartState));
+    final gradientTransitionKey = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .transitionKey;
+    expect(gradientTransitionKey, isNot(initialTransitionKey));
     expect(find.text('Value-axis gradients'), findsOneWidget);
     expect(
       find.text(
         'Gradients follow each bar from its baseline to its value end.',
       ),
       findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-gradient')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.state(find.byType(BravenChartPlus)),
+      same(gradientChartState),
+    );
+    expect(
+      tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .transitionKey,
+      gradientTransitionKey,
     );
   });
 

@@ -54,12 +54,24 @@ class BarLabelLayoutResult {
 /// this coordinator provides the chart-wide occupied-space contract that a
 /// per-series painter cannot otherwise see.
 class BarLabelLayoutCoordinator {
-  BarLabelLayoutCoordinator({required this.plotBounds});
+  BarLabelLayoutCoordinator({
+    required this.plotBounds,
+    this.collisionCellSize = 48,
+  }) : assert(collisionCellSize > 0, 'Collision cell size must be positive');
 
   final Rect plotBounds;
+  final double collisionCellSize;
   final List<Rect> _occupied = [];
+  final Map<(int, int), List<Rect>> _occupiedByCell = {};
+  int _collisionComparisonCount = 0;
 
   List<Rect> get occupiedBounds => List.unmodifiable(_occupied);
+
+  /// Number of exact rectangle comparisons performed by this coordinator.
+  ///
+  /// Exposed for diagnostics and benchmarks. Dense layouts should grow close
+  /// to linearly instead of comparing every label with every prior label.
+  int get collisionComparisonCount => _collisionComparisonCount;
 
   BarLabelLayoutResult? place({
     required List<Rect> candidates,
@@ -120,14 +132,35 @@ class BarLabelLayoutCoordinator {
 
   bool _collides(Rect rect, double padding) {
     final padded = rect.inflate(padding / 2);
-    return _occupied.any(
-      (other) => padded.overlaps(other.inflate(padding / 2)),
-    );
+    final visited = <Rect>{};
+    for (final cell in _cellsFor(rect.inflate(padding))) {
+      for (final other in _occupiedByCell[cell] ?? const <Rect>[]) {
+        if (!visited.add(other)) continue;
+        _collisionComparisonCount++;
+        if (padded.overlaps(other.inflate(padding / 2))) return true;
+      }
+    }
+    return false;
   }
 
   BarLabelLayoutResult _accept(Rect rect, {required bool displaced}) {
     _occupied.add(rect);
+    for (final cell in _cellsFor(rect)) {
+      (_occupiedByCell[cell] ??= []).add(rect);
+    }
     return BarLabelLayoutResult(rect: rect, displaced: displaced);
+  }
+
+  Iterable<(int, int)> _cellsFor(Rect rect) sync* {
+    final left = ((rect.left - plotBounds.left) / collisionCellSize).floor();
+    final right = ((rect.right - plotBounds.left) / collisionCellSize).floor();
+    final top = ((rect.top - plotBounds.top) / collisionCellSize).floor();
+    final bottom = ((rect.bottom - plotBounds.top) / collisionCellSize).floor();
+    for (var x = left; x <= right; x++) {
+      for (var y = top; y <= bottom; y++) {
+        yield (x, y);
+      }
+    }
   }
 
   Rect _clampToPlot(Rect rect) {
