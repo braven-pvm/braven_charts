@@ -29,6 +29,8 @@ streaming path so each sample does not require a widget-tree rebuild.
   covers every built-in chart family, axes, annotations, themes, interactions,
   legends, and optional durable view state; bounded data and runtime callbacks
   produce explicit diagnostics instead of disappearing from the output.
+  Visible Source follows effective chart changes automatically on a bounded,
+  coalesced cadence, while manual snapshot behavior remains an explicit option.
 - **Coordinated chart surfaces:** `ChartWorkbenchGroupController` and the
   nestable `ChartWorkbenchScope` can synchronize Chart, Data, Split, or Source
   presentation—and selector visibility—across an application or one chart
@@ -483,7 +485,10 @@ interaction remain local to each chart. Dispose caller-owned group controllers.
 
 Source is generated from the current effective chart document and teaches the
 public `BravenChartPlus` API. Runtime callbacks and bounded-data omissions are
-reported explicitly rather than silently discarded. The package manages
+reported explicitly rather than silently discarded. While Source is visible,
+its default revision-aware policy automatically regenerates after chart option,
+series, axis, annotation, theme, interaction, or durable view-state changes;
+hidden Source catches up when opened again. The package manages
 chart/table/source lifecycle and structured extraction state; the
 workbench also links table focus and activation to revision-safe chart point
 focus/selection by default. Wide rows target every populated series at their
@@ -491,7 +496,9 @@ exact X value, and a successful linked selection rebases the table snapshot so
 the next row remains usable. The host owns action policy, artifact IDs,
 persistence, and navigation. Initial and refresh failures retain explicit
 recovery actions, and manual refresh is the recommended policy when a bounded
-live stream should not rewrite a visible table at sample cadence. See the
+live stream should not rewrite a visible table at sample cadence. Source can
+also opt into manual or mode-entry regeneration when a host explicitly needs
+retained code snapshots. See the
 [Chart Workbench guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
 for shared system/chart-family presentation, source options and limits,
 refresh policies, point identity, responsive semantics, status, and controller

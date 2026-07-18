@@ -301,7 +301,6 @@ BravenChartWorkbench(
     maxInlinePoints: 250,
     variableName: 'chart',
   ),
-  sourceRefreshPolicy: ChartSourceRefreshPolicy.onModeEntry,
   chartBuilder: (context, controller) => BravenChartPlus(
     bravenChartController: controller,
     series: series,
@@ -323,10 +322,17 @@ generated Dart includes the portable configuration and marks the application
 callbacks that still need to be supplied; Source never weakens artifact
 portability rules.
 
-`ChartSourceRefreshPolicy.manual`, `onModeEntry`, and `onDocumentRevision`
-mirror the table freshness model while keeping source and table operations
-independent. A failed refresh retains the previous usable source and marks it
-stale.
+Source is a live developer projection by default. While Source is visible,
+`ChartSourceRefreshPolicy.onDocumentRevision` coalesces effective chart changes
+onto a bounded 250 ms cadence and regenerates the Dart without exposing normal
+revision movement as a manual stale state. Changes made while Source is hidden
+are generated when Source next becomes visible. A failed regeneration retains
+the previous usable source and exposes an explicit retry.
+
+`ChartSourceRefreshPolicy.manual` and `onModeEntry` remain available for hosts
+that intentionally want retained source snapshots or only want regeneration
+when entering Source. Source and table policies remain independent: Data keeps
+its snapshot-oriented `onModeEntry` default.
 
 Set `includeViewState: true` when the copied result should also retain the
 current viewport, hidden series, durable point selection, axis slots, selected

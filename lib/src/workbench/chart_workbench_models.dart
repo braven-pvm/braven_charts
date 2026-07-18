@@ -21,13 +21,17 @@ enum ChartTableRefreshPolicy {
 
 /// Determines when a chart workbench refreshes generated Dart source.
 enum ChartSourceRefreshPolicy {
-  /// Capture on first use and only after an explicit refresh request.
+  /// Generate on first use and only after an explicit refresh request.
   manual,
 
-  /// Refresh whenever Source presentation becomes effective.
+  /// Regenerate whenever Source presentation becomes effective.
   onModeEntry,
 
-  /// Mark stale on effective revision changes and refresh on a bounded cadence.
+  /// Keep visible Source synchronized on a bounded revision cadence.
+  ///
+  /// Changes that occur while Source is hidden are regenerated when it next
+  /// becomes visible. This is the default because Source represents the
+  /// chart's current effective configuration rather than a retained snapshot.
   onDocumentRevision,
 }
 

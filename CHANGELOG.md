@@ -73,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reduced motion, and support per-series opt-out.
 
 ### Changed
+- Visible Workbench Source now follows effective chart-document changes by
+  default. Regeneration is coalesced on a bounded cadence, hidden Source catches
+  up on entry, and normal automatic refreshes no longer present manual
+  `Chart changed` or `Refresh source` controls. `manual` and `onModeEntry`
+  policies remain explicit opt-ins, independent from Data's snapshot policy.
 - Line, Area, Bar, Scatter, Pie, and Donut showcase guides now use the same
   package-owned Chart/Data/Split/Source Workbench contract. Line and Area add
   resizable Split panes, motion presets, replay/update controls, responsive
