@@ -132,6 +132,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _CartesianFamily.scatter => 'Scatter Charts',
   };
 
+  String get _presetPickerTitle => switch (widget.family) {
+    _CartesianFamily.line => 'Choose a line chart example',
+    _CartesianFamily.area => 'Choose an area chart example',
+    _CartesianFamily.scatter => 'Choose a scatter chart example',
+  };
+
   String get _pageSubtitle => switch (widget.family) {
     _CartesianFamily.line =>
       'The analytical workhorse: trends, interpolation, axes, tracking, and annotations',
@@ -215,7 +221,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose a ${_pageTitle.toLowerCase()} example',
+              _presetPickerTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),

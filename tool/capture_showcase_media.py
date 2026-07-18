@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Iterable
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFont, ImageOps
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -35,6 +35,7 @@ INTERACTION_SIZE = (900, 400)
 LIVE_SIZE = (754, 522)
 FOCUSED_MEDIA_CROP = (120, 90, 1320, 810)
 FOCUSED_MEDIA_SIZE = (800, 480)
+PATH_WORKBENCH_CROP = (264, 112, 1120, 884)
 FRAME_DURATION_MS = 110
 BRAND = "#4F46E5"
 INK = "#262230"
@@ -76,18 +77,22 @@ def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 CAPTION_FONT = _font(20, bold=True)
 
 
-def _driver() -> webdriver.Chrome:
+def _driver(*, disable_gpu: bool = True) -> webdriver.Chrome:
     options = Options()
     options.binary_location = "C:/Program Files/Google/Chrome/Application/chrome.exe"
-    for argument in (
+    arguments = [
         "--headless=new",
-        "--disable-gpu",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",
         f"--window-size={VIEWPORT[0]},{VIEWPORT[1]}",
         "--no-first-run",
         "--no-default-browser-check",
-    ):
+        "--run-all-compositor-stages-before-draw",
+        "--disable-features=PaintHolding",
+    ]
+    if disable_gpu:
+        arguments.append("--disable-gpu")
+    for argument in arguments:
         options.add_argument(argument)
 
     driver = webdriver.Chrome(options=options)
@@ -303,6 +308,30 @@ def _save_png(
     print(f"Wrote {output} ({image.width}x{image.height})")
 
 
+def _save_composited_png(
+    driver: webdriver.Chrome,
+    output: Path,
+    crop: tuple[int, int, int, int],
+) -> None:
+    """Combine stable frames to recover intermittently omitted canvas tiles."""
+    frames: list[Image.Image] = []
+    route = driver.current_url
+    for attempt in range(3):
+        if attempt > 0:
+            _load(driver, route)
+        frame = Image.open(io.BytesIO(driver.get_screenshot_as_png())).convert(
+            "RGB"
+        )
+        frames.append(frame.crop(crop))
+
+    image = frames[0]
+    for frame in frames[1:]:
+        image = ImageChops.darker(image, frame)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    image.save(output, format="PNG", optimize=True)
+    print(f"Wrote {output} ({image.width}x{image.height}, 3-load composite)")
+
+
 def _save_gallery_mosaic(output_dir: Path) -> None:
     columns = 3
     rows = 5
@@ -375,6 +404,31 @@ def _hero_panel_stills(
     ):
         _load(driver, f"{base_url}?capture={query}")
         _save_png(driver, output_dir / filename, HERO_PANEL_CROP)
+
+
+def _path_workbench_stills(
+    base_url: str,
+    output_dir: Path,
+) -> None:
+    """Capture the release Line and Area motion workbench routes."""
+    for page, filename, disable_gpu in (
+        ("line-charts", "line_motion_workbench.png", False),
+        ("area-charts", "area_motion_workbench.png", False),
+    ):
+        driver = _driver(disable_gpu=disable_gpu)
+        try:
+            # Discard one warm-up route so CanvasKit has materialized every
+            # compositor tile before the release image is recorded.
+            _load(driver, f"{base_url}?page=chart-types")
+            route = f"{base_url}?page={page}&preset=motion&view=split"
+            _load(driver, route)
+            _save_composited_png(
+                driver,
+                output_dir / filename,
+                PATH_WORKBENCH_CROP,
+            )
+        finally:
+            driver.quit()
 
 
 def _gallery_stills_intro(
@@ -926,6 +980,7 @@ def main() -> None:
             "interaction-still",
             "type-strip",
             "donut",
+            "line-area",
         ),
         default="all",
         help="Capture all media, a focused animation, or the static set.",
@@ -950,6 +1005,9 @@ def main() -> None:
         return
     if args.capture == "hero":
         _native_stills(args.output_dir, "hero")
+        return
+    if args.capture == "line-area":
+        _path_workbench_stills(base_url, args.output_dir)
         return
 
     driver = _driver()
@@ -985,6 +1043,8 @@ def main() -> None:
 
     if args.capture in ("all", "stills"):
         _native_stills(args.output_dir)
+    if args.capture == "all":
+        _path_workbench_stills(base_url, args.output_dir)
 
 
 if __name__ == "__main__":

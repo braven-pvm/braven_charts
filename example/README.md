@@ -35,8 +35,8 @@ flutter build web --release --base-href /braven_charts/
 | --- | --- |
 | Gallery | Start with a native-rendered six-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Cartesian, and mixed-series examples |
 | Chart Types | Choose between line, area, bar, scatter, Pie, and Donut from a concise visual overview; each family links to its own runnable guide |
-| Line Charts | Compare the workhorse composition, four interpolation modes, and independently scaled multi-axis signals; tune stroke, glow, markers, labels, tracking, zoom, and pan |
-| Area Charts | Compare layered magnitude, positive and negative baseline fills, and observed-versus-forecast compositions; tune opacity and baseline behavior |
+| Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and opt-in entrance/data-update motion; inspect the same mounted chart in resizable Chart/Data/Split views |
+| Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and synchronized fill/outline motion; inspect target data and artifacts in resizable Chart/Data/Split views |
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API |
 | Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; and capture or restore a portable artifact |
@@ -80,9 +80,10 @@ bar.
 ## Screenshot routes
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
-also be captured from Pie Charts, Donut Charts, Bar Charts, Multi-Axis, Live
-Stream, Annotations, and Loading States to show radial rendering, categorical
-composition, the interaction engine, and application states in more detail.
+also be captured from Line Charts, Area Charts, Pie Charts, Donut Charts, Bar
+Charts, Multi-Axis, Live Stream, Annotations, and Loading States to show path
+motion, workbench composition, radial rendering, categorical composition, the
+interaction engine, and application states in more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
@@ -92,3 +93,5 @@ For the reusable Chart/Data/Split composition shown by Chart Workbench, see
 [Chart Document Comparison](../doc/chart_comparison.md).
 For radial series contracts, see [Pie charts](../doc/pie_charts.md) and
 [Donut charts](../doc/donut_charts.md).
+For path-series motion, streaming boundaries, and the Line/Area workbench, see
+[Line and Area charts](../doc/line_area_charts.md).

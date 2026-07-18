@@ -35,6 +35,17 @@ package rather than treating a single composition as representative.
 | **Scatter** | **Pie** | **Donut** |
 | [![Two scatter cohorts with distinct marker sets and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_experiment_cohorts.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
+### Line and Area workbenches
+
+Line and Area now pair opt-in entrance and data-update motion with the same
+package-owned Chart/Data/Split workflow used by the radial chart guides. The
+wide Split divider is resizable, while compact layouts fall back to a single
+active surface without unmounting the chart unnecessarily.
+
+| Line motion | Area motion |
+| --- | --- |
+| [![Line motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split) | [![Area motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/area_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split) |
+
 ### Bar compositions
 
 The Bar API covers comparison, progress, interval, bridge, ranking, stacking,
@@ -108,6 +119,10 @@ tables, artifact capture, previews, and restored charts.
 [Open Donut Charts directly](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
 to try full and partial rings, variable outer radii, selection-aware center
 content, Chart/Data/Split views, native tables, and portable restoration.
+[Open Line motion directly](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split)
+or [open Area motion directly](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split)
+to inspect entrance replay, compatible data updates, target-state tables, and
+the resizable package-owned workbench.
 
 ## Install
 
@@ -481,6 +496,7 @@ fills, and state UX.
 - [Live interactive showcase](https://braven-pvm.github.io/braven_charts/)
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
+- [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)

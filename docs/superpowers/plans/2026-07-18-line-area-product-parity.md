@@ -2,7 +2,8 @@
 
 **Branch:** `feature/line-area-product-parity`  
 **Base:** current `origin/master`  
-**Promotion:** local review first; PR only after explicit approval.
+**Promotion:** local review passed; PR #35 is open and remains unmerged until
+the sprint roadmap and consolidated E2E gate are complete.
 
 ## Lane 1 — Core path motion
 
@@ -42,5 +43,6 @@
   tests without layout exceptions.
 - The branch debug server is available on port 8097 with direct Motion/Split
   routes for joint review.
-- PR promotion remains deliberately deferred until the visual review is
-  accepted.
+- Local visual review was accepted and PR #35 was opened with green package
+  quality CI. Merge remains deliberately deferred until the remaining sprints
+  and consolidated E2E gate are complete.

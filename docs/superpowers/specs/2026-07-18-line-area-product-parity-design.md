@@ -1,8 +1,11 @@
 # Line and Area Product Parity — Design Spec
 
-**Status:** In progress  
-**Lane:** `feature/line-area-product-parity`  
-**Review gate:** Local-first. No PR until the Line and Area review routes pass pixel review.
+**Status:** Sprints 1–3 complete; consolidated E2E in progress
+**Lane:** `feature/line-area-product-parity`
+**Review gate:** PR #35 remains unmerged until the sprint roadmap and final E2E gate are complete.
+
+See the [sprint roadmap](../plans/2026-07-18-line-area-product-parity-roadmap.md)
+for the remaining hardening, public-release, and consolidated E2E work.
 
 ## Goal
 
