@@ -530,6 +530,13 @@ class _BarLabPageState extends State<BarLabPage> {
         chartController: _chartController,
         workbenchController: _workbenchController,
         initialDisplayMode: _initialDisplayMode,
+        availableDisplayModes: const {
+          ChartDisplayMode.chart,
+          ChartDisplayMode.data,
+          ChartDisplayMode.split,
+          ChartDisplayMode.source,
+        },
+        sourceOptions: const ChartDartSourceOptions(variableName: 'barChart'),
         documentOptions: _documentOptions,
         tableOptions: _tableOptions,
         splitBreakpoint: 760,

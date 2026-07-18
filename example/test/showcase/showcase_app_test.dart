@@ -1,5 +1,6 @@
 import 'package:braven_charts_example/showcase/showcase_app.dart';
 import 'package:braven_charts_example/showcase/widgets/braven_brand.dart';
+import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -72,7 +73,7 @@ void main() {
     );
 
     await tester.tap(find.text('Line Charts'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
     expect(find.text('Choose a line chart example'), findsOneWidget);
@@ -129,5 +130,81 @@ void main() {
 
     expect(find.text('Choose a streaming strategy'), findsOneWidget);
     expect(find.text('Follow latest'), findsWidgets);
+  });
+
+  testWidgets('Workbench presentation follows chart-family navigation', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1440 * pixelRatio, 900 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const ShowcaseApp());
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(find.text('Line Charts'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final lineSwitcher = tester.widget<SegmentedButton<ChartDisplayMode>>(
+      find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+    );
+    lineSwitcher.onSelectionChanged?.call({ChartDisplayMode.split});
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SegmentedButton<ChartDisplayMode>>(
+            find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+          )
+          .selected,
+      {ChartDisplayMode.split},
+    );
+
+    await tester.tap(find.text('Area Charts'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SegmentedButton<ChartDisplayMode>>(
+            find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+          )
+          .selected,
+      {ChartDisplayMode.split},
+    );
+
+    await tester.tap(find.text('Pie Charts'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SegmentedButton<ChartDisplayMode>>(
+            find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+          )
+          .selected,
+      {ChartDisplayMode.split},
+    );
+
+    await tester.ensureVisible(find.text('Chart Workbench'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chart Workbench'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Show view selector'));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      findsNothing,
+    );
+
+    await tester.ensureVisible(find.text('Line Charts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Line Charts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a line chart example'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

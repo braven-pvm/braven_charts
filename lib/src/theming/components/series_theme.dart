@@ -16,6 +16,13 @@ enum MarkerShape {
   none,
 }
 
+/// Public, unambiguous name for marker shapes used by [SeriesTheme].
+///
+/// `MarkerShape` is also used by point annotations. This alias keeps custom
+/// theme configuration available from the package barrel without colliding
+/// with the annotation enum.
+typedef SeriesMarkerShape = MarkerShape;
+
 /// Theming for chart data series.
 ///
 /// Provides color, line style, and marker configuration for multiple series.

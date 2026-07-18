@@ -48,6 +48,7 @@ class BravenChartController extends ChangeNotifier {
   void Function()? _clearHandler;
   void Function(String seriesId, bool visible)? _setVisibilityHandler;
   ChartDocumentExtractionHandler? _extractDocumentHandler;
+  ChartDocumentExtractionHandler? _extractSourceDocumentHandler;
   void Function(ChartViewState viewState)? _restoreViewStateHandler;
   ChartPreviewCaptureHandler? _capturePreviewHandler;
   ChartPointCommandHandler? _focusPointsHandler;
@@ -214,6 +215,27 @@ class BravenChartController extends ChangeNotifier {
     return handler(options);
   }
 
+  /// Captures the chart document for readable Dart source generation.
+  ///
+  /// Unlike [extractDocument], this source-only path may describe runtime
+  /// callbacks and formatters with explicit placeholders. Portable artifact
+  /// extraction remains fail-closed when those descriptors are not supplied.
+  ChartArtifactResult<ChartDocumentSnapshot> extractSourceDocument([
+    ChartDocumentExtractOptions options = const ChartDocumentExtractOptions(),
+  ]) {
+    final handler = _extractSourceDocumentHandler;
+    if (handler == null) {
+      return ChartArtifactFailure(
+        error: const ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.chartNotAttached,
+          message:
+              'The BravenChartController is not attached to a mounted chart.',
+        ),
+      );
+    }
+    return handler(options);
+  }
+
   /// Restores durable visibility, selection, viewport, and axis-slot state.
   void restoreViewState(ChartViewState viewState) =>
       _restoreViewStateHandler?.call(viewState);
@@ -272,6 +294,7 @@ class BravenChartController extends ChangeNotifier {
     required void Function() onClear,
     void Function(String, bool)? onSetSeriesVisibility,
     ChartDocumentExtractionHandler? onExtractDocument,
+    ChartDocumentExtractionHandler? onExtractSourceDocument,
     void Function(ChartViewState)? onRestoreViewState,
     ChartPreviewCaptureHandler? onCapturePreview,
     ChartPointCommandHandler? onFocusPoints,
@@ -287,6 +310,7 @@ class BravenChartController extends ChangeNotifier {
     _clearHandler = onClear;
     _setVisibilityHandler = onSetSeriesVisibility;
     _extractDocumentHandler = onExtractDocument;
+    _extractSourceDocumentHandler = onExtractSourceDocument;
     _restoreViewStateHandler = onRestoreViewState;
     _capturePreviewHandler = onCapturePreview;
     _focusPointsHandler = onFocusPoints;
@@ -307,6 +331,7 @@ class BravenChartController extends ChangeNotifier {
     _clearHandler = null;
     _setVisibilityHandler = null;
     _extractDocumentHandler = null;
+    _extractSourceDocumentHandler = null;
     _restoreViewStateHandler = null;
     _capturePreviewHandler = null;
     _focusPointsHandler = null;

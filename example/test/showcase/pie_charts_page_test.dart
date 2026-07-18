@@ -5,6 +5,48 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('generates current Pie configuration in the shared Source view', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    final sourceMode = find.descendant(
+      of: switcher,
+      matching: find.text('Source'),
+    );
+    await tester.ensureVisible(sourceMode);
+    await tester.pump();
+    await tester.tap(sourceMode);
+    await tester.pumpAndSettle();
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    expect(
+      workbench.workbenchController!.sourceState.phase,
+      ChartWorkbenchSourcePhase.ready,
+    );
+    expect(
+      workbench.workbenchController!.generatedSource!.source,
+      allOf(
+        contains('final pieChart = BravenChartPlus('),
+        contains('PieChartSeries('),
+      ),
+    );
+    expect(find.byType(ChartSourceView), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('showcases live pie datasets and public usage guidance', (
     tester,
   ) async {
@@ -198,7 +240,7 @@ void main() {
 
     await tester.tap(
       find.descendant(
-        of: find.byKey(const ValueKey('pie-display-mode')),
+        of: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
         matching: find.text('Split'),
       ),
     );
@@ -261,7 +303,7 @@ void main() {
 
     await tester.tap(
       find.descendant(
-        of: find.byKey(const ValueKey('pie-display-mode')),
+        of: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
         matching: find.text('Split'),
       ),
     );
@@ -387,7 +429,7 @@ void main() {
 
       await tester.tap(
         find.descendant(
-          of: find.byKey(const ValueKey('pie-display-mode')),
+          of: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
           matching: find.text('Split'),
         ),
       );
@@ -438,7 +480,7 @@ void main() {
 
     await tester.tap(
       find.descendant(
-        of: find.byKey(const ValueKey('pie-display-mode')),
+        of: find.byKey(const ValueKey('chart-workbench-mode-switcher')),
         matching: find.text('Split'),
       ),
     );

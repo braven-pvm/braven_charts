@@ -10,6 +10,49 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'generates current Donut configuration in the shared Source view',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: DonutChartsPage())),
+      );
+      await tester.pumpAndSettle();
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      final sourceMode = find.descendant(
+        of: switcher,
+        matching: find.text('Source'),
+      );
+      await tester.ensureVisible(sourceMode);
+      await tester.pump();
+      await tester.tap(sourceMode);
+      await tester.pumpAndSettle();
+
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      expect(
+        workbench.workbenchController!.sourceState.phase,
+        ChartWorkbenchSourcePhase.ready,
+      );
+      expect(
+        workbench.workbenchController!.generatedSource!.source,
+        allOf(
+          contains('final donutChart = BravenChartPlus('),
+          contains('DonutChartSeries('),
+        ),
+      );
+      expect(find.byType(ChartSourceView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('shows Donut stories and the chart, data, split workflow', (
     tester,
   ) async {
@@ -32,7 +75,11 @@ void main() {
     expect(find.text('Motion'), findsOneWidget);
     expect(find.text('Grow in'), findsOneWidget);
     expect(find.text('Selected or total'), findsWidgets);
-    expect(find.byKey(const ValueKey('donut-display-mode')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('chart-workbench-mode-switcher')),
+      findsOneWidget,
+    );
+    expect(find.text('Source'), findsOneWidget);
     expect(find.byKey(const ValueKey('donut-showcase-chart')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('chart-workbench-data-table')),

@@ -72,6 +72,7 @@ export 'src/table/chart_table_export.dart';
 export 'src/table/chart_data_table.dart';
 export 'src/table/chart_data_table_theme.dart';
 export 'src/workbench/braven_chart_workbench.dart';
+export 'src/workbench/chart_workbench_group.dart';
 export 'src/workbench/chart_workbench_models.dart';
 export 'src/artifacts/json_value.dart';
 // Core chart widget
@@ -133,6 +134,10 @@ export 'src/models/y_axis_position.dart';
 export 'src/rendering/axis_color_resolver.dart';
 export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
+// Generated Dart source
+export 'src/source/chart_dart_source_generator.dart';
+export 'src/source/chart_source_models.dart';
+export 'src/source/chart_source_view.dart';
 // Streaming
 export 'src/streaming/live_stream_controller.dart';
 export 'src/streaming/streaming_buffer.dart';
@@ -146,6 +151,7 @@ export 'src/theming/components/axis_style.dart';
 export 'src/theming/components/grid_style.dart';
 export 'src/theming/components/interaction_theme.dart';
 export 'src/theming/components/scrollbar_config.dart';
-export 'src/theming/components/series_theme.dart' show SeriesTheme;
+export 'src/theming/components/series_theme.dart'
+    show SeriesMarkerShape, SeriesTheme;
 export 'src/theming/components/typography_theme.dart';
 export 'src/theming/styles/label_style.dart';

@@ -74,7 +74,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
   LegendOrientation _legendOrientation = LegendOrientation.horizontal;
   bool _showTooltips = true;
   String? _selectedCategory;
-  ChartDisplayMode _displayMode = ChartDisplayMode.chart;
   ChartArtifact? _capturedArtifact;
   HydratedChartConfiguration? _restoredConfiguration;
   String? _portableJson;
@@ -842,8 +841,6 @@ class _PieChartsPageState extends State<PieChartsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildDisplayModeSelector(),
-                          const SizedBox(height: 8),
                           Expanded(child: _buildDataSurface(compact: compact)),
                         ],
                       ),
@@ -865,44 +862,18 @@ class _PieChartsPageState extends State<PieChartsPage> {
     );
   }
 
-  Widget _buildDisplayModeSelector() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SegmentedButton<ChartDisplayMode>(
-        key: const ValueKey('pie-display-mode'),
-        segments: const [
-          ButtonSegment(
-            value: ChartDisplayMode.chart,
-            icon: Icon(Icons.show_chart, size: 18),
-            label: Text('Chart'),
-          ),
-          ButtonSegment(
-            value: ChartDisplayMode.data,
-            icon: Icon(Icons.table_rows_outlined, size: 18),
-            label: Text('Data'),
-          ),
-          ButtonSegment(
-            value: ChartDisplayMode.split,
-            icon: Icon(Icons.vertical_split_outlined, size: 18),
-            label: Text('Split'),
-          ),
-        ],
-        selected: {_displayMode},
-        onSelectionChanged: (selected) {
-          final mode = selected.single;
-          setState(() => _displayMode = mode);
-          _workbenchController.setDisplayMode(mode);
-        },
-      ),
-    );
-  }
-
   Widget _buildDataSurface({required bool compact}) {
     return BravenChartWorkbench(
       chartController: _chartController,
       workbenchController: _workbenchController,
-      initialDisplayMode: _displayMode,
-      showModeSwitcher: false,
+      initialDisplayMode: ChartDisplayMode.chart,
+      availableDisplayModes: const {
+        ChartDisplayMode.chart,
+        ChartDisplayMode.data,
+        ChartDisplayMode.split,
+        ChartDisplayMode.source,
+      },
+      sourceOptions: const ChartDartSourceOptions(variableName: 'pieChart'),
       splitBreakpoint: 1,
       splitAxis: compact ? Axis.vertical : Axis.horizontal,
       splitGap: 8,

@@ -5,6 +5,7 @@ import '../artifacts/chart_artifact.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../table/chart_table_model.dart';
 import '../table/chart_table_options.dart';
+import '../source/chart_source_models.dart';
 
 /// Determines when a chart workbench refreshes its document-backed table.
 enum ChartTableRefreshPolicy {
@@ -16,6 +17,53 @@ enum ChartTableRefreshPolicy {
 
   /// Mark stale on effective revision changes and refresh on a bounded cadence.
   onDocumentRevision,
+}
+
+/// Determines when a chart workbench refreshes generated Dart source.
+enum ChartSourceRefreshPolicy {
+  /// Capture on first use and only after an explicit refresh request.
+  manual,
+
+  /// Refresh whenever Source presentation becomes effective.
+  onModeEntry,
+
+  /// Mark stale on effective revision changes and refresh on a bounded cadence.
+  onDocumentRevision,
+}
+
+/// Current phase of the workbench's generated-source operation.
+enum ChartWorkbenchSourcePhase {
+  uninitialized,
+  loading,
+  ready,
+  refreshing,
+  failed,
+}
+
+/// Immutable generated source and diagnostics owned by a chart workbench.
+@immutable
+class ChartWorkbenchSourceState {
+  const ChartWorkbenchSourceState({
+    this.phase = ChartWorkbenchSourcePhase.uninitialized,
+    this.snapshot,
+    this.generated,
+    this.isStale = false,
+    this.warnings = const [],
+    this.error,
+  });
+
+  final ChartWorkbenchSourcePhase phase;
+  final ChartDocumentSnapshot? snapshot;
+  final ChartGeneratedSource? generated;
+  final bool isStale;
+  final List<ChartArtifactWarning> warnings;
+  final ChartArtifactError? error;
+
+  bool get hasUsableSource => snapshot != null && generated != null;
+
+  bool get isLoading =>
+      phase == ChartWorkbenchSourcePhase.loading ||
+      phase == ChartWorkbenchSourcePhase.refreshing;
 }
 
 /// Current phase of the workbench's table snapshot operation.
@@ -106,6 +154,7 @@ class ChartWorkbenchStatus {
     required this.effectiveMode,
     required this.table,
     required this.artifact,
+    this.source = const ChartWorkbenchSourceState(),
   });
 
   /// Mode selected by the user or host.
@@ -119,4 +168,7 @@ class ChartWorkbenchStatus {
 
   /// Independent artifact operation state.
   final ChartWorkbenchArtifactState artifact;
+
+  /// Independent generated-source operation state.
+  final ChartWorkbenchSourceState source;
 }

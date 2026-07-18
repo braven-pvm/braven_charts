@@ -429,6 +429,10 @@ void main() {
       find.descendant(of: switcher, matching: find.text('Split')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(of: switcher, matching: find.text('Source')),
+      findsOneWidget,
+    );
 
     await tester.tap(
       find.descendant(of: switcher, matching: find.text('Data')),
@@ -446,6 +450,21 @@ void main() {
 
     expect(find.byType(BravenChartPlus), findsOneWidget);
     expect(find.byType(ChartDataTable), findsOneWidget);
+
+    final sourceMode = find.descendant(
+      of: switcher,
+      matching: find.text('Source'),
+    );
+    await tester.ensureVisible(sourceMode);
+    await tester.pump();
+    await tester.tap(sourceMode);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartSourceView), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('chart-source-dark-window')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

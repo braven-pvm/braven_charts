@@ -212,9 +212,21 @@ preview/restoration fallback. See [Donut charts](donut_charts.md).
 ## Portable chart artifacts and data tables
 
 - `BravenChartWorkbench`, `ChartWorkbenchController`, and
-  `ChartWorkbenchHandle` — one mounted Chart/Data/Split product surface with
-  responsive fallback, content-aware/resizable Split panes, snapshot freshness,
-  independent operation state, and host-defined artifact actions.
+  `ChartWorkbenchHandle` — one mounted Chart/Data/Split/Source product surface
+  with responsive fallback, content-aware/resizable Split panes, snapshot
+  freshness, independent table/source/artifact operation state, and
+  host-defined actions. Source is opt-in through `availableDisplayModes`.
+- `ChartWorkbenchGroupController` and `ChartWorkbenchScope` — nestable,
+  caller-owned system or chart-family coordination for shared display mode,
+  selector visibility, and safe common-mode reconciliation across mounted
+  Workbenches.
+- `ChartDartSourceGenerator`, `ChartDartSourceOptions`, and
+  `ChartGeneratedSource` — deterministic direct Dart for an effective chart
+  document, with bounded inline data, completeness metadata, runtime-placeholder
+  warnings, and optional durable view-state restoration.
+- `ChartSourceRefreshPolicy` and `ChartWorkbenchSourceState` — manual,
+  mode-entry, or revision-aware source refresh with stale-result retention and
+  structured recovery.
 - `ChartDataTable.preferredWidthFor` — projection-aware native column width for
   host-owned Split sizing.
 - `ChartDocumentRevision` and `ChartPointRef` — opaque snapshot freshness and
@@ -262,8 +274,10 @@ preview/restoration fallback. See [Donut charts](donut_charts.md).
 
 See [Portable chart artifacts](chart_artifacts.md) for the end-to-end guide and
 copyable examples, [Chart Workbench](chart_workbench.md) for the reusable
-single-chart surface, and [Chart Document Comparison](chart_comparison.md) for
-multi-document alignment and export.
+single-chart surface, [Chart family integration](chart_family_integration.md)
+for new built-in family requirements, and
+[Chart Document Comparison](chart_comparison.md) for multi-document alignment
+and export.
 
 See [Pie charts](pie_charts.md) for the radial data contract, labels,
 interaction, table projection, artifacts, and accessibility behavior.
