@@ -4,8 +4,9 @@
 **Original PR:** #35 (merged)
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
-**Sprint 8 promotion:** PR #38 open
-**Next lane:** Stable-identity interior topology motion (Sprint 9; local review)
+**Sprint 8 promotion:** PR #38 (merged)
+**Sprint 9 lane:** Stable-identity interior topology motion (review approved)
+**Next lane:** Showcase polish and Area gradients (Sprint 10; in progress)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -173,7 +174,7 @@ The locked interaction contract and exclusions are recorded in
 
 ## Sprint 8 — Per-series motion timing
 
-**Status:** PR open
+**Status:** Complete
 
 ### Product outcome
 
@@ -262,7 +263,7 @@ The detailed proposal is recorded in
 
 ## Sprint 9 — Stable-identity interior topology motion
 
-**Status:** Local review
+**Status:** Local review approved
 
 ### Product outcome
 
@@ -331,3 +332,44 @@ The detailed contract is recorded in
 - The root release build is available on port 8097 for joint review. This lane
   remains local and stacked on Sprint 8 / PR #38; it has not been pushed or
   opened as a PR.
+
+## Sprint 10 — Showcase polish and Area gradients
+
+**Status:** In progress
+
+### Product outcome
+
+The Line and Area family pages expose a broader set of immediately useful
+compositions, while Area charts gain a first-class portable linear fill
+gradient. The page remains a chart-first guide rather than a configuration
+catalogue.
+
+### Scope
+
+- Add two concise Line presets and two concise Area presets, including mixed
+  Line/Area compositions that reuse the existing Workbench and controller.
+- Keep six choices per family in the existing segmented selector. Wide layouts
+  fit the choices in one group; compact layouts retain horizontal scrolling.
+- Add a serializable `AreaGradient` model with colors, optional stops, and
+  begin/end alignment, applied across the stable plot bounds.
+- Preserve the solid-fill default and baseline-fill precedence. Gradient
+  opacity composes with the existing `fillOpacity`.
+- Round-trip non-default gradients through chart artifacts and advertise a
+  dedicated capability.
+
+### Explicit exclusions
+
+- Radial gradients, per-point gradients, animated gradient stops, or a general
+  cross-family gradient abstraction.
+- Gradient baseline-above/below pairs or gradient interpolation during motion.
+- A new options panel, preset editor, gallery page, or chart family.
+
+### Acceptance gates
+
+- Pixel-backed render tests prove vertical and directional gradient fills,
+  opacity composition, solid fallback, and unchanged baseline behavior.
+- Artifact tests prove exact gradient round-trip and capability hydration.
+- Showcase tests prove all new presets, mixed family compositions, interactive
+  gradient toggling, and bounded wide/390 px selectors and option surfaces.
+- Complete analyzers/suites, Dartdoc, pub.dev dry run, deployment/root release
+  builds, and direct Line/Area route review pass before promotion.
