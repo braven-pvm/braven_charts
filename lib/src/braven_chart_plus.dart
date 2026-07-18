@@ -2135,7 +2135,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
-    if (_layoutKind == ChartLayoutKind.radial &&
+    if (_layoutKind == ChartLayoutKind.partitionRadial &&
         _resolvedChartData.allSeries.single is RadialCategorySeries) {
       final visibleIndices =
           (_resolvedChartData.allSeries.single as RadialCategorySeries)
@@ -2149,7 +2149,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _radialKeyboardFocusIndex = null;
       _radialFocusIndicatorVisible = false;
     }
-    if (_layoutKind == ChartLayoutKind.radial &&
+    if (_layoutKind == ChartLayoutKind.partitionRadial &&
         _resolveEffectiveAnnotations().isNotEmpty) {
       throw ArgumentError('Radial charts do not support Cartesian annotations');
     }
@@ -2340,7 +2340,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       // Generate series elements from effective series (with streaming data)
       final List<ChartElement> elements;
-      if (_layoutKind == ChartLayoutKind.radial) {
+      if (_layoutKind == ChartLayoutKind.partitionRadial) {
         if (_effectiveRenderSeries.isEmpty) {
           elements = <ChartElement>[];
         } else {
@@ -2582,7 +2582,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleRadialAnimationTick() {
-    if (!mounted || _layoutKind != ChartLayoutKind.radial) return;
+    if (!mounted || _layoutKind != ChartLayoutKind.partitionRadial) return;
     setState(() => _elementGeneratorVersion++);
   }
 
@@ -2791,7 +2791,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }) {
     _radialSeriesTransition = null;
     _radialDataAnimationController.stop();
-    if (_layoutKind != ChartLayoutKind.radial || nextSeries.length != 1) {
+    if (_layoutKind != ChartLayoutKind.partitionRadial ||
+        nextSeries.length != 1) {
       _radialDataAnimationController.value = 1;
       return;
     }
@@ -3748,7 +3749,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (_layoutKind == ChartLayoutKind.radial) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial) {
       final interaction = _effectiveRadialInteractionConfig();
       if (!interaction.enabled) return;
       final renderBox =
@@ -4281,7 +4282,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _selectedPointRefs
       ..clear()
       ..addAll(nextSelection);
-    if (_layoutKind == ChartLayoutKind.radial && nextSelection.isEmpty) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial &&
+        nextSelection.isEmpty) {
       _coordinator.setHoveredMarker(null);
     }
     _captureStateRevision++;
@@ -4387,7 +4389,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void _clearPointSelection() {
     if (_selectedPointRefs.isEmpty) return;
     _selectedPointRefs.clear();
-    if (_layoutKind == ChartLayoutKind.radial) {
+    if (_layoutKind == ChartLayoutKind.partitionRadial) {
       _coordinator.setHoveredMarker(null);
     }
     _captureStateRevision++;
@@ -5058,7 +5060,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         chartTheme: widget.theme,
       );
     } else {
-      final hasData = _layoutKind == ChartLayoutKind.radial
+      final hasData = _layoutKind == ChartLayoutKind.partitionRadial
           ? _effectiveDataSeries.whereType<RadialCategorySeries>().any(
               (series) => series.total > 0,
             )
@@ -5177,7 +5179,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BrowserContextMenu.disableContextMenu();
     }
 
-    final isRadial = _layoutKind == ChartLayoutKind.radial;
+    final isRadial = _layoutKind == ChartLayoutKind.partitionRadial;
     final effectiveInteractionConfig = isRadial
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;

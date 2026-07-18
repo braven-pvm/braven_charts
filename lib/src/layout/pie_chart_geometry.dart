@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../models/chart_data_point.dart';
 import '../models/pie_chart_config.dart';
 import '../models/radial_category_series.dart';
+import 'annular_sector_geometry.dart';
 
 const double _tau = math.pi * 2;
 const double _angleEpsilon = 1e-9;
@@ -356,7 +357,7 @@ class PieChartGeometryCalculator {
               cornerRadius: sliceCornerRadius,
               roundInnerCorners: roundsInnerCorners,
             )
-          : _sectorPath(
+          : AnnularSectorGeometry(
               center: sliceCenter,
               innerRadius: usesCircularCenter ? 0 : sliceInnerRadius,
               outerRadius: sliceOuterRadius,
@@ -364,7 +365,7 @@ class PieChartGeometryCalculator {
               sweepAngle: pathSweepAngle,
               cornerRadius: sliceCornerRadius,
               roundInnerCorners: roundsInnerCorners,
-            );
+            ).path;
       final path = usesCircularCenter
           ? _subtractCircularCenter(
               basePath,
@@ -520,200 +521,6 @@ Map<int, double> _sliceRadiusFactors(RadialCategorySeries series) {
   };
 }
 
-Path _sectorPath({
-  required Offset center,
-  required double innerRadius,
-  required double outerRadius,
-  required double startAngle,
-  required double sweepAngle,
-  double cornerRadius = 0,
-  bool roundInnerCorners = true,
-}) {
-  final outerRect = Rect.fromCircle(center: center, radius: outerRadius);
-  final path = Path();
-  if (sweepAngle.abs() >= _tau - _angleEpsilon) {
-    if (innerRadius > 0) {
-      path.fillType = PathFillType.evenOdd;
-    }
-    path.addOval(outerRect);
-    if (innerRadius > 0) {
-      path.addOval(Rect.fromCircle(center: center, radius: innerRadius));
-    }
-    return path;
-  }
-
-  if (cornerRadius > 0 && innerRadius == 0) {
-    return _roundedPieSectorPath(
-      center: center,
-      outerRadius: outerRadius,
-      startAngle: startAngle,
-      sweepAngle: sweepAngle,
-      cornerRadius: cornerRadius,
-      roundInnerCorners: roundInnerCorners,
-    );
-  }
-  if (cornerRadius > 0 && innerRadius > 0) {
-    return _roundedAnnularSectorPath(
-      center: center,
-      innerRadius: innerRadius,
-      outerRadius: outerRadius,
-      startAngle: startAngle,
-      sweepAngle: sweepAngle,
-      cornerRadius: cornerRadius,
-      roundInnerCorners: roundInnerCorners,
-    );
-  }
-
-  final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
-  path.moveTo(outerStart.dx, outerStart.dy);
-  path.arcTo(outerRect, startAngle, sweepAngle, false);
-
-  if (innerRadius == 0) {
-    path.lineTo(center.dx, center.dy);
-  } else {
-    final innerEnd =
-        center + Offset.fromDirection(startAngle + sweepAngle, innerRadius);
-    path.lineTo(innerEnd.dx, innerEnd.dy);
-    path.arcTo(
-      Rect.fromCircle(center: center, radius: innerRadius),
-      startAngle + sweepAngle,
-      -sweepAngle,
-      false,
-    );
-  }
-  path.close();
-  return path;
-}
-
-Path _roundedAnnularSectorPath({
-  required Offset center,
-  required double innerRadius,
-  required double outerRadius,
-  required double startAngle,
-  required double sweepAngle,
-  required double cornerRadius,
-  required bool roundInnerCorners,
-}) {
-  final sweepMagnitude = sweepAngle.abs();
-  final thickness = outerRadius - innerRadius;
-  if (thickness <= _angleEpsilon || sweepMagnitude <= _angleEpsilon) {
-    return _sectorPath(
-      center: center,
-      innerRadius: innerRadius,
-      outerRadius: outerRadius,
-      startAngle: startAngle,
-      sweepAngle: sweepAngle,
-    );
-  }
-
-  final maximumByOuterSweep =
-      outerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45;
-  final maximumByInnerSweep = roundInnerCorners
-      ? innerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45
-      : double.infinity;
-  final radius = math.min(
-    cornerRadius,
-    math.min(
-      thickness * 0.45,
-      math.min(maximumByOuterSweep, maximumByInnerSweep),
-    ),
-  );
-  if (radius <= _angleEpsilon) {
-    return _sectorPath(
-      center: center,
-      innerRadius: innerRadius,
-      outerRadius: outerRadius,
-      startAngle: startAngle,
-      sweepAngle: sweepAngle,
-    );
-  }
-
-  final direction = sweepAngle.sign;
-  final endAngle = startAngle + sweepAngle;
-  final outerTrim = math.min(radius / outerRadius, sweepMagnitude * 0.2);
-  final innerTrim = roundInnerCorners
-      ? math.min(radius / innerRadius, sweepMagnitude * 0.2)
-      : 0.0;
-  final outerArcStartAngle = startAngle + direction * outerTrim;
-  final outerArcSweep = sweepAngle - direction * outerTrim * 2;
-  final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
-  final outerEnd = center + Offset.fromDirection(endAngle, outerRadius);
-  final outerStartEdge =
-      center + Offset.fromDirection(startAngle, outerRadius - radius);
-  final outerEndEdge =
-      center + Offset.fromDirection(endAngle, outerRadius - radius);
-  final outerArcStart =
-      center + Offset.fromDirection(outerArcStartAngle, outerRadius);
-
-  final path = Path()
-    ..moveTo(outerStartEdge.dx, outerStartEdge.dy)
-    ..quadraticBezierTo(
-      outerStart.dx,
-      outerStart.dy,
-      outerArcStart.dx,
-      outerArcStart.dy,
-    )
-    ..arcTo(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      outerArcStartAngle,
-      outerArcSweep,
-      false,
-    )
-    ..quadraticBezierTo(
-      outerEnd.dx,
-      outerEnd.dy,
-      outerEndEdge.dx,
-      outerEndEdge.dy,
-    );
-
-  if (!roundInnerCorners) {
-    final innerEnd = center + Offset.fromDirection(endAngle, innerRadius);
-    path
-      ..lineTo(innerEnd.dx, innerEnd.dy)
-      ..arcTo(
-        Rect.fromCircle(center: center, radius: innerRadius),
-        endAngle,
-        -sweepAngle,
-        false,
-      )
-      ..close();
-    return path;
-  }
-
-  final innerEndOuter =
-      center + Offset.fromDirection(endAngle, innerRadius + radius);
-  final innerEnd = center + Offset.fromDirection(endAngle, innerRadius);
-  final innerArcEndAngle = endAngle - direction * innerTrim;
-  final innerArcEnd =
-      center + Offset.fromDirection(innerArcEndAngle, innerRadius);
-  final innerArcSweep = -sweepAngle + direction * innerTrim * 2;
-  final innerStart = center + Offset.fromDirection(startAngle, innerRadius);
-  final innerStartOuter =
-      center + Offset.fromDirection(startAngle, innerRadius + radius);
-  path
-    ..lineTo(innerEndOuter.dx, innerEndOuter.dy)
-    ..quadraticBezierTo(
-      innerEnd.dx,
-      innerEnd.dy,
-      innerArcEnd.dx,
-      innerArcEnd.dy,
-    )
-    ..arcTo(
-      Rect.fromCircle(center: center, radius: innerRadius),
-      innerArcEndAngle,
-      innerArcSweep,
-      false,
-    )
-    ..quadraticBezierTo(
-      innerStart.dx,
-      innerStart.dy,
-      innerStartOuter.dx,
-      innerStartOuter.dy,
-    )
-    ..close();
-  return path;
-}
-
 Path _paddedPieSectorPath({
   required Offset apex,
   required Offset outerArcCenter,
@@ -827,76 +634,6 @@ Offset _rayCircleIntersection({
   );
   final distance = -projection + math.sqrt(discriminant);
   return origin + direction * distance;
-}
-
-Path _roundedPieSectorPath({
-  required Offset center,
-  required double outerRadius,
-  required double startAngle,
-  required double sweepAngle,
-  required double cornerRadius,
-  required bool roundInnerCorners,
-}) {
-  final sweepMagnitude = sweepAngle.abs();
-  final direction = sweepAngle.sign;
-  final maximumBySweep =
-      outerRadius * math.sin(sweepMagnitude / 2).abs() * 0.45;
-  final radius = math.min(
-    cornerRadius,
-    math.min(outerRadius * 0.24, maximumBySweep),
-  );
-  if (radius <= _angleEpsilon || outerRadius <= _angleEpsilon) {
-    return _sectorPath(
-      center: center,
-      innerRadius: 0,
-      outerRadius: outerRadius,
-      startAngle: startAngle,
-      sweepAngle: sweepAngle,
-    );
-  }
-
-  final endAngle = startAngle + sweepAngle;
-  final angleTrim = math.min(radius / outerRadius, sweepMagnitude * 0.2);
-  final arcStartAngle = startAngle + direction * angleTrim;
-  final arcSweep = sweepAngle - direction * angleTrim * 2;
-  final outerStart = center + Offset.fromDirection(startAngle, outerRadius);
-  final outerEnd = center + Offset.fromDirection(endAngle, outerRadius);
-  final startEdge =
-      center + Offset.fromDirection(startAngle, outerRadius - radius);
-  final endEdge = center + Offset.fromDirection(endAngle, outerRadius - radius);
-  final arcStart = center + Offset.fromDirection(arcStartAngle, outerRadius);
-  final centerTrim = roundInnerCorners && sweepMagnitude < math.pi
-      ? math.min(
-          radius / math.max(0.2, math.tan(sweepMagnitude / 2)),
-          outerRadius * 0.32,
-        )
-      : 0.0;
-  final centerStart = center + Offset.fromDirection(startAngle, centerTrim);
-  final centerEnd = center + Offset.fromDirection(endAngle, centerTrim);
-
-  final path = Path()
-    ..moveTo(centerStart.dx, centerStart.dy)
-    ..lineTo(startEdge.dx, startEdge.dy)
-    ..quadraticBezierTo(outerStart.dx, outerStart.dy, arcStart.dx, arcStart.dy)
-    ..arcTo(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      arcStartAngle,
-      arcSweep,
-      false,
-    )
-    ..quadraticBezierTo(outerEnd.dx, outerEnd.dy, endEdge.dx, endEdge.dy)
-    ..lineTo(centerEnd.dx, centerEnd.dy);
-  if (centerTrim > 0) {
-    path.quadraticBezierTo(
-      center.dx,
-      center.dy,
-      centerStart.dx,
-      centerStart.dy,
-    );
-  } else {
-    path.lineTo(center.dx, center.dy);
-  }
-  return path..close();
 }
 
 double _degreesToRadians(double degrees) => degrees * math.pi / 180;

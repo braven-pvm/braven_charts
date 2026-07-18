@@ -3,8 +3,19 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/radial_category_series.dart';
 
-/// Internal chart-coordinate family selected for a series composition.
-enum ChartLayoutKind { cartesian, radial }
+/// Internal coordinate/composition family selected for a chart.
+///
+/// Only [cartesian] and [partitionRadial] have public series implementations
+/// today. The remaining values reserve distinct runtime branches for approved
+/// chart families; they are not enabled by [ChartLayoutResolver] until their
+/// validated public models exist.
+enum ChartLayoutKind {
+  cartesian,
+  partitionRadial,
+  polarAxis,
+  hierarchicalRadial,
+  gauge,
+}
 
 /// Resolves and validates the coordinate family for a chart composition.
 class ChartLayoutResolver {
@@ -49,6 +60,6 @@ class ChartLayoutResolver {
     }
     return radialSeries.isEmpty
         ? ChartLayoutKind.cartesian
-        : ChartLayoutKind.radial;
+        : ChartLayoutKind.partitionRadial;
   }
 }
