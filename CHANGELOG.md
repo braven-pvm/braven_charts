@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Collision-aware Bar labels with reposition/hide policies, plot-edge
   containment, optional backgrounds and callouts, range endpoints, normalized
   percentages, waterfall values, and exposed positive/negative stack totals.
+- `BravenChartPlus.transitionKey` for switching one mounted chart between
+  semantically different configurations without interpolating incompatible
+  geometry. A changed key clears prior Line, Area, Bar, Pie, and Donut motion
+  history, replays only the destination entrance, and preserves Workbench and
+  controller state.
 - Runtime Donut center builders and actions through
   `BravenChartPlus.donutCenterBuilder`, `onDonutCenterTap`, and
   `DonutCenterData`, with package-owned circular hit testing and semantics,
@@ -88,6 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bar charts now inherit right-to-left canvas text direction and semantics,
   retain canonical interaction geometry across lollipop/bullet/pattern marks,
   and use keyed transitions for durable selection and focus across updates.
+- Dense Bar charts now materialize only viewport-intersecting categories with
+  visual overscan while retaining original point identity. Plot-cell hit-test
+  indexing and a separate spatial index for collision-aware labels avoid
+  full-series and previously accepted-label scans; maintained stress coverage
+  spans 100,000 source points, 5,000 labels, and the public 12–10,000-category
+  Bar Lab preset.
 - Pie and Donut share the annular-sector layout foundation, formatter contract,
   grouped-radius semantics, and data-transition policy while preserving their
   distinct full-disc and center-opening constraints.

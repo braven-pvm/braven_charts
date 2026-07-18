@@ -44,7 +44,9 @@ streaming path so each sample does not require a widget-tree rebuild.
 - **Expanded Bar API:** first-class categorical axes, diverging/Likert stacks,
   lollipop and bullet marks, Pareto and histogram data helpers, accessible
   pattern fills, sequenced keyed motion, collision-aware labels, stack totals,
-  and complete artifact and tool-schema support.
+  viewport-virtualized dense geometry, indexed hit testing and label collision,
+  semantic preset transitions through `BravenChartPlus.transitionKey`, and
+  complete artifact and tool-schema support.
 
 [Open the Source workbench](https://braven-pvm.github.io/braven_charts/?page=chart-workbench&view=source)
 or review the [0.7.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#070---2026-07-18)
