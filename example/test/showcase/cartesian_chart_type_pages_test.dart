@@ -132,51 +132,132 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('line guide covers workhorse, interpolation, axes, and motion', (
+  testWidgets(
+    'line guide covers workhorse, interpolation, axes, motion, and compositions',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+
+      expect(find.text('Line Charts'), findsOneWidget);
+      expect(find.text('Workhorse'), findsWidgets);
+      expect(find.text('Interpolation'), findsWidgets);
+      expect(find.text('Multi-axis'), findsWidgets);
+      expect(find.text('Motion'), findsWidgets);
+      expect(find.text('Comparison'), findsWidgets);
+      expect(find.text('Envelope'), findsWidgets);
+      expect(find.byType(BravenChartWorkbench), findsOneWidget);
+      expect(find.byType(BravenChartPlus), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('line-preset-picker')),
+          matching: find.text('Multi-axis'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      expect(chart.series, hasLength(3));
+      expect(chart.normalizationMode, NormalizationMode.perSeries);
+    },
+  );
+
+  testWidgets(
+    'area guide exposes baseline, forecast, and gradient compositions',
+    (tester) async {
+      await pumpPage(tester, const AreaChartsPage());
+
+      expect(find.text('Area Charts'), findsOneWidget);
+      expect(find.text('Layered'), findsWidgets);
+      expect(find.text('Baseline'), findsWidgets);
+      expect(find.text('Forecast'), findsWidgets);
+      expect(find.text('Motion'), findsWidgets);
+      expect(find.text('Gradient'), findsWidgets);
+      expect(find.text('Composition'), findsWidgets);
+      expect(find.byType(BravenChartWorkbench), findsOneWidget);
+
+      await tester.tap(find.text('Baseline'));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final series = chart.series.first as AreaChartSeries;
+      expect(series.aboveBaselineFillColor, isNotNull);
+      expect(series.belowBaselineFillColor, isNotNull);
+    },
+  );
+
+  testWidgets('line presets add comparison and mixed envelope examples', (
     tester,
   ) async {
     await pumpPage(tester, const LineChartsPage());
+    final picker = find.byKey(const ValueKey('line-preset-picker'));
 
-    expect(find.text('Line Charts'), findsOneWidget);
-    expect(find.text('Workhorse'), findsWidgets);
-    expect(find.text('Interpolation'), findsWidgets);
-    expect(find.text('Multi-axis'), findsWidgets);
-    expect(find.text('Motion'), findsWidgets);
-    expect(find.byType(BravenChartWorkbench), findsOneWidget);
-    expect(find.byType(BravenChartPlus), findsOneWidget);
-
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey('line-preset-picker')),
-        matching: find.text('Multi-axis'),
-      ),
+    final comparison = find.descendant(
+      of: picker,
+      matching: find.text('Comparison'),
     );
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.ensureVisible(comparison);
+    await tester.pumpAndSettle();
+    await tester.tap(comparison);
+    await tester.pumpAndSettle();
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series.whereType<LineChartSeries>(), hasLength(3));
+    expect(chart.series.map((series) => series.name), [
+      'Current',
+      'Previous',
+      'Target',
+    ]);
 
-    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
-    expect(chart.series, hasLength(3));
-    expect(chart.normalizationMode, NormalizationMode.perSeries);
+    final envelope = find.descendant(
+      of: picker,
+      matching: find.text('Envelope'),
+    );
+    await tester.ensureVisible(envelope);
+    await tester.pumpAndSettle();
+    await tester.tap(envelope);
+    await tester.pumpAndSettle();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series, hasLength(2));
+    expect(chart.series.first, isA<AreaChartSeries>());
+    expect((chart.series.first as AreaChartSeries).fillGradient, isNotNull);
+    expect(chart.series.last, isA<LineChartSeries>());
   });
 
-  testWidgets('area guide exposes baseline and forecast compositions', (
+  testWidgets('area presets add gradient and mixed composition examples', (
     tester,
   ) async {
     await pumpPage(tester, const AreaChartsPage());
+    final picker = find.byKey(const ValueKey('area-preset-picker'));
 
-    expect(find.text('Area Charts'), findsOneWidget);
-    expect(find.text('Layered'), findsWidgets);
-    expect(find.text('Baseline'), findsWidgets);
-    expect(find.text('Forecast'), findsWidgets);
-    expect(find.text('Motion'), findsWidgets);
-    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    await tester.tap(
+      find.descendant(of: picker, matching: find.text('Gradient')),
+    );
+    await tester.pumpAndSettle();
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series, hasLength(1));
+    expect((chart.series.single as AreaChartSeries).fillGradient, isNotNull);
 
-    await tester.tap(find.text('Baseline'));
-    await tester.pump(const Duration(milliseconds: 200));
+    final gradientToggle = find.byKey(const ValueKey('area-gradient-fill'));
+    expect(gradientToggle, findsOneWidget);
+    await tester.tap(gradientToggle);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect((chart.series.single as AreaChartSeries).fillGradient, isNull);
 
-    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
-    final series = chart.series.first as AreaChartSeries;
-    expect(series.aboveBaselineFillColor, isNotNull);
-    expect(series.belowBaselineFillColor, isNotNull);
+    final composition = find.descendant(
+      of: picker,
+      matching: find.text('Composition'),
+    );
+    await tester.ensureVisible(composition);
+    await tester.pumpAndSettle();
+    await tester.tap(composition);
+    await tester.pumpAndSettle();
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series.whereType<AreaChartSeries>(), hasLength(2));
+    expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
   });
 
   testWidgets('scatter guide demonstrates a trend annotation', (tester) async {
@@ -556,6 +637,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(BravenChartPlus), findsOneWidget);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
+      final finalPreset = find.descendant(
+        of: find.byKey(
+          ValueKey(
+            page is LineChartsPage
+                ? 'line-preset-picker'
+                : 'area-preset-picker',
+          ),
+        ),
+        matching: find.text(
+          page is LineChartsPage ? 'Envelope' : 'Composition',
+        ),
+      );
+      await tester.ensureVisible(finalPreset);
+      await tester.pumpAndSettle();
+      await tester.tap(finalPreset);
+      await tester.pumpAndSettle();
+      expect(find.byType(BravenChartPlus), findsOneWidget);
       final viewportWidth = tester.view.physicalSize.width;
       for (final surface in [
         find.text('Reset example'),

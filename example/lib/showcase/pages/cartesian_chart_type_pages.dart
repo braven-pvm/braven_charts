@@ -61,6 +61,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
+  bool _useAreaGradient = true;
   bool _animatePaths = true;
   double _motionDurationMs = 650;
   late double _motionSeriesDelayMs;
@@ -174,6 +175,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.animation,
         description: 'Reveal paths, then interpolate real value updates.',
       ),
+      _ChartTypePreset(
+        label: 'Comparison',
+        icon: Icons.multiline_chart,
+        description: 'Current, previous, and target trends share one scale.',
+      ),
+      _ChartTypePreset(
+        label: 'Envelope',
+        icon: Icons.area_chart_outlined,
+        description: 'A gradient capacity envelope supports the observed line.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -195,6 +206,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         label: 'Motion',
         icon: Icons.animation,
         description: 'Fill and stroke reveal and update as one geometry.',
+      ),
+      _ChartTypePreset(
+        label: 'Gradient',
+        icon: Icons.gradient,
+        description: 'A plot-bound gradient adds depth without obscuring data.',
+      ),
+      _ChartTypePreset(
+        label: 'Composition',
+        icon: Icons.stacked_line_chart,
+        description: 'Two area layers combine with a crisp reference line.',
       ),
     ],
     _CartesianFamily.scatter => const [
@@ -357,7 +378,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _CartesianFamily.line =>
       '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
     _CartesianFamily.area =>
-      '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill · ${_interpolation.name}',
+      '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
     _CartesianFamily.scatter =>
       '${_buildSeries().length} cohorts · ${_markerRadius.toStringAsFixed(0)}px markers · tracking enabled',
   };
@@ -439,12 +460,20 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           value: _showPointLabels,
           onChanged: (value) => setState(() => _showPointLabels = value),
         ),
-      if (widget.family == _CartesianFamily.area)
+      if (widget.family == _CartesianFamily.area && _presetIndex == 1)
         BoolOption(
           label: 'Use baseline fills',
           value: _showBaselineFill,
           onChanged: (value) => setState(() => _showBaselineFill = value),
           subtitle: 'Apply positive and negative fills in the baseline preset',
+        ),
+      if (widget.family == _CartesianFamily.area && _presetIndex >= 4)
+        BoolOption(
+          key: const ValueKey('area-gradient-fill'),
+          label: 'Gradient fill',
+          value: _useAreaGradient,
+          onChanged: (value) => setState(() => _useAreaGradient = value),
+          subtitle: 'Blend configured colors across the plot',
         ),
     ];
 
@@ -683,6 +712,54 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           ),
       ];
     }
+    if (_presetIndex == 4) {
+      return [
+        _line(
+          id: 'comparison-current',
+          name: 'Current',
+          unit: 'W',
+          points: _primaryPoints,
+          color: const Color(0xFF2563EB),
+        ),
+        if (_showSecondSeries)
+          _line(
+            id: 'comparison-previous',
+            name: 'Previous',
+            unit: 'W',
+            points: _offsetPoints(_primaryPoints, -6),
+            color: const Color(0xFF8B5CF6),
+          ),
+        if (_showSecondSeries)
+          _line(
+            id: 'comparison-target',
+            name: 'Target',
+            unit: 'W',
+            points: _secondaryPoints,
+            color: const Color(0xFFF97316),
+          ),
+      ];
+    }
+    if (_presetIndex == 5) {
+      return [
+        _area(
+          id: 'capacity-envelope',
+          name: 'Capacity envelope',
+          points: _offsetPoints(_secondaryPoints, 10),
+          color: const Color(0xFF818CF8),
+          fillOpacity: 0.32,
+          fillGradient: const AreaGradient(
+            colors: [Color(0xFF6366F1), Color(0x196366F1)],
+          ),
+        ),
+        _line(
+          id: 'envelope-observed',
+          name: 'Observed',
+          unit: 'W',
+          points: _primaryPoints,
+          color: const Color(0xFF0F9F8F),
+        ),
+      ];
+    }
     return [
       _line(
         id: 'observed',
@@ -797,6 +874,59 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ];
     }
+    if (_presetIndex == 4) {
+      return [
+        _area(
+          id: 'gradient-throughput',
+          name: 'Throughput',
+          points: _primaryPoints,
+          color: const Color(0xFF4F46E5),
+          fillOpacity: _fillOpacity,
+          fillGradient: _useAreaGradient
+              ? const AreaGradient(
+                  colors: [Color(0xFF4F46E5), Color(0x1A06B6D4)],
+                  stops: [0, 1],
+                )
+              : null,
+        ),
+      ];
+    }
+    if (_presetIndex == 5) {
+      return [
+        _area(
+          id: 'composition-total',
+          name: 'Total demand',
+          points: _offsetPoints(_secondaryPoints, 18),
+          color: const Color(0xFF6366F1),
+          fillOpacity: (_fillOpacity * 0.72).clamp(0.08, 0.48),
+          fillGradient: _useAreaGradient
+              ? const AreaGradient(
+                  colors: [Color(0xFF6366F1), Color(0x146366F1)],
+                )
+              : null,
+        ),
+        if (_showSecondSeries)
+          _area(
+            id: 'composition-active',
+            name: 'Active demand',
+            points: _primaryPoints,
+            color: const Color(0xFF06B6D4),
+            fillOpacity: _fillOpacity,
+            fillGradient: _useAreaGradient
+                ? const AreaGradient(
+                    colors: [Color(0xFF06B6D4), Color(0x1406B6D4)],
+                  )
+                : null,
+          ),
+        _line(
+          id: 'composition-plan',
+          name: 'Plan',
+          unit: 'k',
+          points: _secondaryPoints,
+          color: const Color(0xFFF97316),
+        ),
+      ];
+    }
     return [
       _area(
         id: 'sessions',
@@ -820,6 +950,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     required List<ChartDataPoint> points,
     required Color color,
     double? fillOpacity,
+    AreaGradient? fillGradient,
     int motionSequence = 0,
   }) {
     return AreaChartSeries(
@@ -830,6 +961,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       interpolation: _interpolation,
       strokeWidth: _strokeWidth,
       fillOpacity: fillOpacity ?? _fillOpacity,
+      fillGradient: fillGradient,
       lineGlow: _lineGlow,
       showDataPointMarkers: _optionsController.showDataMarkers,
       dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
@@ -951,6 +1083,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
+      _useAreaGradient = true;
       _animatePaths = true;
       _motionDurationMs = 650;
       _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
@@ -1137,6 +1270,7 @@ class _FeatureCoverage extends StatelessWidget {
       _CartesianFamily.area => const [
         'Layering',
         'Fill opacity',
+        'Gradient fill',
         'Positive/negative baseline',
         'Interpolation',
         'Markers',

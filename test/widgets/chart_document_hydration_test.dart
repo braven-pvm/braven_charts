@@ -562,6 +562,26 @@ void main() {
     );
   });
 
+  test('hydrates the built-in Area gradient capability', () {
+    const source = AreaChartSeries(
+      id: 'gradient-area',
+      points: [ChartDataPoint(x: 1, y: 10)],
+      fillGradient: AreaGradient(
+        colors: [Color(0xFF4F46E5), Color(0x1A06B6D4)],
+        stops: [0, 1],
+      ),
+    );
+    final document = _portableDocument(sourceSeries: source);
+
+    expect(
+      document.series.single.requiredCapabilities,
+      contains('series.area.gradient.v1'),
+    );
+    final hydrated = _success(ChartDocumentHydrator.hydrateDocument(document));
+    final series = hydrated.value.series.single as AreaChartSeries;
+    expect(series.fillGradient, source.fillGradient);
+  });
+
   test('hydrates a registered custom series extension codec', () {
     final source = _portableDocument();
     final customSeries = ChartSeriesDocument(

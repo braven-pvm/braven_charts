@@ -5,7 +5,14 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/painting.dart'
-    show FontWeight, TextAlign, TextDirection, TextPainter, TextSpan, TextStyle;
+    show
+        FontWeight,
+        LinearGradient,
+        TextAlign,
+        TextDirection,
+        TextPainter,
+        TextSpan,
+        TextStyle;
 
 import '../coordinates/chart_transform.dart';
 import '../interaction/core/chart_element.dart';
@@ -1441,9 +1448,7 @@ class SeriesElement implements DataHitElement {
     path.close();
 
     // Fill area
-    final fillPaint = Paint()
-      ..color = baseColor.withValues(alpha: series.fillOpacity)
-      ..style = PaintingStyle.fill;
+    final fillPaint = _areaFillPaint(series, baseColor);
     canvas.drawPath(path, fillPaint);
 
     // Draw stroke line on top
@@ -1503,9 +1508,7 @@ class SeriesElement implements DataHitElement {
       );
 
       // Draw fill with region color
-      final fillPaint = Paint()
-        ..color = region.color.withValues(alpha: series.fillOpacity)
-        ..style = PaintingStyle.fill;
+      final fillPaint = _areaFillPaint(series, region.color);
       canvas.drawPath(fillPath, fillPaint);
 
       // Build stroke path for this region
@@ -1536,6 +1539,33 @@ class SeriesElement implements DataHitElement {
       }
       canvas.drawPath(strokePath, strokePaint);
     }
+  }
+
+  Paint _areaFillPaint(AreaChartSeries series, Color fallbackColor) {
+    final gradient = series.fillGradient;
+    if (gradient == null) {
+      return Paint()
+        ..color = fallbackColor.withValues(alpha: series.fillOpacity)
+        ..style = PaintingStyle.fill;
+    }
+
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    return Paint()
+      ..shader = LinearGradient(
+        colors: [
+          for (final color in gradient.colors)
+            color.withValues(alpha: color.a * series.fillOpacity),
+        ],
+        stops: gradient.stops,
+        begin: gradient.begin,
+        end: gradient.end,
+      ).createShader(plotBounds)
+      ..style = PaintingStyle.fill;
   }
 
   /// Paints an area series filled relative to a fixed [AreaChartSeries.baselineValue].

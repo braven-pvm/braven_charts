@@ -335,7 +335,7 @@ The detailed contract is recorded in
 
 ## Sprint 10 — Showcase polish and Area gradients
 
-**Status:** In progress
+**Status:** Local review ready
 
 ### Product outcome
 
@@ -373,3 +373,28 @@ catalogue.
   gradient toggling, and bounded wide/390 px selectors and option surfaces.
 - Complete analyzers/suites, Dartdoc, pub.dev dry run, deployment/root release
   builds, and direct Line/Area route review pass before promotion.
+
+### Delivered local slice
+
+- Added `Comparison` and mixed `Envelope` Line presets plus `Gradient` and
+  mixed `Composition` Area presets. The existing segmented selector remains a
+  single group on wide layouts and horizontally scrollable at 390 px.
+- Added public `AreaGradient` colors, stops, and begin/end alignment with a
+  stable plot-bound shader, `fillOpacity` composition, solid fallback, and
+  baseline-fill precedence.
+- Added `series.area.gradient.v1` artifact encoding, decoding, capability
+  advertisement, and built-in hydration support.
+- Pixel-backed renderer tests cover solid fallback, vertical/directional
+  blends, alpha composition, and baseline precedence. Artifact, hydration,
+  wide, compact, mixed-series, controller, and toggle coverage is green.
+- `flutter analyze lib` and the showcase analyzer are clean. Complete package
+  and 137-test showcase suites pass, as does the release web build. Direct
+  Envelope, Gradient, and Composition routes return HTTP 200 and were reviewed
+  at 1600 px and 390 px.
+- The clean-tree pub.dev dry run passes with zero warnings. Dartdoc 9.0.4
+  currently crashes inside
+  `DocumentationComment._stripDocImports` with an internal range error before
+  emitting diagnostics; this publication gate remains recorded for the final
+  promotion pass.
+- The current release build is served on port 8097 from the dedicated Sprint
+  10 worktree. This slice remains local and has no PR.

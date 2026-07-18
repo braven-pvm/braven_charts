@@ -467,6 +467,58 @@ class ScatterChartSeries extends ChartSeries {
       'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius)';
 }
 
+/// A linear gradient used to paint the interior of an [AreaChartSeries].
+///
+/// The gradient is resolved against the chart's plot bounds, so its colors stay
+/// visually stable while series geometry animates or changes. Each color's
+/// alpha is multiplied by [AreaChartSeries.fillOpacity].
+class AreaGradient {
+  const AreaGradient({
+    required this.colors,
+    this.stops,
+    this.begin = Alignment.topCenter,
+    this.end = Alignment.bottomCenter,
+  });
+
+  /// The colors blended across the area fill. Provide at least two colors.
+  final List<Color> colors;
+
+  /// Optional ordered positions from 0 to 1 corresponding to [colors].
+  final List<double>? stops;
+
+  /// Alignment where the gradient begins within the plot bounds.
+  final Alignment begin;
+
+  /// Alignment where the gradient ends within the plot bounds.
+  final Alignment end;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AreaGradient &&
+          _listEquals(other.colors, colors) &&
+          _listEquals(other.stops, stops) &&
+          other.begin == begin &&
+          other.end == end;
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(colors),
+    stops == null ? null : Object.hashAll(stops!),
+    begin,
+    end,
+  );
+
+  static bool _listEquals<T>(List<T>? a, List<T>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null || a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
+}
+
 /// Area chart series with fill and interpolation.
 class AreaChartSeries extends ChartSeries {
   const AreaChartSeries({
@@ -485,6 +537,7 @@ class AreaChartSeries extends ChartSeries {
     this.strokeWidth = 2.0,
     this.tension = 0.25,
     this.fillOpacity = 0.3,
+    this.fillGradient,
     this.showDataPointMarkers = false,
     this.dataPointMarkerRadius = 3.0,
     this.dataPointMarkerStyle = DataPointMarkerStyle.filled,
@@ -502,6 +555,12 @@ class AreaChartSeries extends ChartSeries {
   final double strokeWidth;
   final double tension;
   final double fillOpacity;
+
+  /// Optional plot-bound gradient for the area interior.
+  ///
+  /// When [baselineValue] is configured, the positive and negative baseline
+  /// fill colors take precedence and this gradient is ignored.
+  final AreaGradient? fillGradient;
   final bool showDataPointMarkers;
   final double dataPointMarkerRadius;
   final DataPointMarkerStyle dataPointMarkerStyle;
@@ -534,6 +593,8 @@ class AreaChartSeries extends ChartSeries {
     double? strokeWidth,
     double? tension,
     double? fillOpacity,
+    AreaGradient? fillGradient,
+    bool clearFillGradient = false,
     bool? showDataPointMarkers,
     double? dataPointMarkerRadius,
     DataPointMarkerStyle? dataPointMarkerStyle,
@@ -564,6 +625,9 @@ class AreaChartSeries extends ChartSeries {
       strokeWidth: strokeWidth ?? this.strokeWidth,
       tension: tension ?? this.tension,
       fillOpacity: fillOpacity ?? this.fillOpacity,
+      fillGradient: clearFillGradient
+          ? null
+          : fillGradient ?? this.fillGradient,
       showDataPointMarkers: showDataPointMarkers ?? this.showDataPointMarkers,
       dataPointMarkerRadius:
           dataPointMarkerRadius ?? this.dataPointMarkerRadius,
@@ -584,7 +648,7 @@ class AreaChartSeries extends ChartSeries {
 
   @override
   String toString() =>
-      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, baselineValue: $baselineValue, aboveBaselineFillColor: $aboveBaselineFillColor, belowBaselineFillColor: $belowBaselineFillColor)';
+      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, fillGradient: $fillGradient, baselineValue: $baselineValue, aboveBaselineFillColor: $aboveBaselineFillColor, belowBaselineFillColor: $belowBaselineFillColor)';
 
   @override
   bool operator ==(Object other) {
@@ -595,6 +659,7 @@ class AreaChartSeries extends ChartSeries {
         other.strokeWidth == strokeWidth &&
         other.tension == tension &&
         other.fillOpacity == fillOpacity &&
+        other.fillGradient == fillGradient &&
         other.showDataPointMarkers == showDataPointMarkers &&
         other.dataPointMarkerRadius == dataPointMarkerRadius &&
         other.dataPointMarkerStyle == dataPointMarkerStyle &&
@@ -615,6 +680,7 @@ class AreaChartSeries extends ChartSeries {
     strokeWidth,
     tension,
     fillOpacity,
+    fillGradient,
     showDataPointMarkers,
     dataPointMarkerRadius,
     dataPointMarkerStyle,
