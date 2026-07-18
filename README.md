@@ -21,6 +21,33 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
+## What's new in 0.7.0
+
+- **Generated Dart source:** opt a `BravenChartWorkbench` into
+  `ChartDisplayMode.source` to inspect and copy deterministic
+  `BravenChartPlus` code for the chart's effective configuration. The generator
+  covers every built-in chart family, axes, annotations, themes, interactions,
+  legends, and optional durable view state; bounded data and runtime callbacks
+  produce explicit diagnostics instead of disappearing from the output.
+- **Coordinated chart surfaces:** `ChartWorkbenchGroupController` and the
+  nestable `ChartWorkbenchScope` can synchronize Chart, Data, Split, or Source
+  presentation—and selector visibility—across an application or one chart
+  family while leaving each chart's split size, selection, and interaction
+  state independent.
+- **More explicit motion:** Line and Area series now expose opt-in entrance and
+  compatible update modes with per-series delay and duration through
+  `PathAnimationStyle` and `PathAnimationTiming`. Pie and Donut gain keyed data
+  transitions, shared formatter properties, grouped-radius aggregation, and
+  runtime Donut center builders and actions.
+- **Expanded Bar API:** first-class categorical axes, diverging/Likert stacks,
+  lollipop and bullet marks, Pareto and histogram data helpers, accessible
+  pattern fills, sequenced keyed motion, collision-aware labels, stack totals,
+  and complete artifact and tool-schema support.
+
+[Open the Source workbench](https://braven-pvm.github.io/braven_charts/?page=chart-workbench&view=source)
+or review the [0.7.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#070---2026-07-18)
+for the complete API-level release notes.
+
 ## Rendered examples
 
 Every image below opens the matching interactive example and configuration
@@ -103,8 +130,9 @@ workflows, styling treatments, business charts, and radial presentations.
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
-| Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split workbenches, loading skeletons, progress indicators, and empty states |
-| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
+| Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split/Source workbenches, loading skeletons, progress indicators, and empty states |
+| Developer tooling | Deterministic Dart generation from effective chart documents, selectable dark source viewport, bounded-data and runtime-callback diagnostics, exact copy, and configurable refresh policies |
+| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, synchronized Workbench presentation, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X or category/share data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 | Document comparison | Explicit semantic series mapping, exact-X or timestamp alignment, safe units, missing values, deltas, and source-preserving CSV export |
 
@@ -132,7 +160,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.6.0
+  braven_charts: ^0.7.0
 ```
 
 Then fetch dependencies:
@@ -141,7 +169,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.6.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.7.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

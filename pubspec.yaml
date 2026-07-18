@@ -1,8 +1,8 @@
 name: braven_charts
 description: >-
   Pure Dart Flutter line, area, bar, scatter, Pie, and Donut charts with custom
-  rendering, multi-axis interaction, streaming, annotations, tables, and artifacts.
-version: 0.6.0
+  rendering, multi-axis interaction, live data, annotations, tables, and generated Dart source.
+version: 0.7.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
