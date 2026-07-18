@@ -113,7 +113,7 @@ class TooltipRenderer {
     final baseTooltipText = dataHit.category == null || dataHit.share == null
         ? '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY'
         : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
-              'Share: ${(dataHit.share! * 100).toStringAsFixed(1)}%'
+              'Share: ${dataHit.formattedShare ?? '${(dataHit.share! * 100).toStringAsFixed(1)}%'}'
               '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
     final barSeries = dataElement.series is BarChartSeries
         ? dataElement.series as BarChartSeries

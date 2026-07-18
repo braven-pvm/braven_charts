@@ -5,6 +5,24 @@ import 'chart_series.dart';
 import 'pie_chart_config.dart';
 import 'segment_style.dart';
 
+/// Policy used to combine the second radius metric of grouped radial slices.
+enum RadialSliceRadiusAggregation {
+  /// Add every grouped radius value.
+  sum,
+
+  /// Use the arithmetic mean of grouped radius values.
+  mean,
+
+  /// Weight each radius value by its primary contribution value.
+  weightedMean,
+
+  /// Use the smallest grouped radius value.
+  minimum,
+
+  /// Use the largest grouped radius value.
+  maximum,
+}
+
 /// Deterministic small-slice grouping for Pie and Donut category series.
 ///
 /// Positive source points whose contribution is smaller than [minimumShare]
@@ -18,6 +36,7 @@ class RadialSliceGroupingConfig {
     this.minimumSourceCount = 2,
     this.label = 'Other',
     this.color,
+    this.radiusAggregation,
   });
 
   /// Exclusive fractional threshold below which a positive point is grouped.
@@ -32,6 +51,32 @@ class RadialSliceGroupingConfig {
   /// Optional fixed color for the aggregate slice.
   final Color? color;
 
+  /// Explicit policy for a grouped variable-radius second metric.
+  ///
+  /// This is required when grouping is combined with
+  /// `RadialSliceRadiusConfig`; the package never guesses how two different
+  /// measures should aggregate.
+  final RadialSliceRadiusAggregation? radiusAggregation;
+
+  /// Returns a copy with selected fields replaced.
+  RadialSliceGroupingConfig copyWith({
+    double? minimumShare,
+    int? minimumSourceCount,
+    String? label,
+    Color? color,
+    bool clearColor = false,
+    RadialSliceRadiusAggregation? radiusAggregation,
+    bool clearRadiusAggregation = false,
+  }) => RadialSliceGroupingConfig(
+    minimumShare: minimumShare ?? this.minimumShare,
+    minimumSourceCount: minimumSourceCount ?? this.minimumSourceCount,
+    label: label ?? this.label,
+    color: clearColor ? null : (color ?? this.color),
+    radiusAggregation: clearRadiusAggregation
+        ? null
+        : (radiusAggregation ?? this.radiusAggregation),
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -39,11 +84,17 @@ class RadialSliceGroupingConfig {
           other.minimumShare == minimumShare &&
           other.minimumSourceCount == minimumSourceCount &&
           other.label == label &&
-          other.color == color;
+          other.color == color &&
+          other.radiusAggregation == radiusAggregation;
 
   @override
-  int get hashCode =>
-      Object.hash(minimumShare, minimumSourceCount, label, color);
+  int get hashCode => Object.hash(
+    minimumShare,
+    minimumSourceCount,
+    label,
+    color,
+    radiusAggregation,
+  );
 }
 
 /// One visible radial category and the original source points it represents.
@@ -158,13 +209,14 @@ abstract class RadialCategorySeries extends ChartSeries {
       0,
       (sum, slice) => sum + slice.point.y,
     );
+    final groupedRadius = _aggregateGroupedRadius(grouped, grouping);
     final groupPoint = ChartDataPoint(
       x: grouped.first.point.x,
       y: groupedValue,
       label: grouping.label.trim(),
-      pointStyle: grouping.color == null
+      pointStyle: grouping.color == null && groupedRadius == null
           ? null
-          : PointStyle(color: grouping.color),
+          : PointStyle(color: grouping.color, size: groupedRadius),
     );
     return List<RadialCategorySlice>.unmodifiable([
       ...retained,
@@ -173,6 +225,36 @@ abstract class RadialCategorySeries extends ChartSeries {
         sourcePointIndices: groupedIndices,
       ),
     ]);
+  }
+
+  double? _aggregateGroupedRadius(
+    List<RadialCategorySlice> grouped,
+    RadialSliceGroupingConfig grouping,
+  ) {
+    final policy = grouping.radiusAggregation;
+    if (sliceRadiusConfig == null || policy == null) return null;
+    final values = [for (final slice in grouped) slice.point.pointStyle!.size!];
+    return switch (policy) {
+      RadialSliceRadiusAggregation.sum => values.fold<double>(
+        0,
+        (a, b) => a + b,
+      ),
+      RadialSliceRadiusAggregation.mean =>
+        values.fold<double>(0, (a, b) => a + b) / values.length,
+      RadialSliceRadiusAggregation.weightedMean =>
+        grouped.fold<double>(
+              0,
+              (sum, slice) =>
+                  sum + slice.point.pointStyle!.size! * slice.point.y,
+            ) /
+            grouped.fold<double>(0, (sum, slice) => sum + slice.point.y),
+      RadialSliceRadiusAggregation.minimum => values.reduce(
+        (a, b) => a < b ? a : b,
+      ),
+      RadialSliceRadiusAggregation.maximum => values.reduce(
+        (a, b) => a > b ? a : b,
+      ),
+    };
   }
 
   /// Primary source indices that produce visible projected geometry.
@@ -382,10 +464,15 @@ abstract class RadialCategorySeries extends ChartSeries {
           'Grouped radial slices require a visible label',
         );
       }
-      if (sliceRadiusConfig != null) {
+      if (sliceRadiusConfig != null && grouping.radiusAggregation == null) {
         throw ArgumentError(
           'Radial slice grouping cannot be combined with variable slice '
-          'radii until an explicit second-metric aggregation policy is set',
+          'radii without an explicit second-metric aggregation policy',
+        );
+      }
+      if (sliceRadiusConfig == null && grouping.radiusAggregation != null) {
+        throw ArgumentError(
+          'A radial radius aggregation policy requires variable slice radii',
         );
       }
     }

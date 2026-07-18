@@ -4,8 +4,14 @@ import 'package:flutter/foundation.dart';
 
 import '../theming/styles/label_style.dart';
 
-/// Entrance animation used when a Pie or Donut first mounts or receives new
-/// data.
+/// Formats one numeric component shown by a Pie or Donut surface.
+///
+/// Formatters own the complete returned text, including any unit or suffix.
+/// Portable chart artifacts require a matching formatter descriptor at
+/// extraction time so the callback can be safely rebound during hydration.
+typedef RadialValueFormatter = String Function(double value);
+
+/// Entrance animation used when a Pie or Donut first mounts or is replayed.
 enum PieAnimationMode {
   /// Render the final geometry immediately.
   none,
@@ -21,6 +27,16 @@ enum PieAnimationMode {
 
   /// Fade the complete radial geometry into view.
   fade,
+}
+
+/// Policy for data-to-data transitions after a radial chart is mounted.
+enum RadialDataTransitionMode {
+  /// Apply new data immediately.
+  none,
+
+  /// Interpolate stable categories and use a structural fade for category
+  /// insertion, removal, or reordering.
+  automatic,
 }
 
 /// Policy used when a Pie slice does not provide an explicit border color.
@@ -456,6 +472,7 @@ class PieSliceRadiusConfig {
     this.scale = PieSliceRadiusScale.area,
     this.label = 'Radius',
     this.unit,
+    this.formatter,
   });
 
   /// Smallest radius as a fraction of the maximum Pie radius.
@@ -470,6 +487,9 @@ class PieSliceRadiusConfig {
   /// Optional unit for the radius metric.
   final String? unit;
 
+  /// Optional formatter shared by radius tooltips and custom consumers.
+  final RadialValueFormatter? formatter;
+
   /// Returns a copy with selected fields replaced.
   PieSliceRadiusConfig copyWith({
     double? minimumFactor,
@@ -477,11 +497,14 @@ class PieSliceRadiusConfig {
     String? label,
     String? unit,
     bool clearUnit = false,
+    RadialValueFormatter? formatter,
+    bool clearFormatter = false,
   }) => PieSliceRadiusConfig(
     minimumFactor: minimumFactor ?? this.minimumFactor,
     scale: scale ?? this.scale,
     label: label ?? this.label,
     unit: clearUnit ? null : (unit ?? this.unit),
+    formatter: clearFormatter ? null : (formatter ?? this.formatter),
   );
 
   @override
@@ -491,10 +514,11 @@ class PieSliceRadiusConfig {
           minimumFactor == other.minimumFactor &&
           scale == other.scale &&
           label == other.label &&
-          unit == other.unit;
+          unit == other.unit &&
+          formatter == other.formatter;
 
   @override
-  int get hashCode => Object.hash(minimumFactor, scale, label, unit);
+  int get hashCode => Object.hash(minimumFactor, scale, label, unit, formatter);
 }
 
 /// Shared name for the optional second-metric radius encoding used by radial
@@ -526,6 +550,7 @@ abstract interface class RadialChartStyle {
   PieElevationStyle? get shadow;
   PieElevationStyle? get selectedElevation;
   PieAnimationMode? get animationMode;
+  RadialDataTransitionMode get dataTransitionMode;
 }
 
 /// Immutable per-series Pie geometry and appearance overrides.
@@ -551,6 +576,7 @@ class PieChartStyle implements RadialChartStyle {
     this.shadow,
     this.selectedElevation,
     this.animationMode,
+    this.dataTransitionMode = RadialDataTransitionMode.automatic,
   });
 
   /// Angle in degrees at which the first slice begins.
@@ -630,6 +656,10 @@ class PieChartStyle implements RadialChartStyle {
   @override
   final PieAnimationMode? animationMode;
 
+  /// Data-to-data motion policy, independent from entrance animation.
+  @override
+  final RadialDataTransitionMode dataTransitionMode;
+
   /// Returns a copy with selected fields replaced.
   PieChartStyle copyWith({
     double? startAngleDegrees,
@@ -662,6 +692,7 @@ class PieChartStyle implements RadialChartStyle {
     bool clearSelectedElevation = false,
     PieAnimationMode? animationMode,
     bool clearAnimationMode = false,
+    RadialDataTransitionMode? dataTransitionMode,
   }) {
     return PieChartStyle(
       startAngleDegrees: startAngleDegrees ?? this.startAngleDegrees,
@@ -699,6 +730,7 @@ class PieChartStyle implements RadialChartStyle {
       animationMode: clearAnimationMode
           ? null
           : (animationMode ?? this.animationMode),
+      dataTransitionMode: dataTransitionMode ?? this.dataTransitionMode,
     );
   }
 
@@ -723,7 +755,8 @@ class PieChartStyle implements RadialChartStyle {
           cornerTreatment == other.cornerTreatment &&
           shadow == other.shadow &&
           selectedElevation == other.selectedElevation &&
-          animationMode == other.animationMode;
+          animationMode == other.animationMode &&
+          dataTransitionMode == other.dataTransitionMode;
 
   @override
   int get hashCode => Object.hash(
@@ -745,6 +778,7 @@ class PieChartStyle implements RadialChartStyle {
     shadow,
     selectedElevation,
     animationMode,
+    dataTransitionMode,
   );
 }
 
@@ -765,6 +799,8 @@ class PieDataLabelConfig {
     this.connectorColor,
     this.collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide,
     this.calloutStyle,
+    this.valueFormatter,
+    this.percentageFormatter,
   });
 
   /// Whether data labels are rendered.
@@ -806,6 +842,14 @@ class PieDataLabelConfig {
   /// Optional label callout override; null resolves from [PieChartTheme].
   final LabelStyle? calloutStyle;
 
+  /// Optional value formatter shared by labels, legends, tooltips, and
+  /// assistive descriptions.
+  final RadialValueFormatter? valueFormatter;
+
+  /// Optional fractional-share formatter shared by labels, legends,
+  /// tooltips, and assistive descriptions. The input is in the range 0–1.
+  final RadialValueFormatter? percentageFormatter;
+
   /// Returns a copy with selected fields replaced.
   PieDataLabelConfig copyWith({
     bool? isVisible,
@@ -822,6 +866,10 @@ class PieDataLabelConfig {
     PieDataLabelCollisionStrategy? collisionStrategy,
     LabelStyle? calloutStyle,
     bool clearCalloutStyle = false,
+    RadialValueFormatter? valueFormatter,
+    bool clearValueFormatter = false,
+    RadialValueFormatter? percentageFormatter,
+    bool clearPercentageFormatter = false,
   }) {
     return PieDataLabelConfig(
       isVisible: isVisible ?? this.isVisible,
@@ -840,6 +888,12 @@ class PieDataLabelConfig {
       calloutStyle: clearCalloutStyle
           ? null
           : (calloutStyle ?? this.calloutStyle),
+      valueFormatter: clearValueFormatter
+          ? null
+          : (valueFormatter ?? this.valueFormatter),
+      percentageFormatter: clearPercentageFormatter
+          ? null
+          : (percentageFormatter ?? this.percentageFormatter),
     );
   }
 
@@ -858,7 +912,9 @@ class PieDataLabelConfig {
           connectorWidth == other.connectorWidth &&
           connectorColor == other.connectorColor &&
           collisionStrategy == other.collisionStrategy &&
-          calloutStyle == other.calloutStyle;
+          calloutStyle == other.calloutStyle &&
+          valueFormatter == other.valueFormatter &&
+          percentageFormatter == other.percentageFormatter;
 
   @override
   int get hashCode => Object.hash(
@@ -874,5 +930,7 @@ class PieDataLabelConfig {
     connectorColor,
     collisionStrategy,
     calloutStyle,
+    valueFormatter,
+    percentageFormatter,
   );
 }

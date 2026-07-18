@@ -73,6 +73,12 @@ typedef ElementGenerator =
 /// 4. Route event to appropriate handler based on button/modifiers
 /// 5. Update coordinator state if interaction mode changes
 class ChartRenderBox extends RenderBox {
+  /// Insets around an axisless radial plot inside this render box.
+  ///
+  /// Widget overlays use the same contract so Donut center content remains
+  /// aligned with Canvas geometry during resize.
+  static const EdgeInsets axislessPlotInsets = EdgeInsets.all(10);
+
   ChartRenderBox({
     required this.coordinator,
     List<ChartElement>? elements,
@@ -1531,10 +1537,12 @@ class ChartRenderBox extends RenderBox {
 
     // Calculate plot area (reserve space for axes AND scrollbars)
     // Default margins if no axes
-    double leftMargin = 10;
-    double rightMargin = 10 + rightReserved; // Add scrollbar space
-    double topMargin = 10;
-    double bottomMargin = 10 + bottomReserved; // Add scrollbar space
+    double leftMargin = axislessPlotInsets.left;
+    double rightMargin =
+        axislessPlotInsets.right + rightReserved; // Add scrollbar space
+    double topMargin = axislessPlotInsets.top;
+    double bottomMargin =
+        axislessPlotInsets.bottom + bottomReserved; // Add scrollbar space
 
     // Track right axis width separately for scrollbar positioning
     double rightAxisWidth = 0;

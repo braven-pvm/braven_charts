@@ -59,6 +59,7 @@ export 'src/artifacts/chart_document_extractor.dart'
         ChartDocumentSnapshot;
 export 'src/artifacts/chart_interaction_document_codec.dart';
 export 'src/artifacts/chart_runtime_bindings.dart';
+export 'src/artifacts/radial_formatter_document_descriptors.dart';
 export 'src/artifacts/chart_preview.dart';
 export 'src/artifacts/chart_preview_capture.dart';
 export 'src/artifacts/chart_series_document_codec.dart';
@@ -103,6 +104,7 @@ export 'src/models/chart_theme.dart';
 export 'src/models/chart_type.dart';
 export 'src/models/data_range.dart';
 export 'src/models/donut_chart_config.dart';
+export 'src/models/donut_center_builder.dart';
 export 'src/models/donut_chart_series.dart';
 export 'src/models/enums.dart';
 export 'src/models/grid_config.dart';

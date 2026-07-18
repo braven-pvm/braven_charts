@@ -14,7 +14,7 @@ import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/radial_category_series.dart';
-import '../formatting/multi_axis_value_formatter.dart';
+import '../formatting/radial_value_formatter.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 import '../theming/styles/label_style.dart';
 
@@ -34,6 +34,8 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
     this.animationProgress = 1,
     bool? isEntranceAnimationComplete,
     this.selectionProgress = 1,
+    this.paintCenterContent = true,
+    this.includeCenterSemantics = true,
     this.isSelected = false,
     this.isHovered = false,
   }) : isEntranceAnimationComplete =
@@ -41,7 +43,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
        geometry = PieChartGeometryCalculator.calculate(
          series: series,
          size: size,
-         padding: _geometryPadding(series, size, theme, textScaleFactor),
+         padding: geometryPaddingFor(series, size, theme, textScaleFactor),
          explodedPointIndices: selectedPointIndices,
          cornerRadius:
              series.radialStyle.cornerRadius ??
@@ -92,6 +94,18 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
 
   /// Selected explode/elevation progress in the inclusive range 0–1.
   final double selectionProgress;
+
+  /// Whether the portable Donut center text is painted on the Canvas.
+  ///
+  /// Runtime center widgets disable this while retaining the same portable
+  /// [DonutCenterContent] as an artifact and preview fallback.
+  final bool paintCenterContent;
+
+  /// Whether the render element contributes the Donut center summary node.
+  ///
+  /// Runtime center widgets and actions provide their own widget semantics and
+  /// disable this to avoid duplicate assistive nodes.
+  final bool includeCenterSemantics;
 
   /// Immutable geometry shared by painting and hit testing.
   final PieChartGeometry geometry;
@@ -160,6 +174,16 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
   Iterable<ChartDataHit> get semanticDataHits =>
       geometry.slices.map(_dataHitForSlice);
 
+  /// Visible selected slice represented by the Donut center, if any.
+  PieSliceGeometry? get selectedCenterSlice {
+    for (final slice in geometry.slices) {
+      if (slice.sourcePointIndices.any(selectedPointIndices.contains)) {
+        return slice;
+      }
+    }
+    return null;
+  }
+
   /// Resolved text shown in the Donut opening for the current selection.
   DonutCenterPresentation? get centerPresentation {
     final donut = series;
@@ -167,13 +191,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       return null;
     }
     final config = donut.centerContent;
-    PieSliceGeometry? selectedSlice;
-    for (final slice in geometry.slices) {
-      if (slice.sourcePointIndices.any(selectedPointIndices.contains)) {
-        selectedSlice = slice;
-        break;
-      }
-    }
+    final selectedSlice = selectedCenterSlice;
     final selectedIndex = selectedSlice?.pointIndex;
     final selectedPoint = selectedSlice?.point;
     final usesSelectedValue = switch (config.valueMode) {
@@ -182,17 +200,11 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       DonutCenterValueMode.total || DonutCenterValueMode.custom => false,
     };
     final String? value = switch (config.valueMode) {
-      DonutCenterValueMode.total => _formatCenterNumber(
-        donut.total,
-        donut.unit,
-      ),
+      DonutCenterValueMode.total => _formatCenterNumber(donut.total),
       DonutCenterValueMode.selectedValue =>
-        selectedPoint == null
-            ? null
-            : _formatCenterNumber(selectedPoint.y, donut.unit),
+        selectedPoint == null ? null : _formatCenterNumber(selectedPoint.y),
       DonutCenterValueMode.selectedOrTotal => _formatCenterNumber(
         selectedPoint?.y ?? donut.total,
-        donut.unit,
       ),
       DonutCenterValueMode.custom => config.customValue!.trim(),
     };
@@ -235,6 +247,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
 
   @override
   Iterable<ChartSemanticSummary> get semanticSummaries sync* {
+    if (!includeCenterSemantics) return;
     final presentation = centerPresentation;
     final contentBounds = centerContentBounds;
     if (presentation == null || contentBounds == null) return;
@@ -356,7 +369,7 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
         _paintOutsideLabels(canvas);
       }
     }
-    _paintCenterContent(canvas);
+    if (paintCenterContent) _paintCenterContent(canvas);
     if (usesFadeLayer) canvas.restore();
   }
 
@@ -486,8 +499,8 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
     )..layout(maxWidth: math.max(8, maxWidth - horizontalPadding));
   }
 
-  String _formatCenterNumber(double value, String? unit) =>
-      MultiAxisValueFormatter.format(value: value, unit: unit);
+  String _formatCenterNumber(double value) =>
+      RadialValueFormatters.center(series, value);
 
   void _paintElevation(
     Canvas canvas,
@@ -851,10 +864,8 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
 
   String _labelText(PieSliceGeometry slice) {
     final category = slice.point.label!.trim();
-    final value =
-        '${slice.point.y.toStringAsFixed(2)}'
-        '${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}';
-    final percentage = '${(slice.share * 100).toStringAsFixed(1)}%';
+    final value = RadialValueFormatters.value(series, slice.point.y);
+    final percentage = RadialValueFormatters.share(series, slice.share);
     return switch (series.dataLabels.content) {
       PieDataLabelContent.category => category,
       PieDataLabelContent.value => value,
@@ -964,16 +975,10 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
 
   ChartDataHit _dataHitForSlice(PieSliceGeometry slice) {
     final visibleIndex = geometry.slices.indexOf(slice);
-    final unit = series.unit == null || series.unit!.isEmpty
-        ? ''
-        : ' ${series.unit}';
     final radiusConfig = series.sliceRadiusConfig;
     final radiusValue = radiusConfig == null
         ? null
         : slice.point.pointStyle!.size;
-    final radiusUnit = radiusConfig?.unit == null || radiusConfig!.unit!.isEmpty
-        ? ''
-        : ' ${radiusConfig.unit}';
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: slice.pointIndex,
@@ -984,12 +989,13 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       category: slice.point.label!.trim(),
       total: geometry.total,
       share: slice.share,
+      formattedShare: RadialValueFormatters.share(series, slice.share),
       radiusValue: radiusValue,
       formattedRadiusValue: radiusValue == null
           ? null
-          : '${radiusValue.toStringAsFixed(2)}$radiusUnit',
+          : RadialValueFormatters.radius(series, radiusValue),
       radiusLabel: radiusConfig?.label,
-      formattedValue: '${slice.point.y.toStringAsFixed(2)}$unit',
+      formattedValue: RadialValueFormatters.value(series, slice.point.y),
       ordinal: visibleIndex + 1,
       count: geometry.slices.length,
       isSelected: _isSliceSelected(slice),
@@ -1029,12 +1035,15 @@ class PieSeriesElement implements DataHitElement, ChartSemanticSummaryProvider {
       animationProgress: animationProgress,
       isEntranceAnimationComplete: isEntranceAnimationComplete,
       selectionProgress: selectionProgress,
+      paintCenterContent: paintCenterContent,
+      includeCenterSemantics: includeCenterSemantics,
       isHovered: isHovered ?? this.isHovered,
       isSelected: isSelected ?? this.isSelected,
     );
   }
 
-  static EdgeInsets _geometryPadding(
+  /// Resolves the exact padding shared by radial Canvas and widget overlays.
+  static EdgeInsets geometryPaddingFor(
     RadialCategorySeries series,
     Size size,
     ChartTheme theme,

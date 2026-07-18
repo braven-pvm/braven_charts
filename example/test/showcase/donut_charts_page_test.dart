@@ -43,6 +43,50 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(BravenChartPlus), findsOneWidget);
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('donut-showcase-chart')),
+    );
+    final series = chart.series.single as DonutChartSeries;
+    expect(
+      series.donutStyle.dataTransitionMode,
+      RadialDataTransitionMode.automatic,
+    );
+    expect(series.dataLabels.valueFormatter, isNotNull);
+    expect(series.dataLabels.percentageFormatter, isNotNull);
+    expect(series.centerContent.valueFormatter, isNotNull);
+  });
+
+  testWidgets('shows a host-built interactive Donut center', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: DonutChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final centerStyle = find.byKey(const ValueKey('donut-center-style'));
+    await tester.ensureVisible(centerStyle);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: centerStyle, matching: find.text('Theme default')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom widget + action').last);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('donut-showcase-chart')),
+    );
+    expect(chart.donutCenterBuilder, isNotNull);
+    expect(chart.onDonutCenterTap, isNotNull);
+    expect(find.text('Center actions: 0'), findsOneWidget);
+
+    await tester.tap(find.text('Center actions: 0'));
+    await tester.pumpAndSettle();
+    expect(find.text('Center actions: 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('auto-fits and resizes the native Donut Split surface', (
@@ -132,8 +176,8 @@ void main() {
     );
     var firstItem = tester.widget<RadialLegendValueCard>(firstItemFinder);
     expect(firstItem.item.category, 'Build');
-    expect(firstItem.item.valueLabel, '46.00 hours');
-    expect(firstItem.item.shareLabel, '46.0%');
+    expect(firstItem.item.valueLabel, '46.0 hours');
+    expect(firstItem.item.shareLabel, '46%');
     expect(firstItem.item.selected, isFalse);
     final initialRect = tester.getRect(firstItemFinder);
 

@@ -7,7 +7,11 @@ void main() {
     test('round-trips descriptors and resolves built-in fixed formatting', () {
       final descriptor = ChartFormatterDescriptor(
         id: 'braven.number.fixed',
-        arguments: {'decimals': JsonNumberValue(1)},
+        arguments: {
+          'decimals': JsonNumberValue(1),
+          'prefix': const JsonStringValue('\$'),
+          'suffix': const JsonStringValue(' USD'),
+        },
       );
 
       final decoded = ChartFormatterDescriptor.fromDocument(
@@ -17,7 +21,7 @@ void main() {
 
       expect(decoded.id, descriptor.id);
       expect(decoded.arguments['decimals']?.toJson(), 1);
-      expect(resolution.formatter(12.34), '12.3');
+      expect(resolution.formatter(12.34), r'$12.3 USD');
       expect(resolution.warning, isNull);
     });
 

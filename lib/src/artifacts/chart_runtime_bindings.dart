@@ -219,7 +219,14 @@ class ChartRuntimeBindings {
 
 String _formatFixed(double value, Map<String, JsonValue> arguments) {
   final decimals = _integerArgument(arguments, 'decimals', fallback: 2);
-  return value.toStringAsFixed(decimals.clamp(0, 20));
+  final prefix = _stringArgument(arguments, 'prefix');
+  final suffix = _stringArgument(arguments, 'suffix');
+  return '$prefix${value.toStringAsFixed(decimals.clamp(0, 20))}$suffix';
+}
+
+String _stringArgument(Map<String, JsonValue> arguments, String key) {
+  final raw = arguments[key]?.toJson();
+  return raw is String ? raw : '';
 }
 
 String _formatPercent(double value, Map<String, JsonValue> arguments) {

@@ -126,12 +126,38 @@ BravenChartPlus(
 controller.replayRadialEntrance();
 ```
 
-The data-update duration and curve come from `ChartTheme.animationTheme`.
+The entrance duration and curve come from `ChartTheme.animationTheme`.
 `MediaQuery.disableAnimationsOf`, `PieAnimationMode.none`, and a zero duration
 always render the final frame immediately, including controller-triggered
 replays. Labels wait until the entrance lifecycle completes so elastic curves
 cannot flash them on and off. Entrance modes do not change source data,
 selection identity, artifact content, or the native table.
+
+## Data updates
+
+Entrance motion and data-to-data motion are separate. Set
+`DonutChartStyle.dataTransitionMode` to control what happens after the mounted
+chart receives new values:
+
+```dart
+DonutChartStyle(
+  innerRadiusFactor: 0.58,
+  animationMode: PieAnimationMode.sweep,
+  dataTransitionMode: RadialDataTransitionMode.automatic,
+)
+```
+
+`automatic` interpolates values and the optional radius metric when category
+identity and order remain stable. Adding, removing, reordering, or grouping
+categories uses a two-phase structural fade, which avoids morphing one
+category into another. `none` applies the new data immediately. Data updates
+do not replay `animationMode`.
+
+Identity is deterministic: a unique trimmed category label is the primary
+key; duplicate labels are disambiguated by X value and then occurrence. The
+controller remaps focused and selected source points through reordering.
+`MediaQuery.disableAnimationsOf` and a zero theme duration always show the
+final state immediately.
 
 ## Center content
 
@@ -183,6 +209,76 @@ const DonutCenterContent(
   customValue: 'On track',
 )
 ```
+
+### Runtime center widgets and actions
+
+Use `BravenChartPlus.donutCenterBuilder` when the live product needs arbitrary
+Flutter content in the opening. The package still owns the circular clip,
+measured bounds, pointer/keyboard/assistive activation shell, and semantics.
+The builder is active while `DonutCenterContent.isVisible` is true:
+
+```dart
+BravenChartPlus(
+  series: [donut],
+  donutCenterBuilder: (context, center) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(center.hasSelection ? Icons.check_circle : Icons.donut_large),
+      Text(center.label ?? 'Total', style: center.defaultLabelStyle),
+      Text(center.valueLabel, style: center.defaultValueStyle),
+    ],
+  ),
+  onDonutCenterTap: (center) {
+    openCategory(center.selectedCategory);
+  },
+)
+```
+
+`DonutCenterData` includes the resolved value and semantic labels, total,
+selection, share, available diameter, theme styles, selection color, and every
+original source point represented by a grouped slice. The action receives the
+same immutable object for pointer, keyboard, and assistive activation.
+
+Builders and actions are runtime-only. Keep `DonutCenterContent` configured as
+the portable fallback used by artifacts, PNG previews, and restored charts
+that have not rebound host code. Rebind both after hydration:
+
+```dart
+final hydrated = ChartDocumentHydrator.hydrateJson(json);
+if (hydrated case ChartArtifactSuccess<HydratedChartConfiguration>()) {
+  final restored = hydrated.value.build(
+    donutCenterBuilder: buildCenter,
+    onDonutCenterTap: handleCenterTap,
+  );
+}
+```
+
+## Numeric formatting
+
+All radial numeric surfaces share the same optional callbacks:
+
+```dart
+DonutChartSeries.fromMap(
+  id: 'revenue-share',
+  values: const {'Subscriptions': 42, 'Services': 31},
+  dataLabels: PieDataLabelConfig(
+    valueFormatter: (value) => '\$${value.toStringAsFixed(1)}',
+    percentageFormatter: (share) =>
+        '${(share * 100).toStringAsFixed(0)}%',
+  ),
+  sliceRadiusConfig: PieSliceRadiusConfig(
+    formatter: (value) => '${value.toStringAsFixed(0)} k users',
+  ),
+  centerContent: DonutCenterContent(
+    valueFormatter: (value) => '\$${value.toStringAsFixed(0)}',
+  ),
+)
+```
+
+The formatter owns the complete returned text, including units. Percentage
+callbacks receive a fractional share from `0` to `1`. Resolved value/share
+formatting is reused by data labels, legends, tooltips, and accessibility;
+radius and center callbacks additionally own their corresponding surfaces.
 
 ## Variable outer radius
 
@@ -247,8 +343,24 @@ Activating the aggregate selects all represented `ChartPointRef` values;
 activating any grouped table row selects the same visible aggregate. The
 controller exposes the original refs, not a synthetic index.
 
-Grouping and variable radii are mutually exclusive until the host chooses a
-defined aggregation rule for the radius metric.
+When grouping and variable radius are combined, the host must declare how the
+second metric is aggregated. Braven Charts never guesses between measures:
+
+```dart
+sliceGroupingConfig: const RadialSliceGroupingConfig(
+  minimumShare: 0.07,
+  minimumSourceCount: 2,
+  label: 'Other',
+  radiusAggregation: RadialSliceRadiusAggregation.weightedMean,
+),
+```
+
+The policies are `sum`, arithmetic `mean`, contribution-weighted
+`weightedMean`, `minimum`, and `maximum`. The policy changes only the synthetic
+visible slice radius. Original radius values remain intact in tables, copy,
+CSV, callbacks, artifacts, and hydrated charts. Supplying a policy without a
+radius metric, or combining a radius metric with grouping but no policy, fails
+validation.
 
 ## Selection and controllers
 
@@ -361,8 +473,23 @@ final captured = await controller.extractArtifact(
     artifactId: 'revenue-donut-copy',
     createdAt: DateTime.now().toUtc(),
     includePreview: true,
-    documentOptions: const ChartDocumentExtractOptions(
+    documentOptions: ChartDocumentExtractOptions(
       documentId: 'revenue-donut',
+      radialFormatterDescriptors: {
+        'revenue-share': RadialFormatterDocumentDescriptors(
+          value: ChartFormatterDescriptor(
+            id: 'braven.number.fixed',
+            arguments: {
+              'decimals': JsonNumberValue(1),
+              'prefix': JsonStringValue(r'$'),
+            },
+          ).toDocument(),
+          percentage: ChartFormatterDescriptor(
+            id: 'braven.number.percent',
+            arguments: {'decimals': JsonNumberValue(0)},
+          ).toDocument(),
+        ),
+      },
     ),
   ),
 );
@@ -378,8 +505,18 @@ if (captured case ChartArtifactSuccess<ChartArtifact>()) {
 Donut documents declare `series.donut` and `series.donut.style.v1`.
 Center content adds `series.donut.center-content.v1`; variable radius adds
 `series.donut.variable-radius.v1`; source-preserving grouping adds
-`series.radial.grouping.v1`. Unsupported readers fail with a capability
+`series.radial.grouping.v1`; grouped variable radius adds
+`series.radial.grouped-variable-radius.v1`; numeric formatter descriptors add
+`series.radial.formatters.v1`; and automatic data updates add
+`series.radial.data-transitions.v1`. Unsupported readers fail with a capability
 diagnostic instead of silently rendering a different chart.
+
+Formatter callbacks are executable behavior and cannot be serialized. If any
+radial callback is present, extraction fails closed unless the matching
+series-keyed `RadialFormatterDocumentDescriptors` entry is supplied. The
+built-in registry supports `braven.number.fixed` (`decimals`, `prefix`, and
+`suffix`) and `braven.number.percent` (`decimals`). Hosts may register their
+own stable formatter IDs through `ChartRuntimeBindings.formatters`.
 
 ## AI tool input
 
@@ -430,10 +567,10 @@ the shared `LegendStyle` and `InteractionTheme` contracts.
 
 - Donut is single-series and radial; it does not render Cartesian axes,
   crosshairs, scrollbars, pan, or zoom.
-- The center accepts portable text configuration, not an arbitrary Widget or
-  builder.
-- Multiple concentric rings, drill-down, center actions,
-  data-to-data morphing, per-slice staggering, spring choreography, 3D effects,
-  and image shaders are not V1 features.
+- Portable center content is text configuration. Arbitrary widgets and actions
+  are supported as runtime bindings and must be rebound after hydration.
+- Multiple concentric rings, hierarchy/drill-down, radial bars, per-slice
+  staggering, spring choreography, 3D effects, and image shaders are outside
+  this single-ring Donut contract.
 - Prefer bars when precise comparison matters more than part-to-whole meaning
   or when categories are too dense for readable slices.

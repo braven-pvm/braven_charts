@@ -34,6 +34,7 @@ class DonutCenterContent {
     this.customValue,
     this.labelStyle,
     this.valueStyle,
+    this.valueFormatter,
   });
 
   /// A hidden center summary used as the default on [DonutChartSeries].
@@ -60,6 +61,12 @@ class DonutCenterContent {
   /// Optional per-series value appearance override.
   final LabelStyle? valueStyle;
 
+  /// Optional formatter for numeric total and selected-value center modes.
+  ///
+  /// Custom string values bypass this callback. The formatter owns the
+  /// complete returned text, including units.
+  final RadialValueFormatter? valueFormatter;
+
   /// Returns a copy with selected fields replaced.
   DonutCenterContent copyWith({
     bool? isVisible,
@@ -72,6 +79,8 @@ class DonutCenterContent {
     bool clearLabelStyle = false,
     LabelStyle? valueStyle,
     bool clearValueStyle = false,
+    RadialValueFormatter? valueFormatter,
+    bool clearValueFormatter = false,
   }) => DonutCenterContent(
     isVisible: isVisible ?? this.isVisible,
     label: clearLabel ? null : (label ?? this.label),
@@ -79,6 +88,9 @@ class DonutCenterContent {
     customValue: clearCustomValue ? null : (customValue ?? this.customValue),
     labelStyle: clearLabelStyle ? null : (labelStyle ?? this.labelStyle),
     valueStyle: clearValueStyle ? null : (valueStyle ?? this.valueStyle),
+    valueFormatter: clearValueFormatter
+        ? null
+        : (valueFormatter ?? this.valueFormatter),
   );
 
   @override
@@ -90,7 +102,8 @@ class DonutCenterContent {
           valueMode == other.valueMode &&
           customValue == other.customValue &&
           labelStyle == other.labelStyle &&
-          valueStyle == other.valueStyle;
+          valueStyle == other.valueStyle &&
+          valueFormatter == other.valueFormatter;
 
   @override
   int get hashCode => Object.hash(
@@ -100,6 +113,7 @@ class DonutCenterContent {
     customValue,
     labelStyle,
     valueStyle,
+    valueFormatter,
   );
 }
 
@@ -131,6 +145,7 @@ class DonutChartStyle extends PieChartStyle {
     super.shadow,
     super.selectedElevation,
     super.animationMode,
+    super.dataTransitionMode,
   });
 
   /// Creates a Donut style from an existing shared radial appearance.
@@ -159,6 +174,7 @@ class DonutChartStyle extends PieChartStyle {
     shadow: style.shadow,
     selectedElevation: style.selectedElevation,
     animationMode: style.animationMode,
+    dataTransitionMode: style.dataTransitionMode,
   );
 
   /// Radius of the shared center opening as a fraction of the maximum outer
@@ -206,6 +222,7 @@ class DonutChartStyle extends PieChartStyle {
     bool clearSelectedElevation = false,
     PieAnimationMode? animationMode,
     bool clearAnimationMode = false,
+    RadialDataTransitionMode? dataTransitionMode,
   }) => DonutChartStyle(
     innerRadiusFactor: innerRadiusFactor ?? this.innerRadiusFactor,
     sweepAngleDegrees: sweepAngleDegrees ?? this.sweepAngleDegrees,
@@ -244,6 +261,7 @@ class DonutChartStyle extends PieChartStyle {
     animationMode: clearAnimationMode
         ? null
         : (animationMode ?? this.animationMode),
+    dataTransitionMode: dataTransitionMode ?? this.dataTransitionMode,
   );
 
   @override

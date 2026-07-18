@@ -6,6 +6,7 @@ import '../models/chart_theme.dart';
 import '../models/legend_style.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_legend_item.dart';
+import '../formatting/radial_value_formatter.dart';
 import '../rendering/pie_slice_color_resolver.dart';
 
 /// Native, slice-aware legend used by radial charts.
@@ -92,6 +93,11 @@ class PieChartLegend extends StatelessWidget {
             animationDuration: disableAnimations
                 ? Duration.zero
                 : chartTheme.animationTheme.interactionDuration,
+            valueLabel: RadialValueFormatters.value(series, slice.point.y),
+            shareLabel: RadialValueFormatters.share(
+              series,
+              slice.point.y / total,
+            ),
           ),
           onTap: () => onSliceTap(slice.pointIndex),
         ),
