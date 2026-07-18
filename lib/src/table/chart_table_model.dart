@@ -274,12 +274,14 @@ class ChartTableModel {
         : options.rowLayout == ChartTableRowLayout.long
         ? ChartTableProjectionKind.cartesianLong
         : ChartTableProjectionKind.cartesianWide;
-    final xFormatter = _resolveFormatter(
-      document.xAxis.formatter,
-      options.formatters,
-      warnings,
-      r'$.document.xAxis.formatter',
-    );
+    final xFormatter =
+        _resolveFormatter(
+          document.xAxis.formatter,
+          options.formatters,
+          warnings,
+          r'$.document.xAxis.formatter',
+        ) ??
+        _categoryFormatter(document.xAxis.categories);
     final axesById = {for (final axis in document.axes) axis.id: axis};
     final themeSeriesColors = _themeSeriesColors(document);
     final stackComposition = _stackCompositionValues(document, hiddenIds);
@@ -653,6 +655,19 @@ String Function(double)? _resolveFormatter(
   }
 }
 
+String Function(double)? _categoryFormatter(List<String> categories) {
+  if (categories.isEmpty) return null;
+  return (value) {
+    final index = value.round();
+    if ((value - index).abs() > 0.000001 ||
+        index < 0 ||
+        index >= categories.length) {
+      return _plainNumber(value);
+    }
+    return categories[index];
+  };
+}
+
 String _displayNumber(double value, String Function(double)? formatter) {
   if (value.isNaN) return 'No value';
   if (value == double.infinity) return 'Positive infinity';
@@ -689,7 +704,7 @@ Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
     if (style['barErrorUpperValues'] is JsonArrayValue)
       ChartTableAuxiliaryField.errorUpper,
     if (style['barLayoutMode'] case final JsonStringValue mode
-        when mode.value == 'stacked') ...{
+        when mode.value == 'stacked' || mode.value == 'divergingStacked') ...{
       ChartTableAuxiliaryField.stackStart,
       ChartTableAuxiliaryField.stackEnd,
     },
@@ -697,7 +712,8 @@ Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
         when mode.value == 'waterfall')
       ChartTableAuxiliaryField.waterfallCumulative,
     if (style['barLayoutMode'] case final JsonStringValue mode
-        when mode.value == 'normalizedStacked')
+        when mode.value == 'normalizedStacked' ||
+            mode.value == 'divergingStacked')
       ChartTableAuxiliaryField.normalizedShare,
   });
 }
@@ -743,7 +759,7 @@ _auxiliaryValuesForPoint(
   add(ChartTableAuxiliaryField.errorUpper, 'barErrorUpperValues');
   final mode = style['barLayoutMode'];
   if (mode is JsonStringValue &&
-      mode.value == 'stacked' &&
+      (mode.value == 'stacked' || mode.value == 'divergingStacked') &&
       stackValue != null) {
     values[ChartTableAuxiliaryField.stackStart] = ChartTableAuxiliaryValue(
       raw: stackValue.start,
@@ -792,7 +808,9 @@ Map<(String, int), _BarStackTableValue> _stackCompositionValues(
     if (style == null || payload is! InlineChartDataPayload) continue;
     final mode = style['barLayoutMode'];
     if (mode is! JsonStringValue ||
-        (mode.value != 'stacked' && mode.value != 'normalizedStacked')) {
+        (mode.value != 'stacked' &&
+            mode.value != 'normalizedStacked' &&
+            mode.value != 'divergingStacked')) {
       continue;
     }
     final inlineAxisId = series.inlineAxis?.values['id']?.toJson();
@@ -810,6 +828,10 @@ Map<(String, int), _BarStackTableValue> _stackCompositionValues(
 
   final values = <(String, int), _BarStackTableValue>{};
   for (final entry in stacks.entries) {
+    if (entry.key.$1 == 'divergingStacked') {
+      _appendDivergingTableValues(entry.value, entry.key.$3, values);
+      continue;
+    }
     final normalized = entry.key.$1 == 'normalizedStacked';
     final baseline = entry.key.$3;
     final positiveTotals = <double, double>{};
@@ -852,6 +874,99 @@ Map<(String, int), _BarStackTableValue> _stackCompositionValues(
     }
   }
   return values;
+}
+
+void _appendDivergingTableValues(
+  List<(ChartSeriesDocument, InlineChartDataPayload)> series,
+  double baseline,
+  Map<(String, int), _BarStackTableValue> values,
+) {
+  final totals = <double, double>{};
+  for (final item in series) {
+    for (final point in item.$2.points) {
+      totals[point.x.asDouble] =
+          (totals[point.x.asDouble] ?? 0) + (point.y.asDouble - baseline);
+    }
+  }
+
+  String roleOf(ChartSeriesDocument document) {
+    final value = document.style?.values['barDivergingRole'];
+    return value is JsonStringValue ? value.value : 'positive';
+  }
+
+  final neutral = series
+      .where((item) => roleOf(item.$1) == 'neutral')
+      .firstOrNull;
+  final xValues = <double>{
+    for (final item in series)
+      for (final point in item.$2.points) point.x.asDouble,
+  };
+  for (final x in xValues) {
+    double shareFor(
+      (ChartSeriesDocument, InlineChartDataPayload) item,
+      int pointIndex,
+    ) {
+      final total = totals[x] ?? 0;
+      if (total == 0) return 0;
+      final share =
+          (item.$2.points[pointIndex].y.asDouble - baseline) / total * 100;
+      final rounded = share.roundToDouble();
+      return (share - rounded).abs() < 1e-10 ? rounded : share;
+    }
+
+    final neutralIndex = neutral?.$2.points.indexWhere(
+      (point) => point.x.asDouble == x,
+    );
+    final neutralShare =
+        neutral == null || neutralIndex == null || neutralIndex < 0
+        ? 0.0
+        : shareFor(neutral, neutralIndex);
+    if (neutral != null && neutralIndex != null && neutralIndex >= 0) {
+      values[(neutral.$1.id, neutralIndex)] = (
+        start: baseline - neutralShare / 2,
+        end: baseline + neutralShare / 2,
+        share: neutralShare,
+      );
+    }
+
+    var negativeOffset = -neutralShare / 2;
+    for (final item
+        in series
+            .where((current) => roleOf(current.$1) == 'negative')
+            .toList(growable: false)
+            .reversed) {
+      final pointIndex = item.$2.points.indexWhere(
+        (point) => point.x.asDouble == x,
+      );
+      if (pointIndex < 0) continue;
+      final share = shareFor(item, pointIndex);
+      final start = negativeOffset;
+      negativeOffset -= share;
+      values[(item.$1.id, pointIndex)] = (
+        start: baseline + start,
+        end: baseline + negativeOffset,
+        share: share,
+      );
+    }
+
+    var positiveOffset = neutralShare / 2;
+    for (final item in series.where(
+      (current) => roleOf(current.$1) == 'positive',
+    )) {
+      final pointIndex = item.$2.points.indexWhere(
+        (point) => point.x.asDouble == x,
+      );
+      if (pointIndex < 0) continue;
+      final share = shareFor(item, pointIndex);
+      final start = positiveOffset;
+      positiveOffset += share;
+      values[(item.$1.id, pointIndex)] = (
+        start: baseline + start,
+        end: baseline + positiveOffset,
+        share: share,
+      );
+    }
+  }
 }
 
 double? _waterfallCumulativeValue(

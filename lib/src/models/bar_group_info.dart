@@ -101,7 +101,10 @@ class BarGroupInfo {
 
   bool get isStacked =>
       layoutMode == BarLayoutMode.stacked ||
-      layoutMode == BarLayoutMode.normalizedStacked;
+      layoutMode == BarLayoutMode.normalizedStacked ||
+      layoutMode == BarLayoutMode.divergingStacked;
+
+  bool get isDiverging => layoutMode == BarLayoutMode.divergingStacked;
 
   bool get isOverlaid => layoutMode == BarLayoutMode.overlaid;
 

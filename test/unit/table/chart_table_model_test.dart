@@ -375,6 +375,72 @@ void main() {
       );
     });
 
+    test('projects centered diverging bounds beside raw response shares', () {
+      const disagree = BarChartSeries(
+        id: 'disagree',
+        name: 'Disagree',
+        unit: '%',
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.divergingStacked,
+        groupId: 'responses',
+        divergingRole: BarDivergingRole.negative,
+        points: [ChartDataPoint(x: 0, y: 30)],
+      );
+      const neutral = BarChartSeries(
+        id: 'neutral',
+        name: 'Neutral',
+        unit: '%',
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.divergingStacked,
+        groupId: 'responses',
+        divergingRole: BarDivergingRole.neutral,
+        points: [ChartDataPoint(x: 0, y: 20)],
+      );
+      const agree = BarChartSeries(
+        id: 'agree',
+        name: 'Agree',
+        unit: '%',
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.divergingStacked,
+        groupId: 'responses',
+        points: [ChartDataPoint(x: 0, y: 50)],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(disagree)).value,
+          _success(ChartSeriesDocumentCodec.encode(neutral)).value,
+          _success(ChartSeriesDocumentCodec.encode(agree)).value,
+        ]),
+      );
+
+      expect(model.series.first.auxiliaryFields, {
+        ChartTableAuxiliaryField.stackStart,
+        ChartTableAuxiliaryField.stackEnd,
+        ChartTableAuxiliaryField.normalizedShare,
+      });
+      expect(
+        model.longRows.map(
+          (row) =>
+              row.auxiliaryValues[ChartTableAuxiliaryField.stackStart]!.raw,
+        ),
+        [-10, -10, 10],
+      );
+      expect(
+        model.longRows.map(
+          (row) => row.auxiliaryValues[ChartTableAuxiliaryField.stackEnd]!.raw,
+        ),
+        [-40, 10, 60],
+      );
+      expect(
+        model.longRows.map(
+          (row) => row
+              .auxiliaryValues[ChartTableAuxiliaryField.normalizedShare]!
+              .raw,
+        ),
+        [30, 20, 50],
+      );
+    });
+
     test('projects signed stack bounds beside raw source values', () {
       const first = BarChartSeries(
         id: 'first',

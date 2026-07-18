@@ -68,6 +68,41 @@ null duration inherits `ChartTheme.animationTheme.dataUpdateDuration`.
 Reduced motion and a zero-duration chart theme override every series timing;
 an explicit zero series duration renders that series immediately.
 
+### `BarChartSeries`
+
+Represents grouped, overlaid, stacked, normalized, diverging/Likert,
+floating-range, waterfall, vertical, or horizontal bars. `BarLabelStyle` controls value content and
+placement plus chart-wide collision handling (`none`, `reposition`, or `hide`),
+plot-edge awareness, optional background/border boxes, callout lines, and one
+resolved total per stack. These label settings round-trip through portable
+chart artifacts. `ChartConfigBuilder` and `ChartToolSchema` expose the same
+model to serializable tool calls, including per-point range starts, targets,
+uncertainty endpoints, waterfall totals, and native categorical axes.
+`BarMotionStyle` adds together, forward, reverse, center-out, and edges-in
+sequencing on one reduced-motion-aware entrance, keyed update, and exit
+timeline. Removed points and complete series stay in canonical geometry while
+collapsing to baseline, then leave the render tree at completion.
+`BarPatternStyle` and `BarFillPattern` add clipped diagonal, crosshatch,
+horizontal, or vertical line encodings. The same patterned swatch appears in
+the chart legend so series remain distinguishable without colour alone.
+`BarBulletStyle` and ordered `BarBulletRange` values add passive qualitative
+backgrounds behind the actual bar; existing target values remain the distinct
+comparison marker. Bullet ranges transpose, expand bounds, and round-trip
+through artifacts and tool configuration without becoming synthetic series.
+`BarLollipopStyle` replaces the filled body with a configurable stem and
+circular endpoint marker while preserving canonical labels, motion,
+interaction, horizontal transposition, and artifact/tool serialization.
+`ParetoCategory` and `ParetoChartData` prepare stable descending values and
+aligned cumulative percentages for a mixed `BarChartSeries` plus
+`LineChartSeries` composition on independent value axes.
+`HistogramChartData` prepares continuous samples with fixed-count,
+Freedman–Diaconis, Sturges, or square-root binning and exposes count,
+percentage, and density point sets for ordinary categorical bars.
+`BarLayoutMode.divergingStacked` uses `BarDivergingRole` to place positive
+magnitudes around one centered neutral segment. `BarDivergingStyle` controls
+the shared midpoint line; normalized shares, centered bounds, raw values,
+roles, and styling survive tool and artifact round-trips.
+
 ### `PieChartSeries`
 
 Represents one insertion-ordered set of category contributions. A pie chart
@@ -148,6 +183,26 @@ Controls X-axis layout, labeling, and tick generation.
 - `min`, `max`, `tickCount`
 - `labelDisplay`, `tickLabelPadding`, `axisLabelPadding`, `axisMargin`
 - `showAxisLine`, `showTicks`, `showCrosshairLabel`
+- `categoryAxis` — optional `CategoryAxisConfig` for integer-indexed category
+  names, automatic readable viewports, density control, wrapping/ellipsis, and
+  label rotation. Category metadata is portable in chart artifacts and is used
+  by axis ticks, crosshair labels, and native data tables without a formatter
+  callback.
+
+```dart
+xAxisConfig: const XAxisConfig(
+  label: 'Market segment',
+  maxHeight: 88,
+  categoryAxis: CategoryAxisConfig(
+    categories: ['Enterprise', 'Mid-market', 'Small business'],
+    minimumCategoryExtent: 72,
+    labelOverflow: CategoryLabelOverflow.wrap,
+  ),
+),
+```
+
+When all categories cannot fit, `autoViewport` opens the first readable window.
+Enable `showXScrollbar` or pan/zoom to navigate the full category domain.
 
 ### `YAxisConfig`
 

@@ -67,6 +67,17 @@ abstract final class BarCompositionEngine {
         continue;
       }
 
+      if (first.layoutMode == BarLayoutMode.divergingStacked) {
+        _resolveDivergingStack(
+          slotSeries,
+          slotIndex: slotIndex,
+          slotCount: orderedSlots.length,
+          gap: gap,
+          result: result,
+        );
+        continue;
+      }
+
       _resolveStack(
         slotSeries,
         slotIndex: slotIndex,
@@ -76,6 +87,139 @@ abstract final class BarCompositionEngine {
       );
     }
     return result;
+  }
+
+  static void _resolveDivergingStack(
+    List<BarChartSeries> series, {
+    required int slotIndex,
+    required int slotCount,
+    required double gap,
+    required Map<String, BarGroupInfo> result,
+  }) {
+    final neutralSeries = series
+        .where((current) => current.divergingRole == BarDivergingRole.neutral)
+        .toList(growable: false);
+    if (neutralSeries.length > 1) {
+      throw ArgumentError(
+        'A diverging stack can contain at most one neutral series',
+      );
+    }
+
+    final stackBaseline = series.first.baselineValue;
+    final totals = <double, double>{};
+    for (final current in series) {
+      for (final point in current.points) {
+        final magnitude = point.y - current.baselineValue;
+        totals[point.x] = (totals[point.x] ?? 0) + magnitude;
+      }
+    }
+
+    final shares = <String, Map<int, double>>{};
+    for (final current in series) {
+      shares[current.id] = {
+        for (final (pointIndex, point) in current.points.indexed)
+          pointIndex: (totals[point.x] ?? 0) == 0
+              ? 0
+              : _stablePercentage(
+                  point.y - current.baselineValue,
+                  totals[point.x]!,
+                ),
+      };
+    }
+
+    final starts = <String, Map<int, double>>{
+      for (final current in series) current.id: <int, double>{},
+    };
+    final ends = <String, Map<int, double>>{
+      for (final current in series) current.id: <int, double>{},
+    };
+    final outer = <String, Set<int>>{
+      for (final current in series) current.id: <int>{},
+    };
+
+    final xValues = <double>{
+      for (final current in series)
+        for (final point in current.points) point.x,
+    };
+    for (final x in xValues) {
+      final neutral = neutralSeries.firstOrNull;
+      final neutralPointIndex = neutral?.points.indexWhere(
+        (point) => point.x == x,
+      );
+      final neutralShare =
+          neutral == null || neutralPointIndex == null || neutralPointIndex < 0
+          ? 0.0
+          : shares[neutral.id]![neutralPointIndex]!;
+      var negativeOffset = -neutralShare / 2;
+      var positiveOffset = neutralShare / 2;
+
+      if (neutral != null &&
+          neutralPointIndex != null &&
+          neutralPointIndex >= 0) {
+        starts[neutral.id]![neutralPointIndex] =
+            stackBaseline - neutralShare / 2;
+        ends[neutral.id]![neutralPointIndex] = stackBaseline + neutralShare / 2;
+      }
+
+      final negative = series
+          .where(
+            (current) => current.divergingRole == BarDivergingRole.negative,
+          )
+          .toList(growable: false)
+          .reversed;
+      _PointRef? outerNegative;
+      for (final current in negative) {
+        final pointIndex = current.points.indexWhere((point) => point.x == x);
+        if (pointIndex < 0) continue;
+        final share = shares[current.id]![pointIndex]!;
+        starts[current.id]![pointIndex] = stackBaseline + negativeOffset;
+        negativeOffset -= share;
+        ends[current.id]![pointIndex] = stackBaseline + negativeOffset;
+        outerNegative = _PointRef(current.id, pointIndex);
+      }
+      if (outerNegative != null) {
+        outer[outerNegative.seriesId]!.add(outerNegative.pointIndex);
+      }
+
+      _PointRef? outerPositive;
+      for (final current in series.where(
+        (candidate) => candidate.divergingRole == BarDivergingRole.positive,
+      )) {
+        final pointIndex = current.points.indexWhere((point) => point.x == x);
+        if (pointIndex < 0) continue;
+        final share = shares[current.id]![pointIndex]!;
+        starts[current.id]![pointIndex] = stackBaseline + positiveOffset;
+        positiveOffset += share;
+        ends[current.id]![pointIndex] = stackBaseline + positiveOffset;
+        outerPositive = _PointRef(current.id, pointIndex);
+      }
+      if (outerPositive != null) {
+        outer[outerPositive.seriesId]!.add(outerPositive.pointIndex);
+      }
+    }
+
+    for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+      final current = series[seriesIndex];
+      result[current.id] = BarGroupInfo(
+        index: slotIndex,
+        count: slotCount,
+        gap: gap,
+        layoutMode: BarLayoutMode.divergingStacked,
+        groupId: current.groupId,
+        stackBaseline: stackBaseline,
+        startValues: starts[current.id]!,
+        endValues: ends[current.id]!,
+        percentages: shares[current.id]!,
+        outerPointIndices: outer[current.id]!,
+        drawTrack: seriesIndex == 0,
+      );
+    }
+  }
+
+  static double _stablePercentage(double value, double total) {
+    final percentage = value / total * 100;
+    final rounded = percentage.roundToDouble();
+    return (percentage - rounded).abs() < 1e-10 ? rounded : percentage;
   }
 
   static void _resolveOverlay(

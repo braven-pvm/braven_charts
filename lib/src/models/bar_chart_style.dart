@@ -37,12 +37,69 @@ enum BarLayoutMode {
   /// Stack contributions as a percentage of the positive or negative total.
   normalizedStacked,
 
+  /// Center a normalized composition around the baseline.
+  ///
+  /// Series opt into the negative, neutral, or positive side with
+  /// [BarChartSeries.divergingRole]. Negative responses stack left/below the
+  /// baseline, positive responses stack right/above it, and one neutral
+  /// response straddles the baseline. Source values remain positive
+  /// magnitudes and are normalized across the complete category total.
+  divergingStacked,
+
   /// Accumulate each point as a sequential increase or decrease.
   ///
   /// Points listed in [BarChartSeries.waterfallTotalIndices] render the
   /// running total from the series baseline instead of applying their `y`
   /// value as another delta.
   waterfall,
+}
+
+/// Semantic placement of a series in a diverging stacked composition.
+enum BarDivergingRole {
+  /// Stack away from the baseline on the negative side.
+  negative,
+
+  /// Center the segment across the baseline.
+  neutral,
+
+  /// Stack away from the baseline on the positive side.
+  positive,
+}
+
+/// Center-line treatment for a diverging stacked bar composition.
+class BarDivergingStyle {
+  const BarDivergingStyle({
+    this.showCenterLine = true,
+    this.centerLineColor = const Color(0xFF64748B),
+    this.centerLineWidth = 1.25,
+    this.centerLineOpacity = 0.7,
+  }) : assert(centerLineWidth >= 0, 'Center-line width must be non-negative'),
+       assert(
+         centerLineOpacity >= 0 && centerLineOpacity <= 1,
+         'Center-line opacity must be between 0 and 1',
+       );
+
+  final bool showCenterLine;
+  final Color centerLineColor;
+  final double centerLineWidth;
+  final double centerLineOpacity;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarDivergingStyle &&
+          other.showCenterLine == showCenterLine &&
+          other.centerLineColor == centerLineColor &&
+          other.centerLineWidth == centerLineWidth &&
+          other.centerLineOpacity == centerLineOpacity;
+
+  @override
+  int get hashCode => Object.hash(
+    showCenterLine,
+    centerLineColor,
+    centerLineWidth,
+    centerLineOpacity,
+  );
 }
 
 /// Determines which corners of a bar receive [BarChartStyle.cornerRadius].
@@ -66,6 +123,55 @@ enum BarAnimationMode {
   grow,
 }
 
+/// Controls the order in which bars enter or update within one series.
+enum BarAnimationOrder {
+  /// Animate every bar on the same timeline.
+  together,
+
+  /// Animate from the first category to the last.
+  forward,
+
+  /// Animate from the last category to the first.
+  reverse,
+
+  /// Animate the center category or pair first, then move toward the edges.
+  centerOut,
+
+  /// Animate the outer categories first, then move toward the center.
+  edgesIn,
+}
+
+/// Serializable choreography for bar entrance and data-update motion.
+class BarMotionStyle {
+  const BarMotionStyle({
+    this.order = BarAnimationOrder.together,
+    this.staggerFraction = 0.0,
+  }) : assert(
+         staggerFraction >= 0 && staggerFraction < 1,
+         'Stagger fraction must be at least 0 and less than 1',
+       );
+
+  /// Category sequencing order.
+  final BarAnimationOrder order;
+
+  /// Fraction of the shared animation timeline reserved for start delays.
+  ///
+  /// A value of `0` animates bars together. A value of `0.4` distributes bar
+  /// starts across the first 40% of the timeline while preserving one shared
+  /// completion point.
+  final double staggerFraction;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarMotionStyle &&
+          other.order == order &&
+          other.staggerFraction == staggerFraction;
+
+  @override
+  int get hashCode => Object.hash(order, staggerFraction);
+}
+
 /// A serializable linear gradient used to fill bars.
 ///
 /// The gradient follows the value axis: baseline to value end for each bar.
@@ -85,6 +191,63 @@ class BarGradient {
   @override
   int get hashCode =>
       Object.hash(Object.hashAll(colors), Object.hashAll(stops ?? const []));
+}
+
+/// Non-color fill encodings that can distinguish bar series in monochrome.
+enum BarFillPattern {
+  /// Lines rise from left to right (`/`).
+  diagonalUp,
+
+  /// Lines fall from left to right (`\\`).
+  diagonalDown,
+
+  /// Both diagonal directions are drawn.
+  crosshatch,
+
+  /// Horizontal lines repeat along the value axis.
+  horizontal,
+
+  /// Vertical lines repeat along the category axis.
+  vertical,
+}
+
+/// A clipped line pattern drawn over a bar's fill.
+///
+/// Patterns provide a second visual channel alongside color. When [color] is
+/// null, the renderer chooses black or white from the resolved bar luminance.
+class BarPatternStyle {
+  const BarPatternStyle({
+    required this.pattern,
+    this.color,
+    this.spacing = 8.0,
+    this.strokeWidth = 1.5,
+    this.opacity = 0.55,
+  }) : assert(spacing > 0, 'Pattern spacing must be greater than zero'),
+       assert(
+         strokeWidth > 0,
+         'Pattern stroke width must be greater than zero',
+       ),
+       assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
+
+  final BarFillPattern pattern;
+  final Color? color;
+  final double spacing;
+  final double strokeWidth;
+  final double opacity;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarPatternStyle &&
+          other.pattern == pattern &&
+          other.color == color &&
+          other.spacing == spacing &&
+          other.strokeWidth == strokeWidth &&
+          other.opacity == opacity;
+
+  @override
+  int get hashCode =>
+      Object.hash(pattern, color, spacing, strokeWidth, opacity);
 }
 
 /// Optional border drawn around each bar.
@@ -194,16 +357,19 @@ class BarChartStyle {
     this.cornerRadius = 0.0,
     this.cornerRadiusPolicy = BarCornerRadiusPolicy.valueEnd,
     this.gradient,
+    this.pattern,
     this.border,
     this.opacity = 1.0,
     this.interaction = const BarInteractionStyle(),
     this.animationMode = BarAnimationMode.grow,
+    this.motion = const BarMotionStyle(),
   }) : assert(cornerRadius >= 0, 'Corner radius must be non-negative'),
        assert(opacity >= 0 && opacity <= 1, 'Opacity must be between 0 and 1');
 
   final double cornerRadius;
   final BarCornerRadiusPolicy cornerRadiusPolicy;
   final BarGradient? gradient;
+  final BarPatternStyle? pattern;
   final BarBorderStyle? border;
   final double opacity;
   final BarInteractionStyle interaction;
@@ -214,6 +380,9 @@ class BarChartStyle {
   /// Reduced motion preferences always render the final geometry immediately.
   final BarAnimationMode animationMode;
 
+  /// Optional sequencing applied within this series.
+  final BarMotionStyle motion;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -221,20 +390,24 @@ class BarChartStyle {
           other.cornerRadius == cornerRadius &&
           other.cornerRadiusPolicy == cornerRadiusPolicy &&
           other.gradient == gradient &&
+          other.pattern == pattern &&
           other.border == border &&
           other.opacity == opacity &&
           other.interaction == interaction &&
-          other.animationMode == animationMode;
+          other.animationMode == animationMode &&
+          other.motion == motion;
 
   @override
   int get hashCode => Object.hash(
     cornerRadius,
     cornerRadiusPolicy,
     gradient,
+    pattern,
     border,
     opacity,
     interaction,
     animationMode,
+    motion,
   );
 }
 
@@ -256,6 +429,10 @@ class BarTrackStyle {
   final Color color;
 
   /// Explicit track value. When null, the visible value-axis boundary is used.
+  ///
+  /// In a diverging composition this is the capacity endpoint on one side of
+  /// the shared baseline; the track mirrors that distance on the other side.
+  /// A null diverging value spans both visible value-axis boundaries.
   final double? value;
 
   final double opacity;
@@ -277,6 +454,130 @@ class BarTrackStyle {
 
   @override
   int get hashCode => Object.hash(color, value, opacity, cornerRadius, border);
+}
+
+/// A light-weight stem-and-head treatment for categorical bar values.
+///
+/// Supplying this style replaces the filled bar body while preserving the
+/// same canonical value geometry, labels, animation, tooltips, and
+/// interactions. The stem follows the value axis and the circular head marks
+/// the exact value end.
+class BarLollipopStyle {
+  const BarLollipopStyle({
+    this.stemWidth = 3.0,
+    this.headRadius = 7.0,
+    this.stemColor,
+    this.headColor,
+    this.headBorder,
+  }) : assert(stemWidth > 0, 'Lollipop stem width must be positive'),
+       assert(headRadius > 0, 'Lollipop head radius must be positive');
+
+  /// Logical-pixel width of the line from the baseline to the value.
+  final double stemWidth;
+
+  /// Logical-pixel radius of the circular value marker.
+  final double headRadius;
+
+  /// Optional stem color. Null inherits the resolved point or series color.
+  final Color? stemColor;
+
+  /// Optional head color. Null inherits the resolved point or series color.
+  final Color? headColor;
+
+  /// Optional outline around the value marker.
+  final BarBorderStyle? headBorder;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarLollipopStyle &&
+          other.stemWidth == stemWidth &&
+          other.headRadius == headRadius &&
+          other.stemColor == stemColor &&
+          other.headColor == headColor &&
+          other.headBorder == headBorder;
+
+  @override
+  int get hashCode =>
+      Object.hash(stemWidth, headRadius, stemColor, headColor, headBorder);
+}
+
+/// One qualitative performance range behind a bullet-chart measure.
+class BarBulletRange {
+  const BarBulletRange({
+    required this.endValue,
+    required this.color,
+    this.label,
+  });
+
+  /// Value-axis end of this range, measured from the series baseline.
+  final double endValue;
+
+  /// Passive background color for this range.
+  final Color color;
+
+  /// Optional portable description such as `On track` or `Stretch`.
+  final String? label;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarBulletRange &&
+          other.endValue == endValue &&
+          other.color == color &&
+          other.label == label;
+
+  @override
+  int get hashCode => Object.hash(endValue, color, label);
+}
+
+/// Qualitative ranges that turn a standard bar into a bullet chart.
+///
+/// Ranges are shared by every point in the series and paint behind the actual
+/// measure. The series target values remain the comparative
+/// marker, so the bullet chart does not create synthetic data series.
+class BarBulletStyle {
+  const BarBulletStyle({
+    required this.ranges,
+    this.measureThicknessFactor = 0.45,
+    this.cornerRadius = 3.0,
+  }) : assert(
+         measureThicknessFactor > 0 && measureThicknessFactor <= 1,
+         'Measure thickness factor must be greater than 0 and at most 1',
+       ),
+       assert(cornerRadius >= 0, 'Bullet range radius must be non-negative');
+
+  /// Ordered range endpoints. Values must increase away from the baseline.
+  final List<BarBulletRange> ranges;
+
+  /// Actual-measure thickness relative to the qualitative range thickness.
+  final double measureThicknessFactor;
+
+  /// Corner radius applied to the complete qualitative range background.
+  final double cornerRadius;
+
+  /// Returns the first qualitative range containing [value].
+  ///
+  /// Values beyond the outermost configured endpoint intentionally return
+  /// null: callers can then describe the measure as exceeding the scale.
+  BarBulletRange? rangeForValue(double value) {
+    for (final range in ranges) {
+      if (value <= range.endValue) return range;
+    }
+    return null;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarBulletStyle &&
+          _listEquals(other.ranges, ranges) &&
+          other.measureThicknessFactor == measureThicknessFactor &&
+          other.cornerRadius == cornerRadius;
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(ranges), measureThicknessFactor, cornerRadius);
 }
 
 /// A benchmark marker drawn across a bar at a target value.
@@ -449,6 +750,49 @@ enum BarLabelValueMode {
   waterfall,
 }
 
+/// Controls how bar labels behave when their painted bounds overlap.
+enum BarLabelCollisionPolicy {
+  /// Preserve the requested position even when labels overlap.
+  none,
+
+  /// Try inside/outside alternatives and progressively displaced callouts.
+  reposition,
+
+  /// Hide a label when its requested position is already occupied.
+  hide,
+}
+
+/// Optional connector drawn between a displaced label and its bar value end.
+class BarLabelCalloutStyle {
+  const BarLabelCalloutStyle({
+    this.show = false,
+    this.color,
+    this.width = 1.0,
+    this.minimumLength = 4.0,
+  }) : assert(width >= 0, 'Callout width must be non-negative'),
+       assert(
+         minimumLength >= 0,
+         'Minimum callout length must be non-negative',
+       );
+
+  final bool show;
+  final Color? color;
+  final double width;
+  final double minimumLength;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BarLabelCalloutStyle &&
+          other.show == show &&
+          other.color == color &&
+          other.width == width &&
+          other.minimumLength == minimumLength;
+
+  @override
+  int get hashCode => Object.hash(show, color, width, minimumLength);
+}
+
 /// Optional value labels rendered using bar geometry rather than marker geometry.
 class BarLabelStyle {
   const BarLabelStyle({
@@ -460,9 +804,26 @@ class BarLabelStyle {
     this.fontWeight = FontWeight.w600,
     this.showUnit = false,
     this.padding = 4.0,
+    this.collisionPolicy = BarLabelCollisionPolicy.none,
+    this.plotEdgeAware = true,
+    this.collisionPadding = 2.0,
+    this.backgroundColor,
+    this.borderColor,
+    this.borderWidth = 0.0,
+    this.borderRadius = 4.0,
+    this.backgroundPadding = 3.0,
+    this.callout = const BarLabelCalloutStyle(),
+    this.showStackTotal = false,
     this.formatter,
   }) : assert(fontSize > 0, 'Font size must be positive'),
-       assert(padding >= 0, 'Padding must be non-negative');
+       assert(padding >= 0, 'Padding must be non-negative'),
+       assert(collisionPadding >= 0, 'Collision padding must be non-negative'),
+       assert(borderWidth >= 0, 'Border width must be non-negative'),
+       assert(borderRadius >= 0, 'Border radius must be non-negative'),
+       assert(
+         backgroundPadding >= 0,
+         'Background padding must be non-negative',
+       );
 
   final bool show;
   final BarLabelPosition position;
@@ -479,6 +840,28 @@ class BarLabelStyle {
   /// their exact gap.
   final double padding;
 
+  /// Global label collision behavior shared across every bar series.
+  final BarLabelCollisionPolicy collisionPolicy;
+
+  /// Whether labels should remain fully inside the plot viewport.
+  final bool plotEdgeAware;
+
+  /// Minimum gap reserved around every accepted label box.
+  final double collisionPadding;
+
+  /// Optional compact backing surface for labels over dense chart content.
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final double borderWidth;
+  final double borderRadius;
+  final double backgroundPadding;
+
+  /// Connector used when a label is moved away from its value end.
+  final BarLabelCalloutStyle callout;
+
+  /// Paint the resolved positive or negative total outside an exposed stack.
+  final bool showStackTotal;
+
   /// Runtime-only formatter. Portable artifacts intentionally omit callbacks.
   final String Function(ChartDataPoint)? formatter;
 
@@ -494,6 +877,16 @@ class BarLabelStyle {
           other.fontWeight == fontWeight &&
           other.showUnit == showUnit &&
           other.padding == padding &&
+          other.collisionPolicy == collisionPolicy &&
+          other.plotEdgeAware == plotEdgeAware &&
+          other.collisionPadding == collisionPadding &&
+          other.backgroundColor == backgroundColor &&
+          other.borderColor == borderColor &&
+          other.borderWidth == borderWidth &&
+          other.borderRadius == borderRadius &&
+          other.backgroundPadding == backgroundPadding &&
+          other.callout == callout &&
+          other.showStackTotal == showStackTotal &&
           other.formatter == formatter;
 
   @override
@@ -506,6 +899,16 @@ class BarLabelStyle {
     fontWeight,
     showUnit,
     padding,
+    collisionPolicy,
+    plotEdgeAware,
+    collisionPadding,
+    backgroundColor,
+    borderColor,
+    borderWidth,
+    borderRadius,
+    backgroundPadding,
+    callout,
+    showStackTotal,
     formatter,
   );
 }

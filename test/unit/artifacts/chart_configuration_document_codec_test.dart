@@ -4,6 +4,33 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChartAxisDocumentCodec', () {
+    test('round-trips a self-contained categorical X-axis', () {
+      const source = XAxisConfig(
+        label: 'Market',
+        maxHeight: 88,
+        categoryAxis: CategoryAxisConfig(
+          categories: ['Enterprise', 'Mid-market', 'Small business'],
+          labelDensity: CategoryLabelDensity.showAll,
+          labelOverflow: CategoryLabelOverflow.ellipsis,
+          minimumCategoryExtent: 72,
+          maximumLabelExtent: 120,
+          maxLabelLines: 3,
+          labelRotationDegrees: -30,
+          autoViewport: false,
+        ),
+      );
+
+      final document = _success(ChartAxisDocumentCodec.encodeXAxis(source));
+      final json = document.toJson();
+      final decoded = _success(
+        ChartAxisDocumentCodec.decodeXAxis(ChartAxisDocument.fromJson(json)),
+      );
+
+      expect(json['categories'], source.categoryAxis!.categories);
+      expect(json.containsKey('formatter'), isFalse);
+      expect(decoded, source);
+    });
+
     test('round-trips every X-axis field', () {
       const source = XAxisConfig(
         color: Color(0xFF123456),

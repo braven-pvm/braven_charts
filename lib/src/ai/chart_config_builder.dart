@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/bar_chart_style.dart';
+import '../models/category_axis_config.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_type.dart';
@@ -151,6 +153,10 @@ class ChartConfigBuilder {
     final yAxisConfig = isRadial
         ? null
         : _parseYAxisConfig(json['y_axis'] as Map<String, dynamic>?);
+    final categoryAxis = xAxisConfig?.categoryAxis;
+    if (categoryAxis != null) {
+      _validateCategoryCoordinates(series, categoryAxis);
+    }
 
     // Check for multi-axis mode (series have different units)
     final units = series
@@ -282,14 +288,16 @@ class ChartConfigBuilder {
         interpolation: LineInterpolation.linear,
         fillOpacity: 0.3,
       ),
-      SeriesStyle.bar => BarChartSeries(
+      SeriesStyle.bar => _buildBarSeries(
         id: id,
         name: name ?? id,
         points: points,
         color: color,
         unit: unit,
         yAxisConfig: yAxisConfig,
-        barWidthPercent: 0.8,
+        chartStyle: chartStyle,
+        seriesJson: json,
+        dataList: dataList,
       ),
       SeriesStyle.scatter => ScatterChartSeries(
         id: id,
@@ -319,6 +327,30 @@ class ChartConfigBuilder {
         seriesJson: json,
       ),
     };
+  }
+
+  static void _validateCategoryCoordinates(
+    List<ChartSeries> series,
+    CategoryAxisConfig categoryAxis,
+  ) {
+    for (final chartSeries in series) {
+      for (
+        var pointIndex = 0;
+        pointIndex < chartSeries.points.length;
+        pointIndex++
+      ) {
+        final x = chartSeries.points[pointIndex].x;
+        final categoryIndex = x.round();
+        if ((x - categoryIndex).abs() > 0.000001 ||
+            categoryIndex < 0 ||
+            categoryIndex >= categoryAxis.categories.length) {
+          throw FormatException(
+            'Data point $pointIndex in series "${chartSeries.id}" has x=$x, '
+            'which does not map to a configured category index.',
+          );
+        }
+      }
+    }
   }
 
   static DonutChartSeries _buildDonutSeries({
@@ -358,6 +390,517 @@ class ChartConfigBuilder {
     } on ArgumentError catch (error) {
       throw FormatException('Invalid donut series "$id": ${error.message}');
     }
+  }
+
+  static BarChartSeries _buildBarSeries({
+    required String id,
+    required String name,
+    required List<ChartDataPoint> points,
+    required Color? color,
+    required String? unit,
+    required YAxisConfig? yAxisConfig,
+    required Map<String, dynamic>? chartStyle,
+    required Map<String, dynamic> seriesJson,
+    required List<dynamic> dataList,
+  }) {
+    final style = <String, dynamic>{
+      ...?chartStyle,
+      for (final entry in seriesJson.entries)
+        if (entry.key.startsWith('bar_')) entry.key: entry.value,
+    };
+    final layout = _parseBarLayout(style['bar_layout']);
+    final rangeStarts = _barPointValues(dataList, 'bar_start');
+    final targetValues = _barPointValues(dataList, 'bar_target');
+    final errorLowerValues = _barPointValues(dataList, 'bar_error_lower');
+    final errorUpperValues = _barPointValues(dataList, 'bar_error_upper');
+    if (errorLowerValues.isNotEmpty != errorUpperValues.isNotEmpty) {
+      throw FormatException(
+        'Bar series "$id" must provide bar_error_lower and '
+        'bar_error_upper together.',
+      );
+    }
+    if (rangeStarts.isNotEmpty &&
+        (layout == BarLayoutMode.stacked ||
+            layout == BarLayoutMode.normalizedStacked ||
+            layout == BarLayoutMode.divergingStacked ||
+            layout == BarLayoutMode.waterfall)) {
+      throw FormatException(
+        'Bar series "$id" cannot combine bar_start values with '
+        '${style['bar_layout']}.',
+      );
+    }
+
+    final waterfallTotals = <int>{};
+    for (var index = 0; index < dataList.length; index++) {
+      final point = dataList[index] as Map<String, dynamic>;
+      final isTotal = point['bar_total'];
+      if (isTotal != null && isTotal is! bool) {
+        throw FormatException(
+          'Bar data point $index in "$id" has a non-boolean bar_total.',
+        );
+      }
+      if (isTotal == true) waterfallTotals.add(index);
+    }
+
+    try {
+      return BarChartSeries(
+        id: id,
+        name: name,
+        points: points,
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        isXOrdered: layout == BarLayoutMode.waterfall,
+        barWidthPercent:
+            (style['bar_width_percent'] as num?)?.toDouble() ?? 0.8,
+        minWidth: (style['bar_min_width'] as num?)?.toDouble() ?? 4,
+        maxWidth: (style['bar_max_width'] as num?)?.toDouble() ?? 100,
+        barGap: (style['bar_gap'] as num?)?.toDouble() ?? 2,
+        orientation: _parseBarOrientation(style['bar_orientation']),
+        layoutMode: layout,
+        groupId: seriesJson['bar_group_id'] as String?,
+        divergingRole: _parseBarDivergingRole(seriesJson['bar_diverging_role']),
+        divergingStyle: _parseBarDivergingStyle(style),
+        overlayWidthFactor:
+            (seriesJson['bar_overlay_width_factor'] as num?)?.toDouble() ?? 1,
+        overlayOffsetFactor:
+            (seriesJson['bar_overlay_offset_factor'] as num?)?.toDouble() ?? 0,
+        baselineValue: (style['bar_baseline'] as num?)?.toDouble() ?? 0,
+        rangeStartValues: rangeStarts,
+        waterfallTotalIndices: waterfallTotals,
+        waterfallStyle: _parseBarWaterfallStyle(style),
+        minBarLength: (style['bar_minimum_length'] as num?)?.toDouble() ?? 0,
+        barStyle: _parseBarChartStyle(style),
+        trackStyle: _parseBarTrackStyle(style),
+        lollipopStyle: _parseBarLollipopStyle(style),
+        bulletStyle: _parseBarBulletStyle(style),
+        targetValues: targetValues,
+        targetMarkerStyle: _parseBarTargetMarkerStyle(style),
+        errorLowerValues: errorLowerValues,
+        errorUpperValues: errorUpperValues,
+        errorBarStyle: _parseBarErrorBarStyle(style),
+        labelStyle: _parseBarLabelStyle(style),
+      );
+    } on ArgumentError catch (error) {
+      throw FormatException('Invalid bar series "$id": ${error.message}');
+    }
+  }
+
+  static List<double?> _barPointValues(List<dynamic> data, String key) {
+    if (!data.any(
+      (value) => (value as Map<String, dynamic>).containsKey(key),
+    )) {
+      return const [];
+    }
+    return [
+      for (var index = 0; index < data.length; index++)
+        switch ((data[index] as Map<String, dynamic>)[key]) {
+          null => null,
+          final num value => value.toDouble(),
+          _ => throw FormatException(
+            'Bar data point $index has a non-numeric $key.',
+          ),
+        },
+    ];
+  }
+
+  static BarLayoutMode _parseBarLayout(Object? value) => switch (value) {
+    null || 'grouped' => BarLayoutMode.grouped,
+    'overlaid' => BarLayoutMode.overlaid,
+    'stacked' => BarLayoutMode.stacked,
+    'normalized_stacked' => BarLayoutMode.normalizedStacked,
+    'diverging_stacked' => BarLayoutMode.divergingStacked,
+    'waterfall' => BarLayoutMode.waterfall,
+    _ => throw FormatException('Unknown bar_layout "$value".'),
+  };
+
+  static BarDivergingRole _parseBarDivergingRole(Object? value) =>
+      switch (value) {
+        null || 'positive' => BarDivergingRole.positive,
+        'negative' => BarDivergingRole.negative,
+        'neutral' => BarDivergingRole.neutral,
+        _ => throw FormatException('Unknown bar_diverging_role "$value".'),
+      };
+
+  static BarDivergingStyle _parseBarDivergingStyle(
+    Map<String, dynamic> json,
+  ) => BarDivergingStyle(
+    showCenterLine: json['bar_diverging_center_line_show'] as bool? ?? true,
+    centerLineColor:
+        _optionalNamedColor(json, 'bar_diverging_center_line_color') ??
+        const Color(0xFF64748B),
+    centerLineWidth:
+        (json['bar_diverging_center_line_width'] as num?)?.toDouble() ?? 1.25,
+    centerLineOpacity:
+        (json['bar_diverging_center_line_opacity'] as num?)?.toDouble() ?? 0.7,
+  );
+
+  static BarOrientation _parseBarOrientation(Object? value) => switch (value) {
+    null || 'vertical' => BarOrientation.vertical,
+    'horizontal' => BarOrientation.horizontal,
+    _ => throw FormatException('Unknown bar_orientation "$value".'),
+  };
+
+  static BarChartStyle _parseBarChartStyle(Map<String, dynamic> json) =>
+      BarChartStyle(
+        cornerRadius: (json['bar_corner_radius'] as num?)?.toDouble() ?? 0,
+        cornerRadiusPolicy: switch (json['bar_corner_policy']) {
+          null || 'value_end' => BarCornerRadiusPolicy.valueEnd,
+          'all' => BarCornerRadiusPolicy.all,
+          final value => throw FormatException(
+            'Unknown bar_corner_policy "$value".',
+          ),
+        },
+        gradient: _parseBarGradient(json),
+        pattern: _parseBarPattern(json),
+        border: _parseBarBorder(json),
+        opacity: (json['bar_opacity'] as num?)?.toDouble() ?? 1,
+        interaction: _parseBarInteractionStyle(json),
+        animationMode: switch (json['bar_animation_mode']) {
+          null || 'grow' => BarAnimationMode.grow,
+          'none' => BarAnimationMode.none,
+          final value => throw FormatException(
+            'Unknown bar_animation_mode "$value".',
+          ),
+        },
+        motion: _parseBarMotionStyle(json),
+      );
+
+  static BarPatternStyle? _parseBarPattern(Map<String, dynamic> json) {
+    final patternValue = json['bar_pattern'];
+    if (patternValue == null || patternValue == 'none') return null;
+    final spacingValue = json['bar_pattern_spacing'];
+    final strokeWidthValue = json['bar_pattern_stroke_width'];
+    final opacityValue = json['bar_pattern_opacity'];
+    if (spacingValue != null && spacingValue is! num) {
+      throw const FormatException('bar_pattern_spacing must be numeric.');
+    }
+    if (strokeWidthValue != null && strokeWidthValue is! num) {
+      throw const FormatException('bar_pattern_stroke_width must be numeric.');
+    }
+    if (opacityValue != null && opacityValue is! num) {
+      throw const FormatException('bar_pattern_opacity must be numeric.');
+    }
+    final spacing = (spacingValue as num?)?.toDouble() ?? 8;
+    final strokeWidth = (strokeWidthValue as num?)?.toDouble() ?? 1.5;
+    final opacity = (opacityValue as num?)?.toDouble() ?? 0.55;
+    if (spacing <= 0 || strokeWidth <= 0 || opacity < 0 || opacity > 1) {
+      throw const FormatException(
+        'Bar pattern spacing and stroke width must be positive and opacity must be between 0 and 1.',
+      );
+    }
+    return BarPatternStyle(
+      pattern: switch (patternValue) {
+        'diagonal_up' => BarFillPattern.diagonalUp,
+        'diagonal_down' => BarFillPattern.diagonalDown,
+        'crosshatch' => BarFillPattern.crosshatch,
+        'horizontal' => BarFillPattern.horizontal,
+        'vertical' => BarFillPattern.vertical,
+        final value => throw FormatException('Unknown bar_pattern "$value".'),
+      },
+      color: _optionalNamedColor(json, 'bar_pattern_color'),
+      spacing: spacing,
+      strokeWidth: strokeWidth,
+      opacity: opacity,
+    );
+  }
+
+  static BarMotionStyle _parseBarMotionStyle(Map<String, dynamic> json) {
+    final staggerValue = json['bar_animation_stagger'];
+    if (staggerValue != null && staggerValue is! num) {
+      throw const FormatException(
+        'bar_animation_stagger must be a numeric fraction.',
+      );
+    }
+    final stagger = (staggerValue as num?)?.toDouble() ?? 0;
+    if (stagger < 0 || stagger >= 1) {
+      throw const FormatException(
+        'bar_animation_stagger must be at least 0 and less than 1.',
+      );
+    }
+    return BarMotionStyle(
+      order: switch (json['bar_animation_order']) {
+        null || 'together' => BarAnimationOrder.together,
+        'forward' => BarAnimationOrder.forward,
+        'reverse' => BarAnimationOrder.reverse,
+        'center_out' => BarAnimationOrder.centerOut,
+        'edges_in' => BarAnimationOrder.edgesIn,
+        final value => throw FormatException(
+          'Unknown bar_animation_order "$value".',
+        ),
+      },
+      staggerFraction: stagger,
+    );
+  }
+
+  static BarGradient? _parseBarGradient(Map<String, dynamic> json) {
+    final colorsValue = json['bar_gradient_colors'];
+    if (colorsValue == null) return null;
+    if (colorsValue is! List || colorsValue.length < 2) {
+      throw const FormatException(
+        'bar_gradient_colors requires at least two colors.',
+      );
+    }
+    final colors = [
+      for (final value in colorsValue)
+        if (value is String)
+          _requiredColor(value, 'bar_gradient_colors')
+        else
+          throw const FormatException(
+            'bar_gradient_colors entries must be color strings.',
+          ),
+    ];
+    final stopsValue = json['bar_gradient_stops'];
+    final stops = stopsValue == null
+        ? null
+        : [
+            for (final value in stopsValue as List<dynamic>)
+              if (value is num)
+                value.toDouble()
+              else
+                throw const FormatException(
+                  'bar_gradient_stops entries must be numeric.',
+                ),
+          ];
+    if (stops != null && stops.length != colors.length) {
+      throw const FormatException(
+        'bar_gradient_stops must align with bar_gradient_colors.',
+      );
+    }
+    return BarGradient(colors: colors, stops: stops);
+  }
+
+  static BarBorderStyle? _parseBarBorder(Map<String, dynamic> json) {
+    final color = json['bar_border_color'];
+    final width = json['bar_border_width'];
+    if (color == null && width == null) return null;
+    return BarBorderStyle(
+      color: color is String
+          ? _requiredColor(color, 'bar_border_color')
+          : const Color(0xFF334155),
+      width: (width as num?)?.toDouble() ?? 1,
+    );
+  }
+
+  static BarInteractionStyle _parseBarInteractionStyle(
+    Map<String, dynamic> json,
+  ) => BarInteractionStyle(
+    hoverColor: _optionalNamedColor(json, 'bar_hover_color'),
+    hoverOpacity: (json['bar_hover_opacity'] as num?)?.toDouble() ?? 0.12,
+    hoverBorderWidth: (json['bar_hover_border_width'] as num?)?.toDouble() ?? 2,
+    pressedColor:
+        _optionalNamedColor(json, 'bar_pressed_color') ??
+        const Color(0xFF000000),
+    pressedOpacity: (json['bar_pressed_opacity'] as num?)?.toDouble() ?? 0.16,
+    selectionColor: _optionalNamedColor(json, 'bar_selection_color'),
+    selectionOpacity:
+        (json['bar_selection_opacity'] as num?)?.toDouble() ?? 0.14,
+    selectionBorderWidth:
+        (json['bar_selection_border_width'] as num?)?.toDouble() ?? 2.5,
+    focusColor: _optionalNamedColor(json, 'bar_focus_color'),
+    focusBorderWidth:
+        (json['bar_focus_border_width'] as num?)?.toDouble() ?? 2.5,
+    focusGap: (json['bar_focus_gap'] as num?)?.toDouble() ?? 3,
+    dimmedOpacity: (json['bar_dimmed_opacity'] as num?)?.toDouble() ?? 0.42,
+  );
+
+  static BarTrackStyle? _parseBarTrackStyle(Map<String, dynamic> json) {
+    final enabled = json['bar_track_enabled'] as bool?;
+    final colorValue = json['bar_track_color'];
+    if (enabled != true && colorValue == null) return null;
+    return BarTrackStyle(
+      color: colorValue is String
+          ? _requiredColor(colorValue, 'bar_track_color')
+          : const Color(0xFFE5E7EB),
+      value: (json['bar_track_value'] as num?)?.toDouble(),
+      opacity: (json['bar_track_opacity'] as num?)?.toDouble() ?? 1,
+      cornerRadius: (json['bar_track_corner_radius'] as num?)?.toDouble(),
+    );
+  }
+
+  static BarLollipopStyle? _parseBarLollipopStyle(Map<String, dynamic> json) {
+    final enabled = json['bar_lollipop_enabled'] as bool?;
+    if (enabled != true) return null;
+    final borderColor = _optionalNamedColor(
+      json,
+      'bar_lollipop_head_border_color',
+    );
+    final borderWidth =
+        (json['bar_lollipop_head_border_width'] as num?)?.toDouble() ?? 0;
+    return BarLollipopStyle(
+      stemWidth: (json['bar_lollipop_stem_width'] as num?)?.toDouble() ?? 3,
+      headRadius: (json['bar_lollipop_head_radius'] as num?)?.toDouble() ?? 7,
+      stemColor: _optionalNamedColor(json, 'bar_lollipop_stem_color'),
+      headColor: _optionalNamedColor(json, 'bar_lollipop_head_color'),
+      headBorder: borderColor == null && borderWidth == 0
+          ? null
+          : BarBorderStyle(
+              color: borderColor ?? const Color(0xFF334155),
+              width: borderWidth,
+            ),
+    );
+  }
+
+  static BarBulletStyle? _parseBarBulletStyle(Map<String, dynamic> json) {
+    final rawRanges = json['bar_bullet_ranges'];
+    if (rawRanges == null) return null;
+    if (rawRanges is! List || rawRanges.isEmpty) {
+      throw const FormatException(
+        'bar_bullet_ranges must be a non-empty array.',
+      );
+    }
+    return BarBulletStyle(
+      ranges: [
+        for (var index = 0; index < rawRanges.length; index++)
+          if (rawRanges[index] case final Map rawRange)
+            _parseBarBulletRange(rawRange, index)
+          else
+            throw FormatException(
+              'bar_bullet_ranges[$index] must be an object.',
+            ),
+      ],
+      measureThicknessFactor:
+          (json['bar_bullet_measure_thickness'] as num?)?.toDouble() ?? 0.45,
+      cornerRadius: (json['bar_bullet_corner_radius'] as num?)?.toDouble() ?? 3,
+    );
+  }
+
+  static BarBulletRange _parseBarBulletRange(Map rawRange, int index) {
+    final range = Map<String, dynamic>.from(rawRange);
+    final end = range['end'];
+    final color = range['color'];
+    final label = range['label'];
+    if (end is! num) {
+      throw FormatException('bar_bullet_ranges[$index].end must be numeric.');
+    }
+    if (color is! String) {
+      throw FormatException(
+        'bar_bullet_ranges[$index].color must be a color string.',
+      );
+    }
+    if (label != null && label is! String) {
+      throw FormatException(
+        'bar_bullet_ranges[$index].label must be a string.',
+      );
+    }
+    return BarBulletRange(
+      endValue: end.toDouble(),
+      color: _requiredColor(color, 'bar_bullet_ranges[$index].color'),
+      label: label as String?,
+    );
+  }
+
+  static BarTargetMarkerStyle _parseBarTargetMarkerStyle(
+    Map<String, dynamic> json,
+  ) => BarTargetMarkerStyle(
+    color: _optionalNamedColor(json, 'bar_target_color'),
+    width: (json['bar_target_width'] as num?)?.toDouble() ?? 2,
+    lengthFactor: (json['bar_target_length_factor'] as num?)?.toDouble() ?? 1.3,
+    opacity: (json['bar_target_opacity'] as num?)?.toDouble() ?? 1,
+  );
+
+  static BarErrorBarStyle _parseBarErrorBarStyle(Map<String, dynamic> json) =>
+      BarErrorBarStyle(
+        color: _optionalNamedColor(json, 'bar_error_color'),
+        width: (json['bar_error_width'] as num?)?.toDouble() ?? 1.5,
+        capLengthFactor:
+            (json['bar_error_cap_length_factor'] as num?)?.toDouble() ?? 0.6,
+        opacity: (json['bar_error_opacity'] as num?)?.toDouble() ?? 1,
+      );
+
+  static BarWaterfallStyle _parseBarWaterfallStyle(
+    Map<String, dynamic> json,
+  ) => BarWaterfallStyle(
+    increaseColor: _optionalNamedColor(json, 'bar_waterfall_increase_color'),
+    decreaseColor: _optionalNamedColor(json, 'bar_waterfall_decrease_color'),
+    totalColor: _optionalNamedColor(json, 'bar_waterfall_total_color'),
+    connector: BarWaterfallConnectorStyle(
+      show: json['bar_waterfall_connector_show'] as bool? ?? true,
+      color:
+          _optionalNamedColor(json, 'bar_waterfall_connector_color') ??
+          const Color(0xFF9CA3AF),
+      width: (json['bar_waterfall_connector_width'] as num?)?.toDouble() ?? 1,
+    ),
+  );
+
+  static BarLabelStyle _parseBarLabelStyle(
+    Map<String, dynamic> json,
+  ) => BarLabelStyle(
+    show: json['bar_labels_show'] as bool? ?? false,
+    position: switch (json['bar_label_position']) {
+      null || 'auto' => BarLabelPosition.auto,
+      'inside_end' => BarLabelPosition.insideEnd,
+      'inside_center' => BarLabelPosition.insideCenter,
+      'outside_end' => BarLabelPosition.outsideEnd,
+      'range_ends' => BarLabelPosition.rangeEnds,
+      final value => throw FormatException(
+        'Unknown bar_label_position "$value".',
+      ),
+    },
+    valueMode: switch (json['bar_label_value_mode']) {
+      null || 'value' => BarLabelValueMode.value,
+      'range' => BarLabelValueMode.range,
+      'percentage' => BarLabelValueMode.percentage,
+      'waterfall' => BarLabelValueMode.waterfall,
+      final value => throw FormatException(
+        'Unknown bar_label_value_mode "$value".',
+      ),
+    },
+    color: _optionalNamedColor(json, 'bar_label_color'),
+    fontSize: (json['bar_label_font_size'] as num?)?.toDouble() ?? 10,
+    fontWeight: _parseBarLabelFontWeight(json['bar_label_font_weight']),
+    showUnit: json['bar_label_show_unit'] as bool? ?? false,
+    padding: (json['bar_label_padding'] as num?)?.toDouble() ?? 4,
+    collisionPolicy: switch (json['bar_label_collision']) {
+      null || 'none' => BarLabelCollisionPolicy.none,
+      'reposition' => BarLabelCollisionPolicy.reposition,
+      'hide' => BarLabelCollisionPolicy.hide,
+      final value => throw FormatException(
+        'Unknown bar_label_collision "$value".',
+      ),
+    },
+    plotEdgeAware: json['bar_label_plot_edge_aware'] as bool? ?? true,
+    collisionPadding:
+        (json['bar_label_collision_padding'] as num?)?.toDouble() ?? 2,
+    backgroundColor: _optionalNamedColor(json, 'bar_label_background_color'),
+    borderColor: _optionalNamedColor(json, 'bar_label_border_color'),
+    borderWidth: (json['bar_label_border_width'] as num?)?.toDouble() ?? 0,
+    borderRadius: (json['bar_label_border_radius'] as num?)?.toDouble() ?? 4,
+    backgroundPadding:
+        (json['bar_label_background_padding'] as num?)?.toDouble() ?? 3,
+    callout: BarLabelCalloutStyle(
+      show: json['bar_label_callout_show'] as bool? ?? false,
+      color: _optionalNamedColor(json, 'bar_label_callout_color'),
+      width: (json['bar_label_callout_width'] as num?)?.toDouble() ?? 1,
+      minimumLength:
+          (json['bar_label_callout_minimum_length'] as num?)?.toDouble() ?? 4,
+    ),
+    showStackTotal: json['bar_label_show_stack_total'] as bool? ?? false,
+  );
+
+  static FontWeight _parseBarLabelFontWeight(Object? value) {
+    final weight = value == null ? 600 : (value as num).toInt();
+    return FontWeight.values.firstWhere(
+      (candidate) => candidate.value == weight,
+      orElse: () => throw const FormatException(
+        'bar_label_font_weight must be 100 through 900.',
+      ),
+    );
+  }
+
+  static Color? _optionalNamedColor(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value == null) return null;
+    if (value is! String) {
+      throw FormatException('$key must be a color string.');
+    }
+    return _requiredColor(value, key);
+  }
+
+  static Color _requiredColor(String value, String field) {
+    final color = _parseColor(value);
+    if (color == null) throw FormatException('Invalid $field color "$value".');
+    return color;
   }
 
   static DonutCenterContent _parseDonutCenterContent(
@@ -497,11 +1040,50 @@ class ChartConfigBuilder {
   static XAxisConfig? _parseXAxisConfig(Map<String, dynamic>? json) {
     if (json == null) return null;
 
+    final categoriesValue = json['categories'];
+    CategoryAxisConfig? categoryAxis;
+    if (categoriesValue != null) {
+      if (categoriesValue is! List ||
+          categoriesValue.isEmpty ||
+          categoriesValue.any((value) => value is! String || value.isEmpty)) {
+        throw const FormatException(
+          'x_axis.categories must be a non-empty array of non-empty strings.',
+        );
+      }
+      categoryAxis = CategoryAxisConfig(
+        categories: categoriesValue.cast<String>(),
+        labelDensity: switch (json['category_label_density']) {
+          null || 'auto' => CategoryLabelDensity.auto,
+          'show_all' => CategoryLabelDensity.showAll,
+          final value => throw FormatException(
+            'Unknown category_label_density "$value".',
+          ),
+        },
+        labelOverflow: switch (json['category_label_overflow']) {
+          null || 'wrap' => CategoryLabelOverflow.wrap,
+          'ellipsis' => CategoryLabelOverflow.ellipsis,
+          final value => throw FormatException(
+            'Unknown category_label_overflow "$value".',
+          ),
+        },
+        minimumCategoryExtent:
+            (json['category_minimum_extent'] as num?)?.toDouble() ?? 56,
+        maximumLabelExtent:
+            (json['category_maximum_label_extent'] as num?)?.toDouble() ?? 104,
+        maxLabelLines: (json['category_max_label_lines'] as num?)?.toInt() ?? 2,
+        labelRotationDegrees:
+            (json['category_label_rotation'] as num?)?.toDouble() ?? 0,
+        autoViewport: json['category_auto_viewport'] as bool? ?? true,
+      );
+    }
+
     return XAxisConfig(
       label: json['label'] as String?,
       unit: json['unit'] as String?,
       min: (json['min'] as num?)?.toDouble(),
       max: (json['max'] as num?)?.toDouble(),
+      categoryAxis: categoryAxis,
+      maxHeight: categoryAxis == null ? 60 : 104,
     );
   }
 

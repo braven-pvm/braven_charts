@@ -44,6 +44,34 @@ transient animation frames. Controller-fed streaming tails retain their
 dedicated animation and do not also run path interpolation. See
 [Line and Area charts](line_area_charts.md).
 
+### Bar charts
+
+- `BarChartStyle`, `BarPatternStyle`, `BarFillPattern`, `BarTrackStyle`, `BarLollipopStyle`, `BarBulletStyle`, `BarBulletRange`, `BarDivergingStyle`, `BarDivergingRole`, `BarTargetMarkerStyle`, and
+  `BarErrorBarStyle` control mark styling and analytical references.
+- Pattern fills are clipped to canonical rounded bar geometry, choose an
+  automatic contrast colour when none is supplied, and are repeated by the
+  legend swatch as a non-colour series cue.
+- Bullet ranges provide ordered qualitative context behind one dominant actual
+  measure and reuse `targetValues` for the benchmark marker.
+- `BarLollipopStyle` replaces the filled body with a stem and circular value
+  marker while preserving canonical labels, animation, interaction, and
+  horizontal transposition.
+- `ParetoCategory` and `ParetoChartData` validate and stably rank categorical
+  values, expose aligned raw and cumulative point sets, and locate cumulative
+  thresholds for mixed bar-and-line Pareto compositions.
+- `HistogramChartData`, `HistogramBin`, `HistogramBinningMethod`, and
+  `HistogramValueMode` transform continuous samples into equal-width count,
+  percentage, or density bars while preserving interval boundaries.
+- `BarLayoutMode.divergingStacked` normalizes positive response magnitudes,
+  centers one neutral series, stacks negative and positive roles outward, and
+  preserves raw values for tooltips and tables.
+- `BarMotionStyle` and `BarAnimationOrder` sequence keyed entrances, updates,
+  and baseline-collapse exits together, forward, reverse, center-out, or
+  edges-in while honoring the chart animation theme and reduced-motion
+  preference.
+- `BarLabelStyle` controls content, placement, chart-wide collision handling,
+  backgrounds, callouts, and stack totals.
+
 ### Pie charts
 
 - `PieChartSeries.fromMap` converts insertion-ordered category/value pairs into
@@ -112,7 +140,9 @@ preview/restoration fallback. See [Donut charts](donut_charts.md).
 
 ## Axes, normalization, and layout
 
-- `XAxisConfig` — X bounds, ticks, labels, render range, and presentation.
+- `XAxisConfig`, `CategoryAxisConfig` — numeric bounds plus native categorical
+  labels, density, wrapping/ellipsis, rotation, and automatic scrollable
+  viewports.
 - `YAxisConfig`, `YAxisPosition` — independent Y-axis identity, units,
   position, bounds, and labels.
 - `MultiAxisConfig`, `NormalizationMode` — multi-axis policy.
@@ -173,7 +203,9 @@ preview/restoration fallback. See [Donut charts](donut_charts.md).
 
 ## Configuration and tool-driven charts
 
-- `ChartConfigBuilder` — converts serializable configuration into chart input.
+- `ChartConfigBuilder` — converts serializable configuration into chart input,
+  including advanced bar composition, analytical references, label layout,
+  native categories, and radial chart contracts.
 - `ChartAgentInterface` and chart tool schemas — contracts for tool-driven or
   agent-assisted chart construction.
 

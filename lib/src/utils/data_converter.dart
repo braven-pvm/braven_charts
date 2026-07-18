@@ -1,6 +1,10 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // BravenChartPlus - Data Conversion Utilities
 
+import 'dart:math' as math;
+
+import 'dart:ui' show TextDirection;
+
 import '../coordinates/chart_transform.dart';
 import '../artifacts/chart_view_state.dart';
 import '../elements/series_element.dart';
@@ -53,6 +57,7 @@ class DataConverter {
     Map<String, PathSeriesPointMap> pathPointMapsBySeries = const {},
     @Deprecated('Use theme.seriesTheme instead') double? strokeWidth,
     ChartInteractionCoordinator? coordinator,
+    TextDirection textDirection = TextDirection.ltr,
   }) {
     _validateHorizontalBarChart(series);
     final barSeries = series.whereType<BarChartSeries>().toList();
@@ -88,6 +93,7 @@ class DataConverter {
         hasAnySelectedPoints: selectedPointRefs.isNotEmpty,
         revealProgress: pathRevealProgressBySeries[s.id] ?? 1,
         pathPointMap: pathPointMapsBySeries[s.id],
+        textDirection: textDirection,
       );
     }).toList();
   }
@@ -158,6 +164,27 @@ class DataConverter {
         if (trackValue < yMin) yMin = trackValue;
         if (trackValue > yMax) yMax = trackValue;
       }
+      for (final range in s.bulletStyle?.ranges ?? const <BarBulletRange>[]) {
+        if (range.endValue < yMin) yMin = range.endValue;
+        if (range.endValue > yMax) yMax = range.endValue;
+      }
+    }
+
+    final divergingBars = barSeries
+        .where(
+          (current) => current.layoutMode == BarLayoutMode.divergingStacked,
+        )
+        .toList(growable: false);
+    if (divergingBars.isNotEmpty &&
+        divergingBars.length == series.length &&
+        divergingBars.every(
+          (current) =>
+              current.baselineValue == divergingBars.first.baselineValue,
+        )) {
+      final baseline = divergingBars.first.baselineValue;
+      final extent = math.max((yMin - baseline).abs(), (yMax - baseline).abs());
+      yMin = baseline - extent;
+      yMax = baseline + extent;
     }
 
     // Add 5% padding to data bounds for visual breathing room

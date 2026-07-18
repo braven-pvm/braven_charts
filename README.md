@@ -50,6 +50,8 @@ active surface without unmounting the chart unnecessarily.
 
 The Bar API covers comparison, progress, interval, bridge, ranking, stacking,
 and overlay layouts without reducing every dataset to another grouped column.
+It also supports keyed and category-sequenced updates, durable point selection,
+gradients, benchmark markers, and absolute uncertainty intervals.
 
 | Capacity tracks | Waterfall bridge | Floating ranges |
 | --- | --- | --- |
@@ -97,11 +99,11 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar, Scatter, mixed Cartesian series; and category-based Pie and Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter and mixed Cartesian series; and category-based Pie and Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
-| Display | Light/dark and custom themes, legends, labels, package-owned Chart/Data/Split workbenches, loading skeletons, progress indicators, and empty states |
+| Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split workbenches, loading skeletons, progress indicators, and empty states |
 | Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X or category/share data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 | Document comparison | Explicit semantic series mapping, exact-X or timestamp alignment, safe units, missing values, deltas, and source-preserving CSV export |

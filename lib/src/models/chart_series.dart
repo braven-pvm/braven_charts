@@ -651,6 +651,8 @@ class BarChartSeries extends ChartSeries {
     this.orientation = BarOrientation.vertical,
     this.layoutMode = BarLayoutMode.grouped,
     this.groupId,
+    this.divergingRole = BarDivergingRole.positive,
+    this.divergingStyle = const BarDivergingStyle(),
     this.overlayWidthFactor = 1.0,
     this.overlayOffsetFactor = 0.0,
     this.baselineValue = 0.0,
@@ -660,6 +662,8 @@ class BarChartSeries extends ChartSeries {
     this.minBarLength = 0.0,
     this.barStyle = const BarChartStyle(),
     this.trackStyle,
+    this.lollipopStyle,
+    this.bulletStyle,
     this.targetValues = const [],
     this.targetMarkerStyle = const BarTargetMarkerStyle(),
     this.errorLowerValues = const [],
@@ -707,6 +711,14 @@ class BarChartSeries extends ChartSeries {
   ///
   /// Series with the same group ID share one category slot.
   final String? groupId;
+
+  /// Side occupied by this series in [BarLayoutMode.divergingStacked].
+  ///
+  /// Values remain non-negative magnitudes; the role supplies direction.
+  final BarDivergingRole divergingRole;
+
+  /// Shared center-line presentation for a diverging composition.
+  final BarDivergingStyle divergingStyle;
 
   /// Width of an overlaid bar relative to its resolved category slot.
   ///
@@ -830,12 +842,25 @@ class BarChartSeries extends ChartSeries {
     if (rangeStartValues.isNotEmpty &&
         (layoutMode == BarLayoutMode.stacked ||
             layoutMode == BarLayoutMode.normalizedStacked ||
+            layoutMode == BarLayoutMode.divergingStacked ||
             layoutMode == BarLayoutMode.waterfall)) {
       throw ArgumentError.value(
         layoutMode,
         'layoutMode',
         'Range bars cannot use stacked or waterfall layout modes',
       );
+    }
+    if (layoutMode == BarLayoutMode.divergingStacked) {
+      for (var index = 0; index < points.length; index++) {
+        final magnitude = points[index].y - baselineValue;
+        if (!magnitude.isFinite || magnitude < 0) {
+          throw ArgumentError.value(
+            points[index].y,
+            'points[$index].y',
+            'Diverging stacked values must be finite magnitudes at or above the baseline',
+          );
+        }
+      }
     }
     if (waterfallTotalIndices.isNotEmpty &&
         layoutMode != BarLayoutMode.waterfall) {
@@ -866,6 +891,66 @@ class BarChartSeries extends ChartSeries {
         }
       }
     }
+    final bullet = bulletStyle;
+    if (lollipopStyle != null &&
+        layoutMode != BarLayoutMode.grouped &&
+        layoutMode != BarLayoutMode.overlaid) {
+      throw ArgumentError.value(
+        layoutMode,
+        'layoutMode',
+        'Lollipop bars require grouped or overlaid layout mode',
+      );
+    }
+    if (lollipopStyle != null && bullet != null) {
+      throw ArgumentError(
+        'lollipopStyle and bulletStyle cannot both be supplied',
+      );
+    }
+    if (bullet != null) {
+      if (layoutMode != BarLayoutMode.grouped) {
+        throw ArgumentError.value(
+          layoutMode,
+          'layoutMode',
+          'Bullet ranges require grouped layout mode',
+        );
+      }
+      if (trackStyle != null) {
+        throw ArgumentError(
+          'bulletStyle and trackStyle cannot both be supplied',
+        );
+      }
+      if (hasRangeValues) {
+        throw ArgumentError(
+          'bulletStyle and rangeStartValues cannot both be supplied',
+        );
+      }
+      if (bullet.ranges.isEmpty) {
+        throw ArgumentError.value(
+          bullet.ranges,
+          'bulletStyle.ranges',
+          'Bullet charts require at least one qualitative range',
+        );
+      }
+      var previous = baselineValue;
+      for (var index = 0; index < bullet.ranges.length; index++) {
+        final range = bullet.ranges[index];
+        if (!range.endValue.isFinite || range.endValue <= previous) {
+          throw ArgumentError.value(
+            range.endValue,
+            'bulletStyle.ranges[$index].endValue',
+            'Bullet range endpoints must be finite and strictly increase from the baseline',
+          );
+        }
+        if (range.label?.trim().isEmpty == true) {
+          throw ArgumentError.value(
+            range.label,
+            'bulletStyle.ranges[$index].label',
+            'Bullet range labels must be non-empty when supplied',
+          );
+        }
+        previous = range.endValue;
+      }
+    }
   }
 
   /// Backward-compatible validation entry point.
@@ -879,6 +964,18 @@ class BarChartSeries extends ChartSeries {
 
   /// Optional passive capacity or target track behind each bar.
   final BarTrackStyle? trackStyle;
+
+  /// Optional stem-and-head treatment replacing the filled bar body.
+  ///
+  /// Lollipop marks support grouped and overlaid layouts in either
+  /// orientation. Tracks, labels, targets, and uncertainty remain available.
+  final BarLollipopStyle? lollipopStyle;
+
+  /// Optional qualitative ranges that turn each point into a bullet chart.
+  ///
+  /// The actual bar remains the interactive measure and [targetValues]
+  /// provide the comparative marker. Ranges are passive shared context.
+  final BarBulletStyle? bulletStyle;
 
   /// Optional benchmark values aligned by index with [points].
   ///
@@ -938,6 +1035,8 @@ class BarChartSeries extends ChartSeries {
     BarLayoutMode? layoutMode,
     String? groupId,
     bool clearGroupId = false,
+    BarDivergingRole? divergingRole,
+    BarDivergingStyle? divergingStyle,
     double? overlayWidthFactor,
     double? overlayOffsetFactor,
     double? baselineValue,
@@ -950,6 +1049,10 @@ class BarChartSeries extends ChartSeries {
     BarChartStyle? barStyle,
     BarTrackStyle? trackStyle,
     bool clearTrackStyle = false,
+    BarLollipopStyle? lollipopStyle,
+    bool clearLollipopStyle = false,
+    BarBulletStyle? bulletStyle,
+    bool clearBulletStyle = false,
     List<double?>? targetValues,
     bool clearTargetValues = false,
     BarTargetMarkerStyle? targetMarkerStyle,
@@ -979,6 +1082,8 @@ class BarChartSeries extends ChartSeries {
       orientation: orientation ?? this.orientation,
       layoutMode: layoutMode ?? this.layoutMode,
       groupId: clearGroupId ? null : (groupId ?? this.groupId),
+      divergingRole: divergingRole ?? this.divergingRole,
+      divergingStyle: divergingStyle ?? this.divergingStyle,
       overlayWidthFactor: overlayWidthFactor ?? this.overlayWidthFactor,
       overlayOffsetFactor: overlayOffsetFactor ?? this.overlayOffsetFactor,
       baselineValue: baselineValue ?? this.baselineValue,
@@ -992,6 +1097,10 @@ class BarChartSeries extends ChartSeries {
       minBarLength: minBarLength ?? this.minBarLength,
       barStyle: barStyle ?? this.barStyle,
       trackStyle: clearTrackStyle ? null : (trackStyle ?? this.trackStyle),
+      lollipopStyle: clearLollipopStyle
+          ? null
+          : (lollipopStyle ?? this.lollipopStyle),
+      bulletStyle: clearBulletStyle ? null : (bulletStyle ?? this.bulletStyle),
       targetValues: clearTargetValues
           ? const []
           : (targetValues ?? this.targetValues),
@@ -1020,6 +1129,8 @@ class BarChartSeries extends ChartSeries {
           other.orientation == orientation &&
           other.layoutMode == layoutMode &&
           other.groupId == groupId &&
+          other.divergingRole == divergingRole &&
+          other.divergingStyle == divergingStyle &&
           other.overlayWidthFactor == overlayWidthFactor &&
           other.overlayOffsetFactor == overlayOffsetFactor &&
           other.baselineValue == baselineValue &&
@@ -1030,6 +1141,8 @@ class BarChartSeries extends ChartSeries {
           other.minBarLength == minBarLength &&
           other.barStyle == barStyle &&
           other.trackStyle == trackStyle &&
+          other.lollipopStyle == lollipopStyle &&
+          other.bulletStyle == bulletStyle &&
           ChartSeries._listEquals(other.targetValues, targetValues) &&
           other.targetMarkerStyle == targetMarkerStyle &&
           ChartSeries._listEquals(other.errorLowerValues, errorLowerValues) &&
@@ -1048,6 +1161,8 @@ class BarChartSeries extends ChartSeries {
     orientation,
     layoutMode,
     groupId,
+    divergingRole,
+    divergingStyle,
     overlayWidthFactor,
     overlayOffsetFactor,
     baselineValue,
@@ -1057,6 +1172,8 @@ class BarChartSeries extends ChartSeries {
     minBarLength,
     barStyle,
     trackStyle,
+    lollipopStyle,
+    bulletStyle,
     Object.hashAll(targetValues),
     targetMarkerStyle,
     Object.hashAll(errorLowerValues),

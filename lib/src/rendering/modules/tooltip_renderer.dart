@@ -14,6 +14,7 @@ import '../../models/chart_theme.dart';
 import '../../models/interaction_config.dart';
 import '../../models/series_axis_binding.dart';
 import '../../models/y_axis_config.dart';
+import '../../utils/text_direction_resolver.dart';
 import 'tooltip_animator.dart';
 
 /// Renders marker tooltips with smart positioning and arrow pointers.
@@ -121,7 +122,11 @@ class TooltipRenderer {
     final targetValue = barSeries?.targetValueFor(markerInfo.markerIndex);
     final errorLower = barSeries?.errorLowerValueFor(markerInfo.markerIndex);
     final errorUpper = barSeries?.errorUpperValueFor(markerInfo.markerIndex);
+    final qualitativeRange = barSeries?.bulletStyle?.rangeForValue(dataPoint.y);
     final tooltipBuffer = StringBuffer(baseTooltipText);
+    if (barSeries?.layoutMode == BarLayoutMode.divergingStacked) {
+      tooltipBuffer.write('\nResponse: ${barSeries!.divergingRole.name}');
+    }
     if (targetValue != null) {
       tooltipBuffer.write(
         '\nTarget: ${MultiAxisValueFormatter.format(value: targetValue, unit: yUnit)}',
@@ -134,6 +139,9 @@ class TooltipRenderer {
         '${MultiAxisValueFormatter.format(value: errorUpper, unit: yUnit)}',
       );
     }
+    if (qualitativeRange?.label case final label?) {
+      tooltipBuffer.write('\nRange: $label');
+    }
     final tooltipText = tooltipBuffer.toString();
 
     // Create text painter with configured style
@@ -145,7 +153,7 @@ class TooltipRenderer {
 
     final textPainter = TextPainter(
       text: TextSpan(text: tooltipText, style: textStyle),
-      textDirection: TextDirection.ltr,
+      textDirection: resolveChartTextDirection(tooltipText),
       textAlign: TextAlign.center,
     )..layout();
 
@@ -292,7 +300,7 @@ class TooltipRenderer {
           color: style.textColor.withValues(alpha: animator.opacity),
         ),
       ),
-      textDirection: TextDirection.ltr,
+      textDirection: resolveChartTextDirection(tooltipText),
       textAlign: TextAlign.center,
     )..layout();
     textPaintWithOpacity.paint(

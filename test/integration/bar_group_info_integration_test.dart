@@ -116,6 +116,53 @@ void main() {
       recorder.endRecording().dispose();
     });
 
+    test('outer stacked segment renders one resolved stack total', () {
+      final formattedValues = <double>[];
+      final series = BarChartSeries(
+        id: 'stack-top',
+        points: const [ChartDataPoint(x: 1, y: 10)],
+        barWidthPercent: 0.7,
+        layoutMode: BarLayoutMode.stacked,
+        groupId: 'actual',
+        labelStyle: BarLabelStyle(
+          show: true,
+          showStackTotal: true,
+          formatter: (point) {
+            formattedValues.add(point.y);
+            return point.y.toStringAsFixed(0);
+          },
+        ),
+      );
+      const transform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 2,
+        dataYMin: 0,
+        dataYMax: 50,
+        plotWidth: 240,
+        plotHeight: 200,
+      );
+      const groupInfo = BarGroupInfo(
+        index: 0,
+        count: 1,
+        layoutMode: BarLayoutMode.stacked,
+        groupId: 'actual',
+        startValues: {0: 20},
+        endValues: {0: 30},
+        outerPointIndices: {0},
+      );
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      SeriesElement(
+        series: series,
+        transform: transform,
+        barGroupInfo: groupInfo,
+      ).paint(canvas, const Size(240, 200));
+
+      expect(formattedValues, [10, 30]);
+      recorder.endRecording().dispose();
+    });
+
     test('DataConverter assigns BarGroupInfo for multiple bar series', () {
       // Create two bar series (like in fit_distribution_page)
       const barSeries1 = BarChartSeries(
@@ -300,6 +347,123 @@ void main() {
       expect(bounds.yMax, closeTo(99.75, 0.001));
     });
 
+    test('DataConverter bounds include bullet qualitative ranges', () {
+      final bounds = DataConverter.computeDataBounds(const [
+        BarChartSeries(
+          id: 'bullet-ranges',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.5,
+          bulletStyle: BarBulletStyle(
+            ranges: [
+              BarBulletRange(endValue: 50, color: Color(0xFFE2E8F0)),
+              BarBulletRange(endValue: 100, color: Color(0xFF94A3B8)),
+            ],
+          ),
+        ),
+      ]);
+
+      expect(bounds.yMin, closeTo(-5, 0.001));
+      expect(bounds.yMax, closeTo(105, 0.001));
+    });
+
+    test('bullet ranges reject incompatible and unordered configurations', () {
+      expect(
+        () => const BarChartSeries(
+          id: 'invalid-bullet-track',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.5,
+          trackStyle: BarTrackStyle(color: Color(0xFFE2E8F0)),
+          bulletStyle: BarBulletStyle(
+            ranges: [BarBulletRange(endValue: 100, color: Color(0xFF94A3B8))],
+          ),
+        ).validateConfiguration(),
+        throwsArgumentError,
+      );
+      expect(
+        () => const BarChartSeries(
+          id: 'invalid-bullet-order',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.5,
+          bulletStyle: BarBulletStyle(
+            ranges: [
+              BarBulletRange(endValue: 80, color: Color(0xFFE2E8F0)),
+              BarBulletRange(endValue: 70, color: Color(0xFF94A3B8)),
+            ],
+          ),
+        ).validateConfiguration(),
+        throwsArgumentError,
+      );
+    });
+
+    test('lollipop marks reject stacked and bullet compositions', () {
+      expect(
+        () => const BarChartSeries(
+          id: 'stacked-lollipop',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.5,
+          layoutMode: BarLayoutMode.stacked,
+          lollipopStyle: BarLollipopStyle(),
+        ).validateConfiguration(),
+        throwsArgumentError,
+      );
+      expect(
+        () => const BarChartSeries(
+          id: 'bullet-lollipop',
+          points: [ChartDataPoint(x: 0, y: 60)],
+          barWidthPercent: 0.5,
+          lollipopStyle: BarLollipopStyle(),
+          bulletStyle: BarBulletStyle(
+            ranges: [BarBulletRange(endValue: 100, color: Color(0xFF94A3B8))],
+          ),
+        ).validateConfiguration(),
+        throwsArgumentError,
+      );
+    });
+
+    test('bullet qualitative geometry transposes with its measure', () {
+      const transform = ChartTransform(
+        dataXMin: -0.5,
+        dataXMax: 0.5,
+        dataYMin: 0,
+        dataYMax: 100,
+        plotWidth: 100,
+        plotHeight: 100,
+      );
+      const vertical = BarChartSeries(
+        id: 'vertical-bullet',
+        points: [ChartDataPoint(x: 0, y: 60)],
+        barWidthPixels: 20,
+        bulletStyle: BarBulletStyle(
+          measureThicknessFactor: 0.5,
+          ranges: [BarBulletRange(endValue: 100, color: Color(0xFFE2E8F0))],
+        ),
+      );
+      const horizontal = BarChartSeries(
+        id: 'horizontal-bullet',
+        points: [ChartDataPoint(x: 0, y: 60)],
+        barWidthPixels: 20,
+        orientation: BarOrientation.horizontal,
+        bulletStyle: BarBulletStyle(
+          measureThicknessFactor: 0.5,
+          ranges: [BarBulletRange(endValue: 100, color: Color(0xFFE2E8F0))],
+        ),
+      );
+
+      final verticalGeometry = DataConverter.seriesToElements(
+        series: const [vertical],
+        transform: transform,
+      ).single.barGeometryForPoint(0)!;
+      final horizontalGeometry = DataConverter.seriesToElements(
+        series: const [horizontal],
+        transform: transform,
+      ).single.barGeometryForPoint(0)!;
+
+      expect(verticalGeometry.bulletRect?.width, 40);
+      expect(verticalGeometry.bulletRect?.height, 100);
+      expect(horizontalGeometry.bulletRect?.width, 100);
+      expect(horizontalGeometry.bulletRect?.height, 40);
+    });
+
     test('DataConverter bounds include uncertainty endpoints', () {
       final bounds = DataConverter.computeDataBounds(const [
         BarChartSeries(
@@ -357,6 +521,34 @@ void main() {
         expect(bounds.yMin, closeTo(-5, 0.001));
       },
     );
+
+    test('DataConverter centers diverging composition bounds', () {
+      final bounds = DataConverter.computeDataBounds(const [
+        BarChartSeries(
+          id: 'negative',
+          points: [ChartDataPoint(x: 0, y: 30)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          divergingRole: BarDivergingRole.negative,
+        ),
+        BarChartSeries(
+          id: 'neutral',
+          points: [ChartDataPoint(x: 0, y: 20)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+          divergingRole: BarDivergingRole.neutral,
+        ),
+        BarChartSeries(
+          id: 'positive',
+          points: [ChartDataPoint(x: 0, y: 50)],
+          barWidthPercent: 0.8,
+          layoutMode: BarLayoutMode.divergingStacked,
+        ),
+      ]);
+
+      expect(bounds.yMin, closeTo(-66, 0.001));
+      expect(bounds.yMax, closeTo(66, 0.001));
+    });
 
     test(
       'SeriesElement bounds and hit testing use rendered bar rectangles',
@@ -611,6 +803,121 @@ void main() {
       expect(decrease.$1, greaterThan(decrease.$2));
       expect(total.$3, greaterThan(total.$2));
       expect(connector.$4, greaterThan(0));
+    });
+
+    test('bar painter clips a non-color pattern to rounded geometry', () async {
+      const series = BarChartSeries(
+        id: 'pattern-paint',
+        points: [ChartDataPoint(x: 0, y: 70)],
+        color: Color(0xFFD1D5DB),
+        barWidthPixels: 60,
+        barStyle: BarChartStyle(
+          cornerRadius: 8,
+          cornerRadiusPolicy: BarCornerRadiusPolicy.all,
+          pattern: BarPatternStyle(
+            pattern: BarFillPattern.vertical,
+            color: Color(0xFF111827),
+            spacing: 8,
+            strokeWidth: 2,
+            opacity: 1,
+          ),
+        ),
+      );
+      const transform = ChartTransform(
+        dataXMin: -0.5,
+        dataXMax: 0.5,
+        dataYMin: 0,
+        dataYMax: 100,
+        plotWidth: 100,
+        plotHeight: 100,
+      );
+      final element = DataConverter.seriesToElements(
+        series: const [series],
+        transform: transform,
+      ).single;
+      final geometry = element.barGeometryForPoint(0)!;
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      element.paint(canvas, const Size(100, 100));
+      final image = await recorder.endRecording().toImage(100, 100);
+      final pixels = await image.toByteData(format: ImageByteFormat.rawRgba);
+      addTearDown(image.dispose);
+      expect(pixels, isNotNull);
+
+      var patternPixels = 0;
+      var fillPixels = 0;
+      for (
+        var x = geometry.rect.left.ceil() + 2;
+        x < geometry.rect.right.floor() - 2;
+        x++
+      ) {
+        final pixel = _rgbaAt(
+          pixels!,
+          100,
+          Offset(x.toDouble(), geometry.rect.center.dy),
+        );
+        if (pixel.$1 < 80 && pixel.$2 < 80 && pixel.$3 < 80) {
+          patternPixels++;
+        } else if (pixel.$1 > 150 && pixel.$2 > 150 && pixel.$3 > 150) {
+          fillPixels++;
+        }
+      }
+
+      expect(patternPixels, greaterThan(0));
+      expect(fillPixels, greaterThan(0));
+      expect(
+        _rgbaAt(pixels!, 100, const Offset(4, 50)).$4,
+        0,
+        reason: 'The pattern must not escape the canonical bar clip.',
+      );
+    });
+
+    test('bullet painter layers ranges behind the actual measure', () async {
+      const series = BarChartSeries(
+        id: 'bullet-paint',
+        points: [ChartDataPoint(x: 0, y: 60)],
+        color: Color(0xFF008000),
+        orientation: BarOrientation.horizontal,
+        barWidthPixels: 20,
+        barStyle: BarChartStyle(cornerRadius: 2),
+        bulletStyle: BarBulletStyle(
+          measureThicknessFactor: 0.5,
+          ranges: [
+            BarBulletRange(endValue: 50, color: Color(0xFFFF0000)),
+            BarBulletRange(endValue: 100, color: Color(0xFF0000FF)),
+          ],
+        ),
+      );
+      const transform = ChartTransform(
+        dataXMin: -0.5,
+        dataXMax: 0.5,
+        dataYMin: 0,
+        dataYMax: 100,
+        plotWidth: 100,
+        plotHeight: 100,
+      );
+      final element = DataConverter.seriesToElements(
+        series: const [series],
+        transform: transform,
+      ).single;
+      final geometry = element.barGeometryForPoint(0)!;
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      element.paint(canvas, const Size(100, 100));
+      final image = await recorder.endRecording().toImage(100, 100);
+      final pixels = await image.toByteData(format: ImageByteFormat.rawRgba);
+      addTearDown(image.dispose);
+      expect(pixels, isNotNull);
+
+      final rangeSampleY = geometry.rect.top - 5;
+      final nearRange = _rgbaAt(pixels!, 100, Offset(25, rangeSampleY));
+      final farRange = _rgbaAt(pixels, 100, Offset(75, rangeSampleY));
+      final actual = _rgbaAt(pixels, 100, geometry.rect.center);
+
+      expect(nearRange.$1, greaterThan(nearRange.$3));
+      expect(farRange.$3, greaterThan(farRange.$1));
+      expect(actual.$2, greaterThan(actual.$1));
+      expect(actual.$2, greaterThan(actual.$3));
     });
   });
 }
