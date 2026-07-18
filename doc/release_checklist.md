@@ -43,9 +43,13 @@ GitHub publishing can be enabled on pub.dev after the package exists.
 - [ ] The public API has useful `///` documentation.
 - [ ] Screenshot 1 is a chart-only flagship hero and works as the package
   thumbnail without relying on showcase application chrome.
-- [ ] The remaining screenshot slots show varied chart-only examples,
+- [ ] Every README image is an individual chart or focused animation linked
+      to the exact Gallery or detail page that demonstrates it.
+- [ ] The README visual index uses three examples per row and includes every
+      composition in the Gallery's curated tour without repeating an asset.
+- [ ] The remaining screenshot slots show varied individual examples,
       including Pie, Donut, multi-axis, annotations, live data, themes, and
-      baseline fills.
+      baseline fills; do not publish contact sheets or repeated composites.
 - [ ] Screenshot descriptions are specific and at most 160 characters.
 - [ ] The interaction and live-stream animations show real behavior from the
   deployed showcase, remain below 4 MB each, and render from package-local
@@ -61,11 +65,13 @@ python -m pip install selenium Pillow
 python tool/capture_showcase_media.py
 ```
 
-Use `--capture interaction`, `--capture interaction-still`,
-`--capture live-stream`, `--capture stills`, `--capture pie`, `--capture bar`, or
-`--capture donut` when only one media group changed. Capture browser media
-from a local release build with `--url http://127.0.0.1:<port>/` before the
-public site has the change.
+Use `--capture interaction` for the focused tracking and zoom/pan recordings,
+`--capture selection` for Donut selection, `--capture live-stream` for the
+buffering sequence, or `--capture tracking` and `--capture zoom-pan` when only
+one interaction changed. Use `--capture interaction-still`, `--capture
+stills`, `--capture pie`, `--capture bar`, or `--capture donut` for static
+media. Capture browser media from a local release build with `--url
+http://127.0.0.1:<port>/` before the public site has the change.
 
 `--capture pie`, `--capture donut`, `--capture bar`, `--capture hero`, and
 `--capture interaction-still` do not take browser screenshots. They mount the

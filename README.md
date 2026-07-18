@@ -23,65 +23,47 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 ## Rendered examples
 
-| Multi-axis training profile | Dark baseline fill, glow, and sections |
-| --- | --- |
-| [![Power area and heart-rate response with two axes, stage bands, a target threshold, tracking, and a peak marker](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/) | [![Power-duration chart with six curves, positive and negative baseline fill, glow, annotations, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/) |
+Every image below opens the matching interactive example and configuration
+surface in the public showcase. The compact grid provides a visual index of the
+package rather than treating a single composition as representative.
 
-### Core chart types
+### Chart types
 
-Line, area, scatter, bar, Pie, and Donut charts share the same native Flutter
-rendering pipeline while retaining independent series and theme treatments.
-
-[![Line, area, scatter, bar, Pie, and Donut charts rendered by Braven Charts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_strip.png)](https://braven-pvm.github.io/braven_charts/?page=chart-types)
-
-### Multi-axis interaction
-
-The animated example combines independently scaled axes, normalization,
-annotations, tracking, pointer zoom, drag-to-pan, and a synchronized scrollbar:
-
-[![Four-axis chart with annotations, tracking, zoom, pan, and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/interaction_demo.gif)](https://braven-pvm.github.io/braven_charts/)
-
-### Live-stream buffering
-
-`LiveStreamController` sends frame-coalesced point updates directly to the
-rendering layer. The viewport can follow the latest sample, pause while the
-bounded buffer continues receiving data, and resume with buffered catch-up.
-
-[![Live chart data buffering and catching up](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream)
-
-## Gallery
-
-The Gallery combines curated and full-catalog views across Pie, Donut, line, area,
-bar, scatter, and mixed compositions. It covers light and dark Pie treatments,
-inside and collision-aware outside labels, dense categories, rounded and
-elevated slices, solid and gradient fills, baseline fills, live data,
-independent axes, annotations,
-interpolation, thresholds, and domain-shaped dashboards.
-
-These PNGs are exported by `BravenChartController.capturePreview()`, the same
-native image path available to package consumers:
-
-| Collision-managed outside labels | Gradient, elevation, and positioned legend |
-| --- | --- |
-| [![Pie contribution chart with outside category and percentage labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie allocation chart with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
-
-[![Three product-shaped Donut compositions with center content, a partial sweep, and variable radii](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_donut_collection.png)](https://braven-pvm.github.io/braven_charts/?page=gallery)
-
-| Subscription MRR | Release readiness | Channel efficiency |
+| Line | Area | Bar |
 | --- | --- | --- |
-| [![Subscription MRR Donut with a selection-aware center value](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_revenue_ring.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Dark release-readiness Donut with a partial sweep and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Variable-radius Donut encoding orders and audience reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+| [![Linear, Bezier, stepped, and monotone line interpolation](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_interpolation.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Positive and negative baseline area fill across independently scaled series](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_baseline.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Grouped bars with gradients, targets, uncertainty intervals, and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts&preset=targets) |
+| **Scatter** | **Pie** | **Donut** |
+| [![Two scatter cohorts with distinct marker sets and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_experiment_cohorts.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
-### Bar targets and interaction
+### Interaction and motion
 
-Grouped Bar series support keyed data-update animation, durable point
-selection, gradients, per-category benchmark markers, and absolute
-uncertainty intervals with styled stems and caps.
+Each recording demonstrates one behavior rather than compressing the entire
+interaction model into a single animation.
 
-[![Grouped Bar chart with gradients, target markers, uncertainty intervals, and a tracking tooltip](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts)
+| Multi-series tracking | Zoom and drag-to-pan | Live-stream buffering |
+| --- | --- | --- |
+| [![Crosshair tracking across independently scaled line and area series](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/tracking_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=interaction) | [![Pointer zoom and drag-to-pan on a dark multi-axis chart with a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/zoom_pan_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=interaction) | [![Live chart pausing while points buffer and resuming with catch-up](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/live_stream_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=live-stream) |
+| **Donut selection** | **Live viewport** | **Normalized tracking** |
+| [![Animated Donut selection with selection-aware center content](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_selection_demo.gif)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Live sensor viewport with bounded buffering and a synchronized scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_live_sensor.png)](https://braven-pvm.github.io/braven_charts/?page=live-stream) | [![Normalized pressure and temperature signals with crosshair tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_multi_sensor.png)](https://braven-pvm.github.io/braven_charts/?page=interaction) |
 
-The wider Cartesian catalog remains available in the current Gallery mosaic:
+### Curated Gallery
 
-[![Varied Braven Charts compositions from the current Gallery](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_mosaic.png)](https://braven-pvm.github.io/braven_charts/)
+These are the remaining compositions in the Gallery's curated tour: analytical
+workflows, styling treatments, business charts, and radial presentations.
+
+| Training profile | Power-duration model | Annotations |
+| --- | --- | --- |
+| [![Multi-axis training profile with stage bands, a target threshold, tracking, and a highlighted peak](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_threshold.png)](https://braven-pvm.github.io/braven_charts/?page=gallery) | [![Dark power-duration model with six curves, baseline fill, glow, range sections, and a scrollbar](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/hero_power_duration.png)](https://braven-pvm.github.io/braven_charts/?page=multi-axis) | [![Point, range, and threshold annotations applied to an analysis](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_annotated.png)](https://braven-pvm.github.io/braven_charts/?page=annotations) |
+| **VO2 stages** | **Signal glow** | **Lactate comparison** |
+| [![Raw VO2 signal with stage averages, a target range, thresholds, and a VO2max event](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_vo2_stage.png)](https://braven-pvm.github.io/braven_charts/?page=scientific) | [![Dark chart with a glowing focus series, contextual area, inline labels, and a threshold](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_glow.png)](https://braven-pvm.github.io/braven_charts/?page=series-styling) | [![Reusable lactate analysis shown as reference and current-session small multiples](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_lactate.png)](https://braven-pvm.github.io/braven_charts/?page=scientific) |
+| **Analytics dashboard** | **Monthly revenue** | **Temperature comparison** |
+| [![Layered area and line series in a compact analytics dashboard](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_dashboard.png)](https://braven-pvm.github.io/braven_charts/?page=gallery) | [![Revenue curve with target annotation, markers, labels, and a themed plot area](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_monthly_revenue.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![High and low temperature series with independent styling](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_temperature.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) |
+| **Revenue forecast** | **Threshold segments** | **Positive and negative area** |
+| [![Revenue line layered over a forecast area](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_revenue_forecast.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![System load line whose segments change style at a threshold](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_system_load.png)](https://braven-pvm.github.io/braven_charts/?page=series-styling) | [![Dark profit and loss chart with positive and negative baseline areas](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_profit_loss.png)](https://braven-pvm.github.io/braven_charts/?page=baseline-fill) |
+| **Revenue by product** | **Revenue contribution** | **Release effort** |
+| [![Dark Pie chart with linear fills and value-first inside labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_revenue_by_product.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Pie chart with outside contribution labels and slice-derived borders](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_revenue_contribution.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark Pie chart with rounded slices and compact inside labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_release_effort.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) |
+| **Support request mix** | **Subscription MRR** | **Channel efficiency** |
+| [![Dense Pie categories with collision-aware outside callouts](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_support_request_mix.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Donut chart showing subscription mix with selection-aware center content](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_revenue_ring.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) | [![Variable-radius Donut chart encoding orders and audience reach](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_campaign_reach.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
 ## Feature coverage
 

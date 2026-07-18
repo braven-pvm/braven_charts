@@ -35,8 +35,26 @@ void main() {
     await _capturePie(
       tester,
       outputDirectory: outputDirectory,
+      fileName: 'pie_revenue_by_product.png',
+      source: const SimpleRevenueGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
       fileName: 'pie_revenue_contribution.png',
       source: const RevenueContributionGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'pie_release_effort.png',
+      source: const ReleaseEffortGalleryCard(),
+    );
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'pie_support_request_mix.png',
+      source: const SupportMixGalleryCard(),
     );
     await _capturePie(
       tester,

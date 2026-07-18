@@ -303,6 +303,24 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
         panel: PerformanceIntelligenceHeroPanel.powerDuration,
       );
     }
+    if (capture == 'interaction-session') {
+      return const _MediaCaptureFrame(
+        child: PerformanceIntelligenceGalleryHero(
+          panel: PerformanceIntelligenceHeroPanel.sessionProfile,
+        ),
+      );
+    }
+    if (capture == 'interaction-duration') {
+      return const _MediaCaptureFrame(
+        child: PerformanceIntelligenceGalleryHero(
+          panel: PerformanceIntelligenceHeroPanel.powerDuration,
+          showTracking: false,
+        ),
+      );
+    }
+    if (capture == 'donut-revenue') {
+      return const _MediaCaptureFrame(child: RevenueRingGalleryCard());
+    }
     if (capture == 'donut-gallery') {
       return const DonutGalleryMediaPanel();
     }
@@ -446,6 +464,23 @@ class _HeroMediaCapture extends StatelessWidget {
           child: PerformanceIntelligenceGalleryHero(panel: panel),
         ),
       ),
+    );
+  }
+}
+
+/// Large, deterministic frame for focused animated package media.
+///
+/// The child is one of the same reusable compositions shown in the Gallery;
+/// this surface only removes navigation and other showcase chrome.
+class _MediaCaptureFrame extends StatelessWidget {
+  const _MediaCaptureFrame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(child: SizedBox(width: 1200, height: 720, child: child)),
     );
   }
 }

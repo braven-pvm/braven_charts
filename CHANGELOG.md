@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   strip, keyboard resizing, Escape/double-click reset, and stable Pie/Donut legend footprints
   when selection changes.
 
+### Changed
+- Replaced repeated pub.dev contact sheets and oversized caption overlays with
+  a three-column visual index of 30 individually linked chart captures. The
+  index covers every curated Gallery composition alongside concise tracking,
+  zoom/pan, Donut selection, and live-buffering animations generated from
+  reusable showcase compositions.
+
 ## 0.5.0 - 2026-07-17
 
 ### Added
