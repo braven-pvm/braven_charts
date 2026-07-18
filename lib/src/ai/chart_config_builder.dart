@@ -353,6 +353,7 @@ class ChartConfigBuilder {
           seriesJson: seriesJson,
           chartStyle: chartStyle,
         ),
+        sliceGroupingConfig: _parseRadialSliceGroupingConfig(chartStyle),
       );
     } on ArgumentError catch (error) {
       throw FormatException('Invalid donut series "$id": ${error.message}');
@@ -407,6 +408,7 @@ class ChartConfigBuilder {
           seriesJson: seriesJson,
           chartStyle: chartStyle,
         ),
+        sliceGroupingConfig: _parseRadialSliceGroupingConfig(chartStyle),
       );
     } on ArgumentError catch (error) {
       throw FormatException('Invalid pie series "$id": ${error.message}');
@@ -433,6 +435,26 @@ class ChartConfigBuilder {
       },
       label: seriesJson['radius_label'] as String? ?? defaults.label,
       unit: seriesJson['radius_unit'] as String?,
+    );
+  }
+
+  static RadialSliceGroupingConfig? _parseRadialSliceGroupingConfig(
+    Map<String, dynamic>? json,
+  ) {
+    if (json == null ||
+        !json.keys.any((key) => key.startsWith('pie_grouping_'))) {
+      return null;
+    }
+    return RadialSliceGroupingConfig(
+      minimumShare:
+          (json['pie_grouping_minimum_share'] as num?)?.toDouble() ?? 0.05,
+      minimumSourceCount:
+          (json['pie_grouping_minimum_source_count'] as num?)?.toInt() ?? 2,
+      label: json['pie_grouping_label'] as String? ?? 'Other',
+      color: switch (json['pie_grouping_color']) {
+        final String value => _parseColor(value),
+        _ => null,
+      },
     );
   }
 
@@ -571,6 +593,8 @@ class ChartConfigBuilder {
         null => null,
         'none' => PieAnimationMode.none,
         'grow' => PieAnimationMode.grow,
+        'sweep' => PieAnimationMode.sweep,
+        'fade' => PieAnimationMode.fade,
         final value => throw FormatException(
           'Unknown pie_animation_mode "$value".',
         ),

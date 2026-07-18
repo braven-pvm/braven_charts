@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
@@ -226,6 +227,63 @@ void main() {
 
     expect(workbenchController.requestedMode, ChartDisplayMode.split);
     expect(workbenchController.effectiveMode, ChartDisplayMode.split);
+  });
+
+  testWidgets('auto-fits and resizes the Split data pane without remounting', (
+    tester,
+  ) async {
+    final chartController = BravenChartController();
+    final workbenchController = ChartWorkbenchController();
+    addTearDown(chartController.dispose);
+    addTearDown(workbenchController.dispose);
+
+    await tester.pumpWidget(
+      _host(
+        width: 1200,
+        chartController: chartController,
+        workbenchController: workbenchController,
+        initialDisplayMode: ChartDisplayMode.split,
+        splitBreakpoint: 600,
+        autoFitTablePane: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chartFinder = find.byKey(const ValueKey('chart-workbench-chart'));
+    final tableFinder = find.byType(ChartDataTable);
+    final handleFinder = find.byKey(
+      const ValueKey('chart-workbench-split-handle'),
+    );
+    final initialChartWidth = tester.getSize(chartFinder).width;
+    final initialTableWidth = tester.getSize(tableFinder).width;
+    final preferredTableWidth = ChartDataTable.preferredWidthFor(
+      model: workbenchController.tableModel!,
+    );
+
+    expect(handleFinder, findsOneWidget);
+    expect(tester.getSize(handleFinder).width, 12);
+    expect(initialTableWidth, closeTo(math.max(360, preferredTableWidth), 0.1));
+    expect(initialChartWidth, greaterThan(initialTableWidth));
+
+    await tester.drag(handleFinder, const Offset(-120, 0));
+    await tester.pumpAndSettle();
+    final draggedChartWidth = tester.getSize(chartFinder).width;
+    expect(draggedChartWidth, lessThan(initialChartWidth - 80));
+    expect(tester.getSize(tableFinder).width, greaterThan(initialTableWidth));
+
+    await tester.tap(handleFinder);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(chartFinder).width, greaterThan(draggedChartWidth));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(chartFinder).width, closeTo(initialChartWidth, 0.1));
+    expect(
+      chartController.extractDocument(),
+      isA<ChartArtifactSuccess<ChartDocumentSnapshot>>(),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('supports large text, high contrast, and keyboard-only modes', (
@@ -1041,6 +1099,7 @@ Widget _host({
   double chartValue = 10,
   TextScaler textScaler = TextScaler.noScaling,
   bool highContrast = false,
+  bool autoFitTablePane = false,
 }) => MaterialApp(
   builder: (context, child) => MediaQuery(
     data: MediaQuery.of(
@@ -1066,6 +1125,7 @@ Widget _host({
           tableRefreshPolicy: tableRefreshPolicy,
           tableOptions: tableOptions,
           documentOptions: documentOptions,
+          autoFitTablePane: autoFitTablePane,
         ),
       ),
     ),

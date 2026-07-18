@@ -84,7 +84,6 @@ The recommended architectural shape is:
 - Rose/Nightingale charts.
 - Semi-circular gauges.
 - Mixed radial and Cartesian series.
-- Automatic small-slice grouping into `Other`.
 - Image shaders.
 - Streaming-specific pie behavior.
 
@@ -492,6 +491,20 @@ Status: **Complete locally and ready for live review.**
 - Round-trip gradient style through artifact JSON and expose it through the AI
   builder/tool schema.
 - Add deterministic pixel coverage and live showcase presets/controls.
+
+### Slice 8: source-preserving small-slice grouping
+
+Status: **Complete locally and ready for live review.**
+
+- Project qualifying positive source points into one visible aggregate without
+  rewriting the original series data.
+- Carry every grouped source index through geometry, hits, semantics, legend,
+  data-table, controller selection, artifacts, hydration, and AI input.
+- Keep `onPointTap` presentation-oriented with the aggregate point while
+  selection callbacks and controller state expose the original source points.
+- Reject grouping combined with variable slice radii until a deliberate
+  second-metric aggregation policy is defined.
+- Demonstrate the complete workflow in the public Donut showcase.
 
 Slice 6 release evidence:
 

@@ -448,6 +448,49 @@ void main() {
     });
 
     test(
+      'fade entrance multiplies slice opacity without scaling geometry',
+      () async {
+        final series = DonutChartSeries.fromMap(
+          id: 'fade-donut',
+          values: const {'Only': 1},
+          donutStyle: const DonutChartStyle(
+            innerRadiusFactor: 0.5,
+            radiusFactor: 1,
+            sliceGap: 0,
+            borderWidth: 0,
+            animationMode: PieAnimationMode.fade,
+          ),
+          centerContent: DonutCenterContent.hidden,
+          dataLabels: const PieDataLabelConfig(isVisible: false),
+        );
+        final element = PieSeriesElement(
+          series: series,
+          size: const Size.square(100),
+          theme: ChartTheme.light,
+          animationProgress: 0.5,
+          isEntranceAnimationComplete: false,
+        );
+        final finalElement = PieSeriesElement(
+          series: series,
+          size: const Size.square(100),
+          theme: ChartTheme.light,
+        );
+        final recorder = PictureRecorder();
+        element.paint(Canvas(recorder), const Size.square(100));
+        final image = await recorder.endRecording().toImage(100, 100);
+        addTearDown(image.dispose);
+        final bytes = await image.toByteData(format: ImageByteFormat.rawRgba);
+        expect(bytes, isNotNull);
+
+        final ringOffset = (50 * 100 + 80) * 4;
+        expect(bytes!.getUint8(ringOffset + 3), closeTo(128, 2));
+        expect(element.geometry.outerRadius, finalElement.geometry.outerRadius);
+        expect(element.geometry.innerRadius, finalElement.geometry.innerRadius);
+        expect(element.geometry.slices, hasLength(1));
+      },
+    );
+
+    test(
       'callout and selected elevation styles paint without changing hits',
       () {
         final series = PieChartSeries.fromMap(

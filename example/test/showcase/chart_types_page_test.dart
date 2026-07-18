@@ -26,6 +26,9 @@ void main() {
     for (final family in ['Line', 'Area', 'Bar', 'Scatter', 'Pie', 'Donut']) {
       expect(find.text(family), findsOneWidget);
     }
+    expect(find.text('Motion'), findsNWidgets(2));
+    expect(find.text('Grouping'), findsOneWidget);
+    expect(find.text('Variable radius'), findsOneWidget);
     expect(find.text('Chart Options'), findsNothing);
     expect(find.text('Regenerate Dataset'), findsNothing);
   });

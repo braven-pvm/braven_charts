@@ -19,6 +19,8 @@ class DonutChartsPage extends StatefulWidget {
 
 class _DonutChartsPageState extends State<DonutChartsPage> {
   final BravenChartController _chartController = BravenChartController();
+  final ChartWorkbenchController _workbenchController =
+      ChartWorkbenchController();
 
   _DonutStory _story = _DonutStory.contribution;
   double _innerRadiusFactor = 0.58;
@@ -27,15 +29,16 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   double _radiusFactor = 0.86;
   double _sliceGap = 3;
   double _cornerRadius = 8;
+  PieAnimationMode _animationMode = PieAnimationMode.grow;
   bool _clockwise = true;
   bool _showLabels = true;
   bool _showLegend = true;
   bool _showCenterContent = true;
+  bool _groupSmallSlices = false;
+  double _groupingMinimumShare = 0.07;
   DonutCenterValueMode _centerValueMode = DonutCenterValueMode.selectedOrTotal;
   _DonutCenterStyle _centerStyle = _DonutCenterStyle.theme;
   ChartDisplayMode _displayMode = ChartDisplayMode.split;
-  ChartTableModel? _tableModel;
-  ChartDocumentRevision? _tableRevision;
   ChartArtifact? _capturedArtifact;
   HydratedChartConfiguration? _restoredConfiguration;
   String? _portableJson;
@@ -43,16 +46,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   String? _selectedCategory;
   bool _isCapturing = false;
   bool _showRestoredCopy = false;
-  int _tableRefreshAttempts = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleTableRefresh();
-  }
 
   @override
   void dispose() {
+    _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
   }
@@ -188,17 +185,32 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           children: [
             Icon(Icons.donut_large_outlined, color: theme.colorScheme.primary),
             const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _selectedCategory == null
-                    ? 'Select a slice, legend item, or table row. The center follows the same durable selection, then returns to the total when selection clears.'
-                    : 'Selected: $_selectedCategory. The chart, table, controller, and center now share this category identity.',
-              ),
-            ),
+            Expanded(child: Text(_sliceNoticeText)),
           ],
         ),
       ),
     );
+  }
+
+  String get _sliceNoticeText {
+    if (_selectedCategory == null) {
+      return _groupSmallSlices
+          ? 'Small categories render as one Other slice, while the data table keeps every original row. Select Other or any grouped row to see the shared selection.'
+          : 'Select a slice, legend item, or table row. The center follows the same durable selection, then returns to the total when selection clears.';
+    }
+    if (_groupSmallSlices && _selectedCategory == 'Other') {
+      RadialCategorySlice? grouped;
+      for (final slice in _buildSeries().visibleSlices) {
+        if (slice.isGrouped) {
+          grouped = slice;
+          break;
+        }
+      }
+      if (grouped != null) {
+        return 'Selected: Other. One visible slice now selects all ${grouped.sourcePointIndices.length} original source rows through the controller.';
+      }
+    }
+    return 'Selected: $_selectedCategory. The chart, table, controller, and center now share this category identity.';
   }
 
   Widget _buildChartCard({required bool compact}) {
@@ -212,38 +224,24 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _story.chartTitle,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _story.chartDescription,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _MetricPill(
-                  label: '${(_innerRadiusFactor * 100).round()}% center',
-                ),
-                const SizedBox(width: 6),
-                _MetricPill(label: '${_sweepAngleDegrees.round()}° sweep'),
-                const SizedBox(width: 6),
-                _MetricPill(label: _centerModeName(_centerValueMode)),
-              ],
-            ),
+            if (compact)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildChartHeading(theme),
+                  const SizedBox(height: 8),
+                  _buildChartMetrics(),
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildChartHeading(theme)),
+                  const SizedBox(width: 16),
+                  Flexible(child: _buildChartMetrics()),
+                ],
+              ),
             const SizedBox(height: 8),
             _buildDisplayModeSelector(),
             const SizedBox(height: 8),
@@ -253,6 +251,38 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       ),
     );
   }
+
+  Widget _buildChartHeading(ThemeData theme) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        _story.chartTitle,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        _story.chartDescription,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
+  );
+
+  Widget _buildChartMetrics() => Wrap(
+    alignment: WrapAlignment.end,
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      _MetricPill(label: '${(_innerRadiusFactor * 100).round()}% center'),
+      _MetricPill(label: '${_sweepAngleDegrees.round()}° sweep'),
+      _MetricPill(label: _centerModeName(_centerValueMode)),
+      _MetricPill(label: '${_animationModeName(_animationMode)} in'),
+      if (_groupSmallSlices) const _MetricPill(label: 'Grouped sources'),
+    ],
+  );
 
   Widget _buildDisplayModeSelector() {
     return Align(
@@ -278,55 +308,45 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         ],
         selected: {_displayMode},
         onSelectionChanged: (selected) {
-          setState(() => _displayMode = selected.single);
-          if (_tableModel == null) _scheduleTableRefresh();
+          final mode = selected.single;
+          setState(() => _displayMode = mode);
+          _workbenchController.setDisplayMode(mode);
         },
       ),
     );
   }
 
   Widget _buildDataSurface({required bool compact}) {
-    final chart = _buildLiveChart();
-    final table = _buildLiveTable();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 8.0;
-        final split = _displayMode == ChartDisplayMode.split;
-        final showChart = _displayMode != ChartDisplayMode.data;
-        final showTable = _displayMode != ChartDisplayMode.chart;
-        final splitWidth = (constraints.maxWidth - gap) / 2;
-        final splitHeight = (constraints.maxHeight - gap) / 2;
-
-        // Both surfaces keep stable slots so changing presentation does not
-        // detach the chart controller or lose durable point selection.
-        return Stack(
-          children: [
-            Positioned(
-              left: 0,
-              top: 0,
-              width: split && !compact ? splitWidth : constraints.maxWidth,
-              height: split && compact ? splitHeight : constraints.maxHeight,
-              child: Offstage(offstage: !showChart, child: chart),
-            ),
-            Positioned(
-              left: split && !compact ? splitWidth + gap : 0,
-              top: split && compact ? splitHeight + gap : 0,
-              width: split && !compact ? splitWidth : constraints.maxWidth,
-              height: split && compact ? splitHeight : constraints.maxHeight,
-              child: Offstage(offstage: !showTable, child: table),
-            ),
-          ],
-        );
-      },
+    return BravenChartWorkbench(
+      chartController: _chartController,
+      workbenchController: _workbenchController,
+      initialDisplayMode: _displayMode,
+      showModeSwitcher: false,
+      splitBreakpoint: 1,
+      splitAxis: compact ? Axis.vertical : Axis.horizontal,
+      splitGap: 8,
+      minimumChartPaneExtent: compact ? 240 : 360,
+      minimumTablePaneExtent: compact ? 240 : 420,
+      maximumAutoTablePaneExtent: 620,
+      autoFitTablePane: true,
+      isSplitResizable: true,
+      tableRefreshPolicy: ChartTableRefreshPolicy.onDocumentRevision,
+      onTableRowFocused: _focusTablePoints,
+      onTableRowFocusCleared: _chartController.clearPointFocus,
+      onTableRowHoverChanged: (points) => points == null
+          ? _chartController.clearPointFocus()
+          : _focusTablePoints(points),
+      onTableRowActivated: _selectTablePoints,
+      chartBuilder: (context, controller) => _buildLiveChart(controller),
     );
   }
 
-  Widget _buildLiveChart() {
+  Widget _buildLiveChart(BravenChartController controller) {
     return BravenChartPlus(
       key: const ValueKey('donut-showcase-chart'),
       title: _story.chartTitle,
       subtitle: _story.chartDescription,
-      bravenChartController: _chartController,
+      bravenChartController: controller,
       showLegend: _showLegend,
       theme: ChartTheme.light,
       interactionConfig: const InteractionConfig(
@@ -345,23 +365,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     );
   }
 
-  Widget _buildLiveTable() {
-    final model = _tableModel;
-    if (model == null) return const ChartDataTable(isLoading: true);
-    return ChartDataTable(
-      key: const ValueKey('donut-showcase-table'),
-      model: model,
-      selectedPointRefs: _chartController.selectedPointRefs,
-      csvFileName: 'donut-${_story.name}.csv',
-      onRowFocused: _focusTablePoints,
-      onRowFocusCleared: _chartController.clearPointFocus,
-      onRowHoverChanged: (points) => points == null
-          ? _chartController.clearPointFocus()
-          : _focusTablePoints(points),
-      onRowActivated: _selectTablePoints,
-    );
-  }
-
   DonutChartSeries _buildSeries() {
     return DonutChartSeries.fromMap(
       id: 'donut-${_story.name}',
@@ -377,6 +380,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               label: 'Audience reach',
               unit: 'k users',
             ),
+      sliceGroupingConfig: _groupSmallSlices
+          ? RadialSliceGroupingConfig(
+              minimumShare: _groupingMinimumShare,
+              label: 'Other',
+            )
+          : null,
       donutStyle: DonutChartStyle(
         innerRadiusFactor: _innerRadiusFactor,
         sweepAngleDegrees: _sweepAngleDegrees,
@@ -390,6 +399,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         selectionExplodeOffset: 10,
         cornerRadius: _cornerRadius,
         cornerTreatment: PieCornerTreatment.roundAll,
+        animationMode: _animationMode,
         gradient: const PieGradientStyle(
           type: PieGradientType.radial,
           startLightnessShift: 0.14,
@@ -422,52 +432,24 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     );
   }
 
-  void _scheduleTableRefresh({bool resetAttempts = true}) {
-    if (resetAttempts) _tableRefreshAttempts = 0;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _refreshTableFromChart();
-    });
-  }
-
-  void _refreshTableFromChart() {
-    final result = _chartController.extractDocument(
-      ChartDocumentExtractOptions(documentId: 'donut-${_story.name}'),
-    );
-    if (result case ChartArtifactSuccess<ChartDocumentSnapshot>()) {
-      final snapshot = result.value;
-      final model = ChartTableModel.fromDocument(
-        snapshot.document,
-        viewState: snapshot.viewState,
-      );
-      if (!mounted) return;
-      setState(() {
-        _tableModel = model;
-        _tableRevision = snapshot.revision;
-      });
-      _tableRefreshAttempts = 0;
-      return;
-    }
-    if (_tableRefreshAttempts < 3) {
-      _tableRefreshAttempts++;
-      _scheduleTableRefresh(resetAttempts: false);
-    }
-  }
-
   void _focusTablePoints(List<ChartPointRef> points) {
     final revision =
-        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+        _chartController.effectiveDocumentRevision.value ??
+        _workbenchController.tableSnapshot?.revision;
     if (revision == null) return;
     _chartController.focusPoints(points, revision: revision);
   }
 
   void _selectTablePoints(List<ChartPointRef> points) {
     final revision =
-        _chartController.effectiveDocumentRevision.value ?? _tableRevision;
+        _chartController.effectiveDocumentRevision.value ??
+        _workbenchController.tableSnapshot?.revision;
     if (revision == null) return;
     final selectedPoints = _chartController.selectedPointRefs;
-    if (points.isNotEmpty &&
-        selectedPoints.length == points.length &&
-        selectedPoints.containsAll(points)) {
+    final targetPoints = _expandedVisibleSliceRefs(points);
+    if (targetPoints.isNotEmpty &&
+        selectedPoints.length == targetPoints.length &&
+        selectedPoints.containsAll(targetPoints)) {
       _chartController.clearPointSelection();
       setState(() => _selectedCategory = null);
       return;
@@ -475,17 +457,40 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     final result = _chartController.selectPoints(points, revision: revision);
     if (result case ChartArtifactSuccess<void>()) {
       final selected = points.firstOrNull;
-      String? category;
-      if (selected != null) {
-        for (final row in _tableModel?.pieRows ?? const <ChartTablePieRow>[]) {
-          if (row.reference == selected) {
-            category = row.category;
-            break;
-          }
-        }
-      }
+      final category = selected == null
+          ? null
+          : _buildSeries()
+                .visibleSliceForSourcePointIndex(selected.pointIndex)
+                ?.point
+                .label;
       setState(() => _selectedCategory = category);
     }
+  }
+
+  Set<ChartPointRef> _expandedVisibleSliceRefs(List<ChartPointRef> points) {
+    final series = _buildSeries();
+    final expanded = <ChartPointRef>{};
+    for (final ref in points) {
+      final slice = series.visibleSliceForSourcePointIndex(ref.pointIndex);
+      if (slice == null) {
+        expanded.add(ref);
+        continue;
+      }
+      expanded.addAll([
+        for (final pointIndex in slice.sourcePointIndices)
+          ChartPointRef(seriesId: ref.seriesId, pointIndex: pointIndex),
+      ]);
+    }
+    return expanded;
+  }
+
+  void _setGroupingEnabled(bool value) {
+    _chartController.clearPointSelection();
+    setState(() {
+      _groupSmallSlices = value;
+      _selectedCategory = null;
+      _clearPortableState();
+    });
   }
 
   void _handlePointActivation(ChartDataPoint point, String seriesId) {
@@ -507,12 +512,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
 
   Future<void> _capturePortableCopy() async {
     if (_isCapturing) return;
-    final previousMode = _displayMode;
-    if (previousMode == ChartDisplayMode.data) {
-      setState(() => _displayMode = ChartDisplayMode.chart);
-      await WidgetsBinding.instance.endOfFrame;
-    }
-    if (!mounted) return;
     setState(() {
       _isCapturing = true;
       _captureError = null;
@@ -534,7 +533,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         _isCapturing = false;
         _captureError =
             '${captured.error.message} Try again after the chart finishes rendering.';
-        _displayMode = previousMode;
       });
       return;
     }
@@ -544,7 +542,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       setState(() {
         _isCapturing = false;
         _captureError = encoded.error.message;
-        _displayMode = previousMode;
       });
       return;
     }
@@ -554,7 +551,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       setState(() {
         _isCapturing = false;
         _captureError = hydrated.error.message;
-        _displayMode = previousMode;
       });
       return;
     }
@@ -564,7 +560,6 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       _portableJson = json;
       _restoredConfiguration =
           (hydrated as ChartArtifactSuccess<HydratedChartConfiguration>).value;
-      _displayMode = previousMode;
     });
   }
 
@@ -643,6 +638,32 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
         ],
       ),
       OptionSection(
+        title: 'Motion',
+        icon: Icons.animation_outlined,
+        children: [
+          EnumOption<PieAnimationMode>(
+            key: const ValueKey('donut-animation-mode'),
+            label: 'Entrance',
+            value: _animationMode,
+            values: PieAnimationMode.values,
+            labelBuilder: _animationModeName,
+            onChanged: _setAnimationMode,
+            subtitle: 'Grow, reveal around the ring, fade, or render instantly',
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('replay-donut-entrance'),
+              onPressed: _animationMode == PieAnimationMode.none
+                  ? null
+                  : _chartController.replayRadialEntrance,
+              icon: const Icon(Icons.replay_outlined, size: 18),
+              label: const Text('Replay entrance'),
+            ),
+          ),
+        ],
+      ),
+      OptionSection(
         title: 'Center content',
         icon: Icons.center_focus_strong_outlined,
         children: [
@@ -672,6 +693,42 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               onChanged: (value) => setState(() => _centerStyle = value),
             ),
           ],
+        ],
+      ),
+      OptionSection(
+        title: 'Small categories',
+        icon: Icons.call_merge_outlined,
+        children: [
+          BoolOption(
+            key: const ValueKey('donut-group-small-slices'),
+            label: 'Group small slices',
+            value: _groupSmallSlices,
+            onChanged: _story == _DonutStory.reach
+                ? (_) {}
+                : _setGroupingEnabled,
+            subtitle: _story == _DonutStory.reach
+                ? 'Variable radii need an explicit second-metric aggregation policy'
+                : 'Render one Other slice while preserving every source row',
+          ),
+          if (_groupSmallSlices)
+            SliderOption(
+              key: const ValueKey('donut-grouping-threshold'),
+              label: 'Share threshold',
+              value: _groupingMinimumShare * 100,
+              min: 1,
+              max: 15,
+              divisions: 14,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) {
+                _chartController.clearPointSelection();
+                setState(() {
+                  _groupingMinimumShare = value / 100;
+                  _selectedCategory = null;
+                  _clearPortableState();
+                });
+              },
+            ),
         ],
       ),
       OptionSection(
@@ -992,6 +1049,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             'Slices, legends, tables, controllers, and restored charts resolve the same ChartPointRef.',
       ),
       _DonutFeature(
+        icon: Icons.call_merge_outlined,
+        title: 'Group without losing detail',
+        description:
+            'Small sources can render as Other while tables, exports, selection callbacks, and controller state retain every original point.',
+      ),
+      _DonutFeature(
         icon: Icons.inventory_2_outlined,
         title: 'Ready to travel',
         description:
@@ -1022,7 +1085,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           crossAxisCount: columns,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: compact ? 2.6 : 3.4,
+          mainAxisExtent: 128,
           children: [for (final feature in features) _FeatureTile(feature)],
         ),
       ],
@@ -1066,7 +1129,17 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             child: const SelectableText('''DonutChartSeries.fromMap(
   id: 'revenue-share',
   unit: 'USD',
-  values: {'Subscriptions': 42, 'Services': 31, 'Hardware': 27},
+  values: {
+    'Subscriptions': 42,
+    'Services': 31,
+    'Hardware': 20,
+    'Training': 4,
+    'Support': 3,
+  },
+  sliceGroupingConfig: RadialSliceGroupingConfig(
+    minimumShare: 0.05,
+    label: 'Other',
+  ),
   donutStyle: DonutChartStyle(innerRadiusFactor: 0.58),
   centerContent: DonutCenterContent(
     label: 'Revenue',
@@ -1093,8 +1166,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.86;
           _sliceGap = 3;
           _cornerRadius = 8;
+          _animationMode = PieAnimationMode.grow;
           _centerValueMode = DonutCenterValueMode.selectedOrTotal;
           _centerStyle = _DonutCenterStyle.theme;
+          _groupSmallSlices = false;
         case _DonutStory.progress:
           _innerRadiusFactor = 0.68;
           _sweepAngleDegrees = 280;
@@ -1102,8 +1177,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.9;
           _sliceGap = 2;
           _cornerRadius = 12;
+          _animationMode = PieAnimationMode.sweep;
           _centerValueMode = DonutCenterValueMode.custom;
           _centerStyle = _DonutCenterStyle.accent;
+          _groupSmallSlices = false;
         case _DonutStory.reach:
           _innerRadiusFactor = 0.3;
           _sweepAngleDegrees = 360;
@@ -1111,11 +1188,24 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
           _radiusFactor = 0.88;
           _sliceGap = 4;
           _cornerRadius = 10;
+          _animationMode = PieAnimationMode.fade;
           _centerValueMode = DonutCenterValueMode.total;
           _centerStyle = _DonutCenterStyle.compact;
+          _groupSmallSlices = false;
+        case _DonutStory.grouping:
+          _innerRadiusFactor = 0.58;
+          _sweepAngleDegrees = 360;
+          _startAngleDegrees = -90;
+          _radiusFactor = 0.88;
+          _sliceGap = 3;
+          _cornerRadius = 8;
+          _animationMode = PieAnimationMode.sweep;
+          _centerValueMode = DonutCenterValueMode.selectedOrTotal;
+          _centerStyle = _DonutCenterStyle.theme;
+          _groupSmallSlices = true;
+          _groupingMinimumShare = 0.07;
       }
     });
-    _scheduleTableRefresh();
   }
 
   String _centerModeName(DonutCenterValueMode mode) => switch (mode) {
@@ -1124,6 +1214,17 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     DonutCenterValueMode.selectedOrTotal => 'Selected or total',
     DonutCenterValueMode.custom => 'Custom text',
   };
+
+  String _animationModeName(PieAnimationMode mode) => switch (mode) {
+    PieAnimationMode.none => 'No animation',
+    PieAnimationMode.grow => 'Grow',
+    PieAnimationMode.sweep => 'Sweep',
+    PieAnimationMode.fade => 'Fade',
+  };
+
+  void _setAnimationMode(PieAnimationMode mode) {
+    setState(() => _animationMode = mode);
+  }
 
   LabelStyle? get _centerLabelStyle => switch (_centerStyle) {
     _DonutCenterStyle.theme => null,
@@ -1174,7 +1275,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   };
 }
 
-enum _DonutStory { contribution, progress, reach }
+enum _DonutStory { contribution, progress, reach, grouping }
 
 enum _DonutCenterStyle { theme, compact, accent }
 
@@ -1183,24 +1284,28 @@ extension on _DonutStory {
     _DonutStory.contribution => 'Contribution ring',
     _DonutStory.progress => 'Partial sweep',
     _DonutStory.reach => 'Variable radius',
+    _DonutStory.grouping => 'Grouped sources',
   };
 
   String get description => switch (this) {
     _DonutStory.contribution => 'A complete ring for category shares',
     _DonutStory.progress => 'A controlled angular span and opening',
     _DonutStory.reach => 'A second metric controls outer radius',
+    _DonutStory.grouping => 'Small sources combine without losing rows',
   };
 
   IconData get icon => switch (this) {
     _DonutStory.contribution => Icons.donut_large_outlined,
     _DonutStory.progress => Icons.speed_outlined,
     _DonutStory.reach => Icons.radar_outlined,
+    _DonutStory.grouping => Icons.call_merge_outlined,
   };
 
   String get chartTitle => switch (this) {
     _DonutStory.contribution => 'Revenue by product',
     _DonutStory.progress => 'Delivery mix',
     _DonutStory.reach => 'Campaign contribution and reach',
+    _DonutStory.grouping => 'Support requests by channel',
   };
 
   String get chartDescription => switch (this) {
@@ -1210,18 +1315,22 @@ extension on _DonutStory {
       'The same category contract rendered across a 280° sweep',
     _DonutStory.reach =>
       'Angle shows contribution; outer radius shows audience reach',
+    _DonutStory.grouping =>
+      'Small channels render as Other while source data stays intact',
   };
 
   String get seriesName => switch (this) {
     _DonutStory.contribution => 'Revenue',
     _DonutStory.progress => 'Delivery',
     _DonutStory.reach => 'Campaigns',
+    _DonutStory.grouping => 'Requests',
   };
 
   String get unit => switch (this) {
     _DonutStory.contribution => 'USD',
     _DonutStory.progress => 'hours',
     _DonutStory.reach => 'leads',
+    _DonutStory.grouping => 'tickets',
   };
 
   Map<String, num> get values => switch (this) {
@@ -1247,10 +1356,21 @@ extension on _DonutStory {
       'Events': 15,
       'Email': 11,
     },
+    _DonutStory.grouping => const {
+      'Portal': 64,
+      'Phone': 12,
+      'Partners': 9,
+      'Email': 6,
+      'Chat': 4,
+      'Events': 3,
+      'Other source': 2,
+    },
   };
 
   Map<String, num> get radiusValues => switch (this) {
-    _DonutStory.contribution || _DonutStory.progress => const {},
+    _DonutStory.contribution ||
+    _DonutStory.progress ||
+    _DonutStory.grouping => const {},
     _DonutStory.reach => const {
       'Search': 82,
       'Social': 54,

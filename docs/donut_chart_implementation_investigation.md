@@ -262,9 +262,6 @@ fields. The one-series/no-Cartesian-axis boundary remains explicit.
 - arbitrary center widgets/builders;
 - multiple concentric rings or nested browser-style hierarchies;
 - radial-bar/progress semantics;
-- automatic small-slice grouping into “Other” (hosts can pre-aggregate in V1;
-  native grouping later needs a defined many-source-points-to-one-slice
-  identity contract);
 - drilling from a grouped or parent segment;
 - image shaders and 3D effects; and
 - multiple radial series in one chart.
@@ -287,10 +284,32 @@ fields. The one-series/no-Cartesian-axis boundary remains explicit.
    Full test/analyze, benchmarks, direct-route debug and release web checks,
    narrow/large-text/high-contrast/reduced-motion review, dartdoc, package
    dry-run, and local user approval before PR.
+6. **V1.1 radial entrance motion — implemented locally**
+   Preserve `grow` as the compatibility default; add deterministic angular
+   `sweep` and geometry-preserving `fade`; serialize theme/series overrides;
+   expose the modes to AI input; add a controller replay command; honor reduced
+   motion; and make all three modes directly testable in the public Donut
+   showcase.
+7. **V1.1 source-preserving small-slice grouping — implemented locally**
+   Project qualifying positive points into one visible aggregate while keeping
+   the original series immutable; carry every source index through geometry,
+   hits, semantics, legend/table/controller selection, artifacts, hydration,
+   and AI input; expose a direct public showcase story. Variable-radius
+   grouping remains rejected until a second-metric aggregation policy is
+   explicit.
+8. **Responsive Split polish — implemented locally**
+   Keep radial legend item geometry invariant across selection, auto-fit the
+   native table to its projection width, and expose an accessible drag/keyboard
+   divider without remounting the chart or changing durable point identity.
 
-Release evidence on the current `origin/master` baseline:
+The motion slice deliberately excludes interpolation between old and new data,
+per-slice delay/stagger controls, spring physics, selection-motion redesign,
+and multi-ring sequencing. Those require separate lifecycle and identity
+contracts rather than additional enum values in this slice.
 
-- the complete package suite and all 108 showcase tests pass;
+Release evidence for the local feature worktree at this checkpoint:
+
+- all 1,715 package tests and all 113 showcase tests pass;
 - package, showcase, focused Donut, benchmark, accessibility, and deterministic
   media analysis report no issues;
 - the advanced 24-slice partial/variable-radius Donut paint benchmark averages

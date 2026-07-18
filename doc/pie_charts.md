@@ -197,6 +197,37 @@ an independently sized inner radius or Donut center content. Use
 `DonutChartSeries` when the hole itself carries product meaning; see the
 [Donut chart guide](donut_charts.md).
 
+## Group small categories without losing source data
+
+`RadialSliceGroupingConfig` can project several small positive categories into
+one visible aggregate. The original `ChartDataPoint` list is unchanged, so
+tables, copy/CSV export, artifacts, hydration, controller references, and
+selection callbacks remain source-accurate.
+
+```dart
+PieChartSeries.fromMap(
+  id: 'channels',
+  values: const {
+    'Portal': 80,
+    'Email': 8,
+    'Chat': 7,
+    'Events': 5,
+  },
+  sliceGroupingConfig: const RadialSliceGroupingConfig(
+    minimumShare: 0.1,
+    minimumSourceCount: 2,
+    label: 'Other',
+  ),
+);
+```
+
+The threshold is exclusive. The aggregate appears only when at least
+`minimumSourceCount` positive points qualify. Selecting the aggregate expands
+to every represented `ChartPointRef`; selecting any represented table row
+selects the same visible aggregate. Grouping cannot currently be combined with
+variable slice radii because that requires an explicit second-metric
+aggregation policy.
+
 The geometry preserves an internal inner-radius seam, but nested radial charts
 are not part of Pie. Variable-radius Pie is
 supported through the explicit second-metric contract above; it is not an
@@ -260,8 +291,11 @@ JSON and restored with the Pie series.
 Use a dark color plus a downward offset for a shadow, or a slice-derived color
 with zero offset for a glow. Blur radius, spread radius, offset, opacity, and
 an optional fixed color are all configurable independently for base shadow and
-selected elevation. `MediaQuery.disableAnimationsOf` and a zero theme duration
-always win over `PieAnimationMode.grow`.
+selected elevation. `PieAnimationMode` supports `none`, radial `grow`, angular
+`sweep`, and geometry-preserving `fade`. `MediaQuery.disableAnimationsOf` and
+a zero theme duration always win over every entrance mode. A mounted chart can
+replay its configured radial entrance through
+`BravenChartController.replayRadialEntrance()`.
 
 The renderer reserves the maximum configured explode distance, border and
 focus stroke, base shadow, and selected elevation before calculating the Pie

@@ -125,7 +125,7 @@ void main() {
             borderRadius: 10,
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           ),
-          animationMode: PieAnimationMode.none,
+          animationMode: PieAnimationMode.fade,
         ),
       );
 
