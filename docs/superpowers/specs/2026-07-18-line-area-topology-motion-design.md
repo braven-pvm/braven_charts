@@ -3,6 +3,7 @@
 **Status:** Complete
 **Branch:** `feature/line-area-topology-motion`
 **Parent delivery:** Line and Area Product Parity, PR #35 (merged)
+**Delivery:** PR #37 (merged)
 
 ## Goal
 

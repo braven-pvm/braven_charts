@@ -1,11 +1,11 @@
 # Line and Area Product Parity — Design Spec
 
-**Status:** All sprints and consolidated E2E complete; awaiting merge approval
-**Lane:** `feature/line-area-product-parity`
-**Review gate:** PR #35 remains unmerged until the sprint roadmap and final E2E gate are complete.
+**Status:** Sprints 1-7 complete; PRs #35 and #37 merged
+**Original lane:** `feature/line-area-product-parity`
+**Next review gate:** Sprint 8 per-series motion timing
 
 See the [sprint roadmap](../plans/2026-07-18-line-area-product-parity-roadmap.md)
-for the remaining hardening, public-release, and consolidated E2E work.
+for the completed delivery record and next proposed slice.
 
 ## Goal
 
@@ -73,7 +73,12 @@ Presentation comes from the target series. Point metadata, labels, segment style
 
 ### Incompatible updates
 
-Type, interpolation, point-count, or identity/topology changes do not morph. The target series uses its configured entrance reveal, or renders immediately when reveal is disabled. Streaming single-tail updates retain the existing incoming-point animation and do not double animate.
+Stable-identity points may enter or leave at a series boundary, including a
+rolling-window update. Interior topology edits, arbitrary reordering, series
+type changes, and interpolation-mode changes do not morph. An incompatible
+target uses its configured entrance reveal, or renders immediately when reveal
+is disabled. Streaming single-tail updates retain the existing incoming-point
+animation and do not double animate.
 
 ## Rendering architecture
 
@@ -135,7 +140,9 @@ The workbench uses the package component and existing showcase tokens. It does n
 
 - Axis-domain interpolation. Stable target bounds are less distracting and avoid normalization ambiguity.
 - Scatter entrance/update motion.
-- Per-series stagger and custom per-series durations.
+- Per-series delay and duration move into proposed Sprint 8; automatic
+  order-derived staggering and per-series curves remain deferred.
 - Animation-progress persistence in chart artifacts.
-- Morphing point insertion/removal or interpolation-mode changes.
+- Morphing interior point insertion/removal, arbitrary reordering, or
+  interpolation-mode changes.
 

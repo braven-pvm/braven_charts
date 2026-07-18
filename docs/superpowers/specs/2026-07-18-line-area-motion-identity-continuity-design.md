@@ -2,7 +2,8 @@
 
 **Status:** Complete
 **Branch:** `feature/line-area-topology-motion`
-**Parent delivery:** Path Motion 1.1 topology updates, commit `451320b7`
+**Parent delivery:** Path Motion 1.1 topology updates
+**Delivery:** PR #37 (merged)
 
 ## Problem
 
