@@ -19,6 +19,9 @@ import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
 import '../models/series_inline_label_config.dart';
 import '../rendering/bar_geometry.dart';
+import '../rendering/bar_bullet_painter.dart';
+import '../rendering/bar_label_layout.dart';
+import '../rendering/bar_pattern_painter.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/interpolation_geometry.dart';
 import '../utils/path_series_transition.dart';
@@ -150,6 +153,7 @@ class SeriesElement implements DataHitElement {
     this.hasAnySelectedPoints = false,
     this.revealProgress = 1,
     this.pathPointMap,
+    this.textDirection = TextDirection.ltr,
     @Deprecated('Use seriesTheme instead') double? strokeWidth,
     @Deprecated('Use seriesTheme instead') Color? themeColor,
   }) : _deprecatedStrokeWidth = strokeWidth,
@@ -187,6 +191,9 @@ class SeriesElement implements DataHitElement {
   /// Bar series use this to de-emphasize non-selected bars consistently across
   /// series without coupling the renderer to widget state.
   final bool hasAnySelectedPoints;
+
+  /// Ambient reading direction used by canvas value labels.
+  final TextDirection textDirection;
 
   /// Leading-edge reveal progress for Line and Area series.
   final double revealProgress;
@@ -372,6 +379,12 @@ class SeriesElement implements DataHitElement {
   // TextPainter cache for data-point labels — keyed by formatted text string
   final Map<String, TextPainter> _labelPainterCache = {};
   List<BarGeometry>? _barGeometries;
+  BarLabelLayoutCoordinator? _barLabelLayoutCoordinator;
+
+  /// Shares one occupied-label registry across every bar series paint pass.
+  void setBarLabelLayoutCoordinator(BarLabelLayoutCoordinator? coordinator) {
+    _barLabelLayoutCoordinator = coordinator;
+  }
 
   List<BarGeometry> _resolveBarGeometries() {
     final cached = _barGeometries;
@@ -698,6 +711,26 @@ class SeriesElement implements DataHitElement {
       ..strokeWidth = interaction.selectionBorderWidth;
 
     for (final geometry in _resolveBarGeometries()) {
+      final lollipop = currentSeries.lollipopStyle;
+      final headCenter = geometry.lollipopHeadCenter;
+      if (lollipop != null && headCenter != null) {
+        if (selectedPointIndices.contains(geometry.pointIndex)) {
+          canvas.drawCircle(headCenter, lollipop.headRadius + 3, selectionFill);
+          canvas.drawCircle(
+            headCenter,
+            lollipop.headRadius + 3,
+            selectionBorder,
+          );
+        }
+        if (focusedPointIndices.contains(geometry.pointIndex)) {
+          canvas.drawCircle(
+            headCenter,
+            lollipop.headRadius + interaction.focusGap,
+            focusPaint,
+          );
+        }
+        continue;
+      }
       if (selectedPointIndices.contains(geometry.pointIndex)) {
         canvas.drawRRect(geometry.rrect, selectionFill);
         canvas.drawRRect(geometry.rrect.inflate(2), selectionBorder);
@@ -729,6 +762,46 @@ class SeriesElement implements DataHitElement {
     final geometry = barGeometryForPoint(activeIndex);
     if (geometry == null) return;
     final barColor = _resolvedBarColor(currentSeries, geometry, themeColor);
+    final lollipop = currentSeries.lollipopStyle;
+    final headCenter = geometry.lollipopHeadCenter;
+
+    if (lollipop != null && headCenter != null) {
+      if (pressedPointIndex != null) {
+        canvas.drawCircle(
+          headCenter,
+          lollipop.headRadius + 2,
+          Paint()
+            ..color = interaction.pressedColor.withValues(
+              alpha: interaction.pressedOpacity,
+            )
+            ..style = PaintingStyle.fill,
+        );
+        return;
+      }
+      final hoverColor =
+          interaction.hoverColor ??
+          (barColor.computeLuminance() > 0.45
+              ? const Color(0xFF111827)
+              : const Color(0xFFFFFFFF));
+      canvas.drawCircle(
+        headCenter,
+        lollipop.headRadius + 2,
+        Paint()
+          ..color = hoverColor.withValues(alpha: interaction.hoverOpacity)
+          ..style = PaintingStyle.fill,
+      );
+      if (interaction.hoverBorderWidth > 0) {
+        canvas.drawCircle(
+          headCenter,
+          lollipop.headRadius + interaction.hoverBorderWidth / 2,
+          Paint()
+            ..color = hoverColor.withValues(alpha: 0.82)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = interaction.hoverBorderWidth,
+        );
+      }
+      return;
+    }
 
     if (pressedPointIndex != null) {
       canvas.drawRRect(
@@ -1504,11 +1577,26 @@ class SeriesElement implements DataHitElement {
     final track = series.trackStyle;
     final geometries = _resolveBarGeometries();
 
+    if (series.layoutMode == BarLayoutMode.divergingStacked &&
+        barGroupInfo?.drawTrack != false) {
+      _paintDivergingCenterLine(canvas, series);
+    }
+
     if (series.layoutMode == BarLayoutMode.waterfall) {
       _paintWaterfallConnectors(canvas, series, geometries, opacity);
     }
 
     for (final geometry in geometries) {
+      final bullet = series.bulletStyle;
+      if (bullet != null) {
+        BarBulletPainter.paint(
+          canvas: canvas,
+          geometry: geometry,
+          transform: _currentTransform,
+          style: bullet,
+        );
+      }
+
       if (track != null && geometry.trackRRect != null) {
         final trackPaint = Paint()
           ..color = track.color.withValues(alpha: track.opacity)
@@ -1534,40 +1622,87 @@ class SeriesElement implements DataHitElement {
                   !selectedPointIndices.contains(geometry.pointIndex)
               ? series.barStyle.interaction.dimmedOpacity
               : 1.0);
-      final gradient =
-          geometry.point.pointStyle?.color == null && waterfallColor == null
-          ? series.barStyle.gradient
-          : null;
-      final barPaint = Paint()..style = PaintingStyle.fill;
-      if (gradient != null &&
-          gradient.colors.length >= 2 &&
-          (gradient.stops == null ||
-              gradient.stops!.length == gradient.colors.length)) {
-        barPaint.shader = Gradient.linear(
-          geometry.orientation == BarOrientation.horizontal
-              ? Offset(geometry.baselineX, geometry.rect.center.dy)
-              : Offset(geometry.rect.center.dx, geometry.baselineY),
-          geometry.valueEndPoint,
-          [
-            for (final color in gradient.colors)
-              color.withValues(alpha: pointOpacity),
-          ],
-          gradient.stops,
-        );
-      } else {
-        barPaint.color = barColor.withValues(alpha: pointOpacity);
-      }
-      canvas.drawRRect(geometry.rrect, barPaint);
-
-      final border = series.barStyle.border;
-      if (border != null && border.width > 0) {
-        canvas.drawRRect(
-          geometry.rrect,
+      final lollipop = series.lollipopStyle;
+      if (lollipop != null &&
+          geometry.lollipopStemStart != null &&
+          geometry.lollipopStemEnd != null &&
+          geometry.lollipopHeadCenter != null) {
+        final stemColor = lollipop.stemColor ?? barColor;
+        final headColor = lollipop.headColor ?? barColor;
+        canvas.drawLine(
+          geometry.lollipopStemStart!,
+          geometry.lollipopStemEnd!,
           Paint()
-            ..color = border.color.withValues(alpha: pointOpacity)
+            ..color = stemColor.withValues(alpha: pointOpacity)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = border.width,
+            ..strokeWidth = lollipop.stemWidth
+            ..strokeCap = StrokeCap.round,
         );
+        canvas.drawCircle(
+          geometry.lollipopHeadCenter!,
+          lollipop.headRadius,
+          Paint()
+            ..color = headColor.withValues(alpha: pointOpacity)
+            ..style = PaintingStyle.fill,
+        );
+        final headBorder = lollipop.headBorder ?? series.barStyle.border;
+        if (headBorder != null && headBorder.width > 0) {
+          canvas.drawCircle(
+            geometry.lollipopHeadCenter!,
+            lollipop.headRadius,
+            Paint()
+              ..color = headBorder.color.withValues(alpha: pointOpacity)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = headBorder.width,
+          );
+        }
+      } else {
+        final gradient =
+            geometry.point.pointStyle?.color == null && waterfallColor == null
+            ? series.barStyle.gradient
+            : null;
+        final barPaint = Paint()..style = PaintingStyle.fill;
+        if (gradient != null &&
+            gradient.colors.length >= 2 &&
+            (gradient.stops == null ||
+                gradient.stops!.length == gradient.colors.length)) {
+          barPaint.shader = Gradient.linear(
+            geometry.orientation == BarOrientation.horizontal
+                ? Offset(geometry.baselineX, geometry.rect.center.dy)
+                : Offset(geometry.rect.center.dx, geometry.baselineY),
+            geometry.valueEndPoint,
+            [
+              for (final color in gradient.colors)
+                color.withValues(alpha: pointOpacity),
+            ],
+            gradient.stops,
+          );
+        } else {
+          barPaint.color = barColor.withValues(alpha: pointOpacity);
+        }
+        canvas.drawRRect(geometry.rrect, barPaint);
+
+        final pattern = series.barStyle.pattern;
+        if (pattern != null) {
+          BarPatternPainter.paint(
+            canvas: canvas,
+            clip: geometry.rrect,
+            style: pattern,
+            baseColor: barColor,
+            opacityMultiplier: pointOpacity,
+          );
+        }
+
+        final border = series.barStyle.border;
+        if (border != null && border.width > 0) {
+          canvas.drawRRect(
+            geometry.rrect,
+            Paint()
+              ..color = border.color.withValues(alpha: pointOpacity)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = border.width,
+          );
+        }
       }
 
       if (geometry.targetStart != null && geometry.targetEnd != null) {
@@ -1626,6 +1761,37 @@ class SeriesElement implements DataHitElement {
       if (series.labelStyle.show) {
         _paintBarLabel(canvas, series, geometry, barColor);
       }
+      if (series.labelStyle.showStackTotal &&
+          barGroupInfo?.isStacked == true &&
+          barGroupInfo!.isOuterPoint(geometry.pointIndex)) {
+        _paintBarStackTotal(canvas, series, geometry, barColor);
+      }
+    }
+  }
+
+  void _paintDivergingCenterLine(Canvas canvas, BarChartSeries series) {
+    final style = series.divergingStyle;
+    if (!style.showCenterLine || style.centerLineWidth <= 0) return;
+    final transform = _currentTransform.copyWith(
+      transposed: series.orientation == BarOrientation.horizontal,
+    );
+    final baseline = transform.dataToPlot(0, series.baselineValue);
+    final paint = Paint()
+      ..color = style.centerLineColor.withValues(alpha: style.centerLineOpacity)
+      ..strokeWidth = style.centerLineWidth
+      ..style = PaintingStyle.stroke;
+    if (series.orientation == BarOrientation.horizontal) {
+      canvas.drawLine(
+        Offset(baseline.dx, 0),
+        Offset(baseline.dx, transform.plotHeight),
+        paint,
+      );
+    } else {
+      canvas.drawLine(
+        Offset(0, baseline.dy),
+        Offset(transform.plotWidth, baseline.dy),
+        paint,
+      );
     }
   }
 
@@ -1718,7 +1884,6 @@ class SeriesElement implements DataHitElement {
             ),
         };
 
-    var position = config.position;
     final provisionalPainter = _barLabelPainter(
       text,
       config.color ?? barColor,
@@ -1726,23 +1891,135 @@ class SeriesElement implements DataHitElement {
       config.fontWeight,
     );
     final insideEndOffset = _barLabelInsideEndOffset(series, geometry);
-    if (position == BarLabelPosition.auto) {
-      final fitsInside = series.orientation == BarOrientation.horizontal
-          ? geometry.rect.height >= provisionalPainter.height + 4 &&
-                geometry.rect.width >=
-                    provisionalPainter.width + insideEndOffset * 2
-          : geometry.rect.height >=
-                    provisionalPainter.height + insideEndOffset * 2 &&
-                geometry.rect.width >= provisionalPainter.width + 4;
-      position = fitsInside
-          ? BarLabelPosition.insideEnd
-          : BarLabelPosition.outsideEnd;
-    }
+    final fitsInside =
+        series.lollipopStyle == null &&
+        (series.orientation == BarOrientation.horizontal
+            ? geometry.rect.height >= provisionalPainter.height + 4 &&
+                  geometry.rect.width >=
+                      provisionalPainter.width + insideEndOffset * 2
+            : geometry.rect.height >=
+                      provisionalPainter.height + insideEndOffset * 2 &&
+                  geometry.rect.width >= provisionalPainter.width + 4);
+    final positions = switch (config.position) {
+      BarLabelPosition.auto =>
+        fitsInside
+            ? const [
+                BarLabelPosition.insideEnd,
+                BarLabelPosition.outsideEnd,
+                BarLabelPosition.insideCenter,
+              ]
+            : const [
+                BarLabelPosition.outsideEnd,
+                BarLabelPosition.insideEnd,
+                BarLabelPosition.insideCenter,
+              ],
+      BarLabelPosition.insideEnd => const [
+        BarLabelPosition.insideEnd,
+        BarLabelPosition.outsideEnd,
+      ],
+      BarLabelPosition.insideCenter => const [
+        BarLabelPosition.insideCenter,
+        BarLabelPosition.insideEnd,
+      ],
+      BarLabelPosition.outsideEnd => const [
+        BarLabelPosition.outsideEnd,
+        BarLabelPosition.insideEnd,
+      ],
+      BarLabelPosition.rangeEnds => const [BarLabelPosition.outsideEnd],
+    };
+    _layoutAndPaintBarLabel(
+      canvas: canvas,
+      series: series,
+      geometry: geometry,
+      text: text,
+      barColor: barColor,
+      positions: positions,
+    );
+  }
 
-    final isInside = position != BarLabelPosition.outsideEnd;
+  void _paintBarStackTotal(
+    Canvas canvas,
+    BarChartSeries series,
+    BarGeometry geometry,
+    Color barColor,
+  ) {
+    final config = series.labelStyle;
+    final unit =
+        series.layoutMode == BarLayoutMode.normalizedStacked ||
+            series.layoutMode == BarLayoutMode.divergingStacked
+        ? '%'
+        : config.showUnit
+        ? series.unit
+        : null;
+    final text =
+        config.formatter?.call(geometry.point.copyWith(y: geometry.endValue)) ??
+        DataPointLabelConfig.autoFormatLabelValue(geometry.endValue, unit);
+    _layoutAndPaintBarLabel(
+      canvas: canvas,
+      series: series,
+      geometry: geometry,
+      text: text,
+      barColor: barColor,
+      positions: const [
+        BarLabelPosition.outsideEnd,
+        BarLabelPosition.insideEnd,
+      ],
+    );
+  }
+
+  void _layoutAndPaintBarLabel({
+    required Canvas canvas,
+    required BarChartSeries series,
+    required BarGeometry geometry,
+    required String text,
+    required Color barColor,
+    required List<BarLabelPosition> positions,
+  }) {
+    final config = series.labelStyle;
+    final provisionalPainter = _barLabelPainter(
+      text,
+      config.color ?? barColor,
+      config.fontSize,
+      config.fontWeight,
+    );
+    final hasContainer =
+        config.backgroundColor != null ||
+        config.borderColor != null && config.borderWidth > 0;
+    final boxPadding = hasContainer ? config.backgroundPadding : 0.0;
+    final boxSize = Size(
+      provisionalPainter.width + boxPadding * 2,
+      provisionalPainter.height + boxPadding * 2,
+    );
+    final candidates = [
+      for (final position in positions)
+        _barLabelRect(series, geometry, position, boxSize),
+    ];
+    final displacementDirection = _barLabelDisplacementDirection(
+      series,
+      geometry,
+    );
+    final result = _barLabelLayoutCoordinator?.place(
+      candidates: candidates,
+      collisionPolicy: config.collisionPolicy,
+      plotEdgeAware: config.plotEdgeAware,
+      collisionPadding: config.collisionPadding,
+      displacementDirection: displacementDirection,
+      displacementStep:
+          (series.orientation == BarOrientation.horizontal
+              ? boxSize.width
+              : boxSize.height) +
+          config.collisionPadding,
+    );
+    if (_barLabelLayoutCoordinator != null && result == null) return;
+    final labelRect = result?.rect ?? candidates.first;
+    final isInside = geometry.rect.contains(labelRect.center);
     final labelColor =
         config.color ??
-        (isInside
+        (config.backgroundColor != null
+            ? (config.backgroundColor!.computeLuminance() > 0.45
+                  ? const Color(0xFF1F2937)
+                  : const Color(0xFFFFFFFF))
+            : isInside
             ? (barColor.computeLuminance() > 0.45
                   ? const Color(0xFF1A1A1A)
                   : const Color(0xFFFFFFFF))
@@ -1753,46 +2030,131 @@ class SeriesElement implements DataHitElement {
       config.fontSize,
       config.fontWeight,
     );
+
+    _paintBarLabelCallout(canvas, geometry, labelRect, labelColor, config);
+    _paintBarLabelContainer(canvas, labelRect, config);
+    painter.paint(canvas, labelRect.topLeft + Offset(boxPadding, boxPadding));
+  }
+
+  Rect _barLabelRect(
+    BarChartSeries series,
+    BarGeometry geometry,
+    BarLabelPosition position,
+    Size labelSize,
+  ) {
+    if (position == BarLabelPosition.outsideEnd ||
+        position == BarLabelPosition.rangeEnds ||
+        position == BarLabelPosition.auto) {
+      return resolveBarOutsideEndLabelRect(
+        geometry: geometry,
+        labelSize: labelSize,
+        padding: series.labelStyle.padding,
+      );
+    }
+
+    final insideEndOffset = _barLabelInsideEndOffset(series, geometry);
     if (series.orientation == BarOrientation.horizontal) {
       final valueEndIsRight = geometry.valueEndX >= geometry.baselineX;
       final x = switch (position) {
         BarLabelPosition.insideCenter =>
-          geometry.rect.center.dx - painter.width / 2,
+          geometry.rect.center.dx - labelSize.width / 2,
         BarLabelPosition.insideEnd =>
           valueEndIsRight
-              ? geometry.rect.right - insideEndOffset - painter.width
+              ? geometry.rect.right - insideEndOffset - labelSize.width
               : geometry.rect.left + insideEndOffset,
-        BarLabelPosition.outsideEnd =>
-          valueEndIsRight
-              ? geometry.rect.right + config.padding
-              : geometry.rect.left - config.padding - painter.width,
-        BarLabelPosition.rangeEnds => geometry.rect.left,
-        BarLabelPosition.auto => geometry.rect.left,
+        BarLabelPosition.outsideEnd ||
+        BarLabelPosition.rangeEnds ||
+        BarLabelPosition.auto => throw StateError('Handled above'),
       };
-      painter.paint(
-        canvas,
-        Offset(x, geometry.rect.center.dy - painter.height / 2),
+      return Rect.fromLTWH(
+        x,
+        geometry.rect.center.dy - labelSize.height / 2,
+        labelSize.width,
+        labelSize.height,
       );
-      return;
     }
 
-    final x = geometry.rect.center.dx - painter.width / 2;
     final valueEndIsTop = geometry.valueEndY <= geometry.baselineY;
     final y = switch (position) {
       BarLabelPosition.insideCenter =>
-        geometry.rect.center.dy - painter.height / 2,
+        geometry.rect.center.dy - labelSize.height / 2,
       BarLabelPosition.insideEnd =>
         valueEndIsTop
             ? geometry.rect.top + insideEndOffset
-            : geometry.rect.bottom - insideEndOffset - painter.height,
-      BarLabelPosition.outsideEnd =>
-        valueEndIsTop
-            ? geometry.rect.top - config.padding - painter.height
-            : geometry.rect.bottom + config.padding,
-      BarLabelPosition.rangeEnds => geometry.rect.top,
-      BarLabelPosition.auto => geometry.rect.top,
+            : geometry.rect.bottom - insideEndOffset - labelSize.height,
+      BarLabelPosition.outsideEnd ||
+      BarLabelPosition.rangeEnds ||
+      BarLabelPosition.auto => throw StateError('Handled above'),
     };
-    painter.paint(canvas, Offset(x, y));
+    return Rect.fromLTWH(
+      geometry.rect.center.dx - labelSize.width / 2,
+      y,
+      labelSize.width,
+      labelSize.height,
+    );
+  }
+
+  Offset _barLabelDisplacementDirection(
+    BarChartSeries series,
+    BarGeometry geometry,
+  ) {
+    if (series.orientation == BarOrientation.horizontal) {
+      return geometry.valueEndX >= geometry.baselineX
+          ? const Offset(-1, 0)
+          : const Offset(1, 0);
+    }
+    return geometry.valueEndY <= geometry.baselineY
+        ? const Offset(0, 1)
+        : const Offset(0, -1);
+  }
+
+  void _paintBarLabelContainer(Canvas canvas, Rect rect, BarLabelStyle config) {
+    if (config.backgroundColor == null &&
+        (config.borderColor == null || config.borderWidth <= 0)) {
+      return;
+    }
+    final rrect = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(config.borderRadius),
+    );
+    if (config.backgroundColor case final background?) {
+      canvas.drawRRect(rrect, Paint()..color = background);
+    }
+    if (config.borderColor case final border? when config.borderWidth > 0) {
+      canvas.drawRRect(
+        rrect,
+        Paint()
+          ..color = border
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = config.borderWidth,
+      );
+    }
+  }
+
+  void _paintBarLabelCallout(
+    Canvas canvas,
+    BarGeometry geometry,
+    Rect labelRect,
+    Color labelColor,
+    BarLabelStyle config, {
+    Offset? anchor,
+  }) {
+    final callout = config.callout;
+    if (!callout.show || geometry.rect.contains(labelRect.center)) return;
+    final resolvedAnchor = anchor ?? geometry.valueEndPoint;
+    final target = Offset(
+      resolvedAnchor.dx.clamp(labelRect.left, labelRect.right),
+      resolvedAnchor.dy.clamp(labelRect.top, labelRect.bottom),
+    );
+    if ((target - resolvedAnchor).distance < callout.minimumLength) return;
+    canvas.drawLine(
+      resolvedAnchor,
+      target,
+      Paint()
+        ..color = callout.color ?? labelColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = callout.width,
+    );
   }
 
   double _barLabelInsideEndOffset(BarChartSeries series, BarGeometry geometry) {
@@ -1876,14 +2238,42 @@ class SeriesElement implements DataHitElement {
       config.fontSize,
       config.fontWeight,
     );
-    painter.paint(
-      canvas,
-      Offset(
-        placeAtStart
-            ? geometry.rect.left - config.padding - painter.width
-            : geometry.rect.right + config.padding,
-        geometry.rect.center.dy - painter.height / 2,
-      ),
+    final padding = _barLabelBoxPadding(config);
+    final size = Size(
+      painter.width + padding * 2,
+      painter.height + padding * 2,
+    );
+    final outsideX = placeAtStart
+        ? geometry.rect.left - config.padding - size.width
+        : geometry.rect.right + config.padding;
+    final insideX = placeAtStart
+        ? geometry.rect.left + config.padding
+        : geometry.rect.right - config.padding - size.width;
+    _paintBarRangeLabelBox(
+      canvas: canvas,
+      geometry: geometry,
+      painter: painter,
+      color: color,
+      config: config,
+      padding: padding,
+      candidates: [
+        Rect.fromLTWH(
+          outsideX,
+          geometry.rect.center.dy - size.height / 2,
+          size.width,
+          size.height,
+        ),
+        Rect.fromLTWH(
+          insideX,
+          geometry.rect.center.dy - size.height / 2,
+          size.width,
+          size.height,
+        ),
+      ],
+      anchor: placeAtStart
+          ? geometry.rect.centerLeft
+          : geometry.rect.centerRight,
+      displacementDirection: const Offset(0, 1),
     );
   }
 
@@ -1936,27 +2326,87 @@ class SeriesElement implements DataHitElement {
     final rotate = painter.width > availableWidth;
     if (rotate) painter = horizontalPainter;
     final centerX = geometry.rect.center.dx;
-    if (!rotate) {
-      painter.paint(
-        canvas,
-        Offset(
-          centerX - painter.width / 2,
-          placeAbove
-              ? geometry.rect.top - config.padding - painter.height
-              : geometry.rect.bottom + config.padding,
+    final boxPadding = _barLabelBoxPadding(config);
+    final visualSize = rotate
+        ? Size(painter.height + boxPadding * 2, painter.width + boxPadding * 2)
+        : Size(painter.width + boxPadding * 2, painter.height + boxPadding * 2);
+    final outsideY = placeAbove
+        ? geometry.rect.top - config.padding - visualSize.height
+        : geometry.rect.bottom + config.padding;
+    final insideY = placeAbove
+        ? geometry.rect.top + config.padding
+        : geometry.rect.bottom - config.padding - visualSize.height;
+    _paintBarRangeLabelBox(
+      canvas: canvas,
+      geometry: geometry,
+      painter: painter,
+      color: color,
+      config: config,
+      padding: boxPadding,
+      candidates: [
+        Rect.fromLTWH(
+          centerX - visualSize.width / 2,
+          outsideY,
+          visualSize.width,
+          visualSize.height,
         ),
-      );
+        Rect.fromLTWH(
+          centerX - visualSize.width / 2,
+          insideY,
+          visualSize.width,
+          visualSize.height,
+        ),
+      ],
+      anchor: placeAbove ? geometry.rect.topCenter : geometry.rect.bottomCenter,
+      displacementDirection: const Offset(1, 0),
+      rotate: rotate,
+    );
+  }
+
+  double _barLabelBoxPadding(BarLabelStyle config) =>
+      config.backgroundColor != null ||
+          config.borderColor != null && config.borderWidth > 0
+      ? config.backgroundPadding
+      : 0;
+
+  void _paintBarRangeLabelBox({
+    required Canvas canvas,
+    required BarGeometry geometry,
+    required TextPainter painter,
+    required Color color,
+    required BarLabelStyle config,
+    required double padding,
+    required List<Rect> candidates,
+    required Offset anchor,
+    required Offset displacementDirection,
+    bool rotate = false,
+  }) {
+    final result = _barLabelLayoutCoordinator?.place(
+      candidates: candidates,
+      collisionPolicy: config.collisionPolicy,
+      plotEdgeAware: config.plotEdgeAware,
+      collisionPadding: config.collisionPadding,
+      displacementDirection: displacementDirection,
+      displacementStep:
+          (rotate ? painter.height : painter.width) + config.collisionPadding,
+    );
+    if (_barLabelLayoutCoordinator != null && result == null) return;
+    final rect = result?.rect ?? candidates.first;
+    _paintBarLabelCallout(
+      canvas,
+      geometry,
+      rect,
+      color,
+      config,
+      anchor: anchor,
+    );
+    _paintBarLabelContainer(canvas, rect, config);
+    if (!rotate) {
+      painter.paint(canvas, rect.topLeft + Offset(padding, padding));
       return;
     }
-
-    // Rotate only as the final fallback. After a clockwise quarter-turn the
-    // painter's visual width is its original height and its visual height is
-    // its original width.
-    final visualTop = placeAbove
-        ? geometry.rect.top - config.padding - painter.width
-        : geometry.rect.bottom + config.padding;
     canvas.save();
-    canvas.translate(centerX + painter.height / 2, visualTop);
+    canvas.translate(rect.left + padding + painter.height, rect.top + padding);
     canvas.rotate(math.pi / 2);
     painter.paint(canvas, Offset.zero);
     canvas.restore();
@@ -1981,7 +2431,7 @@ class SeriesElement implements DataHitElement {
             fontWeight: fontWeight,
           ),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: textDirection,
         textAlign: textAlign,
       );
       painter.layout();
@@ -2025,7 +2475,7 @@ class SeriesElement implements DataHitElement {
             fontFamily: fontFamily,
           ),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: textDirection,
         textAlign: TextAlign.left,
       );
       painter.layout();
@@ -2271,7 +2721,7 @@ class SeriesElement implements DataHitElement {
           fontFamily: fontFamily,
         ),
       ),
-      textDirection: TextDirection.ltr,
+      textDirection: textDirection,
       textAlign: TextAlign.left,
     )..layout();
 
@@ -2350,6 +2800,7 @@ class SeriesElement implements DataHitElement {
       hasAnySelectedPoints: hasAnySelectedPoints,
       revealProgress: revealProgress,
       pathPointMap: pathPointMap,
+      textDirection: textDirection,
     );
   }
 }

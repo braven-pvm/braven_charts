@@ -1,6 +1,8 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Multi-Axis Manager Tests
 
+import 'dart:ui';
+
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/models/bar_chart_style.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
@@ -614,6 +616,42 @@ void main() {
         expect(bounds['axis1']!.max, closeTo(115.5, 0.001));
       });
 
+      test('computeAxisBounds centers diverging composition bounds', () {
+        final axis = YAxisConfig.withId(
+          id: 'axis1',
+          position: YAxisPosition.left,
+        );
+        manager.setSeries([
+          BarChartSeries(
+            id: 'negative',
+            points: const [ChartDataPoint(x: 0, y: 30)],
+            barWidthPercent: 0.8,
+            layoutMode: BarLayoutMode.divergingStacked,
+            divergingRole: BarDivergingRole.negative,
+            yAxisConfig: axis,
+          ),
+          BarChartSeries(
+            id: 'neutral',
+            points: const [ChartDataPoint(x: 0, y: 20)],
+            barWidthPercent: 0.8,
+            layoutMode: BarLayoutMode.divergingStacked,
+            divergingRole: BarDivergingRole.neutral,
+            yAxisConfig: axis,
+          ),
+          BarChartSeries(
+            id: 'positive',
+            points: const [ChartDataPoint(x: 0, y: 50)],
+            barWidthPercent: 0.8,
+            layoutMode: BarLayoutMode.divergingStacked,
+            yAxisConfig: axis,
+          ),
+        ]);
+
+        final bounds = manager.computeAxisBounds();
+        expect(bounds['axis1']!.min, closeTo(-66, 0.001));
+        expect(bounds['axis1']!.max, closeTo(66, 0.001));
+      });
+
       test('computeAxisBounds includes floating bar starts and ends', () {
         manager.setSeries([
           BarChartSeries(
@@ -653,6 +691,30 @@ void main() {
         final bounds = manager.computeAxisBounds();
         expect(bounds['axis1']!.min, closeTo(-4.75, 0.001));
         expect(bounds['axis1']!.max, closeTo(99.75, 0.001));
+      });
+
+      test('computeAxisBounds includes bullet qualitative ranges', () {
+        manager.setSeries([
+          BarChartSeries(
+            id: 'bullet-ranges',
+            points: const [ChartDataPoint(x: 0, y: 60)],
+            barWidthPercent: 0.5,
+            bulletStyle: const BarBulletStyle(
+              ranges: [
+                BarBulletRange(endValue: 50, color: Color(0xFFE2E8F0)),
+                BarBulletRange(endValue: 100, color: Color(0xFF94A3B8)),
+              ],
+            ),
+            yAxisConfig: YAxisConfig.withId(
+              id: 'axis1',
+              position: YAxisPosition.left,
+            ),
+          ),
+        ]);
+
+        final bounds = manager.computeAxisBounds();
+        expect(bounds['axis1']!.min, closeTo(-5, 0.001));
+        expect(bounds['axis1']!.max, closeTo(105, 0.001));
       });
 
       test('computeAxisBounds includes bar uncertainty endpoints', () {

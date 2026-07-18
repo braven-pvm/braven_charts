@@ -981,6 +981,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   ChartLayoutKind _layoutKind = ChartLayoutKind.cartesian;
   double _textScaleFactor = 1;
+  TextDirection _textDirection = TextDirection.ltr;
   bool _disableAnimations = false;
   int? _radialKeyboardFocusIndex;
   bool _radialFocusIndicatorVisible = false;
@@ -1307,10 +1308,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     super.didChangeDependencies();
     final nextTextScale = MediaQuery.maybeOf(context)?.textScaler.scale(1) ?? 1;
     final nextDisableAnimations = MediaQuery.disableAnimationsOf(context);
+    final nextTextDirection = Directionality.of(context);
     if (nextTextScale != _textScaleFactor ||
-        nextDisableAnimations != _disableAnimations) {
+        nextDisableAnimations != _disableAnimations ||
+        nextTextDirection != _textDirection) {
       _textScaleFactor = nextTextScale;
       _disableAnimations = nextDisableAnimations;
+      _textDirection = nextTextDirection;
       if (_disableAnimations) {
         _barDataAnimationController
           ..stop()
@@ -2211,6 +2215,27 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     _refreshAnimatedRenderSeries();
 
+    final retainsExitingBars = _barSeriesTransitions.values.any(
+      (transition) => transition.retainsExits,
+    );
+    DataBounds computeTransitionAwareBounds() {
+      final finalBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
+      if (!retainsExitingBars || _effectiveRenderSeries.isEmpty) {
+        return finalBounds;
+      }
+      // Keep the old domain stable while exits collapse, but union it with the
+      // final domain so simultaneous entrances and larger updates never clip.
+      final exitingBounds = DataConverter.computeDataBounds(
+        _effectiveRenderSeries,
+      );
+      return DataBounds(
+        xMin: math.min(finalBounds.xMin, exitingBounds.xMin),
+        xMax: math.max(finalBounds.xMax, exitingBounds.xMax),
+        yMin: math.min(finalBounds.yMin, exitingBounds.yMin),
+        yMax: math.max(finalBounds.yMax, exitingBounds.yMax),
+      );
+    }
+
     // Series-level interpolation is now respected directly from ChartSeries.interpolation
     // The deprecated widget-level lineStyle override has been removed.
 
@@ -2287,7 +2312,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             );
           } else {
             // Removed excessive print (no points in window)
-            dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
+            dataBounds = computeTransitionAwareBounds();
           }
         } else {
           // Removed excessive print (no points at all)
@@ -2295,8 +2320,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         }
       } else {
         // Non-streaming, no auto-scroll, or explore mode: use all data
-        dataBounds = DataConverter.computeDataBounds(_effectiveDataSeries);
+        dataBounds = computeTransitionAwareBounds();
       }
+    }
+
+    // A categorical X-axis owns the full semantic domain. Raw bar points are
+    // centered on integer category indices, while the half-step padding keeps
+    // the first and last bars inside the viewport without requiring callers to
+    // duplicate min/max values beside their category list.
+    final configuredCategoryAxis = widget.xAxisConfig?.categoryAxis;
+    if (configuredCategoryAxis != null &&
+        configuredCategoryAxis.categories.isNotEmpty) {
+      dataBounds = DataBounds(
+        xMin: widget.xAxisConfig?.min ?? configuredCategoryAxis.domainMin,
+        xMax: widget.xAxisConfig?.max ?? configuredCategoryAxis.domainMax,
+        yMin: dataBounds.yMin,
+        yMax: dataBounds.yMax,
+      );
     }
 
     // CRITICAL: Ensure valid bounds before creating axes (prevent dataMax <= dataMin assertion)
@@ -2417,6 +2457,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               id: _pathRevealProgressFor(id),
           },
           pathPointMapsBySeries: _pathPointMapsBySeries,
+          textDirection: _textDirection,
         ).cast<ChartElement>().toList();
       }
 
@@ -2550,8 +2591,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _barSeriesTransitions.clear();
-      _refreshAnimatedRenderSeries();
-      _elementGeneratorVersion++;
+      // Exit transitions deliberately retain their previous domain while
+      // marks collapse. Rebuild once at completion so axes and normalization
+      // immediately return to the final data-only domain.
+      _rebuildElements();
     });
   }
 
@@ -2860,19 +2903,62 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     _barDataAnimationController.value = 0;
 
-    for (final next in nextSeries.whereType<BarChartSeries>()) {
+    final nextBarIds = <String>{
+      for (final next in nextSeries.whereType<BarChartSeries>()) next.id,
+    };
+    final nextBars = nextSeries.whereType<BarChartSeries>().toList(
+      growable: false,
+    );
+    for (var nextIndex = 0; nextIndex < nextSeries.length; nextIndex++) {
+      final next = nextSeries[nextIndex];
+      if (next is! BarChartSeries) continue;
       if (next.barStyle.animationMode == BarAnimationMode.none) continue;
       final previous = previousSeriesById[next.id];
-      final from = entrance || previous is! BarChartSeries
-          ? BarSeriesTransition.collapsed(next)
-          : BarSeriesTransition.hasCompatibleLayout(previous, next)
+      final compatiblePrevious =
+          !entrance &&
+              previous is BarChartSeries &&
+              BarSeriesTransition.hasCompatibleLayout(previous, next)
           ? previous
-          : BarSeriesTransition.collapsed(next);
-      if (!entrance && from == next) continue;
+          : null;
+      final from = compatiblePrevious ?? BarSeriesTransition.collapsed(next);
+      final to = compatiblePrevious != null
+          ? BarSeriesTransition.withExitingPoints(
+              previous: compatiblePrevious,
+              next: next,
+            )
+          : next;
+      if (!entrance && from == to) continue;
       _barSeriesTransitions[next.id] = _ActiveBarSeriesTransition(
         from: from,
-        to: next,
+        to: to,
+        renderIndex: nextIndex,
+        retainsExits: to.points.length > next.points.length,
       );
+    }
+
+    var previousIndex = 0;
+    for (final previous in previousSeriesById.values) {
+      if (previous is BarChartSeries &&
+          !nextBarIds.contains(previous.id) &&
+          (nextBars.isEmpty ||
+              nextBars.every(
+                (next) =>
+                    next.orientation == previous.orientation &&
+                    next.layoutMode == previous.layoutMode,
+              )) &&
+          previous.barStyle.animationMode != BarAnimationMode.none) {
+        final to = BarSeriesTransition.collapsed(previous);
+        if (previous != to) {
+          _barSeriesTransitions[previous.id] = _ActiveBarSeriesTransition(
+            from: previous,
+            to: to,
+            renderIndex: previousIndex,
+            exiting: true,
+            retainsExits: true,
+          );
+        }
+      }
+      previousIndex++;
     }
 
     if (_barSeriesTransitions.isEmpty) {
@@ -3174,7 +3260,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _refreshAnimatedRenderSeries() {
     _pathPointMapsBySeries.clear();
-    if (_effectiveDataSeries.isEmpty) {
+    if (_effectiveDataSeries.isEmpty && _barSeriesTransitions.isEmpty) {
       _effectiveRenderSeries = _effectiveDataSeries;
       return;
     }
@@ -3192,7 +3278,25 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               progress: progress,
             );
           })
-          .toList(growable: false);
+          .toList(growable: true);
+      final exitingTransitions =
+          _barSeriesTransitions.values
+              .where((transition) => transition.exiting)
+              .toList(growable: false)
+            ..sort((a, b) => a.renderIndex.compareTo(b.renderIndex));
+      for (final transition in exitingTransitions) {
+        final insertionIndex = transition.renderIndex
+            .clamp(0, renderSeries.length)
+            .toInt();
+        renderSeries.insert(
+          insertionIndex,
+          BarSeriesTransition.interpolate(
+            from: transition.from,
+            to: transition.to,
+            progress: progress,
+          ),
+        );
+      }
     }
     if (_pathSeriesTransitions.isNotEmpty) {
       renderSeries = renderSeries
@@ -5133,6 +5237,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         if (point.y > maxY) maxY = point.y;
       }
       if (series is BarChartSeries) {
+        for (final range
+            in series.bulletStyle?.ranges ?? const <BarBulletRange>[]) {
+          if (range.endValue < minY) minY = range.endValue;
+          if (range.endValue > maxY) maxY = range.endValue;
+        }
         for (final target in series.targetValues.whereType<double>()) {
           if (!target.isFinite) continue;
           if (target < minY) minY = target;
@@ -5276,6 +5385,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _ when series.hasRangeValues =>
         '${series.rangeStartValueFor(ref.pointIndex)} to ${point.y}$unit',
       BarLayoutMode.normalizedStacked => '${point.y}$unit, normalized segment',
+      BarLayoutMode.divergingStacked =>
+        '${point.y}$unit, ${series.divergingRole.name} response',
       _ => '${point.y}$unit',
     };
     final target = series.targetValueFor(ref.pointIndex);
@@ -5285,9 +5396,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final uncertaintyDescription = errorLower == null || errorUpper == null
         ? ''
         : ', uncertainty $errorLower to $errorUpper$unit';
+    final qualitativeLabel = series.bulletStyle?.rangeForValue(point.y)?.label;
+    final qualitativeDescription = qualitativeLabel == null
+        ? ''
+        : ', range $qualitativeLabel';
     return (
       value:
-          '${series.name}, $category, $value$targetDescription$uncertaintyDescription',
+          '${series.name}, $category, $value$targetDescription$uncertaintyDescription$qualitativeDescription',
       isSelected: _selectedPointRefs.contains(ref),
     );
   }
@@ -5447,6 +5562,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         scrollbarTheme: widget.scrollbarTheme,
                         interactionConfig: effectiveInteractionConfig,
                         textScaleFactor: _textScaleFactor,
+                        textDirection: _textDirection,
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
@@ -5773,6 +5889,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.scrollbarTheme,
     this.interactionConfig,
     this.textScaleFactor = 1,
+    this.textDirection = TextDirection.ltr,
     this.onCursorChange,
     this.onAnnotationChanged,
     this.onElementHover,
@@ -5816,6 +5933,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final ScrollbarConfig? scrollbarTheme;
   final InteractionConfig? interactionConfig;
   final double textScaleFactor;
+  final TextDirection textDirection;
   final void Function(MouseCursor cursor)? onCursorChange;
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)?
   onAnnotationChanged;
@@ -5845,6 +5963,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         scrollbarTheme: scrollbarTheme,
         interactionConfig: interactionConfig,
         textScaleFactor: textScaleFactor,
+        textDirection: textDirection,
         normalizationMode: normalizationMode,
         series: series,
         onCursorChange: onCursorChange,
@@ -5890,6 +6009,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setScrollbarTheme(scrollbarTheme)
       ..setInteractionConfig(interactionConfig)
       ..setTextScaleFactor(textScaleFactor)
+      ..setTextDirection(textDirection)
       ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
       ..onElementHover = onElementHover;
@@ -6120,10 +6240,19 @@ class _IncomingPointAnimation {
 }
 
 class _ActiveBarSeriesTransition {
-  const _ActiveBarSeriesTransition({required this.from, required this.to});
+  const _ActiveBarSeriesTransition({
+    required this.from,
+    required this.to,
+    required this.renderIndex,
+    this.exiting = false,
+    this.retainsExits = false,
+  });
 
   final BarChartSeries from;
   final BarChartSeries to;
+  final int renderIndex;
+  final bool exiting;
+  final bool retainsExits;
 }
 
 class _ActiveRadialSeriesTransition {

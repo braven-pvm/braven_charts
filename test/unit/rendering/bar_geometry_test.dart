@@ -98,6 +98,132 @@ void main() {
       expect(geometry.paintBounds.contains(geometry.rect.topCenter), isTrue);
     });
 
+    test('diverging capacity tracks span both sides of the baseline', () {
+      const horizontalTransform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 4,
+        dataYMin: -100,
+        dataYMax: 100,
+        plotWidth: 400,
+        plotHeight: 200,
+        transposed: true,
+      );
+      const series = BarChartSeries(
+        id: 'diverging-track',
+        points: [ChartDataPoint(x: 1, y: 20)],
+        barWidthPixels: 20,
+        orientation: BarOrientation.horizontal,
+        layoutMode: BarLayoutMode.divergingStacked,
+        trackStyle: BarTrackStyle(color: Color(0xFFE0E0E0), value: 100),
+      );
+      const groupInfo = BarGroupInfo(
+        index: 0,
+        count: 1,
+        layoutMode: BarLayoutMode.divergingStacked,
+        startValues: {0: -10},
+        endValues: {0: 10},
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: horizontalTransform,
+        groupInfo: groupInfo,
+      ).single;
+
+      expect(geometry.trackRect, const Rect.fromLTRB(0, 40, 400, 60));
+      expect(geometry.trackRect!.center.dx, 200);
+    });
+
+    test('diverging tracks without a value span the visible axis', () {
+      const asymmetricTransform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 4,
+        dataYMin: -60,
+        dataYMax: 100,
+        plotWidth: 400,
+        plotHeight: 200,
+      );
+      const series = BarChartSeries(
+        id: 'visible-diverging-track',
+        points: [ChartDataPoint(x: 1, y: 20)],
+        barWidthPixels: 20,
+        layoutMode: BarLayoutMode.divergingStacked,
+        trackStyle: BarTrackStyle(color: Color(0xFFE0E0E0)),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: asymmetricTransform,
+        groupInfo: const BarGroupInfo(
+          index: 0,
+          count: 1,
+          layoutMode: BarLayoutMode.divergingStacked,
+          startValues: {0: -10},
+          endValues: {0: 10},
+        ),
+      ).single;
+
+      expect(geometry.trackRect, const Rect.fromLTRB(90, 0, 110, 200));
+    });
+
+    test('lays out canonical lollipop stem and head geometry', () {
+      const series = BarChartSeries(
+        id: 'lollipop',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 24,
+        lollipopStyle: BarLollipopStyle(stemWidth: 4, headRadius: 8),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: transform,
+      ).single;
+
+      expect(geometry.lollipopStemStart, const Offset(100, 100));
+      expect(geometry.lollipopStemEnd, const Offset(100, 50));
+      expect(
+        geometry.lollipopStemBounds,
+        const Rect.fromLTRB(98, 48, 102, 102),
+      );
+      expect(geometry.lollipopHeadCenter, const Offset(100, 50));
+      expect(geometry.lollipopHeadBounds, const Rect.fromLTRB(92, 42, 108, 58));
+      expect(geometry.paintBounds, const Rect.fromLTRB(92, 42, 108, 102));
+      expect(geometry.hitBounds.contains(const Offset(100, 75)), isTrue);
+      expect(geometry.hitBounds.contains(const Offset(107, 50)), isTrue);
+    });
+
+    test('transposes lollipop geometry with horizontal bars', () {
+      const horizontalTransform = ChartTransform(
+        dataXMin: 0,
+        dataXMax: 4,
+        dataYMin: -100,
+        dataYMax: 100,
+        plotWidth: 400,
+        plotHeight: 200,
+        transposed: true,
+      );
+      const series = BarChartSeries(
+        id: 'horizontal-lollipop',
+        points: [ChartDataPoint(x: 1, y: 50)],
+        barWidthPixels: 24,
+        orientation: BarOrientation.horizontal,
+        lollipopStyle: BarLollipopStyle(stemWidth: 4, headRadius: 8),
+      );
+
+      final geometry = BarGeometryEngine.layout(
+        series: series,
+        transform: horizontalTransform,
+      ).single;
+
+      expect(geometry.lollipopStemStart, const Offset(200, 50));
+      expect(geometry.lollipopStemEnd, const Offset(300, 50));
+      expect(
+        geometry.lollipopHeadBounds,
+        const Rect.fromLTRB(292, 42, 308, 58),
+      );
+      expect(geometry.paintBounds, const Rect.fromLTRB(198, 42, 308, 58));
+    });
+
     test('lays out a vertical target marker across the bar', () {
       const series = BarChartSeries(
         id: 'target',

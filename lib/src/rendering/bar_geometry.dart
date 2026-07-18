@@ -29,6 +29,13 @@ class BarGeometry {
     this.percentage,
     this.trackRect,
     this.trackRRect,
+    this.lollipopStemStart,
+    this.lollipopStemEnd,
+    this.lollipopStemBounds,
+    this.lollipopHeadCenter,
+    this.lollipopHeadBounds,
+    this.bulletRect,
+    this.bulletRRect,
     this.targetValue,
     this.targetStart,
     this.targetEnd,
@@ -79,6 +86,13 @@ class BarGeometry {
   final double? percentage;
   final Rect? trackRect;
   final RRect? trackRRect;
+  final Offset? lollipopStemStart;
+  final Offset? lollipopStemEnd;
+  final Rect? lollipopStemBounds;
+  final Offset? lollipopHeadCenter;
+  final Rect? lollipopHeadBounds;
+  final Rect? bulletRect;
+  final RRect? bulletRRect;
   final double? targetValue;
   final Offset? targetStart;
   final Offset? targetEnd;
@@ -93,9 +107,21 @@ class BarGeometry {
   final Offset? errorUpperCapEnd;
   final Rect? errorBounds;
 
+  /// The visible mark at the value end used to anchor outside labels.
+  ///
+  /// Standard bars terminate at [rect]. Lollipop bars terminate at the outer
+  /// edge of their circular marker, so using the raw bar rectangle would move
+  /// labels underneath larger markers.
+  Rect get valueEndVisualBounds => lollipopHeadBounds ?? rect;
+
   /// The bar body plus its passive tracks, markers, and uncertainty interval.
   Rect get paintBounds {
-    var result = trackRect == null ? rect : rect.expandToInclude(trackRect!);
+    var result = lollipopStemBounds ?? rect;
+    if (lollipopHeadBounds != null) {
+      result = result.expandToInclude(lollipopHeadBounds!);
+    }
+    if (trackRect != null) result = result.expandToInclude(trackRect!);
+    if (bulletRect != null) result = result.expandToInclude(bulletRect!);
     if (targetBounds != null) result = result.expandToInclude(targetBounds!);
     if (errorBounds != null) result = result.expandToInclude(errorBounds!);
     return result;
@@ -104,6 +130,21 @@ class BarGeometry {
   /// A forgiving hit target for very thin rod-style bars.
   Rect get hitBounds {
     const minimumHitThickness = 8.0;
+    if (lollipopStemBounds != null && lollipopHeadBounds != null) {
+      var stemHitBounds = lollipopStemBounds!;
+      if (orientation == BarOrientation.horizontal &&
+          stemHitBounds.height < minimumHitThickness) {
+        stemHitBounds = stemHitBounds.inflate(
+          (minimumHitThickness - stemHitBounds.height) / 2,
+        );
+      } else if (orientation == BarOrientation.vertical &&
+          stemHitBounds.width < minimumHitThickness) {
+        stemHitBounds = stemHitBounds.inflate(
+          (minimumHitThickness - stemHitBounds.width) / 2,
+        );
+      }
+      return stemHitBounds.expandToInclude(lollipopHeadBounds!);
+    }
     if (orientation == BarOrientation.horizontal) {
       if (rect.height >= minimumHitThickness) return rect;
       final padding = (minimumHitThickness - rect.height) / 2;
@@ -325,12 +366,22 @@ abstract final class BarGeometryEngine {
     Rect? trackRect;
     RRect? trackRRect;
     if (track != null && (groupInfo?.drawTrack ?? true)) {
-      final trackValue =
-          track.value ?? (isNegative ? transform.dataYMin : transform.dataYMax);
-      final trackEnd = transform.dataToPlot(point.x, trackValue);
       final trackBaseline =
           groupInfo?.stackBaseline ?? series.rangeStartValueFor(pointIndex);
-      final trackStart = transform.dataToPlot(point.x, trackBaseline);
+      final (trackStartValue, trackEndValue) = groupInfo?.isDiverging ?? false
+          ? track.value == null
+                ? (transform.dataYMin, transform.dataYMax)
+                : (
+                    trackBaseline - (track.value! - trackBaseline).abs(),
+                    trackBaseline + (track.value! - trackBaseline).abs(),
+                  )
+          : (
+              trackBaseline,
+              track.value ??
+                  (isNegative ? transform.dataYMin : transform.dataYMax),
+            );
+      final trackStart = transform.dataToPlot(point.x, trackStartValue);
+      final trackEnd = transform.dataToPlot(point.x, trackEndValue);
       trackRect = series.orientation == BarOrientation.horizontal
           ? Rect.fromLTRB(
               math.min(trackEnd.dx, trackStart.dx),
@@ -351,6 +402,61 @@ abstract final class BarGeometryEngine {
       trackRRect = RRect.fromRectAndRadius(
         trackRect,
         Radius.circular(trackRadius),
+      );
+    }
+
+    final lollipop = series.lollipopStyle;
+    Offset? lollipopStemStart;
+    Offset? lollipopStemEnd;
+    Rect? lollipopStemBounds;
+    Offset? lollipopHeadCenter;
+    Rect? lollipopHeadBounds;
+    if (lollipop != null) {
+      lollipopStemStart = series.orientation == BarOrientation.horizontal
+          ? Offset(baselinePosition, rect.center.dy)
+          : Offset(rect.center.dx, baselinePosition);
+      lollipopStemEnd = series.orientation == BarOrientation.horizontal
+          ? Offset(valueEndPosition, rect.center.dy)
+          : Offset(rect.center.dx, valueEndPosition);
+      lollipopStemBounds = Rect.fromPoints(
+        lollipopStemStart,
+        lollipopStemEnd,
+      ).inflate(lollipop.stemWidth / 2);
+      lollipopHeadCenter = lollipopStemEnd;
+      lollipopHeadBounds = Rect.fromCircle(
+        center: lollipopHeadCenter,
+        radius: lollipop.headRadius,
+      );
+    }
+
+    final bullet = series.bulletStyle;
+    Rect? bulletRect;
+    RRect? bulletRRect;
+    if (bullet != null) {
+      final endPosition = transform.dataToPlot(
+        point.x,
+        bullet.ranges.last.endValue,
+      );
+      final measureThickness = series.orientation == BarOrientation.horizontal
+          ? rect.height
+          : rect.width;
+      final rangeThickness = measureThickness / bullet.measureThicknessFactor;
+      bulletRect = series.orientation == BarOrientation.horizontal
+          ? Rect.fromLTRB(
+              math.min(baselinePosition, endPosition.dx),
+              rect.center.dy - rangeThickness / 2,
+              math.max(baselinePosition, endPosition.dx),
+              rect.center.dy + rangeThickness / 2,
+            )
+          : Rect.fromLTRB(
+              rect.center.dx - rangeThickness / 2,
+              math.min(baselinePosition, endPosition.dy),
+              rect.center.dx + rangeThickness / 2,
+              math.max(baselinePosition, endPosition.dy),
+            );
+      bulletRRect = RRect.fromRectAndRadius(
+        bulletRect,
+        Radius.circular(_clampRadius(bullet.cornerRadius, bulletRect)),
       );
     }
 
@@ -476,6 +582,13 @@ abstract final class BarGeometryEngine {
       percentage: groupInfo?.percentageFor(pointIndex),
       trackRect: trackRect,
       trackRRect: trackRRect,
+      lollipopStemStart: lollipopStemStart,
+      lollipopStemEnd: lollipopStemEnd,
+      lollipopStemBounds: lollipopStemBounds,
+      lollipopHeadCenter: lollipopHeadCenter,
+      lollipopHeadBounds: lollipopHeadBounds,
+      bulletRect: bulletRect,
+      bulletRRect: bulletRRect,
       targetValue: targetValue,
       targetStart: targetStart,
       targetEnd: targetEnd,

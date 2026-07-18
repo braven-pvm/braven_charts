@@ -30,6 +30,7 @@ class TransposedBarAxesPainter {
     this.bindings = const [],
     this.series = const [],
     this.categoryTickValues,
+    this.textDirection = TextDirection.ltr,
   });
 
   final XAxisConfig categoryConfig;
@@ -40,6 +41,7 @@ class TransposedBarAxesPainter {
   final List<SeriesAxisBinding> bindings;
   final List<ChartSeries> series;
   final List<double>? categoryTickValues;
+  final TextDirection textDirection;
 
   static const _tickLength = TransposedBarAxisLayout.tickLength;
 
@@ -54,13 +56,25 @@ class TransposedBarAxesPainter {
       labelStyle: labelStyle,
       series: series,
       tickValues: categoryTickValues,
+      textDirection: textDirection,
     );
-    final ticks = categoryTickValues ?? formatter.generateTicks(categoryBounds);
+    final ticks = categoryConfig.isCategorical
+        ? formatter.resolveTickValues(
+            math.max(
+              1,
+              categoryBounds.span *
+                  categoryConfig.categoryAxis!.minimumCategoryExtent,
+            ),
+          )
+        : categoryTickValues ?? formatter.generateTicks(categoryBounds);
     var widest = 0.0;
     if (categoryConfig.shouldShowTickLabels) {
       for (final value in ticks) {
         if (!_categoryTickVisible(value)) continue;
-        final painter = _text(formatter.formatTickLabel(value));
+        final painter = formatter.layoutTickLabel(
+          value,
+          maximumWidth: categoryConfig.categoryAxis?.maximumLabelExtent,
+        );
         widest = math.max(widest, painter.width);
       }
     }
@@ -128,6 +142,7 @@ class TransposedBarAxesPainter {
       labelStyle: labelStyle,
       series: series,
       tickValues: categoryTickValues,
+      textDirection: textDirection,
     );
     final color = formatter.resolveAxisColor();
     final paint = Paint()
@@ -138,7 +153,7 @@ class TransposedBarAxesPainter {
       canvas.drawLine(plotArea.topLeft, plotArea.bottomLeft, paint);
     }
 
-    final ticks = categoryTickValues ?? formatter.generateTicks(categoryBounds);
+    final ticks = formatter.resolveTickValues(plotArea.height);
     for (final value in ticks) {
       if (!_categoryTickVisible(value)) continue;
       final ratio = categoryBounds.span == 0
@@ -154,7 +169,10 @@ class TransposedBarAxesPainter {
         );
       }
       if (categoryConfig.shouldShowTickLabels) {
-        final label = _text(formatter.formatTickLabel(value), color: color);
+        final label = formatter.layoutTickLabel(
+          value,
+          maximumWidth: categoryConfig.categoryAxis?.maximumLabelExtent,
+        );
         label.paint(
           canvas,
           Offset(
@@ -319,6 +337,7 @@ class TransposedBarAxesPainter {
         ),
         axisBounds: bounds,
         labelStyle: labelStyle,
+        textDirection: textDirection,
       );
 
   bool _categoryTickVisible(double value) {
@@ -338,6 +357,6 @@ class TransposedBarAxesPainter {
           text: value,
           style: labelStyle.copyWith(color: color, fontWeight: fontWeight),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: textDirection,
       )..layout();
 }

@@ -3,6 +3,7 @@
 
 import 'dart:ui' show Color;
 
+import 'category_axis_config.dart';
 import 'y_axis_config.dart';
 
 /// Typedef for custom X-axis label formatters.
@@ -57,19 +58,17 @@ class XAxisConfig {
     this.axisMargin = 8.0,
     this.tickCount,
     this.labelFormatter,
+    this.categoryAxis,
     this.showMinorTicks = false,
     this.minorTickCount = 4,
     this.minorTickLength = 3.0,
-  })  : assert(minHeight >= 0, 'minHeight must be non-negative'),
-        assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight'),
-        assert(
-          min == null || max == null || min < max,
-          'min must be less than max',
-        ),
-        assert(
-          tickCount == null || tickCount >= 2,
-          'tickCount must be >= 2',
-        );
+  }) : assert(minHeight >= 0, 'minHeight must be non-negative'),
+       assert(maxHeight >= minHeight, 'maxHeight must be >= minHeight'),
+       assert(
+         min == null || max == null || min < max,
+         'min must be less than max',
+       ),
+       assert(tickCount == null || tickCount >= 2, 'tickCount must be >= 2');
 
   // ========== Appearance ==========
 
@@ -201,6 +200,19 @@ class XAxisConfig {
   /// If provided, overrides default number formatting.
   final XAxisLabelFormatter? labelFormatter;
 
+  /// Optional first-class category metadata for integer X values.
+  ///
+  /// When supplied, category labels take precedence over [labelFormatter] at
+  /// exact category centers. Numeric formatting remains available between
+  /// categories for existing annotation and viewport behavior.
+  final CategoryAxisConfig? categoryAxis;
+
+  /// Whether this axis resolves integer X values as named categories.
+  bool get isCategorical => categoryAxis?.categories.isNotEmpty ?? false;
+
+  /// Returns the category at [value], if [value] is an exact category center.
+  String? categoryLabelFor(double value) => categoryAxis?.labelFor(value);
+
   // ========== Minor Ticks ==========
 
   /// Whether to show minor (unlabelled) tick marks between major ticks.
@@ -279,6 +291,8 @@ class XAxisConfig {
     double? axisMargin,
     int? tickCount,
     XAxisLabelFormatter? labelFormatter,
+    CategoryAxisConfig? categoryAxis,
+    bool clearCategoryAxis = false,
     bool? showMinorTicks,
     int? minorTickCount,
     double? minorTickLength,
@@ -306,6 +320,9 @@ class XAxisConfig {
       axisMargin: axisMargin ?? this.axisMargin,
       tickCount: tickCount ?? this.tickCount,
       labelFormatter: labelFormatter ?? this.labelFormatter,
+      categoryAxis: clearCategoryAxis
+          ? null
+          : (categoryAxis ?? this.categoryAxis),
       showMinorTicks: showMinorTicks ?? this.showMinorTicks,
       minorTickCount: minorTickCount ?? this.minorTickCount,
       minorTickLength: minorTickLength ?? this.minorTickLength,
@@ -338,37 +355,39 @@ class XAxisConfig {
           axisMargin == other.axisMargin &&
           tickCount == other.tickCount &&
           labelFormatter == other.labelFormatter &&
+          categoryAxis == other.categoryAxis &&
           showMinorTicks == other.showMinorTicks &&
           minorTickCount == other.minorTickCount &&
           minorTickLength == other.minorTickLength;
 
   @override
   int get hashCode => Object.hashAll([
-        color,
-        label,
-        unit,
-        min,
-        max,
-        renderMin,
-        renderMax,
-        visible,
-        showAxisLine,
-        showTicks,
-        showTickLabels,
-        showCrosshairLabel,
-        crosshairLabelPosition,
-        labelDisplay,
-        minHeight,
-        maxHeight,
-        tickLabelPadding,
-        axisLabelPadding,
-        axisMargin,
-        tickCount,
-        labelFormatter,
-        showMinorTicks,
-        minorTickCount,
-        minorTickLength,
-      ]);
+    color,
+    label,
+    unit,
+    min,
+    max,
+    renderMin,
+    renderMax,
+    visible,
+    showAxisLine,
+    showTicks,
+    showTickLabels,
+    showCrosshairLabel,
+    crosshairLabelPosition,
+    labelDisplay,
+    minHeight,
+    maxHeight,
+    tickLabelPadding,
+    axisLabelPadding,
+    axisMargin,
+    tickCount,
+    labelFormatter,
+    categoryAxis,
+    showMinorTicks,
+    minorTickCount,
+    minorTickLength,
+  ]);
 
   @override
   String toString() {
@@ -393,6 +412,7 @@ class XAxisConfig {
         'axisMargin: $axisMargin, '
         'tickCount: $tickCount, '
         'labelFormatter: $labelFormatter, '
+        'categoryAxis: $categoryAxis, '
         'showMinorTicks: $showMinorTicks, '
         'minorTickCount: $minorTickCount, '
         'minorTickLength: $minorTickLength'

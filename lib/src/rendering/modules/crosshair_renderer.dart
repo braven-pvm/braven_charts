@@ -20,6 +20,7 @@ import '../../models/series_axis_binding.dart';
 import '../../models/x_axis_config.dart';
 import '../../models/y_axis_config.dart';
 import '../../models/y_axis_position.dart';
+import '../../utils/text_direction_resolver.dart';
 import '../multi_axis_normalizer.dart';
 import '../transposed_bar_axis_layout.dart';
 
@@ -591,11 +592,10 @@ class CrosshairRenderer {
         const TextStyle(color: Color(0xFF000000), fontSize: 10);
     final padding = labelStyle?.padding.left ?? 4.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
-    final displayValue =
-        xAxisConfig?.labelFormatter?.call(dataX) ?? _formatDataValue(dataX);
+    final displayValue = _formatXAxisValue(dataX, xAxisConfig);
     final painter = TextPainter(
       text: TextSpan(text: displayValue, style: textStyle),
-      textDirection: TextDirection.ltr,
+      textDirection: resolveChartTextDirection(displayValue),
     )..layout();
     final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
     final inside =
@@ -690,21 +690,11 @@ class CrosshairRenderer {
         xAxisConfig?.showCrosshairLabel != false) {
       final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
 
-      // Apply custom formatter if provided, otherwise use default formatting
-      final String displayValue;
-      if (xAxisConfig?.labelFormatter != null) {
-        displayValue = xAxisConfig!.labelFormatter!(dataX);
-      } else {
-        final formattedValue = _formatDataValue(dataX);
-        // Append unit suffix if configured
-        displayValue = xAxisConfig?.unit != null
-            ? '$formattedValue ${xAxisConfig!.unit}'
-            : formattedValue;
-      }
+      final displayValue = _formatXAxisValue(dataX, xAxisConfig);
 
       final xTextPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle),
-        textDirection: TextDirection.ltr,
+        textDirection: resolveChartTextDirection(displayValue),
       )..layout();
 
       var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
@@ -834,7 +824,7 @@ class CrosshairRenderer {
           '${_formatDataValue(displayY)}${axis.unit == null ? '' : ' ${axis.unit}'}';
       final painter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle),
-        textDirection: TextDirection.ltr,
+        textDirection: resolveChartTextDirection(displayValue),
       )..layout();
       final axisColor = multiAxisInfo.resolveAxisColor(axis);
       final isBottom = TransposedBarAxisLayout.isBottom(axis);
@@ -932,7 +922,7 @@ class CrosshairRenderer {
 
       final textPainter = TextPainter(
         text: TextSpan(text: displayValue, style: textStyle),
-        textDirection: TextDirection.ltr,
+        textDirection: resolveChartTextDirection(displayValue),
       )..layout();
 
       final labelX = calculateYAxisCrosshairLabelX(
@@ -1162,7 +1152,7 @@ class CrosshairRenderer {
             fontFamily: fontFamily,
           ),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: resolveChartTextDirection(label),
       )..layout();
 
       final target = value.isTrend ? trendEntries : seriesEntries;
@@ -1190,7 +1180,7 @@ class CrosshairRenderer {
             fontFamily: fontFamily,
           ),
         ),
-        textDirection: TextDirection.ltr,
+        textDirection: resolveChartTextDirection('Trends'),
       )..layout();
       // divider spacing + line + spacing + header + spacing
       totalHeight +=
@@ -1311,21 +1301,11 @@ class CrosshairRenderer {
 
     final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
 
-    // Apply custom formatter if provided, otherwise use default formatting
-    final String displayValue;
-    if (xAxisConfig?.labelFormatter != null) {
-      displayValue = xAxisConfig!.labelFormatter!(dataX);
-    } else {
-      final formattedValue = _formatDataValue(dataX);
-      // Append unit suffix if configured
-      displayValue = xAxisConfig?.unit != null
-          ? '$formattedValue ${xAxisConfig!.unit}'
-          : formattedValue;
-    }
+    final displayValue = _formatXAxisValue(dataX, xAxisConfig);
 
     final xTextPainter = TextPainter(
       text: TextSpan(text: displayValue, style: textStyle),
-      textDirection: TextDirection.ltr,
+      textDirection: resolveChartTextDirection(displayValue),
     )..layout();
 
     var xLabelX = cursorPosition.dx - xTextPainter.width / 2;
@@ -1392,7 +1372,7 @@ class CrosshairRenderer {
     final yDisplayValue = _formatDataValue(dataY);
     final yTextPainter = TextPainter(
       text: TextSpan(text: 'Y: $yDisplayValue', style: textStyle),
-      textDirection: TextDirection.ltr,
+      textDirection: resolveChartTextDirection('Y: $yDisplayValue'),
     )..layout();
 
     final yLabelX = plotArea.left + 8;
@@ -1441,6 +1421,18 @@ class CrosshairRenderer {
     }
 
     return const Color(0xFF333333);
+  }
+
+  String _formatXAxisValue(double value, XAxisConfig? config) {
+    final categoryLabel = config?.categoryLabelFor(value);
+    if (categoryLabel != null) return categoryLabel;
+    if (config?.labelFormatter != null) {
+      return config!.labelFormatter!(value);
+    }
+    final formattedValue = _formatDataValue(value);
+    return config?.unit == null
+        ? formattedValue
+        : '$formattedValue ${config!.unit}';
   }
 
   /// Formats data values for display.

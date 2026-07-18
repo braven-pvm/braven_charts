@@ -38,6 +38,370 @@ void main() {
     );
   });
 
+  testWidgets('showcases native dense categories in chart and data views', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-categories')));
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.showXScrollbar, isTrue);
+    expect(chart.xAxisConfig?.categoryAxis?.categories, hasLength(24));
+    expect(chart.xAxisConfig?.labelFormatter, isNull);
+    expect(find.text('Category axis'), findsOneWidget);
+    expect(find.text('Label density'), findsOneWidget);
+    expect(find.text('Long labels'), findsOneWidget);
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(find.text('North America Enterprise'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('inherits RTL direction across horizontal and vertical bars', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-rtl')));
+    await tester.pumpAndSettle();
+
+    final chartFinder = find.byType(BravenChartPlus);
+    var chart = tester.widget<BravenChartPlus>(chartFinder);
+    expect(Directionality.of(tester.element(chartFinder)), TextDirection.rtl);
+    expect(chart.xAxisConfig?.categoryAxis?.categories, contains('المؤسسات'));
+    expect(chart.series.first.name, 'الإيراد الحالي');
+    expect(chart.showLegend, isFalse);
+    expect(
+      chart.series.whereType<BarChartSeries>().every(
+        (series) => series.orientation == BarOrientation.horizontal,
+      ),
+      isTrue,
+    );
+
+    tester
+        .widget<EnumOption<BarOrientation>>(
+          find.byKey(const ValueKey('bar-lab-orientation')),
+        )
+        .onChanged(BarOrientation.vertical);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(chartFinder);
+    expect(
+      chart.series.whereType<BarChartSeries>().every(
+        (series) => series.orientation == BarOrientation.vertical,
+      ),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('showcases a first-class bullet chart preset', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-bullet')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delivery against target'), findsOneWidget);
+    expect(find.text('Bullet ranges'), findsOneWidget);
+    expect(find.text('Qualitative bands'), findsOneWidget);
+    expect(find.text('Measure thickness'), findsOneWidget);
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final series = chart.series.single as BarChartSeries;
+    expect(series.orientation, BarOrientation.horizontal);
+    expect(series.bulletStyle?.ranges, hasLength(3));
+    expect(series.bulletStyle?.measureThicknessFactor, 0.42);
+    expect(series.targetValues, isNotEmpty);
+    expect(series.trackStyle, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('showcases a centered diverging Likert preset', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-likert')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product experience survey'), findsOneWidget);
+    expect(find.text('Diverging scale'), findsOneWidget);
+    expect(find.text('Center line'), findsOneWidget);
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final series = chart.series.cast<BarChartSeries>();
+    expect(series, hasLength(5));
+    expect(
+      series.every(
+        (current) => current.layoutMode == BarLayoutMode.divergingStacked,
+      ),
+      isTrue,
+    );
+    expect(series.map((current) => current.divergingRole), [
+      BarDivergingRole.negative,
+      BarDivergingRole.negative,
+      BarDivergingRole.neutral,
+      BarDivergingRole.positive,
+      BarDivergingRole.positive,
+    ]);
+    expect(series.first.orientation, BarOrientation.horizontal);
+    expect(series.first.divergingStyle.showCenterLine, isTrue);
+    expect(series.first.labelStyle.valueMode, BarLabelValueMode.percentage);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('showcases first-class lollipop marks and controls', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-lollipop')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Weekly activation score'), findsOneWidget);
+    expect(find.text('Stem width'), findsOneWidget);
+    expect(find.text('Marker radius'), findsOneWidget);
+    expect(find.text('Corner radius'), findsNothing);
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final series = chart.series.cast<BarChartSeries>();
+    expect(series, hasLength(2));
+    expect(series.every((current) => current.lollipopStyle != null), isTrue);
+    expect(series.first.lollipopStyle?.stemWidth, 3);
+    expect(series.first.lollipopStyle?.headRadius, 8);
+    expect(series.first.labelStyle.position, BarLabelPosition.outsideEnd);
+    expect(chart.interactionConfig?.crosshair.mode, CrosshairMode.both);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('showcases a ranked Pareto bar and cumulative line composition', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-pareto')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Support issues by cause'), findsOneWidget);
+    expect(find.text('Cumulative line'), findsOneWidget);
+    expect(find.text('Markers'), findsOneWidget);
+    expect(find.text('Cumulative labels'), findsOneWidget);
+    expect(find.text('Series count'), findsNothing);
+    expect(find.text('Orientation'), findsNothing);
+    expect(find.text('Capacity tracks'), findsNothing);
+
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series, hasLength(2));
+    var bars = chart.series.first as BarChartSeries;
+    var cumulative = chart.series.last as LineChartSeries;
+    expect(
+      bars.points.map((point) => point.y),
+      orderedEquals([126, 84, 53, 41, 29, 18, 12]),
+    );
+    expect(
+      bars.points.map((point) => point.label),
+      orderedEquals(chart.xAxisConfig!.categoryAxis!.categories),
+    );
+    expect(bars.yAxisConfig?.position, YAxisPosition.left);
+    expect(bars.yAxisConfig?.min, 0);
+    expect(
+      cumulative.points.map((point) => point.y),
+      orderedEquals(cumulative.points.map((point) => point.y).toList()..sort()),
+    );
+    expect(cumulative.points.last.y, 100);
+    expect(cumulative.yAxisConfig?.position, YAxisPosition.right);
+    expect(cumulative.yAxisConfig?.min, 0);
+    expect(cumulative.yAxisConfig?.max, 100);
+    expect(cumulative.showDataPointMarkers, isTrue);
+    expect(chart.interactionConfig?.crosshair.mode, CrosshairMode.both);
+
+    final labelPosition = tester.widget<EnumOption<BarLabelPosition>>(
+      find.byType(EnumOption<BarLabelPosition>),
+    );
+    expect(labelPosition.values, isNot(contains(BarLabelPosition.rangeEnds)));
+
+    SliderOption slider(String label) => tester
+        .widgetList<SliderOption>(find.byType(SliderOption))
+        .singleWhere((option) => option.label == label);
+
+    slider('Category fill').onChanged(0.8);
+    slider('Bar gap').onChanged(12);
+    slider('Corner radius').onChanged(14);
+    slider('Edge offset').onChanged(10);
+    tester
+        .widget<EnumOption<BarCornerRadiusPolicy>>(
+          find.byType(EnumOption<BarCornerRadiusPolicy>),
+        )
+        .onChanged(BarCornerRadiusPolicy.all);
+    tester
+        .widget<BoolOption>(find.byKey(const ValueKey('bar-lab-border')))
+        .onChanged(true);
+    tester
+        .widget<BoolOption>(find.byKey(const ValueKey('bar-lab-gradient')))
+        .onChanged(true);
+    tester
+        .widget<BoolOption>(
+          find.byKey(const ValueKey('bar-lab-pareto-markers')),
+        )
+        .onChanged(false);
+    tester
+        .widget<BoolOption>(find.byKey(const ValueKey('bar-lab-pareto-labels')))
+        .onChanged(true);
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('bar-lab-pareto-line-width')),
+        )
+        .onChanged(5);
+    await tester.pumpAndSettle();
+
+    final updatedChart = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus),
+    );
+    bars = updatedChart.series.first as BarChartSeries;
+    cumulative = updatedChart.series.last as LineChartSeries;
+    expect(bars.barWidthPercent, 0.8);
+    expect(bars.barGap, 12);
+    expect(bars.barStyle.cornerRadius, 14);
+    expect(bars.barStyle.cornerRadiusPolicy, BarCornerRadiusPolicy.all);
+    expect(bars.barStyle.border, isNotNull);
+    expect(bars.barStyle.gradient, isNotNull);
+    expect(bars.labelStyle.padding, 10);
+    expect(cumulative.showDataPointMarkers, isFalse);
+    expect(cumulative.dataPointLabels?.show, isTrue);
+    expect(cumulative.strokeWidth, 5);
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+    expect(
+      table.model?.wideRows.map((row) => row.xDisplay),
+      contains('Missing profile data'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('bins continuous samples into a configurable histogram', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-histogram')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Support response-time distribution'), findsOneWidget);
+    expect(find.text('Binning'), findsOneWidget);
+    expect(find.text('Method'), findsOneWidget);
+    expect(find.text('Bar height'), findsOneWidget);
+    expect(find.text('Bin count'), findsNothing);
+    expect(find.text('Series count'), findsNothing);
+    expect(find.text('Orientation'), findsNothing);
+    expect(find.text('Capacity tracks'), findsNothing);
+
+    var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    var series = chart.series.single as BarChartSeries;
+    expect(series.points.fold<double>(0, (sum, point) => sum + point.y), 52);
+    expect(series.points, hasLength(greaterThan(1)));
+    expect(series.barWidthPercent, 1);
+    expect(series.barGap, 0);
+    expect(series.barStyle.cornerRadius, 0);
+    expect(series.barStyle.border, isNotNull);
+    expect(chart.showLegend, isFalse);
+    expect(
+      chart.xAxisConfig?.categoryAxis?.categories,
+      orderedEquals(series.points.map((point) => point.label)),
+    );
+
+    tester
+        .widget<EnumOption<HistogramBinningMethod>>(
+          find.byKey(const ValueKey('bar-lab-histogram-method')),
+        )
+        .onChanged(HistogramBinningMethod.fixedCount);
+    await tester.pumpAndSettle();
+    expect(find.text('Bin count'), findsOneWidget);
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('bar-lab-histogram-bin-count')),
+        )
+        .onChanged(6);
+    tester
+        .widget<EnumOption<HistogramValueMode>>(
+          find.byKey(const ValueKey('bar-lab-histogram-value-mode')),
+        )
+        .onChanged(HistogramValueMode.percentage);
+    tester
+        .widget<BoolOption>(find.byKey(const ValueKey('bar-lab-gradient')))
+        .onChanged(true);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    series = chart.series.single as BarChartSeries;
+    expect(series.points, hasLength(6));
+    expect(
+      series.points.fold<double>(0, (sum, point) => sum + point.y),
+      closeTo(100, 0.000001),
+    );
+    expect(series.unit, '%');
+    expect(series.barStyle.gradient, isNotNull);
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BravenChartPlus), findsOneWidget);
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('switches between chart, data, and split presentations', (
     tester,
   ) async {
@@ -482,6 +846,9 @@ void main() {
       'Capacity',
       'Targets',
       'Uncertainty',
+      'Lollipop',
+      'Pareto',
+      'Histogram',
       'Rods',
       'Gradient',
       'Signed',
@@ -491,6 +858,7 @@ void main() {
       'Waterfall',
       'Horizontal',
       'Axes',
+      'Patterns',
       'Motion',
       'States',
       'Stacked',
@@ -714,6 +1082,7 @@ void main() {
       bars.every((series) => series.layoutMode == BarLayoutMode.stacked),
       isTrue,
     );
+    expect(bars.every((series) => series.labelStyle.showStackTotal), isTrue);
     expect(bars.map((series) => series.groupId).toSet(), hasLength(2));
 
     await tapPreset('100%');
@@ -727,7 +1096,8 @@ void main() {
       bars.every(
         (series) =>
             series.layoutMode == BarLayoutMode.normalizedStacked &&
-            series.labelStyle.valueMode == BarLabelValueMode.percentage,
+            series.labelStyle.valueMode == BarLabelValueMode.percentage &&
+            series.labelStyle.showStackTotal,
       ),
       isTrue,
     );
@@ -784,6 +1154,115 @@ void main() {
     element = renderBox.debugElements.whereType<SeriesElement>().single;
     geometry = element.barGeometryForPoint(0)!;
     expect(geometry.targetStart!.dx, closeTo(geometry.targetEnd!.dx, 0.001));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('coordinates dense value labels across bar series', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-labels')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collision-aware value labels'), findsOneWidget);
+    expect(find.text('Collisions', skipOffstage: false), findsOneWidget);
+    expect(find.text('Plot-edge aware', skipOffstage: false), findsOneWidget);
+
+    final bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars, hasLength(6));
+    expect(
+      bars.every(
+        (series) =>
+            series.labelStyle.collisionPolicy ==
+                BarLabelCollisionPolicy.reposition &&
+            series.labelStyle.plotEdgeAware &&
+            series.labelStyle.backgroundColor != null &&
+            series.labelStyle.callout.show,
+      ),
+      isTrue,
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rebuilds advanced bars through the public tool contract', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-config')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tool-configured analytical bars'), findsOneWidget);
+    expect(find.textContaining('public tool JSON'), findsWidgets);
+    final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    final bars = chart.series.whereType<BarChartSeries>().toList();
+    expect(bars, hasLength(3));
+    expect(chart.xAxisConfig?.categoryAxis?.categories, const [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ]);
+    expect(
+      bars.every(
+        (series) =>
+            series.targetValues.isNotEmpty &&
+            series.errorLowerValues.isNotEmpty &&
+            series.errorUpperValues.isNotEmpty &&
+            series.barStyle.gradient != null &&
+            series.barStyle.gradient!.colors.last == series.color &&
+            series.trackStyle != null &&
+            series.labelStyle.collisionPolicy ==
+                BarLabelCollisionPolicy.reposition &&
+            series.labelStyle.backgroundColor != null &&
+            series.labelStyle.callout.show,
+      ),
+      isTrue,
+    );
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await tester.pumpAndSettle();
+
+    final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+    expect(
+      table.model!.series.every(
+        (column) => column.auxiliaryFields.containsAll(const {
+          ChartTableAuxiliaryField.target,
+          ChartTableAuxiliaryField.errorLower,
+          ChartTableAuxiliaryField.errorUpper,
+        }),
+      ),
+      isTrue,
+    );
+    expect(find.textContaining('target'), findsWidgets);
+    expect(find.textContaining('lower'), findsWidgets);
+    expect(find.textContaining('upper'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -848,6 +1327,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('pairs a shared bar hue with distinct pattern encodings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-patterns')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pattern-coded comparisons'), findsOneWidget);
+    expect(find.text('Pattern encoding', skipOffstage: false), findsOneWidget);
+    expect(find.text('Pattern spacing', skipOffstage: false), findsOneWidget);
+    expect(find.text('Line width', skipOffstage: false), findsOneWidget);
+    expect(find.text('Pattern opacity', skipOffstage: false), findsOneWidget);
+
+    var bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars, hasLength(4));
+    expect(bars.map((series) => series.color).toSet(), hasLength(1));
+    expect(
+      bars.map((series) => series.barStyle.pattern?.pattern).toSet(),
+      hasLength(4),
+    );
+    expect(bars.every((series) => series.barStyle.pattern != null), isTrue);
+
+    final patternToggle = find.byKey(
+      const ValueKey('bar-lab-pattern-fills'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(patternToggle);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: patternToggle, matching: find.byType(Switch)),
+    );
+    await tester.pumpAndSettle();
+
+    bars = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(bars.every((series) => series.barStyle.pattern == null), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('replays bar values from the Motion preset', (tester) async {
     tester.view.physicalSize = const Size(1600, 900);
     tester.view.devicePixelRatio = 1;
@@ -860,9 +1391,21 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('bar-lab-preset-motion')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Animated value updates'), findsOneWidget);
+    expect(find.text('Keyed lifecycle motion'), findsOneWidget);
+    expect(find.text('Sequence', skipOffstage: false), findsOneWidget);
+    expect(find.text('Stagger', skipOffstage: false), findsOneWidget);
     expect(find.text('Duration', skipOffstage: false), findsOneWidget);
     expect(find.text('Animate bars', skipOffstage: false), findsOneWidget);
+    expect(find.text('Sunday point', skipOffstage: false), findsOneWidget);
+    expect(find.text('Forecast series', skipOffstage: false), findsOneWidget);
+
+    final initialChart = tester.widget<BravenChartPlus>(
+      find.byType(BravenChartPlus),
+    );
+    final initialMotion =
+        (initialChart.series.first as BarChartSeries).barStyle.motion;
+    expect(initialMotion.order, BarAnimationOrder.forward);
+    expect(initialMotion.staggerFraction, 0.45);
 
     final replay = find.byKey(
       const ValueKey('bar-lab-replay-motion'),
@@ -880,18 +1423,93 @@ void main() {
     final renderBox = tester.allRenderObjects
         .whereType<ChartRenderBox>()
         .single;
-    final animatedValue =
+    final animatedPoints =
         (renderBox.debugElements.whereType<SeriesElement>().first.series
                 as BarChartSeries)
-            .points
-            .first
-            .y;
-    expect(animatedValue, greaterThan(54));
-    expect(animatedValue, lessThan(82));
+            .points;
+    final firstProgress = (animatedPoints.first.y - 54) / (82 - 54);
+    final lastProgress = (animatedPoints.last.y - 76) / (96 - 76);
+    expect(firstProgress, greaterThan(lastProgress));
+    expect(firstProgress, greaterThan(0));
+    expect(firstProgress, lessThan(1));
+    expect(lastProgress, greaterThan(0));
+    expect(lastProgress, lessThan(1));
 
     await tester.pumpAndSettle();
     final chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
     expect((chart.series.first as BarChartSeries).points.first.y, 82);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('previews keyed point and series exits from the Motion preset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bar-lab-preset-motion')));
+    await tester.pumpAndSettle();
+
+    final sunday = find.byKey(
+      const ValueKey('bar-lab-motion-sunday'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(sunday);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: sunday, matching: find.byType(Switch)),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    var renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    var rendered = renderBox.debugElements
+        .whereType<SeriesElement>()
+        .map((element) => element.series)
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(rendered.first.points, hasLength(7));
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .series
+          .first
+          .points,
+      hasLength(6),
+    );
+
+    final forecast = find.byKey(
+      const ValueKey('bar-lab-motion-forecast'),
+      skipOffstage: false,
+    );
+    await tester.tap(
+      find.descendant(of: forecast, matching: find.byType(Switch)),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    renderBox = tester.allRenderObjects.whereType<ChartRenderBox>().single;
+    rendered = renderBox.debugElements
+        .whereType<SeriesElement>()
+        .map((element) => element.series)
+        .whereType<BarChartSeries>()
+        .toList();
+    expect(rendered, hasLength(2));
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .series
+          .whereType<BarChartSeries>(),
+      hasLength(1),
+    );
     expect(tester.takeException(), isNull);
   });
 
