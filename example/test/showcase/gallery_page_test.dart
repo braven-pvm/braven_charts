@@ -83,7 +83,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Seven chart guides, one native renderer'),
+        find.text('Seven chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -204,7 +204,7 @@ void main() {
     expect(_gridContains<BarStackedGalleryCard>(tester, barGrid), isTrue);
 
     await tester.scrollUntilVisible(
-      find.text('One whole, five presentation strategies'),
+      find.text('Three stories about one whole'),
       800,
       scrollable: galleryScrollable,
     );
@@ -214,15 +214,13 @@ void main() {
       find.byKey(const ValueKey('gallery-pie-compositions')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-pie-compositions'), 5);
+    expect(_gridCount(tester, 'gallery-pie-compositions'), 3);
     expect(find.byType(SimpleRevenueGalleryCard), findsOneWidget);
-    expect(find.byType(RevenueContributionGalleryCard), findsOneWidget);
-    expect(find.byType(ReleaseEffortGalleryCard), findsOneWidget);
     expect(find.byType(SupportMixGalleryCard), findsOneWidget);
     expect(find.byType(PortfolioAllocationGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Three measures, three radial encodings'),
+      find.text('Three totals with meaningful centers'),
       500,
       scrollable: galleryScrollable,
     );
@@ -238,7 +236,7 @@ void main() {
     expect(find.byType(CampaignReachGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Independent totals, one shared radial pane'),
+      find.text('Three comparisons across independent totals'),
       500,
       scrollable: galleryScrollable,
     );
@@ -327,9 +325,7 @@ void main() {
         .toList(growable: false);
     expect(charts.map((chart) => chart.series.length), [3, 3, 3]);
     expect(
-      charts.map(
-        (chart) => chart.concentricDonutConfig.centerContent.label,
-      ),
+      charts.map((chart) => chart.concentricDonutConfig.centerContent.label),
       ['Periods', 'Regions', 'Funds'],
     );
     expect(

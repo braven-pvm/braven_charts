@@ -165,9 +165,9 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Seven chart guides, one native renderer',
+              title: 'Seven chart guides, grouped by visual grammar',
               subtitle:
-                  'Start with the shape of the data, then open a focused guide for the complete feature set.',
+                  'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
               count: 7,
             ),
           ),
@@ -175,7 +175,7 @@ class _GalleryPageState extends State<GalleryPage> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               child: SizedBox(
-                height: 310,
+                height: 620,
                 child: ChartTypeCatalogStrip(
                   onOpenChartType: widget.onOpenChartType,
                 ),
@@ -268,68 +268,41 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'PIE COMPOSITIONS',
-              title: 'One whole, five presentation strategies',
+              title: 'Three stories about one whole',
               subtitle:
-                  'Compare a simple value-first Pie with outside and inside labels, dense categories, dark and light themes, rounded slices, elevation, and legend treatments.',
-              count: 5,
+                  'Compare a value-first dark Pie, dense collision-aware labels, and an elevated allocation view with a full legend.',
+              count: 3,
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-            sliver: SliverGrid(
-              key: const ValueKey('gallery-pie-compositions'),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 760,
-                mainAxisExtent: 420,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildListDelegate(pieGalleryCards),
-            ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-pie-compositions'),
+            cards: pieGalleryCards,
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'DONUT COMPOSITIONS',
-              title: 'Three measures, three radial encodings',
+              title: 'Three totals with meaningful centers',
               subtitle:
-                  'Compare subscription mix, release readiness, and channel efficiency with selection-aware center content.',
+                  'Compare subscription mix, release readiness, and channel efficiency with equal visual weight and selection-aware center content.',
               count: 3,
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-            sliver: SliverGrid(
-              key: const ValueKey('gallery-donut-compositions'),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 760,
-                mainAxisExtent: 420,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildListDelegate(donutGalleryCards),
-            ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-donut-compositions'),
+            cards: donutGalleryCards,
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CONCENTRIC DONUT COMPOSITIONS',
-              title: 'Independent totals, one shared radial pane',
+              title: 'Three comparisons across independent totals',
               subtitle:
-                  'Compare time periods, regional service health, and weighted portfolio mandates without forcing the rings onto one total.',
+                  'Compare time periods, regional service health, and weighted portfolio mandates in consistently sized shared radial panes.',
               count: 3,
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-            sliver: SliverGrid(
-              key: const ValueKey('gallery-concentric-donut-compositions'),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 760,
-                mainAxisExtent: 420,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              delegate: SliverChildListDelegate(concentricDonutGalleryCards),
-            ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-concentric-donut-compositions'),
+            cards: concentricDonutGalleryCards,
           ),
         ],
       ),
@@ -2589,6 +2562,39 @@ class _GalleryPageState extends State<GalleryPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RadialGalleryGrid extends StatelessWidget {
+  const _RadialGalleryGrid({required this.gridKey, required this.cards});
+
+  final Key gridKey;
+  final List<Widget> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.crossAxisExtent >= 1260
+            ? 3
+            : constraints.crossAxisExtent >= 760
+            ? 2
+            : 1;
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+          sliver: SliverGrid(
+            key: gridKey,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisExtent: 440,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+            ),
+            delegate: SliverChildListDelegate(cards),
+          ),
+        );
+      },
     );
   }
 }

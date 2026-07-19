@@ -32,7 +32,14 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   double _innerRadiusFactor = 0.28;
   double _outerRadiusFactor = 0.94;
   double _ringGap = 6;
-  double _currentWeight = 1.25;
+  final Map<String, double> _ringWeights = {
+    'current': 1.25,
+    'previous': 1,
+    'forecast': 1,
+    'plan': 1,
+    'baseline': 1,
+    'target': 1,
+  };
   double _sweepAngleDegrees = 360;
   double _startAngleDegrees = -90;
   double _sliceGap = 2;
@@ -126,6 +133,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   String? _artifactMessage;
   bool _isCapturing = false;
   int _categoryCount = 5;
+  int _ringCount = 2;
 
   static const _oceanSliceColors = <String, Color>{
     'Subscriptions': Color(0xFF2563EB),
@@ -161,6 +169,119 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     'Support': 8,
   };
 
+  static const _baseForecastValues = <String, num>{
+    'Subscriptions': 90,
+    'Services': 80,
+    'Enterprise': 70,
+    'Training': 36,
+    'Support': 24,
+  };
+
+  static const _ringDescriptors = <_ConcentricRingDescriptor>[
+    _ConcentricRingDescriptor(
+      id: 'current',
+      name: 'Current period',
+      generatedTotal: 100,
+    ),
+    _ConcentricRingDescriptor(
+      id: 'previous',
+      name: 'Previous period',
+      generatedTotal: 200,
+    ),
+    _ConcentricRingDescriptor(
+      id: 'forecast',
+      name: 'Forecast period',
+      generatedTotal: 300,
+    ),
+    _ConcentricRingDescriptor(
+      id: 'plan',
+      name: 'Plan period',
+      generatedTotal: 400,
+    ),
+    _ConcentricRingDescriptor(
+      id: 'baseline',
+      name: 'Baseline period',
+      generatedTotal: 500,
+    ),
+    _ConcentricRingDescriptor(
+      id: 'target',
+      name: 'Target period',
+      generatedTotal: 600,
+    ),
+  ];
+
+  static const _compactCurrentValues = <String, num>{
+    'Subscriptions': 2.1003057687312516,
+    'Services': 10.174866679789481,
+    'Enterprise': 18.900722496403024,
+    'Training': 29.04229774545904,
+    'Support': 8.879737207130427,
+    'Analytics': 3.7440403282201826,
+    'Integrations': 27.158029774266595,
+  };
+
+  static const _compactPreviousValues = <String, num>{
+    'Subscriptions': 35.38110724006537,
+    'Services': 37.475410358254884,
+    'Enterprise': 16.848117707993246,
+    'Training': 24.053069677188876,
+    'Support': 23.484604667790432,
+    'Analytics': 46.304313668802855,
+    'Integrations': 16.453376679904352,
+  };
+
+  static const _elevatedCurrentValues = <String, num>{
+    'Subscriptions': 19.05387372764938,
+    'Services': 2.1825014427349614,
+    'Enterprise': 2.843202175093259,
+    'Training': 12.522433120729959,
+    'Support': 0.4391245911747618,
+    'Analytics': 10.67415082878745,
+    'Integrations': 14.125337101318364,
+    'Consulting': 12.802344186918882,
+    'Marketplace': 20.354578075178033,
+    'Storage': 5.002454750414955,
+  };
+
+  static const _elevatedPreviousValues = <String, num>{
+    'Subscriptions': 57.902067509084496,
+    'Services': 26.803072722142396,
+    'Enterprise': 7.010259915540149,
+    'Training': 7.322416023511789,
+    'Support': 7.335267283792226,
+    'Analytics': 27.647908021492693,
+    'Integrations': 29.2101962847596,
+    'Consulting': 5.08061233727336,
+    'Marketplace': 13.091333849004572,
+    'Storage': 18.59686605339874,
+  };
+
+  static const _highContrastCurrentValues = <String, num>{
+    'Subscriptions': 2.9299878623846847,
+    'Services': 3.3231662201015584,
+    'Enterprise': 11.516645869356609,
+    'Training': 12.214459531127103,
+    'Support': 20.885276994518527,
+    'Analytics': 3.0963227197881693,
+    'Integrations': 13.468165395321275,
+    'Consulting': 15.109796979410444,
+    'Marketplace': 0.9286434299171611,
+    'Storage': 16.527534998074472,
+  };
+
+  static const _highContrastPreviousValues = <String, num>{
+    'Subscriptions': 32.78483949737364,
+    'Services': 21.81597367483022,
+    'Enterprise': 27.987188696333433,
+    'Training': 31.11579472021379,
+    'Support': 21.16458186019966,
+    'Analytics': 31.51415239808732,
+    'Integrations': 7.460035810557016,
+    'Consulting': 5.494188839139545,
+    'Marketplace': 9.523272012296621,
+    'Storage': 11.139972490968745,
+  };
+
   static const _categoryLabels = <String>[
     'Subscriptions',
     'Services',
@@ -186,12 +307,24 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
 
   late Map<String, num> _currentValues;
   late Map<String, num> _previousValues;
+  final Map<String, Map<String, num>> _additionalRingValues = {};
 
   @override
   void initState() {
     super.initState();
     _currentValues = Map<String, num>.of(_baseCurrentValues);
     _previousValues = Map<String, num>.of(_basePreviousValues);
+    final labels = radialDemoLabels(
+      preferredLabels: _categoryLabels,
+      count: _categoryCount,
+    );
+    for (final ring in _ringDescriptors.skip(2)) {
+      _additionalRingValues[ring.id] = randomRadialDistribution(
+        labels: labels,
+        total: ring.generatedTotal,
+        random: _random,
+      );
+    }
     _applyComparisonPresentation();
   }
 
@@ -226,6 +359,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               _buildPresentationHeader(),
               const SizedBox(height: 8),
               _buildPresentationSelector(),
+              const SizedBox(height: 12),
+              _buildRingCountSelector(),
               const SizedBox(height: 16),
               _buildMeaningCard(compact: compact),
               const SizedBox(height: 16),
@@ -389,13 +524,55 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     );
   }
 
+  Widget _buildRingCountSelector() {
+    final theme = Theme.of(context);
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+          width: 320,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose active rings',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Every ring keeps its own series identity, total, and table rows.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SegmentedButton<int>(
+          key: const ValueKey('concentric-ring-count-selector'),
+          segments: [
+            for (var count = 2; count <= _ringDescriptors.length; count++)
+              ButtonSegment(value: count, label: Text('$count')),
+          ],
+          selected: {_ringCount},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) => _setRingCount(selection.single),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMeaningCard({required bool compact}) {
     final theme = Theme.of(context);
     final points = [
       (
         Icons.layers_outlined,
         'Independent totals',
-        'Current totals 100 USD; previous totals 200 USD. Shares never cross denominators.',
+        '$_ringCount active rings calculate shares against their own totals. Denominators never cross rings.',
       ),
       (
         Icons.track_changes_outlined,
@@ -458,18 +635,12 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        _RingPill(
-          label: _order == ConcentricRingOrder.outerToInner
-              ? 'Outer · Current'
-              : 'Inner · Current',
-          total: '100 USD',
-        ),
-        _RingPill(
-          label: _order == ConcentricRingOrder.outerToInner
-              ? 'Inner · Previous'
-              : 'Outer · Previous',
-          total: '200 USD',
-        ),
+        for (final (index, ring) in _activeRingDescriptors.indexed)
+          _RingPill(
+            label:
+                '${_ringPositionLabel(index)} · ${ring.name.replaceFirst(' period', '')}',
+            total: '${_ringTotal(ring.id).toStringAsFixed(0)} USD',
+          ),
       ],
     );
     final selection = AnimatedSwitcher(
@@ -584,7 +755,10 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
         ringGap: _ringGap,
         order: _order,
         legendMode: _legendMode,
-        ringWeights: {'current': _currentWeight, 'previous': 1},
+        ringWeights: {
+          for (final ring in _activeRingDescriptors)
+            ring.id: _ringWeights[ring.id] ?? 1,
+        },
         centerContent: _centerContent,
       ),
       donutCenterBuilder: _showCenter && _useRuntimeCenter
@@ -790,57 +964,61 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   }) {
     if (!mounted) return;
     setState(() {
-      final period = series.id == 'current'
-          ? 'Current period'
-          : 'Previous period';
       final sourceRows = slice.isGrouped
           ? ' · ${slice.sourcePointIndices.length} source rows'
           : '';
       _selectedSummary =
-          '$period · ${slice.point.label} · '
+          '${series.name} · ${slice.point.label} · '
           '${slice.point.y.toStringAsFixed(0)} USD$sourceRows';
     });
   }
 
+  List<_ConcentricRingDescriptor> get _activeRingDescriptors =>
+      _ringDescriptors.take(_ringCount).toList(growable: false);
+
+  Map<String, num> _valuesForRing(String ringId) => switch (ringId) {
+    'current' => _currentValues,
+    'previous' => _previousValues,
+    _ => _additionalRingValues[ringId]!,
+  };
+
+  double _ringTotal(String ringId) => _valuesForRing(
+    ringId,
+  ).values.fold<double>(0, (sum, value) => sum + value.toDouble());
+
+  String _ringPositionLabel(int seriesIndex) {
+    final radialIndex = _order == ConcentricRingOrder.outerToInner
+        ? seriesIndex
+        : _ringCount - seriesIndex - 1;
+    if (radialIndex == 0) return 'Outer';
+    if (radialIndex == _ringCount - 1) return 'Inner';
+    return 'Ring ${radialIndex + 1}';
+  }
+
+  bool _isOuterRing(int seriesIndex) =>
+      _order == ConcentricRingOrder.outerToInner
+      ? seriesIndex == 0
+      : seriesIndex == _ringCount - 1;
+
   List<DonutChartSeries> _buildSeries() => [
-    DonutChartSeries.fromMap(
-      id: 'current',
-      name: 'Current period',
-      unit: 'USD',
-      values: _currentValues,
-      sliceColors: _activeSliceColors,
-      sliceGroupingConfig: _groupSmallCategories
-          ? RadialSliceGroupingConfig(
-              minimumShare: _groupingMinimumShare,
-              label: 'Other',
-              color: const Color(0xFF7C3AED),
-            )
-          : null,
-      dataLabels: _buildDataLabels(
-        isOuterRing: _order == ConcentricRingOrder.outerToInner,
+    for (final (index, ring) in _activeRingDescriptors.indexed)
+      DonutChartSeries.fromMap(
+        id: ring.id,
+        name: ring.name,
+        unit: 'USD',
+        values: _valuesForRing(ring.id),
+        sliceColors: _activeSliceColors,
+        sliceGroupingConfig: _groupSmallCategories
+            ? RadialSliceGroupingConfig(
+                minimumShare: _groupingMinimumShare,
+                label: 'Other',
+                color: const Color(0xFF7C3AED),
+              )
+            : null,
+        dataLabels: _buildDataLabels(isOuterRing: _isOuterRing(index)),
+        donutStyle: _buildDonutStyle(),
+        selectionStyle: _buildSelectionStyle(),
       ),
-      donutStyle: _buildDonutStyle(),
-      selectionStyle: _buildSelectionStyle(),
-    ),
-    DonutChartSeries.fromMap(
-      id: 'previous',
-      name: 'Previous period',
-      unit: 'USD',
-      values: _previousValues,
-      sliceColors: _activeSliceColors,
-      sliceGroupingConfig: _groupSmallCategories
-          ? RadialSliceGroupingConfig(
-              minimumShare: _groupingMinimumShare,
-              label: 'Other',
-              color: const Color(0xFF7C3AED),
-            )
-          : null,
-      dataLabels: _buildDataLabels(
-        isOuterRing: _order == ConcentricRingOrder.innerToOuter,
-      ),
-      donutStyle: _buildDonutStyle(),
-      selectionStyle: _buildSelectionStyle(),
-    ),
   ];
 
   PieDataLabelConfig _buildDataLabels({required bool isOuterRing}) {
@@ -1264,7 +1442,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Save both ring documents plus their chart-level composition, exact point selection, portable center, and PNG preview.',
+                        'Save every active ring document plus its chart-level composition, exact point selection, portable center, and PNG preview.',
                       ),
                     ],
                   ),
@@ -1391,16 +1569,9 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
         preferredLabels: _categoryLabels,
         count: _categoryCount,
       );
-      _currentValues = randomRadialDistribution(
-        labels: labels,
-        total: 100,
-        random: _random,
-      );
-      _previousValues = randomRadialDistribution(
-        labels: labels,
-        total: 200,
-        random: _random,
-      );
+      for (final ring in _activeRingDescriptors) {
+        _regenerateRing(ring, labels);
+      }
       _selectedSummary = null;
       _capturedArtifact = null;
       _restoredConfiguration = null;
@@ -1418,22 +1589,60 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
         preferredLabels: _categoryLabels,
         count: count,
       );
-      _currentValues = randomRadialDistribution(
-        labels: labels,
-        total: 100,
-        random: _random,
-      );
-      _previousValues = randomRadialDistribution(
-        labels: labels,
-        total: 200,
-        random: _random,
-      );
+      for (final ring in _activeRingDescriptors) {
+        _regenerateRing(ring, labels);
+      }
       _selectedSummary = null;
       _capturedArtifact = null;
       _restoredConfiguration = null;
       _capturedJson = null;
       _artifactMessage = null;
     });
+  }
+
+  void _setRingCount(int count) {
+    if (_ringCount == count) return;
+    _chartController.clearPointSelection();
+    setState(() {
+      final previousCount = _ringCount;
+      _ringCount = count;
+      if (count > previousCount) {
+        final labels = radialDemoLabels(
+          preferredLabels: _categoryLabels,
+          count: _categoryCount,
+        );
+        for (final ring
+            in _ringDescriptors
+                .skip(previousCount)
+                .take(count - previousCount)) {
+          _regenerateRing(ring, labels);
+        }
+      }
+      _selectedSummary = null;
+      _capturedArtifact = null;
+      _restoredConfiguration = null;
+      _capturedJson = null;
+      _artifactMessage = null;
+    });
+  }
+
+  void _regenerateRing(_ConcentricRingDescriptor ring, List<String> labels) {
+    final values = randomRadialDistribution(
+      labels: labels,
+      total: ring.generatedTotal,
+      random: _random,
+    );
+    switch (ring.id) {
+      case 'current':
+        _currentValues = values;
+        return;
+      case 'previous':
+        _previousValues = values;
+        return;
+      default:
+        _additionalRingValues[ring.id] = values;
+        return;
+    }
   }
 
   String _dataLabelContentName(PieDataLabelContent value) => switch (value) {
@@ -1465,30 +1674,74 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
         case _ConcentricShowcasePreset.comparison:
           _applyComparisonPresentation();
         case _ConcentricShowcasePreset.compact:
-          _innerRadiusFactor = 0.22;
-          _outerRadiusFactor = 0.92;
-          _ringGap = 2;
-          _currentWeight = 1;
-          _sliceGap = 1;
-          _borderWidth = 0;
-          _cornerRadius = 2;
-          _cornerTreatment = PieCornerTreatment.circularCenter;
-          _selectionExplodeOffset = 4;
+          _categoryCount = 7;
+          _currentValues = Map<String, num>.of(_compactCurrentValues);
+          _previousValues = Map<String, num>.of(_compactPreviousValues);
+          _themePreset = _ConcentricThemePreset.colorblind;
+          _palette = _ConcentricPalette.theme;
+          _innerRadiusFactor = 0.4;
+          _outerRadiusFactor = 1;
+          _ringGap = 0;
+          _ringWeights['current'] = 1;
+          _sweepAngleDegrees = 360;
+          _startAngleDegrees = -90;
+          _clockwise = true;
+          _sliceGap = 0;
+          _borderWidth = 3;
+          _borderPreset = _ConcentricBorderPreset.darkerSlice;
+          _cornerRadius = 12;
+          _cornerTreatment = PieCornerTreatment.outerOnly;
+          _selectionExplodeOffset = 10;
           _selectionEffect = RadialSelectionEffect.explode;
+          _selectionLiftScale = 1.1;
+          _sliceOpacity = 1;
           _gradientPreset = _ConcentricGradientPreset.solid;
-          _showSelectedGlow = false;
-          _labelMinimumShare = 0.06;
+          _showShadow = true;
+          _showSelectedGlow = true;
+          _selectedGlowColor = _ConcentricGlowColor.slice;
+          _selectedGlowBlur = 12;
+          _selectedGlowSpread = 2.5;
+          _selectedGlowOpacity = 0.48;
+          _selectedGlowOffsetY = 0;
+          _showLabels = true;
+          _labelLayout = _ConcentricLabelLayout.hierarchy;
+          _labelMinimumShare = 0.04;
+          _labelMinimumSweepDegrees = 16;
+          _labelPadding = 10;
+          _insideLabelOffset = 0;
+          _outsideLabelOffset = 6;
           _calloutPreset = _ConcentricCalloutPreset.plain;
-          _legendMarkerSize = 8;
+          _insideShareStyle = _ConcentricInsideShareStyle.autoContrast;
+          _showLegend = false;
+          _legendPreset = _ConcentricLegendPreset.compact;
+          _legendContent = _ConcentricLegendContent.standard;
+          _legendMarkerSize = 11;
           _legendFontSize = 9;
+          _showTooltips = true;
+          _tooltipPreset = _ConcentricTooltipPreset.elevated;
+          _showCenter = true;
           _useRuntimeCenter = false;
+          _centerValueMode = DonutCenterValueMode.selectedOrTotal;
+          _centerLabel = '';
+          _centerLabelFontSize = 11;
+          _centerValueFontSize = 22;
+          _centerLabelFontWeight = FontWeight.w500;
+          _centerValueFontWeight = FontWeight.w700;
+          _useChartThemeCenterColors = true;
+          _centerSurface = _ConcentricCenterSurface.transparent;
+          _groupSmallCategories = true;
+          _groupingMinimumShare = 0.1;
           _animationMode = PieAnimationMode.fade;
           break;
         case _ConcentricShowcasePreset.partial:
+          _ringCount = 3;
+          _additionalRingValues['forecast'] = Map<String, num>.of(
+            _baseForecastValues,
+          );
           _innerRadiusFactor = 0.38;
           _outerRadiusFactor = 0.9;
           _ringGap = 8;
-          _currentWeight = 1;
+          _ringWeights['current'] = 1;
           _sweepAngleDegrees = 260;
           _startAngleDegrees = -140;
           _sliceGap = 3;
@@ -1511,15 +1764,23 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           _legendFontSize = 11;
           break;
         case _ConcentricShowcasePreset.elevated:
+          _categoryCount = 10;
+          _currentValues = Map<String, num>.of(_elevatedCurrentValues);
+          _previousValues = Map<String, num>.of(_elevatedPreviousValues);
           _themePreset = _ConcentricThemePreset.dark;
           _palette = _ConcentricPalette.sunset;
           _innerRadiusFactor = 0.38;
           _outerRadiusFactor = 0.94;
-          _ringGap = 8;
-          _currentWeight = 1.25;
-          _sliceGap = 4;
+          _ringGap = 10;
+          _ringWeights['current'] = 1.25;
+          _sweepAngleDegrees = 360;
+          _startAngleDegrees = -30;
+          _clockwise = true;
+          _sliceGap = 2;
+          _borderWidth = 1;
           _borderPreset = _ConcentricBorderPreset.darkerSlice;
-          _cornerRadius = 11;
+          _cornerRadius = 8;
+          _cornerTreatment = PieCornerTreatment.roundAll;
           _selectionExplodeOffset = 14;
           _selectionEffect = RadialSelectionEffect.lift;
           _selectionLiftScale = 1.14;
@@ -1527,61 +1788,119 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
           _selectionBackdropBlur = 2;
           _sliceOpacity = 1;
           _gradientPreset = _ConcentricGradientPreset.radial;
+          _useFixedGradientColors = false;
           _gradientStartLightnessShift = 0.24;
           _gradientEndLightnessShift = -0.14;
           _showShadow = true;
+          _showSelectedGlow = true;
           _selectedGlowColor = _ConcentricGlowColor.accent;
           _selectedGlowBlur = 20;
           _selectedGlowSpread = 4;
           _selectedGlowOpacity = 0.65;
+          _selectedGlowOffsetY = 0;
+          _showLabels = true;
           _labelLayout = _ConcentricLabelLayout.hierarchy;
           _labelMinimumShare = 0.04;
           _labelMinimumSweepDegrees = 6;
+          _labelPadding = 6;
+          _insideLabelOffset = 0;
+          _outsideLabelOffset = 4;
           _calloutPreset = _ConcentricCalloutPreset.surface;
           _insideShareStyle = _ConcentricInsideShareStyle.autoContrast;
+          _showLegend = false;
           _legendPreset = _ConcentricLegendPreset.compact;
           _legendContent = _ConcentricLegendContent.standard;
           _legendMarkerSize = 9;
           _legendFontSize = 10;
+          _showTooltips = true;
+          _tooltipPreset = _ConcentricTooltipPreset.elevated;
+          _showCenter = true;
+          _useRuntimeCenter = false;
           _centerValueMode = DonutCenterValueMode.selectedOrTotal;
+          _centerLabel = '';
           _centerLabelFontSize = 11;
           _centerValueFontSize = 22;
           _centerLabelFontWeight = FontWeight.w600;
           _centerValueFontWeight = FontWeight.w700;
           _useChartThemeCenterColors = true;
-          _centerSurface = _ConcentricCenterSurface.tonal;
+          _centerSurface = _ConcentricCenterSurface.transparent;
+          _groupSmallCategories = false;
           _animationMode = PieAnimationMode.grow;
           break;
         case _ConcentricShowcasePreset.highContrast:
+          _categoryCount = 10;
+          _currentValues = Map<String, num>.of(_highContrastCurrentValues);
+          _previousValues = Map<String, num>.of(_highContrastPreviousValues);
           _themePreset = _ConcentricThemePreset.highContrast;
           _palette = _ConcentricPalette.monochrome;
           _order = ConcentricRingOrder.innerToOuter;
-          _innerRadiusFactor = 0.3;
-          _outerRadiusFactor = 0.92;
-          _ringGap = 6;
+          _innerRadiusFactor = 0.38;
+          _outerRadiusFactor = 1;
+          _ringGap = 9;
+          _ringWeights['current'] = 1;
+          _sweepAngleDegrees = 360;
+          _startAngleDegrees = -90;
+          _clockwise = true;
+          _sliceGap = 5;
           _gradientPreset = _ConcentricGradientPreset.solid;
-          _borderWidth = 2;
+          _borderWidth = 1.5;
           _borderPreset = _ConcentricBorderPreset.fixed;
           _fixedBorderColor = Colors.black;
           _cornerRadius = 0;
+          _cornerTreatment = PieCornerTreatment.roundAll;
           _selectionExplodeOffset = 10;
           _selectionEffect = RadialSelectionEffect.explode;
+          _selectionLiftScale = 1.1;
+          _sliceOpacity = 1;
           _showShadow = false;
+          _showSelectedGlow = true;
           _selectedGlowColor = _ConcentricGlowColor.neutral;
           _selectedGlowBlur = 4;
           _selectedGlowSpread = 3;
           _selectedGlowOpacity = 1;
+          _selectedGlowOffsetY = 0;
+          _animationMode = PieAnimationMode.sweep;
+          _showLabels = true;
+          _labelLayout = _ConcentricLabelLayout.split;
           _labelPosition = PieDataLabelPosition.outside;
-          _labelContent = PieDataLabelContent.categoryAndPercentage;
-          _labelMinimumShare = 0;
-          _labelMinimumSweepDegrees = 0;
-          _outsideLabelOffset = 10;
+          _labelContent = PieDataLabelContent.category;
+          _labelMinimumShare = 0.05;
+          _labelMinimumSweepDegrees = 4;
+          _labelPadding = 2;
+          _insideLabelOffset = 0;
+          _outsideLabelOffset = 32;
+          _connectorLength = 12;
+          _connectorWidth = 1.5;
           _useCustomConnectorColor = true;
-          _connectorColor = Colors.black;
+          _connectorColor = const Color(0xFFEF4444);
           _calloutPreset = _ConcentricCalloutPreset.highContrast;
+          _insideShareStyle = _ConcentricInsideShareStyle.darkBadge;
           _groupSmallCategories = false;
+          _showLegend = true;
+          _legendMode = ConcentricDonutLegendMode.groupedByRing;
+          _legendPreset = _ConcentricLegendPreset.compact;
+          _legendContent = _ConcentricLegendContent.standard;
+          _legendPosition = LegendPosition.bottomCenter;
+          _legendOrientation = LegendOrientation.horizontal;
+          _legendMarkerShape = LegendMarkerShape.circle;
+          _legendMarkerSize = 10;
           _legendFontSize = 12;
+          _legendOpacity = 1;
+          _showTooltips = true;
           _tooltipPreset = _ConcentricTooltipPreset.highContrast;
+          _tooltipPosition = TooltipPosition.auto;
+          _tooltipFollowsCursor = false;
+          _tooltipOffset = 8;
+          _showCenter = true;
+          _useRuntimeCenter = false;
+          _centerValueMode = DonutCenterValueMode.selectedOrTotal;
+          _centerLabel = '';
+          _centerLabelFontSize = 11;
+          _centerValueFontSize = 22;
+          _centerLabelFontWeight = FontWeight.w500;
+          _centerValueFontWeight = FontWeight.w700;
+          _useChartThemeCenterColors = true;
+          _centerSurface = _ConcentricCenterSurface.transparent;
           break;
       }
       _selectedSummary = null;
@@ -1593,10 +1912,20 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   }
 
   void _resetPresentationDefaults() {
+    _ringCount = 2;
+    _categoryCount = 5;
+    _currentValues = Map<String, num>.of(_baseCurrentValues);
+    _previousValues = Map<String, num>.of(_basePreviousValues);
+    _additionalRingValues['forecast'] = Map<String, num>.of(
+      _baseForecastValues,
+    );
+    for (final ring in _ringDescriptors) {
+      _ringWeights[ring.id] = 1;
+    }
     _innerRadiusFactor = 0.28;
     _outerRadiusFactor = 0.94;
     _ringGap = 6;
-    _currentWeight = 1.25;
+    _ringWeights['current'] = 1.25;
     _sweepAngleDegrees = 360;
     _startAngleDegrees = -90;
     _sliceGap = 2;
@@ -1676,10 +2005,15 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
   }
 
   void _applyComparisonPresentation() {
+    _ringCount = 3;
+    _additionalRingValues['forecast'] = Map<String, num>.of(
+      _baseForecastValues,
+    );
     _innerRadiusFactor = 0.36;
     _outerRadiusFactor = 0.88;
     _ringGap = 12;
-    _currentWeight = 1;
+    _ringWeights['current'] = 1;
+    _ringWeights['forecast'] = 0.9;
     _sliceGap = 8;
     _cornerRadius = 6;
     _selectionEffect = RadialSelectionEffect.lift;
@@ -1713,15 +2047,15 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
     _ConcentricShowcasePreset preset,
   ) => switch (preset) {
     _ConcentricShowcasePreset.comparison =>
-      'Separated full rings, grouped sources, high-contrast percentages, and lifted selection',
+      'Three full rings, grouped sources, high-contrast percentages, and lifted selection',
     _ConcentricShowcasePreset.compact =>
-      'Tight bands, solid fills, inside values, and a space-efficient legend',
+      'Two joined rings, colorblind palette, grouped sources, and compact labels',
     _ConcentricShowcasePreset.partial =>
-      'Controlled sweep, outside callouts, flat ring identity, and earth tones',
+      'Three partial rings, outside callouts, flat ring identity, and earth tones',
     _ConcentricShowcasePreset.elevated =>
-      'Luminous gradients, lifted depth, readable hierarchy, and a compact legend',
+      'Two ten-category rings, luminous gradients, lifted depth, and layered labels',
     _ConcentricShowcasePreset.highContrast =>
-      'Opaque monochrome rings, strong borders, accessible callouts, and explicit labels',
+      'Two monochrome rings, strong borders, accessible callouts, and explicit labels',
   };
 
   IconData _presentationIcon(_ConcentricShowcasePreset preset) =>
@@ -1741,6 +2075,15 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
         icon: Icons.dataset_outlined,
         children: [
           IntSliderOption(
+            key: const ValueKey('concentric-ring-count'),
+            label: 'Active rings',
+            value: _ringCount,
+            min: 2,
+            max: _ringDescriptors.length,
+            suffix: 'rings',
+            onChanged: _setRingCount,
+          ),
+          IntSliderOption(
             key: const ValueKey('concentric-data-point-count'),
             label: 'Data points per ring',
             value: _categoryCount,
@@ -1750,8 +2093,8 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             onChanged: _setCategoryCount,
           ),
           Text(
-            '${_categoryCount * 2} source points across 2 independent rings. '
-            'Count changes generate fresh random distributions. '
+            '${_categoryCount * _ringCount} source points across $_ringCount independent rings. '
+            'New rings receive fresh random distributions; point-count changes regenerate every active ring. '
             'Turn off Group small categories to render every row as a slice.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1846,17 +2189,23 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             decimalPlaces: 0,
             onChanged: (value) => setState(() => _ringGap = value),
           ),
-          SliderOption(
-            key: const ValueKey('concentric-current-weight'),
-            label: 'Current ring weight',
-            value: _currentWeight,
-            min: 0.5,
-            max: 2,
-            divisions: 6,
-            suffix: '×',
-            decimalPlaces: 2,
-            onChanged: (value) => setState(() => _currentWeight = value),
-          ),
+          for (final ring in _activeRingDescriptors)
+            SliderOption(
+              key: ValueKey(
+                ring.id == 'current'
+                    ? 'concentric-current-weight'
+                    : 'concentric-ring-weight-${ring.id}',
+              ),
+              label: '${ring.name} weight',
+              value: _ringWeights[ring.id] ?? 1,
+              min: 0.5,
+              max: 2,
+              divisions: 6,
+              suffix: '×',
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _ringWeights[ring.id] = value),
+            ),
           EnumOption<ConcentricRingOrder>(
             key: const ValueKey('concentric-ring-order'),
             label: 'Series order',
@@ -2871,7 +3220,7 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              'No new point type is required. Two or more DonutChartSeries values activate the shared allocator; the composition owns one portable center and one saved chart-level configuration.',
+              'No new point type is required. Two or more DonutChartSeries values activate the shared allocator; this demo exposes up to six rings, while the public API has no fixed upper count.',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
@@ -2884,11 +3233,15 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
               ),
               child: const SelectableText(
                 "BravenChartPlus(\n"
-                "  series: [currentDonut, previousDonut],\n"
+                "  series: [currentDonut, previousDonut, forecastDonut],\n"
                 "  concentricDonutConfig: ConcentricDonutConfig(\n"
                 "    innerRadiusFactor: 0.28,\n"
                 "    ringGap: 6,\n"
-                "    ringWeights: {'current': 1.25},\n"
+                "    ringWeights: {\n"
+                "      'current': 1.25,\n"
+                "      'previous': 1,\n"
+                "      'forecast': 0.8,\n"
+                "    },\n"
                 "    legendMode: ConcentricDonutLegendMode.groupedByRing,\n"
                 "    centerContent: DonutCenterContent(\n"
                 "      valueMode: DonutCenterValueMode.selectedOrTotal,\n"
@@ -2913,6 +3266,18 @@ class _ConcentricDonutPageState extends State<ConcentricDonutPage> {
       ),
     );
   }
+}
+
+class _ConcentricRingDescriptor {
+  const _ConcentricRingDescriptor({
+    required this.id,
+    required this.name,
+    required this.generatedTotal,
+  });
+
+  final String id;
+  final String name;
+  final double generatedTotal;
 }
 
 enum _ConcentricShowcasePreset {

@@ -7,8 +7,6 @@ import 'package:flutter/material.dart' hide TooltipTriggerMode;
 /// The Pie compositions shown together in the public Gallery and package media.
 const pieGalleryCards = <Widget>[
   SimpleRevenueGalleryCard(),
-  RevenueContributionGalleryCard(),
-  ReleaseEffortGalleryCard(),
   SupportMixGalleryCard(),
   PortfolioAllocationGalleryCard(),
 ];
