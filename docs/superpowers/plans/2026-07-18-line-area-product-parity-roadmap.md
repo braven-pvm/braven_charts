@@ -8,7 +8,7 @@
 **Sprint 9 lane:** Stable-identity interior topology motion (complete)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Synchronized tracking detail controls (Sprint 17)
+**Next lane:** Synchronized consolidation and promotion readiness (Sprint 18)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -813,3 +813,78 @@ or axis-label output without disabling synchronization.
   200 showcase tests pass, including direct synchronized behavior and option
   wiring coverage. The release web build is clean, the direct route returns
   HTTP 200, and port 8193 serves the browser-reviewed build.
+
+## Sprint 18 — Synchronized consolidation and promotion readiness
+
+**Status:** Local E2E ready; final user approval pending
+
+### Product outcome
+
+The complete synchronized-chart lane is proven as one releasable unit before
+promotion. Runtime behavior, composition controls, stress profiles, live
+updates, tracking detail, documentation, generated source, and public showcase
+delivery agree at the final branch tip.
+
+### Scope
+
+- Review the four synchronized continuation commits as one branch against the
+  current `origin/master`, checking for scope drift and stale roadmap claims.
+- Run package and showcase analyzers and complete suites, including the
+  synchronized render-path, Stress 15k update, compact layout, Workbench, and
+  controller-lifecycle coverage.
+- Re-run synchronized cursor fanout and 5,000-point path benchmarks and record
+  whether each remains within the 16.67 ms frame budget.
+- Validate root and `/braven_charts/` release builds, direct synchronized-route
+  loading, compiled assets, visual states, and severe browser console output.
+- Validate public documentation, generated source, dartdoc, and the pub.dev
+  archive; leave the root-path release build on port 8193 for final review.
+
+### Acceptance gates
+
+- The branch is cleanly based on the current mainline or any incoming drift is
+  resolved before final verification; the aggregate diff contains only the
+  synchronized product lane and its roadmap/public guide changes.
+- Complete package and showcase analyzers/tests pass at the same commit, with
+  permanent behavior assertions for every synchronized control and stress path.
+- Fanout and path benchmarks remain below one 60 fps frame without hiding a
+  regression behind showcase-only instrumentation.
+- Both release bases compile, the direct route and assets return HTTP 200, and
+  browser review finds no blank state, controller warning, visible overflow, or
+  severe console error across wide and compact states.
+- Dartdoc and pub.dev dry run complete without package diagnostics. Any tooling
+  defect or environmental limitation is recorded precisely rather than treated
+  as a product pass.
+- The final root-path build remains available for user E2E approval. No PR is
+  opened until that approval is explicit.
+
+### Local E2E record
+
+- `origin/master` is the direct ancestor of the branch, which is four scoped
+  synchronized commits ahead. The aggregate diff touches nine expected runtime,
+  showcase, test/benchmark, guide, and roadmap files with no unrelated work.
+- Package and showcase analyzers are clean. Serial complete suites pass with
+  2,110 package tests and 200 showcase tests. One deliberately concurrent run
+  produced a timing-sensitive failure under resource contention; the formal
+  serial reruns are green and no product failure reproduced.
+- Targeted performance reruns remain comfortably below 16.67 ms: 12-chart
+  cursor fanout is 2.94 ms p95; cold 5K Line is 1.51 ms p95; 5K Area is
+  2.31 ms p95; baseline Area is 2.25 ms p95; and patterned Forecast is
+  2.19 ms p95.
+- All seven changed Dart files pass the formatter audit. `flutter pub outdated`
+  reports every direct dependency current and the newest mutually resolvable
+  dependency set in use. The pub.dev dry run validates a 9 MB archive with
+  zero warnings.
+- Flutter-bundled dartdoc 9.0.4 still fails internally while precaching 873,756
+  elements: `DocumentationComment._stripDocImports` throws `RangeError (end):
+  Invalid value: Not in inclusive range 0..9089: 9202`. This occurs before
+  package diagnostics and matches the previously recorded tool defect.
+- Root and `/braven_charts/` release builds pass; both base hrefs and compiled
+  assets were verified. The root synchronized route, bootstrap, and application
+  script return HTTP 200 on port 8193.
+- Headless Chrome direct-load/refresh checks at 1600 x 1000 and 430 x 900 each
+  mount one nonblank Flutter view with no severe console entries. Wide tracking
+  review confirms the three local crosshairs align at one shared screen X; no
+  blank state, visible overflow, or controller warning was observed.
+- The root-path release build remains live at
+  `http://127.0.0.1:8193/?page=line-charts&preset=synchronized` for final manual
+  E2E. No push or PR has been performed.
