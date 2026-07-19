@@ -5,8 +5,10 @@
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
 **Sprint 8 promotion:** PR #38 (merged)
-**Sprint 9 lane:** Stable-identity interior topology motion (review approved)
-**Next lane:** Path stroke patterns and Forecast (Sprint 11; in progress)
+**Sprint 9 lane:** Stable-identity interior topology motion (complete)
+**Sprint 11 promotion:** PR #45 (merged)
+**Sprint 12 promotion:** PR #46 (merged)
+**Next lane:** Line showcase Workbench and controls polish (Sprint 13)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -434,7 +436,7 @@ catalogue.
 
 ## Sprint 11 — Path stroke patterns and Forecast
 
-**Status:** Ready for local review
+**Status:** Complete; promoted in PR #45
 
 ### Product outcome
 
@@ -490,8 +492,7 @@ The locked contract and executable work slices are recorded in
 
 ## Sprint 12 — Synchronized Cartesian charts
 
-**Status:** Local review approved; promotion in progress on
-`feature/synchronized-cartesian-charts`
+**Status:** Complete; promoted in PR #46
 
 ### Product outcome
 
@@ -553,3 +554,56 @@ own units, Y domains, titles, and artifacts.
   zero warnings and errors, and the clean-tree pub.dev dry run reports zero
   warnings. The root build remains served from port 8177 for final review; all
   mechanical promotion checks are complete.
+
+## Sprint 13 — Line showcase Workbench and controls polish
+
+**Status:** Complete; promotion in progress on
+`feature/line-showcase-workbench-polish`
+
+### Product outcome
+
+The Line guide gives every plot enough vertical room to read, keeps all eight
+ordinary presets inside the canonical Chart/Data/Split/Source Workbench, and
+makes the custom three-chart synchronization pattern easy to copy and explore.
+
+### Scope
+
+- Give the Line guide a taller scroll-contained presentation without changing
+  the established Area or Scatter layouts.
+- Preserve the Workbench as the sole source-code surface for Workhorse through
+  Forecast, with preset-specific generated-source regression coverage.
+- Keep Synchronized as an intentional multi-chart composition and add compact,
+  selectable controller and participant snippets directly below it.
+- Expose marker radius/style plus cursor, viewport, and intersection behavior;
+  remove controls that do not affect the synchronized composition.
+
+### Acceptance gates
+
+- Wide and compact height, overflow, and visual hierarchy review.
+- Every ordinary Line preset reaches current generated source for its live
+  series; Synchronized exposes both lifecycle and participant snippets.
+- Every new option is proven against the effective series, crosshair, or
+  interaction-group configuration.
+- Showcase/package analyzers and suites, both release base paths, and direct
+  browser routes pass before promotion.
+
+### Delivered slice
+
+- The Line surface now preserves a 960 px wide-layout content height and a
+  larger synchronized composition, using contained scrolling when the viewport
+  is shorter. Area and Scatter retain their existing layouts.
+- Workhorse through Forecast remain in one canonical Workbench and the E2E
+  matrix now proves each Source view contains its selected preset's live series.
+- Synchronized retains three independent charts and adds selectable, copyable
+  controller-lifecycle and participant snippets directly below the plots.
+- Marker style/radius, shared cursor, shared viewport, intersection markers,
+  and the standard marker/X-scrollbar options are wired to effective chart
+  configuration. Inapplicable Legend and Y-scrollbar controls are hidden.
+- The complete package suite passes 2,032 tests and the complete showcase suite
+  passes. Both analyzers and both production base-href builds are clean. Wide,
+  scrolled-code, and compact direct-route browser checks render without console
+  errors; the root build is served on port 8187.
+- Flutter-bundled dartdoc 9.0.4 still fails internally in
+  `DocumentationComment._stripDocImports` before diagnostics. The package dry
+  run otherwise reaches validation; its only warning is the expected dirty-tree
+  warning before this promotion commit.
