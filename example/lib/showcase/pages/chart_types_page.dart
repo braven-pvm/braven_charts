@@ -23,30 +23,116 @@ class ChartTypesPage extends StatelessWidget {
         key: const ValueKey('chart-types-overview'),
         slivers: [
           SliverToBoxAdapter(child: _OverviewIntroduction()),
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
-          SliverGrid(
-            key: const ValueKey('chart-type-catalog-grid'),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 400,
-              mainAxisExtent: 360,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+          const SliverToBoxAdapter(
+            child: _CatalogSectionHeader(
+              eyebrow: 'CARTESIAN FAMILIES',
+              title: 'Compare values across a shared coordinate space',
             ),
-            delegate: SliverChildBuilderDelegate((context, index) {
-              final chartType = showcaseChartTypes[index];
-              return ChartTypeCatalogCard(
-                chartType: chartType,
-                onOpen: onOpenChartType == null
-                    ? null
-                    : () => onOpenChartType!(chartType.slug),
-              );
-            }, childCount: showcaseChartTypes.length),
+          ),
+          _ChartTypeCatalogGrid(
+            gridKey: const ValueKey('chart-type-cartesian-grid'),
+            chartTypes: showcaseChartTypes.take(4).toList(growable: false),
+            maxColumns: 4,
+            onOpenChartType: onOpenChartType,
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          const SliverToBoxAdapter(
+            child: _CatalogSectionHeader(
+              eyebrow: 'RADIAL FAMILIES',
+              title: 'Explain contribution to one or several totals',
+            ),
+          ),
+          _ChartTypeCatalogGrid(
+            gridKey: const ValueKey('chart-type-radial-grid'),
+            chartTypes: showcaseChartTypes.skip(4).toList(growable: false),
+            maxColumns: 3,
+            onOpenChartType: onOpenChartType,
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
           const SliverToBoxAdapter(child: _SelectionGuide()),
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
         ],
       ),
+    );
+  }
+}
+
+class _CatalogSectionHeader extends StatelessWidget {
+  const _CatalogSectionHeader({required this.eyebrow, required this.title});
+
+  final String eyebrow;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartTypeCatalogGrid extends StatelessWidget {
+  const _ChartTypeCatalogGrid({
+    required this.gridKey,
+    required this.chartTypes,
+    required this.maxColumns,
+    required this.onOpenChartType,
+  });
+
+  final Key gridKey;
+  final List<ShowcaseChartType> chartTypes;
+  final int maxColumns;
+  final ValueChanged<String>? onOpenChartType;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final availableColumns = (constraints.crossAxisExtent / 300)
+            .floor()
+            .clamp(1, maxColumns)
+            .toInt();
+        return SliverGrid(
+          key: gridKey,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: availableColumns,
+            mainAxisExtent: 360,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final chartType = chartTypes[index];
+            return ChartTypeCatalogCard(
+              chartType: chartType,
+              onOpen: onOpenChartType == null
+                  ? null
+                  : () => onOpenChartType!(chartType.slug),
+            );
+          }, childCount: chartTypes.length),
+        );
+      },
     );
   }
 }

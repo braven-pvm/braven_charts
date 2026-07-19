@@ -132,13 +132,13 @@ class ChartTypePreview extends StatelessWidget {
       series: _previewSeries(chartType),
       concentricDonutConfig: chartType.slug == 'concentric-donut'
           ? const ConcentricDonutConfig(
-              innerRadiusFactor: 0.25,
-              outerRadiusFactor: 0.94,
-              ringGap: 3,
+              innerRadiusFactor: 0.23,
+              outerRadiusFactor: 0.92,
+              ringGap: 2,
               centerContent: DonutCenterContent(
                 label: 'Rings',
                 valueMode: DonutCenterValueMode.custom,
-                customValue: '2',
+                customValue: '3',
               ),
             )
           : const ConcentricDonutConfig(),
@@ -159,7 +159,7 @@ class ChartTypePreview extends StatelessWidget {
       child: chartType.slug == 'concentric-donut'
           ? Transform.scale(
               key: const ValueKey('chart-type-preview-scale-concentric-donut'),
-              scale: 1.18,
+              scale: 1.12,
               child: preview,
             )
           : preview,
@@ -319,11 +319,46 @@ class ChartTypeCatalogCard extends StatelessWidget {
   }
 }
 
-/// One-row sampler on wide screens, horizontally scrollable when space is
-/// constrained. This mirrors the compact pub.dev chart-family overview.
+/// A compact family sampler with purposeful Cartesian and radial rows.
+///
+/// Each row scrolls independently only when its cards cannot retain a useful
+/// preview width. The three radial families therefore receive more space than
+/// they would in one seven-card strip.
 class ChartTypeCatalogStrip extends StatelessWidget {
   const ChartTypeCatalogStrip({super.key, this.onOpenChartType});
 
+  final ValueChanged<String>? onOpenChartType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: _ChartTypeCatalogRow(
+            chartTypes: showcaseChartTypes.take(4).toList(growable: false),
+            onOpenChartType: onOpenChartType,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: _ChartTypeCatalogRow(
+            chartTypes: showcaseChartTypes.skip(4).toList(growable: false),
+            onOpenChartType: onOpenChartType,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChartTypeCatalogRow extends StatelessWidget {
+  const _ChartTypeCatalogRow({
+    required this.chartTypes,
+    required this.onOpenChartType,
+  });
+
+  final List<ShowcaseChartType> chartTypes;
   final ValueChanged<String>? onOpenChartType;
 
   @override
@@ -332,26 +367,23 @@ class ChartTypeCatalogStrip extends StatelessWidget {
       builder: (context, constraints) {
         const gap = 16.0;
         final fittedWidth =
-            (constraints.maxWidth - (gap * (showcaseChartTypes.length - 1))) /
-            showcaseChartTypes.length;
-        // Keep the complete family map visible on the standard 1440px
-        // showcase viewport. Concise copy and enlarged native previews retain
-        // legibility at this density; narrower layouts scroll intentionally.
-        final fitAll = fittedWidth >= 145;
-        final cardWidth = fitAll ? fittedWidth : 220.0;
+            (constraints.maxWidth - (gap * (chartTypes.length - 1))) /
+            chartTypes.length;
+        final fitAll = fittedWidth >= 200;
+        final cardWidth = fitAll ? fittedWidth : 240.0;
         final row = Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (var index = 0; index < showcaseChartTypes.length; index++) ...[
+            for (var index = 0; index < chartTypes.length; index++) ...[
               if (index > 0) const SizedBox(width: gap),
               SizedBox(
                 width: cardWidth,
                 child: ChartTypeCatalogCard(
-                  chartType: showcaseChartTypes[index],
+                  chartType: chartTypes[index],
                   compact: true,
                   onOpen: onOpenChartType == null
                       ? null
-                      : () => onOpenChartType!(showcaseChartTypes[index].slug),
+                      : () => onOpenChartType!(chartTypes[index].slug),
                 ),
               ),
             ],
@@ -511,8 +543,26 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         ),
       ),
       DonutChartSeries.fromMap(
-        id: 'catalog-concentric-inner',
+        id: 'catalog-concentric-middle',
         values: const {'Product': 30, 'Services': 45, 'Other': 25},
+        sliceColors: const {
+          'Product': Color(0xFF7C3AED),
+          'Services': Color(0xFF0EA5E9),
+          'Other': Color(0xFFF59E0B),
+        },
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+        donutStyle: const DonutChartStyle(
+          radiusFactor: 0.94,
+          sliceGap: 2,
+          cornerRadius: 4,
+          selectionExplodeOffset: 0,
+          selectedElevation: PieElevationStyle(),
+          animationMode: PieAnimationMode.none,
+        ),
+      ),
+      DonutChartSeries.fromMap(
+        id: 'catalog-concentric-inner',
+        values: const {'Product': 52, 'Services': 28, 'Other': 20},
         sliceColors: const {
           'Product': Color(0xFF7C3AED),
           'Services': Color(0xFF0EA5E9),

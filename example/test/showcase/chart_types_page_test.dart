@@ -20,7 +20,11 @@ void main() {
     expect(find.text('Chart Types'), findsOneWidget);
     expect(find.text('Start with the data question'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('chart-type-catalog-grid')),
+      find.byKey(const ValueKey('chart-type-cartesian-grid')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
     expect(find.byType(BravenChartPlus), findsNWidgets(7));
@@ -40,6 +44,14 @@ void main() {
     expect(find.text('Variable radius'), findsOneWidget);
     expect(find.text('Chart Options'), findsNothing);
     expect(find.text('Regenerate Dataset'), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('chart-type-card-pie'))).width,
+      greaterThan(
+        tester
+            .getSize(find.byKey(const ValueKey('chart-type-card-line')))
+            .width,
+      ),
+    );
   });
 
   testWidgets('family cards open the matching deep guides', (tester) async {
@@ -83,7 +95,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SizedBox(
-            height: 310,
+            height: 640,
             child: ChartTypeCatalogStrip(onOpenChartType: (_) {}),
           ),
         ),
@@ -106,12 +118,21 @@ void main() {
     final concentric = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('chart-type-preview-concentric-donut')),
     );
-    expect(concentric.concentricDonutConfig.outerRadiusFactor, 0.94);
-    expect(concentric.concentricDonutConfig.centerContent.customValue, '2');
+    expect(concentric.concentricDonutConfig.outerRadiusFactor, 0.92);
+    expect(concentric.series, hasLength(3));
+    expect(concentric.concentricDonutConfig.centerContent.customValue, '3');
     final concentricScale = tester.widget<Transform>(
       find.byKey(const ValueKey('chart-type-preview-scale-concentric-donut')),
     );
-    expect(concentricScale.transform.getMaxScaleOnAxis(), closeTo(1.18, 0.001));
+    expect(concentricScale.transform.getMaxScaleOnAxis(), closeTo(1.12, 0.001));
+    expect(
+      tester.getSize(find.byKey(const ValueKey('chart-type-card-pie'))).width,
+      greaterThan(
+        tester
+            .getSize(find.byKey(const ValueKey('chart-type-card-line')))
+            .width,
+      ),
+    );
     expect(find.text('View Concentric'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

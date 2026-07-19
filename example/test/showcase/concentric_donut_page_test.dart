@@ -101,14 +101,22 @@ void main() {
     );
     expect(find.text('One shared pane'), findsOneWidget);
     expect(find.text('Outer · Current · 100 USD'), findsOneWidget);
-    expect(find.text('Inner · Previous · 200 USD'), findsOneWidget);
+    expect(find.text('Ring 2 · Previous · 200 USD'), findsOneWidget);
+    expect(find.text('Inner · Forecast · 300 USD'), findsOneWidget);
     expect(find.text('Composition geometry'), findsOneWidget);
     expect(find.text('Shared angular frame'), findsOneWidget);
     expect(find.text('Slice appearance'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Demo data'),
       500,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.descendant(
+        of: find.byType(OptionsPanel),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
     );
     expect(find.text('Demo data'), findsOneWidget);
     expect(find.text('Data points per ring'), findsOneWidget);
@@ -136,7 +144,7 @@ void main() {
     final chart = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('concentric-donut-chart')),
     );
-    expect(chart.series, hasLength(2));
+    expect(chart.series, hasLength(3));
     expect(chart.series, everyElement(isA<DonutChartSeries>()));
     expect(
       chart.series.cast<DonutChartSeries>().every(
@@ -145,10 +153,15 @@ void main() {
       isTrue,
     );
     expect(
-      chart.series.cast<DonutChartSeries>().every(
-        (series) => series.visibleSlices.last.point.label == 'Other',
-      ),
+      chart.series
+          .cast<DonutChartSeries>()
+          .take(2)
+          .every((series) => series.visibleSlices.last.point.label == 'Other'),
       isTrue,
+    );
+    expect(
+      (chart.series.last as DonutChartSeries).visibleSlices.last.point.label,
+      'Support',
     );
     expect(chart.showLegend, isFalse);
     expect(
@@ -161,6 +174,7 @@ void main() {
     expect(chart.concentricDonutConfig.outerRadiusFactor, 0.88);
     expect(chart.concentricDonutConfig.ringGap, 12);
     expect(chart.concentricDonutConfig.ringWeights['current'], 1);
+    expect(chart.concentricDonutConfig.ringWeights['forecast'], 0.9);
     expect(chart.concentricDonutConfig.centerContent.isVisible, isTrue);
     expect(chart.donutCenterBuilder, isNotNull);
     expect(
@@ -247,7 +261,8 @@ void main() {
     );
     expect(find.text('Split'), findsOneWidget);
     expect(find.text('Outer · Current · 100 USD'), findsOneWidget);
-    expect(find.text('Inner · Previous · 200 USD'), findsOneWidget);
+    expect(find.text('Ring 2 · Previous · 200 USD'), findsOneWidget);
+    expect(find.text('Inner · Forecast · 300 USD'), findsOneWidget);
 
     tester.view.physicalSize = const Size(820, 760);
     await tester.pumpAndSettle();
@@ -269,6 +284,508 @@ void main() {
       find.text('Current period · Other · 10 USD · 2 source rows'),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('adds and configures more than two rings in the showcase', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1800, 7000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ConcentricDonutPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final ringCount = tester.widget<IntSliderOption>(
+      find.byKey(const ValueKey('concentric-ring-count')),
+    );
+    expect(ringCount.min, 2);
+    expect(ringCount.max, 6);
+    expect(find.text('Choose active rings'), findsOneWidget);
+    tester
+        .widget<SegmentedButton<int>>(
+          find.byKey(const ValueKey('concentric-ring-count-selector')),
+        )
+        .onSelectionChanged!({4});
+    await tester.pumpAndSettle();
+
+    BravenChartPlus chart() => tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('concentric-donut-chart')),
+    );
+
+    var radialSeries = chart().series.cast<DonutChartSeries>().toList();
+    expect(
+      radialSeries.map((series) => series.id),
+      orderedEquals(['current', 'previous', 'forecast', 'plan']),
+    );
+    expect(
+      radialSeries.map((series) => series.name),
+      orderedEquals([
+        'Current period',
+        'Previous period',
+        'Forecast period',
+        'Plan period',
+      ]),
+    );
+    expect(
+      radialSeries.map((series) => series.total),
+      orderedEquals([100, 200, 300, 400]),
+    );
+    expect(chart().concentricDonutConfig.ringWeights, {
+      'current': 1,
+      'previous': 1,
+      'forecast': 0.9,
+      'plan': 1,
+    });
+    expect(find.text('Outer · Current · 100 USD'), findsOneWidget);
+    expect(find.text('Ring 2 · Previous · 200 USD'), findsOneWidget);
+    expect(find.text('Ring 3 · Forecast · 300 USD'), findsOneWidget);
+    expect(find.text('Inner · Plan · 400 USD'), findsOneWidget);
+    expect(
+      find.textContaining('20 source points across 4 independent rings'),
+      findsOneWidget,
+    );
+
+    tester
+        .widget<SliderOption>(
+          find.byKey(const ValueKey('concentric-ring-weight-forecast')),
+        )
+        .onChanged(1.5);
+    await tester.pumpAndSettle();
+    expect(chart().concentricDonutConfig.ringWeights['forecast'], 1.5);
+
+    final firstDistributions = [
+      for (final series in radialSeries)
+        [for (final point in series.points) point.y],
+    ];
+    await tester.tap(
+      find.byKey(const ValueKey('regenerate-concentric-values')),
+    );
+    await tester.pumpAndSettle();
+    radialSeries = chart().series.cast<DonutChartSeries>().toList();
+    for (var index = 0; index < radialSeries.length; index++) {
+      expect(
+        radialSeries[index].points.map((point) => point.y),
+        isNot(orderedEquals(firstDistributions[index])),
+      );
+      expect(radialSeries[index].total, closeTo((index + 1) * 100, 0.000001));
+    }
+
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final extracted = workbench.chartController!.extractSourceDocument(
+      workbench.documentOptions,
+    );
+    expect(extracted, isA<ChartArtifactSuccess<ChartDocumentSnapshot>>());
+    final source = ChartDartSourceGenerator.generate(
+      (extracted as ChartArtifactSuccess<ChartDocumentSnapshot>).value,
+      options: workbench.sourceOptions,
+    );
+    expect(source, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+    final generated =
+        (source as ChartArtifactSuccess<ChartGeneratedSource>).value.source;
+    expect(generated, contains("id: 'forecast'"));
+    expect(generated, contains("id: 'plan'"));
+    expect(generated, contains("'forecast': 1.5"));
+
+    await tester.tap(
+      find.byKey(const ValueKey('concentric-preset-highContrast')),
+    );
+    await tester.pumpAndSettle();
+    expect(chart().series, hasLength(2));
+    expect(
+      tester
+          .widget<IntSliderOption>(
+            find.byKey(const ValueKey('concentric-ring-count')),
+          )
+          .value,
+      2,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('applies the attached Elevated gradients presentation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ConcentricDonutPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('concentric-preset-elevated')));
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('concentric-donut-chart')),
+    );
+    final series = chart.series.cast<DonutChartSeries>().toList();
+    expect(series, hasLength(2));
+    expect(
+      series,
+      everyElement(
+        predicate<DonutChartSeries>((value) {
+          return value.points.length == 10 && value.visibleSlices.length == 10;
+        }),
+      ),
+    );
+    expect(
+      {for (final point in series[0].points) point.label!: point.y},
+      const {
+        'Subscriptions': 19.05387372764938,
+        'Services': 2.1825014427349614,
+        'Enterprise': 2.843202175093259,
+        'Training': 12.522433120729959,
+        'Support': 0.4391245911747618,
+        'Analytics': 10.67415082878745,
+        'Integrations': 14.125337101318364,
+        'Consulting': 12.802344186918882,
+        'Marketplace': 20.354578075178033,
+        'Storage': 5.002454750414955,
+      },
+    );
+    expect(
+      {for (final point in series[1].points) point.label!: point.y},
+      const {
+        'Subscriptions': 57.902067509084496,
+        'Services': 26.803072722142396,
+        'Enterprise': 7.010259915540149,
+        'Training': 7.322416023511789,
+        'Support': 7.335267283792226,
+        'Analytics': 27.647908021492693,
+        'Integrations': 29.2101962847596,
+        'Consulting': 5.08061233727336,
+        'Marketplace': 13.091333849004572,
+        'Storage': 18.59686605339874,
+      },
+    );
+
+    expect(chart.concentricDonutConfig.innerRadiusFactor, 0.38);
+    expect(chart.concentricDonutConfig.outerRadiusFactor, 0.94);
+    expect(chart.concentricDonutConfig.ringGap, 10);
+    expect(chart.concentricDonutConfig.ringWeights, {
+      'current': 1.25,
+      'previous': 1,
+    });
+    expect(
+      chart.concentricDonutConfig.centerContent.valueMode,
+      DonutCenterValueMode.selectedOrTotal,
+    );
+    expect(chart.donutCenterBuilder, isNull);
+    expect(chart.showLegend, isFalse);
+    expect(chart.theme?.backgroundColor, const Color(0xFF1E1E1E));
+
+    for (final radialSeries in series) {
+      expect(radialSeries.donutStyle.startAngleDegrees, -30);
+      expect(radialSeries.donutStyle.sweepAngleDegrees, 360);
+      expect(radialSeries.donutStyle.sliceGap, 2);
+      expect(radialSeries.donutStyle.borderWidth, 1);
+      expect(radialSeries.donutStyle.borderColorMode, PieBorderColorMode.slice);
+      expect(radialSeries.donutStyle.borderLightnessShift, -0.18);
+      expect(radialSeries.donutStyle.cornerRadius, 8);
+      expect(
+        radialSeries.donutStyle.cornerTreatment,
+        PieCornerTreatment.roundAll,
+      );
+      expect(radialSeries.donutStyle.selectionExplodeOffset, 14);
+      expect(radialSeries.donutStyle.animationMode, PieAnimationMode.grow);
+      expect(radialSeries.donutStyle.gradient?.type, PieGradientType.radial);
+      expect(radialSeries.donutStyle.gradient?.startLightnessShift, 0.24);
+      expect(radialSeries.donutStyle.gradient?.endLightnessShift, -0.14);
+      expect(radialSeries.donutStyle.shadow?.isVisible, isTrue);
+      expect(
+        radialSeries.donutStyle.selectedElevation?.color,
+        const Color(0xFFE63946),
+      );
+      expect(radialSeries.donutStyle.selectedElevation?.blurRadius, 20);
+      expect(radialSeries.donutStyle.selectedElevation?.spreadRadius, 4);
+      expect(radialSeries.donutStyle.selectedElevation?.opacity, 0.65);
+      expect(radialSeries.selectionStyle.effect, RadialSelectionEffect.lift);
+      expect(radialSeries.selectionStyle.liftScale, 1.14);
+      expect(radialSeries.selectionStyle.liftOffset, 8);
+      expect(radialSeries.selectionStyle.backdropBlur, 2);
+      expect(radialSeries.dataLabels.minimumShare, 0.04);
+      expect(radialSeries.dataLabels.minimumSweepDegrees, 6);
+      expect(radialSeries.dataLabels.outsideOffset, 4);
+    }
+    expect(series[0].dataLabels.position, PieDataLabelPosition.outside);
+    expect(
+      series[0].dataLabels.content,
+      PieDataLabelContent.categoryAndPercentage,
+    );
+    expect(series[1].dataLabels.position, PieDataLabelPosition.inside);
+    expect(series[1].dataLabels.content, PieDataLabelContent.category);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('applies the attached Compact dashboard presentation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ConcentricDonutPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('concentric-preset-compact')));
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('concentric-donut-chart')),
+    );
+    final series = chart.series.cast<DonutChartSeries>().toList();
+    expect(series, hasLength(2));
+    expect(
+      series,
+      everyElement(
+        predicate<DonutChartSeries>((value) => value.points.length == 7),
+      ),
+    );
+    expect(
+      {for (final point in series[0].points) point.label!: point.y},
+      const {
+        'Subscriptions': 2.1003057687312516,
+        'Services': 10.174866679789481,
+        'Enterprise': 18.900722496403024,
+        'Training': 29.04229774545904,
+        'Support': 8.879737207130427,
+        'Analytics': 3.7440403282201826,
+        'Integrations': 27.158029774266595,
+      },
+    );
+    expect(
+      {for (final point in series[1].points) point.label!: point.y},
+      const {
+        'Subscriptions': 35.38110724006537,
+        'Services': 37.475410358254884,
+        'Enterprise': 16.848117707993246,
+        'Training': 24.053069677188876,
+        'Support': 23.484604667790432,
+        'Analytics': 46.304313668802855,
+        'Integrations': 16.453376679904352,
+      },
+    );
+
+    expect(
+      chart.theme?.backgroundColor,
+      ChartTheme.colorblindFriendly.backgroundColor,
+    );
+    expect(chart.concentricDonutConfig.innerRadiusFactor, 0.4);
+    expect(chart.concentricDonutConfig.outerRadiusFactor, 1);
+    expect(chart.concentricDonutConfig.ringGap, 0);
+    expect(chart.concentricDonutConfig.ringWeights, {
+      'current': 1,
+      'previous': 1,
+    });
+    expect(
+      chart.concentricDonutConfig.centerContent.valueMode,
+      DonutCenterValueMode.selectedOrTotal,
+    );
+    expect(chart.donutCenterBuilder, isNull);
+    expect(chart.showLegend, isFalse);
+
+    for (final radialSeries in series) {
+      expect(radialSeries.points, hasLength(7));
+      expect(radialSeries.donutStyle.startAngleDegrees, -90);
+      expect(radialSeries.donutStyle.sweepAngleDegrees, 360);
+      expect(radialSeries.donutStyle.sliceGap, 0);
+      expect(radialSeries.donutStyle.borderWidth, 3);
+      expect(radialSeries.donutStyle.borderColorMode, PieBorderColorMode.slice);
+      expect(radialSeries.donutStyle.borderLightnessShift, -0.18);
+      expect(radialSeries.donutStyle.cornerRadius, 12);
+      expect(
+        radialSeries.donutStyle.cornerTreatment,
+        PieCornerTreatment.outerOnly,
+      );
+      expect(radialSeries.donutStyle.selectionExplodeOffset, 10);
+      expect(radialSeries.donutStyle.animationMode, PieAnimationMode.fade);
+      expect(radialSeries.donutStyle.gradient, isNull);
+      expect(radialSeries.donutStyle.shadow?.isVisible, isTrue);
+      expect(radialSeries.donutStyle.shadow?.blurRadius, 8);
+      expect(radialSeries.donutStyle.selectedElevation?.color, isNull);
+      expect(radialSeries.donutStyle.selectedElevation?.blurRadius, 12);
+      expect(radialSeries.donutStyle.selectedElevation?.spreadRadius, 2.5);
+      expect(radialSeries.donutStyle.selectedElevation?.opacity, 0.48);
+      expect(radialSeries.selectionStyle.effect, RadialSelectionEffect.explode);
+      expect(radialSeries.selectionStyle.liftScale, 1.1);
+      expect(radialSeries.dataLabels.minimumShare, 0.04);
+      expect(radialSeries.dataLabels.minimumSweepDegrees, 16);
+      expect(radialSeries.dataLabels.padding, 10);
+      expect(radialSeries.dataLabels.outsideOffset, 6);
+      expect(radialSeries.sliceGroupingConfig?.minimumShare, 0.1);
+      expect(radialSeries.sliceGroupingConfig?.label, 'Other');
+      expect(radialSeries.sliceGroupingConfig?.color, const Color(0xFF7C3AED));
+    }
+    expect(
+      series.first.points.first.pointStyle?.color,
+      const Color(0xFF0173B2),
+    );
+    expect(series[0].dataLabels.position, PieDataLabelPosition.outside);
+    expect(
+      series[0].dataLabels.content,
+      PieDataLabelContent.categoryAndPercentage,
+    );
+    expect(series[0].dataLabels.calloutStyle, isNull);
+    expect(series[1].dataLabels.position, PieDataLabelPosition.inside);
+    expect(series[1].dataLabels.content, PieDataLabelContent.category);
+    expect(
+      series[1].dataLabels.calloutStyle?.backgroundColor,
+      Colors.transparent,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('applies the attached High contrast presentation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: ConcentricDonutPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('concentric-preset-highContrast')),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('concentric-donut-chart')),
+    );
+    final series = chart.series.cast<DonutChartSeries>().toList();
+    expect(series, hasLength(2));
+    expect(
+      series,
+      everyElement(
+        predicate<DonutChartSeries>((value) => value.points.length == 10),
+      ),
+    );
+    expect(
+      {for (final point in series[0].points) point.label!: point.y},
+      const {
+        'Subscriptions': 2.9299878623846847,
+        'Services': 3.3231662201015584,
+        'Enterprise': 11.516645869356609,
+        'Training': 12.214459531127103,
+        'Support': 20.885276994518527,
+        'Analytics': 3.0963227197881693,
+        'Integrations': 13.468165395321275,
+        'Consulting': 15.109796979410444,
+        'Marketplace': 0.9286434299171611,
+        'Storage': 16.527534998074472,
+      },
+    );
+    expect(
+      {for (final point in series[1].points) point.label!: point.y},
+      const {
+        'Subscriptions': 32.78483949737364,
+        'Services': 21.81597367483022,
+        'Enterprise': 27.987188696333433,
+        'Training': 31.11579472021379,
+        'Support': 21.16458186019966,
+        'Analytics': 31.51415239808732,
+        'Integrations': 7.460035810557016,
+        'Consulting': 5.494188839139545,
+        'Marketplace': 9.523272012296621,
+        'Storage': 11.139972490968745,
+      },
+    );
+
+    expect(chart.theme?.backgroundColor, Colors.white);
+    expect(chart.concentricDonutConfig.innerRadiusFactor, 0.38);
+    expect(chart.concentricDonutConfig.outerRadiusFactor, 1);
+    expect(chart.concentricDonutConfig.ringGap, 9);
+    expect(chart.concentricDonutConfig.order, ConcentricRingOrder.innerToOuter);
+    expect(chart.concentricDonutConfig.ringWeights, {
+      'current': 1,
+      'previous': 1,
+    });
+    expect(chart.donutCenterBuilder, isNull);
+    expect(
+      chart.concentricDonutConfig.centerContent.valueMode,
+      DonutCenterValueMode.selectedOrTotal,
+    );
+    expect(chart.showLegend, isTrue);
+    expect(chart.theme?.legendStyle.position, LegendPosition.bottomCenter);
+    expect(chart.theme?.legendStyle.orientation, LegendOrientation.horizontal);
+    expect(chart.theme?.legendStyle.markerShape, LegendMarkerShape.circle);
+    expect(chart.theme?.legendStyle.markerSize, 10);
+    expect(chart.theme?.legendStyle.textStyle.fontSize, 12);
+    expect(chart.theme?.legendStyle.backgroundColor, const Color(0x99FFFFFF));
+    expect(
+      chart.theme?.interactionTheme.tooltipStyle.backgroundColor,
+      Colors.black,
+    );
+    expect(
+      chart.theme?.interactionTheme.tooltipStyle.borderColor,
+      Colors.white,
+    );
+
+    for (final radialSeries in series) {
+      expect(radialSeries.donutStyle.startAngleDegrees, -90);
+      expect(radialSeries.donutStyle.sweepAngleDegrees, 360);
+      expect(radialSeries.donutStyle.sliceGap, 5);
+      expect(radialSeries.donutStyle.borderWidth, 1.5);
+      expect(radialSeries.donutStyle.borderColor, Colors.black);
+      expect(radialSeries.donutStyle.cornerRadius, 0);
+      expect(
+        radialSeries.donutStyle.cornerTreatment,
+        PieCornerTreatment.roundAll,
+      );
+      expect(radialSeries.donutStyle.gradient, isNull);
+      expect(radialSeries.donutStyle.shadow?.isVisible, isFalse);
+      expect(radialSeries.donutStyle.selectedElevation?.color, Colors.black);
+      expect(radialSeries.donutStyle.selectedElevation?.blurRadius, 4);
+      expect(radialSeries.donutStyle.selectedElevation?.spreadRadius, 3);
+      expect(radialSeries.donutStyle.selectedElevation?.opacity, 1);
+      expect(radialSeries.donutStyle.animationMode, PieAnimationMode.sweep);
+      expect(radialSeries.selectionStyle.effect, RadialSelectionEffect.explode);
+      expect(radialSeries.selectionStyle.liftScale, 1.1);
+      expect(radialSeries.dataLabels.position, PieDataLabelPosition.outside);
+      expect(radialSeries.dataLabels.content, PieDataLabelContent.category);
+      expect(
+        radialSeries.dataLabels.secondaryContent,
+        PieDataLabelContent.percentage,
+      );
+      expect(
+        radialSeries.dataLabels.secondaryPosition,
+        PieDataLabelPosition.inside,
+      );
+      expect(radialSeries.dataLabels.minimumShare, 0.05);
+      expect(radialSeries.dataLabels.minimumSweepDegrees, 4);
+      expect(radialSeries.dataLabels.padding, 2);
+      expect(radialSeries.dataLabels.outsideOffset, 32);
+      expect(radialSeries.dataLabels.connectorLength, 12);
+      expect(radialSeries.dataLabels.connectorWidth, 1.5);
+      expect(radialSeries.dataLabels.connectorColor, const Color(0xFFEF4444));
+      expect(
+        radialSeries.dataLabels.calloutStyle?.backgroundColor,
+        Colors.black,
+      );
+      expect(
+        radialSeries.dataLabels.secondaryCalloutStyle?.backgroundColor,
+        const Color(0xD91F2937),
+      );
+      expect(radialSeries.sliceGroupingConfig, isNull);
+    }
+    expect(
+      series.first.points.first.pointStyle?.color,
+      const Color(0xFF1F2937),
+    );
+    expect(series.first.points[4].pointStyle?.color, const Color(0xFF9CA3AF));
     expect(tester.takeException(), isNull);
   });
 
@@ -396,7 +913,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('regenerates both rings without changing their totals', (
+  testWidgets('regenerates every active ring without changing its total', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1600, 5000);
@@ -420,7 +937,14 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('regenerate-concentric-values')),
       500,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.descendant(
+        of: find.byType(OptionsPanel),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
     );
 
     tester
@@ -437,14 +961,17 @@ void main() {
         .series
         .cast<DonutChartSeries>()
         .toList();
+    expect(after, hasLength(3));
     expect(after[0].total, closeTo(100, 0.000001));
     expect(after[1].total, closeTo(200, 0.000001));
+    expect(after[2].total, closeTo(300, 0.000001));
     expect(after[0].points.map((point) => point.y).toList(), isNot(before[0]));
     expect(after[1].points.map((point) => point.y).toList(), isNot(before[1]));
+    expect(after[2].points.map((point) => point.y).toList(), isNot(before[2]));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('randomizes the requested data point count across both rings', (
+  testWidgets('randomizes the requested data point count across active rings', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1600, 5000);
@@ -462,7 +989,14 @@ void main() {
     await tester.scrollUntilVisible(
       categoryCount,
       500,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.descendant(
+        of: find.byType(OptionsPanel),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      ),
     );
     var slider = tester.widget<IntSliderOption>(categoryCount);
     expect(slider.value, 5);
@@ -476,9 +1010,13 @@ void main() {
       find.byKey(const ValueKey('concentric-donut-chart')),
     );
     var series = chart.series.cast<DonutChartSeries>().toList();
-    expect(series, hasLength(2));
-    expect(series[0].points, hasLength(20));
-    expect(series[1].points, hasLength(20));
+    expect(series, hasLength(3));
+    expect(
+      series,
+      everyElement(
+        predicate<DonutChartSeries>((ring) => ring.points.length == 20),
+      ),
+    );
     expect(
       series[0].points.map((point) => point.label),
       orderedEquals(series[1].points.map((point) => point.label)),
@@ -486,14 +1024,18 @@ void main() {
     expect(series[0].points.last.label, 'Other services');
     expect(series[0].total, closeTo(100, 0.000001));
     expect(series[1].total, closeTo(200, 0.000001));
+    expect(series[2].total, closeTo(300, 0.000001));
     final firstCurrentDistribution = series[0].points
         .map((point) => point.y)
         .toList(growable: false);
     final firstPreviousDistribution = series[1].points
         .map((point) => point.y)
         .toList(growable: false);
+    final firstForecastDistribution = series[2].points
+        .map((point) => point.y)
+        .toList(growable: false);
     expect(
-      find.textContaining('40 source points across 2 independent rings'),
+      find.textContaining('60 source points across 3 independent rings'),
       findsOneWidget,
     );
 
@@ -507,8 +1049,10 @@ void main() {
     series = chart.series.cast<DonutChartSeries>().toList();
     expect(series[0].points, hasLength(3));
     expect(series[1].points, hasLength(3));
+    expect(series[2].points, hasLength(3));
     expect(series[0].total, closeTo(100, 0.000001));
     expect(series[1].total, closeTo(200, 0.000001));
+    expect(series[2].total, closeTo(300, 0.000001));
 
     slider = tester.widget<IntSliderOption>(categoryCount);
     slider.onChanged(20);
@@ -526,8 +1070,13 @@ void main() {
       series[1].points.map((point) => point.y),
       isNot(orderedEquals(firstPreviousDistribution)),
     );
+    expect(
+      series[2].points.map((point) => point.y),
+      isNot(orderedEquals(firstForecastDistribution)),
+    );
     expect(series[0].total, closeTo(100, 0.000001));
     expect(series[1].total, closeTo(200, 0.000001));
+    expect(series[2].total, closeTo(300, 0.000001));
     expect(tester.takeException(), isNull);
   });
 
@@ -550,6 +1099,7 @@ void main() {
       find.byKey(const ValueKey('concentric-donut-chart')),
     );
     var series = chart.series.cast<DonutChartSeries>().toList();
+    expect(series, hasLength(3));
     expect(chart.concentricDonutConfig.innerRadiusFactor, 0.38);
     expect(
       chart.concentricDonutConfig.legendMode,
@@ -576,14 +1126,14 @@ void main() {
     expect(chart.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     expect(chart.concentricDonutConfig.innerRadiusFactor, 0.38);
     expect(chart.concentricDonutConfig.outerRadiusFactor, 0.94);
-    expect(chart.concentricDonutConfig.ringGap, 8);
+    expect(chart.concentricDonutConfig.ringGap, 10);
     expect(chart.concentricDonutConfig.ringWeights['current'], 1.25);
     expect(chart.radialLegendItemBuilder, isNull);
     expect(chart.theme?.legendStyle.markerSize, 9);
     expect(chart.theme?.legendStyle.textStyle.fontSize, 10);
     expect(series.first.donutStyle.opacity, 1);
-    expect(series.first.donutStyle.cornerRadius, 11);
-    expect(series.first.donutStyle.sliceGap, 4);
+    expect(series.first.donutStyle.cornerRadius, 8);
+    expect(series.first.donutStyle.sliceGap, 2);
     expect(series.first.donutStyle.shadow?.isVisible, isTrue);
     expect(series.first.donutStyle.shadow?.blurRadius, 12);
     expect(series.first.donutStyle.gradient?.type, PieGradientType.radial);
@@ -616,19 +1166,14 @@ void main() {
     );
     expect(title.style?.color, ChartTheme.dark.axisStyle.titleStyle.color);
     expect(subtitle.style?.color, ChartTheme.dark.axisStyle.labelStyle.color);
-    final centerLabel = tester.widget<Text>(
-      find.byKey(const ValueKey('concentric-runtime-center-label')),
-    );
-    final centerValue = tester.widget<Text>(
-      find.byKey(const ValueKey('concentric-runtime-center-value')),
+    expect(chart.donutCenterBuilder, isNull);
+    expect(
+      chart.concentricDonutConfig.centerContent.labelStyle?.textStyle.color,
+      isNull,
     );
     expect(
-      centerLabel.style?.color,
-      ChartTheme.dark.axisStyle.labelStyle.color,
-    );
-    expect(
-      centerValue.style?.color,
-      ChartTheme.dark.axisStyle.labelStyle.color,
+      chart.concentricDonutConfig.centerContent.valueStyle?.textStyle.color,
+      isNull,
     );
 
     await tester.tap(
@@ -646,9 +1191,9 @@ void main() {
     );
     expect(chart.concentricDonutConfig.order, ConcentricRingOrder.innerToOuter);
     expect(series.first.donutStyle.gradient, isNull);
-    expect(series.first.donutStyle.borderWidth, 2);
+    expect(series.first.donutStyle.borderWidth, 1.5);
     expect(series.first.donutStyle.borderColor, Colors.black);
-    expect(series.first.dataLabels.minimumShare, 0);
+    expect(series.first.dataLabels.minimumShare, 0.05);
     expect(series.first.dataLabels.calloutStyle?.backgroundColor, Colors.black);
     expect(series.first.sliceGroupingConfig, isNull);
 
@@ -661,6 +1206,7 @@ void main() {
       find.byKey(const ValueKey('concentric-donut-chart')),
     );
     series = chart.series.cast<DonutChartSeries>().toList();
+    expect(series, hasLength(3));
     expect(chart.concentricDonutConfig.innerRadiusFactor, 0.36);
     expect(chart.concentricDonutConfig.order, ConcentricRingOrder.outerToInner);
     expect(series.first.donutStyle.sweepAngleDegrees, 360);
