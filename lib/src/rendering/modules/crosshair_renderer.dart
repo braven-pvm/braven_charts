@@ -413,9 +413,60 @@ class CrosshairRenderer {
       xMax: transform.dataXMax,
       seriesList: seriesList,
       interpolate: crosshairConfig.interpolateValues,
+      includeScatterXFallback: false,
     );
 
     if (trackingState == null) return;
+
+    // Line and Area tracking is X-oriented, while Scatter is an unordered
+    // two-dimensional sample. Replace the fallback nearest-X Scatter values
+    // with plot-space nearest points using each element's effective transform
+    // (including per-series multi-axis normalization).
+    final pointerInPlot = Offset(
+      cursorPosition.dx - plotArea.left,
+      cursorPosition.dy - plotArea.top,
+    );
+    for (final element in seriesElements) {
+      final scatter = element.series;
+      if (scatter is! ScatterChartSeries) continue;
+      final hit = element.dataHitAt(
+        pointerInPlot,
+        maxDistance: double.infinity,
+      );
+      final nearest = hit == null
+          ? null
+          : CrosshairSeriesValue(
+              seriesId: scatter.id,
+              seriesName: scatter.displayName,
+              seriesColor: hit.markerColor ?? element.themeColor,
+              x: hit.point.x,
+              y: hit.point.y,
+              dataPointIndex: hit.pointIndex,
+              isInterpolated: false,
+              pointLabel: hit.point.label,
+              magnitudeValue: hit.radiusValue,
+              formattedMagnitudeValue: hit.formattedRadiusValue,
+              magnitudeLabel: hit.radiusLabel,
+              colorValue: hit.colorValue,
+              formattedColorValue: hit.formattedColorValue,
+              colorLabel: hit.colorLabel,
+              opacityValue: hit.opacityValue,
+              formattedOpacityValue: hit.formattedOpacityValue,
+              opacityLabel: hit.opacityLabel,
+            );
+      final existingIndex = trackingState.seriesValues.indexWhere(
+        (value) => value.seriesId == scatter.id,
+      );
+      if (nearest == null) {
+        if (existingIndex >= 0) {
+          trackingState.seriesValues.removeAt(existingIndex);
+        }
+      } else if (existingIndex >= 0) {
+        trackingState.seriesValues[existingIndex] = nearest;
+      } else {
+        trackingState.seriesValues.add(nearest);
+      }
+    }
 
     // Append trend annotation values to tracking state
     for (final trendEl in trendElements) {
@@ -994,8 +1045,14 @@ class CrosshairRenderer {
       final barGeometry = seriesElement?.barGeometryForPoint(
         value.dataPointIndex,
       );
+      final scatterHit = seriesElement?.series is ScatterChartSeries
+          ? seriesElement?.dataHitForPointIndex(value.dataPointIndex)
+          : null;
 
-      if (barGeometry != null) {
+      if (scatterHit != null) {
+        screenX = plotArea.left + scatterHit.plotPosition.dx;
+        screenY = plotArea.top + scatterHit.plotPosition.dy;
+      } else if (barGeometry != null) {
         screenX = plotArea.left + barGeometry.valueEndX;
         screenY = plotArea.top + barGeometry.valueEndY;
       } else if (multiAxisInfo.effectiveAxes.length > 1) {
@@ -1142,7 +1199,18 @@ class CrosshairRenderer {
         value: value.y,
         unit: yUnit,
       );
-      final label = '${value.seriesName}: $displayY';
+      final hasScatterDetail =
+          value.pointLabel != null ||
+          value.formattedMagnitudeValue != null ||
+          value.formattedColorValue != null ||
+          value.formattedOpacityValue != null;
+      final label = hasScatterDetail
+          ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
+                'X: ${_formatDataValue(value.x)} · Y: $displayY'
+                '${value.formattedMagnitudeValue == null ? '' : '\n${value.magnitudeLabel ?? 'Magnitude'}: ${value.formattedMagnitudeValue}'}'
+                '${value.formattedColorValue == null ? '' : '\n${value.colorLabel ?? 'Color value'}: ${value.formattedColorValue}'}'
+                '${value.formattedOpacityValue == null ? '' : '\n${value.opacityLabel ?? 'Opacity value'}: ${value.formattedOpacityValue}'}'
+          : '${value.seriesName}: $displayY';
       final tp = TextPainter(
         text: TextSpan(
           text: label,

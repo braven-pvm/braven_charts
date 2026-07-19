@@ -14,6 +14,7 @@
 
 import 'dart:ui';
 
+import '../../coordinates/chart_transform.dart';
 import '../../models/chart_data_point.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/chart_series.dart';
@@ -49,6 +50,81 @@ enum TrackingInterpolation {
 /// - Total calculation: O(S * log N) where S = series count, N = points per series
 /// - Memory: O(S) for result storage
 abstract final class CrosshairTracker {
+  /// Finds the Scatter point nearest to [plotPosition] in two-dimensional
+  /// plot space.
+  ///
+  /// Unlike line tracking, Scatter samples are not required to be X-ordered
+  /// and proximity depends on both coordinates. Ties preserve source order so
+  /// repeated coordinates resolve deterministically.
+  static CrosshairSeriesValue? calculateNearestScatterValue({
+    required ScatterChartSeries series,
+    required Offset plotPosition,
+    required ChartTransform transform,
+  }) {
+    var nearestIndex = -1;
+    var nearestDistanceSquared = double.infinity;
+    for (var index = 0; index < series.points.length; index++) {
+      final point = series.points[index];
+      if (!point.isValid) continue;
+      final candidate = transform.dataToPlot(point.x, point.y);
+      if (!candidate.dx.isFinite || !candidate.dy.isFinite) continue;
+      final dx = plotPosition.dx - candidate.dx;
+      final dy = plotPosition.dy - candidate.dy;
+      final distanceSquared = dx * dx + dy * dy;
+      if (distanceSquared < nearestDistanceSquared) {
+        nearestDistanceSquared = distanceSquared;
+        nearestIndex = index;
+      }
+    }
+    if (nearestIndex < 0) return null;
+
+    final point = series.points[nearestIndex];
+    final magnitude =
+        series.sizeEncoding != null &&
+            point.magnitude != null &&
+            point.magnitude!.isFinite &&
+            point.magnitude! >= 0
+        ? point.magnitude
+        : null;
+    final colorValue =
+        series.colorEncoding != null &&
+            point.colorValue != null &&
+            point.colorValue!.isFinite
+        ? point.colorValue
+        : null;
+    final opacityValue =
+        series.opacityEncoding != null &&
+            point.opacityValue != null &&
+            point.opacityValue!.isFinite
+        ? point.opacityValue
+        : null;
+    return CrosshairSeriesValue(
+      seriesId: series.id,
+      seriesName: series.displayName,
+      seriesColor: _trackedPointColor(series, nearestIndex),
+      x: point.x,
+      y: _trackedPointY(series, nearestIndex),
+      dataPointIndex: nearestIndex,
+      isInterpolated: false,
+      pointLabel: point.label,
+      magnitudeValue: magnitude,
+      formattedMagnitudeValue: magnitude == null
+          ? null
+          : series.sizeEncoding!.format(magnitude),
+      magnitudeLabel: magnitude == null ? null : series.sizeEncoding!.label,
+      colorValue: colorValue,
+      formattedColorValue: colorValue == null
+          ? null
+          : series.colorEncoding!.formatForInteraction(colorValue),
+      colorLabel: colorValue == null ? null : series.colorEncoding!.label,
+      opacityValue: opacityValue,
+      formattedOpacityValue: opacityValue == null
+          ? null
+          : series.opacityEncoding!.format(opacityValue),
+      opacityLabel: opacityValue == null ? null : series.opacityEncoding!.label,
+    );
+  }
+
   /// Calculates the tracking state for a given screen X position.
   ///
   /// This is the main entry point for tracking mode. It converts the
@@ -61,6 +137,9 @@ abstract final class CrosshairTracker {
   /// [xMax] The maximum X value in data coordinates
   /// [seriesList] List of all series to evaluate
   /// [interpolate] Whether to interpolate between points (default: true)
+  /// [includeScatterXFallback] Whether unordered Scatter series should use a
+  /// nearest-X fallback. The renderer disables this after installing its
+  /// indexed two-dimensional values.
   ///
   /// Returns null if the position is outside the chart bounds or if
   /// there are no series with data.
@@ -71,6 +150,7 @@ abstract final class CrosshairTracker {
     required double xMax,
     required List<ChartSeries> seriesList,
     bool interpolate = true,
+    bool includeScatterXFallback = true,
   }) {
     // Early exit if outside chart bounds
     if (screenX < chartBounds.left || screenX > chartBounds.right) {
@@ -86,10 +166,15 @@ abstract final class CrosshairTracker {
 
     // Calculate value for each series
     final seriesValues = <CrosshairSeriesValue>[];
+    var hasDeferredScatterData = false;
 
     for (final series in seriesList) {
       final points = series.points;
       if (points.isEmpty) continue;
+      if (series is ScatterChartSeries && !includeScatterXFallback) {
+        hasDeferredScatterData = true;
+        continue;
+      }
 
       final value = _calculateSeriesValue(
         series: series,
@@ -102,7 +187,7 @@ abstract final class CrosshairTracker {
       }
     }
 
-    if (seriesValues.isEmpty) return null;
+    if (seriesValues.isEmpty && !hasDeferredScatterData) return null;
 
     return CrosshairTrackingState(
       dataX: dataX,
@@ -123,10 +208,16 @@ abstract final class CrosshairTracker {
     final points = series.points;
     if (points.isEmpty) return null;
 
-    // Bars and scatter marks represent discrete observations. Their crosshair
-    // values must snap to an actual mark rather than inventing values between
-    // categories, even when tracking interpolation is enabled globally.
-    if (series is BarChartSeries || series is ScatterChartSeries) {
+    // Scatter samples are not required to be X-ordered. Use a stable linear
+    // nearest-X lookup until the plot-space two-dimensional tracker supplies
+    // indexed candidates directly.
+    if (series is ScatterChartSeries) {
+      return _calculateScatterSeriesValue(series, targetX);
+    }
+
+    // Bars represent discrete observations. Their crosshair values must snap
+    // to an actual mark rather than inventing values between categories.
+    if (series is BarChartSeries) {
       interpolate = false;
     }
 
@@ -264,6 +355,35 @@ abstract final class CrosshairTracker {
     }
   }
 
+  static CrosshairSeriesValue? _calculateScatterSeriesValue(
+    ScatterChartSeries series,
+    double targetX,
+  ) {
+    var nearestIndex = -1;
+    var nearestDistance = double.infinity;
+    for (var index = 0; index < series.points.length; index++) {
+      final point = series.points[index];
+      if (!point.isValid) continue;
+      final distance = (targetX - point.x).abs();
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    }
+    if (nearestIndex < 0) return null;
+
+    final point = series.points[nearestIndex];
+    return CrosshairSeriesValue(
+      seriesId: series.id,
+      seriesName: series.displayName,
+      seriesColor: _trackedPointColor(series, nearestIndex),
+      x: point.x,
+      y: _trackedPointY(series, nearestIndex),
+      dataPointIndex: nearestIndex,
+      isInterpolated: false,
+    );
+  }
+
   static double _trackedPointY(ChartSeries series, int pointIndex) {
     if (series case final BarChartSeries barSeries
         when barSeries.layoutMode == BarLayoutMode.waterfall) {
@@ -273,8 +393,39 @@ abstract final class CrosshairTracker {
   }
 
   static Color _trackedPointColor(ChartSeries series, int pointIndex) {
+    final markerColor =
+        series.points[pointIndex].pointStyle?.scatterMarkerStyle?.fillColor;
+    if (markerColor != null) return markerColor;
     final pointColor = series.points[pointIndex].pointStyle?.color;
     if (pointColor != null) return pointColor;
+    if (series case final ScatterChartSeries scatter
+        when scatter.colorEncoding != null) {
+      final values = [
+        for (final point in scatter.points)
+          if (point.colorValue case final value? when value.isFinite) value,
+      ];
+      if (values.isNotEmpty) {
+        final encoding = scatter.colorEncoding!;
+        var minimum = encoding.minimumValue ?? values.first;
+        var maximum = encoding.maximumValue ?? values.first;
+        if (encoding.minimumValue == null || encoding.maximumValue == null) {
+          for (final value in values.skip(1)) {
+            if (encoding.minimumValue == null && value < minimum) {
+              minimum = value;
+            }
+            if (encoding.maximumValue == null && value > maximum) {
+              maximum = value;
+            }
+          }
+        }
+        final encoded = encoding.colorFor(
+          scatter.points[pointIndex].colorValue,
+          resolvedMinimumValue: minimum,
+          resolvedMaximumValue: maximum,
+        );
+        if (encoded != null) return encoded;
+      }
+    }
     if (series case final BarChartSeries barSeries
         when barSeries.layoutMode == BarLayoutMode.waterfall) {
       final waterfallColor = barSeries.isWaterfallTotal(pointIndex)

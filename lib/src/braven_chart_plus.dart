@@ -61,6 +61,7 @@ import 'models/pie_chart_config.dart';
 import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
+import 'models/scatter_marker_style.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -2785,6 +2786,37 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             chartSize: Size(transform.plotWidth, transform.plotHeight),
           ),
         );
+
+        for (final sizeLegend in _buildAutomaticSizeLegends(
+          effectiveLegendStyle,
+        )) {
+          elements.add(
+            LegendAnnotationElement(
+              annotation: sizeLegend,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+          );
+        }
+        for (final colorLegend in _buildAutomaticColorLegends(
+          effectiveLegendStyle,
+        )) {
+          elements.add(
+            LegendAnnotationElement(
+              annotation: colorLegend,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+          );
+        }
+        for (final opacityLegend in _buildAutomaticOpacityLegends(
+          effectiveLegendStyle,
+        )) {
+          elements.add(
+            LegendAnnotationElement(
+              annotation: opacityLegend,
+              chartSize: Size(transform.plotWidth, transform.plotHeight),
+            ),
+          );
+        }
       }
 
       return elements;
@@ -2987,6 +3019,258 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               ),
     ];
   }
+
+  List<LegendAnnotation> _buildAutomaticSizeLegends(LegendStyle baseStyle) {
+    final groups = <ScatterSizeEncoding, List<(ScatterChartSeries, int)>>{};
+    for (var index = 0; index < _effectiveRenderSeries.length; index++) {
+      final series = _effectiveRenderSeries[index];
+      if (series is! ScatterChartSeries) continue;
+      final encoding = series.sizeEncoding;
+      if (encoding == null || !encoding.showLegend) continue;
+      groups.putIfAbsent(encoding, () => []).add((series, index));
+    }
+
+    final theme = widget.theme ?? ChartTheme.light;
+    final legends = <LegendAnnotation>[];
+    var legendIndex = 0;
+    for (final entry in groups.entries) {
+      final encoding = entry.key;
+      var resolvedMaximum = encoding.maximumValue ?? encoding.minimumValue;
+      var hasMagnitude = false;
+      for (final (series, _) in entry.value) {
+        for (final point in series.points) {
+          final magnitude = point.magnitude;
+          if (magnitude == null || !magnitude.isFinite || magnitude < 0) {
+            continue;
+          }
+          hasMagnitude = true;
+          resolvedMaximum = math.max(resolvedMaximum, magnitude);
+        }
+      }
+      if (!hasMagnitude && encoding.maximumValue == null) continue;
+
+      final values = <double>[
+        encoding.minimumValue,
+        if (resolvedMaximum > encoding.minimumValue)
+          (encoding.minimumValue + resolvedMaximum) / 2,
+        if (resolvedMaximum > encoding.minimumValue) resolvedMaximum,
+      ];
+      final first = entry.value.first;
+      final color = first.$1.color ?? theme.seriesTheme.colorAt(first.$2);
+      final sizeScale = LegendSizeScale(
+        label: encoding.label,
+        color: color,
+        samples: [
+          for (final value in values)
+            LegendSizeSample(
+              radius: encoding.radiusFor(
+                value,
+                resolvedMaximumValue: resolvedMaximum,
+              ),
+              label: encoding.format(value),
+            ),
+        ],
+      );
+      final position = _complementaryLegendPosition(baseStyle.position);
+      final offsetDirection = switch (position) {
+        LegendPosition.bottomLeft ||
+        LegendPosition.bottomCenter ||
+        LegendPosition.bottomRight => -1.0,
+        _ => 1.0,
+      };
+      legends.add(
+        LegendAnnotation(
+          id: '__internal_size_legend_$legendIndex',
+          sizeScale: sizeScale,
+          legendStyle: baseStyle.copyWith(
+            position: position,
+            orientation: LegendOrientation.horizontal,
+            markerShape: LegendMarkerShape.circle,
+            allowDragging: false,
+            offset:
+                baseStyle.offset +
+                Offset(0, offsetDirection * legendIndex * 64),
+          ),
+        ),
+      );
+      legendIndex++;
+    }
+    return legends;
+  }
+
+  List<LegendAnnotation> _buildAutomaticColorLegends(LegendStyle baseStyle) {
+    final groups = <ScatterColorEncoding, List<ScatterChartSeries>>{};
+    for (final series in _effectiveRenderSeries) {
+      if (series is! ScatterChartSeries) continue;
+      final encoding = series.colorEncoding;
+      if (encoding == null || !encoding.showLegend) continue;
+      groups.putIfAbsent(encoding, () => []).add(series);
+    }
+
+    final legends = <LegendAnnotation>[];
+    var legendIndex = 0;
+    for (final entry in groups.entries) {
+      final encoding = entry.key;
+      if (!encoding.hasValidPiecewiseConfiguration) continue;
+      var minimum = encoding.minimumValue ?? double.infinity;
+      var maximum = encoding.maximumValue ?? double.negativeInfinity;
+      for (final series in entry.value) {
+        for (final point in series.points) {
+          final value = point.colorValue;
+          if (value == null || !value.isFinite) continue;
+          if (encoding.minimumValue == null) minimum = math.min(minimum, value);
+          if (encoding.maximumValue == null) maximum = math.max(maximum, value);
+        }
+      }
+      if (!minimum.isFinite && maximum.isFinite) minimum = maximum;
+      if (!maximum.isFinite && minimum.isFinite) maximum = minimum;
+      if (!minimum.isFinite || !maximum.isFinite) continue;
+      final midpoint = (minimum + maximum) / 2;
+      final position = _colorLegendPosition(baseStyle.position);
+      final offsetDirection = switch (position) {
+        LegendPosition.bottomLeft ||
+        LegendPosition.bottomCenter ||
+        LegendPosition.bottomRight => -1.0,
+        _ => 1.0,
+      };
+      legends.add(
+        LegendAnnotation(
+          id: '__internal_color_legend_$legendIndex',
+          colorScale: LegendColorScale(
+            label: encoding.label,
+            colors: encoding.colors,
+            type: encoding.scaleType == ScatterColorScaleType.piecewise
+                ? LegendColorScaleType.piecewise
+                : LegendColorScaleType.continuous,
+            segmentLabels: encoding.scaleType == ScatterColorScaleType.piecewise
+                ? encoding.effectiveBandLabels
+                : const [],
+            minimumLabel: encoding.format(minimum),
+            midpointLabel: minimum == maximum
+                ? null
+                : encoding.format(midpoint),
+            maximumLabel: encoding.format(maximum),
+          ),
+          legendStyle: baseStyle.copyWith(
+            position: position,
+            orientation: LegendOrientation.horizontal,
+            allowDragging: false,
+            offset:
+                baseStyle.offset +
+                Offset(0, offsetDirection * legendIndex * 58),
+          ),
+        ),
+      );
+      legendIndex++;
+    }
+    return legends;
+  }
+
+  List<LegendAnnotation> _buildAutomaticOpacityLegends(LegendStyle baseStyle) {
+    final groups = <ScatterOpacityEncoding, List<(ScatterChartSeries, int)>>{};
+    for (var index = 0; index < _effectiveRenderSeries.length; index++) {
+      final series = _effectiveRenderSeries[index];
+      if (series is! ScatterChartSeries) continue;
+      final encoding = series.opacityEncoding;
+      if (encoding == null || !encoding.showLegend) continue;
+      groups.putIfAbsent(encoding, () => []).add((series, index));
+    }
+
+    final theme = widget.theme ?? ChartTheme.light;
+    final legends = <LegendAnnotation>[];
+    var legendIndex = 0;
+    for (final entry in groups.entries) {
+      final encoding = entry.key;
+      var minimum = encoding.minimumValue ?? double.infinity;
+      var maximum = encoding.maximumValue ?? double.negativeInfinity;
+      for (final (series, _) in entry.value) {
+        for (final point in series.points) {
+          final value = point.opacityValue;
+          if (value == null || !value.isFinite) continue;
+          if (encoding.minimumValue == null) minimum = math.min(minimum, value);
+          if (encoding.maximumValue == null) maximum = math.max(maximum, value);
+        }
+      }
+      if (!minimum.isFinite && maximum.isFinite) minimum = maximum;
+      if (!maximum.isFinite && minimum.isFinite) maximum = minimum;
+      if (!minimum.isFinite || !maximum.isFinite) continue;
+      final midpoint = (minimum + maximum) / 2;
+      final first = entry.value.first;
+      final color = first.$1.color ?? theme.seriesTheme.colorAt(first.$2);
+      final position = _opacityLegendPosition(baseStyle.position);
+      final offsetDirection = switch (position) {
+        LegendPosition.bottomLeft ||
+        LegendPosition.bottomCenter ||
+        LegendPosition.bottomRight => -1.0,
+        _ => 1.0,
+      };
+      legends.add(
+        LegendAnnotation(
+          id: '__internal_opacity_legend_$legendIndex',
+          opacityScale: LegendOpacityScale(
+            label: encoding.label,
+            color: color,
+            minimumOpacity: encoding.minimumOpacity,
+            maximumOpacity: encoding.maximumOpacity,
+            minimumLabel: encoding.format(minimum),
+            midpointLabel: minimum == maximum
+                ? null
+                : encoding.format(midpoint),
+            maximumLabel: encoding.format(maximum),
+          ),
+          legendStyle: baseStyle.copyWith(
+            position: position,
+            orientation: LegendOrientation.horizontal,
+            allowDragging: false,
+            offset:
+                baseStyle.offset +
+                Offset(0, offsetDirection * legendIndex * 58),
+          ),
+        ),
+      );
+      legendIndex++;
+    }
+    return legends;
+  }
+
+  LegendPosition _complementaryLegendPosition(LegendPosition position) =>
+      switch (position) {
+        LegendPosition.topLeft => LegendPosition.bottomRight,
+        LegendPosition.topCenter => LegendPosition.bottomCenter,
+        LegendPosition.topRight => LegendPosition.bottomLeft,
+        LegendPosition.centerLeft => LegendPosition.bottomRight,
+        LegendPosition.center => LegendPosition.bottomCenter,
+        LegendPosition.centerRight => LegendPosition.bottomLeft,
+        LegendPosition.bottomLeft => LegendPosition.topRight,
+        LegendPosition.bottomCenter => LegendPosition.topCenter,
+        LegendPosition.bottomRight => LegendPosition.topLeft,
+      };
+
+  LegendPosition _colorLegendPosition(LegendPosition position) =>
+      switch (position) {
+        LegendPosition.topLeft => LegendPosition.bottomLeft,
+        LegendPosition.topCenter => LegendPosition.bottomRight,
+        LegendPosition.topRight => LegendPosition.bottomRight,
+        LegendPosition.centerLeft => LegendPosition.bottomLeft,
+        LegendPosition.center => LegendPosition.bottomRight,
+        LegendPosition.centerRight => LegendPosition.bottomRight,
+        LegendPosition.bottomLeft => LegendPosition.topLeft,
+        LegendPosition.bottomCenter => LegendPosition.topRight,
+        LegendPosition.bottomRight => LegendPosition.topRight,
+      };
+
+  LegendPosition _opacityLegendPosition(LegendPosition position) =>
+      switch (position) {
+        LegendPosition.topLeft ||
+        LegendPosition.topRight => LegendPosition.bottomCenter,
+        LegendPosition.topCenter => LegendPosition.bottomLeft,
+        LegendPosition.centerLeft ||
+        LegendPosition.centerRight => LegendPosition.bottomCenter,
+        LegendPosition.center => LegendPosition.bottomLeft,
+        LegendPosition.bottomLeft ||
+        LegendPosition.bottomRight => LegendPosition.topCenter,
+        LegendPosition.bottomCenter => LegendPosition.topLeft,
+      };
 
   void _handleIncomingDataAnimationTick() {
     if (!mounted || _incomingPointAnimations.isEmpty) {

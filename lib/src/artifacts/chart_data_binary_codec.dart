@@ -16,6 +16,9 @@ abstract final class ChartDataBinaryCodec {
   static const _sidecarKeys = <String>{
     'timestamps',
     'labels',
+    'magnitudes',
+    'colorValues',
+    'opacityValues',
     'metadata',
     'segmentStyles',
     'pointStyles',

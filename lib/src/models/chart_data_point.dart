@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import 'segment_style.dart';
+import 'scatter_marker_style.dart';
 
 /// Represents a single (x, y) coordinate with optional metadata.
 ///
 /// ChartDataPoint is an immutable data structure representing a point
 /// in 2D space, with optional timestamp and label for rich data visualization.
 ///
-/// Equality is based on x, y, timestamp, label, segmentStyle, and pointStyle.
+/// Equality is based on x, y, magnitude, colorValue, opacityValue, timestamp, label,
+/// segmentStyle, and pointStyle.
 /// Metadata is excluded from equality comparisons for performance optimization.
 ///
 /// Example:
@@ -42,6 +44,9 @@ class ChartDataPoint {
   const ChartDataPoint({
     required this.x,
     required this.y,
+    this.magnitude,
+    this.colorValue,
+    this.opacityValue,
     this.timestamp,
     this.label,
     this.metadata,
@@ -54,6 +59,26 @@ class ChartDataPoint {
 
   /// Y-axis value (vertical position).
   final double y;
+
+  /// Optional third quantitative value used by size-aware renderers.
+  ///
+  /// Scatter series with a [ScatterSizeEncoding] map this data value to marker
+  /// area. It is deliberately separate from [PointStyle.size], which remains
+  /// an explicit marker radius in logical pixels.
+  final double? magnitude;
+
+  /// Optional quantitative value used by continuous color encodings.
+  ///
+  /// This remains independent from [magnitude], so a Scatter point can encode
+  /// two different measures through marker area and color simultaneously.
+  final double? colorValue;
+
+  /// Optional quantitative value used by opacity encodings.
+  ///
+  /// This remains independent from [magnitude] and [colorValue], allowing a
+  /// Scatter point to encode three separate measures through area, color, and
+  /// opacity.
+  final double? opacityValue;
 
   /// Optional timestamp for time-series data.
   final DateTime? timestamp;
@@ -142,6 +167,12 @@ class ChartDataPoint {
   ChartDataPoint copyWith({
     double? x,
     double? y,
+    double? magnitude,
+    bool clearMagnitude = false,
+    double? colorValue,
+    bool clearColorValue = false,
+    double? opacityValue,
+    bool clearOpacityValue = false,
     DateTime? timestamp,
     String? label,
     Map<String, dynamic>? metadata,
@@ -153,6 +184,11 @@ class ChartDataPoint {
     return ChartDataPoint(
       x: x ?? this.x,
       y: y ?? this.y,
+      magnitude: clearMagnitude ? null : (magnitude ?? this.magnitude),
+      colorValue: clearColorValue ? null : (colorValue ?? this.colorValue),
+      opacityValue: clearOpacityValue
+          ? null
+          : (opacityValue ?? this.opacityValue),
       timestamp: timestamp ?? this.timestamp,
       label: label ?? this.label,
       metadata: metadata ?? this.metadata,
@@ -170,6 +206,9 @@ class ChartDataPoint {
           runtimeType == other.runtimeType &&
           x == other.x &&
           y == other.y &&
+          magnitude == other.magnitude &&
+          colorValue == other.colorValue &&
+          opacityValue == other.opacityValue &&
           timestamp == other.timestamp &&
           label == other.label &&
           segmentStyle == other.segmentStyle &&
@@ -177,13 +216,31 @@ class ChartDataPoint {
   // Note: metadata is intentionally excluded from equality
 
   @override
-  int get hashCode =>
-      Object.hash(x, y, timestamp, label, segmentStyle, pointStyle);
+  int get hashCode => Object.hash(
+    x,
+    y,
+    magnitude,
+    colorValue,
+    opacityValue,
+    timestamp,
+    label,
+    segmentStyle,
+    pointStyle,
+  );
 
   @override
   String toString() {
     final buffer = StringBuffer('ChartDataPoint(');
     buffer.write('x: $x, y: $y');
+    if (magnitude != null) {
+      buffer.write(', magnitude: $magnitude');
+    }
+    if (colorValue != null) {
+      buffer.write(', colorValue: $colorValue');
+    }
+    if (opacityValue != null) {
+      buffer.write(', opacityValue: $opacityValue');
+    }
     if (hasTimestamp) {
       buffer.write(', timestamp: $timestamp');
     }

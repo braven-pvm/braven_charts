@@ -5,23 +5,21 @@
 import 'package:flutter/material.dart';
 
 /// Marker shapes for series data points.
-enum MarkerShape {
+///
+/// This is deliberately distinct from the annotation-specific `MarkerShape`
+/// model. Use this enum for [SeriesTheme], Scatter series, and point-level
+/// Scatter overrides.
+enum SeriesMarkerShape {
   circle,
   square,
   triangle,
+  invertedTriangle,
   diamond,
   cross,
   plus,
   star,
   none,
 }
-
-/// Public, unambiguous name for marker shapes used by [SeriesTheme].
-///
-/// `MarkerShape` is also used by point annotations. This alias keeps custom
-/// theme configuration available from the package barrel without colliding
-/// with the annotation enum.
-typedef SeriesMarkerShape = MarkerShape;
 
 /// Theming for chart data series.
 ///
@@ -34,7 +32,7 @@ typedef SeriesMarkerShape = MarkerShape;
 ///   colors: [Colors.blue, Colors.red, Colors.green],
 ///   lineWidths: [2.0],
 ///   markerSizes: [6.0],
-///   markerShapes: [MarkerShape.circle],
+///   markerShapes: [SeriesMarkerShape.circle],
 /// );
 /// print(theme.colorAt(0)); // Colors.blue
 /// print(theme.colorAt(3)); // Colors.blue (cycles)
@@ -45,13 +43,16 @@ class SeriesTheme {
     required this.lineWidths,
     required this.markerSizes,
     required this.markerShapes,
-  })  : assert(colors.isNotEmpty, 'colors must have at least 1 element'),
-        assert(
-            lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
-        assert(
-            markerSizes.isNotEmpty, 'markerSizes must have at least 1 element'),
-        assert(markerShapes.isNotEmpty,
-            'markerShapes must have at least 1 element');
+  }) : assert(colors.isNotEmpty, 'colors must have at least 1 element'),
+       assert(lineWidths.isNotEmpty, 'lineWidths must have at least 1 element'),
+       assert(
+         markerSizes.isNotEmpty,
+         'markerSizes must have at least 1 element',
+       ),
+       assert(
+         markerShapes.isNotEmpty,
+         'markerShapes must have at least 1 element',
+       );
 
   /// Colors for series. Cycles when series count exceeds list length.
   final List<Color> colors;
@@ -63,7 +64,7 @@ class SeriesTheme {
   final List<double> markerSizes;
 
   /// Marker shapes for series. Cycles when series count exceeds list length.
-  final List<MarkerShape> markerShapes;
+  final List<SeriesMarkerShape> markerShapes;
 
   // ========== Predefined Themes ==========
 
@@ -77,7 +78,7 @@ class SeriesTheme {
     ],
     lineWidths: const [2.0],
     markerSizes: const [6.0],
-    markerShapes: const [MarkerShape.circle],
+    markerShapes: const [SeriesMarkerShape.circle],
   );
 
   static final SeriesTheme defaultDark = SeriesTheme(
@@ -90,7 +91,7 @@ class SeriesTheme {
     ],
     lineWidths: const [2.0],
     markerSizes: const [6.0],
-    markerShapes: const [MarkerShape.circle],
+    markerShapes: const [SeriesMarkerShape.circle],
   );
 
   static final SeriesTheme corporateBlue = SeriesTheme(
@@ -103,7 +104,7 @@ class SeriesTheme {
     ],
     lineWidths: const [2.0],
     markerSizes: const [6.0],
-    markerShapes: const [MarkerShape.square],
+    markerShapes: const [SeriesMarkerShape.square],
   );
 
   static final SeriesTheme vibrant = SeriesTheme(
@@ -118,9 +119,9 @@ class SeriesTheme {
     lineWidths: const [2.5],
     markerSizes: const [8.0],
     markerShapes: const [
-      MarkerShape.circle,
-      MarkerShape.square,
-      MarkerShape.triangle
+      SeriesMarkerShape.circle,
+      SeriesMarkerShape.square,
+      SeriesMarkerShape.triangle,
     ],
   );
 
@@ -132,7 +133,7 @@ class SeriesTheme {
     ],
     lineWidths: const [1.5],
     markerSizes: const [4.0],
-    markerShapes: const [MarkerShape.circle],
+    markerShapes: const [SeriesMarkerShape.circle],
   );
 
   static final SeriesTheme highContrast = SeriesTheme(
@@ -144,7 +145,7 @@ class SeriesTheme {
     ],
     lineWidths: const [3.0],
     markerSizes: const [10.0],
-    markerShapes: const [MarkerShape.square],
+    markerShapes: const [SeriesMarkerShape.square],
   );
 
   static final SeriesTheme colorblindFriendly = SeriesTheme(
@@ -159,10 +160,10 @@ class SeriesTheme {
     lineWidths: const [2.0],
     markerSizes: const [7.0],
     markerShapes: const [
-      MarkerShape.circle,
-      MarkerShape.square,
-      MarkerShape.triangle,
-      MarkerShape.diamond,
+      SeriesMarkerShape.circle,
+      SeriesMarkerShape.square,
+      SeriesMarkerShape.triangle,
+      SeriesMarkerShape.diamond,
     ],
   );
 
@@ -178,7 +179,7 @@ class SeriesTheme {
   double markerSizeAt(int index) => markerSizes[index % markerSizes.length];
 
   /// Get marker shape at index with cycling.
-  MarkerShape markerShapeAt(int index) =>
+  SeriesMarkerShape markerShapeAt(int index) =>
       markerShapes[index % markerShapes.length];
 
   // ========== Customization ==========
@@ -187,7 +188,7 @@ class SeriesTheme {
     List<Color>? colors,
     List<double>? lineWidths,
     List<double>? markerSizes,
-    List<MarkerShape>? markerShapes,
+    List<SeriesMarkerShape>? markerShapes,
   }) {
     return SeriesTheme(
       colors: colors ?? this.colors,
@@ -212,22 +213,26 @@ class SeriesTheme {
 
   static SeriesTheme fromJson(Map<String, dynamic> json) {
     return SeriesTheme(
-      colors: (json['colors'] as List<dynamic>?)
+      colors:
+          (json['colors'] as List<dynamic>?)
               ?.map((c) => _parseColor(c))
               .whereType<Color>()
               .toList() ??
           defaultLight.colors,
-      lineWidths: (json['lineWidths'] as List<dynamic>?)
+      lineWidths:
+          (json['lineWidths'] as List<dynamic>?)
               ?.map((w) => (w as num).toDouble())
               .toList() ??
           defaultLight.lineWidths,
-      markerSizes: (json['markerSizes'] as List<dynamic>?)
+      markerSizes:
+          (json['markerSizes'] as List<dynamic>?)
               ?.map((s) => (s as num).toDouble())
               .toList() ??
           defaultLight.markerSizes,
-      markerShapes: (json['markerShapes'] as List<dynamic>?)
+      markerShapes:
+          (json['markerShapes'] as List<dynamic>?)
               ?.map((s) => _parseMarkerShape(s))
-              .whereType<MarkerShape>()
+              .whereType<SeriesMarkerShape>()
               .toList() ??
           defaultLight.markerShapes,
     );
@@ -241,10 +246,10 @@ class SeriesTheme {
     return Color(int.parse(hex, radix: 16));
   }
 
-  static MarkerShape? _parseMarkerShape(dynamic value) {
+  static SeriesMarkerShape? _parseMarkerShape(dynamic value) {
     if (value is! String) return null;
     try {
-      return MarkerShape.values.firstWhere((s) => s.name == value);
+      return SeriesMarkerShape.values.firstWhere((s) => s.name == value);
     } catch (_) {
       return null;
     }
@@ -264,11 +269,11 @@ class SeriesTheme {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(colors),
-        Object.hashAll(lineWidths),
-        Object.hashAll(markerSizes),
-        Object.hashAll(markerShapes),
-      );
+    Object.hashAll(colors),
+    Object.hashAll(lineWidths),
+    Object.hashAll(markerSizes),
+    Object.hashAll(markerShapes),
+  );
 
   bool _listEquals<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;

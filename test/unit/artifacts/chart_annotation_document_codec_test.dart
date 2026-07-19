@@ -289,6 +289,114 @@ void main() {
       expect(pie.unit, 'USD');
     });
 
+    test('round-trips a native quantitative size legend', () {
+      const scale = LegendSizeScale(
+        label: 'Active accounts',
+        color: Color(0xFF0F9F8F),
+        samples: [
+          LegendSizeSample(radius: 4, label: '95'),
+          LegendSizeSample(radius: 17.2, label: '347.5'),
+          LegendSizeSample(radius: 24, label: '600'),
+        ],
+      );
+      final source = LegendAnnotation(
+        id: 'bubble-size-key',
+        sizeScale: scale,
+        legendStyle: const LegendStyle(position: LegendPosition.bottomRight),
+      );
+
+      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+      final encoded =
+          ChartAnnotationDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartAnnotationDocument>;
+
+      expect(decoded.series, isEmpty);
+      expect(decoded.sizeScale, scale);
+      expect(decoded.legendStyle.position, LegendPosition.bottomRight);
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('annotation.legend.size-scale.v1'),
+      );
+    });
+
+    test('round-trips a native quantitative color legend', () {
+      const scale = LegendColorScale(
+        label: 'Recovery readiness',
+        colors: [Color(0xFFDC2626), Color(0xFFF59E0B), Color(0xFF16A34A)],
+        minimumLabel: '45 %',
+        midpointLabel: '70 %',
+        maximumLabel: '95 %',
+      );
+      final source = LegendAnnotation(
+        id: 'readiness-key',
+        colorScale: scale,
+        legendStyle: const LegendStyle(position: LegendPosition.bottomLeft),
+      );
+
+      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+      final encoded =
+          ChartAnnotationDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartAnnotationDocument>;
+
+      expect(decoded.series, isEmpty);
+      expect(decoded.colorScale, scale);
+      expect(decoded.legendStyle.position, LegendPosition.bottomLeft);
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('annotation.legend.color-scale.v1'),
+      );
+    });
+
+    test('round-trips a native segmented color legend', () {
+      const scale = LegendColorScale(
+        label: 'Risk score',
+        colors: [
+          Color(0xFF16A34A),
+          Color(0xFFFACC15),
+          Color(0xFFF97316),
+          Color(0xFFDC2626),
+        ],
+        minimumLabel: '0',
+        maximumLabel: '100',
+        type: LegendColorScaleType.piecewise,
+        segmentLabels: ['Normal', 'Monitor', 'Warning', 'Critical'],
+      );
+      final source = LegendAnnotation(id: 'risk-key', colorScale: scale);
+
+      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+
+      expect(decoded.colorScale, scale);
+    });
+
+    test('round-trips a native quantitative opacity legend', () {
+      const scale = LegendOpacityScale(
+        label: 'Model confidence',
+        color: Color(0xFF2563EB),
+        minimumOpacity: 0.15,
+        maximumOpacity: 0.95,
+        minimumLabel: '45 %',
+        midpointLabel: '70 %',
+        maximumLabel: '95 %',
+      );
+      final source = LegendAnnotation(
+        id: 'confidence-key',
+        opacityScale: scale,
+        legendStyle: const LegendStyle(position: LegendPosition.bottomCenter),
+      );
+
+      final decoded = _roundTrip(source).$2 as LegendAnnotation;
+      final encoded =
+          ChartAnnotationDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartAnnotationDocument>;
+
+      expect(decoded.opacityScale, scale);
+      expect(decoded.legendStyle.position, LegendPosition.bottomCenter);
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('annotation.legend.opacity-scale.v1'),
+      );
+    });
+
     test('projects nested legend series with the selected data storage', () {
       final result = ChartAnnotationDocumentCodec.encode(
         LegendAnnotation(

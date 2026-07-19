@@ -21,6 +21,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/scatter_marker_style.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/x_axis_config.dart';
@@ -295,6 +296,32 @@ class _ChartDartEmitter {
           _emitAreaOptions(writer, series);
         case ScatterChartSeries():
           _numberIf(writer, 'markerRadius', series.markerRadius, 5);
+          _enumIf(
+            writer,
+            'markerShape',
+            'SeriesMarkerShape',
+            series.markerShape.name,
+            defaultName: 'circle',
+          );
+          if (series.markerStyle != null) {
+            _emitScatterMarkerStyle(writer, 'markerStyle', series.markerStyle!);
+          }
+          if (series.sizeEncoding != null) {
+            _emitScatterSizeEncoding(writer, series.sizeEncoding!);
+          }
+          if (series.colorEncoding != null) {
+            _emitScatterColorEncoding(writer, series.colorEncoding!);
+          }
+          if (series.opacityEncoding != null) {
+            _emitScatterOpacityEncoding(writer, series.opacityEncoding!);
+          }
+          if (series.interactionStyle != const ScatterInteractionStyle()) {
+            _emitScatterInteraction(
+              writer,
+              'interactionStyle',
+              series.interactionStyle,
+            );
+          }
         case BarChartSeries():
           _emitBarOptions(writer, series, seriesIndex);
         case PieChartSeries():
@@ -342,6 +369,9 @@ class _ChartDartEmitter {
     writer.indented(() {
       writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
       writer.namedArgument('y', DartSourceWriter.numberLiteral(point.y));
+      _optionalNumber(writer, 'magnitude', point.magnitude);
+      _optionalNumber(writer, 'colorValue', point.colorValue);
+      _optionalNumber(writer, 'opacityValue', point.opacityValue);
       if (point.timestamp != null) {
         writer.namedArgument(
           'timestamp',
@@ -377,6 +407,184 @@ class _ChartDartEmitter {
     writer.indented(() {
       _optionalColor(writer, 'color', style.color);
       _optionalNumber(writer, 'size', style.size);
+      if (style.scatterMarkerShape != null) {
+        writer.namedArgument(
+          'scatterMarkerShape',
+          'SeriesMarkerShape.${style.scatterMarkerShape!.name}',
+        );
+      }
+      if (style.scatterMarkerStyle != null) {
+        _emitScatterMarkerStyle(
+          writer,
+          'scatterMarkerStyle',
+          style.scatterMarkerStyle!,
+        );
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterMarkerStyle(
+    DartSourceWriter writer,
+    String argument,
+    ScatterMarkerStyle style,
+  ) {
+    writer.writeLine('$argument: ScatterMarkerStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'fillColor', style.fillColor);
+      _optionalColor(writer, 'strokeColor', style.strokeColor);
+      _optionalNumber(writer, 'strokeWidth', style.strokeWidth);
+      _optionalNumber(writer, 'opacity', style.opacity);
+      _optionalNumber(writer, 'width', style.width);
+      _optionalNumber(writer, 'height', style.height);
+      _optionalNumber(writer, 'rotationDegrees', style.rotationDegrees);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterSizeEncoding(
+    DartSourceWriter writer,
+    ScatterSizeEncoding encoding,
+  ) {
+    writer.writeLine('sizeEncoding: ScatterSizeEncoding(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumRadius', encoding.minimumRadius, 4);
+      _numberIf(writer, 'maximumRadius', encoding.maximumRadius, 24);
+      _numberIf(writer, 'minimumValue', encoding.minimumValue, 0);
+      _optionalNumber(writer, 'maximumValue', encoding.maximumValue);
+      if (options.includeDefaultValues || encoding.label != 'Magnitude') {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(encoding.label),
+        );
+      }
+      _optionalString(writer, 'unit', encoding.unit);
+      _valueIf(writer, 'showLegend', encoding.showLegend, defaultValue: true);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterColorEncoding(
+    DartSourceWriter writer,
+    ScatterColorEncoding encoding,
+  ) {
+    writer.writeLine('colorEncoding: ScatterColorEncoding(');
+    writer.indented(() {
+      writer.writeLine('colors: [');
+      writer.indented(() {
+        for (final color in encoding.colors) {
+          writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
+        }
+      });
+      writer.writeLine('],');
+      if (encoding.scaleType != ScatterColorScaleType.continuous) {
+        writer.namedArgument(
+          'scaleType',
+          'ScatterColorScaleType.${encoding.scaleType.name}',
+        );
+      }
+      if (encoding.thresholds.isNotEmpty) {
+        writer.namedArgument(
+          'thresholds',
+          '[${encoding.thresholds.map(DartSourceWriter.numberLiteral).join(', ')}]',
+        );
+      }
+      if (encoding.bandLabels.isNotEmpty) {
+        writer.namedArgument(
+          'bandLabels',
+          '[${encoding.bandLabels.map(DartSourceWriter.stringLiteral).join(', ')}]',
+        );
+      }
+      _optionalNumber(writer, 'minimumValue', encoding.minimumValue);
+      _optionalNumber(writer, 'maximumValue', encoding.maximumValue);
+      if (options.includeDefaultValues || encoding.label != 'Color value') {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(encoding.label),
+        );
+      }
+      _optionalString(writer, 'unit', encoding.unit);
+      _valueIf(writer, 'showLegend', encoding.showLegend, defaultValue: true);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterOpacityEncoding(
+    DartSourceWriter writer,
+    ScatterOpacityEncoding encoding,
+  ) {
+    writer.writeLine('opacityEncoding: ScatterOpacityEncoding(');
+    writer.indented(() {
+      _numberIf(writer, 'minimumOpacity', encoding.minimumOpacity, 0.2);
+      _numberIf(writer, 'maximumOpacity', encoding.maximumOpacity, 1);
+      _optionalNumber(writer, 'minimumValue', encoding.minimumValue);
+      _optionalNumber(writer, 'maximumValue', encoding.maximumValue);
+      if (options.includeDefaultValues || encoding.label != 'Opacity value') {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(encoding.label),
+        );
+      }
+      _optionalString(writer, 'unit', encoding.unit);
+      _valueIf(writer, 'showLegend', encoding.showLegend, defaultValue: true);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitScatterInteraction(
+    DartSourceWriter writer,
+    String argument,
+    ScatterInteractionStyle style,
+  ) {
+    writer.writeLine('$argument: ScatterInteractionStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'hoverColor', style.hoverColor);
+      writer.namedArgument(
+        'hoverScale',
+        DartSourceWriter.numberLiteral(style.hoverScale),
+      );
+      writer.namedArgument(
+        'hoverStrokeWidth',
+        DartSourceWriter.numberLiteral(style.hoverStrokeWidth),
+      );
+      writer.namedArgument(
+        'pressedColor',
+        DartSourceWriter.colorLiteral(style.pressedColor),
+      );
+      writer.namedArgument(
+        'pressedScale',
+        DartSourceWriter.numberLiteral(style.pressedScale),
+      );
+      writer.namedArgument(
+        'pressedOpacity',
+        DartSourceWriter.numberLiteral(style.pressedOpacity),
+      );
+      _optionalColor(writer, 'selectionColor', style.selectionColor);
+      writer.namedArgument(
+        'selectionScale',
+        DartSourceWriter.numberLiteral(style.selectionScale),
+      );
+      writer.namedArgument(
+        'selectionOpacity',
+        DartSourceWriter.numberLiteral(style.selectionOpacity),
+      );
+      writer.namedArgument(
+        'selectionStrokeWidth',
+        DartSourceWriter.numberLiteral(style.selectionStrokeWidth),
+      );
+      _optionalColor(writer, 'focusColor', style.focusColor);
+      writer.namedArgument(
+        'focusGap',
+        DartSourceWriter.numberLiteral(style.focusGap),
+      );
+      writer.namedArgument(
+        'focusStrokeWidth',
+        DartSourceWriter.numberLiteral(style.focusStrokeWidth),
+      );
+      writer.namedArgument(
+        'dimmedOpacity',
+        DartSourceWriter.numberLiteral(style.dimmedOpacity),
+      );
     });
     writer.writeLine('),');
   }
@@ -698,6 +906,110 @@ class _ChartDartEmitter {
         annotation.trendAnnotations,
         pathPrefix: '$path.trendAnnotations',
       );
+    }
+    final sizeScale = annotation.sizeScale;
+    if (sizeScale != null) {
+      writer.writeLine('sizeScale: LegendSizeScale(');
+      writer.indented(() {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(sizeScale.label),
+        );
+        writer.namedArgument(
+          'color',
+          DartSourceWriter.colorLiteral(sizeScale.color),
+        );
+        writer.writeLine('samples: [');
+        writer.indented(() {
+          for (final sample in sizeScale.samples) {
+            writer.writeLine('LegendSizeSample(');
+            writer.indented(() {
+              writer.namedArgument(
+                'radius',
+                DartSourceWriter.numberLiteral(sample.radius),
+              );
+              writer.namedArgument(
+                'label',
+                DartSourceWriter.stringLiteral(sample.label),
+              );
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
+      });
+      writer.writeLine('),');
+    }
+    final colorScale = annotation.colorScale;
+    if (colorScale != null) {
+      writer.writeLine('colorScale: LegendColorScale(');
+      writer.indented(() {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(colorScale.label),
+        );
+        writer.writeLine('colors: [');
+        writer.indented(() {
+          for (final color in colorScale.colors) {
+            writer.writeLine('${DartSourceWriter.colorLiteral(color)},');
+          }
+        });
+        writer.writeLine('],');
+        if (colorScale.type != LegendColorScaleType.continuous) {
+          writer.namedArgument(
+            'type',
+            'LegendColorScaleType.${colorScale.type.name}',
+          );
+        }
+        if (colorScale.segmentLabels.isNotEmpty) {
+          writer.namedArgument(
+            'segmentLabels',
+            '[${colorScale.segmentLabels.map(DartSourceWriter.stringLiteral).join(', ')}]',
+          );
+        }
+        writer.namedArgument(
+          'minimumLabel',
+          DartSourceWriter.stringLiteral(colorScale.minimumLabel),
+        );
+        _optionalString(writer, 'midpointLabel', colorScale.midpointLabel);
+        writer.namedArgument(
+          'maximumLabel',
+          DartSourceWriter.stringLiteral(colorScale.maximumLabel),
+        );
+      });
+      writer.writeLine('),');
+    }
+    final opacityScale = annotation.opacityScale;
+    if (opacityScale != null) {
+      writer.writeLine('opacityScale: LegendOpacityScale(');
+      writer.indented(() {
+        writer.namedArgument(
+          'label',
+          DartSourceWriter.stringLiteral(opacityScale.label),
+        );
+        writer.namedArgument(
+          'color',
+          DartSourceWriter.colorLiteral(opacityScale.color),
+        );
+        writer.namedArgument(
+          'minimumOpacity',
+          DartSourceWriter.numberLiteral(opacityScale.minimumOpacity),
+        );
+        writer.namedArgument(
+          'maximumOpacity',
+          DartSourceWriter.numberLiteral(opacityScale.maximumOpacity),
+        );
+        writer.namedArgument(
+          'minimumLabel',
+          DartSourceWriter.stringLiteral(opacityScale.minimumLabel),
+        );
+        _optionalString(writer, 'midpointLabel', opacityScale.midpointLabel);
+        writer.namedArgument(
+          'maximumLabel',
+          DartSourceWriter.stringLiteral(opacityScale.maximumLabel),
+        );
+      });
+      writer.writeLine('),');
     }
     _emitLegendStyle(writer, annotation.legendStyle, force: true);
     if (annotation.hiddenSeriesIds.isNotEmpty) {

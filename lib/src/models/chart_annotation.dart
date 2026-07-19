@@ -1,6 +1,7 @@
 // Copyright (c) 2025 braven_charts. All rights reserved.
 // Chart Annotation Base Classes for BravenChartPlus
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:parchment/parchment.dart';
 
@@ -105,7 +106,17 @@ sealed class ChartAnnotation {
 }
 
 /// Anchor point for text annotations positioning.
-enum AnnotationAnchor { topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight }
+enum AnnotationAnchor {
+  topLeft,
+  topCenter,
+  topRight,
+  centerLeft,
+  center,
+  centerRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight,
+}
 
 /// Position for range annotation labels.
 enum AnnotationLabelPosition {
@@ -265,10 +276,22 @@ class RangeAnnotation extends ChartAnnotation {
     this.borderColor,
     this.labelPosition = AnnotationLabelPosition.topLeft,
     this.labelMargin = 8.0,
-  }) : assert(startX != null || startY != null, 'At least one range (X or Y) must be specified'),
-       assert(startX == null || endX == null || startX < endX, 'startX must be less than endX'),
-       assert(startY == null || endY == null || startY < endY, 'startY must be less than endY'),
-       assert(snapTolerance >= 0 && snapTolerance <= 1, 'snapTolerance must be between 0 and 1'),
+  }) : assert(
+         startX != null || startY != null,
+         'At least one range (X or Y) must be specified',
+       ),
+       assert(
+         startX == null || endX == null || startX < endX,
+         'startX must be less than endX',
+       ),
+       assert(
+         startY == null || endY == null || startY < endY,
+         'startY must be less than endY',
+       ),
+       assert(
+         snapTolerance >= 0 && snapTolerance <= 1,
+         'snapTolerance must be between 0 and 1',
+       ),
        assert(labelMargin >= 0, 'Label margin must be non-negative'),
        super(id: id ?? ChartAnnotation.generateId());
 
@@ -423,11 +446,17 @@ class TextAnnotation extends ChartAnnotation {
   /// Creates a TextAnnotation from JSON.
   factory TextAnnotation.fromJson(Map<String, dynamic> json) {
     final posJson = json['position'] as Map<String, dynamic>;
-    final position = Offset((posJson['dx'] as num).toDouble(), (posJson['dy'] as num).toDouble());
+    final position = Offset(
+      (posJson['dx'] as num).toDouble(),
+      (posJson['dy'] as num).toDouble(),
+    );
 
     final anchorName = json['anchor'] as String?;
     final anchor = anchorName != null
-        ? AnnotationAnchor.values.firstWhere((a) => a.name == anchorName, orElse: () => AnnotationAnchor.topLeft)
+        ? AnnotationAnchor.values.firstWhere(
+            (a) => a.name == anchorName,
+            orElse: () => AnnotationAnchor.topLeft,
+          )
         : AnnotationAnchor.topLeft;
 
     return TextAnnotation._internal(
@@ -437,8 +466,12 @@ class TextAnnotation extends ChartAnnotation {
       richTextDelta: json['richTextDelta'] as List<dynamic>?,
       position: position,
       anchor: anchor,
-      backgroundColor: json['backgroundColor'] != null ? Color(json['backgroundColor'] as int) : null,
-      borderColor: json['borderColor'] != null ? Color(json['borderColor'] as int) : null,
+      backgroundColor: json['backgroundColor'] != null
+          ? Color(json['backgroundColor'] as int)
+          : null,
+      borderColor: json['borderColor'] != null
+          ? Color(json['borderColor'] as int)
+          : null,
       allowDragging: json['allowDragging'] as bool? ?? false,
       allowEditing: json['allowEditing'] as bool? ?? false,
       zIndex: json['zIndex'] as int? ?? 0,
@@ -459,7 +492,10 @@ class TextAnnotation extends ChartAnnotation {
     this.backgroundColor,
     this.borderColor,
   }) : richTextDelta = null,
-       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       assert(
+         position.dx >= 0 && position.dy >= 0,
+         'Position cannot have negative coordinates',
+       ),
        super(id: id ?? ChartAnnotation.generateId());
 
   /// Creates a text annotation with rich text (Delta format) at a screen position.
@@ -476,7 +512,10 @@ class TextAnnotation extends ChartAnnotation {
     this.backgroundColor,
     this.borderColor,
   }) : text = null,
-       assert(position.dx >= 0 && position.dy >= 0, 'Position cannot have negative coordinates'),
+       assert(
+         position.dx >= 0 && position.dy >= 0,
+         'Position cannot have negative coordinates',
+       ),
        super(id: id ?? ChartAnnotation.generateId());
 
   /// Internal constructor for copyWith and fromJson.
@@ -493,7 +532,10 @@ class TextAnnotation extends ChartAnnotation {
     this.anchor = AnnotationAnchor.topLeft,
     this.backgroundColor,
     this.borderColor,
-  }) : assert(text != null || richTextDelta != null, 'Either text or richTextDelta must be provided');
+  }) : assert(
+         text != null || richTextDelta != null,
+         'Either text or richTextDelta must be provided',
+       );
 
   /// The plain text content to display (null if using rich text).
   final String? text;
@@ -663,7 +705,10 @@ class TextAnnotation extends ChartAnnotation {
         return style; // Unknown level, no change
     }
 
-    return style.copyWith(fontSize: baseFontSize * sizeMultiplier, fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600);
+    return style.copyWith(
+      fontSize: baseFontSize * sizeMultiplier,
+      fontWeight: level <= 2 ? FontWeight.bold : FontWeight.w600,
+    );
   }
 
   /// Applies Delta attributes to a TextStyle.
@@ -686,7 +731,9 @@ class TextAnnotation extends ChartAnnotation {
     if (attrs['u'] == true || attrs['underline'] == true) {
       result = result.copyWith(decoration: TextDecoration.underline);
     }
-    if (attrs['s'] == true || attrs['strikethrough'] == true || attrs['strike'] == true) {
+    if (attrs['s'] == true ||
+        attrs['strikethrough'] == true ||
+        attrs['strike'] == true) {
       result = result.copyWith(decoration: TextDecoration.lineThrough);
     }
 
@@ -845,7 +892,8 @@ class TextAnnotation extends ChartAnnotation {
       if (richTextDelta != null) 'richTextDelta': richTextDelta,
       'position': {'dx': position.dx, 'dy': position.dy},
       'anchor': anchor.name,
-      if (backgroundColor != null) 'backgroundColor': backgroundColor!.toARGB32(),
+      if (backgroundColor != null)
+        'backgroundColor': backgroundColor!.toARGB32(),
       if (borderColor != null) 'borderColor': borderColor!.toARGB32(),
       'allowDragging': allowDragging,
       'allowEditing': allowEditing,
@@ -1201,7 +1249,8 @@ class TrendAnnotation extends ChartAnnotation {
     this.dashPattern,
     this.elevation = 0.0,
   }) : assert(
-         trendType != TrendType.movingAverage || (windowSize != null && windowSize > 0),
+         trendType != TrendType.movingAverage ||
+             (windowSize != null && windowSize > 0),
          'windowSize must be positive when trendType is movingAverage',
        ),
        assert(degree > 0, 'degree must be positive'),
@@ -1354,13 +1403,15 @@ class ChordAnnotation extends ChartAnnotation {
     this.perpendicularLineWidth,
     this.perpendicularDashPattern,
     this.perpendicularElevation,
-  })  : assert(startIndex >= 0, 'startIndex must be non-negative'),
-        assert(endIndex >= 0, 'endIndex must be non-negative'),
-        assert(startIndex != endIndex, 'startIndex and endIndex must differ'),
-        assert(elevation >= 0, 'Elevation must be non-negative'),
-        assert(perpendicularIndex == null || perpendicularIndex >= 0,
-            'perpendicularIndex must be non-negative'),
-        super(id: id ?? ChartAnnotation.generateId());
+  }) : assert(startIndex >= 0, 'startIndex must be non-negative'),
+       assert(endIndex >= 0, 'endIndex must be non-negative'),
+       assert(startIndex != endIndex, 'startIndex and endIndex must differ'),
+       assert(elevation >= 0, 'Elevation must be non-negative'),
+       assert(
+         perpendicularIndex == null || perpendicularIndex >= 0,
+         'perpendicularIndex must be non-negative',
+       ),
+       super(id: id ?? ChartAnnotation.generateId());
 
   /// The ID of the series containing the data points.
   final String seriesId;
@@ -1554,22 +1605,228 @@ class ChordAnnotation extends ChartAnnotation {
 ///   ),
 /// )
 /// ```
+@immutable
+class LegendSizeSample {
+  const LegendSizeSample({required this.radius, required this.label})
+    : assert(radius >= 0 && radius < double.infinity);
+
+  /// Marker radius in logical pixels before legend-space normalization.
+  final double radius;
+
+  /// Display-ready quantitative value represented by [radius].
+  final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendSizeSample &&
+          other.radius == radius &&
+          other.label == label;
+
+  @override
+  int get hashCode => Object.hash(radius, label);
+}
+
+/// A quantitative marker-size key rendered by a native [LegendAnnotation].
+///
+/// This is deliberately a presentation descriptor. Chart families derive its
+/// samples from their source encoding, while the legend renderer remains
+/// independent of any particular series family.
+@immutable
+class LegendSizeScale {
+  const LegendSizeScale({
+    required this.label,
+    required this.samples,
+    required this.color,
+  });
+
+  /// Human-readable name of the metric represented by marker area.
+  final String label;
+
+  /// Ordered representative values and their source marker radii.
+  final List<LegendSizeSample> samples;
+
+  /// Fill color used for the representative markers.
+  final Color color;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendSizeScale &&
+          other.label == label &&
+          other.color == color &&
+          listEquals(other.samples, samples);
+
+  @override
+  int get hashCode => Object.hash(label, color, Object.hashAll(samples));
+}
+
+/// Quantitative color key rendering strategy.
+enum LegendColorScaleType {
+  /// A smoothly interpolated color ramp.
+  continuous,
+
+  /// Adjacent discrete color bands with one label per band.
+  piecewise,
+}
+
+/// A quantitative color key rendered by a native [LegendAnnotation].
+@immutable
+class LegendColorScale {
+  const LegendColorScale({
+    required this.label,
+    required this.colors,
+    required this.minimumLabel,
+    required this.maximumLabel,
+    this.midpointLabel,
+    this.type = LegendColorScaleType.continuous,
+    this.segmentLabels = const [],
+  });
+
+  /// Human-readable name of the metric represented by marker color.
+  final String label;
+
+  /// Ordered ramp colors from the low-domain edge to the high-domain edge.
+  final List<Color> colors;
+
+  /// Display-ready label for the low-domain edge.
+  final String minimumLabel;
+
+  /// Optional display-ready midpoint label.
+  final String? midpointLabel;
+
+  /// Display-ready label for the high-domain edge.
+  final String maximumLabel;
+
+  /// Whether the key is rendered as a gradient or discrete segments.
+  final LegendColorScaleType type;
+
+  /// Display-ready label for each piecewise segment.
+  final List<String> segmentLabels;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendColorScale &&
+          other.label == label &&
+          listEquals(other.colors, colors) &&
+          other.minimumLabel == minimumLabel &&
+          other.midpointLabel == midpointLabel &&
+          other.maximumLabel == maximumLabel &&
+          other.type == type &&
+          listEquals(other.segmentLabels, segmentLabels);
+
+  @override
+  int get hashCode => Object.hash(
+    label,
+    Object.hashAll(colors),
+    minimumLabel,
+    midpointLabel,
+    maximumLabel,
+    type,
+    Object.hashAll(segmentLabels),
+  );
+}
+
+/// A quantitative opacity key rendered by a native [LegendAnnotation].
+///
+/// Opacity keys remain a distinct semantic payload even though the native
+/// renderer can share its compact ramp layout with quantitative color keys.
+@immutable
+class LegendOpacityScale {
+  const LegendOpacityScale({
+    required this.label,
+    required this.color,
+    required this.minimumOpacity,
+    required this.maximumOpacity,
+    required this.minimumLabel,
+    required this.maximumLabel,
+    this.midpointLabel,
+  });
+
+  /// Human-readable name of the metric represented by marker opacity.
+  final String label;
+
+  /// Base marker color used to demonstrate the opacity progression.
+  final Color color;
+
+  /// Opacity used at the low-domain edge.
+  final double minimumOpacity;
+
+  /// Opacity used at the high-domain edge.
+  final double maximumOpacity;
+
+  /// Display-ready label for the low-domain edge.
+  final String minimumLabel;
+
+  /// Optional display-ready midpoint label.
+  final String? midpointLabel;
+
+  /// Display-ready label for the high-domain edge.
+  final String maximumLabel;
+
+  /// Presentation adapter used by the native quantitative ramp painter.
+  LegendColorScale get asColorScale => LegendColorScale(
+    label: label,
+    colors: [
+      color.withValues(alpha: minimumOpacity),
+      color.withValues(alpha: (minimumOpacity + maximumOpacity) / 2),
+      color.withValues(alpha: maximumOpacity),
+    ],
+    minimumLabel: minimumLabel,
+    midpointLabel: midpointLabel,
+    maximumLabel: maximumLabel,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LegendOpacityScale &&
+          other.label == label &&
+          other.color == color &&
+          other.minimumOpacity == minimumOpacity &&
+          other.maximumOpacity == maximumOpacity &&
+          other.minimumLabel == minimumLabel &&
+          other.midpointLabel == midpointLabel &&
+          other.maximumLabel == maximumLabel;
+
+  @override
+  int get hashCode => Object.hash(
+    label,
+    color,
+    minimumOpacity,
+    maximumOpacity,
+    minimumLabel,
+    midpointLabel,
+    maximumLabel,
+  );
+}
+
 class LegendAnnotation extends ChartAnnotation {
   /// Creates a legend annotation.
   ///
-  /// [series] is the list of chart series to display in the legend.
+  /// [series] is the list of chart series to display in the legend. A
+  /// quantitative size key instead supplies [sizeScale] and uses a separate
+  /// annotation so it can be positioned independently.
   /// [legendStyle] controls the visual appearance and position.
   LegendAnnotation({
     String? id,
     super.label,
     super.zIndex,
-    required this.series,
+    this.series = const [],
     this.trendAnnotations = const [],
+    this.sizeScale,
+    this.colorScale,
+    this.opacityScale,
     this.legendStyle = const LegendStyle(),
     this.hiddenSeriesIds = const {},
     this.onSeriesToggle,
     Offset? customPosition,
-  }) : _customPosition = customPosition,
+  }) : assert(
+         [sizeScale, colorScale, opacityScale].whereType<Object>().length <= 1,
+         'Quantitative scales use separate LegendAnnotation instances.',
+       ),
+       _customPosition = customPosition,
        super(
          id: id ?? ChartAnnotation.generateId(),
          allowDragging: legendStyle.allowDragging,
@@ -1583,6 +1840,24 @@ class LegendAnnotation extends ChartAnnotation {
   ///
   /// Only trends with a non-empty [TrendAnnotation.label] are shown.
   final List<TrendAnnotation> trendAnnotations;
+
+  /// Optional quantitative marker-size key.
+  ///
+  /// Size scales intentionally occupy their own legend annotation instead of
+  /// being mixed with categorical series toggles.
+  final LegendSizeScale? sizeScale;
+
+  /// Optional quantitative marker-color key.
+  ///
+  /// Color scales intentionally occupy their own legend annotation so they
+  /// can be positioned independently from categorical toggles and size keys.
+  final LegendColorScale? colorScale;
+
+  /// Optional quantitative marker-opacity key.
+  ///
+  /// Opacity scales intentionally occupy their own legend annotation so they
+  /// can be positioned independently from categorical, size, and color keys.
+  final LegendOpacityScale? opacityScale;
 
   /// Visual style configuration for the legend.
   final LegendStyle legendStyle;
@@ -1609,6 +1884,12 @@ class LegendAnnotation extends ChartAnnotation {
     int? zIndex,
     List<ChartSeries>? series,
     List<TrendAnnotation>? trendAnnotations,
+    LegendSizeScale? sizeScale,
+    bool clearSizeScale = false,
+    LegendColorScale? colorScale,
+    bool clearColorScale = false,
+    LegendOpacityScale? opacityScale,
+    bool clearOpacityScale = false,
     LegendStyle? legendStyle,
     Set<String>? hiddenSeriesIds,
     ValueChanged<String>? onSeriesToggle,
@@ -1621,10 +1902,17 @@ class LegendAnnotation extends ChartAnnotation {
       zIndex: zIndex ?? this.zIndex,
       series: series ?? this.series,
       trendAnnotations: trendAnnotations ?? this.trendAnnotations,
+      sizeScale: clearSizeScale ? null : (sizeScale ?? this.sizeScale),
+      colorScale: clearColorScale ? null : (colorScale ?? this.colorScale),
+      opacityScale: clearOpacityScale
+          ? null
+          : (opacityScale ?? this.opacityScale),
       legendStyle: legendStyle ?? this.legendStyle,
       hiddenSeriesIds: hiddenSeriesIds ?? this.hiddenSeriesIds,
       onSeriesToggle: onSeriesToggle ?? this.onSeriesToggle,
-      customPosition: clearCustomPosition ? null : (customPosition ?? _customPosition),
+      customPosition: clearCustomPosition
+          ? null
+          : (customPosition ?? _customPosition),
     );
   }
 }

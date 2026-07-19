@@ -29,6 +29,14 @@ class ChartDataHit {
     this.groupName,
     this.groupOrdinal,
     this.groupCount,
+    this.colorValue,
+    this.formattedColorValue,
+    this.colorLabel,
+    this.markerColor,
+    this.opacityValue,
+    this.formattedOpacityValue,
+    this.opacityLabel,
+    this.markerOpacity,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -96,6 +104,30 @@ class ChartDataHit {
   /// Number of groups participating in the composition.
   final int? groupCount;
 
+  /// Optional quantitative Scatter value represented through marker color.
+  final double? colorValue;
+
+  /// Display-ready [colorValue], including its unit.
+  final String? formattedColorValue;
+
+  /// Human-readable name for [colorValue].
+  final String? colorLabel;
+
+  /// Effective marker color after point and quantitative encoding overrides.
+  final Color? markerColor;
+
+  /// Optional quantitative Scatter value represented through marker opacity.
+  final double? opacityValue;
+
+  /// Display-ready [opacityValue], including its unit.
+  final String? formattedOpacityValue;
+
+  /// Human-readable name for [opacityValue].
+  final String? opacityLabel;
+
+  /// Effective marker opacity after point and quantitative overrides.
+  final double? markerOpacity;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -125,6 +157,12 @@ class ChartDataHit {
     }
     if (formattedRadiusValue != null) {
       parts.add('${radiusLabel ?? 'Radius'} $formattedRadiusValue');
+    }
+    if (formattedColorValue != null) {
+      parts.add('${colorLabel ?? 'Color value'} $formattedColorValue');
+    }
+    if (formattedOpacityValue != null) {
+      parts.add('${opacityLabel ?? 'Opacity value'} $formattedOpacityValue');
     }
     if (effectiveSourcePointIndices.length > 1) {
       parts.add('${effectiveSourcePointIndices.length} grouped categories');

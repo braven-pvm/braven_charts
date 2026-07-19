@@ -13,10 +13,12 @@ import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
+import '../models/scatter_marker_style.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
 import '../models/y_axis_position.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 import 'chart_annotation_document.dart';
 import 'chart_annotation_document_codec.dart';
 import 'chart_artifact_diagnostics.dart';
@@ -154,6 +156,21 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is BarChartSeries &&
                 series.layoutMode == BarLayoutMode.divergingStacked)
               'series.bar.diverging.v1',
+            if (series is ScatterChartSeries &&
+                (series.markerStyle != null ||
+                    series.points.any(
+                      (point) => point.pointStyle?.scatterMarkerStyle != null,
+                    )))
+              'series.scatter.marker-style.v1',
+            if (series is ScatterChartSeries &&
+                series.interactionStyle != const ScatterInteractionStyle())
+              'series.scatter.interaction.v1',
+            if (series is ScatterChartSeries && series.sizeEncoding != null)
+              'series.scatter.size-encoding.v1',
+            if (series is ScatterChartSeries && series.colorEncoding != null)
+              'series.scatter.color-encoding.v1',
+            if (series is ScatterChartSeries && series.opacityEncoding != null)
+              'series.scatter.opacity-encoding.v1',
             if (series is PieChartSeries) 'series.pie.style.v2',
             if (series is PieChartSeries) 'series.pie.corner-treatment.v1',
             if (series is PieChartSeries && series.hasVariableSliceRadius)
@@ -339,6 +356,28 @@ abstract final class ChartSeriesDocumentCodec {
           yAxisConfig: axis,
           unit: document.unit,
           markerRadius: _double(style, 'markerRadius'),
+          markerShape:
+              _optionalEnum(
+                style['markerShape'],
+                SeriesMarkerShape.values,
+                r'$.style.markerShape',
+              ) ??
+              SeriesMarkerShape.circle,
+          markerStyle: _decodeScatterMarkerStyle(
+            _optionalMap(style, 'markerStyle'),
+          ),
+          sizeEncoding: _decodeScatterSizeEncoding(
+            _optionalMap(style, 'sizeEncoding'),
+          ),
+          colorEncoding: _decodeScatterColorEncoding(
+            _optionalMap(style, 'colorEncoding'),
+          ),
+          opacityEncoding: _decodeScatterOpacityEncoding(
+            _optionalMap(style, 'opacityEncoding'),
+          ),
+          interactionStyle: _decodeScatterInteraction(
+            _optionalMap(style, 'interaction'),
+          ),
         ),
         'area' => AreaChartSeries(
           id: document.id,
@@ -596,6 +635,15 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
     ChartPointDocument(
       x: ChartNumberDocument.fromDouble(point.x),
       y: ChartNumberDocument.fromDouble(point.y),
+      magnitude: point.magnitude == null
+          ? null
+          : ChartNumberDocument.fromDouble(point.magnitude!),
+      colorValue: point.colorValue == null
+          ? null
+          : ChartNumberDocument.fromDouble(point.colorValue!),
+      opacityValue: point.opacityValue == null
+          ? null
+          : ChartNumberDocument.fromDouble(point.opacityValue!),
       timestamp: point.timestamp,
       label: point.label,
       metadata: _jsonObjectOrNull(
@@ -622,6 +670,13 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
                 'color': point.pointStyle!.color!.toARGB32(),
               if (point.pointStyle!.size != null)
                 'size': _number(point.pointStyle!.size!),
+              if (point.pointStyle!.scatterMarkerShape != null)
+                'scatterMarkerShape':
+                    point.pointStyle!.scatterMarkerShape!.name,
+              if (point.pointStyle!.scatterMarkerStyle != null)
+                'scatterMarkerStyle': _encodeScatterMarkerStyle(
+                  point.pointStyle!.scatterMarkerStyle!,
+                ),
             }, path: r'$.data.points[$index].pointStyle'),
     );
 
@@ -631,6 +686,9 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
   return ChartDataPoint(
     x: point.x.asDouble,
     y: point.y.asDouble,
+    magnitude: point.magnitude?.asDouble,
+    colorValue: point.colorValue?.asDouble,
+    opacityValue: point.opacityValue?.asDouble,
     timestamp: point.timestamp,
     label: point.label,
     metadata: _dynamicMap(point.metadata),
@@ -654,6 +712,14 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
               r'$.data.point.pointStyle.color',
             ),
             size: _optionalDouble(pointStyle['size']),
+            scatterMarkerShape: _optionalEnum(
+              pointStyle['scatterMarkerShape'],
+              SeriesMarkerShape.values,
+              r'$.data.point.pointStyle.scatterMarkerShape',
+            ),
+            scatterMarkerStyle: _decodeScatterMarkerStyle(
+              _optionalMap(pointStyle, 'scatterMarkerStyle'),
+            ),
           ),
   );
 }
@@ -689,7 +755,32 @@ Map<String, Object?> _encodeSeriesStyle(
       );
       result['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
     case ScatterChartSeries():
-      result['markerRadius'] = _number(series.markerRadius);
+      result
+        ..['markerRadius'] = _number(series.markerRadius)
+        ..['markerShape'] = series.markerShape.name;
+      if (series.markerStyle != null) {
+        result['markerStyle'] = _encodeScatterMarkerStyle(series.markerStyle!);
+      }
+      if (series.sizeEncoding != null) {
+        result['sizeEncoding'] = _encodeScatterSizeEncoding(
+          series.sizeEncoding!,
+        );
+      }
+      if (series.colorEncoding != null) {
+        result['colorEncoding'] = _encodeScatterColorEncoding(
+          series.colorEncoding!,
+        );
+      }
+      if (series.opacityEncoding != null) {
+        result['opacityEncoding'] = _encodeScatterOpacityEncoding(
+          series.opacityEncoding!,
+        );
+      }
+      if (series.interactionStyle != const ScatterInteractionStyle()) {
+        result['interaction'] = _encodeScatterInteraction(
+          series.interactionStyle,
+        );
+      }
     case AreaChartSeries():
       result
         ..addAll(
@@ -1112,6 +1203,366 @@ BarMotionStyle _decodeBarMotion(Map<String, Object?>? value) {
         ) ??
         BarAnimationOrder.together,
     staggerFraction: stagger,
+  );
+}
+
+Map<String, Object?> _encodeScatterMarkerStyle(ScatterMarkerStyle style) => {
+  if (style.fillColor != null) 'fillColor': style.fillColor!.toARGB32(),
+  if (style.strokeColor != null) 'strokeColor': style.strokeColor!.toARGB32(),
+  if (style.strokeWidth != null) 'strokeWidth': _number(style.strokeWidth!),
+  if (style.opacity != null) 'opacity': _number(style.opacity!),
+  if (style.width != null) 'width': _number(style.width!),
+  if (style.height != null) 'height': _number(style.height!),
+  if (style.rotationDegrees != null)
+    'rotationDegrees': _number(style.rotationDegrees!),
+};
+
+ScatterMarkerStyle? _decodeScatterMarkerStyle(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final strokeWidth = _optionalDouble(value['strokeWidth']);
+  final opacity = _optionalDouble(value['opacity']);
+  final width = _optionalDouble(value['width']);
+  final height = _optionalDouble(value['height']);
+  final rotationDegrees = _optionalDouble(value['rotationDegrees']);
+  if ((strokeWidth != null && (!strokeWidth.isFinite || strokeWidth < 0)) ||
+      (opacity != null && (!opacity.isFinite || opacity < 0 || opacity > 1)) ||
+      (width != null && (!width.isFinite || width < 0)) ||
+      (height != null && (!height.isFinite || height < 0)) ||
+      (rotationDegrees != null && !rotationDegrees.isFinite)) {
+    throw const FormatException(
+      'Scatter marker dimensions and stroke must be non-negative, opacity must be between 0 and 1, and rotation must be finite.',
+    );
+  }
+  return ScatterMarkerStyle(
+    fillColor: _optionalColor(
+      value['fillColor'],
+      r'$.style.markerStyle.fillColor',
+    ),
+    strokeColor: _optionalColor(
+      value['strokeColor'],
+      r'$.style.markerStyle.strokeColor',
+    ),
+    strokeWidth: strokeWidth,
+    opacity: opacity,
+    width: width,
+    height: height,
+    rotationDegrees: rotationDegrees,
+  );
+}
+
+Map<String, Object?> _encodeScatterSizeEncoding(ScatterSizeEncoding encoding) =>
+    {
+      'minimumRadius': _number(encoding.minimumRadius),
+      'maximumRadius': _number(encoding.maximumRadius),
+      'minimumValue': _number(encoding.minimumValue),
+      if (encoding.maximumValue != null)
+        'maximumValue': _number(encoding.maximumValue!),
+      'label': encoding.label,
+      if (encoding.unit != null) 'unit': encoding.unit,
+      'showLegend': encoding.showLegend,
+    };
+
+ScatterSizeEncoding? _decodeScatterSizeEncoding(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final minimumRadius = _optionalDouble(value['minimumRadius']) ?? 4;
+  final maximumRadius = _optionalDouble(value['maximumRadius']) ?? 24;
+  final minimumValue = _optionalDouble(value['minimumValue']) ?? 0;
+  final maximumValue = _optionalDouble(value['maximumValue']);
+  if (!minimumRadius.isFinite ||
+      minimumRadius < 0 ||
+      !maximumRadius.isFinite ||
+      maximumRadius < minimumRadius ||
+      !minimumValue.isFinite ||
+      minimumValue < 0 ||
+      (maximumValue != null &&
+          (!maximumValue.isFinite || maximumValue < minimumValue))) {
+    throw const FormatException(
+      'Scatter size encoding radii and domain must be finite, non-negative, and ordered.',
+    );
+  }
+  final label = value['label'];
+  final unit = value['unit'];
+  final showLegend = value['showLegend'];
+  if (label != null && label is! String ||
+      unit != null && unit is! String ||
+      showLegend != null && showLegend is! bool) {
+    throw const FormatException(
+      'Scatter size encoding label and unit must be strings and showLegend must be a boolean.',
+    );
+  }
+  return ScatterSizeEncoding(
+    minimumRadius: minimumRadius,
+    maximumRadius: maximumRadius,
+    minimumValue: minimumValue,
+    maximumValue: maximumValue,
+    label: label as String? ?? 'Magnitude',
+    unit: unit as String?,
+    showLegend: showLegend as bool? ?? true,
+  );
+}
+
+Map<String, Object?> _encodeScatterColorEncoding(
+  ScatterColorEncoding encoding,
+) => {
+  'colors': [for (final color in encoding.colors) color.toARGB32()],
+  'scaleType': encoding.scaleType.name,
+  if (encoding.thresholds.isNotEmpty)
+    'thresholds': [
+      for (final threshold in encoding.thresholds) _number(threshold),
+    ],
+  if (encoding.bandLabels.isNotEmpty) 'bandLabels': encoding.bandLabels,
+  if (encoding.minimumValue != null)
+    'minimumValue': _number(encoding.minimumValue!),
+  if (encoding.maximumValue != null)
+    'maximumValue': _number(encoding.maximumValue!),
+  'label': encoding.label,
+  if (encoding.unit != null) 'unit': encoding.unit,
+  'showLegend': encoding.showLegend,
+};
+
+ScatterColorEncoding? _decodeScatterColorEncoding(Map<String, Object?>? value) {
+  if (value == null) return null;
+  final rawColors = value['colors'];
+  if (rawColors is! List || rawColors.length < 2) {
+    throw const FormatException(
+      'Scatter color encoding requires at least two colors.',
+    );
+  }
+  final colors = <Color>[];
+  for (var index = 0; index < rawColors.length; index++) {
+    final color = _optionalColor(
+      rawColors[index],
+      r'$.style.colorEncoding.colors['
+      '${index.toString()}]',
+    );
+    if (color == null) {
+      throw FormatException(
+        r'$.style.colorEncoding.colors['
+        '${index.toString()}] must be a color.',
+      );
+    }
+    colors.add(color);
+  }
+  final minimumValue = _optionalDouble(value['minimumValue']);
+  final maximumValue = _optionalDouble(value['maximumValue']);
+  if ((minimumValue != null && !minimumValue.isFinite) ||
+      (maximumValue != null && !maximumValue.isFinite) ||
+      (minimumValue != null &&
+          maximumValue != null &&
+          maximumValue < minimumValue)) {
+    throw const FormatException(
+      'Scatter color encoding domain must be finite and ordered.',
+    );
+  }
+  final label = value['label'];
+  final unit = value['unit'];
+  final showLegend = value['showLegend'];
+  final rawScaleType = value['scaleType'];
+  final scaleType = switch (rawScaleType) {
+    null || 'continuous' => ScatterColorScaleType.continuous,
+    'piecewise' => ScatterColorScaleType.piecewise,
+    _ => throw const FormatException(
+      'Scatter color encoding scaleType must be continuous or piecewise.',
+    ),
+  };
+  final rawThresholds = value['thresholds'];
+  final thresholds = <double>[];
+  if (rawThresholds != null) {
+    if (rawThresholds is! List) {
+      throw const FormatException(
+        'Scatter color encoding thresholds must be a list.',
+      );
+    }
+    for (final threshold in rawThresholds) {
+      final number = _optionalDouble(threshold);
+      if (number == null) {
+        throw const FormatException(
+          'Scatter color encoding thresholds must be numbers.',
+        );
+      }
+      thresholds.add(number);
+    }
+  }
+  final rawBandLabels = value['bandLabels'];
+  final bandLabels = <String>[];
+  if (rawBandLabels != null) {
+    if (rawBandLabels is! List ||
+        rawBandLabels.any((item) => item is! String)) {
+      throw const FormatException(
+        'Scatter color encoding bandLabels must be strings.',
+      );
+    }
+    bandLabels.addAll(rawBandLabels.cast<String>());
+  }
+  if (label != null && label is! String ||
+      unit != null && unit is! String ||
+      showLegend != null && showLegend is! bool) {
+    throw const FormatException(
+      'Scatter color encoding label and unit must be strings and showLegend must be a boolean.',
+    );
+  }
+  final encoding = ScatterColorEncoding(
+    colors: colors,
+    scaleType: scaleType,
+    thresholds: thresholds,
+    bandLabels: bandLabels,
+    minimumValue: minimumValue,
+    maximumValue: maximumValue,
+    label: label as String? ?? 'Color value',
+    unit: unit as String?,
+    showLegend: showLegend as bool? ?? true,
+  );
+  if (!encoding.hasValidPiecewiseConfiguration) {
+    throw const FormatException(
+      'Piecewise Scatter color scales require one fewer strictly ordered finite thresholds than colors and, when supplied, one label per color.',
+    );
+  }
+  return encoding;
+}
+
+Map<String, Object?> _encodeScatterOpacityEncoding(
+  ScatterOpacityEncoding encoding,
+) => {
+  'minimumOpacity': _number(encoding.minimumOpacity),
+  'maximumOpacity': _number(encoding.maximumOpacity),
+  if (encoding.minimumValue != null)
+    'minimumValue': _number(encoding.minimumValue!),
+  if (encoding.maximumValue != null)
+    'maximumValue': _number(encoding.maximumValue!),
+  'label': encoding.label,
+  if (encoding.unit != null) 'unit': encoding.unit,
+  'showLegend': encoding.showLegend,
+};
+
+ScatterOpacityEncoding? _decodeScatterOpacityEncoding(
+  Map<String, Object?>? value,
+) {
+  if (value == null) return null;
+  final minimumOpacity = _optionalDouble(value['minimumOpacity']) ?? 0.2;
+  final maximumOpacity = _optionalDouble(value['maximumOpacity']) ?? 1;
+  final minimumValue = _optionalDouble(value['minimumValue']);
+  final maximumValue = _optionalDouble(value['maximumValue']);
+  if (!minimumOpacity.isFinite ||
+      minimumOpacity < 0 ||
+      minimumOpacity > 1 ||
+      !maximumOpacity.isFinite ||
+      maximumOpacity < minimumOpacity ||
+      maximumOpacity > 1 ||
+      (minimumValue != null && !minimumValue.isFinite) ||
+      (maximumValue != null && !maximumValue.isFinite) ||
+      (minimumValue != null &&
+          maximumValue != null &&
+          maximumValue < minimumValue)) {
+    throw const FormatException(
+      'Scatter opacity encoding visual range and domain must be finite and ordered.',
+    );
+  }
+  final label = value['label'];
+  final unit = value['unit'];
+  final showLegend = value['showLegend'];
+  if (label != null && label is! String ||
+      unit != null && unit is! String ||
+      showLegend != null && showLegend is! bool) {
+    throw const FormatException(
+      'Scatter opacity encoding label and unit must be strings and showLegend must be a boolean.',
+    );
+  }
+  return ScatterOpacityEncoding(
+    minimumOpacity: minimumOpacity,
+    maximumOpacity: maximumOpacity,
+    minimumValue: minimumValue,
+    maximumValue: maximumValue,
+    label: label as String? ?? 'Opacity value',
+    unit: unit as String?,
+    showLegend: showLegend as bool? ?? true,
+  );
+}
+
+Map<String, Object?> _encodeScatterInteraction(ScatterInteractionStyle style) =>
+    {
+      if (style.hoverColor != null) 'hoverColor': style.hoverColor!.toARGB32(),
+      'hoverScale': _number(style.hoverScale),
+      'hoverStrokeWidth': _number(style.hoverStrokeWidth),
+      'pressedColor': style.pressedColor.toARGB32(),
+      'pressedScale': _number(style.pressedScale),
+      'pressedOpacity': _number(style.pressedOpacity),
+      if (style.selectionColor != null)
+        'selectionColor': style.selectionColor!.toARGB32(),
+      'selectionScale': _number(style.selectionScale),
+      'selectionOpacity': _number(style.selectionOpacity),
+      'selectionStrokeWidth': _number(style.selectionStrokeWidth),
+      if (style.focusColor != null) 'focusColor': style.focusColor!.toARGB32(),
+      'focusGap': _number(style.focusGap),
+      'focusStrokeWidth': _number(style.focusStrokeWidth),
+      'dimmedOpacity': _number(style.dimmedOpacity),
+    };
+
+ScatterInteractionStyle _decodeScatterInteraction(Map<String, Object?>? value) {
+  if (value == null) return const ScatterInteractionStyle();
+  final hoverScale = _optionalDouble(value['hoverScale']) ?? 1.35;
+  final hoverStrokeWidth = _optionalDouble(value['hoverStrokeWidth']) ?? 2.0;
+  final pressedScale = _optionalDouble(value['pressedScale']) ?? 1.15;
+  final pressedOpacity = _optionalDouble(value['pressedOpacity']) ?? 0.12;
+  final selectionScale = _optionalDouble(value['selectionScale']) ?? 1.25;
+  final selectionOpacity = _optionalDouble(value['selectionOpacity']) ?? 0.14;
+  final selectionStrokeWidth =
+      _optionalDouble(value['selectionStrokeWidth']) ?? 2.5;
+  final focusGap = _optionalDouble(value['focusGap']) ?? 4.0;
+  final focusStrokeWidth = _optionalDouble(value['focusStrokeWidth']) ?? 2.5;
+  final dimmedOpacity = _optionalDouble(value['dimmedOpacity']) ?? 0.32;
+  if (hoverScale < 1 ||
+      !hoverScale.isFinite ||
+      hoverStrokeWidth < 0 ||
+      !hoverStrokeWidth.isFinite ||
+      pressedScale <= 0 ||
+      !pressedScale.isFinite ||
+      pressedOpacity < 0 ||
+      pressedOpacity > 1 ||
+      selectionScale < 1 ||
+      !selectionScale.isFinite ||
+      selectionOpacity < 0 ||
+      selectionOpacity > 1 ||
+      selectionStrokeWidth < 0 ||
+      !selectionStrokeWidth.isFinite ||
+      focusGap < 0 ||
+      !focusGap.isFinite ||
+      focusStrokeWidth < 0 ||
+      !focusStrokeWidth.isFinite ||
+      dimmedOpacity < 0 ||
+      dimmedOpacity > 1) {
+    throw const FormatException(
+      'Scatter interaction scales, widths, gaps, and opacities are outside their supported ranges.',
+    );
+  }
+  return ScatterInteractionStyle(
+    hoverColor: _optionalColor(
+      value['hoverColor'],
+      r'$.style.interaction.hoverColor',
+    ),
+    hoverScale: hoverScale,
+    hoverStrokeWidth: hoverStrokeWidth,
+    pressedColor:
+        _optionalColor(
+          value['pressedColor'],
+          r'$.style.interaction.pressedColor',
+        ) ??
+        const Color(0xFF000000),
+    pressedScale: pressedScale,
+    pressedOpacity: pressedOpacity,
+    selectionColor: _optionalColor(
+      value['selectionColor'],
+      r'$.style.interaction.selectionColor',
+    ),
+    selectionScale: selectionScale,
+    selectionOpacity: selectionOpacity,
+    selectionStrokeWidth: selectionStrokeWidth,
+    focusColor: _optionalColor(
+      value['focusColor'],
+      r'$.style.interaction.focusColor',
+    ),
+    focusGap: focusGap,
+    focusStrokeWidth: focusStrokeWidth,
+    dimmedOpacity: dimmedOpacity,
   );
 }
 

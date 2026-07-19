@@ -2387,7 +2387,10 @@ class ChartRenderBox extends RenderBox {
   bool _hasActiveOverlayContent() {
     final hoveredMarker = coordinator.hoveredMarker;
     final pressedMarker = coordinator.pressedMarker;
-    if (_isBarMarker(hoveredMarker) || _isBarMarker(pressedMarker)) {
+    if (_isBarMarker(hoveredMarker) ||
+        _isBarMarker(pressedMarker) ||
+        _isScatterMarker(hoveredMarker) ||
+        _isScatterMarker(pressedMarker)) {
       return true;
     }
 
@@ -2437,6 +2440,7 @@ class ChartRenderBox extends RenderBox {
   void _paintOverlayLayer(Canvas canvas, Size size) {
     // [DEBUG OUTPUT REMOVED] Overlay paint start - was firing at 60fps
     _paintBarInteractionOverlays(canvas);
+    _paintScatterInteractionOverlays(canvas);
 
     // Paint preview selection indicators (during box drag)
     // Draw with different visual style than actual selection (dashed outline)
@@ -2688,6 +2692,16 @@ class ChartRenderBox extends RenderBox {
     return false;
   }
 
+  bool _isScatterMarker(HoveredMarkerInfo? marker) {
+    if (marker == null) return false;
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.id == marker.seriesId) {
+        return element.series is ScatterChartSeries;
+      }
+    }
+    return false;
+  }
+
   void _paintBarInteractionOverlays(Canvas canvas) {
     final hoveredMarker = coordinator.hoveredMarker;
     final pressedMarker = coordinator.pressedMarker;
@@ -2705,6 +2719,34 @@ class ChartRenderBox extends RenderBox {
           : null;
       if (hoveredPointIndex == null && pressedPointIndex == null) continue;
       element.paintBarInteractionOverlay(
+        canvas,
+        hoveredPointIndex: hoveredPointIndex,
+        pressedPointIndex: pressedPointIndex,
+      );
+    }
+    canvas.restore();
+  }
+
+  void _paintScatterInteractionOverlays(Canvas canvas) {
+    final hoveredMarker = coordinator.hoveredMarker;
+    final pressedMarker = coordinator.pressedMarker;
+    if (!_isScatterMarker(hoveredMarker) && !_isScatterMarker(pressedMarker)) {
+      return;
+    }
+
+    canvas.save();
+    canvas.translate(_plotArea.left, _plotArea.top);
+    canvas.clipRect(Offset.zero & _plotArea.size);
+    for (final element in _elements.whereType<SeriesElement>()) {
+      if (element.series is! ScatterChartSeries) continue;
+      final hoveredPointIndex = hoveredMarker?.seriesId == element.id
+          ? hoveredMarker!.markerIndex
+          : null;
+      final pressedPointIndex = pressedMarker?.seriesId == element.id
+          ? pressedMarker!.markerIndex
+          : null;
+      if (hoveredPointIndex == null && pressedPointIndex == null) continue;
+      element.paintScatterInteractionOverlay(
         canvas,
         hoveredPointIndex: hoveredPointIndex,
         pressedPointIndex: pressedPointIndex,

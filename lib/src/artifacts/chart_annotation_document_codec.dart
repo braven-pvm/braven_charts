@@ -153,6 +153,15 @@ String _typeOf(ChartAnnotation annotation) => switch (annotation) {
 Set<String> _requiredCapabilities(ChartAnnotation annotation) {
   final result = <String>{'annotation.${_typeOf(annotation)}'};
   if (annotation case LegendAnnotation()) {
+    if (annotation.sizeScale != null) {
+      result.add('annotation.legend.size-scale.v1');
+    }
+    if (annotation.colorScale != null) {
+      result.add('annotation.legend.color-scale.v1');
+    }
+    if (annotation.opacityScale != null) {
+      result.add('annotation.legend.opacity-scale.v1');
+    }
     for (final series in annotation.series) {
       result.add('series.${_seriesTypeOf(series)}');
       for (final nested in series.annotations) {
@@ -313,6 +322,12 @@ Map<String, Object?> _encodePayload(
           for (final trend in annotation.trendAnnotations)
             _encodeAnnotationOrThrow(trend, context).toJson(),
         ],
+        if (annotation.sizeScale != null)
+          'sizeScale': _encodeLegendSizeScale(annotation.sizeScale!),
+        if (annotation.colorScale != null)
+          'colorScale': _encodeLegendColorScale(annotation.colorScale!),
+        if (annotation.opacityScale != null)
+          'opacityScale': _encodeLegendOpacityScale(annotation.opacityScale!),
         'legendStyle': ChartStyleDocumentCodec.encodeLegendStyle(
           annotation.legendStyle,
         ).toJson(),
@@ -544,6 +559,18 @@ LegendAnnotation _decodeLegend(
       r'$.payload',
     );
   }
+  if ([
+        payload['sizeScale'],
+        payload['colorScale'],
+        payload['opacityScale'],
+      ].where((value) => value != null).length >
+      1) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Quantitative scales require separate legend annotations.',
+      r'$.payload',
+    );
+  }
   return LegendAnnotation(
     id: id,
     label: common.label,
@@ -556,11 +583,142 @@ LegendAnnotation _decodeLegend(
       for (final item in _list(payload, 'trendAnnotations'))
         _decodeTrendOrThrow(ChartAnnotationDocument.fromJson(_map(item))),
     ],
+    sizeScale: payload['sizeScale'] == null
+        ? null
+        : _decodeLegendSizeScale(_requiredMap(payload, 'sizeScale')),
+    colorScale: payload['colorScale'] == null
+        ? null
+        : _decodeLegendColorScale(_requiredMap(payload, 'colorScale')),
+    opacityScale: payload['opacityScale'] == null
+        ? null
+        : _decodeLegendOpacityScale(_requiredMap(payload, 'opacityScale')),
     legendStyle: style,
     hiddenSeriesIds: _stringSet(payload, 'hiddenSeriesIds'),
     customPosition: payload['customPosition'] == null
         ? null
         : _decodeOffset(_requiredMap(payload, 'customPosition')),
+  );
+}
+
+Map<String, Object?> _encodeLegendSizeScale(LegendSizeScale scale) => {
+  'label': scale.label,
+  'color': scale.color.toARGB32(),
+  'samples': [
+    for (final sample in scale.samples)
+      {'radius': _number(sample.radius), 'label': sample.label},
+  ],
+};
+
+LegendSizeScale _decodeLegendSizeScale(Map<String, Object?> payload) {
+  final samples = <LegendSizeSample>[
+    for (final item in _list(payload, 'samples'))
+      LegendSizeSample(
+        radius: _double(_map(item), 'radius'),
+        label: _string(_map(item), 'label'),
+      ),
+  ];
+  if (samples.isEmpty) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Legend size scales require at least one sample.',
+      r'$.payload.sizeScale.samples',
+    );
+  }
+  return LegendSizeScale(
+    label: _string(payload, 'label'),
+    samples: samples,
+    color: _color(payload, 'color'),
+  );
+}
+
+Map<String, Object?> _encodeLegendColorScale(LegendColorScale scale) => {
+  'label': scale.label,
+  'colors': [for (final color in scale.colors) color.toARGB32()],
+  'type': scale.type.name,
+  if (scale.segmentLabels.isNotEmpty) 'segmentLabels': scale.segmentLabels,
+  'minimumLabel': scale.minimumLabel,
+  if (scale.midpointLabel != null) 'midpointLabel': scale.midpointLabel,
+  'maximumLabel': scale.maximumLabel,
+};
+
+LegendColorScale _decodeLegendColorScale(Map<String, Object?> payload) {
+  final rawColors = _list(payload, 'colors');
+  if (rawColors.length < 2) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Legend color scales require at least two colors.',
+      r'$.payload.colorScale.colors',
+    );
+  }
+  final type = payload['type'] == null
+      ? LegendColorScaleType.continuous
+      : _enum(payload, 'type', LegendColorScaleType.values);
+  final segmentLabels = payload['segmentLabels'] == null
+      ? const <String>[]
+      : [
+          for (final item in _list(payload, 'segmentLabels'))
+            if (item is String)
+              item
+            else
+              throw const FormatException(
+                'Legend color scale segment labels must be strings.',
+              ),
+        ];
+  if (type == LegendColorScaleType.piecewise &&
+      segmentLabels.length != rawColors.length) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Piecewise legend color scales require one label per color.',
+      r'$.payload.colorScale.segmentLabels',
+    );
+  }
+  return LegendColorScale(
+    label: _string(payload, 'label'),
+    colors: [
+      for (var index = 0; index < rawColors.length; index++)
+        _color({'value': rawColors[index]}, 'value'),
+    ],
+    minimumLabel: _string(payload, 'minimumLabel'),
+    midpointLabel: _optionalString(payload['midpointLabel']),
+    maximumLabel: _string(payload, 'maximumLabel'),
+    type: type,
+    segmentLabels: segmentLabels,
+  );
+}
+
+Map<String, Object?> _encodeLegendOpacityScale(LegendOpacityScale scale) => {
+  'label': scale.label,
+  'color': scale.color.toARGB32(),
+  'minimumOpacity': _number(scale.minimumOpacity),
+  'maximumOpacity': _number(scale.maximumOpacity),
+  'minimumLabel': scale.minimumLabel,
+  if (scale.midpointLabel != null) 'midpointLabel': scale.midpointLabel,
+  'maximumLabel': scale.maximumLabel,
+};
+
+LegendOpacityScale _decodeLegendOpacityScale(Map<String, Object?> payload) {
+  final minimumOpacity = _double(payload, 'minimumOpacity');
+  final maximumOpacity = _double(payload, 'maximumOpacity');
+  if (!minimumOpacity.isFinite ||
+      minimumOpacity < 0 ||
+      minimumOpacity > 1 ||
+      !maximumOpacity.isFinite ||
+      maximumOpacity < minimumOpacity ||
+      maximumOpacity > 1) {
+    throw const _CodecException(
+      ChartArtifactDiagnosticCodes.invalidArtifact,
+      'Legend opacity scale range must be finite, ordered, and within zero to one.',
+      r'$.payload.opacityScale',
+    );
+  }
+  return LegendOpacityScale(
+    label: _string(payload, 'label'),
+    color: _color(payload, 'color'),
+    minimumOpacity: minimumOpacity,
+    maximumOpacity: maximumOpacity,
+    minimumLabel: _string(payload, 'minimumLabel'),
+    midpointLabel: _optionalString(payload['midpointLabel']),
+    maximumLabel: _string(payload, 'maximumLabel'),
   );
 }
 
