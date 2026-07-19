@@ -11,6 +11,8 @@ import '../widgets/bar_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
+import '../widgets/scatter_gallery_cards.dart';
+import '../widgets/synchronized_cartesian_gallery_card.dart';
 import '../widgets/chart_type_catalog.dart';
 
 const _capabilities = <(IconData, String)>[
@@ -48,6 +50,7 @@ class _GalleryPageState extends State<GalleryPage> {
       const GlowSignalGalleryCard(),
       const LactateComparisonGalleryCard(),
       const LiveStreamGalleryCard(),
+      const SynchronizedCartesianGalleryCard(),
       _buildNormalizedCrosshairChart(isDark),
       _buildAnnotatedChart(isDark),
       _buildMultiLayerAnalyticsChart(isDark),
@@ -60,7 +63,6 @@ class _GalleryPageState extends State<GalleryPage> {
     final buildingBlockCards = <Widget>[
       _buildMonthlyRevenueChart(isDark),
       _buildTemperatureTrendChart(isDark),
-      _buildExperimentScatterChart(isDark),
       _buildMixedSeriesTypeChart(isDark),
       _buildMixedInterpolationChart(isDark),
       _buildThresholdColoringChart(isDark),
@@ -245,6 +247,28 @@ class _GalleryPageState extends State<GalleryPage> {
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
+              eyebrow: 'SCATTER COMPOSITIONS',
+              title: 'Three independent visual channels, one point model',
+              subtitle:
+                  'Compare area-correct bubbles, continuous readiness colour, and explicit operating-risk bands while preserving raw X, Y, and encoding values.',
+              count: 3,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-scatter-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 460,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(scatterGalleryCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
               eyebrow: 'BAR COMPOSITIONS',
               title: 'Thirteen comparison strategies, one Bar API',
               subtitle:
@@ -305,80 +329,6 @@ class _GalleryPageState extends State<GalleryPage> {
             cards: concentricDonutGalleryCards,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildExperimentScatterChart(bool isDark) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Experiment Cohorts',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Scatter correlation with crosshair tracking',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: BravenChartPlus(
-                series: const [
-                  ScatterChartSeries(
-                    id: 'control',
-                    name: 'Control',
-                    points: [
-                      ChartDataPoint(x: 12, y: 18),
-                      ChartDataPoint(x: 18, y: 25),
-                      ChartDataPoint(x: 24, y: 28),
-                      ChartDataPoint(x: 31, y: 39),
-                      ChartDataPoint(x: 38, y: 42),
-                      ChartDataPoint(x: 45, y: 51),
-                    ],
-                    color: Color(0xFF64748B),
-                    markerRadius: 5,
-                  ),
-                  ScatterChartSeries(
-                    id: 'variant',
-                    name: 'Variant',
-                    points: [
-                      ChartDataPoint(x: 14, y: 28),
-                      ChartDataPoint(x: 21, y: 34),
-                      ChartDataPoint(x: 27, y: 41),
-                      ChartDataPoint(x: 34, y: 49),
-                      ChartDataPoint(x: 41, y: 58),
-                      ChartDataPoint(x: 48, y: 66),
-                    ],
-                    color: Color(0xFFF97316),
-                    markerRadius: 6,
-                  ),
-                ],
-                theme: isDark ? ChartTheme.dark : ChartTheme.light,
-                showLegend: true,
-                xAxisConfig: const XAxisConfig(label: 'Input'),
-                yAxis: YAxisConfig(
-                  position: YAxisPosition.left,
-                  label: 'Outcome',
-                ),
-                interactionConfig: const InteractionConfig(
-                  crosshair: CrosshairConfig(
-                    enabled: true,
-                    mode: CrosshairMode.both,
-                    snapToDataPoint: true,
-                    displayMode: CrosshairDisplayMode.tracking,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

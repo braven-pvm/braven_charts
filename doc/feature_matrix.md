@@ -15,7 +15,7 @@ is added to package marketing.
 | Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, explicit per-series entrance/update timing, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, inherited RTL canvas text and semantics, `rangeStartValues`, `BarLayoutMode`, first-class diverging/Likert roles and center line, `BarChartStyle`, non-colour `BarPatternStyle`, `BarTrackStyle`, `BarLollipopStyle`, first-class `BarBulletStyle`, `ParetoChartData` mixed bar-line compositions, `HistogramChartData` continuous-sample binning, keyed entrance/update/exit `BarMotionStyle`, viewport-virtualized geometry and indexed hit testing, spatially indexed chart-wide collision-aware `BarLabelStyle`, stack totals, `BarGroupInfo` | Bar Lab Stress, Bar Lab RTL, Bar Lab Histogram, Bar Lab Pareto, Bar Lab Lollipop, Bar Lab Likert, Bar Lab Bullet, Bar Lab Patterns, Bar Lab, Chart Types, Gallery |
-| Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
+| Scatter plots | `ScatterChartSeries`, `ScatterMarkerStyle`, `ScatterInteractionStyle`, area-correct `ScatterSizeEncoding`, continuous or piecewise `ScatterColorEncoding`, `ScatterOpacityEncoding`, independent point channels, quantitative legends, unsorted-data culling, and point-accurate 2D interaction | Scatter Charts, Chart Types, Gallery |
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
 | Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
@@ -34,7 +34,7 @@ is added to package marketing.
 | Generated Dart source | `ChartDartSourceGenerator`, `ChartDartSourceOptions`, `ChartDisplayMode.source`, `ChartWorkbenchSourceState` | Chart Workbench; Line, Area, Bar, Scatter, Pie, Donut, and Concentric Donut guides |
 | Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
 | Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including complete advanced `bar`, `pie`, and `donut` contracts | Bar Lab, Pie Charts, API documentation |
-| Dense-data performance | bounded buffers, viewport culling, render caches | Performance, Live Stream |
+| Dense-data performance | bounded buffers, viewport culling, render caches, Scatter spatial indexing and geometry-aware hit testing | Performance, Scatter Charts, Live Stream |
 
 ## Current boundary
 

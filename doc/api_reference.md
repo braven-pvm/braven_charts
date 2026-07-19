@@ -22,6 +22,26 @@ types and where to begin.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
 
+### Scatter charts
+
+- `ScatterMarkerStyle` controls fill, outline, opacity, independent width and
+  height, and rotation; `SeriesMarkerShape` provides circle, square, triangle,
+  inverted-triangle, diamond, cross, plus, star, and hidden markers.
+- `ScatterSizeEncoding` maps `ChartDataPoint.magnitude` to perceptually correct
+  marker area with optional fixed bounds and a quantitative size legend.
+- `ScatterColorEncoding` maps `ChartDataPoint.colorValue` through continuous
+  interpolation or explicit `ScatterColorScaleType.piecewise` thresholds with
+  native gradient or segmented legends.
+- `ScatterOpacityEncoding` maps `ChartDataPoint.opacityValue` independently of
+  position, size, and colour.
+- `ScatterInteractionStyle` controls geometry-and-outline hover, press,
+  selection, focus, and dimmed states. The renderer uses resolved marker paths
+  for point-accurate two-dimensional hits, including unsorted data.
+
+Scatter channels, legends, tracking values, tables, CSV, artifacts, hydration,
+and generated Dart share the same portable configuration. See
+[Chart types: Scatter](../docs/guides/chart-types.md#scatter-charts).
+
 ### Line and Area charts
 
 - `PathAnimationStyle` opts a Line or Area series into leading-edge entrance

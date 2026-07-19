@@ -17,6 +17,10 @@ import '../example/lib/showcase/widgets/bar_gallery_cards.dart';
 import '../example/lib/showcase/widgets/donut_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/scatter_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/synchronized_cartesian_gallery_card.dart';
 
 const _outputDirectory = String.fromEnvironment(
   'PUBDEV_MEDIA_OUTPUT_DIR',
@@ -183,6 +187,50 @@ void main() {
             source.fileName == 'bar_targets_interaction.png',
       );
     }
+  });
+
+  testWidgets('capture pub.dev Scatter media through the public preview API', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+
+    for (final source in const [
+      (
+        fileName: 'scatter_market_opportunity.png',
+        widget: MarketOpportunityScatterCard(),
+      ),
+      (
+        fileName: 'scatter_athlete_readiness.png',
+        widget: AthleteReadinessScatterCard(),
+      ),
+      (
+        fileName: 'scatter_equipment_risk.png',
+        widget: EquipmentRiskScatterCard(),
+      ),
+    ]) {
+      await _captureInteraction(
+        tester,
+        outputDirectory: outputDirectory,
+        fileName: source.fileName,
+        source: source.widget,
+      );
+    }
+  });
+
+  testWidgets('capture pub.dev synchronized Cartesian composition', (
+    tester,
+  ) async {
+    await tester.runAsync(_loadCaptureFont);
+    final outputDirectory = Directory(_outputDirectory)
+      ..createSync(recursive: true);
+    await _captureComposition(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'synchronized_route_profile.png',
+      source: const SynchronizedCartesianGalleryCard(),
+    );
   });
 
   testWidgets(
@@ -581,6 +629,50 @@ Future<void> _captureInteraction(
   await pointer.removePointer();
   await tester.pumpWidget(const SizedBox.shrink());
   controller.dispose();
+}
+
+Future<void> _captureComposition(
+  WidgetTester tester, {
+  required Directory outputDirectory,
+  required String fileName,
+  required Widget source,
+}) async {
+  const logicalSize = Size(1200, 720);
+  const pixelRatio = 1.5;
+  final boundaryKey = GlobalKey();
+  await tester.binding.setSurfaceSize(logicalSize);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: _captureFontFamily),
+      home: Scaffold(
+        body: RepaintBoundary(
+          key: boundaryKey,
+          child: SizedBox.fromSize(size: logicalSize, child: source),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  final boundary =
+      boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final byteData = await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: pixelRatio);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data;
+  });
+  expect(byteData, isNotNull);
+  final bytes = byteData!.buffer.asUint8List();
+  final output = File(
+    '${outputDirectory.path}${Platform.pathSeparator}$fileName',
+  );
+  await tester.runAsync(() => output.writeAsBytes(bytes, flush: true));
+  // ignore: avoid_print
+  print('Wrote ${output.path} (1800x1080)');
+
+  await tester.pumpWidget(const SizedBox.shrink());
 }
 
 Future<_ChartTypeCapture> _captureChartType(

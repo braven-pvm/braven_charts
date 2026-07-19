@@ -197,20 +197,96 @@ the same X domain across grouped series so the comparison remains meaningful.
 
 ## Scatter charts
 
-Scatter series render independent markers without connecting lines.
+Scatter series render independent markers without connecting lines. X and Y
+always determine position; optional point channels can independently determine
+marker area, colour, and opacity.
 
 ```dart
 ScatterChartSeries(
   id: 'samples',
   name: 'Samples',
   points: points,
-  markerRadius: 5,
+  markerShape: SeriesMarkerShape.diamond,
+  markerStyle: const ScatterMarkerStyle(
+    strokeColor: Color(0xFF1E3A8A),
+    strokeWidth: 1.5,
+    width: 12,
+    height: 12,
+    rotationDegrees: 4,
+  ),
 )
 ```
 
-Use point-level styles when individual observations need distinct colors or
-shapes. Use segment styling on line, area, or bar series when the style follows
-a rule across values.
+Available marker shapes are circle, square, triangle, inverted triangle,
+diamond, cross, plus, star, and none. `ScatterMarkerStyle` controls fill,
+outline, opacity, independent width and height, and rotation. A point-level
+`PointStyle` can override the series when one observation needs a distinct
+marker.
+
+### Quantitative encodings
+
+`ChartDataPoint` has three optional Scatter-specific channels:
+
+- `magnitude` maps to marker area through `ScatterSizeEncoding`;
+- `colorValue` maps through a continuous or piecewise
+  `ScatterColorEncoding`; and
+- `opacityValue` maps through `ScatterOpacityEncoding`.
+
+The channels are independent, so a single observation can carry four measures:
+X, Y, area, and colour (or five when opacity is useful). Area interpolation is
+perceptually correct: the configured data domain interpolates marker area, not
+radius.
+
+```dart
+ScatterChartSeries(
+  id: 'markets',
+  name: 'Markets',
+  markerShape: SeriesMarkerShape.circle,
+  sizeEncoding: const ScatterSizeEncoding(
+    minimumRadius: 5,
+    maximumRadius: 22,
+    maximumValue: 18000,
+    label: 'Active accounts',
+  ),
+  colorEncoding: const ScatterColorEncoding(
+    colors: [Color(0xFFE11D48), Color(0xFFF59E0B), Color(0xFF10B981)],
+    minimumValue: 40,
+    maximumValue: 95,
+    label: 'Readiness',
+    unit: '%',
+  ),
+  points: const [
+    ChartDataPoint(
+      x: 18,
+      y: 84,
+      magnitude: 6900,
+      colorValue: 73,
+      label: 'Partner growth',
+    ),
+  ],
+)
+```
+
+For explicit alert categories, use
+`ScatterColorScaleType.piecewise`, provide one fewer ordered threshold than
+colours, and optionally name each band. Values equal to a threshold enter the
+higher band. Fixed domains make charts directly comparable; omit the domain to
+derive it from finite series values.
+
+### Interaction and portability
+
+Scatter hover, press, selection, and focus use `ScatterInteractionStyle` and
+combine an outline with a geometry change so state does not rely on colour
+alone. Hit testing uses the resolved marker path and both data dimensions, not
+only nearest X. Unsorted series, overlapping points, rotated/non-circular
+markers, encoded radii, and viewport culling retain accurate point identity.
+
+Encoding labels and resolved values appear consistently in tracking tooltips,
+quantitative legends, native tables, copy/CSV output, portable artifacts,
+hydrated charts, and generated Dart source. Open the public
+[Scatter guide](https://braven-pvm.github.io/braven_charts/?page=scatter-charts)
+to compare the fixed, styling, stress, unsorted, interaction-state, bubble,
+continuous-colour, piecewise-band, and opacity presets.
 
 ## Pie charts
 

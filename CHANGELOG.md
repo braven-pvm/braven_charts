@@ -5,6 +5,60 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.9.0 - 2026-07-19
+
+### Added
+- Quantitative Scatter encodings through `ScatterSizeEncoding`,
+  `ScatterColorEncoding`, and `ScatterOpacityEncoding`. Independent
+  `ChartDataPoint.magnitude`, `colorValue`, and `opacityValue` channels can be
+  combined without replacing the point's X/Y coordinates or explicit style.
+- Continuous and threshold-based Scatter colour scales, fixed or data-derived
+  domains, native gradient and segmented legends, named piecewise bands, and
+  consistent values in tracking tooltips, tables, artifacts, hydration, and
+  generated Dart source.
+- Area-correct bubble sizing with configurable radius bounds and quantitative
+  size legends. Invalid size values are omitted deliberately, while finite
+  values clamp safely to the configured domain.
+- `ScatterMarkerStyle` for independent fill, outline, opacity, width, height,
+  and rotation; circle, square, triangle, inverted-triangle, diamond, cross,
+  plus, star, and hidden marker shapes; and per-point style/shape overrides.
+- `ScatterInteractionStyle` for geometry-and-outline hover, press, durable
+  selection, keyboard/linked focus, and non-selected dimming states that do not
+  rely on colour alone.
+- Point-accurate Scatter hit testing and tracking based on the resolved marker
+  geometry, including unsorted X data, overlapping points, viewport culling,
+  spatial indexing, and finite-value filtering.
+- A complete Scatter chart-family guide with fixed, styled, stress, unsorted,
+  interaction-state, bubble, continuous-colour, piecewise-band, and opacity
+  examples in the shared Chart/Data/Split/Source Workbench.
+- Three production-shaped Scatter Gallery compositions and native release
+  captures covering bubble area and shape, continuous readiness colour, and a
+  dark piecewise equipment-risk scale.
+- A synchronized route-profile Gallery composition showing three independent
+  charts with local Y scales and one shared data-X interaction controller.
+
+### Changed
+- Scatter data now round-trips its quantitative channels, resolved marker
+  presentation, and encoding metadata through binary/JSON artifacts, chart
+  hydration, generated Dart, chart tables, copy, and CSV export.
+- Crosshair tracking and tooltips now resolve Scatter hits in both dimensions
+  and expose encoded size, colour, opacity, and piecewise-band values alongside
+  normal series and point metadata.
+- The Chart Types catalog and Gallery now lead to the expanded Scatter guide
+  and synchronized Cartesian example, and the pub.dev media set uses focused
+  native captures of those capabilities.
+- Pie and Concentric Donut catalog previews use more representative configured
+  examples while preserving the existing radial rendering contracts.
+
+### Fixed
+- Removed an accidentally tracked, ignored local worktree gitlink from the
+  package archive so `dart pub publish --dry-run` remains warning-free.
+- Scatter virtualization and interaction no longer assume points are ordered by
+  X, and marker bounds account for non-circular dimensions, rotation, outlines,
+  and encoded radius.
+- Annotation and series artifact codecs retain the complete Scatter
+  configuration rather than silently dropping newly encoded fields.
+
 ## 0.8.0 - 2026-07-19
 
 ### Added

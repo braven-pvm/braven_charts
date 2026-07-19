@@ -4,6 +4,8 @@ import 'package:braven_charts_example/showcase/widgets/bar_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/donut_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/synchronized_cartesian_gallery_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -140,7 +142,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       expect(find.text('The building blocks'), findsOneWidget);
-      expect(_gridCount(tester, 'gallery-building-blocks-curated'), 7);
+      expect(_gridCount(tester, 'gallery-building-blocks-curated'), 6);
     },
   );
 
@@ -167,14 +169,40 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-curated')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-curated'), 8);
-    expect(_gridCount(tester, 'gallery-building-blocks-curated'), 7);
+    expect(_gridCount(tester, 'gallery-advanced-curated'), 9);
+    expect(_gridCount(tester, 'gallery-building-blocks-curated'), 6);
     final galleryScrollable = find
         .descendant(
           of: find.byType(CustomScrollView),
           matching: find.byType(Scrollable),
         )
         .first;
+
+    await tester.scrollUntilVisible(
+      find.text('Three independent visual channels, one point model'),
+      800,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(
+      find.byKey(const ValueKey('gallery-scatter-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-scatter-compositions'), 3);
+    const scatterGrid = 'gallery-scatter-compositions';
+    expect(
+      _gridContains<MarketOpportunityScatterCard>(tester, scatterGrid),
+      isTrue,
+    );
+    expect(
+      _gridContains<AthleteReadinessScatterCard>(tester, scatterGrid),
+      isTrue,
+    );
+    expect(
+      _gridContains<EquipmentRiskScatterCard>(tester, scatterGrid),
+      isTrue,
+    );
 
     await tester.scrollUntilVisible(
       find.text('Thirteen comparison strategies, one Bar API'),
@@ -270,8 +298,89 @@ void main() {
       find.byKey(const ValueKey('gallery-building-blocks-full')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-advanced-full'), 11);
-    expect(_gridCount(tester, 'gallery-building-blocks-full'), 17);
+    expect(_gridCount(tester, 'gallery-advanced-full'), 12);
+    expect(_gridCount(tester, 'gallery-building-blocks-full'), 16);
+  });
+
+  testWidgets('synchronized Gallery card mounts three independent charts', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 620,
+            child: SynchronizedCartesianGalleryCard(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(charts, hasLength(3));
+    expect(
+      charts.every((chart) => chart.interactionGroupController != null),
+      isTrue,
+    );
+    expect(charts.map((chart) => chart.series.single.unit), [
+      'km/h',
+      'm',
+      'bpm',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Scatter Gallery cards expose three portable encodings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 620);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              Expanded(child: MarketOpportunityScatterCard()),
+              Expanded(child: AthleteReadinessScatterCard()),
+              Expanded(child: EquipmentRiskScatterCard()),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(charts, hasLength(3));
+    expect(
+      charts[0].series.whereType<ScatterChartSeries>().every(
+        (series) => series.sizeEncoding != null,
+      ),
+      isTrue,
+    );
+    expect(
+      charts[1].series.whereType<ScatterChartSeries>().every(
+        (series) =>
+            series.colorEncoding?.scaleType == ScatterColorScaleType.continuous,
+      ),
+      isTrue,
+    );
+    expect(
+      (charts[2].series.single as ScatterChartSeries).colorEncoding?.scaleType,
+      ScatterColorScaleType.piecewise,
+    );
+    expect(tester.takeException(), isNull);
   });
   testWidgets('donut media panel reuses three product-shaped compositions', (
     tester,
