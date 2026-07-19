@@ -104,6 +104,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _synchronizeViewport = true;
   bool _showSynchronizedIntersections = true;
   bool _synchronizedTracking = true;
+  bool _synchronizedInterpolateValues = true;
+  bool _showSynchronizedTrackingTooltip = true;
+  bool _showSynchronizedHorizontalGuide = true;
+  bool _showSynchronizedAxisValues = true;
+  double _synchronizedIntersectionRadius = 4;
   bool _animateSynchronizedUpdates = true;
   bool _synchronizedLiveRevision = false;
   double _synchronizedUpdateDurationMs = 650;
@@ -527,6 +532,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                       synchronizeViewport: _synchronizeViewport,
                       showIntersectionMarkers: _showSynchronizedIntersections,
                       trackingEnabled: _synchronizedTracking,
+                      interpolateValues: _synchronizedInterpolateValues,
+                      showTrackingTooltip: _showSynchronizedTrackingTooltip,
+                      showHorizontalGuide: _showSynchronizedHorizontalGuide,
+                      showAxisValues: _showSynchronizedAxisValues,
+                      intersectionMarkerRadius: _synchronizedIntersectionRadius,
                       visibleMetrics: visibleMetrics,
                       chartHeights: _synchronizedChartHeights,
                       pointsByMetric: pointsByMetric,
@@ -1255,6 +1265,60 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               subtitle: 'Mark each local curve at the shared X position',
               onChanged: (value) =>
                   setState(() => _showSynchronizedIntersections = value),
+            ),
+          ],
+        ),
+      if (_isLineSynchronized)
+        OptionSection(
+          title: 'Tracking detail',
+          icon: Icons.center_focus_strong_outlined,
+          initiallyExpanded: false,
+          children: [
+            BoolOption(
+              key: const ValueKey('synchronized-interpolate-values'),
+              label: 'Interpolate values',
+              value: _synchronizedInterpolateValues,
+              subtitle: _synchronizedInterpolateValues
+                  ? 'Resolve each local curve at the shared X position'
+                  : 'Use the nearest real sample in each chart',
+              onChanged: (value) =>
+                  setState(() => _synchronizedInterpolateValues = value),
+            ),
+            BoolOption(
+              key: const ValueKey('synchronized-tracking-tooltip'),
+              label: 'Show tracking tooltip',
+              value: _showSynchronizedTrackingTooltip,
+              subtitle: 'Show the floating series-value summary',
+              onChanged: (value) =>
+                  setState(() => _showSynchronizedTrackingTooltip = value),
+            ),
+            BoolOption(
+              key: const ValueKey('synchronized-horizontal-guide'),
+              label: 'Show horizontal guide',
+              value: _showSynchronizedHorizontalGuide,
+              subtitle: 'Draw each chart\'s local Y crosshair line',
+              onChanged: (value) =>
+                  setState(() => _showSynchronizedHorizontalGuide = value),
+            ),
+            BoolOption(
+              key: const ValueKey('synchronized-axis-values'),
+              label: 'Show axis values',
+              value: _showSynchronizedAxisValues,
+              subtitle: 'Label the active X and local Y coordinates',
+              onChanged: (value) =>
+                  setState(() => _showSynchronizedAxisValues = value),
+            ),
+            SliderOption(
+              key: const ValueKey('synchronized-intersection-radius'),
+              label: 'Intersection radius',
+              value: _synchronizedIntersectionRadius,
+              min: 2,
+              max: 10,
+              divisions: 8,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _synchronizedIntersectionRadius = value),
             ),
           ],
         ),
@@ -2624,6 +2688,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _synchronizeViewport = true;
       _showSynchronizedIntersections = true;
       _synchronizedTracking = true;
+      _synchronizedInterpolateValues = true;
+      _showSynchronizedTrackingTooltip = true;
+      _showSynchronizedHorizontalGuide = true;
+      _showSynchronizedAxisValues = true;
+      _synchronizedIntersectionRadius = 4;
       _animateSynchronizedUpdates = true;
       _synchronizedLiveRevision = false;
       _synchronizedUpdateDurationMs = 650;
@@ -2932,6 +3001,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required this.synchronizeViewport,
     required this.showIntersectionMarkers,
     required this.trackingEnabled,
+    required this.interpolateValues,
+    required this.showTrackingTooltip,
+    required this.showHorizontalGuide,
+    required this.showAxisValues,
+    required this.intersectionMarkerRadius,
     required this.visibleMetrics,
     required this.chartHeights,
     required this.pointsByMetric,
@@ -2949,6 +3023,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
   final bool synchronizeViewport;
   final bool showIntersectionMarkers;
   final bool trackingEnabled;
+  final bool interpolateValues;
+  final bool showTrackingTooltip;
+  final bool showHorizontalGuide;
+  final bool showAxisValues;
+  final double intersectionMarkerRadius;
   final List<_SynchronizedMetric> visibleMetrics;
   final Map<_SynchronizedMetric, double> chartHeights;
   final Map<_SynchronizedMetric, List<ChartDataPoint>> pointsByMetric;
@@ -3031,6 +3110,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
         synchronizeViewport: synchronizeViewport,
         showIntersectionMarkers: showIntersectionMarkers,
         trackingEnabled: trackingEnabled,
+        interpolateValues: interpolateValues,
+        showTrackingTooltip: showTrackingTooltip,
+        showHorizontalGuide: showHorizontalGuide,
+        showAxisValues: showAxisValues,
+        intersectionMarkerRadius: intersectionMarkerRadius,
       ),
       _SynchronizedMetric.elevation => _SynchronizedMetricPlot(
         title: 'Elevation',
@@ -3064,6 +3148,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
         synchronizeViewport: synchronizeViewport,
         showIntersectionMarkers: showIntersectionMarkers,
         trackingEnabled: trackingEnabled,
+        interpolateValues: interpolateValues,
+        showTrackingTooltip: showTrackingTooltip,
+        showHorizontalGuide: showHorizontalGuide,
+        showAxisValues: showAxisValues,
+        intersectionMarkerRadius: intersectionMarkerRadius,
       ),
       _SynchronizedMetric.heartRate => _SynchronizedMetricPlot(
         title: 'Heart rate',
@@ -3097,6 +3186,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
         synchronizeViewport: synchronizeViewport,
         showIntersectionMarkers: showIntersectionMarkers,
         trackingEnabled: trackingEnabled,
+        interpolateValues: interpolateValues,
+        showTrackingTooltip: showTrackingTooltip,
+        showHorizontalGuide: showHorizontalGuide,
+        showAxisValues: showAxisValues,
+        intersectionMarkerRadius: intersectionMarkerRadius,
       ),
     };
   }
@@ -3156,6 +3250,11 @@ class _SynchronizedMetricPlot extends StatelessWidget {
     required this.synchronizeViewport,
     required this.showIntersectionMarkers,
     required this.trackingEnabled,
+    required this.interpolateValues,
+    required this.showTrackingTooltip,
+    required this.showHorizontalGuide,
+    required this.showAxisValues,
+    required this.intersectionMarkerRadius,
   });
 
   final String title;
@@ -3172,6 +3271,11 @@ class _SynchronizedMetricPlot extends StatelessWidget {
   final bool synchronizeViewport;
   final bool showIntersectionMarkers;
   final bool trackingEnabled;
+  final bool interpolateValues;
+  final bool showTrackingTooltip;
+  final bool showHorizontalGuide;
+  final bool showAxisValues;
+  final double intersectionMarkerRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -3243,7 +3347,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 showAxisLine: options.showAxisLines,
                 showTicks: !compact || showDistanceAxis,
                 showTickLabels: !compact || showDistanceAxis,
-                showCrosshairLabel: trackingEnabled,
+                showCrosshairLabel: trackingEnabled && showAxisValues,
                 labelDisplay: AxisLabelDisplay.labelWithUnit,
                 tickCount: compact ? 4 : 6,
                 maxHeight: showDistanceAxis ? 52 : 36,
@@ -3253,7 +3357,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 color: color,
                 unit: series.unit,
                 showAxisLine: options.showAxisLines,
-                showCrosshairLabel: trackingEnabled,
+                showCrosshairLabel: trackingEnabled && showAxisValues,
                 labelDisplay: AxisLabelDisplay.tickOnly,
                 tickCount: compact ? 3 : 4,
                 minWidth: yAxisGutterWidth,
@@ -3264,12 +3368,15 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 enablePan: options.enablePan,
                 crosshair: CrosshairConfig(
                   enabled: trackingEnabled,
-                  mode: CrosshairMode.both,
+                  mode: showHorizontalGuide
+                      ? CrosshairMode.both
+                      : CrosshairMode.vertical,
                   displayMode: CrosshairDisplayMode.tracking,
-                  interpolateValues: true,
-                  showTrackingTooltip: trackingEnabled,
+                  interpolateValues: interpolateValues,
+                  showTrackingTooltip: trackingEnabled && showTrackingTooltip,
                   showIntersectionMarkers: showIntersectionMarkers,
-                  showCoordinateLabels: trackingEnabled,
+                  intersectionMarkerRadius: intersectionMarkerRadius,
+                  showCoordinateLabels: trackingEnabled && showAxisValues,
                 ),
                 tooltip: const TooltipConfig(enabled: true),
               ),
@@ -3607,6 +3714,9 @@ const updateMotion = PathAnimationStyle(
     duration: Duration(milliseconds: 650),
   ),
 );
+final crosshairMode = showHorizontalGuide
+    ? CrosshairMode.both
+    : CrosshairMode.vertical;
 
 Column(
   children: [
@@ -3626,11 +3736,16 @@ Column(
             maxWidth: 56,
             showCrosshairLabel: true,
           ),
-          interactionConfig: const InteractionConfig(
+          interactionConfig: InteractionConfig(
             crosshair: CrosshairConfig(
               enabled: true,
-              mode: CrosshairMode.both,
+              mode: crosshairMode,
               displayMode: CrosshairDisplayMode.tracking,
+              interpolateValues: true,
+              showTrackingTooltip: true,
+              showCoordinateLabels: true,
+              showIntersectionMarkers: true,
+              intersectionMarkerRadius: 4,
             ),
           ),
         ),

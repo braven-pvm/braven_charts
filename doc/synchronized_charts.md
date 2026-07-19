@@ -81,9 +81,10 @@ side by side or intentionally use different plot widths do not need this.
 Mouse hover and touch scrub publish one finite data-X value. Every participating
 chart paints a vertical crosshair and resolves its local Line and Area values
 through the same linear, stepped, Bezier, or monotone geometry used to paint
-the paths. Intersection markers therefore remain on both the shared crosshair
-and each visible curve. Pointer exit, focus loss, touch completion, touch
-cancellation, detach, and controller changes clear the transient cursor.
+the paths by default. Interpolated intersection markers therefore remain on
+both the shared crosshair and each visible curve. Pointer exit, focus loss,
+touch completion, touch cancellation, detach, and controller changes clear the
+transient cursor.
 
 Each participant keeps its own `CrosshairConfig`. A synchronized cursor forces
 only the continuous data-X tracking mechanics; it does not replace the chart's
@@ -103,10 +104,18 @@ BravenChartPlus(
       mode: CrosshairMode.both,
       displayMode: CrosshairDisplayMode.tracking,
       interpolateValues: true,
+      showTrackingTooltip: true,
+      showCoordinateLabels: true,
+      showIntersectionMarkers: true,
+      intersectionMarkerRadius: 4,
     ),
   ),
 )
 ```
+
+Set `mode: CrosshairMode.vertical` to retain the shared synchronized X cursor
+without drawing each participant's horizontal Y guide. Tooltips, intersection
+markers, and X coordinate labels remain independently configurable.
 
 The horizontal guide follows the participant's first local series value using
 the transform already used to paint that series. This remains a paint-only
@@ -114,10 +123,19 @@ path: it does not rescan axis bounds, rebuild geometry or widgets, change a
 chart document revision, create durable selection, or add shared cursor state
 to an artifact. Local point tooltips remain local.
 
+Set `interpolateValues: false` to report the nearest real sample in each local
+series instead. The synchronized vertical guide remains at the shared data X,
+while each intersection marker moves to its chart's resolved sample position.
+This is useful when estimated between-sample values would be misleading. Keep
+interpolation enabled for continuous signals and dense curves.
+
 In the Line showcase, **Crosshair tracking** toggles the complete overlay as
 one behavior: synchronized X, local Y, both axis-value labels, intersection
 marker, and the floating tracking tooltip. Turning it off disables that
-crosshair overlay without disabling viewport synchronization.
+crosshair overlay without disabling viewport synchronization. The collapsed
+**Tracking detail** group independently controls value interpolation, tooltip
+visibility, the horizontal guide, axis-value labels, and the 2-10 px
+intersection radius.
 
 ## Dynamic membership and sizing
 

@@ -758,3 +758,58 @@ and synchronized X viewport.
   benchmarks remain below one frame: cold Line 1.60 ms, Area 3.16 ms, baseline
   Area 3.36 ms, and patterned Forecast 2.97 ms. The release web build is clean,
   the direct route returns HTTP 200, and port 8193 serves the review build.
+
+## Sprint 17 — Synchronized tracking detail controls
+
+**Status:** Local review ready
+
+### Product outcome
+
+The synchronized crosshair remains simple by default but no longer hides its
+useful precision and presentation choices. Users can compare interpolated and
+nearest-sample values, tune intersections, and independently simplify tooltip
+or axis-label output without disabling synchronization.
+
+### Scope
+
+- Expose `interpolateValues`, `showTrackingTooltip`,
+  horizontal-guide visibility, `showCoordinateLabels`, and 2-10 px
+  `intersectionMarkerRadius` through the effective participant
+  `CrosshairConfig`.
+- Preserve the existing full-tracking toggle as the master switch and keep the
+  five detailed controls in a separate collapsed Tracking detail group.
+- Keep synchronized data-X publication independent from local value resolution:
+  nearest mode resolves each chart against its own samples and Y scale.
+- Update the synchronized code reference and public guide with both resolution
+  modes and their high-density trade-off.
+
+### Acceptance gates
+
+- Every control changes all currently mounted participant configurations and
+  survives membership, profile, theme, and live-update changes.
+- Interpolated mode returns local curve values at the shared data X; nearest
+  mode returns real local samples while the vertical shared cursor stays aligned.
+- Tooltip and axis-value toggles are independent, intersection radius reaches
+  effective paint configuration, horizontal guides can be removed without
+  removing the shared vertical cursor, and the master tracking switch still
+  removes the complete overlay.
+- Wide/compact widget coverage, both analyzers, affected suites, release build,
+  and direct-route visual review pass without adding a new package API.
+
+### Delivered local slice
+
+- The participant renderer now honors each chart's interpolation preference;
+  the synchronized group continues to publish one shared data X.
+- Nearest-sample mode places each intersection marker on its resolved local
+  sample instead of leaving it at the shared cursor X, while interpolated mode
+  preserves the continuous curve-value behavior.
+- A collapsed Tracking detail section controls interpolation, tooltip output,
+  horizontal-guide visibility, axis values, and 2-10 px intersection markers
+  across every mounted chart. The existing tracking switch remains the master
+  overlay control.
+- The public guide and synchronized code reference document the complete
+  effective `CrosshairConfig`, including the nearest-sample trade-off.
+- Package and showcase analyzers are clean. The complete package suite and all
+  200 showcase tests pass, including direct synchronized behavior and option
+  wiring coverage. The release web build is clean, the direct route returns
+  HTTP 200, and port 8193 serves the browser-reviewed build.

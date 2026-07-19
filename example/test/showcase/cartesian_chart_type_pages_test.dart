@@ -978,6 +978,35 @@ void main() {
           find.widgetWithText(SwitchListTile, 'Show X Scrollbar'),
         )
         .onChanged!(true);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    final trackingDetailHeader = find.ancestor(
+      of: find.text('Tracking detail'),
+      matching: find.byType(InkWell),
+    );
+    tester.widget<InkWell>(trackingDetailHeader).onTap!();
+    await tester.pumpAndSettle();
+    for (final optionKey in const [
+      ValueKey('synchronized-interpolate-values'),
+      ValueKey('synchronized-tracking-tooltip'),
+      ValueKey('synchronized-horizontal-guide'),
+      ValueKey('synchronized-axis-values'),
+    ]) {
+      final option = find.descendant(
+        of: find.byKey(optionKey, skipOffstage: false),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(option).onChanged!(false);
+      await tester.pump();
+    }
+    final intersectionRadius = find.descendant(
+      of: find.byKey(
+        const ValueKey('synchronized-intersection-radius'),
+        skipOffstage: false,
+      ),
+      matching: find.byType(Slider, skipOffstage: false),
+    );
+    tester.widget<Slider>(intersectionRadius).onChanged!(8);
     await tester.pump();
 
     final charts = tester
@@ -1010,6 +1039,38 @@ void main() {
       charts.map(
         (chart) => chart.interactionConfig!.crosshair.showIntersectionMarkers,
       ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.interpolateValues,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.showTrackingTooltip,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map((chart) => chart.interactionConfig!.crosshair.mode),
+      everyElement(CrosshairMode.vertical),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.showCoordinateLabels,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.intersectionMarkerRadius,
+      ),
+      everyElement(8),
+    );
+    expect(
+      charts.map((chart) => chart.yAxis!.showCrosshairLabel),
       everyElement(isFalse),
     );
     expect(

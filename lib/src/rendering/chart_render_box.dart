@@ -621,10 +621,8 @@ class ChartRenderBox extends RenderBox {
     return base.copyWith(
       snapToDataPoint: false,
       displayMode: CrosshairDisplayMode.tracking,
-      // A shared cursor is a continuous data-X coordinate. Resolve each local
-      // Line/Area value through its rendered interpolation geometry so the
-      // marker remains on both the crosshair and the visible path.
-      interpolateValues: true,
+      // A shared cursor remains a continuous data-X coordinate. Local value
+      // resolution still honors the participant's interpolation preference.
     );
   }
 
@@ -640,7 +638,7 @@ class ChartRenderBox extends RenderBox {
           .whereType<SeriesElement>()
           .map((element) => element.series)
           .toList(growable: false),
-      interpolate: true,
+      interpolate: _interactionConfig?.crosshair.interpolateValues ?? true,
     );
   }
 

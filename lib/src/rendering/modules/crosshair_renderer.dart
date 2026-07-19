@@ -1055,6 +1055,13 @@ class CrosshairRenderer {
       } else if (barGeometry != null) {
         screenX = plotArea.left + barGeometry.valueEndX;
         screenY = plotArea.top + barGeometry.valueEndY;
+      } else if (!value.isInterpolated &&
+          seriesElement != null &&
+          (seriesElement.series is LineChartSeries ||
+              seriesElement.series is AreaChartSeries)) {
+        final point = seriesElement.dataToCurrentPlot(value.x, value.y);
+        screenX = plotArea.left + point.dx;
+        screenY = plotArea.top + point.dy;
       } else if (multiAxisInfo.effectiveAxes.length > 1) {
         // Look up the axis for this series (use linked series ID for trends)
         final axisConfig = SeriesAxisResolver.resolveAxis(
