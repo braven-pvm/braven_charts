@@ -18,7 +18,13 @@ const donutGalleryCards = <Widget>[
   RevenueRingGalleryCard(),
   DeliveryProgressGalleryCard(),
   CampaignReachGalleryCard(),
+];
+
+/// Reusable Concentric Donut compositions shown in the Gallery and media.
+const concentricDonutGalleryCards = <Widget>[
   ConcentricMixGalleryCard(),
+  ConcentricHealthGalleryCard(),
+  ConcentricPortfolioGalleryCard(),
 ];
 
 /// A deterministic, navigation-free panel for pub.dev media capture.
@@ -34,6 +40,30 @@ class DonutGalleryMediaPanel extends StatelessWidget {
         child: Row(
           children: [
             for (final (index, card) in donutGalleryCards.indexed) ...[
+              if (index > 0) const SizedBox(width: 16),
+              Expanded(child: card),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A deterministic, navigation-free Concentric Donut media panel.
+class ConcentricDonutGalleryMediaPanel extends StatelessWidget {
+  const ConcentricDonutGalleryMediaPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            for (final (index, card)
+                in concentricDonutGalleryCards.indexed) ...[
               if (index > 0) const SizedBox(width: 16),
               Expanded(child: card),
             ],
@@ -362,6 +392,178 @@ class ConcentricMixGalleryCard extends StatelessWidget {
           name: 'Last year',
           unit: 'k USD',
           values: const {'Direct': 42, 'Partners': 38, 'Expansion': 20},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+      ],
+    );
+  }
+}
+
+/// Three service regions compared as compact, partial status rings.
+class ConcentricHealthGalleryCard extends StatelessWidget {
+  const ConcentricHealthGalleryCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = ChartTheme.light;
+    final theme = base.copyWith(
+      backgroundColor: const Color(0xFFFFFBF5),
+      seriesTheme: base.seriesTheme.copyWith(
+        colors: const [Color(0xFF16A34A), Color(0xFFF59E0B), Color(0xFFEF4444)],
+      ),
+    );
+    const hiddenLabels = PieDataLabelConfig(isVisible: false);
+    const ringStyle = DonutChartStyle(
+      startAngleDegrees: 135,
+      sweepAngleDegrees: 270,
+      sliceGap: 3,
+      cornerRadius: 8,
+      borderWidth: 1,
+      borderColorMode: PieBorderColorMode.slice,
+      gradient: PieGradientStyle(
+        type: PieGradientType.linear,
+        angleDegrees: -35,
+      ),
+    );
+
+    return _DonutGalleryCard(
+      key: const ValueKey('gallery-concentric-health'),
+      title: 'Service-level health',
+      subtitle: '3 regions · 270° status rings · shared categories',
+      showLegend: false,
+      theme: theme,
+      concentricDonutConfig: const ConcentricDonutConfig(
+        innerRadiusFactor: 0.3,
+        outerRadiusFactor: 0.88,
+        ringGap: 5,
+        centerContent: DonutCenterContent(
+          label: 'SLO status',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: '3 zones',
+        ),
+      ),
+      concentricSeries: [
+        DonutChartSeries.fromMap(
+          id: 'gallery-health-core',
+          name: 'Core platform',
+          unit: '%',
+          values: const {'Healthy': 91, 'Watch': 7, 'Breach': 2},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-health-data',
+          name: 'Data services',
+          unit: '%',
+          values: const {'Healthy': 78, 'Watch': 16, 'Breach': 6},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-health-edge',
+          name: 'Edge delivery',
+          unit: '%',
+          values: const {'Healthy': 84, 'Watch': 11, 'Breach': 5},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+      ],
+    );
+  }
+}
+
+/// Weighted rings compare allocation across independent investment mandates.
+class ConcentricPortfolioGalleryCard extends StatelessWidget {
+  const ConcentricPortfolioGalleryCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = ChartTheme.dark;
+    final theme = base.copyWith(
+      backgroundColor: const Color(0xFF101827),
+      seriesTheme: base.seriesTheme.copyWith(
+        colors: const [
+          Color(0xFF22D3EE),
+          Color(0xFFA78BFA),
+          Color(0xFF34D399),
+          Color(0xFFFBBF24),
+        ],
+      ),
+    );
+    const hiddenLabels = PieDataLabelConfig(isVisible: false);
+    const ringStyle = DonutChartStyle(
+      sliceGap: 2.5,
+      cornerRadius: 7,
+      borderWidth: 1,
+      borderColorMode: PieBorderColorMode.slice,
+      gradient: PieGradientStyle(type: PieGradientType.radial),
+      shadow: PieElevationStyle(
+        color: Color(0x5538BDF8),
+        blurRadius: 8,
+        spreadRadius: 1,
+        opacity: 0.55,
+      ),
+    );
+
+    return _DonutGalleryCard(
+      key: const ValueKey('gallery-concentric-portfolio'),
+      title: 'Portfolio allocation',
+      subtitle: 'Weighted rings · independent mandates · dark theme',
+      showLegend: false,
+      theme: theme,
+      concentricDonutConfig: const ConcentricDonutConfig(
+        innerRadiusFactor: 0.26,
+        outerRadiusFactor: 0.89,
+        ringGap: 5,
+        ringWeights: {
+          'gallery-portfolio-growth': 1.25,
+          'gallery-portfolio-balanced': 1,
+          'gallery-portfolio-income': 0.78,
+        },
+        centerContent: DonutCenterContent(
+          label: 'Capital',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: '3 funds',
+        ),
+      ),
+      concentricSeries: [
+        DonutChartSeries.fromMap(
+          id: 'gallery-portfolio-growth',
+          name: 'Growth',
+          unit: '%',
+          values: const {
+            'Equity': 58,
+            'Credit': 14,
+            'Real assets': 18,
+            'Cash': 10,
+          },
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-portfolio-balanced',
+          name: 'Balanced',
+          unit: '%',
+          values: const {
+            'Equity': 42,
+            'Credit': 28,
+            'Real assets': 20,
+            'Cash': 10,
+          },
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-portfolio-income',
+          name: 'Income',
+          unit: '%',
+          values: const {
+            'Equity': 24,
+            'Credit': 48,
+            'Real assets': 16,
+            'Cash': 12,
+          },
           donutStyle: ringStyle,
           dataLabels: hiddenLabels,
         ),

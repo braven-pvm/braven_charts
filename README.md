@@ -9,11 +9,11 @@ rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
 `BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
-Pie, Donut, and multi-ring Concentric Donut charts; multiple independent axes and normalization;
-zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
+Pie, Donut, and multi-ring Concentric Donut charts; multiple independent axes
+and normalization; zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
 frame-coalesced live data; configurable themes and state views; chart, table,
-split, and generated Dart source modes; and portable chart artifacts. Rendering, input handling, and
-streaming updates remain inside the Flutter rendering pipeline.
+split, and generated Dart source modes; and portable chart artifacts. Rendering,
+input handling, and streaming updates remain inside the Flutter rendering pipeline.
 
 For update-heavy charts, the implementation uses cached series layers, a
 spatial hit-test index, frame-coalesced point delivery, and a direct render-box
@@ -21,39 +21,29 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
-## What's new in 0.7.0
+## What's new in 0.8.0
 
-- **Generated Dart source:** opt a `BravenChartWorkbench` into
-  `ChartDisplayMode.source` to inspect and copy deterministic
-  `BravenChartPlus` code for the chart's effective configuration. The generator
-  covers every built-in chart family, axes, annotations, themes, interactions,
-  legends, and optional durable view state; bounded data and runtime callbacks
-  produce explicit diagnostics instead of disappearing from the output.
-  Visible Source follows effective chart changes automatically on a bounded,
-  coalesced cadence, while manual snapshot behavior remains an explicit option.
-- **Coordinated chart surfaces:** `ChartWorkbenchGroupController` and the
-  nestable `ChartWorkbenchScope` can synchronize Chart, Data, Split, or Source
-  presentation—and selector visibility—across an application or one chart
-  family while leaving each chart's split size, selection, and interaction
-  state independent.
+- **Concentric Donut:** render two or more independent `DonutChartSeries` as
+  allocated rings with automatic or explicit ordering, weighted thickness,
+  grouped or flat legends, coordinated labels, one shared center, ring-aware
+  data tables and tooltips, exact generated Source, artifacts, and native image
+  capture. Selection can lift one slice above the complete composition.
+- **Radial presentation controls:** Pie, Donut, and Concentric Donut support
+  constant-width slice channels, signed inside-label offsets, dual inside and
+  outside label layers, and a shared explode-or-lift selection model.
 - **Synchronized Cartesian charts:** `ChartInteractionGroupController` shares
   a semantic data-X cursor and X-only viewport across independent Line and Area
-  charts while keeping Y scales, tooltips, selection, annotations, and
-  artifacts local.
-- **More explicit motion:** Line and Area series now expose opt-in entrance and
-  compatible update modes with per-series delay and duration through
-  `PathAnimationStyle` and `PathAnimationTiming`. Pie and Donut gain keyed data
-  transitions, shared formatter properties, grouped-radius aggregation, and
-  runtime Donut center builders and actions.
-- **Expanded Bar API:** first-class categorical axes, diverging/Likert stacks,
-  lollipop and bullet marks, Pareto and histogram data helpers, accessible
-  pattern fills, sequenced keyed motion, collision-aware labels, stack totals,
-  viewport-virtualized dense geometry, indexed hit testing and label collision,
-  semantic preset transitions through `BravenChartPlus.transitionKey`, and
-  complete artifact and tool-schema support.
+  charts while retaining local Y scales, tooltips, selections, annotations,
+  and artifacts.
+- **Portable path patterns:** Line and Area outlines accept `dashPattern`
+  without breaking interpolation, Area fills, glow, generated Source,
+  artifacts, or segment-level style changes.
+- **Bar reliability and scale:** invalid points are isolated from bounds and
+  stack geometry, extreme marks remain safely clipped and hittable, and dense
+  transitions retain the maintained 10,000-mark animation budget.
 
-[Open the Source workbench](https://braven-pvm.github.io/braven_charts/?page=chart-workbench&view=source)
-or review the [0.7.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#070---2026-07-18)
+[Open the Concentric Donut guide](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
+or review the [0.8.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#080---2026-07-19)
 for the complete API-level release notes.
 
 ## Rendered examples
@@ -70,9 +60,15 @@ package rather than treating a single composition as representative.
 | **Scatter** | **Pie** | **Donut** |
 | [![Two scatter cohorts with distinct marker sets and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_experiment_cohorts.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
-### Multi-ring radial composition
+### Concentric Donut compositions
 
-[![Concentric Donut comparing three independent revenue totals in weighted rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_revenue_mix.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
+Each ring retains its own total and category shares. Ring order, thickness,
+gaps, sweep, labels, legends, center content, and selection are configurable at
+the composition or series level.
+
+| Period comparison | Service-level health | Portfolio allocation |
+| --- | --- | --- |
+| [![Three revenue periods compared as independently weighted Concentric Donut rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_revenue_mix.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three service regions compared as partial-sweep status rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_service_health.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three portfolio mandates compared as weighted rings on a dark chart theme](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_portfolio.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) |
 
 ### Line and Area workbenches
 
@@ -175,7 +171,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.7.0
+  braven_charts: ^0.8.0
 ```
 
 Then fetch dependencies:
@@ -184,7 +180,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.7.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.8.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

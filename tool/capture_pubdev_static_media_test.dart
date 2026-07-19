@@ -111,19 +111,43 @@ void main() {
       );
     }
 
-    await _capturePie(
-      tester,
-      outputDirectory: outputDirectory,
-      fileName: 'concentric_revenue_mix.png',
-      source: const ConcentricMixGalleryCard(),
-    );
-
     await _captureDonutCollection(
       tester,
       outputDirectory: outputDirectory,
       captures: captures,
     );
   });
+
+  testWidgets(
+    'capture pub.dev Concentric Donut media through the public preview API',
+    (tester) async {
+      await tester.runAsync(_loadCaptureFont);
+      final outputDirectory = Directory(_outputDirectory)
+        ..createSync(recursive: true);
+
+      for (final source in const [
+        (
+          fileName: 'concentric_revenue_mix.png',
+          widget: ConcentricMixGalleryCard(),
+        ),
+        (
+          fileName: 'concentric_service_health.png',
+          widget: ConcentricHealthGalleryCard(),
+        ),
+        (
+          fileName: 'concentric_portfolio.png',
+          widget: ConcentricPortfolioGalleryCard(),
+        ),
+      ]) {
+        await _capturePie(
+          tester,
+          outputDirectory: outputDirectory,
+          fileName: source.fileName,
+          source: source.widget,
+        );
+      }
+    },
+  );
 
   testWidgets('capture pub.dev Bar media through the public preview API', (
     tester,

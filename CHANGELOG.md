@@ -5,7 +5,7 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.8.0 - 2026-07-19
 
 ### Added
 - Portable `dashPattern` outlines for ordinary Line and Area series, including
@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Donut charts. Selection can retain the established explode treatment or lift
   a scaled, radially offset foreground slice with configurable composition
   backdrop blur while preserving durable point identity and ring allocation.
+- A dedicated Concentric Donut Gallery section with period comparison,
+  partial-sweep service health, and dark weighted-portfolio compositions, plus
+  native chart-export captures for the README and pub.dev listing.
 
 ### Fixed
 - Invalid or non-finite Bar points no longer poison stacked, normalized,

@@ -1,8 +1,8 @@
 name: braven_charts
 description: >-
-  Pure Dart Flutter line, area, bar, scatter, Pie, and Donut charts with custom
-  rendering, multi-axis interaction, live data, annotations, tables, and generated Dart source.
-version: 0.7.0
+  Pure Dart Flutter line, area, bar, scatter, Pie, Donut, and Concentric Donut
+  charts with custom rendering, live data, annotations, tables, and generated Dart source.
+version: 0.8.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -29,9 +29,9 @@ screenshots:
       and a resolved total.
     path: doc/screenshots/bar_waterfall.png
   - description: >-
-      Concentric Donut comparing three independent revenue totals with weighted
-      rings, a shared center, gradients, and stable category identity.
-    path: doc/screenshots/concentric_revenue_mix.png
+      Dark Concentric Donut comparing three independent portfolio mandates with
+      weighted rings, a shared center, radial gradients, and stable categories.
+    path: doc/screenshots/concentric_portfolio.png
   - description: >-
       Pie allocation chart with radial gradients, rounded separated slices,
       elevation, inside percentages, and a positioned legend.
