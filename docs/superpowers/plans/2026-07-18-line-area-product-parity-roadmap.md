@@ -8,7 +8,7 @@
 **Sprint 9 lane:** Stable-identity interior topology motion (complete)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Line showcase Workbench and controls polish (Sprint 13)
+**Next lane:** Synchronized dataset stress profiles (Sprint 15)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -557,8 +557,7 @@ own units, Y domains, titles, and artifacts.
 
 ## Sprint 13 — Line showcase Workbench and controls polish
 
-**Status:** Complete; promotion in progress on
-`feature/line-showcase-workbench-polish`
+**Status:** Complete; promoted in PR #48
 
 ### Product outcome
 
@@ -607,3 +606,57 @@ makes the custom three-chart synchronization pattern easy to copy and explore.
   `DocumentationComment._stripDocImports` before diagnostics. The package dry
   run otherwise reaches validation; its only warning is the expected dirty-tree
   warning before this promotion commit.
+
+## Sprint 14 — Synchronized composition lab and diagnostics
+
+**Status:** Local review approved
+
+### Product outcome
+
+The Synchronized example becomes a real composition lab: charts can join and
+leave the group, keep independent heights, opt into full local X/Y tracking,
+and expose honest session performance signals while the composition changes.
+
+### Scope
+
+- Model chart membership as ordinary mount/detach lifecycle against one shared
+  `ChartInteractionGroupController`, including a supported empty state.
+- Expose independent 176-400 px heights without compressing chart drawable
+  ranges; scroll the chart stack when its explicit height exceeds the card.
+- Preserve each participant's configured crosshair mode and labels during a
+  synchronized cursor, and align the horizontal guide to its local rendered
+  series value without geometry or axis-bound recomputation.
+- Show rolling `FrameTiming` measurements in an isolated diagnostics subtree,
+  clearly scoped to the current device, browser, and build mode.
+- Add permanent controller-fanout and real render-path regression coverage.
+
+### Acceptance gates
+
+- Add/remove every participant, zero-chart recovery, explicit heights, and
+  last-visible distance-axis behavior at wide and compact widths.
+- Shared cursor X alignment plus local rendered Y alignment with tracking on;
+  no shared overlay when tracking is off.
+- Diagnostics update no more than twice per second and never rebuild chart
+  participants; reset and empty-sample states remain safe.
+- A 12-chart, 1,000-move cursor-fanout batch stays inside one 16.67 ms frame at
+  p95 in the permanent benchmark, followed by full package/showcase analysis,
+  suites, release builds, and direct-route browser review.
+
+### Delivered local slice
+
+- Dynamic Speed, Elevation, and Heart-rate membership and per-chart height
+  controls are live; the options use collapsed progressive disclosure and the
+  stack keeps its final visible chart as the distance-axis owner.
+- Full tracking now preserves participant crosshair configuration and maps the
+  horizontal guide through the already-painted series transform. Its showcase
+  toggle controls the complete crosshair overlay, including X/Y axis values,
+  the local intersection, and the floating tracking-value tooltip.
+- The showcase reports active charts, visible points, rolling sample count,
+  p95 build/raster time, and frames over 16.7 ms from real Flutter frame timing.
+- The complete package suite passes 2,033 tests and the complete showcase suite
+  passes 186 tests; package-library and showcase analyzers are clean.
+- The permanent 12-chart/1,000-move cursor-fanout benchmark records a 4.44 ms
+  p95 inside the full parallel package run on this machine. Both production
+  base-href builds pass, and wide, tall, and compact release captures render
+  the direct Synchronized route without severe browser output. The root build
+  is served on port 8193 for pixel review before promotion.

@@ -573,11 +573,43 @@ class ChartRenderBox extends RenderBox {
     final dataX = _synchronizedCursorX;
     if (transform == null || dataX == null || _plotArea.isEmpty) return null;
     final plotPosition = transform.dataToPlot(dataX, transform.dataYMin);
-    final widgetPosition = plotToWidget(
+    var widgetPosition = plotToWidget(
       transform.transposed
           ? Offset(_plotArea.width / 2, plotPosition.dy)
           : Offset(plotPosition.dx, _plotArea.height / 2),
     );
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final needsLocalY =
+        crosshair.enabled &&
+        (crosshair.mode == CrosshairMode.horizontal ||
+            crosshair.mode == CrosshairMode.both) &&
+        !transform.transposed;
+    if (needsLocalY) {
+      final trackingState = _calculateSynchronizedTrackingState(
+        widgetPosition.dx,
+      );
+      if (trackingState != null && trackingState.seriesValues.isNotEmpty) {
+        final value = trackingState.seriesValues.first;
+        SeriesElement? seriesElement;
+        for (final candidate in _elements.whereType<SeriesElement>()) {
+          if (candidate.id == value.axisSeriesId) {
+            seriesElement = candidate;
+            break;
+          }
+        }
+        final screenY = seriesElement == null
+            ? CrosshairTracker.dataToScreenY(
+                dataY: value.y,
+                chartBounds: _plotArea,
+                yMin: transform.dataYMin,
+                yMax: transform.dataYMax,
+              )
+            : plotToWidget(
+                seriesElement.dataToCurrentPlot(value.x, value.y),
+              ).dy;
+        widgetPosition = Offset(widgetPosition.dx, screenY);
+      }
+    }
     return _plotArea.contains(widgetPosition) ? widgetPosition : null;
   }
 
@@ -587,16 +619,28 @@ class ChartRenderBox extends RenderBox {
   CrosshairConfig _effectiveCrosshairConfig(CrosshairConfig base) {
     if (_synchronizedCursorPosition == null) return base;
     return base.copyWith(
-      mode: CrosshairMode.vertical,
       snapToDataPoint: false,
-      showCoordinateLabels: false,
       displayMode: CrosshairDisplayMode.tracking,
       // A shared cursor is a continuous data-X coordinate. Resolve each local
       // Line/Area value through its rendered interpolation geometry so the
       // marker remains on both the crosshair and the visible path.
       interpolateValues: true,
-      showTrackingTooltip: false,
-      showIntersectionMarkers: true,
+    );
+  }
+
+  CrosshairTrackingState? _calculateSynchronizedTrackingState(double screenX) {
+    final transform = _transform;
+    if (transform == null || _plotArea.isEmpty) return null;
+    return CrosshairTracker.calculateTrackingState(
+      screenX: screenX,
+      chartBounds: _plotArea,
+      xMin: transform.dataXMin,
+      xMax: transform.dataXMax,
+      seriesList: _elements
+          .whereType<SeriesElement>()
+          .map((element) => element.series)
+          .toList(growable: false),
+      interpolate: true,
     );
   }
 
@@ -611,20 +655,9 @@ class ChartRenderBox extends RenderBox {
   /// Local rendered-path intersections used by synchronized tracking.
   @visibleForTesting
   CrosshairTrackingState? get debugSynchronizedTrackingState {
-    final transform = _transform;
     final cursor = _synchronizedCursorPosition;
-    if (transform == null || cursor == null) return null;
-    return CrosshairTracker.calculateTrackingState(
-      screenX: transform.transposed ? cursor.dy : cursor.dx,
-      chartBounds: _plotArea,
-      xMin: transform.dataXMin,
-      xMax: transform.dataXMax,
-      seriesList: _elements
-          .whereType<SeriesElement>()
-          .map((element) => element.series)
-          .toList(growable: false),
-      interpolate: true,
-    );
+    if (cursor == null) return null;
+    return _calculateSynchronizedTrackingState(cursor.dx);
   }
 
   // ==========================================================================

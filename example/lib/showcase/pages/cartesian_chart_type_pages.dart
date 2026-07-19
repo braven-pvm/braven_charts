@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
@@ -18,6 +19,8 @@ enum _ScatterFillTone { indigo, teal, coral, amber }
 enum _ScatterColorRamp { readiness, thermal, coolWarm }
 
 enum _ScatterRiskPalette { safety, thermal, service }
+
+enum _SynchronizedMetric { speed, elevation, heartRate }
 
 class LineChartsPage extends StatelessWidget {
   const LineChartsPage({super.key});
@@ -98,6 +101,15 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _synchronizeCursor = true;
   bool _synchronizeViewport = true;
   bool _showSynchronizedIntersections = true;
+  bool _synchronizedTracking = true;
+  final Set<_SynchronizedMetric> _visibleSynchronizedMetrics = {
+    ..._SynchronizedMetric.values,
+  };
+  final Map<_SynchronizedMetric, double> _synchronizedChartHeights = {
+    _SynchronizedMetric.speed: 216,
+    _SynchronizedMetric.elevation: 216,
+    _SynchronizedMetric.heartRate: 232,
+  };
   double _motionDurationMs = 650;
   late double _motionSeriesDelayMs;
   int _motionValueRevision = 0;
@@ -169,9 +181,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           final compact = constraints.maxWidth < 600;
           final preferredHeight = switch ((widget.family, compact)) {
             (_CartesianFamily.line, true) =>
-              _isLineSynchronized ? 1136.0 : 820.0,
+              _isLineSynchronized ? 1660.0 : 820.0,
             (_CartesianFamily.line, false) =>
-              _isLineSynchronized ? 1260.0 : 960.0,
+              _isLineSynchronized ? 1504.0 : 960.0,
             _ => constraints.maxHeight,
           };
           final contentHeight = math.max(
@@ -455,32 +467,62 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       builder: (context, _) {
         final options = _optionsController.options;
         if (_isLineSynchronized) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ChartCard(
-                  title: _presets[_presetIndex].label,
-                  subtitle:
-                      '3 independent charts · shared distance cursor + X viewport',
-                  padding: const EdgeInsets.all(8),
-                  child: _SynchronizedCartesianExample(
-                    groupController: _interactionGroupController,
-                    options: options,
-                    interpolation: _interpolation,
-                    strokeWidth: _strokeWidth,
-                    lineGlow: _lineGlow,
-                    markerRadius: _lineMarkerRadius,
-                    markerStyle: _lineMarkerStyle,
-                    synchronizeCursor: _synchronizeCursor,
-                    synchronizeViewport: _synchronizeViewport,
-                    showIntersectionMarkers: _showSynchronizedIntersections,
+          final visibleMetrics = _SynchronizedMetric.values
+              .where(_visibleSynchronizedMetrics.contains)
+              .toList(growable: false);
+          final pointCount = visibleMetrics.fold<int>(
+            0,
+            (total, metric) => total + _synchronizedPointCount(metric),
+          );
+          final configuredStackHeight = visibleMetrics.fold<double>(
+            0,
+            (total, metric) => total + (_synchronizedChartHeights[metric] ?? 0),
+          );
+          final chartCardHeight = (configuredStackHeight + 72)
+              .clamp(360.0, 800.0)
+              .toDouble();
+          return Align(
+            alignment: Alignment.topCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: chartCardHeight,
+                  child: ChartCard(
+                    title: _presets[_presetIndex].label,
+                    subtitle:
+                        '${visibleMetrics.length} independent ${visibleMetrics.length == 1 ? 'chart' : 'charts'} · shared distance cursor + X viewport',
+                    padding: const EdgeInsets.all(8),
+                    child: _SynchronizedCartesianExample(
+                      groupController: _interactionGroupController,
+                      options: options,
+                      interpolation: _interpolation,
+                      strokeWidth: _strokeWidth,
+                      lineGlow: _lineGlow,
+                      markerRadius: _lineMarkerRadius,
+                      markerStyle: _lineMarkerStyle,
+                      synchronizeCursor: _synchronizeCursor,
+                      synchronizeViewport: _synchronizeViewport,
+                      showIntersectionMarkers: _showSynchronizedIntersections,
+                      trackingEnabled: _synchronizedTracking,
+                      visibleMetrics: visibleMetrics,
+                      chartHeights: _synchronizedChartHeights,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const SizedBox(height: 304, child: _SynchronizedCodeReference()),
-            ],
+                const SizedBox(height: 16),
+                _SynchronizedPerformancePanel(
+                  activeChartCount: visibleMetrics.length,
+                  visiblePointCount: pointCount,
+                ),
+                const SizedBox(height: 16),
+                const SizedBox(
+                  height: 304,
+                  child: _SynchronizedCodeReference(),
+                ),
+              ],
+            ),
           );
         }
         return ChartCard(
@@ -1023,10 +1065,68 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         children: typeOptions,
       ),
       if (_isLineSynchronized)
+        StandardChartOptions(
+          controller: _optionsController,
+          showLegendOption: false,
+          showYScrollbarOption: false,
+          showLineStyleOption: false,
+        ),
+      if (_isLineSynchronized)
+        OptionSection(
+          title: 'Chart composition',
+          icon: Icons.view_stream_outlined,
+          initiallyExpanded: false,
+          children: [
+            for (final metric in _SynchronizedMetric.values) ...[
+              BoolOption(
+                key: ValueKey('synchronized-${metric.name}-visible'),
+                label: '${_synchronizedMetricLabel(metric)} chart',
+                value: _visibleSynchronizedMetrics.contains(metric),
+                subtitle: _visibleSynchronizedMetrics.contains(metric)
+                    ? '${_synchronizedPointCount(metric)} points · mounted in the shared group'
+                    : 'Removed from the shared group',
+                onChanged: (value) {
+                  _interactionGroupController.reset();
+                  setState(() {
+                    if (value) {
+                      _visibleSynchronizedMetrics.add(metric);
+                    } else {
+                      _visibleSynchronizedMetrics.remove(metric);
+                    }
+                  });
+                },
+              ),
+              if (_visibleSynchronizedMetrics.contains(metric))
+                SliderOption(
+                  key: ValueKey('synchronized-${metric.name}-height'),
+                  label: '${_synchronizedMetricLabel(metric)} height',
+                  value: _synchronizedChartHeights[metric]!,
+                  min: 176,
+                  max: 400,
+                  divisions: 14,
+                  suffix: 'px',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _synchronizedChartHeights[metric] = value),
+                ),
+            ],
+          ],
+        ),
+      if (_isLineSynchronized)
         OptionSection(
           title: 'Synchronization',
           icon: Icons.sync_alt,
           children: [
+            BoolOption(
+              key: const ValueKey('synchronized-tracking'),
+              label: 'Crosshair tracking',
+              value: _synchronizedTracking,
+              subtitle: 'Show X/Y guides, axis values, and the value tooltip',
+              onChanged: (value) {
+                _interactionGroupController.reset();
+                setState(() => _synchronizedTracking = value);
+              },
+            ),
             BoolOption(
               key: const ValueKey('synchronize-cursor'),
               label: 'Synchronize cursor',
@@ -1208,17 +1308,14 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
-      StandardChartOptions(
-        controller: _optionsController,
-        showThemeOption: !_isLineSpotlight,
-        showLegendOption:
-            !_isLineSpotlight &&
-            !_isLineForecast &&
-            !_isLineSynchronized &&
-            !_isAreaPulse,
-        showYScrollbarOption: !_isLineSynchronized,
-        showLineStyleOption: false,
-      ),
+      if (!_isLineSynchronized)
+        StandardChartOptions(
+          controller: _optionsController,
+          showThemeOption: !_isLineSpotlight,
+          showLegendOption:
+              !_isLineSpotlight && !_isLineForecast && !_isAreaPulse,
+          showLineStyleOption: false,
+        ),
     ];
   }
 
@@ -2425,12 +2522,36 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _synchronizeCursor = true;
       _synchronizeViewport = true;
       _showSynchronizedIntersections = true;
+      _synchronizedTracking = true;
+      _visibleSynchronizedMetrics
+        ..clear()
+        ..addAll(_SynchronizedMetric.values);
+      _synchronizedChartHeights
+        ..clear()
+        ..addAll({
+          _SynchronizedMetric.speed: 216,
+          _SynchronizedMetric.elevation: 216,
+          _SynchronizedMetric.heartRate: 232,
+        });
       _motionDurationMs = 650;
       _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
       _resetMotionData();
     });
     _optionsController.update(const ChartOptions(showDataMarkers: true));
   }
+
+  String _synchronizedMetricLabel(_SynchronizedMetric metric) =>
+      switch (metric) {
+        _SynchronizedMetric.speed => 'Speed',
+        _SynchronizedMetric.elevation => 'Elevation',
+        _SynchronizedMetric.heartRate => 'Heart rate',
+      };
+
+  int _synchronizedPointCount(_SynchronizedMetric metric) => switch (metric) {
+    _SynchronizedMetric.speed => _synchronizedSpeedPoints.length,
+    _SynchronizedMetric.elevation => _synchronizedElevationPoints.length,
+    _SynchronizedMetric.heartRate => _synchronizedHeartRatePoints.length,
+  };
 
   void _resetMotionData() {
     _motionPrimaryPoints = List<ChartDataPoint>.of(_primaryPoints);
@@ -2584,6 +2705,9 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required this.synchronizeCursor,
     required this.synchronizeViewport,
     required this.showIntersectionMarkers,
+    required this.trackingEnabled,
+    required this.visibleMetrics,
+    required this.chartHeights,
   });
 
   final ChartInteractionGroupController groupController;
@@ -2596,128 +2720,187 @@ class _SynchronizedCartesianExample extends StatelessWidget {
   final bool synchronizeCursor;
   final bool synchronizeViewport;
   final bool showIntersectionMarkers;
+  final bool trackingEnabled;
+  final List<_SynchronizedMetric> visibleMetrics;
+  final Map<_SynchronizedMetric, double> chartHeights;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 640;
+        if (visibleMetrics.isEmpty) {
+          return const _SynchronizedEmptyState();
+        }
         final stack = Column(
           key: const ValueKey('synchronized-cartesian-stack'),
           children: [
-            Expanded(
-              child: _SynchronizedMetricPlot(
-                title: 'Speed',
-                latestValue: '9.3 km/h',
-                accessibilityValue: '9.3 kilometres per hour',
-                color: const Color(0xFF2196F3),
-                groupController: groupController,
-                options: options,
-                compact: compact,
-                showDistanceAxis: false,
-                showXScrollbar: false,
-                series: LineChartSeries(
-                  id: 'synchronized-speed',
-                  name: 'Speed',
-                  unit: 'km/h',
-                  points: _synchronizedSpeedPoints,
-                  color: const Color(0xFF2196F3),
-                  interpolation: interpolation,
-                  strokeWidth: strokeWidth,
-                  lineGlow: lineGlow,
-                  showDataPointMarkers: options.showDataMarkers,
-                  dataPointMarkerRadius: markerRadius,
-                  dataPointMarkerStyle: markerStyle,
+            for (var index = 0; index < visibleMetrics.length; index++) ...[
+              if (index > 0) const Divider(height: 1),
+              SizedBox(
+                key: ValueKey(
+                  'synchronized-${visibleMetrics[index].name}-slot',
                 ),
-                synchronizeCursor: synchronizeCursor,
-                synchronizeViewport: synchronizeViewport,
-                showIntersectionMarkers: showIntersectionMarkers,
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: _SynchronizedMetricPlot(
-                title: 'Elevation',
-                latestValue: '329 m',
-                accessibilityValue: '329 metres',
-                color: const Color(0xFF5B56D6),
-                groupController: groupController,
-                options: options,
-                compact: compact,
-                showDistanceAxis: false,
-                showXScrollbar: false,
-                series: AreaChartSeries(
-                  id: 'synchronized-elevation',
-                  name: 'Elevation',
-                  unit: 'm',
-                  points: _synchronizedElevationPoints,
-                  color: const Color(0xFF5B56D6),
-                  interpolation: interpolation,
-                  strokeWidth: strokeWidth,
-                  lineGlow: lineGlow,
-                  fillOpacity: 0.28,
-                  fillGradient: const AreaGradient(
-                    colors: [Color(0x665B56D6), Color(0x125B56D6)],
-                  ),
-                  showDataPointMarkers: options.showDataMarkers,
-                  dataPointMarkerRadius: markerRadius,
-                  dataPointMarkerStyle: markerStyle,
+                height: chartHeights[visibleMetrics[index]],
+                child: _buildMetricPlot(
+                  visibleMetrics[index],
+                  compact: compact,
+                  showDistanceAxis: index == visibleMetrics.length - 1,
                 ),
-                synchronizeCursor: synchronizeCursor,
-                synchronizeViewport: synchronizeViewport,
-                showIntersectionMarkers: showIntersectionMarkers,
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: _SynchronizedMetricPlot(
-                title: 'Heart rate',
-                latestValue: '138 bpm',
-                accessibilityValue: '138 beats per minute',
-                color: const Color(0xFF00B86B),
-                groupController: groupController,
-                options: options,
-                compact: compact,
-                showDistanceAxis: true,
-                showXScrollbar: options.showXScrollbar,
-                series: AreaChartSeries(
-                  id: 'synchronized-heart-rate',
-                  name: 'Heart rate',
-                  unit: 'bpm',
-                  points: _synchronizedHeartRatePoints,
-                  color: const Color(0xFF00B86B),
-                  interpolation: interpolation,
-                  strokeWidth: strokeWidth,
-                  lineGlow: lineGlow,
-                  fillOpacity: 0.24,
-                  fillGradient: const AreaGradient(
-                    colors: [Color(0x6600B86B), Color(0x1000B86B)],
-                  ),
-                  showDataPointMarkers: options.showDataMarkers,
-                  dataPointMarkerRadius: markerRadius,
-                  dataPointMarkerStyle: markerStyle,
-                ),
-                synchronizeCursor: synchronizeCursor,
-                synchronizeViewport: synchronizeViewport,
-                showIntersectionMarkers: showIntersectionMarkers,
-              ),
-            ),
+            ],
           ],
         );
-        const compactMinimumHeight = 420.0;
-        final content = compact && constraints.maxHeight < compactMinimumHeight
-            ? SingleChildScrollView(
-                key: const ValueKey('synchronized-cartesian-scroll'),
-                child: SizedBox(height: compactMinimumHeight, child: stack),
-              )
-            : stack;
         return Semantics(
           container: true,
           label:
-              'Synchronized distance charts. Touch and drag any plot to inspect all three.',
-          child: content,
+              'Synchronized distance charts. Touch and drag any plot to inspect ${visibleMetrics.length == 1 ? 'it' : 'all ${visibleMetrics.length}'}.',
+          child: SingleChildScrollView(
+            key: const ValueKey('synchronized-cartesian-scroll'),
+            primary: false,
+            child: stack,
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildMetricPlot(
+    _SynchronizedMetric metric, {
+    required bool compact,
+    required bool showDistanceAxis,
+  }) {
+    return switch (metric) {
+      _SynchronizedMetric.speed => _SynchronizedMetricPlot(
+        title: 'Speed',
+        latestValue: '9.3 km/h',
+        accessibilityValue: '9.3 kilometres per hour',
+        color: const Color(0xFF2196F3),
+        groupController: groupController,
+        options: options,
+        compact: compact,
+        showDistanceAxis: showDistanceAxis,
+        showXScrollbar: showDistanceAxis && options.showXScrollbar,
+        series: LineChartSeries(
+          id: 'synchronized-speed',
+          name: 'Speed',
+          unit: 'km/h',
+          points: _synchronizedSpeedPoints,
+          color: const Color(0xFF2196F3),
+          interpolation: interpolation,
+          strokeWidth: strokeWidth,
+          lineGlow: lineGlow,
+          showDataPointMarkers: options.showDataMarkers,
+          dataPointMarkerRadius: markerRadius,
+          dataPointMarkerStyle: markerStyle,
+        ),
+        synchronizeCursor: synchronizeCursor,
+        synchronizeViewport: synchronizeViewport,
+        showIntersectionMarkers: showIntersectionMarkers,
+        trackingEnabled: trackingEnabled,
+      ),
+      _SynchronizedMetric.elevation => _SynchronizedMetricPlot(
+        title: 'Elevation',
+        latestValue: '329 m',
+        accessibilityValue: '329 metres',
+        color: const Color(0xFF5B56D6),
+        groupController: groupController,
+        options: options,
+        compact: compact,
+        showDistanceAxis: showDistanceAxis,
+        showXScrollbar: showDistanceAxis && options.showXScrollbar,
+        series: AreaChartSeries(
+          id: 'synchronized-elevation',
+          name: 'Elevation',
+          unit: 'm',
+          points: _synchronizedElevationPoints,
+          color: const Color(0xFF5B56D6),
+          interpolation: interpolation,
+          strokeWidth: strokeWidth,
+          lineGlow: lineGlow,
+          fillOpacity: 0.28,
+          fillGradient: const AreaGradient(
+            colors: [Color(0x665B56D6), Color(0x125B56D6)],
+          ),
+          showDataPointMarkers: options.showDataMarkers,
+          dataPointMarkerRadius: markerRadius,
+          dataPointMarkerStyle: markerStyle,
+        ),
+        synchronizeCursor: synchronizeCursor,
+        synchronizeViewport: synchronizeViewport,
+        showIntersectionMarkers: showIntersectionMarkers,
+        trackingEnabled: trackingEnabled,
+      ),
+      _SynchronizedMetric.heartRate => _SynchronizedMetricPlot(
+        title: 'Heart rate',
+        latestValue: '138 bpm',
+        accessibilityValue: '138 beats per minute',
+        color: const Color(0xFF00B86B),
+        groupController: groupController,
+        options: options,
+        compact: compact,
+        showDistanceAxis: showDistanceAxis,
+        showXScrollbar: showDistanceAxis && options.showXScrollbar,
+        series: AreaChartSeries(
+          id: 'synchronized-heart-rate',
+          name: 'Heart rate',
+          unit: 'bpm',
+          points: _synchronizedHeartRatePoints,
+          color: const Color(0xFF00B86B),
+          interpolation: interpolation,
+          strokeWidth: strokeWidth,
+          lineGlow: lineGlow,
+          fillOpacity: 0.24,
+          fillGradient: const AreaGradient(
+            colors: [Color(0x6600B86B), Color(0x1000B86B)],
+          ),
+          showDataPointMarkers: options.showDataMarkers,
+          dataPointMarkerRadius: markerRadius,
+          dataPointMarkerStyle: markerStyle,
+        ),
+        synchronizeCursor: synchronizeCursor,
+        synchronizeViewport: synchronizeViewport,
+        showIntersectionMarkers: showIntersectionMarkers,
+        trackingEnabled: trackingEnabled,
+      ),
+    };
+  }
+}
+
+class _SynchronizedEmptyState extends StatelessWidget {
+  const _SynchronizedEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      key: const ValueKey('synchronized-empty-state'),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.view_stream_outlined,
+                size: 36,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text('No charts mounted', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Add Speed, Elevation, or Heart rate from Chart composition.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2737,6 +2920,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
     required this.synchronizeCursor,
     required this.synchronizeViewport,
     required this.showIntersectionMarkers,
+    required this.trackingEnabled,
   });
 
   final String title;
@@ -2752,6 +2936,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
   final bool synchronizeCursor;
   final bool synchronizeViewport;
   final bool showIntersectionMarkers;
+  final bool trackingEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -2823,7 +3008,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 showAxisLine: options.showAxisLines,
                 showTicks: !compact || showDistanceAxis,
                 showTickLabels: !compact || showDistanceAxis,
-                showCrosshairLabel: false,
+                showCrosshairLabel: trackingEnabled,
                 labelDisplay: AxisLabelDisplay.labelWithUnit,
                 tickCount: compact ? 4 : 6,
                 maxHeight: showDistanceAxis ? 52 : 36,
@@ -2833,7 +3018,7 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 color: color,
                 unit: series.unit,
                 showAxisLine: options.showAxisLines,
-                showCrosshairLabel: false,
+                showCrosshairLabel: trackingEnabled,
                 labelDisplay: AxisLabelDisplay.tickOnly,
                 tickCount: compact ? 3 : 4,
                 minWidth: yAxisGutterWidth,
@@ -2843,13 +3028,13 @@ class _SynchronizedMetricPlot extends StatelessWidget {
                 enableZoom: options.enableZoom,
                 enablePan: options.enablePan,
                 crosshair: CrosshairConfig(
-                  enabled: true,
-                  mode: CrosshairMode.vertical,
+                  enabled: trackingEnabled,
+                  mode: CrosshairMode.both,
                   displayMode: CrosshairDisplayMode.tracking,
                   interpolateValues: true,
-                  showTrackingTooltip: false,
+                  showTrackingTooltip: trackingEnabled,
                   showIntersectionMarkers: showIntersectionMarkers,
-                  showCoordinateLabels: false,
+                  showCoordinateLabels: trackingEnabled,
                 ),
                 tooltip: const TooltipConfig(enabled: true),
               ),
@@ -2858,6 +3043,181 @@ class _SynchronizedMetricPlot extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Passive page-frame instrumentation for the synchronized composition.
+///
+/// This widget owns its own state so the twice-per-second metrics refresh does
+/// not rebuild any chart participant. Values describe this browser/device and
+/// build mode only; they are comparison signals, not portable benchmarks.
+class _SynchronizedPerformancePanel extends StatefulWidget {
+  const _SynchronizedPerformancePanel({
+    required this.activeChartCount,
+    required this.visiblePointCount,
+  });
+
+  final int activeChartCount;
+  final int visiblePointCount;
+
+  @override
+  State<_SynchronizedPerformancePanel> createState() =>
+      _SynchronizedPerformancePanelState();
+}
+
+class _SynchronizedPerformancePanelState
+    extends State<_SynchronizedPerformancePanel> {
+  static const _slowFrameThreshold = Duration(microseconds: 16667);
+  static const _maxFrameSamples = 180;
+
+  final List<FrameTiming> _frameTimings = [];
+  DateTime _lastMetricsRefresh = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  void initState() {
+    super.initState();
+    SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
+  }
+
+  void _onFrameTimings(List<FrameTiming> timings) {
+    if (!mounted || timings.isEmpty) return;
+    _frameTimings.addAll(timings);
+    if (_frameTimings.length > _maxFrameSamples) {
+      _frameTimings.removeRange(0, _frameTimings.length - _maxFrameSamples);
+    }
+
+    // Throttle the diagnostics subtree so measurement never creates a
+    // per-frame chart rebuild feedback loop.
+    final now = DateTime.now();
+    if (now.difference(_lastMetricsRefresh) >=
+        const Duration(milliseconds: 500)) {
+      _lastMetricsRefresh = now;
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final slowFrames = _frameTimings
+        .where((timing) => timing.totalSpan > _slowFrameThreshold)
+        .length;
+    final p95Build = _percentileMs(
+      _frameTimings.map((timing) => timing.buildDuration),
+      0.95,
+    );
+    final p95Raster = _percentileMs(
+      _frameTimings.map((timing) => timing.rasterDuration),
+      0.95,
+    );
+
+    return Card(
+      key: const ValueKey('synchronized-performance-panel'),
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.speed_outlined,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Session performance',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Rolling UI frame timings for this device, browser, and build mode',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('reset-synchronized-performance'),
+                  tooltip: 'Reset frame samples',
+                  onPressed: () => setState(() {
+                    _frameTimings.clear();
+                    _lastMetricsRefresh = DateTime.now();
+                  }),
+                  icon: const Icon(Icons.restart_alt, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StatusPanel(
+              items: [
+                StatusItem(
+                  label: 'Active charts',
+                  value: '${widget.activeChartCount}',
+                ),
+                StatusItem(
+                  label: 'Visible points',
+                  value: '${widget.visiblePointCount}',
+                ),
+                StatusItem(
+                  label: 'Frame samples',
+                  value: '${_frameTimings.length}',
+                ),
+                StatusItem(
+                  label: 'p95 build',
+                  value: _formatMilliseconds(p95Build),
+                ),
+                StatusItem(
+                  label: 'p95 raster',
+                  value: _formatMilliseconds(p95Raster),
+                ),
+                StatusItem(
+                  label: 'Over 16.7ms',
+                  value: '$slowFrames / ${_frameTimings.length}',
+                  color: slowFrames == 0
+                      ? Colors.green.shade700
+                      : Colors.orange.shade800,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double? _percentileMs(Iterable<Duration> durations, double percentile) {
+    final values = durations.map((duration) => duration.inMicroseconds).toList()
+      ..sort();
+    if (values.isEmpty) return null;
+    final index = ((values.length - 1) * percentile).ceil();
+    return values[index] / 1000;
+  }
+
+  String _formatMilliseconds(double? value) {
+    if (value == null) return '—';
+    if (value < 0.1) return '<0.1ms';
+    return '${value.toStringAsFixed(1)}ms';
   }
 }
 
@@ -3005,14 +3365,35 @@ void dispose() {
 ''';
 
 const _synchronizedParticipantsSnippet = '''
-BravenChartPlus(
-  interactionGroupController: interactions,
-  interactionGroupOptions: const ChartInteractionGroupOptions(
-    synchronizeCursor: true,
-    synchronizeViewport: true,
-  ),
-  series: [metricSeries],
-  yAxis: const YAxisConfig(minWidth: 56, maxWidth: 56),
+final visibleMetrics = metrics.where((metric) => metric.visible);
+
+Column(
+  children: [
+    for (final metric in visibleMetrics)
+      SizedBox(
+        height: metric.height,
+        child: BravenChartPlus(
+          interactionGroupController: interactions,
+          interactionGroupOptions: const ChartInteractionGroupOptions(
+            synchronizeCursor: true,
+            synchronizeViewport: true,
+          ),
+          series: [metric.series],
+          yAxis: const YAxisConfig(
+            minWidth: 56,
+            maxWidth: 56,
+            showCrosshairLabel: true,
+          ),
+          interactionConfig: const InteractionConfig(
+            crosshair: CrosshairConfig(
+              enabled: true,
+              mode: CrosshairMode.both,
+              displayMode: CrosshairDisplayMode.tracking,
+            ),
+          ),
+        ),
+      ),
+  ],
 );
 ''';
 

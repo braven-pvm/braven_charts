@@ -236,6 +236,13 @@ class SeriesElement implements DataHitElement {
   /// nearest-point lookup remains correct after zoom, pan, and per-series
   /// multi-axis normalization.
   ChartTransform get currentTransform => _currentTransform;
+
+  /// Maps a data coordinate through the transform currently used for paint.
+  ///
+  /// Crosshair overlays use this to align synchronized local-value guides
+  /// without recomputing axis bounds or rebuilding series geometry.
+  Offset dataToCurrentPlot(double x, double y) =>
+      _currentTransform.dataToPlot(x, y);
   final SeriesTheme? seriesTheme;
   @override
   final int seriesIndex;
