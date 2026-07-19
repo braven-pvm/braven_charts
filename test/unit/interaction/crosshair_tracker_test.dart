@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:braven_charts/src/interaction/core/crosshair_tracker.dart';
 import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/models/bar_chart_style.dart';
+import 'package:braven_charts/src/models/candlestick_chart_series.dart';
+import 'package:braven_charts/src/models/candlestick_data_point.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/scatter_marker_style.dart';
@@ -105,6 +107,76 @@ void main() {
         expect(state.seriesValues.single.y, 10);
         expect(state.seriesValues.single.dataPointIndex, 0);
         expect(state.seriesValues.single.isInterpolated, isFalse);
+      },
+    );
+
+    test('candlestick tracking snaps to one complete OHLC sample', () {
+      final timestamp = DateTime.utc(2026, 7, 17);
+      final series = CandlestickChartSeries(
+        id: 'price',
+        name: 'Price',
+        unit: 'USD',
+        points: [
+          CandlestickDataPoint(
+            x: 0,
+            open: 100,
+            high: 112,
+            low: 98,
+            close: 110,
+            timestamp: timestamp,
+          ),
+          CandlestickDataPoint(
+            x: 3,
+            open: 110,
+            high: 114,
+            low: 103,
+            close: 105,
+          ),
+        ],
+      );
+
+      final state = CrosshairTracker.calculateTrackingState(
+        screenX: 160,
+        chartBounds: const Rect.fromLTWH(0, 0, 300, 200),
+        xMin: 0,
+        xMax: 3,
+        seriesList: [series],
+        interpolate: true,
+      );
+
+      final value = state!.seriesValues.single;
+      expect(value.dataPointIndex, 1);
+      expect(value.x, 3);
+      expect(value.y, 105);
+      expect(value.isInterpolated, isFalse);
+      expect(value.candlestick, isNotNull);
+      expect(value.candlestick!.open, 110);
+      expect(value.candlestick!.high, 114);
+      expect(value.candlestick!.low, 103);
+      expect(value.candlestick!.close, 105);
+      expect(value.candlestick!.formattedChange, '-5.00 USD (-4.55%)');
+    });
+
+    test(
+      'candlestick tracking breaks nearest-X ties toward the earlier sample',
+      () {
+        final series = CandlestickChartSeries(
+          id: 'price',
+          points: [
+            CandlestickDataPoint(x: 0, open: 1, high: 2, low: 0, close: 2),
+            CandlestickDataPoint(x: 10, open: 2, high: 3, low: 1, close: 1),
+          ],
+        );
+
+        final state = CrosshairTracker.calculateTrackingState(
+          screenX: 150,
+          chartBounds: const Rect.fromLTWH(0, 0, 300, 200),
+          xMin: 0,
+          xMax: 10,
+          seriesList: [series],
+        );
+
+        expect(state!.seriesValues.single.dataPointIndex, 0);
       },
     );
 

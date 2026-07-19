@@ -42,6 +42,17 @@ class TooltipRenderer {
     required String formattedCartesianY,
     required String Function(double) formatDataValue,
   }) {
+    if (dataHit.candlestick case final candle?) {
+      final heading = dataHit.point.label == null
+          ? seriesName
+          : '$seriesName · ${dataHit.point.label}';
+      return '$heading\n'
+          'Open: ${candle.formattedOpen}\n'
+          'High: ${candle.formattedHigh}\n'
+          'Low: ${candle.formattedLow}\n'
+          'Close: ${candle.formattedClose}\n'
+          'Change: ${candle.formattedChange} · ${candle.direction.name}';
+    }
     if (dataHit.category == null || dataHit.share == null) {
       final sizeLine = dataHit.formattedRadiusValue == null
           ? ''

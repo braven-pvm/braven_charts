@@ -1,8 +1,8 @@
 /// Built-in series type rendered by `BravenChartPlus`.
 ///
-/// Line, area, bar, and scatter are Cartesian and may share one chart. Pie and
-/// Donut are partition-radial. Polar Column is axis-based polar. Radial and
-/// polar families cannot mix with Cartesian series or each other.
+/// Line, area, bar, scatter, and Candlestick are Cartesian. Pie and Donut are
+/// partition-radial. Polar Column is axis-based polar. Radial and polar
+/// families cannot mix with Cartesian series or each other.
 enum ChartType {
   /// Line chart with connected points.
   line,
@@ -15,6 +15,9 @@ enum ChartType {
 
   /// Scatter chart with individual points.
   scatter,
+
+  /// Open-high-low-close samples rendered as candle bodies and wicks.
+  candlestick,
 
   /// Pie chart with category contributions rendered as radial slices.
   pie,

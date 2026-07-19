@@ -268,6 +268,60 @@ class ChartTablePolarRow {
   final int? colorValue;
 }
 
+/// Native financial projection for one source candlestick and exact-X overlays.
+@immutable
+class ChartTableCandlestickRow {
+  ChartTableCandlestickRow({
+    required this.rowId,
+    required this.reference,
+    required this.xRaw,
+    required this.xDisplay,
+    required this.openRaw,
+    required this.openDisplay,
+    required this.highRaw,
+    required this.highDisplay,
+    required this.lowRaw,
+    required this.lowDisplay,
+    required this.closeRaw,
+    required this.closeDisplay,
+    required this.changeRaw,
+    required this.changeDisplay,
+    required this.changePercentRaw,
+    required this.changePercentDisplay,
+    required this.isValid,
+    required this.hiddenSeries,
+    required Map<String, ChartTableWideCell> overlayCells,
+    this.unit,
+    this.timestamp,
+    this.label,
+  }) : overlayCells = Map.unmodifiable(overlayCells);
+
+  final String rowId;
+  final ChartTablePointReference reference;
+  final double xRaw;
+  final String xDisplay;
+  final DateTime? timestamp;
+  final double openRaw;
+  final String openDisplay;
+  final double highRaw;
+  final String highDisplay;
+  final double lowRaw;
+  final String lowDisplay;
+  final double closeRaw;
+  final String closeDisplay;
+  final double changeRaw;
+  final String changeDisplay;
+  final double? changePercentRaw;
+  final String changePercentDisplay;
+  final String? unit;
+  final String? label;
+  final bool isValid;
+  final bool hiddenSeries;
+
+  /// Values from permitted Line, Area, or Scatter overlays at this exact X.
+  final Map<String, ChartTableWideCell> overlayCells;
+}
+
 /// Renderer-aware shape exposed by a derived chart table.
 enum ChartTableProjectionKind {
   /// Canonical one-point-per-row Cartesian projection.
@@ -281,6 +335,9 @@ enum ChartTableProjectionKind {
 
   /// Category, series, and value projection for an axis-based polar series.
   polar,
+
+  /// Time/X, OHLC, price-change, and exact-X Cartesian overlay projection.
+  candlestick,
 }
 
 /// Immutable chart-table projection derived exclusively from [ChartDocument].
@@ -300,12 +357,14 @@ class ChartTableModel {
     required Iterable<ChartTableWideRow> wideRows,
     required Iterable<ChartTablePieRow> pieRows,
     required Iterable<ChartTablePolarRow> polarRows,
+    required Iterable<ChartTableCandlestickRow> candlestickRows,
     required Iterable<ChartArtifactWarning> warnings,
   }) : series = List.unmodifiable(series),
        longRows = List.unmodifiable(longRows),
        wideRows = List.unmodifiable(wideRows),
        pieRows = List.unmodifiable(pieRows),
        polarRows = List.unmodifiable(polarRows),
+       candlestickRows = List.unmodifiable(candlestickRows),
        warnings = List.unmodifiable(warnings);
 
   factory ChartTableModel.fromDocument(
@@ -322,13 +381,35 @@ class ChartTableModel {
     final polarSeries = selected
         .where((series) => series.type == 'polarColumn')
         .toList();
+    final candlestickSeries = selected
+        .where((series) => series.type == 'candlestick')
+        .toList();
+    if (candlestickSeries.length > 1) {
+      throw UnsupportedError(
+        'Candlestick table projection supports exactly one OHLC series.',
+      );
+    }
+    if (candlestickSeries.isNotEmpty &&
+        selected.any(
+          (series) =>
+              series.type != 'candlestick' &&
+              series.type != 'line' &&
+              series.type != 'area' &&
+              series.type != 'scatter',
+        )) {
+      throw UnsupportedError(
+        'Candlestick tables only support Line, Area, or Scatter overlays.',
+      );
+    }
     if ((radialSeries.isNotEmpty && radialSeries.length != selected.length) ||
         (polarSeries.isNotEmpty && polarSeries.length != selected.length)) {
       throw UnsupportedError(
         'Radial table projection cannot mix chart families.',
       );
     }
-    final projectionKind = radialSeries.isNotEmpty
+    final projectionKind = candlestickSeries.isNotEmpty
+        ? ChartTableProjectionKind.candlestick
+        : radialSeries.isNotEmpty
         ? ChartTableProjectionKind.pie
         : polarSeries.isNotEmpty
         ? ChartTableProjectionKind.polar
@@ -350,6 +431,9 @@ class ChartTableModel {
     final longRows = <ChartTableLongRow>[];
     final pieRows = <ChartTablePieRow>[];
     final polarRows = <ChartTablePolarRow>[];
+    final unitsBySeries = <String, String?>{};
+    final formattersBySeries = <String, String Function(double)?>{};
+    final hiddenBySeries = <String, bool>{};
 
     for (final series in selected) {
       final inlineAxis = series.inlineAxis?.values;
@@ -377,6 +461,9 @@ class ChartTableModel {
             formatterDocument != null && formatterDocument is! JsonObjectValue,
       );
       final hidden = hiddenIds.contains(series.id);
+      unitsBySeries[series.id] = unit;
+      formattersBySeries[series.id] = yFormatter;
+      hiddenBySeries[series.id] = hidden;
       seriesColumns.add(
         ChartTableSeriesColumn(
           seriesId: series.id,
@@ -461,6 +548,29 @@ class ChartTableModel {
       }
     }
 
+    final candlestickRows = candlestickSeries.isEmpty
+        ? const <ChartTableCandlestickRow>[]
+        : _projectCandlestickRows(
+            candlestickSeries.single,
+            selected,
+            xFormatter: xFormatter,
+            formattersBySeries: formattersBySeries,
+            unitsBySeries: unitsBySeries,
+            hiddenBySeries: hiddenBySeries,
+            viewState: viewState,
+            options: options,
+          );
+    final projectedSeriesColumns = candlestickSeries.isEmpty
+        ? seriesColumns
+        : <ChartTableSeriesColumn>[
+            seriesColumns.firstWhere(
+              (column) => column.seriesId == candlestickSeries.single.id,
+            ),
+            ...seriesColumns.where(
+              (column) => column.seriesId != candlestickSeries.single.id,
+            ),
+          ];
+
     return ChartTableModel._(
       documentId: document.documentId,
       documentRevision: document.revision,
@@ -471,13 +581,14 @@ class ChartTableModel {
           : _xColumnLabel(document.xAxis),
       projectionKind: projectionKind,
       options: options,
-      series: seriesColumns,
+      series: projectedSeriesColumns,
       longRows: longRows,
       wideRows: projectionKind == ChartTableProjectionKind.cartesianWide
           ? _pivotExactX(longRows, seriesColumns)
           : const [],
       pieRows: pieRows,
       polarRows: polarRows,
+      candlestickRows: candlestickRows,
       warnings: warnings,
     );
   }
@@ -497,6 +608,7 @@ class ChartTableModel {
   final List<ChartTableWideRow> wideRows;
   final List<ChartTablePieRow> pieRows;
   final List<ChartTablePolarRow> polarRows;
+  final List<ChartTableCandlestickRow> candlestickRows;
   final List<ChartArtifactWarning> warnings;
 
   /// Auxiliary fields present in at least one projected Cartesian series.
@@ -509,6 +621,7 @@ class ChartTableModel {
     ChartTableProjectionKind.cartesianWide => wideRows.length,
     ChartTableProjectionKind.pie => pieRows.length,
     ChartTableProjectionKind.polar => polarRows.length,
+    ChartTableProjectionKind.candlestick => candlestickRows.length,
   };
 
   bool get isEmpty => rowCount == 0;
@@ -592,6 +705,137 @@ List<ChartTablePolarRow> _projectPolarRows(
                 : themeSeriesColors[pointIndex % themeSeriesColors.length]),
       ),
   ];
+}
+
+const _candlestickPointExtensionKey = 'candlestick.ohlc.v1';
+
+List<ChartTableCandlestickRow> _projectCandlestickRows(
+  ChartSeriesDocument candlestick,
+  List<ChartSeriesDocument> selected, {
+  required String Function(double)? xFormatter,
+  required Map<String, String Function(double)?> formattersBySeries,
+  required Map<String, String?> unitsBySeries,
+  required Map<String, bool> hiddenBySeries,
+  required ChartViewState? viewState,
+  required ChartTableOptions options,
+}) {
+  final candlePayload = candlestick.data;
+  if (candlePayload is! InlineChartDataPayload) {
+    throw UnsupportedError(
+      'Candlestick table generation requires inline source data.',
+    );
+  }
+  final overlayPointsByX = <String, Map<double, (int, ChartPointDocument)>>{};
+  for (final overlay in selected.where((series) => series != candlestick)) {
+    final payload = overlay.data;
+    if (payload is! InlineChartDataPayload) {
+      throw UnsupportedError(
+        'Candlestick overlay tables require inline source data.',
+      );
+    }
+    overlayPointsByX[overlay.id] = {
+      for (final (index, point) in payload.points.indexed)
+        point.x.asDouble: (index, point),
+    };
+  }
+
+  final formatter = formattersBySeries[candlestick.id];
+  final rows = <ChartTableCandlestickRow>[];
+  for (final (pointIndex, point) in candlePayload.points.indexed) {
+    final x = point.x.asDouble;
+    if (!_inViewport(x, viewState, options)) continue;
+    final extension = point.extensions[_candlestickPointExtensionKey];
+    if (extension is! JsonObjectValue) {
+      throw FormatException(
+        'Candlestick point $pointIndex is missing its OHLC extension.',
+      );
+    }
+    final open = _candlestickValue(extension, 'open', pointIndex);
+    final high = _candlestickValue(extension, 'high', pointIndex);
+    final low = _candlestickValue(extension, 'low', pointIndex);
+    final close = _candlestickValue(extension, 'close', pointIndex);
+    if (close != point.y.asDouble ||
+        high < low ||
+        high < open ||
+        high < close ||
+        low > open ||
+        low > close) {
+      throw FormatException('Candlestick point $pointIndex has invalid OHLC.');
+    }
+    final change = close - open;
+    final changePercent = open == 0 ? null : (change / open) * 100;
+    final overlays = <String, ChartTableWideCell>{};
+    for (final overlay in selected.where((series) => series != candlestick)) {
+      final match = overlayPointsByX[overlay.id]?[x];
+      if (match == null) continue;
+      final (overlayIndex, overlayPoint) = match;
+      final value = overlayPoint.y.asDouble;
+      overlays[overlay.id] = ChartTableWideCell(
+        reference: ChartTablePointReference(
+          seriesId: overlay.id,
+          pointIndex: overlayIndex,
+        ),
+        yRaw: value,
+        yDisplay: _displayNumber(value, formattersBySeries[overlay.id]),
+        unit: unitsBySeries[overlay.id],
+        timestamp: overlayPoint.timestamp,
+        label: overlayPoint.label,
+        metadata: options.includeMetadata ? overlayPoint.metadata : null,
+        isValid: x.isFinite && value.isFinite,
+      );
+    }
+    rows.add(
+      ChartTableCandlestickRow(
+        rowId: '${Uri.encodeComponent(candlestick.id)}:$pointIndex',
+        reference: ChartTablePointReference(
+          seriesId: candlestick.id,
+          pointIndex: pointIndex,
+        ),
+        xRaw: x,
+        xDisplay: _displayNumber(x, xFormatter),
+        timestamp: point.timestamp,
+        openRaw: open,
+        openDisplay: _displayNumber(open, formatter),
+        highRaw: high,
+        highDisplay: _displayNumber(high, formatter),
+        lowRaw: low,
+        lowDisplay: _displayNumber(low, formatter),
+        closeRaw: close,
+        closeDisplay: _displayNumber(close, formatter),
+        changeRaw: change,
+        changeDisplay: _displayNumber(change, formatter),
+        changePercentRaw: changePercent,
+        changePercentDisplay: changePercent == null
+            ? 'No value'
+            : '${changePercent.toStringAsFixed(2)}%',
+        unit: unitsBySeries[candlestick.id],
+        label: point.label,
+        isValid:
+            x.isFinite &&
+            open.isFinite &&
+            high.isFinite &&
+            low.isFinite &&
+            close.isFinite,
+        hiddenSeries: hiddenBySeries[candlestick.id] ?? false,
+        overlayCells: overlays,
+      ),
+    );
+  }
+  return rows;
+}
+
+double _candlestickValue(
+  JsonObjectValue extension,
+  String key,
+  int pointIndex,
+) {
+  final value = extension.values[key]?.toJson();
+  if (value is! num || !value.isFinite) {
+    throw FormatException(
+      'Candlestick point $pointIndex $key must be a finite number.',
+    );
+  }
+  return value.toDouble();
 }
 
 List<ChartTablePieRow> _projectPieRows(

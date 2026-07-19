@@ -6,6 +6,9 @@ import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/annotation_style.dart';
 import '../models/bar_chart_style.dart';
+import '../models/candlestick_chart_series.dart';
+import '../models/candlestick_chart_style.dart';
+import '../models/candlestick_data_point.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -31,6 +34,7 @@ import '../models/y_axis_config.dart';
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
+import '../theming/components/candlestick_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -258,6 +262,7 @@ class _ChartDartEmitter {
     int seriesIndex,
   ) {
     final constructor = switch (series) {
+      CandlestickChartSeries() => 'CandlestickChartSeries',
       LineChartSeries() => 'LineChartSeries',
       ScatterChartSeries() => 'ScatterChartSeries',
       AreaChartSeries() => 'AreaChartSeries',
@@ -284,7 +289,8 @@ class _ChartDartEmitter {
           pathPrefix: '\$.series[$seriesIndex].annotations',
         );
       }
-      if (series is! PolarColumnChartSeries) {
+      if (series is! PolarColumnChartSeries &&
+          series is! CandlestickChartSeries) {
         _valueIf(
           writer,
           'isXOrdered',
@@ -298,6 +304,8 @@ class _ChartDartEmitter {
       }
       _optionalString(writer, 'unit', series.unit);
       switch (series) {
+        case CandlestickChartSeries():
+          _emitCandlestickOptions(writer, series);
         case LineChartSeries():
           _emitLineOptions(writer, series);
         case AreaChartSeries():
@@ -375,6 +383,10 @@ class _ChartDartEmitter {
     int seriesIndex,
     int pointIndex,
   ) {
+    if (point is CandlestickDataPoint) {
+      _emitCandlestickPoint(writer, point);
+      return;
+    }
     writer.writeLine('ChartDataPoint(');
     writer.indented(() {
       writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
@@ -398,6 +410,59 @@ class _ChartDartEmitter {
       if (point.metadata != null && point.metadata!.isNotEmpty) {
         writer.namedArgument('metadata', _dynamicLiteral(point.metadata!));
       }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitCandlestickPoint(
+    DartSourceWriter writer,
+    CandlestickDataPoint point,
+  ) {
+    writer.writeLine('CandlestickDataPoint(');
+    writer.indented(() {
+      writer.namedArgument('x', DartSourceWriter.numberLiteral(point.x));
+      writer.namedArgument('open', DartSourceWriter.numberLiteral(point.open));
+      writer.namedArgument('high', DartSourceWriter.numberLiteral(point.high));
+      writer.namedArgument('low', DartSourceWriter.numberLiteral(point.low));
+      writer.namedArgument(
+        'close',
+        DartSourceWriter.numberLiteral(point.close),
+      );
+      _optionalNumber(writer, 'magnitude', point.magnitude);
+      _optionalNumber(writer, 'colorValue', point.colorValue);
+      _optionalNumber(writer, 'opacityValue', point.opacityValue);
+      if (point.timestamp != null) {
+        writer.namedArgument(
+          'timestamp',
+          'DateTime.parse(${DartSourceWriter.stringLiteral(point.timestamp!.toIso8601String())})',
+        );
+      }
+      _optionalString(writer, 'label', point.label);
+      if (point.metadata != null && point.metadata!.isNotEmpty) {
+        writer.namedArgument('metadata', _dynamicLiteral(point.metadata!));
+      }
+      if (point.segmentStyle != null) {
+        _emitSegmentStyle(writer, point.segmentStyle!);
+      }
+      if (point.pointStyle != null) {
+        _emitPointStyle(writer, point.pointStyle!);
+      }
+      if (point.candlestickStyle case final style?) {
+        _emitCandlestickPointStyle(writer, style);
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitCandlestickPointStyle(
+    DartSourceWriter writer,
+    CandlestickPointStyle style,
+  ) {
+    writer.writeLine('candlestickStyle: CandlestickPointStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'bodyFillColor', style.bodyFillColor);
+      _optionalColor(writer, 'borderColor', style.borderColor);
+      _optionalColor(writer, 'wickColor', style.wickColor);
     });
     writer.writeLine('),');
   }
@@ -1040,6 +1105,81 @@ class _ChartDartEmitter {
             'The canvas legend toggle callback was omitted. Provide it from your application.',
         path: '$path.onSeriesToggle',
       );
+    }
+  }
+
+  void _emitCandlestickOptions(
+    DartSourceWriter writer,
+    CandlestickChartSeries series,
+  ) {
+    final style = series.candlestickStyle;
+    if (options.includeDefaultValues ||
+        style != const CandlestickChartStyle()) {
+      writer.writeLine('candlestickStyle: CandlestickChartStyle(');
+      writer.indented(() {
+        _optionalColor(
+          writer,
+          'risingBodyFillColor',
+          style.risingBodyFillColor,
+        );
+        _optionalColor(
+          writer,
+          'fallingBodyFillColor',
+          style.fallingBodyFillColor,
+        );
+        _optionalColor(writer, 'dojiBodyFillColor', style.dojiBodyFillColor);
+        _optionalColor(writer, 'risingBorderColor', style.risingBorderColor);
+        _optionalColor(writer, 'fallingBorderColor', style.fallingBorderColor);
+        _optionalColor(writer, 'dojiBorderColor', style.dojiBorderColor);
+        _optionalColor(writer, 'risingWickColor', style.risingWickColor);
+        _optionalColor(writer, 'fallingWickColor', style.fallingWickColor);
+        _optionalColor(writer, 'dojiWickColor', style.dojiWickColor);
+        _enumIf(
+          writer,
+          'bodyFillMode',
+          'CandlestickBodyFillMode',
+          style.bodyFillMode.name,
+          defaultName: 'hollowRising',
+        );
+        _numberIf(writer, 'bodyWidthFactor', style.bodyWidthFactor, .7);
+        _numberIf(writer, 'minBodyWidth', style.minBodyWidth, 1);
+        _numberIf(writer, 'maxBodyWidth', style.maxBodyWidth, 18);
+        _numberIf(writer, 'bodyBorderWidth', style.bodyBorderWidth, 1);
+        _numberIf(writer, 'wickWidth', style.wickWidth, 1);
+        _valueIf(
+          writer,
+          'showBodyBorder',
+          style.showBodyBorder,
+          defaultValue: true,
+        );
+        _valueIf(writer, 'showWicks', style.showWicks, defaultValue: true);
+        _numberIf(writer, 'bodyCornerRadius', style.bodyCornerRadius, 0);
+        _numberIf(writer, 'minimumBodyHeight', style.minimumBodyHeight, 1);
+      });
+      writer.writeLine('),');
+    }
+    final animation = series.animation;
+    if (options.includeDefaultValues ||
+        animation != const CandlestickAnimationStyle()) {
+      writer.writeLine('animation: CandlestickAnimationStyle(');
+      writer.indented(() {
+        _enumIf(
+          writer,
+          'mode',
+          'CandlestickAnimationMode',
+          animation.mode.name,
+          defaultName: 'reveal',
+        );
+        _numberIf(writer, 'staggerFraction', animation.staggerFraction, 0);
+        _enumIf(
+          writer,
+          'dataUpdateMode',
+          'CandlestickDataUpdateAnimationMode',
+          animation.dataUpdateMode.name,
+          defaultName: 'interpolate',
+        );
+      });
+      writer.writeLine('),');
     }
   }
 
@@ -2321,6 +2461,7 @@ class _ChartDartEmitter {
       _emitScrollbarTheme(writer, theme.scrollbarConfig);
       _emitLegendStyle(writer, theme.legendStyle, force: true);
       _emitPieChartTheme(writer, theme.pieChartTheme);
+      _emitCandlestickTheme(writer, theme.candlestickTheme);
       writer.namedArgument(
         'focusBorderColor',
         DartSourceWriter.colorLiteral(theme.focusBorderColor),
@@ -2414,6 +2555,57 @@ class _ChartDartEmitter {
       writer.namedArgument(
         'markerShapes',
         '[${theme.markerShapes.map((shape) => 'SeriesMarkerShape.${shape.name}').join(', ')}]',
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitCandlestickTheme(DartSourceWriter writer, CandlestickTheme theme) {
+    writer.writeLine('candlestickTheme: CandlestickTheme(');
+    writer.indented(() {
+      writer.namedArgument(
+        'risingBodyFillColor',
+        DartSourceWriter.colorLiteral(theme.risingBodyFillColor),
+      );
+      writer.namedArgument(
+        'fallingBodyFillColor',
+        DartSourceWriter.colorLiteral(theme.fallingBodyFillColor),
+      );
+      writer.namedArgument(
+        'dojiBodyFillColor',
+        DartSourceWriter.colorLiteral(theme.dojiBodyFillColor),
+      );
+      writer.namedArgument(
+        'risingBorderColor',
+        DartSourceWriter.colorLiteral(theme.risingBorderColor),
+      );
+      writer.namedArgument(
+        'fallingBorderColor',
+        DartSourceWriter.colorLiteral(theme.fallingBorderColor),
+      );
+      writer.namedArgument(
+        'dojiBorderColor',
+        DartSourceWriter.colorLiteral(theme.dojiBorderColor),
+      );
+      writer.namedArgument(
+        'risingWickColor',
+        DartSourceWriter.colorLiteral(theme.risingWickColor),
+      );
+      writer.namedArgument(
+        'fallingWickColor',
+        DartSourceWriter.colorLiteral(theme.fallingWickColor),
+      );
+      writer.namedArgument(
+        'dojiWickColor',
+        DartSourceWriter.colorLiteral(theme.dojiWickColor),
+      );
+      writer.namedArgument(
+        'selectionColor',
+        DartSourceWriter.colorLiteral(theme.selectionColor),
+      );
+      writer.namedArgument(
+        'focusColor',
+        DartSourceWriter.colorLiteral(theme.focusColor),
       );
     });
     writer.writeLine('),');

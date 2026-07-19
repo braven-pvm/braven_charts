@@ -1,4 +1,5 @@
 import '../models/chart_series.dart';
+import '../models/candlestick_chart_series.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
@@ -32,6 +33,7 @@ class ChartLayoutResolver {
         SeriesStyle.pie => candidate is! PieChartSeries,
         SeriesStyle.donut => candidate is! DonutChartSeries,
         SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
+        SeriesStyle.candlestick => candidate is! CandlestickChartSeries,
         _ => false,
       },
     );
@@ -46,7 +48,9 @@ class ChartLayoutResolver {
           SeriesStyle.donut => 'SeriesStyle.donut requires a DonutChartSeries',
           SeriesStyle.polarColumn =>
             'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
-          _ => 'Unsupported series style',
+          SeriesStyle.candlestick =>
+            'SeriesStyle.candlestick requires a CandlestickChartSeries',
+          _ => 'Series style does not match its concrete series type',
         },
       );
     }
@@ -101,6 +105,24 @@ class ChartLayoutResolver {
           );
         }
       }
+    }
+    final candlestickSeries = allSeries
+        .whereType<CandlestickChartSeries>()
+        .toList(growable: false);
+    if (candlestickSeries.length > 1) {
+      throw ArgumentError.value(
+        candlestickSeries.length,
+        'series',
+        'A Cartesian chart accepts at most one CandlestickChartSeries in v1',
+      );
+    }
+    if (candlestickSeries.isNotEmpty &&
+        allSeries.any((candidate) => candidate is BarChartSeries)) {
+      throw ArgumentError.value(
+        allSeries.length,
+        'series',
+        'Candlestick and Bar series cannot share one plot in v1',
+      );
     }
     return radialSeries.isEmpty
         ? ChartLayoutKind.cartesian

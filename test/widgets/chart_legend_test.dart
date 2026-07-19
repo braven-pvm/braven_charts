@@ -11,7 +11,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ChartLegend(
-            series: const [
+            series: [
               BarChartSeries(
                 id: 'forecast',
                 name: 'Forecast',
@@ -35,6 +35,20 @@ void main() {
                 points: [ChartDataPoint(x: 0, y: 38)],
                 color: Color(0xFF805AD5),
               ),
+              CandlestickChartSeries(
+                id: 'price',
+                name: 'Price',
+                points: [
+                  CandlestickDataPoint(
+                    x: 0,
+                    open: 40,
+                    high: 45,
+                    low: 38,
+                    close: 43,
+                  ),
+                ],
+                color: Color(0xFF0F766E),
+              ),
             ],
             hiddenSeriesIds: const {},
             onSeriesToggle: (id) => toggledId = id,
@@ -48,6 +62,12 @@ void main() {
         (widget) => widget is CustomPaint && widget.size == const Size(18, 12),
       ),
       findsNWidgets(3),
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is CustomPaint && widget.size == const Size(18, 16),
+      ),
+      findsOneWidget,
     );
     expect(
       find.byWidgetPredicate(

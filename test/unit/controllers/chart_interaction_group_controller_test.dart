@@ -78,6 +78,41 @@ void main() {
       expect(group.viewport, const ChartXViewport(min: 2, max: 8));
     });
 
+    test('host viewport command drives participants without a fake source', () {
+      final group = ChartInteractionGroupController();
+      addTearDown(group.dispose);
+      final firstValues = <ChartXViewport>[];
+      final secondValues = <ChartXViewport>[];
+      final first = group.attachChart(
+        attachment: Object(),
+        onCursorChanged: (_) {},
+        onViewportChanged: firstValues.add,
+      );
+      final second = group.attachChart(
+        attachment: Object(),
+        options: const ChartInteractionGroupOptions(synchronizeViewport: false),
+        onCursorChanged: (_) {},
+        onViewportChanged: secondValues.add,
+      );
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      group.setViewport(const ChartXViewport(min: 4, max: 12));
+
+      expect(firstValues, const [ChartXViewport(min: 4, max: 12)]);
+      expect(secondValues, isEmpty);
+      expect(group.viewport, const ChartXViewport(min: 4, max: 12));
+      expect(
+        () => group.setViewport(
+          const ChartXViewport(
+            min: double.negativeInfinity,
+            max: double.infinity,
+          ),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('honors independent cursor and viewport opt-outs', () {
       final group = ChartInteractionGroupController();
       addTearDown(group.dispose);

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../models/chart_data_point.dart';
+import '../../models/candlestick_interaction_details.dart';
 
 /// Immutable identity and display payload for one interactable chart datum.
 ///
@@ -37,6 +38,7 @@ class ChartDataHit {
     this.formattedOpacityValue,
     this.opacityLabel,
     this.markerOpacity,
+    this.candlestick,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -128,6 +130,9 @@ class ChartDataHit {
   /// Effective marker opacity after point and quantitative overrides.
   final double? markerOpacity;
 
+  /// Typed OHLC values for a native Candlestick datum.
+  final CandlestickInteractionDetails? candlestick;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -146,7 +151,15 @@ class ChartDataHit {
   /// Complete non-color-only announcement for assistive technologies.
   String get semanticLabel {
     final name = category ?? point.label ?? 'Data point';
-    final parts = <String>[?groupLabel, ?groupName, name, formattedValue];
+    final parts = <String>[
+      ?groupLabel,
+      ?groupName,
+      name,
+      if (candlestick case final details?)
+        details.semanticLabel
+      else
+        formattedValue,
+    ];
     if (share != null) {
       final display = formattedShare ?? '${(share! * 100).toStringAsFixed(1)}%';
       parts.add(

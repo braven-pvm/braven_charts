@@ -11,6 +11,8 @@ import 'pages/artifact_showcase_page.dart';
 import 'pages/bar_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/chart_workbench_page.dart';
+import 'pages/candlestick_geometry_lab_page.dart';
+import 'pages/candlestick_charts_page.dart';
 import 'pages/cartesian_chart_type_pages.dart';
 import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
@@ -260,6 +262,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'area-charts' => const AreaChartsPage(),
     'bar-charts' => const BarLabPage(),
     'scatter-charts' => const ScatterChartsPage(),
+    'candlestick-charts' => const CandlestickChartsPage(),
     'pie-charts' => const PieChartsPage(),
     'donut-charts' => const DonutChartsPage(),
     'concentric-donut' => const ConcentricDonutPage(),
@@ -324,6 +327,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
 
   Widget _buildScopedContent(BuildContext context) {
     final capture = Uri.base.queryParameters['capture'];
+    if (capture == 'candlestick-geometry') {
+      return const CandlestickGeometryLabPage();
+    }
     if (capture == 'hero-threshold' || capture == 'hero-session') {
       return const _HeroMediaCapture(
         panel: PerformanceIntelligenceHeroPanel.sessionProfile,

@@ -59,6 +59,12 @@ void main() {
 
     test('generates every built-in chart family constructor', () {
       final series = <ChartSeries>[
+        CandlestickChartSeries(
+          id: 'candlestick',
+          points: [
+            CandlestickDataPoint(x: 0, open: 2, high: 4, low: 1, close: 3),
+          ],
+        ),
         const LineChartSeries(id: 'line', points: [ChartDataPoint(x: 0, y: 1)]),
         const AreaChartSeries(id: 'area', points: [ChartDataPoint(x: 0, y: 2)]),
         const ScatterChartSeries(
@@ -95,6 +101,7 @@ void main() {
           ),
         );
         final constructor = switch (item) {
+          CandlestickChartSeries() => 'CandlestickChartSeries(',
           LineChartSeries() => 'LineChartSeries(',
           AreaChartSeries() => 'AreaChartSeries(',
           ScatterChartSeries() => 'ScatterChartSeries(',
@@ -106,6 +113,50 @@ void main() {
         };
         expect(generated.source, contains(constructor));
       }
+    });
+
+    test('generates deterministic Candlestick OHLC, style, and motion', () {
+      final snapshot = _snapshot(
+        CandlestickChartSeries(
+          id: 'price',
+          unit: 'USD',
+          points: [
+            CandlestickDataPoint(
+              x: 1,
+              open: 100,
+              high: 112,
+              low: 98,
+              close: 110,
+              candlestickStyle: const CandlestickPointStyle(
+                wickColor: Color(0xFF334455),
+              ),
+            ),
+          ],
+          candlestickStyle: const CandlestickChartStyle(
+            bodyFillMode: CandlestickBodyFillMode.filled,
+            bodyWidthFactor: .6,
+          ),
+          animation: const CandlestickAnimationStyle(staggerFraction: .35),
+        ),
+      );
+
+      final first = _success(ChartDartSourceGenerator.generate(snapshot));
+      final second = _success(ChartDartSourceGenerator.generate(snapshot));
+
+      expect(second.source, first.source);
+      expect(first.source, contains('CandlestickChartSeries('));
+      expect(first.source, contains('CandlestickDataPoint('));
+      expect(first.source, contains('open: 100.0,'));
+      expect(first.source, contains('high: 112.0,'));
+      expect(first.source, contains('low: 98.0,'));
+      expect(first.source, contains('close: 110.0,'));
+      expect(first.source, isNot(contains('isXOrdered:')));
+      expect(
+        first.source,
+        contains('bodyFillMode: CandlestickBodyFillMode.filled,'),
+      );
+      expect(first.source, contains('staggerFraction: 0.35,'));
+      expect(first.source, contains('wickColor: Color(0xFF334455),'));
     });
 
     test('omits all data explicitly when the inline ceiling is exceeded', () {

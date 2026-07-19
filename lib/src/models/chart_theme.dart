@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
+import '../theming/components/candlestick_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -55,6 +56,7 @@ class ChartTheme {
     required this.scrollbarConfig,
     required this.legendStyle,
     this.pieChartTheme = const PieChartTheme(),
+    this.candlestickTheme = CandlestickTheme.light,
     this.focusBorderColor = Colors.blue,
     this.focusBorderWidth = 2.0,
     this.focusBorderRadius = 0.0,
@@ -101,6 +103,9 @@ class ChartTheme {
 
   /// Pie-specific defaults resolved beneath per-series overrides.
   final PieChartTheme pieChartTheme;
+
+  /// Candlestick-specific direction and interaction defaults.
+  final CandlestickTheme candlestickTheme;
 
   /// Focus border color when chart has keyboard focus.
   final Color focusBorderColor;
@@ -157,6 +162,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.defaultDark,
     scrollbarConfig: ScrollbarConfig.defaultDark,
     legendStyle: LegendStyle.dark,
+    candlestickTheme: CandlestickTheme.dark,
   );
 
   static final ChartTheme corporateBlue = ChartTheme(
@@ -170,6 +176,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.corporateBlue,
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
+    candlestickTheme: CandlestickTheme.light,
   );
 
   static final ChartTheme vibrant = ChartTheme(
@@ -183,6 +190,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.vibrant,
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
+    candlestickTheme: CandlestickTheme.light,
   );
 
   static final ChartTheme minimal = ChartTheme(
@@ -196,6 +204,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.minimal,
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
+    candlestickTheme: CandlestickTheme.light,
   );
 
   static final ChartTheme highContrast = ChartTheme(
@@ -209,6 +218,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.highContrast,
     scrollbarConfig: ScrollbarConfig.highContrast,
     legendStyle: LegendStyle.light,
+    candlestickTheme: CandlestickTheme.highContrast,
   );
 
   static final ChartTheme colorblindFriendly = ChartTheme(
@@ -222,6 +232,7 @@ class ChartTheme {
     annotationTheme: AnnotationTheme.colorblindFriendly,
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
+    candlestickTheme: CandlestickTheme.colorblindFriendly,
   );
 
   // ========== Customization ==========
@@ -238,6 +249,7 @@ class ChartTheme {
     ScrollbarConfig? scrollbarConfig,
     LegendStyle? legendStyle,
     PieChartTheme? pieChartTheme,
+    CandlestickTheme? candlestickTheme,
     Color? focusBorderColor,
     double? focusBorderWidth,
     double? focusBorderRadius,
@@ -254,6 +266,7 @@ class ChartTheme {
       scrollbarConfig: scrollbarConfig ?? this.scrollbarConfig,
       legendStyle: legendStyle ?? this.legendStyle,
       pieChartTheme: pieChartTheme ?? this.pieChartTheme,
+      candlestickTheme: candlestickTheme ?? this.candlestickTheme,
       focusBorderColor: focusBorderColor ?? this.focusBorderColor,
       focusBorderWidth: focusBorderWidth ?? this.focusBorderWidth,
       focusBorderRadius: focusBorderRadius ?? this.focusBorderRadius,
@@ -280,6 +293,7 @@ class ChartTheme {
         scrollbarConfig == other.scrollbarConfig &&
         legendStyle == other.legendStyle &&
         pieChartTheme == other.pieChartTheme &&
+        candlestickTheme == other.candlestickTheme &&
         focusBorderColor == other.focusBorderColor &&
         focusBorderWidth == other.focusBorderWidth &&
         focusBorderRadius == other.focusBorderRadius;
@@ -298,6 +312,7 @@ class ChartTheme {
     scrollbarConfig,
     legendStyle,
     pieChartTheme,
+    candlestickTheme,
     focusBorderColor,
     focusBorderWidth,
     focusBorderRadius,

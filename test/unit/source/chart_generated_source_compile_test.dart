@@ -30,11 +30,36 @@ void main() {
           unit: '%',
         ),
       );
+      final candles = CandlestickChartSeries(
+        id: 'price',
+        unit: 'USD',
+        points: [
+          CandlestickDataPoint(
+            x: 0,
+            open: 146,
+            high: 153,
+            low: 144,
+            close: 151,
+          ),
+          CandlestickDataPoint(
+            x: 1,
+            open: 151,
+            high: 164,
+            low: 149,
+            close: 158,
+          ),
+        ],
+        candlestickStyle: const CandlestickChartStyle(
+          bodyFillMode: CandlestickBodyFillMode.filled,
+          bodyCornerRadius: 2,
+        ),
+      );
       final snapshot = ChartDocumentSnapshot(
         document: ChartDocument(
           documentId: 'generated-source-compile',
           revision: 4,
           series: [
+            _success(ChartSeriesDocumentCodec.encode(candles)).value,
             _success(ChartSeriesDocumentCodec.encode(series)).value,
             _success(ChartSeriesDocumentCodec.encode(scatter)).value,
           ],

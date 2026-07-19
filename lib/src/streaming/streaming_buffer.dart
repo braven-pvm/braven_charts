@@ -2,6 +2,7 @@
 // High-Performance Circular Buffer for Live Streaming
 
 import '../models/chart_data_point.dart';
+import '../models/candlestick_data_point.dart';
 import '../utils/data_converter.dart';
 
 /// High-performance circular buffer optimized for streaming chart data.
@@ -42,13 +43,13 @@ class StreamingBuffer {
   ///
   /// **Throws**: [AssertionError] if maxSize is not positive.
   StreamingBuffer({required int maxSize})
-      : assert(maxSize > 0, 'maxSize must be positive'),
-        _maxSize = maxSize,
-        // Pre-allocate with dummy values (will be overwritten)
-        _data = List<ChartDataPoint>.filled(
-          maxSize,
-          const ChartDataPoint(x: 0, y: 0),
-        );
+    : assert(maxSize > 0, 'maxSize must be positive'),
+      _maxSize = maxSize,
+      // Pre-allocate with dummy values (will be overwritten)
+      _data = List<ChartDataPoint>.filled(
+        maxSize,
+        const ChartDataPoint(x: 0, y: 0),
+      );
 
   final int _maxSize;
   final List<ChartDataPoint> _data;
@@ -143,12 +144,7 @@ class StreamingBuffer {
       // Else: use stale bounds for a few frames (acceptable for streaming UX)
     }
 
-    return DataBounds(
-      xMin: _xMin,
-      xMax: _xMax,
-      yMin: _yMin,
-      yMax: _yMax,
-    );
+    return DataBounds(xMin: _xMin, xMax: _xMax, yMin: _yMin, yMax: _yMax);
   }
 
   // ============================================================================
@@ -184,8 +180,8 @@ class StreamingBuffer {
       const tolerance = 1e-10;
       if ((evicted.x - _xMin).abs() < tolerance ||
           (evicted.x - _xMax).abs() < tolerance ||
-          (evicted.y - _yMin).abs() < tolerance ||
-          (evicted.y - _yMax).abs() < tolerance) {
+          (_pointYMin(evicted) - _yMin).abs() < tolerance ||
+          (_pointYMax(evicted) - _yMax).abs() < tolerance) {
         _boundsNeedRecalc = true;
       }
     }
@@ -218,6 +214,28 @@ class StreamingBuffer {
     for (final point in points) {
       add(point);
     }
+  }
+
+  /// Replaces the newest sample without changing buffer order or capacity.
+  ///
+  /// This is the O(1) hot path for a still-forming candlestick. Bounds remain
+  /// incrementally correct for new extrema and are lazily recomputed when the
+  /// replaced sample owned an old boundary.
+  bool replaceLatest(ChartDataPoint point) {
+    if (_count == 0) return false;
+    final latestIndex = (_head - 1 + _maxSize) % _maxSize;
+    final previous = _data[latestIndex];
+    const tolerance = 1e-10;
+    if ((previous.x - _xMin).abs() < tolerance ||
+        (previous.x - _xMax).abs() < tolerance ||
+        (_pointYMin(previous) - _yMin).abs() < tolerance ||
+        (_pointYMax(previous) - _yMax).abs() < tolerance) {
+      _boundsNeedRecalc = true;
+    }
+    _data[latestIndex] = point;
+    _version++;
+    _updateBoundsIncremental(point);
+    return true;
   }
 
   /// Returns all points in the buffer in chronological order.
@@ -347,8 +365,10 @@ class StreamingBuffer {
   void _updateBoundsIncremental(ChartDataPoint point) {
     if (point.x < _xMin) _xMin = point.x;
     if (point.x > _xMax) _xMax = point.x;
-    if (point.y < _yMin) _yMin = point.y;
-    if (point.y > _yMax) _yMax = point.y;
+    final yMin = _pointYMin(point);
+    final yMax = _pointYMax(point);
+    if (yMin < _yMin) _yMin = yMin;
+    if (yMax > _yMax) _yMax = yMax;
   }
 
   /// Recalculates bounds by scanning all elements.
@@ -379,8 +399,10 @@ class StreamingBuffer {
       final point = _data[index];
       if (point.x < xMin) xMin = point.x;
       if (point.x > xMax) xMax = point.x;
-      if (point.y < yMin) yMin = point.y;
-      if (point.y > yMax) yMax = point.y;
+      final pointYMin = _pointYMin(point);
+      final pointYMax = _pointYMax(point);
+      if (pointYMin < yMin) yMin = pointYMin;
+      if (pointYMax > yMax) yMax = pointYMax;
     }
 
     _xMin = xMin;
@@ -389,6 +411,12 @@ class StreamingBuffer {
     _yMax = yMax;
     _boundsNeedRecalc = false;
   }
+
+  static double _pointYMin(ChartDataPoint point) =>
+      point is CandlestickDataPoint ? point.low : point.y;
+
+  static double _pointYMax(ChartDataPoint point) =>
+      point is CandlestickDataPoint ? point.high : point.y;
 
   @override
   String toString() {

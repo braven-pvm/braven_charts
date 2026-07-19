@@ -4,6 +4,8 @@ import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/models/braven_chart_controller.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
+import 'package:braven_charts/src/models/candlestick_chart_series.dart';
+import 'package:braven_charts/src/models/candlestick_data_point.dart';
 import 'package:braven_charts/src/braven_chart_plus.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
@@ -231,6 +233,86 @@ void main() {
         await tester.pump();
         expect(controller.selectedPointRefs, {
           const ChartPointRef(seriesId: 'actual', pointIndex: 1),
+        });
+      },
+    );
+
+    testWidgets(
+      'candlestick keyboard navigation announces and selects complete OHLC',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  showLegend: false,
+                  series: [
+                    CandlestickChartSeries(
+                      id: 'price',
+                      name: 'Price',
+                      unit: 'USD',
+                      points: [
+                        CandlestickDataPoint(
+                          x: 0,
+                          open: 100,
+                          high: 108,
+                          low: 98,
+                          close: 106,
+                          label: 'Monday',
+                        ),
+                        CandlestickDataPoint(
+                          x: 1,
+                          open: 106,
+                          high: 110,
+                          low: 99,
+                          close: 101,
+                          label: 'Tuesday',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BravenChartPlus));
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+        expect(controller.focusedPointRefs, {
+          const ChartPointRef(seriesId: 'price', pointIndex: 1),
+        });
+
+        final semantics = tester.widget<Semantics>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label == 'Interactive candlestick chart',
+          ),
+        );
+        expect(
+          semantics.properties.value,
+          contains(
+            'Price, Tuesday, Open 106.00 USD, High 110.00 USD, Low 99.00 USD, Close 101.00 USD',
+          ),
+        );
+        expect(semantics.properties.value, contains('falling'));
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(controller.selectedPointRefs, {
+          const ChartPointRef(seriesId: 'price', pointIndex: 1),
         });
       },
     );

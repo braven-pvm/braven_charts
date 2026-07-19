@@ -39,6 +39,8 @@ abstract final class ChartToolSchema {
 Creates an interactive BravenChartPlus chart from provided data.
 Use this tool when the user wants to visualize data as a chart.
 Cartesian charts support multiple overlaid series, axes, pan, zoom, and crosshair.
+Candlestick charts require finite X/open/high/low/close values per point and
+support Line, Area, or Scatter overlays at matching X coordinates.
 Bar charts additionally support grouped, overlaid, stacked, normalized, range,
 waterfall, horizontal, benchmark, uncertainty, sequenced motion, and
 collision-aware label models.
@@ -56,7 +58,15 @@ same radial interaction contract.
         },
         'chart_type': {
           'type': 'string',
-          'enum': ['line', 'area', 'bar', 'scatter', 'pie', 'donut'],
+          'enum': [
+            'line',
+            'area',
+            'bar',
+            'scatter',
+            'candlestick',
+            'pie',
+            'donut',
+          ],
           'description':
               'Type of chart to render. Pie and Donut show part-to-whole category contributions and require exactly one series.',
         },
@@ -243,6 +253,26 @@ same radial interaction contract.
                       'description':
                           'Y-axis value for Cartesian charts. For Pie and Donut, this is a finite non-negative contribution.',
                     },
+                    'open': {
+                      'type': 'number',
+                      'description':
+                          'Candlestick-only opening value. Required for every candlestick point.',
+                    },
+                    'high': {
+                      'type': 'number',
+                      'description':
+                          'Candlestick-only high value. Must be at least open and close.',
+                    },
+                    'low': {
+                      'type': 'number',
+                      'description':
+                          'Candlestick-only low value. Must be at most open and close.',
+                    },
+                    'close': {
+                      'type': 'number',
+                      'description':
+                          'Candlestick-only closing value. Required instead of generic y.',
+                    },
                     'label': {
                       'type': 'string',
                       'description':
@@ -289,7 +319,7 @@ same radial interaction contract.
                           'Bar-only waterfall total column resolved from the running cumulative value.',
                     },
                   },
-                  'required': ['x', 'y'],
+                  'required': ['x'],
                 },
               },
             },
@@ -1275,6 +1305,84 @@ same radial interaction contract.
           },
         },
       },
+      'allOf': [
+        {
+          'if': {
+            'properties': {
+              'chart_type': {'const': 'candlestick'},
+            },
+            'candlestick_body_fill': {
+              'type': 'string',
+              'enum': ['hollow_rising', 'filled'],
+              'description': 'Candlestick body fill treatment.',
+            },
+            'candlestick_body_width_factor': {
+              'type': 'number',
+              'exclusiveMinimum': 0,
+              'maximum': 1,
+              'description': 'Candle body width relative to its X slot.',
+            },
+            'candlestick_border_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick body outline width.',
+            },
+            'candlestick_wick_width': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick wick stroke width.',
+            },
+            'candlestick_corner_radius': {
+              'type': 'number',
+              'minimum': 0,
+              'description': 'Candlestick body corner radius.',
+            },
+            'candlestick_animation_mode': {
+              'type': 'string',
+              'enum': ['none', 'reveal'],
+              'description': 'Candlestick entrance animation behavior.',
+            },
+            'candlestick_animation_stagger': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description':
+                  'Fraction of the reveal timeline used to stagger candles.',
+            },
+            'required': ['chart_type'],
+          },
+          'then': {
+            'properties': {
+              'series': {
+                'items': {
+                  'properties': {
+                    'data': {
+                      'items': {
+                        'required': ['x', 'open', 'high', 'low', 'close'],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          'else': {
+            'properties': {
+              'series': {
+                'items': {
+                  'properties': {
+                    'data': {
+                      'items': {
+                        'required': ['x', 'y'],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
       'required': ['series'],
     },
   };

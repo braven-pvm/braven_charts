@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../models/chart_annotation.dart';
 import '../models/bar_chart_style.dart';
+import '../models/candlestick_chart_series.dart';
+import '../models/candlestick_chart_style.dart';
+import '../models/candlestick_data_point.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
@@ -148,6 +151,10 @@ abstract final class ChartSeriesDocumentCodec {
           },
           requiredCapabilities: {
             'series.${_typeOf(series)}',
+            if (series is CandlestickChartSeries) 'series.candlestick.ohlc.v1',
+            if (series is CandlestickChartSeries &&
+                series.animation != const CandlestickAnimationStyle())
+              'series.candlestick.motion.v1',
             if (series is BarChartSeries && series.barStyle.pattern != null)
               'series.bar.pattern.v1',
             if (series is BarChartSeries && series.bulletStyle != null)
@@ -278,7 +285,13 @@ abstract final class ChartSeriesDocumentCodec {
       }
 
       final style = _objectMap(document.style);
-      final points = payload.points.map(_decodePoint).toList(growable: false);
+      final points = payload.points
+          .map(
+            document.type == 'candlestick'
+                ? _decodeCandlestickPoint
+                : _decodePoint,
+          )
+          .toList(growable: false);
       final metadata = _dynamicMap(document.metadata);
       final axis = _decodeAxis(
         document.inlineAxis,
@@ -512,6 +525,23 @@ abstract final class ChartSeriesDocumentCodec {
           errorBarStyle: _decodeBarErrorBar(_optionalMap(style, 'barErrorBar')),
           labelStyle: _decodeBarLabels(_optionalMap(style, 'barLabels')),
         ),
+        'candlestick' => CandlestickChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points.cast<CandlestickDataPoint>(),
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          annotations: annotations,
+          yAxisId: document.axisId,
+          yAxisConfig: axis,
+          unit: document.unit,
+          candlestickStyle: _decodeCandlestickStyle(
+            _optionalMap(style, 'candlestickStyle'),
+          ),
+          animation: _decodeCandlestickAnimation(
+            _optionalMap(style, 'candlestickAnimation'),
+          ),
+        ),
         'pie' => PieChartSeries(
           id: document.id,
           name: document.name,
@@ -641,11 +671,14 @@ String _typeOf(ChartSeries series) => switch (series) {
   ScatterChartSeries() => 'scatter',
   AreaChartSeries() => 'area',
   BarChartSeries() => 'bar',
+  CandlestickChartSeries() => 'candlestick',
   PieChartSeries() => 'pie',
   DonutChartSeries() => 'donut',
   PolarColumnChartSeries() => 'polarColumn',
   ChartSeries() => 'base',
 };
+
+const _candlestickPointExtensionKey = 'candlestick.ohlc.v1';
 
 ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
     ChartPointDocument(
@@ -694,6 +727,17 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
                   point.pointStyle!.scatterMarkerStyle!,
                 ),
             }, path: r'$.data.points[$index].pointStyle'),
+      extensions: {
+        if (point is CandlestickDataPoint)
+          _candlestickPointExtensionKey: _jsonObject({
+            'open': _number(point.open),
+            'high': _number(point.high),
+            'low': _number(point.low),
+            'close': _number(point.close),
+            if (point.candlestickStyle case final style?)
+              'style': _encodeCandlestickPointStyle(style),
+          }, path: r'$.data.points[$index].extensions.candlestick'),
+      },
     );
 
 ChartDataPoint _decodePoint(ChartPointDocument point) {
@@ -738,6 +782,49 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
             ),
           ),
   );
+}
+
+CandlestickDataPoint _decodeCandlestickPoint(ChartPointDocument point) {
+  final extension = point.extensions[_candlestickPointExtensionKey];
+  if (extension is! JsonObjectValue) {
+    throw const FormatException(
+      'Candlestick points require a candlestick.ohlc.v1 object extension.',
+    );
+  }
+  final values = extension.values;
+  final base = _decodePoint(point);
+  final close = _requiredExtensionDouble(values, 'close');
+  if (close != base.y) {
+    throw const FormatException(
+      'Candlestick point close must equal its canonical y value.',
+    );
+  }
+  return CandlestickDataPoint(
+    x: base.x,
+    open: _requiredExtensionDouble(values, 'open'),
+    high: _requiredExtensionDouble(values, 'high'),
+    low: _requiredExtensionDouble(values, 'low'),
+    close: close,
+    magnitude: base.magnitude,
+    colorValue: base.colorValue,
+    opacityValue: base.opacityValue,
+    timestamp: base.timestamp,
+    label: base.label,
+    metadata: base.metadata,
+    segmentStyle: base.segmentStyle,
+    pointStyle: base.pointStyle,
+    candlestickStyle: _decodeCandlestickPointStyle(
+      _optionalMap(_objectMap(extension), 'style'),
+    ),
+  );
+}
+
+double _requiredExtensionDouble(Map<String, JsonValue> values, String key) {
+  final value = values[key]?.toJson();
+  if (value is! num) {
+    throw FormatException('Candlestick point $key must be numeric.');
+  }
+  return value.toDouble();
 }
 
 Map<String, Object?> _encodeSeriesStyle(
@@ -897,6 +984,14 @@ Map<String, Object?> _encodeSeriesStyle(
             ? null
             : _encodeBarErrorBar(series.errorBarStyle)
         ..['barLabels'] = _encodeBarLabels(series.labelStyle);
+    case CandlestickChartSeries():
+      result
+        ..['candlestickStyle'] = _encodeCandlestickStyle(
+          series.candlestickStyle,
+        )
+        ..['candlestickAnimation'] = _encodeCandlestickAnimation(
+          series.animation,
+        );
     case PieChartSeries():
       result
         ..['pieStyle'] = _encodePieStyle(series.pieStyle)
@@ -957,6 +1052,154 @@ Map<String, Object?> _encodeSeriesStyle(
   }
   result.removeWhere((_, value) => value == null);
   return result;
+}
+
+Map<String, Object?> _encodeCandlestickPointStyle(
+  CandlestickPointStyle style,
+) => {
+  if (style.bodyFillColor != null)
+    'bodyFillColor': style.bodyFillColor!.toARGB32(),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  if (style.wickColor != null) 'wickColor': style.wickColor!.toARGB32(),
+};
+
+CandlestickPointStyle? _decodeCandlestickPointStyle(
+  Map<String, Object?>? value,
+) => value == null
+    ? null
+    : CandlestickPointStyle(
+        bodyFillColor: _optionalColor(
+          value['bodyFillColor'],
+          r'$.data.point.extensions.candlestick.style.bodyFillColor',
+        ),
+        borderColor: _optionalColor(
+          value['borderColor'],
+          r'$.data.point.extensions.candlestick.style.borderColor',
+        ),
+        wickColor: _optionalColor(
+          value['wickColor'],
+          r'$.data.point.extensions.candlestick.style.wickColor',
+        ),
+      );
+
+Map<String, Object?> _encodeCandlestickStyle(CandlestickChartStyle style) => {
+  if (style.risingBodyFillColor != null)
+    'risingBodyFillColor': style.risingBodyFillColor!.toARGB32(),
+  if (style.fallingBodyFillColor != null)
+    'fallingBodyFillColor': style.fallingBodyFillColor!.toARGB32(),
+  if (style.dojiBodyFillColor != null)
+    'dojiBodyFillColor': style.dojiBodyFillColor!.toARGB32(),
+  if (style.risingBorderColor != null)
+    'risingBorderColor': style.risingBorderColor!.toARGB32(),
+  if (style.fallingBorderColor != null)
+    'fallingBorderColor': style.fallingBorderColor!.toARGB32(),
+  if (style.dojiBorderColor != null)
+    'dojiBorderColor': style.dojiBorderColor!.toARGB32(),
+  if (style.risingWickColor != null)
+    'risingWickColor': style.risingWickColor!.toARGB32(),
+  if (style.fallingWickColor != null)
+    'fallingWickColor': style.fallingWickColor!.toARGB32(),
+  if (style.dojiWickColor != null)
+    'dojiWickColor': style.dojiWickColor!.toARGB32(),
+  'bodyFillMode': style.bodyFillMode.name,
+  'bodyWidthFactor': _number(style.bodyWidthFactor),
+  'minBodyWidth': _number(style.minBodyWidth),
+  'maxBodyWidth': _number(style.maxBodyWidth),
+  'bodyBorderWidth': _number(style.bodyBorderWidth),
+  'wickWidth': _number(style.wickWidth),
+  'showBodyBorder': style.showBodyBorder,
+  'showWicks': style.showWicks,
+  'bodyCornerRadius': _number(style.bodyCornerRadius),
+  'minimumBodyHeight': _number(style.minimumBodyHeight),
+};
+
+CandlestickChartStyle _decodeCandlestickStyle(Map<String, Object?>? value) {
+  if (value == null) return const CandlestickChartStyle();
+  return CandlestickChartStyle(
+    risingBodyFillColor: _optionalColor(
+      value['risingBodyFillColor'],
+      r'$.style.candlestickStyle.risingBodyFillColor',
+    ),
+    fallingBodyFillColor: _optionalColor(
+      value['fallingBodyFillColor'],
+      r'$.style.candlestickStyle.fallingBodyFillColor',
+    ),
+    dojiBodyFillColor: _optionalColor(
+      value['dojiBodyFillColor'],
+      r'$.style.candlestickStyle.dojiBodyFillColor',
+    ),
+    risingBorderColor: _optionalColor(
+      value['risingBorderColor'],
+      r'$.style.candlestickStyle.risingBorderColor',
+    ),
+    fallingBorderColor: _optionalColor(
+      value['fallingBorderColor'],
+      r'$.style.candlestickStyle.fallingBorderColor',
+    ),
+    dojiBorderColor: _optionalColor(
+      value['dojiBorderColor'],
+      r'$.style.candlestickStyle.dojiBorderColor',
+    ),
+    risingWickColor: _optionalColor(
+      value['risingWickColor'],
+      r'$.style.candlestickStyle.risingWickColor',
+    ),
+    fallingWickColor: _optionalColor(
+      value['fallingWickColor'],
+      r'$.style.candlestickStyle.fallingWickColor',
+    ),
+    dojiWickColor: _optionalColor(
+      value['dojiWickColor'],
+      r'$.style.candlestickStyle.dojiWickColor',
+    ),
+    bodyFillMode:
+        _optionalEnum(
+          value['bodyFillMode'],
+          CandlestickBodyFillMode.values,
+          r'$.style.candlestickStyle.bodyFillMode',
+        ) ??
+        CandlestickBodyFillMode.hollowRising,
+    bodyWidthFactor: _optionalDouble(value['bodyWidthFactor']) ?? .7,
+    minBodyWidth: _optionalDouble(value['minBodyWidth']) ?? 1,
+    maxBodyWidth: _optionalDouble(value['maxBodyWidth']) ?? 18,
+    bodyBorderWidth: _optionalDouble(value['bodyBorderWidth']) ?? 1,
+    wickWidth: _optionalDouble(value['wickWidth']) ?? 1,
+    showBodyBorder: _optionalBool(value['showBodyBorder']) ?? true,
+    showWicks: _optionalBool(value['showWicks']) ?? true,
+    bodyCornerRadius: _optionalDouble(value['bodyCornerRadius']) ?? 0,
+    minimumBodyHeight: _optionalDouble(value['minimumBodyHeight']) ?? 1,
+  );
+}
+
+Map<String, Object?> _encodeCandlestickAnimation(
+  CandlestickAnimationStyle animation,
+) => {
+  'mode': animation.mode.name,
+  'staggerFraction': _number(animation.staggerFraction),
+  'dataUpdateMode': animation.dataUpdateMode.name,
+};
+
+CandlestickAnimationStyle _decodeCandlestickAnimation(
+  Map<String, Object?>? value,
+) {
+  if (value == null) return const CandlestickAnimationStyle();
+  return CandlestickAnimationStyle(
+    mode:
+        _optionalEnum(
+          value['mode'],
+          CandlestickAnimationMode.values,
+          r'$.style.candlestickAnimation.mode',
+        ) ??
+        CandlestickAnimationMode.reveal,
+    staggerFraction: _optionalDouble(value['staggerFraction']) ?? 0,
+    dataUpdateMode:
+        _optionalEnum(
+          value['dataUpdateMode'],
+          CandlestickDataUpdateAnimationMode.values,
+          r'$.style.candlestickAnimation.dataUpdateMode',
+        ) ??
+        CandlestickDataUpdateAnimationMode.interpolate,
+  );
 }
 
 PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
@@ -2522,6 +2765,11 @@ int _int(Map<String, Object?> map, String key) {
 int? _optionalInt(Object? value) {
   if (value == null || value is int) return value as int?;
   throw const FormatException('Expected optional integer.');
+}
+
+bool? _optionalBool(Object? value) {
+  if (value == null || value is bool) return value as bool?;
+  throw const FormatException('Expected optional boolean.');
 }
 
 double _double(Map<String, Object?> map, String key) =>

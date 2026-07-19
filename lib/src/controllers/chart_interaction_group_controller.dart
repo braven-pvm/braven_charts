@@ -64,6 +64,7 @@ class ChartInteractionGroupController {
   final Map<Object, _ChartInteractionGroupMember> _members = {};
   double? _cursorX;
   ChartXViewport? _viewport;
+  final ValueNotifier<ChartXViewport?> _viewportNotifier = ValueNotifier(null);
   bool _broadcastingCursor = false;
   bool _broadcastingViewport = false;
   bool _disposed = false;
@@ -74,6 +75,44 @@ class ChartInteractionGroupController {
   /// Most recently shared X viewport, or null before the first viewport event.
   ChartXViewport? get viewport => _viewport;
 
+  /// Observable viewport state for navigator and range-control composition.
+  ValueListenable<ChartXViewport?> get viewportListenable => _viewportNotifier;
+
+  /// Applies one host-owned X viewport to every synchronized participant.
+  ///
+  /// Range controls, navigators, and other composition surfaces use this
+  /// command without pretending to be a chart participant. Each chart keeps
+  /// its independent Y domain and feedback from the resulting update is
+  /// suppressed while the command fans out.
+  void setViewport(ChartXViewport viewport) {
+    if (_disposed) return;
+    if (!viewport.isValid) {
+      throw ArgumentError.value(
+        viewport,
+        'viewport',
+        'bounds must be finite and ordered',
+      );
+    }
+    if (_viewport == viewport) return;
+    _viewport = viewport;
+    _viewportNotifier.value = viewport;
+    if (_broadcastingViewport) return;
+    _broadcastingViewport = true;
+    try {
+      for (final entry
+          in List<MapEntry<Object, _ChartInteractionGroupMember>>.of(
+            _members.entries,
+          )) {
+        if (identical(_members[entry.key], entry.value) &&
+            entry.value.options.synchronizeViewport) {
+          entry.value.onViewportChanged(viewport);
+        }
+      }
+    } finally {
+      _broadcastingViewport = false;
+    }
+  }
+
   /// Clears remembered cursor and viewport state for a fresh composition.
   ///
   /// Mounted charts receive cursor cleanup immediately. Viewports remain local;
@@ -83,6 +122,7 @@ class ChartInteractionGroupController {
     final hadCursor = _cursorX != null;
     _cursorX = null;
     _viewport = null;
+    _viewportNotifier.value = null;
     if (!hadCursor || _broadcastingCursor) return;
     _broadcastingCursor = true;
     try {
@@ -173,6 +213,7 @@ class ChartInteractionGroupController {
     if (!source.options.synchronizeViewport || _broadcastingViewport) return;
     if (_viewport == viewport) return;
     _viewport = viewport;
+    _viewportNotifier.value = viewport;
     _broadcastingViewport = true;
     try {
       for (final entry
@@ -201,6 +242,7 @@ class ChartInteractionGroupController {
     _members.clear();
     _cursorX = null;
     _viewport = null;
+    _viewportNotifier.dispose();
   }
 }
 

@@ -4,6 +4,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/bar_chart_style.dart';
+import '../models/candlestick_chart_series.dart';
+import '../models/candlestick_chart_style.dart';
+import '../models/candlestick_data_point.dart';
 import '../models/category_axis_config.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -216,45 +219,48 @@ class ChartConfigBuilder {
     final dataList = json['data'] as List<dynamic>? ?? [];
     final color = colorStr != null ? _parseColor(colorStr) : null;
 
-    final points = dataList.map((d) {
-      final pointJson = d as Map<String, dynamic>;
-      final x = pointJson['x'];
-      final y = pointJson['y'];
-      if (x is! num || y is! num) {
-        throw const FormatException(
-          'Every data point requires numeric x and y values.',
-        );
-      }
-      final pointColor = pointJson['color'] is String
-          ? _parseColor(pointJson['color'] as String)
-          : null;
-      final radiusValue = pointJson['radius'];
-      if (radiusValue != null && radiusValue is! num) {
-        throw const FormatException(
-          'Pie radius values must be numeric when supplied.',
-        );
-      }
-      return ChartDataPoint(
-        x: x.toDouble(),
-        y: y.toDouble(),
-        label: pointJson['label'] as String?,
-        timestamp: pointJson['timestamp'] != null
-            ? DateTime.tryParse(pointJson['timestamp'] as String)
-            : null,
-        pointStyle: pointColor == null && radiusValue == null
-            ? null
-            : PointStyle(
-                color: pointColor,
-                size: (radiusValue as num?)?.toDouble(),
-              ),
-      );
-    }).toList();
-
-    // Parse style from series or use parent chart_type style
+    // Parse style before points because Candlestick has a dedicated OHLC
+    // point contract and must never accept generic x/y data by accident.
     final styleStr = json['style'] as String?;
     final style = styleStr != null
         ? _parseSeriesStyle(styleStr)
         : (defaultStyle ?? SeriesStyle.line);
+
+    final points = style == SeriesStyle.candlestick
+        ? _parseCandlestickPoints(dataList)
+        : dataList.map((d) {
+            final pointJson = d as Map<String, dynamic>;
+            final x = pointJson['x'];
+            final y = pointJson['y'];
+            if (x is! num || y is! num) {
+              throw const FormatException(
+                'Every data point requires numeric x and y values.',
+              );
+            }
+            final pointColor = pointJson['color'] is String
+                ? _parseColor(pointJson['color'] as String)
+                : null;
+            final radiusValue = pointJson['radius'];
+            if (radiusValue != null && radiusValue is! num) {
+              throw const FormatException(
+                'Pie radius values must be numeric when supplied.',
+              );
+            }
+            return ChartDataPoint(
+              x: x.toDouble(),
+              y: y.toDouble(),
+              label: pointJson['label'] as String?,
+              timestamp: pointJson['timestamp'] != null
+                  ? DateTime.tryParse(pointJson['timestamp'] as String)
+                  : null,
+              pointStyle: pointColor == null && radiusValue == null
+                  ? null
+                  : PointStyle(
+                      color: pointColor,
+                      size: (radiusValue as num?)?.toDouble(),
+                    ),
+            );
+          }).toList();
 
     // Create Y-axis config if unit is specified
     YAxisConfig? yAxisConfig;
@@ -331,8 +337,87 @@ class ChartConfigBuilder {
         'Polar Column is not yet part of the agentic chart schema; construct '
         'PolarColumnChartSeries through the public API.',
       ),
+      SeriesStyle.candlestick => CandlestickChartSeries(
+        id: id,
+        name: name ?? id,
+        points: points.cast<CandlestickDataPoint>(),
+        color: color,
+        unit: unit,
+        yAxisConfig: yAxisConfig,
+        candlestickStyle: _parseCandlestickStyle(chartStyle),
+        animation: _parseCandlestickAnimation(chartStyle),
+      ),
     };
   }
+
+  static List<CandlestickDataPoint> _parseCandlestickPoints(
+    List<dynamic> data,
+  ) => [
+    for (var index = 0; index < data.length; index++)
+      _parseCandlestickPoint(data[index], index),
+  ];
+
+  static CandlestickDataPoint _parseCandlestickPoint(dynamic value, int index) {
+    if (value is! Map<String, dynamic>) {
+      throw FormatException('Candlestick data point $index must be an object.');
+    }
+    double requiredNumber(String key) {
+      final number = value[key];
+      if (number is! num || !number.isFinite) {
+        throw FormatException(
+          'Candlestick data point $index requires a finite numeric $key.',
+        );
+      }
+      return number.toDouble();
+    }
+
+    final timestampValue = value['timestamp'];
+    DateTime? timestamp;
+    if (timestampValue != null) {
+      if (timestampValue is! String ||
+          (timestamp = DateTime.tryParse(timestampValue)) == null) {
+        throw FormatException(
+          'Candlestick data point $index timestamp must be ISO 8601.',
+        );
+      }
+    }
+    return CandlestickDataPoint(
+      x: requiredNumber('x'),
+      open: requiredNumber('open'),
+      high: requiredNumber('high'),
+      low: requiredNumber('low'),
+      close: requiredNumber('close'),
+      timestamp: timestamp,
+      label: value['label'] as String?,
+    );
+  }
+
+  static CandlestickChartStyle _parseCandlestickStyle(
+    Map<String, dynamic>? json,
+  ) => CandlestickChartStyle(
+    bodyFillMode: switch (json?['candlestick_body_fill']) {
+      'filled' => CandlestickBodyFillMode.filled,
+      _ => CandlestickBodyFillMode.hollowRising,
+    },
+    bodyWidthFactor:
+        (json?['candlestick_body_width_factor'] as num?)?.toDouble() ?? .7,
+    bodyBorderWidth:
+        (json?['candlestick_border_width'] as num?)?.toDouble() ?? 1,
+    wickWidth: (json?['candlestick_wick_width'] as num?)?.toDouble() ?? 1,
+    bodyCornerRadius:
+        (json?['candlestick_corner_radius'] as num?)?.toDouble() ?? 0,
+  );
+
+  static CandlestickAnimationStyle _parseCandlestickAnimation(
+    Map<String, dynamic>? json,
+  ) => CandlestickAnimationStyle(
+    mode: switch (json?['candlestick_animation_mode']) {
+      'none' => CandlestickAnimationMode.none,
+      _ => CandlestickAnimationMode.reveal,
+    },
+    staggerFraction:
+        (json?['candlestick_animation_stagger'] as num?)?.toDouble() ?? 0,
+  );
 
   static void _validateCategoryCoordinates(
     List<ChartSeries> series,
@@ -1014,6 +1099,7 @@ class ChartConfigBuilder {
       'area' => ChartType.area,
       'bar' => ChartType.bar,
       'scatter' => ChartType.scatter,
+      'candlestick' => ChartType.candlestick,
       'pie' => ChartType.pie,
       'donut' => ChartType.donut,
       _ => null,
@@ -1026,6 +1112,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'candlestick' => SeriesStyle.candlestick,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,
       _ => SeriesStyle.line, // Default to line
@@ -1038,6 +1125,7 @@ class ChartConfigBuilder {
       'area' => SeriesStyle.area,
       'bar' => SeriesStyle.bar,
       'scatter' => SeriesStyle.scatter,
+      'candlestick' => SeriesStyle.candlestick,
       'pie' => SeriesStyle.pie,
       'donut' => SeriesStyle.donut,
       _ => null,

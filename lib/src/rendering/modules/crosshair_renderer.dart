@@ -1206,12 +1206,18 @@ class CrosshairRenderer {
         value: value.y,
         unit: yUnit,
       );
+      final candle = value.candlestick;
       final hasScatterDetail =
           value.pointLabel != null ||
           value.formattedMagnitudeValue != null ||
           value.formattedColorValue != null ||
           value.formattedOpacityValue != null;
-      final label = hasScatterDetail
+      final label = candle != null
+          ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
+                'O ${candle.formattedOpen} · H ${candle.formattedHigh}\n'
+                'L ${candle.formattedLow} · C ${candle.formattedClose}\n'
+                '${candle.formattedChange} · ${candle.direction.name}'
+          : hasScatterDetail
           ? '${value.seriesName}${value.pointLabel == null ? '' : ' · ${value.pointLabel}'}\n'
                 'X: ${_formatDataValue(value.x)} · Y: $displayY'
                 '${value.formattedMagnitudeValue == null ? '' : '\n${value.magnitudeLabel ?? 'Magnitude'}: ${value.formattedMagnitudeValue}'}'

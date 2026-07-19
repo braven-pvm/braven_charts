@@ -15,10 +15,15 @@ void main() {
     expect(buffer.version, 3);
     expect(buffer.toList(), [2, 3]);
 
-    expect(buffer.removeAll(), [2, 3]);
+    expect(buffer.replaceLatest(4), isTrue);
+    expect(buffer.latest, 4);
+    expect(buffer.toList(), [2, 4]);
     expect(buffer.version, 4);
 
+    expect(buffer.removeAll(), [2, 4]);
+    expect(buffer.version, 5);
+
     expect(buffer.removeAll(), isEmpty);
-    expect(buffer.version, 4);
+    expect(buffer.version, 5);
   });
 }

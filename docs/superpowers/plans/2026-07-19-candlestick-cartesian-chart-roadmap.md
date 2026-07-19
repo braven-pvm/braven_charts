@@ -1,0 +1,387 @@
+# Candlestick Cartesian Chart — Delivery Roadmap
+
+**Date:** 2026-07-19  
+**Branch:** `research/candlestick-cartesian`  
+**Status:** Slices 1–5 complete locally; dense-data promotion work is next  
+**Design:** `docs/superpowers/specs/2026-07-19-candlestick-cartesian-chart-design.md`
+
+## Product outcome
+
+Ship Candlestick as a complete built-in Cartesian family, then use normal
+Braven Cartesian composition to deliver the stock-style range selector,
+navigator, and optional volume pane shown in the reference.
+
+The lane is successful only when OHLC semantics survive every layer: renderer,
+tracking, accessibility, controller state, artifacts, native Data mode,
+generated Source, agentic input, showcase, and performance verification.
+
+## Sequence at a glance
+
+| Slice | Outcome | Review checkpoint |
+|---|---|---|
+| 1 | Typed OHLC model, validation, bounds, and geometry lab | Complete locally |
+| 2 | Native Candlestick paint, theme, hit testing, and core chart route | Complete locally; pixel review approved |
+| 3 | Tracking, keyboard, semantics, temporal helpers, and motion | Complete locally; interaction review open |
+| 4 | Artifacts, hydration, Data/Split, Source, AI schema, and Workbench | Complete locally |
+| 5 | Range presets, navigator, ordinal sessions, and optional volume composition | Complete locally |
+| 6 | Dense-data grouping, benchmarks, E2E, docs, and release readiness | Final merge approval |
+
+No PR is opened between slices unless the user explicitly requests one. The
+review surface remains local throughout the lane.
+
+## Slice 1 — OHLC foundation and geometry lab
+
+**Status:** Complete locally — 2026-07-19
+
+### Scope
+
+- Add `CandlestickDataPoint`, `CandlestickPointStyle`,
+  `CandlestickChartStyle`, `CandlestickAnimationStyle`, and
+  `CandlestickChartSeries`.
+- Make close the inherited canonical Y value while exposing typed OHLC values.
+- Enforce finite values, OHLC ordering, strict unique X ordering, and one
+  Candlestick series per plot.
+- Define allowed Line/Area/Scatter overlays and reject same-plot Bar in v1.
+- Extend `SeriesStyle`, public exports, and Cartesian layout validation.
+- Add pure `CandlestickGeometry` and viewport-aware geometry resolution.
+- Extend data bounds to use low/high and candle-width X padding.
+- Add deterministic tests for rising, falling, doji, flat, single-point,
+  irregular-spacing, invalid, and off-viewport candles.
+- Establish cold/warm geometry benchmarks before painter integration.
+
+### Acceptance gates
+
+- Direct Dart construction and validation have index-specific failures.
+- No invalid OHLC input is silently reordered or clamped.
+- The body, wick, paint, and semantic bounds are deterministic at multiple
+  device-pixel ratios.
+- One large X gap cannot inflate body width beyond the configured maximum.
+- 50,000 ordered candles resolve only the visible range rather than scanning
+  the complete source list on each viewport change.
+- Existing Cartesian families remain green.
+
+### Review surface
+
+A small internal geometry lab paints rising, falling, doji, irregular-time, and
+dense candles without yet claiming Workbench support.
+
+### Local verification
+
+- Public typed OHLC model, styles, animation settings, and series validation
+  are implemented with `close` as canonical `y`.
+- Cartesian composition accepts one Candlestick series plus Line, Area, and
+  Scatter overlays; same-plot Bar and a second Candlestick series fail closed.
+- Low/high bounds, flat single-point padding, robust lower-median X spacing,
+  clamped candle widths, doji bodies, DPR alignment, and off-viewport culling
+  have deterministic tests.
+- The direct internal review surface at
+  `/?capture=candlestick-geometry` paints irregular and dense geometry, exposes
+  body width and corner controls, and remains explicitly outside
+  `BravenChartPlus` until Slice 2.
+- The complete package suite passes: 2,132 tests.
+- `flutter analyze lib` and the standalone example `flutter analyze lib test`
+  pass. Repository-wide analysis remains blocked by pre-existing optional
+  dependencies in vendored `packages/fleather` and legacy golden/integration
+  utilities; neither is touched by this lane.
+- On the current machine, cold indexing 50,000 ordered candles measured
+  7.499 ms during the full suite and resolving 1,000 visible candles averaged
+  0.181 ms. Focused runs measured 4.345 ms and 0.122 ms respectively.
+- Compact and desktop geometry-lab widget tests pass, the release web build
+  succeeds, and browser capture confirms the desktop surface renders rather
+  than returning a blank route.
+- The complete standalone example suite passes: 208 tests.
+
+## Slice 2 — Native renderer and first showcase route
+
+**Status:** Complete locally — 2026-07-19
+
+### Scope
+
+- Add Candlestick dispatch to the existing Cartesian `SeriesElement`.
+- Keep candle geometry and paint helpers isolated from Bar geometry.
+- Implement batched uniform body fill, border, wick, and doji paths.
+- Add the per-point override slow path only when needed.
+- Add `CandlestickTheme` to light, dark, and custom `ChartTheme` handling.
+- Implement plot clipping, crisp one-pixel strokes, legend symbol, preview
+  capture, empty/loading behavior, and selected/focused presentation.
+- Implement body-first and wick-tolerant hit testing with original source refs.
+- Add a `candlestick-charts` route and one controlled reference preset.
+
+### Acceptance gates
+
+- Low/high extremes are never clipped and close-only bounds cannot pass tests.
+- Rising/falling/doji remain distinguishable in light, dark, monochrome, and
+  common colour-vision simulations.
+- Uniform warm paint creates no per-candle `Paint`, `Path`, or text object.
+- Zoom/pan regenerates only visible geometry.
+- Direct route loads at compact and desktop sizes with no blank state,
+  overflow, or severe browser console entry.
+
+### Review surface
+
+The local route exposes body mode, candle width, border, wick, corner, and theme
+controls for the first pixel review.
+
+### Local verification
+
+- Candlestick is registered as the eighth showcase chart family, with a
+  dedicated navigation destination, Chart Types catalogue preview, and direct
+  `/?page=candlestick-charts` route.
+- The route uses the native Cartesian `SeriesElement`, not Bar emulation, and
+  composes a native Line close-average overlay on the same plot.
+- Uniform candles batch rising, falling, and doji body, border, and wick paths;
+  point-specific styles take an explicit slow path.
+- Viewport queries materialize only visible candles and body-first hit testing
+  retains original source indices and point references.
+- `CandlestickTheme` participates in all built-in themes, resolved theme
+  artifacts, generated Dart theme source, equality, and copy operations.
+- Built-in and overlay legends render a candlestick-specific wick/body symbol;
+  the showcase direction legend separately explains hollow rising, filled
+  falling, doji, and the Line overlay without relying on colour alone.
+- The page exposes live body mode, width, maximum width, corner radius, minimum
+  doji height, border, wick, overlay, theme, grid, axes, scrollbars, zoom, and
+  pan controls. Compact layout uses the shared options sheet and keeps header
+  actions within the viewport.
+- The complete package suite passes: 2,138 tests. The complete standalone
+  showcase suite passes: 211 tests. `flutter analyze lib` and showcase
+  `flutter analyze lib test` are clean.
+- Release web build and direct-route HTTP check pass. The local review route is
+  available at `http://127.0.0.1:8132/?page=candlestick-charts`.
+- On the current machine, 50,000 source candles with 1,000 visible resolve in
+  0.223 ms average and warm-paint in 0.018 ms average during the complete suite;
+  the focused warm-paint run measured 0.009 ms average.
+
+## Slice 3 — Tracking, temporal behavior, and motion
+
+**Status:** Complete locally — 2026-07-19
+
+### Scope
+
+- Add nearest-X sample tracking for Candlestick with no interpolation.
+- Extend `ChartDataHit`, crosshair rendering, and tooltip rendering with Open,
+  High, Low, Close, direction, and open-to-close change.
+- Add keyboard traversal, activation, focus, selection, and complete semantic
+  labels.
+- Add UTC epoch-millisecond formatting and runtime locale binding guidance.
+- Add `FinancialTimeDomain` for ordinal index ↔ timestamp mapping.
+- Demonstrate elapsed-time gaps and equal-spaced ordinal sessions explicitly.
+- Implement X-ordered entrance reveal and stable OHLC update interpolation.
+- Extend streaming bounds to low/high and add a typed latest-candle upsert for
+  revising the active interval without appending duplicates.
+- Respect zero-duration themes and reduced motion.
+
+### Acceptance gates
+
+- Crosshair lookup is `O(log n)` and returns the original source candle.
+- Tooltip and axis labels remain stable at doji and flat-value candles.
+- Keyboard and assistive traversal announce all four OHLC values and state.
+- Elapsed and ordinal examples label the same timestamps without confusing
+  their different spacing semantics.
+- Animation keeps target bounds fixed, preserves point identity, and never
+  mutates the source document.
+- Live upsert replaces equal-X final candles, appends increasing X, rejects
+  older X, and keeps the circular-buffer size stable during revision.
+- Existing synchronized Cartesian tracking remains green.
+
+### Review surface
+
+The local route adds tracking and motion presets plus toggles for elapsed versus
+ordinal spacing.
+
+### Local verification
+
+- Candlestick crosshair tracking performs one ordered nearest-X lookup, keeps
+  the original source index, and always reports a complete non-interpolated
+  OHLC sample with direction and open-to-close change.
+- `ChartDataHit`, tracking rows, marker tooltips, and semantics share the typed
+  `CandlestickInteractionDetails` payload rather than rebuilding financial
+  values in individual renderers.
+- Left/right keyboard traversal, Enter/Space activation, focus, selection, and
+  visible semantic nodes announce time/label, Open, High, Low, Close, change,
+  direction, position, and selection state.
+- `FinancialTimeDomain` maps strictly ordered UTC sessions to equal ordinal or
+  elapsed epoch-millisecond X values with O(log n) nearest-session lookup and
+  runtime-supplied locale formatting.
+- The chart-type route exposes `Equal sessions` and `Elapsed UTC`, OHLC
+  tracking/tooltip toggles, reduced-motion-aware entrance replay, update-motion
+  control, and a `Revise latest` interaction on one stable candle identity.
+- X-ordered entrance reveal reuses the Cartesian motion timeline. Compatible
+  update frames interpolate valid OHLC tuples while source data and target
+  bounds remain final and immutable; reduced motion resolves synchronously.
+- `StreamingBuffer` derives Y bounds from candle low/high. The typed live
+  upsert appends increasing X, revises equal X in O(1), rejects older X, and
+  coalesces paused revisions without growing the buffer.
+- Full package analysis is clean and the complete package suite passes 2,156
+  tests. Standalone showcase analysis is clean and its complete suite passes
+  212 tests. The release web build and direct-route HTTP 200 check pass.
+- Full-suite performance measured 7.570 ms for 1,000 nearest-X queries over
+  50,000 candles and 11.247 ms for 10,000 same-candle revisions. Focused
+  renderer checks remain at 4.343 ms cold indexing, 0.122 ms virtualized
+  geometry, and 0.010 ms warm paint for 50,000 source / 1,000 visible candles.
+- The refreshed interaction review remains available at
+  `http://127.0.0.1:8132/?page=candlestick-charts`.
+
+## Slice 4 — Full family and Workbench contract
+
+**Status:** Complete locally — 2026-07-19
+
+### Scope
+
+- Add built-in artifact type `candlestick`, capabilities, point OHLC extension,
+  JSON round trip, validation, and hydration.
+- Support inline point and columnar storage without losing OHLC or timestamp.
+- Add `ChartTableProjectionKind.candlestick` with Time/X, Open, High, Low,
+  Close, change, change percent, unit, copy, CSV, focus, and selection.
+- Add exact-X overlay columns for permitted Line/Area/Scatter indicators.
+- Emit `CandlestickChartSeries` and `CandlestickDataPoint` from generated Dart.
+- Extend source capture and runtime formatter diagnostics.
+- Extend agentic schema/builder with required OHLC fields and shared validation.
+- Mount every preset in `BravenChartWorkbench` with Chart, Data, Split, and
+  Source.
+- Add codec, migration, hydration, table, CSV, source-determinism, syntax, and
+  compile-fixture tests.
+
+### Acceptance gates
+
+- Portable round trip preserves every OHLC value, timestamp, point style,
+  series style, axis, annotation, animation, and source reference.
+- Older runtimes fail closed on Candlestick capabilities rather than rendering
+  close-only data.
+- Data and CSV are lossless; derived change fields are labelled as derived.
+- Generated source compiles and reconstructs equivalent chart state.
+- AI input cannot create a Candlestick series from generic `(x, y)` data.
+- Chart/Data/Split/Source fail independently and do not remount the chart.
+
+### Review surface
+
+The main Candlestick page becomes the complete chart-type detail page and every
+preset exposes Source.
+
+### Local verification
+
+- Portable artifacts register Candlestick as a built-in family with explicit
+  OHLC and motion capabilities; inline-point and inline-column storage both
+  preserve timestamp, point style, series style, animation, and canonical
+  close-as-Y validation through hydration.
+- Native Data and CSV projection expose Time/X, Open, High, Low, Close,
+  derived change and change percent, unit, labels, source references, and
+  exact-X Line/Area/Scatter overlay values.
+- Generated Dart emits typed `CandlestickChartSeries` and
+  `CandlestickDataPoint` construction, passes deterministic source checks, and
+  compiles in the generated-source fixture.
+- Agentic schema and builder require typed OHLC input, reject generic `(x, y)`
+  candle data, and share the package's strict OHLC validation.
+- The chart-type surface now mounts the native family in
+  `BravenChartWorkbench` with Chart, Data, resizable Split, and Source modes.
+- Package analysis and the complete package suite pass. Standalone showcase
+  analysis and all 213 showcase tests pass, including the Workbench mode
+  matrix and generated-source compile fixture.
+- Full-suite performance showed no regression: 1,000 nearest-X queries over
+  50,000 candles measured 6.061 ms, 10,000 active-candle revisions measured
+  11.287 ms, and 1,000 visible candles from a 50,000-source series measured
+  0.216 ms geometry and 0.016 ms warm paint averages.
+
+## Slice 5 — Stock composition
+
+**Status:** Complete locally — 2026-07-19
+
+### Scope
+
+- Add a stock-composition showcase built from ordinary Braven charts.
+- Add 1m, 3m, 6m, YTD, 1y, and All preset controls plus explicit date bounds.
+- Add a compact Area/Line navigator derived from close values.
+- Add draggable navigator window and handles with accessible keyboard actions.
+- Add a public viewport command that range controls and navigator can share.
+- Synchronize main candle, optional volume Bar pane, and navigator X viewport.
+- Keep each pane's Y scale independent.
+- Add ordinal-session and elapsed-time modes using one `FinancialTimeDomain`.
+- Provide copyable composition code beneath the Workbench when the wrapper
+  itself is outside the single-chart Workbench boundary.
+
+### Acceptance gates
+
+- Main pan/zoom updates the navigator window and navigator drag updates the main
+  visible range without feedback loops.
+- Range presets resolve correctly across year boundaries and missing sessions.
+- Adding/removing the volume pane does not reset the main viewport.
+- Compact layout wraps controls and keeps handles touch accessible.
+- The composition is explicitly documented as reusable coordination, not a
+  second Candlestick renderer.
+- Session performance measurements display main, volume, and navigator cost.
+
+### Review surface
+
+The local route matches the reference's information architecture while
+retaining Braven styling and Workbench behavior.
+
+### Local verification
+
+- The chart-type page now switches between the single-chart Workbench and a
+  stock composition built from native Candlestick, Line, Bar, and Area
+  participants; it does not introduce a second financial renderer.
+- `ChartInteractionGroupController.setViewport` and `viewportListenable` give
+  range controls and the navigator a public host-owned viewport contract with
+  participant opt-out and feedback-loop protection.
+- 1m, 3m, 6m, YTD, 1y, and All presets use one 420-session
+  `FinancialTimeDomain`; the same selection survives ordinal-session and
+  elapsed-UTC switching across weekends and year boundaries.
+- Price and optional volume share only X cursor/viewport state and retain
+  independent USD and volume Y domains. Removing and restoring volume leaves
+  the active viewport unchanged.
+- The full-domain Area navigator visualizes the active range and exposes
+  accessible `RangeSlider` handles that drive the shared viewport. Its own
+  viewport synchronization is disabled so it never collapses to the selected
+  window.
+- The composition includes copyable coordination source and isolated passive
+  frame instrumentation for active charts, source/visible sessions, samples,
+  p95 build/raster, and frames over 16.7 ms. Diagnostics refresh no more than
+  twice per second without rebuilding any chart participant.
+- Desktop tests retain more than 250 logical pixels for the main price chart;
+  compact tests cover wrapped controls and prevent a zero-sized plot.
+- Package analysis is clean and all 2,166 package tests pass. Showcase
+  analysis is clean and all 216 showcase tests pass. The release web build,
+  including its Wasm dry run, succeeds.
+- Full-suite measurements remained below one frame: 12-chart synchronized
+  cursor fanout measured 3.51 ms p95 for 1,000 moves; Candlestick nearest-X
+  measured 7.451 ms per 1,000 queries; 10,000 latest-candle revisions measured
+  11.921 ms; and 50,000-source / 1,000-visible geometry and warm paint averaged
+  0.237 ms and 0.015 ms respectively.
+
+## Slice 6 — Grouping, performance, and promotion readiness
+
+**Status:** Pending
+
+### Scope
+
+- Add opt-in density-aware OHLC grouping outside paint.
+- Aggregate first open, maximum high, minimum low, and last close.
+- Retain every represented source index and keep Data/CSV raw by default.
+- Add grouped tracking and explicit grouped tooltip/semantic copy.
+- Run 50,000-source, 5,000-visible, 1,000-animated, crosshair, pan/zoom, and
+  three-pane fanout benchmarks.
+- Add goldens for light, dark, doji, irregular gaps, ordinal sessions, compact
+  stock composition, and grouped density.
+- Complete public guide, API docs, feature matrix, changelog, and gallery/chart
+  type navigation.
+- Run analyzers, complete package/example suites, release builds for both base
+  paths, direct-route/refresh checks, browser console checks, dartdoc, and
+  pub.dev dry run.
+
+### Acceptance gates
+
+- Every benchmark remains below the established 16.67 ms p95 frame budget or a
+  measured device/build-mode qualification is documented before promotion.
+- Grouping never changes raw artifacts, native Data rows, or default CSV.
+- No visible aliasing, clipped wick, unstable body width, crosshair mismatch,
+  remount, overflow, blank state, or severe console error survives E2E.
+- Public docs distinguish native Candlestick, stock composition, and excluded
+  financial analytics.
+- The final local release route remains available for user review.
+- Commit/PR occurs only after explicit user approval.
+
+## Recommended next move
+
+Begin Slice 6 with opt-in OHLC density grouping outside paint while preserving
+raw artifacts, Data, CSV, and source references. Then qualify grouped tracking,
+three-pane fanout, E2E, documentation, and release readiness before the deferred
+full visual/browser review and explicit merge approval.

@@ -1686,6 +1686,127 @@ void main() {
       expect(failure.error.message, contains('Cyclic'));
     });
 
+    test('round-trips Candlestick OHLC, styling, and motion losslessly', () {
+      final source = CandlestickChartSeries(
+        id: 'aapl',
+        name: 'AAPL',
+        points: [
+          CandlestickDataPoint.atTime(
+            timestamp: DateTime.utc(2026, 7, 18, 9, 30),
+            open: 218.25,
+            high: 224.75,
+            low: 216.5,
+            close: 223.1,
+            label: 'Open',
+            metadata: const {'session': 'regular'},
+            candlestickStyle: const CandlestickPointStyle(
+              bodyFillColor: Color(0xFF112233),
+              borderColor: Color(0xFF223344),
+              wickColor: Color(0xFF334455),
+            ),
+          ),
+          CandlestickDataPoint(
+            x: DateTime.utc(
+              2026,
+              7,
+              19,
+              9,
+              30,
+            ).millisecondsSinceEpoch.toDouble(),
+            open: 223.1,
+            high: 225,
+            low: 219.5,
+            close: 220.25,
+          ),
+        ],
+        color: const Color(0xFF445566),
+        metadata: const {'exchange': 'NASDAQ'},
+        unit: 'USD',
+        yAxisConfig: YAxisConfig(
+          position: YAxisPosition.right,
+          label: 'Price',
+          unit: 'USD',
+        ),
+        candlestickStyle: const CandlestickChartStyle(
+          risingBodyFillColor: Color(0xFF16A34A),
+          fallingBodyFillColor: Color(0xFFDC2626),
+          dojiBodyFillColor: Color(0xFFF59E0B),
+          risingBorderColor: Color(0xFF15803D),
+          fallingBorderColor: Color(0xFFB91C1C),
+          dojiBorderColor: Color(0xFFD97706),
+          risingWickColor: Color(0xFF166534),
+          fallingWickColor: Color(0xFF991B1B),
+          dojiWickColor: Color(0xFF92400E),
+          bodyFillMode: CandlestickBodyFillMode.filled,
+          bodyWidthFactor: .65,
+          minBodyWidth: 2,
+          maxBodyWidth: 16,
+          bodyBorderWidth: 1.5,
+          wickWidth: 2,
+          bodyCornerRadius: 2,
+          minimumBodyHeight: 1.5,
+        ),
+        animation: const CandlestickAnimationStyle(
+          staggerFraction: .4,
+          dataUpdateMode: CandlestickDataUpdateAnimationMode.none,
+        ),
+      );
+
+      for (final storage in [
+        ChartDataStorage.inlinePoints,
+        ChartDataStorage.inlineColumns,
+      ]) {
+        final encoded =
+            ChartSeriesDocumentCodec.encode(source, dataStorage: storage)
+                as ChartArtifactSuccess<ChartSeriesDocument>;
+        final document = ChartSeriesDocument.fromJson(encoded.value.toJson());
+        final decoded =
+            ChartSeriesDocumentCodec.decode(document)
+                as ChartArtifactSuccess<ChartSeries>;
+
+        expect(document.type, 'candlestick');
+        expect(
+          document.requiredCapabilities,
+          containsAll(<String>{
+            'series.candlestick',
+            'series.candlestick.ohlc.v1',
+            'series.candlestick.motion.v1',
+          }),
+        );
+        expect(decoded.value, source);
+      }
+    });
+
+    test(
+      'rejects a Candlestick document whose canonical y disagrees with close',
+      () {
+        final source = CandlestickChartSeries(
+          id: 'prices',
+          points: [
+            CandlestickDataPoint(x: 1, open: 10, high: 12, low: 9, close: 11),
+          ],
+        );
+        final encoded =
+            ChartSeriesDocumentCodec.encode(source)
+                as ChartArtifactSuccess<ChartSeriesDocument>;
+        final json = encoded.value.toJson();
+        final data = json['data']! as Map<String, Object?>;
+        final points = data['points']! as List<Object?>;
+        final point = points.single! as Map<String, Object?>;
+        point['y'] = 99;
+
+        final decoded = ChartSeriesDocumentCodec.decode(
+          ChartSeriesDocument.fromJson(json),
+        );
+
+        expect(decoded, isA<ChartArtifactFailure<ChartSeries>>());
+        expect(
+          (decoded as ChartArtifactFailure<ChartSeries>).error.message,
+          contains('canonical y'),
+        );
+      },
+    );
+
     test('returns a structured failure for unknown series types', () {
       final result = ChartSeriesDocumentCodec.decode(
         ChartSeriesDocument(

@@ -42,6 +42,9 @@ import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
 import 'models/bar_chart_style.dart';
 import 'models/braven_chart_controller.dart';
+import 'models/candlestick_chart_series.dart';
+import 'models/candlestick_chart_style.dart';
+import 'models/candlestick_interaction_details.dart';
 import 'models/chart_annotation.dart';
 import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
@@ -76,6 +79,7 @@ import 'source/chart_source_capture_adapter.dart';
 import 'theming/components/scrollbar_config.dart';
 import 'utils/data_converter.dart';
 import 'utils/bar_series_transition.dart';
+import 'utils/candlestick_series_transition.dart';
 import 'utils/radial_series_transition.dart';
 import 'utils/path_animation_timeline.dart';
 import 'utils/path_series_transition.dart';
@@ -300,6 +304,12 @@ class BravenChartPlus extends StatefulWidget {
         'Use PolarColumnChartSeries.fromMap with BravenChartPlus instead.',
       );
     }
+    if (chartType == ChartType.candlestick) {
+      throw ArgumentError(
+        'BravenChartPlus.fromValues cannot infer open, high, low, and close. '
+        'Use CandlestickChartSeries with BravenChartPlus instead.',
+      );
+    }
 
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
@@ -418,6 +428,12 @@ class BravenChartPlus extends StatefulWidget {
     })?
     onAxisSwapped,
   }) {
+    if (chartType == ChartType.candlestick) {
+      throw ArgumentError(
+        'BravenChartPlus.fromMap cannot infer open, high, low, and close. '
+        'Use CandlestickChartSeries with BravenChartPlus instead.',
+      );
+    }
     final ChartSeries series;
     if (chartType == ChartType.pie ||
         chartType == ChartType.donut ||
@@ -567,6 +583,12 @@ class BravenChartPlus extends StatefulWidget {
     })?
     onAxisSwapped,
   }) {
+    if (chartType == ChartType.candlestick) {
+      throw ArgumentError(
+        'BravenChartPlus.fromJson does not yet decode OHLC payloads. '
+        'Use CandlestickChartSeries with BravenChartPlus instead.',
+      );
+    }
     // Parse JSON
     final dynamic decoded = jsonDecode(json);
 
@@ -681,6 +703,9 @@ class BravenChartPlus extends StatefulWidget {
         name: name,
         points: points,
         color: color,
+      ),
+      ChartType.candlestick => throw ArgumentError(
+        'Candlestick requires typed OHLC points. Use CandlestickChartSeries.',
       ),
       ChartType.pie => PieChartSeries(
         id: id,
@@ -1182,6 +1207,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       <String, _IncomingPointAnimation>{};
   final Map<String, _ActiveBarSeriesTransition> _barSeriesTransitions =
       <String, _ActiveBarSeriesTransition>{};
+  final Map<String, _ActiveCandlestickSeriesTransition>
+  _candlestickSeriesTransitions =
+      <String, _ActiveCandlestickSeriesTransition>{};
   _ActiveRadialSeriesTransition? _radialSeriesTransition;
   final Map<String, _ActivePathSeriesTransition> _pathSeriesTransitions =
       <String, _ActivePathSeriesTransition>{};
@@ -1456,6 +1484,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ..stop()
           ..value = 1;
         _barSeriesTransitions.clear();
+        _candlestickSeriesTransitions.clear();
         _finishPathAnimationsImmediately();
         _radialRevealAnimationController
           ..stop()
@@ -3350,7 +3379,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleBarDataAnimationTick() {
-    if (!mounted || _barSeriesTransitions.isEmpty) return;
+    if (!mounted ||
+        (_barSeriesTransitions.isEmpty &&
+            _candlestickSeriesTransitions.isEmpty)) {
+      return;
+    }
     setState(() {
       _refreshAnimatedRenderSeries();
       _elementGeneratorVersion++;
@@ -3361,6 +3394,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (status != AnimationStatus.completed || !mounted) return;
     setState(() {
       _barSeriesTransitions.clear();
+      _candlestickSeriesTransitions.clear();
       // Exit transitions deliberately retain their previous domain while
       // marks collapse. Rebuild once at completion so axes and normalization
       // immediately return to the final data-only domain.
@@ -3479,12 +3513,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (window == null) return 1;
     final curve =
         (widget.theme ?? ChartTheme.light).animationTheme.dataUpdateCurve;
-    return PathAnimationTimeline.progress(
+    final progress = PathAnimationTimeline.progress(
       controllerValue: _pathRevealAnimationController.value,
       timelineDuration: _pathRevealTimelineDuration,
       window: window,
       curve: curve,
     );
+    final series = _effectiveDataSeries
+        .where((candidate) => candidate.id == seriesId)
+        .firstOrNull;
+    if (series is CandlestickChartSeries &&
+        series.animation.staggerFraction > 0) {
+      return (progress / series.animation.staggerFraction).clamp(0.0, 1.0);
+    }
+    return progress;
   }
 
   bool get _canAnimatePaths =>
@@ -3521,7 +3563,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final ids = <String>{
       for (final series in _effectiveDataSeries)
         if (_pathAnimationFor(series)?.entranceMode ==
-            PathEntranceAnimationMode.reveal)
+                PathEntranceAnimationMode.reveal ||
+            series is CandlestickChartSeries &&
+                series.animation.mode == CandlestickAnimationMode.reveal)
           series.id,
     };
     _startPathReveal(ids);
@@ -3541,7 +3585,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final timings = <String, PathAnimationTiming>{
       for (final id in seriesIds)
         if (seriesById[id] case final series?)
-          id: _pathAnimationFor(series)!.entranceTiming,
+          id:
+              _pathAnimationFor(series)?.entranceTiming ??
+              const PathAnimationTiming(),
     };
     final windows = PathAnimationTimeline.resolve(
       timings: timings,
@@ -3666,6 +3712,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     bool entrance = false,
   }) {
     _barSeriesTransitions.clear();
+    _candlestickSeriesTransitions.clear();
     _barDataAnimationController.stop();
     if (!_canAnimateBars || _layoutKind != ChartLayoutKind.cartesian) {
       _barDataAnimationController.value = 1;
@@ -3689,6 +3736,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     for (var nextIndex = 0; nextIndex < nextSeries.length; nextIndex++) {
       final next = nextSeries[nextIndex];
+      if (next is CandlestickChartSeries) {
+        final previous = previousSeriesById[next.id];
+        if (!entrance &&
+            previous is CandlestickChartSeries &&
+            next.animation.dataUpdateMode ==
+                CandlestickDataUpdateAnimationMode.interpolate &&
+            !listEquals(previous.points, next.points) &&
+            CandlestickSeriesTransition.isCompatible(previous, next)) {
+          _candlestickSeriesTransitions[next.id] =
+              _ActiveCandlestickSeriesTransition(from: previous, to: next);
+        }
+        continue;
+      }
       if (next is! BarChartSeries) continue;
       if (next.barStyle.animationMode == BarAnimationMode.none) continue;
       final previous = previousSeriesById[next.id];
@@ -3739,14 +3799,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       previousIndex++;
     }
 
-    if (_barSeriesTransitions.isEmpty) {
+    if (_barSeriesTransitions.isEmpty &&
+        _candlestickSeriesTransitions.isEmpty) {
       _barDataAnimationController.value = 1;
       return;
     }
 
     _barDataAnimationController.duration = _barDataAnimationDuration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _barSeriesTransitions.isEmpty) return;
+      if (!mounted ||
+          (_barSeriesTransitions.isEmpty &&
+              _candlestickSeriesTransitions.isEmpty)) {
+        return;
+      }
       _barDataAnimationController.forward();
     });
   }
@@ -3757,16 +3822,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }) {
     var count = 0;
     final nextIds = <String>{};
-    for (final next in nextSeries.whereType<BarChartSeries>()) {
+    for (final next in nextSeries.where(
+      (series) => series is BarChartSeries || series is CandlestickChartSeries,
+    )) {
       nextIds.add(next.id);
       final previous = previousSeriesById[next.id];
-      count += previous is BarChartSeries
+      count += previous != null && previous.runtimeType == next.runtimeType
           ? math.max(previous.points.length, next.points.length)
           : next.points.length;
       if (count > _maximumAnimatedBarPointCount) return count;
     }
-    for (final previous
-        in previousSeriesById.values.whereType<BarChartSeries>()) {
+    for (final previous in previousSeriesById.values.where(
+      (series) => series is BarChartSeries || series is CandlestickChartSeries,
+    )) {
       if (nextIds.contains(previous.id)) continue;
       count += previous.points.length;
       if (count > _maximumAnimatedBarPointCount) return count;
@@ -4066,7 +4134,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _refreshAnimatedRenderSeries() {
     _pathPointMapsBySeries.clear();
-    if (_effectiveDataSeries.isEmpty && _barSeriesTransitions.isEmpty) {
+    if (_effectiveDataSeries.isEmpty &&
+        _barSeriesTransitions.isEmpty &&
+        _candlestickSeriesTransitions.isEmpty) {
       _effectiveRenderSeries = _effectiveDataSeries;
       return;
     }
@@ -4103,6 +4173,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ),
         );
       }
+    }
+    if (_candlestickSeriesTransitions.isNotEmpty) {
+      final progress = _barDataAnimationProgress;
+      renderSeries = renderSeries
+          .map((series) {
+            final transition = _candlestickSeriesTransitions[series.id];
+            if (transition == null) return series;
+            return CandlestickSeriesTransition.interpolate(
+              from: transition.from,
+              to: transition.to,
+              progress: progress,
+            );
+          })
+          .toList(growable: false);
     }
     if (_pathSeriesTransitions.isNotEmpty) {
       renderSeries = renderSeries
@@ -4885,8 +4969,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         final marker = _coordinator.pressedMarker ?? _coordinator.hoveredMarker;
         if (marker != null && marker.seriesId == tappedElement.series.id) {
           final point = tappedElement.series.points[marker.markerIndex];
-          if (tappedElement.series is BarChartSeries) {
-            _selectBarPointFromInteraction(marker);
+          if (tappedElement.series is BarChartSeries ||
+              tappedElement.series is CandlestickChartSeries) {
+            _selectCartesianPointFromInteraction(marker);
           }
           widget.onPointTap?.call(point, tappedElement.series.id);
         } else {
@@ -4904,15 +4989,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
-  void _selectBarPointFromInteraction(HoveredMarkerInfo marker) {
+  void _selectCartesianPointFromInteraction(HoveredMarkerInfo marker) {
     final ref = ChartPointRef(
       seriesId: marker.seriesId,
       pointIndex: marker.markerIndex,
     );
-    _selectBarPointRef(ref, additive: _coordinator.isCtrlPressed);
+    _selectCartesianPointRef(ref, additive: _coordinator.isCtrlPressed);
   }
 
-  void _selectBarPointRef(ChartPointRef ref, {required bool additive}) {
+  void _selectCartesianPointRef(ChartPointRef ref, {required bool additive}) {
     final nextSelection = additive
         ? <ChartPointRef>{..._selectedPointRefs}
         : <ChartPointRef>{ref};
@@ -4982,6 +5067,46 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       showXScrollbar: false,
       showYScrollbar: false,
     );
+  }
+
+  void _activateCandlestickDataHit(ChartDataHit hit) {
+    final series = _effectiveDataSeries
+        .whereType<CandlestickChartSeries>()
+        .where((candidate) => candidate.id == hit.seriesId)
+        .firstOrNull;
+    if (series == null) return;
+    _focusCandlestickDataHit(hit);
+    if (widget.interactionConfig?.enableSelection ?? true) {
+      _selectCartesianPointRef(
+        ChartPointRef(seriesId: hit.seriesId, pointIndex: hit.pointIndex),
+        additive: false,
+      );
+    }
+    widget.onPointTap?.call(hit.point, hit.seriesId);
+    widget.interactionConfig?.onDataPointTap?.call(
+      hit.point,
+      _widgetPositionForDataHit(hit),
+    );
+  }
+
+  void _focusCandlestickDataHit(ChartDataHit hit) {
+    final ref = ChartPointRef(
+      seriesId: hit.seriesId,
+      pointIndex: hit.pointIndex,
+    );
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    _coordinator.setHoveredMarker(
+      HoveredMarkerInfo(
+        seriesId: hit.seriesId,
+        markerIndex: hit.pointIndex,
+        plotPosition: hit.plotPosition,
+        dataHit: hit,
+      ),
+    );
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
   }
 
   void _activateRadialDataHit(
@@ -5716,6 +5841,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
       if (renderBox == null) return;
 
+      if (_handleCandlestickPointKey(event.logicalKey)) return;
       if (_handleBarPointKey(event.logicalKey)) return;
 
       // Cancel range annotation creation mode
@@ -5842,7 +5968,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       final current = _focusedPointRefs.firstOrNull;
       if (current == null) return false;
-      _selectBarPointRef(
+      _selectCartesianPointRef(
         current,
         additive:
             HardwareKeyboard.instance.isControlPressed ||
@@ -5909,6 +6035,78 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _setKeyboardBarFocus(BarChartSeries series, int pointIndex) {
+    final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
+    if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
+      return;
+    }
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
+  }
+
+  bool _handleCandlestickPointKey(LogicalKeyboardKey key) {
+    final keyboard =
+        widget.interactionConfig?.keyboard ?? const KeyboardConfig();
+    if (!keyboard.enabled) return false;
+    final candles = _effectiveDataSeries
+        .whereType<CandlestickChartSeries>()
+        .where((series) => series.points.isNotEmpty)
+        .toList(growable: false);
+    if (candles.length != 1) return false;
+    final series = candles.single;
+
+    if (key == LogicalKeyboardKey.escape) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current?.seriesId != series.id && _selectedPointRefs.isEmpty) {
+        return false;
+      }
+      _clearPointFocus();
+      _clearPointSelection();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      final current = _focusedPointRefs.firstOrNull;
+      if (current == null || current.seriesId != series.id) return false;
+      _selectCartesianPointRef(
+        current,
+        additive:
+            HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed,
+      );
+      final point = series.points[current.pointIndex];
+      widget.onPointTap?.call(point, series.id);
+      widget.interactionConfig?.onDataPointTap?.call(point, Offset.zero);
+      return true;
+    }
+    if (!keyboard.enableArrowKeys ||
+        HardwareKeyboard.instance.isAltPressed ||
+        (key != LogicalKeyboardKey.arrowLeft &&
+            key != LogicalKeyboardKey.arrowRight)) {
+      return false;
+    }
+
+    final current = _focusedPointRefs.firstOrNull;
+    final pointIndex = current?.seriesId == series.id
+        ? current!.pointIndex
+        : key == LogicalKeyboardKey.arrowLeft
+        ? series.points.length - 1
+        : 0;
+    final delta = key == LogicalKeyboardKey.arrowLeft ? -1 : 1;
+    _setKeyboardCandlestickFocus(
+      series,
+      current?.seriesId == series.id
+          ? (pointIndex + delta).clamp(0, series.points.length - 1)
+          : pointIndex,
+    );
+    return true;
+  }
+
+  void _setKeyboardCandlestickFocus(
+    CandlestickChartSeries series,
+    int pointIndex,
+  ) {
     final ref = ChartPointRef(seriesId: series.id, pointIndex: pointIndex);
     if (_focusedPointRefs.length == 1 && _focusedPointRefs.contains(ref)) {
       return;
@@ -6433,6 +6631,61 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (!_focusNode.hasFocus) _focusNode.requestFocus();
   }
 
+  ({String value, bool isSelected})? _focusedCandlestickSemantics() {
+    final ref = _focusedPointRefs.firstOrNull;
+    if (ref == null) return null;
+    return _candlestickSemanticsForRef(ref);
+  }
+
+  ({String value, bool isSelected})? _candlestickSemanticsForRef(
+    ChartPointRef ref,
+  ) {
+    final series = _effectiveDataSeries
+        .whereType<CandlestickChartSeries>()
+        .where((candidate) => candidate.id == ref.seriesId)
+        .firstOrNull;
+    if (series == null ||
+        ref.pointIndex < 0 ||
+        ref.pointIndex >= series.points.length) {
+      return null;
+    }
+    final point = series.candleAt(ref.pointIndex);
+    final details = CandlestickInteractionDetails.fromPoint(
+      point,
+      unit: series.unit,
+      formattedTimestamp:
+          point.label ?? point.timestamp?.toUtc().toIso8601String(),
+    );
+    return (
+      value: '${series.displayName}, ${details.semanticLabel}',
+      isSelected: _selectedPointRefs.contains(ref),
+    );
+  }
+
+  String? _adjacentCandlestickSemanticsValue(int delta) {
+    final current = _focusedPointRefs.firstOrNull;
+    if (current == null) return null;
+    final series = _effectiveDataSeries
+        .whereType<CandlestickChartSeries>()
+        .where((candidate) => candidate.id == current.seriesId)
+        .firstOrNull;
+    if (series == null || series.points.isEmpty) return null;
+    final nextIndex = (current.pointIndex + delta).clamp(
+      0,
+      series.points.length - 1,
+    );
+    return _candlestickSemanticsForRef(
+      ChartPointRef(seriesId: series.id, pointIndex: nextIndex),
+    )?.value;
+  }
+
+  void _moveSemanticCandlestickFocus(int delta) {
+    _handleCandlestickPointKey(
+      delta < 0 ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight,
+    );
+    if (!_focusNode.hasFocus) _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Disable browser context menu on web platform
@@ -6443,6 +6696,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final isPartitionRadial = _layoutKind == ChartLayoutKind.partitionRadial;
     final isPolarAxis = _layoutKind == ChartLayoutKind.polarAxis;
     final isNonCartesian = isPartitionRadial || isPolarAxis;
+    final hasCandlesticks =
+        !isNonCartesian &&
+        _effectiveDataSeries.any((series) => series is CandlestickChartSeries);
     final effectiveInteractionConfig = isNonCartesian
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
@@ -6572,21 +6828,28 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
-                        onDataHitActivate: (hit) =>
-                            _activateNonCartesianDataHit(
-                              hit,
-                              position: _widgetPositionForDataHit(hit),
-                              showFocusIndicator: true,
-                            ),
-                        onDataHitFocus: (hit) => isPolarAxis
-                            ? _focusPolarPoint(
-                                hit.pointIndex,
-                                seriesId: hit.seriesId,
+                        onDataHitActivate: isNonCartesian
+                            ? (hit) => _activateNonCartesianDataHit(
+                                hit,
+                                position: _widgetPositionForDataHit(hit),
+                                showFocusIndicator: true,
                               )
-                            : _focusRadialPoint(
-                                hit.pointIndex,
-                                seriesId: hit.seriesId,
-                              ),
+                            : hasCandlesticks
+                            ? _activateCandlestickDataHit
+                            : null,
+                        onDataHitFocus: isNonCartesian
+                            ? (hit) => isPolarAxis
+                                  ? _focusPolarPoint(
+                                      hit.pointIndex,
+                                      seriesId: hit.seriesId,
+                                    )
+                                  : _focusRadialPoint(
+                                      hit.pointIndex,
+                                      seriesId: hit.seriesId,
+                                    )
+                            : hasCandlesticks
+                            ? _focusCandlestickDataHit
+                            : null,
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
                         onViewportChanged:
@@ -6692,7 +6955,32 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         _effectiveDataSeries.isNotEmpty &&
         _effectiveDataSeries.every((series) => series is BarChartSeries);
     final focusedBar = hasOnlyBars ? _focusedBarSemantics() : null;
-    final Widget renderedChart = hasOnlyBars
+    final focusedCandlestick = hasCandlesticks
+        ? _focusedCandlestickSemantics()
+        : null;
+    final Widget renderedChart = hasCandlesticks
+        ? Semantics(
+            container: true,
+            focusable: true,
+            label: widget.title ?? 'Interactive candlestick chart',
+            value: focusedCandlestick?.value,
+            increasedValue: focusedCandlestick == null
+                ? null
+                : _adjacentCandlestickSemanticsValue(1) ??
+                      focusedCandlestick.value,
+            decreasedValue: focusedCandlestick == null
+                ? null
+                : _adjacentCandlestickSemanticsValue(-1) ??
+                      focusedCandlestick.value,
+            hint: focusedCandlestick == null
+                ? 'Use left and right arrow keys to inspect candles. Press Enter to select.'
+                : null,
+            selected: focusedCandlestick?.isSelected,
+            onIncrease: () => _moveSemanticCandlestickFocus(1),
+            onDecrease: () => _moveSemanticCandlestickFocus(-1),
+            child: focusChart,
+          )
+        : hasOnlyBars
         ? Semantics(
             container: true,
             focusable: true,
@@ -7492,6 +7780,16 @@ class _ActiveBarSeriesTransition {
   final int renderIndex;
   final bool exiting;
   final bool retainsExits;
+}
+
+class _ActiveCandlestickSeriesTransition {
+  const _ActiveCandlestickSeriesTransition({
+    required this.from,
+    required this.to,
+  });
+
+  final CandlestickChartSeries from;
+  final CandlestickChartSeries to;
 }
 
 class _ActiveRadialSeriesTransition {

@@ -9,6 +9,7 @@ import 'dart:ui' show Color, StrokeCap;
 import 'package:flutter/widgets.dart' show TextStyle, Widget, BuildContext;
 
 import 'interaction_callbacks.dart';
+import 'candlestick_interaction_details.dart';
 
 // ==============================================================================
 // Crosshair Configuration
@@ -63,6 +64,7 @@ class CrosshairSeriesValue {
     this.opacityValue,
     this.formattedOpacityValue,
     this.opacityLabel,
+    this.candlestick,
   });
 
   final String seriesId;
@@ -109,6 +111,9 @@ class CrosshairSeriesValue {
 
   /// Human-readable name for [opacityValue].
   final String? opacityLabel;
+
+  /// Typed OHLC values when this tracked sample is a Candlestick.
+  final CandlestickInteractionDetails? candlestick;
 
   /// Returns the series ID to use for axis resolution (linked series for trends).
   String get axisSeriesId => linkedSeriesId ?? seriesId;

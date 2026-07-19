@@ -95,6 +95,15 @@ class ChartDataTable extends StatefulWidget {
             160 +
             theme.seriesColumnWidth +
             actionWidth,
+      ChartTableProjectionKind.candlestick =>
+        theme.rowNumberWidth +
+            176 +
+            theme.xColumnWidth +
+            theme.seriesColumnWidth *
+                (6 + math.max(0, model.series.length - 1)) +
+            88 +
+            144 +
+            actionWidth,
     };
   }
 
@@ -347,6 +356,15 @@ class _ChartDataTableState extends State<ChartDataTable> {
           rowByPoint[rows[index].reference] = index;
         }
         break;
+      case ChartTableProjectionKind.candlestick:
+        final rows = _sortedCandlestickRows(model);
+        for (var index = 0; index < rows.length; index++) {
+          rowByPoint[rows[index].reference] = index;
+          for (final cell in rows[index].overlayCells.values) {
+            rowByPoint[cell.reference] = index;
+          }
+        }
+        break;
     }
     final firstRow = rowByPoint[points.first];
     if (firstRow == null ||
@@ -393,6 +411,12 @@ class _ChartDataTableState extends State<ChartDataTable> {
       ChartTableProjectionKind.polar => _sortedPolarRows(
         model,
       ).indexWhere((row) => row.reference == point),
+      ChartTableProjectionKind.candlestick =>
+        _sortedCandlestickRows(model).indexWhere(
+          (row) =>
+              row.reference == point ||
+              row.overlayCells.values.any((cell) => cell.reference == point),
+        ),
     };
     if (index < 0) return;
     final tableTheme = _ResolvedTableTheme.from(
@@ -540,6 +564,10 @@ class _ChartDataTableState extends State<ChartDataTable> {
     final polarRows = model.projectionKind == ChartTableProjectionKind.polar
         ? _sortedPolarRows(model)
         : const <ChartTablePolarRow>[];
+    final candlestickRows =
+        model.projectionKind == ChartTableProjectionKind.candlestick
+        ? _sortedCandlestickRows(model)
+        : const <ChartTableCandlestickRow>[];
     final sourceTheme =
         widget.theme ??
         Theme.of(context).extension<ChartDataTableTheme>() ??
@@ -551,6 +579,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       wideRows: wideRows,
       pieRows: pieRows,
       polarRows: polarRows,
+      candlestickRows: candlestickRows,
     );
     final displayedPoints = List<ChartPointRef>.unmodifiable(
       displayedRows.expand((row) => row.points),
@@ -579,6 +608,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
               wideRows: wideRows,
               pieRows: pieRows,
               polarRows: polarRows,
+              candlestickRows: candlestickRows,
             );
         return SizedBox(
           height: height,
@@ -633,6 +663,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
                                     wideRows: wideRows,
                                     pieRows: pieRows,
                                     polarRows: polarRows,
+                                    candlestickRows: candlestickRows,
                                     displayedRows: displayedRows,
                                     displayedPoints: displayedPoints,
                                     theme: tableTheme,
@@ -660,6 +691,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
     required List<ChartTablePolarRow> polarRows,
+    required List<ChartTableCandlestickRow> candlestickRows,
   }) => List.unmodifiable(switch (model.projectionKind) {
     ChartTableProjectionKind.cartesianLong => [
       for (final row in longRows)
@@ -678,6 +710,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
     ChartTableProjectionKind.polar => [
       for (final row in polarRows)
         _DisplayedTableRow(row.rowId, [row.reference]),
+    ],
+    ChartTableProjectionKind.candlestick => [
+      for (final row in candlestickRows)
+        _DisplayedTableRow(row.rowId, [
+          row.reference,
+          ...row.overlayCells.values.map((cell) => cell.reference),
+        ]),
     ],
   });
 
@@ -713,6 +752,76 @@ class _ChartDataTableState extends State<ChartDataTable> {
   }
 
   Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
+    if (model.projectionKind == ChartTableProjectionKind.candlestick) {
+      return _TableHeader(
+        theme: tableTheme,
+        children: [
+          if (widget.showCopyRowAction)
+            _StaticHeader(
+              key: const ValueKey('chart-table-header-row-actions'),
+              label: '',
+              semanticsLabel: 'Row actions',
+              width: 44,
+              theme: tableTheme,
+            ),
+          _StaticHeader(
+            key: const ValueKey('chart-table-header-index'),
+            label: '#',
+            width: tableTheme.rowNumberWidth,
+            theme: tableTheme,
+            numeric: true,
+          ),
+          _SortHeader(
+            label: 'Time',
+            columnId: 'time',
+            width: 176,
+            controller: _controller,
+            theme: tableTheme,
+          ),
+          _SortHeader(
+            label: model.xColumnLabel,
+            columnId: 'x',
+            width: tableTheme.xColumnWidth,
+            controller: _controller,
+            theme: tableTheme,
+            numeric: true,
+          ),
+          for (final field in const [
+            ('Open', 'open'),
+            ('High', 'high'),
+            ('Low', 'low'),
+            ('Close', 'close'),
+            ('Change', 'change'),
+            ('Change %', 'changePercent'),
+          ])
+            _SortHeader(
+              label: field.$1,
+              columnId: field.$2,
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
+          _StaticHeader(label: 'Unit', width: 88, theme: tableTheme),
+          _StaticHeader(label: 'Label', width: 144, theme: tableTheme),
+          for (final column in model.series.skip(1))
+            _SortHeader(
+              label: column.unit == null
+                  ? column.seriesName
+                  : '${column.seriesName} (${column.unit})',
+              columnId: 'series:${column.seriesId}',
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              hidden: column.hidden,
+              numeric: true,
+              seriesColor: column.colorValue == null
+                  ? null
+                  : Color(column.colorValue!),
+            ),
+        ],
+      );
+    }
     if (model.projectionKind == ChartTableProjectionKind.pie) {
       final unit = model.commonRadialUnit;
       return _TableHeader(
@@ -950,10 +1059,21 @@ class _ChartDataTableState extends State<ChartDataTable> {
     required List<ChartTableWideRow> wideRows,
     required List<ChartTablePieRow> pieRows,
     required List<ChartTablePolarRow> polarRows,
+    required List<ChartTableCandlestickRow> candlestickRows,
     required List<_DisplayedTableRow> displayedRows,
     required List<ChartPointRef> displayedPoints,
     required _ResolvedTableTheme theme,
   }) {
+    if (model.projectionKind == ChartTableProjectionKind.candlestick) {
+      return _buildCandlestickRow(
+        model,
+        candlestickRows,
+        index,
+        displayedRows: displayedRows,
+        displayedPoints: displayedPoints,
+        theme: theme,
+      );
+    }
     if (model.projectionKind == ChartTableProjectionKind.pie) {
       final row = pieRows[index];
       final references = List<ChartPointRef>.unmodifiable([row.reference]);
@@ -1339,6 +1459,126 @@ class _ChartDataTableState extends State<ChartDataTable> {
     );
   }
 
+  Widget _buildCandlestickRow(
+    ChartTableModel model,
+    List<ChartTableCandlestickRow> rows,
+    int index, {
+    required List<_DisplayedTableRow> displayedRows,
+    required List<ChartPointRef> displayedPoints,
+    required _ResolvedTableTheme theme,
+  }) {
+    final row = rows[index];
+    final references = List<ChartPointRef>.unmodifiable([
+      row.reference,
+      ...row.overlayCells.values.map((cell) => cell.reference),
+    ]);
+    final timestamp =
+        row.timestamp?.toUtc().toIso8601String() ?? 'No timestamp';
+    return _FocusableTableRow(
+      key: ValueKey(row.rowId),
+      semanticsLabel:
+          'Row ${index + 1}, $timestamp, open ${row.openDisplay}, high ${row.highDisplay}, low ${row.lowDisplay}, close ${row.closeDisplay}, change ${row.changeDisplay}, ${row.changePercentDisplay}',
+      references: references,
+      displayedPoints: displayedPoints,
+      onSelectAllPoints: widget.onSelectAllPoints,
+      onClearSelection: widget.selectedPointRefs.isEmpty
+          ? null
+          : widget.onClearSelection,
+      chartFocused: _isRowFocused(references),
+      selected: _isRowSelected(references),
+      rowIndex: index,
+      theme: theme,
+      focusNode: _focusNodeFor(row.rowId),
+      onMoveVertical: (delta) => _moveRowFocus(
+        rows.length,
+        (targetIndex) => rows[targetIndex].rowId,
+        index,
+        delta,
+        theme.rowHeight,
+      ),
+      onMovePage: (direction) => _moveRowFocusByPage(
+        rows.length,
+        (targetIndex) => rows[targetIndex].rowId,
+        index,
+        direction,
+        theme.rowHeight,
+      ),
+      onMoveToStart: () => _focusRowAt(
+        rows.length,
+        (targetIndex) => rows[targetIndex].rowId,
+        0,
+        theme.rowHeight,
+      ),
+      onMoveToEnd: () => _focusRowAt(
+        rows.length,
+        (targetIndex) => rows[targetIndex].rowId,
+        rows.length - 1,
+        theme.rowHeight,
+      ),
+      onMoveHorizontal: (delta) =>
+          _moveHorizontal(delta, theme.seriesColumnWidth),
+      onFocused: widget.onRowFocused,
+      onFocusCleared: widget.onRowFocusCleared,
+      onHoverChanged: widget.onRowHoverChanged,
+      onActivation: widget.onRowActivation == null
+          ? null
+          : (details) => _activateRow(row.rowId, displayedRows, details),
+      onActivated: widget.onRowActivated,
+      children: [
+        if (widget.showCopyRowAction)
+          _CopyRowButton(
+            tooltip: 'Copy candle row ${index + 1}',
+            onPressed: () => _copyRow(
+              ChartTableExporter.candlestickRow(model, row, index),
+              index,
+            ),
+          ),
+        _TableCell(
+          key: ValueKey('chart-table-row-index-$index'),
+          text: '${index + 1}',
+          width: theme.rowNumberWidth,
+          numeric: true,
+          theme: theme,
+          rowNumber: true,
+        ),
+        _TableCell(text: timestamp, width: 176, theme: theme),
+        _TableCell(
+          text: row.xDisplay,
+          width: theme.xColumnWidth,
+          numeric: true,
+          theme: theme,
+        ),
+        for (final value in [
+          row.openDisplay,
+          row.highDisplay,
+          row.lowDisplay,
+          row.closeDisplay,
+          row.changeDisplay,
+          row.changePercentDisplay,
+        ])
+          _TableCell(
+            text: value,
+            width: theme.seriesColumnWidth,
+            numeric: true,
+            invalid: !row.isValid,
+            color: _seriesColor(model, row.reference.seriesId),
+            theme: theme,
+          ),
+        _TableCell(text: row.unit ?? 'No unit', width: 88, theme: theme),
+        _TableCell(text: row.label ?? 'No label', width: 144, theme: theme),
+        for (final column in model.series.skip(1))
+          _TableCell(
+            text: row.overlayCells[column.seriesId]?.yDisplay ?? 'No value',
+            width: theme.seriesColumnWidth,
+            numeric: true,
+            invalid: row.overlayCells[column.seriesId]?.isValid == false,
+            color: column.colorValue == null ? null : Color(column.colorValue!),
+            theme: theme,
+          ),
+      ],
+    );
+  }
+
   bool _isRowSelected(Iterable<ChartPointRef> references) {
     final points = references.toList(growable: false);
     return points.isNotEmpty && points.every(widget.selectedPointRefs.contains);
@@ -1535,6 +1775,37 @@ class _ChartDataTableState extends State<ChartDataTable> {
           right.seriesName.toLowerCase(),
         ),
         'value' => _compareNumbers(left.valueRaw, right.valueRaw),
+        _ => 0,
+      };
+      return _controller.sortAscending ? result : -result;
+    });
+    return rows;
+  }
+
+  List<ChartTableCandlestickRow> _sortedCandlestickRows(ChartTableModel model) {
+    final rows = [...model.candlestickRows];
+    final column = _controller.sortColumnId;
+    if (column == null) return rows;
+    rows.sort((left, right) {
+      final result = switch (column) {
+        'time' => _compareNullableNumbers(
+          left.timestamp?.millisecondsSinceEpoch.toDouble(),
+          right.timestamp?.millisecondsSinceEpoch.toDouble(),
+        ),
+        'x' => _compareNumbers(left.xRaw, right.xRaw),
+        'open' => _compareNumbers(left.openRaw, right.openRaw),
+        'high' => _compareNumbers(left.highRaw, right.highRaw),
+        'low' => _compareNumbers(left.lowRaw, right.lowRaw),
+        'close' => _compareNumbers(left.closeRaw, right.closeRaw),
+        'change' => _compareNumbers(left.changeRaw, right.changeRaw),
+        'changePercent' => _compareNullableNumbers(
+          left.changePercentRaw,
+          right.changePercentRaw,
+        ),
+        _ when column.startsWith('series:') => _compareNullableNumbers(
+          left.overlayCells[column.substring(7)]?.yRaw,
+          right.overlayCells[column.substring(7)]?.yRaw,
+        ),
         _ => 0,
       };
       return _controller.sortAscending ? result : -result;
