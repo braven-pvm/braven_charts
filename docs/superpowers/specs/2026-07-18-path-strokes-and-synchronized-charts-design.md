@@ -1,10 +1,10 @@
 # Path Stroke Patterns and Synchronized Cartesian Charts
 
-**Status:** Sprint 11 ready for local review; Sprint 12 approved and planned
+**Status:** Sprint 11 promoted in PR #45; Sprint 12 local review approved
 **Roadmap:** Sprints 11 and 12 of Line and Area Product Parity
 **Sprint 11 lane:** `feature/line-stroke-forecast`
-**Sprint 12 lane:** `feature/synchronized-cartesian-charts` after Sprint 11 promotion
-**Prerequisite:** PR #43 merged into `master`
+**Sprint 12 lane:** `feature/synchronized-cartesian-charts`
+**Prerequisite:** PR #45 merged into `master`
 
 ## Goal
 
@@ -129,8 +129,8 @@ Each participant registers its mounted chart and local data-X transform. The
 group coordinates:
 
 - a shared data-space X cursor;
-- nearest visible point resolution per series/chart, even when sample counts
-  differ;
+- rendered-series intersection resolution per chart using each local Line or
+  Area interpolation mode, even when sample counts differ;
 - one vertical crosshair and local intersection markers in every participant;
 - X-only viewport pan, zoom, reset, and reveal bounds;
 - pointer exit, focus loss, and touch-scrub cleanup; and
@@ -201,7 +201,7 @@ target.
 
 ### Sprint 12
 
-- Unit tests prove data-X broadcast, nearest-point resolution, lifecycle,
+- Unit tests prove data-X broadcast, rendered-path intersections, lifecycle,
   opt-outs, re-entrancy protection, and X-only viewport synchronization.
 - Real render-path tests prove aligned crosshairs across different plot sizes,
   sample counts, interpolation modes, and Y domains.

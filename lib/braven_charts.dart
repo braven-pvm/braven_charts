@@ -80,6 +80,8 @@ export 'src/braven_chart_plus.dart';
 // Controllers
 export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
+export 'src/controllers/chart_interaction_group_controller.dart'
+    hide ChartInteractionGroupParticipant;
 // Comparison
 export 'src/comparison/chart_comparison_builder.dart';
 export 'src/comparison/chart_comparison_export.dart';

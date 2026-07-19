@@ -146,6 +146,7 @@ void main() {
       expect(find.text('Envelope'), findsWidgets);
       expect(find.text('Spotlight'), findsWidgets);
       expect(find.text('Forecast'), findsWidgets);
+      expect(find.text('Synchronized'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -322,6 +323,135 @@ void main() {
       expect(find.text('Show second series'), findsNothing);
     },
   );
+
+  testWidgets(
+    'Line Synchronized stacks three independent charts in one interaction group',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.pumpAndSettle();
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('synchronized-cartesian-stack')),
+        findsOneWidget,
+      );
+      expect(find.text('Speed'), findsOneWidget);
+      expect(find.text('Elevation'), findsOneWidget);
+      expect(find.text('Heart rate'), findsOneWidget);
+      expect(find.text('9.3 km/h'), findsOneWidget);
+      expect(find.text('329 m'), findsOneWidget);
+      expect(find.text('138 bpm'), findsOneWidget);
+      expect(find.byType(BravenChartWorkbench), findsNothing);
+
+      final charts = tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList();
+      expect(charts, hasLength(3));
+      expect(charts[0].series.single, isA<LineChartSeries>());
+      expect(charts[1].series.single, isA<AreaChartSeries>());
+      expect(charts[2].series.single, isA<AreaChartSeries>());
+      expect(
+        charts.map((chart) => chart.interactionGroupController).toSet(),
+        hasLength(1),
+      );
+      expect(charts.first.interactionGroupController, isNotNull);
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final renderBoxes = renderElements
+          .map((render) => render.renderObject! as ChartRenderBox)
+          .toList();
+      for (final renderBox in renderBoxes) {
+        expect(renderBox.size.height, greaterThanOrEqualTo(48));
+      }
+      final firstFinder = find.byElementPredicate(
+        (element) => element == renderElements.first,
+      );
+      final first = renderBoxes.first;
+      const dataX = 0.2;
+      final local = first.plotToWidget(
+        first.transform!.dataToPlot(
+          dataX,
+          (first.transform!.dataYMin + first.transform!.dataYMax) / 2,
+        ),
+      );
+      final pointer = await tester.createGesture();
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(tester.getTopLeft(firstFinder) + local);
+      await tester.pump();
+      expect(
+        renderBoxes.map((renderBox) => renderBox.debugSynchronizedCursorX),
+        everyElement(closeTo(dataX, 0.0001)),
+      );
+      for (final renderBox in renderBoxes) {
+        final tracked =
+            renderBox.debugSynchronizedTrackingState!.seriesValues.single;
+        expect(tracked.x, closeTo(dataX, 0.0001));
+        expect(tracked.isInterpolated, isTrue);
+      }
+      final cursorScreenXs = <double>[
+        for (var index = 0; index < renderBoxes.length; index++)
+          tester
+                  .getTopLeft(
+                    find.byElementPredicate(
+                      (element) => element == renderElements[index],
+                    ),
+                  )
+                  .dx +
+              renderBoxes[index].debugSynchronizedCursorPosition!.dx,
+      ];
+      for (final cursorScreenX in cursorScreenXs.skip(1)) {
+        expect(
+          cursorScreenX,
+          closeTo(cursorScreenXs.first, 0.01),
+          reason: 'shared data X must align to one screen-space coordinate',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('compact synchronized stack removes repeated distance axes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(500, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: LineChartsPage())),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    final synchronized = find.descendant(
+      of: find.byKey(const ValueKey('line-preset-picker')),
+      matching: find.text('Synchronized'),
+    );
+    await tester.ensureVisible(synchronized);
+    await tester.pumpAndSettle();
+    await tester.tap(synchronized);
+    await tester.pumpAndSettle();
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList();
+    expect(charts, hasLength(3));
+    expect(
+      charts.take(2).map((chart) => chart.xAxisConfig?.visible),
+      everyElement(isFalse),
+    );
+    expect(charts.last.xAxisConfig?.visible, isTrue);
+    for (final render in _chartRenderFinder().evaluate()) {
+      expect(
+        (render.renderObject! as ChartRenderBox).size.height,
+        greaterThanOrEqualTo(48),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Line Spotlight stays focused while showcasing luminous identity',
@@ -839,3 +969,7 @@ void main() {
     }
   });
 }
+
+Finder _chartRenderFinder() => find.byWidgetPredicate(
+  (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+);

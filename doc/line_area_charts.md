@@ -192,6 +192,7 @@ families. See [Chart Workbench](chart_workbench.md) and
 
 ## Runnable showcase
 
+- [Synchronized Speed, Elevation, and Heart-rate charts](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized)
 - [Line motion workbench](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split)
 - [Area motion workbench](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split)
 - [Area gradient](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=gradient)

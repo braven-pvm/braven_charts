@@ -490,20 +490,21 @@ The locked contract and executable work slices are recorded in
 
 ## Sprint 12 — Synchronized Cartesian charts
 
-**Status:** Planned after Sprint 11 promotion
+**Status:** Local review approved; promotion in progress on
+`feature/synchronized-cartesian-charts`
 
 ### Product outcome
 
 Independent Cartesian charts can share a data-X cursor, aligned crosshairs,
-nearest-point focus, and X-only viewport changes while retaining their own
-units, Y domains, titles, and artifacts.
+rendered-path intersections, and X-only viewport changes while retaining their
+own units, Y domains, titles, and artifacts.
 
 ### Scope
 
 - Add a caller-owned `ChartInteractionGroupController`; do not extend the
   presentation-only `ChartWorkbenchGroupController`.
-- Coordinate data-space X, local nearest points, pointer/touch cleanup, and
-  loop-safe X viewport changes.
+- Coordinate data-space X, local rendered-path intersections, pointer/touch
+  cleanup, and loop-safe X viewport changes.
 - Add a stacked Speed, Elevation, and Heart rate showcase at wide and compact
   sizes.
 - Keep Y interaction, annotations, tooltips, durable selection, and artifacts
@@ -511,9 +512,20 @@ units, Y domains, titles, and artifacts.
 
 ### Acceptance gates
 
-- Controller lifecycle, data-X mapping, nearest-point, viewport, opt-out, and
+- Controller lifecycle, data-X mapping, path-intersection, viewport, opt-out, and
   loop-prevention unit coverage.
 - Real render-path crosshair coverage across different sizes, sample counts,
   interpolation modes, and Y domains.
 - Pointer, touch, keyboard, compact, release, publication, and pixel-review
   gates before promotion.
+
+### Delivered local slice
+
+- Added a caller-owned interaction-group controller with lifecycle-safe,
+  deduplicated data-X cursor and X-only viewport broadcasts.
+- Added paint-only synchronized crosshairs and local rendered-path resolution
+  without sharing Y state, tooltips, selection, documents, or artifacts.
+- Added the compact Speed, Elevation, and Heart rate Line-page showcase with
+  one shared interaction group and independent charts.
+- Passed the package and showcase suites, analyzers, release builds, public
+  base-path build, direct-route checks, and wide/compact visual review.

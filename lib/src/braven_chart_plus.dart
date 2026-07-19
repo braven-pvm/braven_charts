@@ -24,6 +24,7 @@ import 'artifacts/chart_view_state.dart';
 import 'artifacts/resolved_chart_data.dart';
 import 'controllers/annotation_controller.dart';
 import 'controllers/chart_controller.dart';
+import 'controllers/chart_interaction_group_controller.dart';
 import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
 import 'elements/pie_series_element.dart';
@@ -159,6 +160,8 @@ class BravenChartPlus extends StatefulWidget {
     this.maxAxesPerSide = 3,
     this.axisSwapMode = AxisSwapMode.sticky,
     this.bravenChartController,
+    this.interactionGroupController,
+    this.interactionGroupOptions = const ChartInteractionGroupOptions(),
     this.onSeriesDeselected,
     this.onAxisSwapped,
     // ==================== MULTI-AXIS PARAMETERS ====================
@@ -211,6 +214,9 @@ class BravenChartPlus extends StatefulWidget {
     int maxAxesPerSide = 3,
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
+    ChartInteractionGroupController? interactionGroupController,
+    ChartInteractionGroupOptions interactionGroupOptions =
+        const ChartInteractionGroupOptions(),
     void Function(String seriesId)? onSeriesDeselected,
     void Function({
       required String promotedAxisId,
@@ -287,6 +293,8 @@ class BravenChartPlus extends StatefulWidget {
       maxAxesPerSide: maxAxesPerSide,
       axisSwapMode: axisSwapMode,
       bravenChartController: bravenChartController,
+      interactionGroupController: interactionGroupController,
+      interactionGroupOptions: interactionGroupOptions,
       onSeriesDeselected: onSeriesDeselected,
       onAxisSwapped: onAxisSwapped,
     );
@@ -336,6 +344,9 @@ class BravenChartPlus extends StatefulWidget {
     int maxAxesPerSide = 3,
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
+    ChartInteractionGroupController? interactionGroupController,
+    ChartInteractionGroupOptions interactionGroupOptions =
+        const ChartInteractionGroupOptions(),
     void Function(String seriesId)? onSeriesDeselected,
     void Function({
       required String promotedAxisId,
@@ -417,6 +428,8 @@ class BravenChartPlus extends StatefulWidget {
       maxAxesPerSide: maxAxesPerSide,
       axisSwapMode: axisSwapMode,
       bravenChartController: bravenChartController,
+      interactionGroupController: interactionGroupController,
+      interactionGroupOptions: interactionGroupOptions,
       onSeriesDeselected: onSeriesDeselected,
       onAxisSwapped: onAxisSwapped,
     );
@@ -472,6 +485,9 @@ class BravenChartPlus extends StatefulWidget {
     int maxAxesPerSide = 3,
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
+    ChartInteractionGroupController? interactionGroupController,
+    ChartInteractionGroupOptions interactionGroupOptions =
+        const ChartInteractionGroupOptions(),
     void Function(String seriesId)? onSeriesDeselected,
     void Function({
       required String promotedAxisId,
@@ -551,6 +567,8 @@ class BravenChartPlus extends StatefulWidget {
       maxAxesPerSide: maxAxesPerSide,
       axisSwapMode: axisSwapMode,
       bravenChartController: bravenChartController,
+      interactionGroupController: interactionGroupController,
+      interactionGroupOptions: interactionGroupOptions,
       onSeriesDeselected: onSeriesDeselected,
       onAxisSwapped: onAxisSwapped,
     );
@@ -915,6 +933,15 @@ class BravenChartPlus extends StatefulWidget {
   /// The controller is optional — charts without one respond to taps internally.
   final BravenChartController? bravenChartController;
 
+  /// Optional caller-owned controller for transient data-X synchronization.
+  ///
+  /// Charts in the same group retain independent Y domains, tooltips,
+  /// annotations, selections, and artifacts.
+  final ChartInteractionGroupController? interactionGroupController;
+
+  /// Cursor and viewport capabilities for this grouped chart.
+  final ChartInteractionGroupOptions interactionGroupOptions;
+
   /// Called when a series is deselected (tap again or tap empty space).
   final void Function(String seriesId)? onSeriesDeselected;
 
@@ -986,6 +1013,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   MouseCursor _currentCursor = SystemMouseCursors.basic;
   final GlobalKey _renderBoxKey = GlobalKey();
+  ChartInteractionGroupParticipant? _interactionGroupParticipant;
 
   /// Currently selected series ID for Y-axis slot selection.
   String? _selectedSeriesId;
@@ -1016,6 +1044,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   bool _isStreaming = true;
   final List<ChartDataPoint> _streamingDataPoints = [];
   Timer? _streamingResumeTimer;
+  Timer? _interactionViewportSettleTimer;
 
   // Locked viewport bounds when paused - THE FUNDAMENTAL FIX
   DataBounds? _lockedPausedBounds;
@@ -1315,6 +1344,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     _syncControllerPointState();
     _scheduleEffectiveDocumentRevisionPublish();
+    _attachInteractionGroup();
   }
 
   @override
@@ -1462,6 +1492,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _syncControllerPointState();
     }
 
+    if (widget.interactionGroupController !=
+            oldWidget.interactionGroupController ||
+        widget.interactionGroupOptions != oldWidget.interactionGroupOptions ||
+        ChartLayoutResolver.resolve(widget.series) !=
+            ChartLayoutResolver.resolve(oldWidget.series)) {
+      _attachInteractionGroup();
+    }
+
     if (_pathAnimationDuration == Duration.zero) {
       _finishPathAnimationsImmediately();
     }
@@ -1535,6 +1573,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   /// Called when focus state changes.
   void _onFocusChanged() {
+    if (!_focusNode.hasFocus) {
+      _clearInteractionCursor();
+    }
     final hideRadialFocus =
         !_focusNode.hasFocus && _radialFocusIndicatorVisible;
     // Only trigger rebuild when focus border is actually displayed.
@@ -1580,6 +1621,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ..removeListener(_handleRadialAnimationTick)
       ..dispose();
     _streamingResumeTimer?.cancel();
+    _interactionViewportSettleTimer?.cancel();
     _liveDocumentRevisionTimer?.cancel();
     _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
@@ -1594,6 +1636,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
     _internalAnnotationController?.dispose();
     widget.liveStreamController?.detachRenderBox();
+    _interactionGroupParticipant?.dispose();
     widget.bravenChartController?.detach();
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
@@ -1726,6 +1769,89 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _captureStateRevision++;
     _pauseStreamingForViewportInteraction();
     _scheduleStreamingResumeIfNeeded();
+  }
+
+  void _handleViewportChanged() {
+    final participant = _interactionGroupParticipant;
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final transform = renderBox?.transform;
+    if (participant == null || transform == null) return;
+    participant.publishViewport(
+      ChartXViewport(min: transform.dataXMin, max: transform.dataXMax),
+    );
+  }
+
+  void _handleLocalDataXCursorChanged(double? dataX) {
+    final participant = _interactionGroupParticipant;
+    if (participant == null) return;
+    if (dataX == null) {
+      participant.clearCursor();
+    } else {
+      participant.publishCursor(dataX);
+    }
+  }
+
+  void _applySynchronizedCursor(double? dataX) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    renderBox?.setSynchronizedCursorDataX(dataX);
+  }
+
+  void _applySynchronizedViewport(ChartXViewport viewport) {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox?.restoreVisibleXBounds(
+          xMin: viewport.min,
+          xMax: viewport.max,
+        ) ??
+        false) {
+      if (!(_interactionViewportSettleTimer?.isActive ?? false)) {
+        _captureStateRevision++;
+      }
+      _interactionViewportSettleTimer?.cancel();
+      _interactionViewportSettleTimer = Timer(
+        const Duration(milliseconds: 80),
+        () {
+          if (!mounted) return;
+          (_renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?)
+              ?.finalizeSynchronizedViewport();
+        },
+      );
+    }
+  }
+
+  void _attachInteractionGroup() {
+    _interactionGroupParticipant?.dispose();
+    _interactionGroupParticipant = null;
+    _applySynchronizedCursor(null);
+    final controller = widget.interactionGroupController;
+    if (controller == null || _layoutKind != ChartLayoutKind.cartesian) return;
+    _interactionGroupParticipant = controller.attachChart(
+      attachment: this,
+      options: widget.interactionGroupOptions,
+      onCursorChanged: _applySynchronizedCursor,
+      onViewportChanged: _applySynchronizedViewport,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.interactionGroupController != controller) return;
+      _applySynchronizedCursor(
+        widget.interactionGroupOptions.synchronizeCursor
+            ? controller.cursorX
+            : null,
+      );
+      final viewport = controller.viewport;
+      if (widget.interactionGroupOptions.synchronizeViewport &&
+          viewport != null) {
+        _applySynchronizedViewport(viewport);
+      }
+    });
+  }
+
+  void _clearInteractionCursor() {
+    (_renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?)
+        ?.clearCursorPosition();
+    _handleLocalDataXCursorChanged(null);
   }
 
   void _returnToLiveViewport(ChartRenderBox renderBox) {
@@ -4077,6 +4203,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handlePanStart(DragStartDetails details) {
+    _captureStateRevision++;
     _pauseStreamingForViewportInteraction();
 
     // Request focus on pan start to enable keyboard controls
@@ -4788,6 +4915,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       xMax: nextMax,
       yMin: transform.dataYMin,
       yMax: transform.dataYMax,
+      notifyViewportChanged: true,
     )) {
       _captureStateRevision++;
     }
@@ -4837,6 +4965,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Reset view
       else if (event.logicalKey == LogicalKeyboardKey.home ||
           event.logicalKey == LogicalKeyboardKey.keyR) {
+        _captureStateRevision++;
         _returnToLiveViewport(renderBox);
       }
       // Shift modifier for zoom
@@ -4849,6 +4978,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(-20.0, 0.0);
@@ -4858,6 +4988,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(20.0, 0.0);
@@ -4867,6 +4998,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(0.0, -20.0);
@@ -4876,6 +5008,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         // Check if pan is enabled
         if (widget.interactionConfig?.enablePan ?? true) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.panning);
           renderBox.panChart(0.0, 20.0);
@@ -4890,6 +5023,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         // Check if zoom is enabled
         final config = widget.interactionConfig ?? const InteractionConfig();
         if (config.enableZoom) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.zooming);
           renderBox.zoomChart(1.0 + (config.keyboardZoomPercent / 100.0));
@@ -4903,6 +5037,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         // Check if zoom is enabled
         final config = widget.interactionConfig ?? const InteractionConfig();
         if (config.enableZoom) {
+          _captureStateRevision++;
           _pauseStreamingForViewportInteraction();
           _coordinator.claimMode(InteractionMode.zooming);
           renderBox.zoomChart(1.0 - (config.keyboardZoomPercent / 100.0));
@@ -5582,9 +5717,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               if (enableFocusOnHover && _focusNode.hasFocus) {
                 _focusNode.unfocus();
               }
-              (_renderBoxKey.currentContext?.findRenderObject()
-                      as ChartRenderBox?)
-                  ?.clearCursorPosition();
+              _clearInteractionCursor();
             },
             child: Container(
               width: widget.width,
@@ -5666,6 +5799,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                             _focusRadialPoint(hit.pointIndex),
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
+                        onViewportChanged:
+                            !isRadial &&
+                                widget.interactionGroupController != null
+                            ? _handleViewportChanged
+                            : null,
+                        onDataXCursorChanged:
+                            !isRadial &&
+                                widget.interactionGroupController != null
+                            ? _handleLocalDataXCursorChanged
+                            : null,
                         gridConfig: isRadial ? null : widget.grid,
                         // Multi-axis parameters
                         normalizationMode: isRadial
@@ -5988,6 +6131,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.onDataHitFocus,
     this.onRangeCreationComplete,
     this.onViewportInteracted,
+    this.onViewportChanged,
+    this.onDataXCursorChanged,
     // Multi-axis parameters
     this.normalizationMode,
     this.series,
@@ -6034,6 +6179,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final void Function(double startX, double endX, double startY, double endY)?
   onRangeCreationComplete;
   final VoidCallback? onViewportInteracted;
+  final VoidCallback? onViewportChanged;
+  final ValueChanged<double?>? onDataXCursorChanged;
   // Multi-axis fields
   final NormalizationMode? normalizationMode;
   final List<ChartSeries>? series;
@@ -6064,6 +6211,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         onDataHitFocus: onDataHitFocus,
         onRangeCreationComplete: onRangeCreationComplete,
         onViewportInteracted: onViewportInteracted,
+        onViewportChanged: onViewportChanged,
+        onDataXCursorChanged: onDataXCursorChanged,
       )
       ..setXAxis(xAxis)
       ..setXAxisConfig(xAxisConfig)
@@ -6103,6 +6252,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setTextDirection(textDirection)
       ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
+      ..onViewportChanged = onViewportChanged
+      ..onDataXCursorChanged = onDataXCursorChanged
       ..onElementHover = onElementHover;
     renderObject
       ..onDataHitActivate = onDataHitActivate
