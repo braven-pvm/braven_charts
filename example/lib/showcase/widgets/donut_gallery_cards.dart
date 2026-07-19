@@ -18,6 +18,7 @@ const donutGalleryCards = <Widget>[
   RevenueRingGalleryCard(),
   DeliveryProgressGalleryCard(),
   CampaignReachGalleryCard(),
+  ConcentricMixGalleryCard(),
 ];
 
 /// A deterministic, navigation-free panel for pub.dev media capture.
@@ -292,21 +293,103 @@ class CampaignReachGalleryCard extends StatelessWidget {
   }
 }
 
+/// Three independent period totals sharing one compact radial comparison.
+class ConcentricMixGalleryCard extends StatelessWidget {
+  const ConcentricMixGalleryCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final base = ChartTheme.corporateBlue;
+    final theme = base.copyWith(
+      seriesTheme: base.seriesTheme.copyWith(
+        colors: const [
+          Color(0xFF2563EB),
+          Color(0xFF14B8A6),
+          Color(0xFFF59E0B),
+          Color(0xFF8B5CF6),
+        ],
+      ),
+    );
+    const hiddenLabels = PieDataLabelConfig(isVisible: false);
+    const ringStyle = DonutChartStyle(
+      sliceGap: 2,
+      cornerRadius: 5,
+      borderWidth: 1,
+      borderColorMode: PieBorderColorMode.slice,
+      gradient: PieGradientStyle(type: PieGradientType.radial),
+    );
+
+    return _DonutGalleryCard(
+      key: const ValueKey('gallery-donut-concentric'),
+      title: 'Revenue mix over time',
+      subtitle: '3 independent totals · weighted concentric rings',
+      showLegend: false,
+      theme: theme,
+      concentricDonutConfig: const ConcentricDonutConfig(
+        innerRadiusFactor: 0.28,
+        outerRadiusFactor: 0.88,
+        ringGap: 4,
+        ringWeights: {
+          'gallery-concentric-current': 1.2,
+          'gallery-concentric-prior': 1,
+          'gallery-concentric-baseline': 0.8,
+        },
+        centerContent: DonutCenterContent(
+          label: 'Comparison',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: '3 rings',
+        ),
+      ),
+      concentricSeries: [
+        DonutChartSeries.fromMap(
+          id: 'gallery-concentric-current',
+          name: 'Current quarter',
+          unit: 'k USD',
+          values: const {'Direct': 58, 'Partners': 27, 'Expansion': 15},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-concentric-prior',
+          name: 'Previous quarter',
+          unit: 'k USD',
+          values: const {'Direct': 49, 'Partners': 33, 'Expansion': 18},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+        DonutChartSeries.fromMap(
+          id: 'gallery-concentric-baseline',
+          name: 'Last year',
+          unit: 'k USD',
+          values: const {'Direct': 42, 'Partners': 38, 'Expansion': 20},
+          donutStyle: ringStyle,
+          dataLabels: hiddenLabels,
+        ),
+      ],
+    );
+  }
+}
+
 class _DonutGalleryCard extends StatelessWidget {
   const _DonutGalleryCard({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.series,
     required this.theme,
+    this.series,
+    this.concentricSeries,
     this.showLegend = true,
-  });
+    this.concentricDonutConfig = const ConcentricDonutConfig(),
+  }) : assert(series != null || concentricSeries != null),
+       assert(series == null || concentricSeries == null);
 
   final String title;
   final String subtitle;
-  final DonutChartSeries series;
+  final DonutChartSeries? series;
+  final List<DonutChartSeries>? concentricSeries;
   final ChartTheme theme;
   final bool showLegend;
+  final ConcentricDonutConfig concentricDonutConfig;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +431,8 @@ class _DonutGalleryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Expanded(
               child: BravenChartPlus(
-                series: [series],
+                series: concentricSeries ?? [series!],
+                concentricDonutConfig: concentricDonutConfig,
                 theme: theme,
                 showLegend: showLegend,
                 grid: const GridConfig(horizontal: false, vertical: false),

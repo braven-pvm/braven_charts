@@ -6,6 +6,7 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
@@ -62,6 +63,7 @@ class ChartDocumentExtractOptions {
     this.yAxisFormatterDescriptors = const {},
     this.interactionBindingDescriptors = const {},
     this.radialFormatterDescriptors = const {},
+    this.concentricCenterFormatterDescriptor,
     this.maxSnapshotAttempts = 3,
   }) : assert(documentId != ''),
        assert(maxSnapshotAttempts > 0);
@@ -100,6 +102,9 @@ class ChartDocumentExtractOptions {
   /// source series. Extraction fails closed instead of serializing callbacks.
   final Map<String, RadialFormatterDocumentDescriptors>
   radialFormatterDescriptors;
+
+  /// Portable formatter descriptor for the plot-owned Concentric Donut center.
+  final JsonObjectValue? concentricCenterFormatterDescriptor;
 
   /// Maximum stable-snapshot attempts before returning an unstable revision.
   final int maxSnapshotAttempts;
@@ -186,6 +191,7 @@ class ChartDocumentExtractionSource {
     this.subtitle,
     this.width,
     this.height,
+    this.concentricDonutConfig,
   }) : allSeries = List.unmodifiable(allSeries),
        visibleSeries = List.unmodifiable(visibleSeries),
        declaredSeries = List.unmodifiable(declaredSeries),
@@ -209,6 +215,7 @@ class ChartDocumentExtractionSource {
   final String? subtitle;
   final double? width;
   final double? height;
+  final ConcentricDonutConfig? concentricDonutConfig;
   final Color backgroundColor;
   final bool showToolbar;
   final bool interactiveAnnotations;
@@ -299,10 +306,23 @@ abstract final class ChartDocumentExtractor {
         ),
         warnings,
       );
+      final configuration = source.concentricDonutConfig == null
+          ? JsonObjectValue(const {})
+          : _requireValue(
+              ChartConfigurationDocumentCodec.encodeConcentricDonut(
+                source.concentricDonutConfig!,
+                centerFormatterDescriptor:
+                    options.concentricCenterFormatterDescriptor,
+              ),
+              warnings,
+            );
       final requiredCapabilities = <String>{
         for (final series in seriesDocuments) ...series.requiredCapabilities,
         for (final annotation in annotationDocuments)
           ...annotation.requiredCapabilities,
+        if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
+        if (options.concentricCenterFormatterDescriptor != null)
+          'series.radial.formatters.v1',
       };
       final viewState = options.includeViewState ? source.viewState : null;
 
@@ -337,6 +357,7 @@ abstract final class ChartDocumentExtractor {
             normalization: ChartConfigurationDocumentCodec.encodeNormalization(
               source.normalizationMode,
             ),
+            configuration: configuration,
             requiredCapabilities: requiredCapabilities,
             extensions: {'dataScope': JsonStringValue(options.dataScope.name)},
           ),

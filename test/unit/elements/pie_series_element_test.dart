@@ -631,6 +631,59 @@ void main() {
     );
 
     test(
+      'paints independent outside category and inside percentage layers',
+      () {
+        final series = PieChartSeries.fromMap(
+          id: 'dual-labels',
+          values: const {'Webform': 63, 'Call': 20, 'Email': 17},
+          pieStyle: const PieChartStyle(
+            radiusFactor: 0.72,
+            animationMode: PieAnimationMode.none,
+          ),
+          dataLabels: const PieDataLabelConfig(
+            position: PieDataLabelPosition.outside,
+            content: PieDataLabelContent.category,
+            secondaryContent: PieDataLabelContent.percentage,
+            secondaryPosition: PieDataLabelPosition.inside,
+            minimumShare: 0,
+            minimumSweepDegrees: 0,
+            secondaryCalloutStyle: LabelStyle(
+              textStyle: TextStyle(
+                color: Color(0xFFFFFFFF),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+              backgroundColor: Color(0xCC111827),
+              borderColor: Color(0x00000000),
+              borderWidth: 0,
+              borderRadius: 3,
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            ),
+          ),
+        );
+        final element = PieSeriesElement(
+          series: series,
+          size: const Size(420, 300),
+          theme: ChartTheme.light,
+        );
+        final recorder = PictureRecorder();
+        element.paint(Canvas(recorder), element.size);
+        recorder.endRecording().dispose();
+
+        expect(element.debugResolvedOutsideLabelRects, hasLength(3));
+        expect(element.debugResolvedInsideLabelRects, hasLength(3));
+        for (final inside in element.debugResolvedInsideLabelRects) {
+          expect(
+            element.geometry.slices.any(
+              (slice) => slice.bounds.overlaps(inside),
+            ),
+            isTrue,
+          );
+        }
+      },
+    );
+
+    test(
       'selected explode, border, focus, and glow stay inside the canvas',
       () {
         const glow = PieElevationStyle(
@@ -814,6 +867,81 @@ void main() {
       expect(hit.isFocused, isTrue);
       expect(hit.semanticLabel, contains('slice 1 of 2, selected'));
       expect(hit.semanticLabel, contains('Total area 120.00 km²'));
+    });
+
+    test('coordinates outside labels across independent donut rings', () {
+      DonutChartSeries ring(String id) => DonutChartSeries.fromMap(
+        id: id,
+        values: const {
+          'Subscriptions': 40,
+          'Services': 30,
+          'Enterprise': 20,
+          'Support': 10,
+        },
+        dataLabels: const PieDataLabelConfig(
+          position: PieDataLabelPosition.outside,
+          content: PieDataLabelContent.categoryAndPercentage,
+          minimumShare: 0,
+          minimumSweepDegrees: 0,
+          collisionStrategy: PieDataLabelCollisionStrategy.shift,
+        ),
+        donutStyle: const DonutChartStyle(
+          sliceGap: 0,
+          animationMode: PieAnimationMode.none,
+        ),
+      );
+
+      const size = Size(360, 260);
+      const center = Offset(180, 130);
+      final elements = [
+        PieSeriesElement(
+          series: ring('outer'),
+          seriesIndex: 0,
+          size: size,
+          theme: ChartTheme.light,
+          geometryCenter: center,
+          geometryInnerRadius: 92,
+          geometryOuterRadius: 122,
+          coordinateOutsideLabels: true,
+        ),
+        PieSeriesElement(
+          series: ring('inner'),
+          seriesIndex: 1,
+          size: size,
+          theme: ChartTheme.light,
+          geometryCenter: center,
+          geometryInnerRadius: 56,
+          geometryOuterRadius: 86,
+          coordinateOutsideLabels: true,
+        ),
+      ];
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      for (final element in elements) {
+        element.paint(canvas, size);
+      }
+      PieSeriesElement.paintCoordinatedOutsideLabels(canvas, elements);
+      recorder.endRecording().dispose();
+
+      expect(
+        elements.map(
+          (element) => element.debugResolvedOutsideLabelRects.length,
+        ),
+        everyElement(4),
+      );
+      final rects = [
+        for (final element in elements)
+          ...element.debugResolvedOutsideLabelRects,
+      ];
+      for (var first = 0; first < rects.length; first++) {
+        for (var second = first + 1; second < rects.length; second++) {
+          expect(
+            rects[first].overlaps(rects[second]),
+            isFalse,
+            reason: 'Labels $first and $second must share one collision lane',
+          );
+        }
+      }
     });
   });
 }

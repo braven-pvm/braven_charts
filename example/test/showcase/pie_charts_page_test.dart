@@ -1,5 +1,7 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/pie_charts_page.dart';
+import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
+import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -107,10 +109,61 @@ void main() {
     );
     expect(initialSeries.dataLabels.valueFormatter, isNotNull);
     expect(initialSeries.dataLabels.percentageFormatter, isNotNull);
+    expect(initialSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(initialSeries.dataLabels.content, PieDataLabelContent.category);
+    expect(
+      initialSeries.dataLabels.secondaryContent,
+      PieDataLabelContent.percentage,
+    );
+    expect(
+      initialSeries.dataLabels.secondaryPosition,
+      PieDataLabelPosition.inside,
+    );
+    expect(
+      initialSeries.dataLabels.secondaryCalloutStyle?.backgroundColor,
+      const Color(0xD91F2937),
+    );
     expect(initialSeries.pieStyle.gradient?.type, PieGradientType.radial);
     expect(initialSeries.pieStyle.cornerTreatment, PieCornerTreatment.roundAll);
+    expect(initialSeries.selectionStyle.effect, RadialSelectionEffect.explode);
     expect(initialChart.interactionConfig?.showFocusBorder, isFalse);
     expect(tester.takeException(), isNull);
+
+    final dynamic primaryLabelStyle = tester.widget(
+      find.byKey(const ValueKey('pie-primary-label-style')),
+    );
+    primaryLabelStyle.onChanged(primaryLabelStyle.values.last);
+    await tester.pump();
+    final simpleOutsideStyle = tester
+        .widget<BravenChartPlus>(
+          find.byKey(const ValueKey('pie-showcase-chart')),
+        )
+        .theme
+        ?.pieChartTheme
+        .calloutStyle;
+    expect(
+      simpleOutsideStyle?.textStyle.color,
+      ChartTheme.light.axisStyle.labelStyle.color,
+    );
+    expect(simpleOutsideStyle?.backgroundColor, const Color(0x00000000));
+
+    final dynamic insideShareStyle = tester.widget(
+      find.byKey(const ValueKey('pie-inside-share-style')),
+    );
+    insideShareStyle.onChanged(insideShareStyle.values.last);
+    await tester.pump();
+    final lightInsideStyle =
+        (tester
+                    .widget<BravenChartPlus>(
+                      find.byKey(const ValueKey('pie-showcase-chart')),
+                    )
+                    .series
+                    .single
+                as PieChartSeries)
+            .dataLabels
+            .secondaryCalloutStyle;
+    expect(lightInsideStyle?.textStyle.color, const Color(0xFF1A1A1A));
+    expect(lightInsideStyle?.backgroundColor, const Color(0xF2FFFFFF));
 
     await tester.tap(find.byKey(const ValueKey('pie-preset-compact')));
     await tester.pump(const Duration(milliseconds: 300));
@@ -132,15 +185,51 @@ void main() {
     );
     final simpleSeries = simpleChart.series.single as PieChartSeries;
     expect(simpleChart.showLegend, isFalse);
-    expect(simpleChart.theme?.backgroundColor, const Color(0xFF1F1F1F));
-    expect(simpleSeries.dataLabels.position, PieDataLabelPosition.inside);
-    expect(simpleSeries.dataLabels.content, PieDataLabelContent.value);
-    expect(simpleSeries.dataLabels.minimumShare, 0.2);
-    expect(simpleSeries.pieStyle.gradient?.type, PieGradientType.linear);
+    expect(simpleChart.theme?.backgroundColor, const Color(0xFFFFFFFF));
+    expect(simpleSeries.points, hasLength(9));
+    expect(simpleSeries.points.first.label, 'Subscriptions');
+    expect(simpleSeries.points.first.y, closeTo(0.8404721477638243, 1e-12));
+    expect(simpleSeries.points.last.label, 'Category 9');
+    expect(simpleSeries.points.last.y, closeTo(9.78854068295935, 1e-12));
+    expect(simpleSeries.visibleSlices, hasLength(9));
+    expect(simpleSeries.dataLabels.position, PieDataLabelPosition.outside);
+    expect(simpleSeries.dataLabels.content, PieDataLabelContent.category);
+    expect(
+      simpleSeries.dataLabels.secondaryContent,
+      PieDataLabelContent.percentage,
+    );
+    expect(
+      simpleSeries.dataLabels.secondaryPosition,
+      PieDataLabelPosition.inside,
+    );
+    expect(simpleSeries.dataLabels.minimumShare, 0.06);
+    expect(simpleSeries.dataLabels.minimumSweepDegrees, 2);
+    expect(simpleSeries.dataLabels.padding, 3);
+    expect(simpleSeries.dataLabels.connectorLength, 20);
+    expect(simpleSeries.dataLabels.connectorWidth, 1.5);
+    expect(simpleSeries.pieStyle.startAngleDegrees, -45);
+    expect(simpleSeries.pieStyle.radiusFactor, 0.92);
+    expect(simpleSeries.pieStyle.borderWidth, 1);
+    expect(simpleSeries.pieStyle.gradient?.type, PieGradientType.radial);
+    expect(simpleSeries.pieStyle.gradient?.startLightnessShift, 0.25);
+    expect(simpleSeries.pieStyle.gradient?.endLightnessShift, -0.15);
     expect(simpleSeries.pieStyle.cornerTreatment, PieCornerTreatment.outerOnly);
+    expect(simpleSeries.selectionStyle.effect, RadialSelectionEffect.lift);
+    expect(simpleSeries.selectionStyle.liftScale, 1.18);
+    expect(simpleSeries.selectionStyle.liftOffset, 8);
+    expect(simpleSeries.selectionStyle.backdropBlur, 0);
+    expect(simpleChart.theme?.pieChartTheme.opacity, 0.8);
+    expect(simpleChart.theme?.pieChartTheme.cornerRadius, 4);
+    expect(simpleChart.theme?.pieChartTheme.shadow.isVisible, isTrue);
+    expect(simpleChart.theme?.pieChartTheme.selectedElevation.blurRadius, 10);
+    expect(simpleChart.theme?.pieChartTheme.selectedElevation.spreadRadius, 2);
+    expect(
+      simpleChart.theme?.pieChartTheme.animationMode,
+      PieAnimationMode.sweep,
+    );
     expect(
       simpleChart.theme?.pieChartTheme.calloutStyle?.textStyle.color,
-      const Color(0xFFFFFFFF),
+      const Color(0xFF000000),
     );
     expect(
       simpleChart.theme?.pieChartTheme.calloutStyle?.backgroundColor,
@@ -193,12 +282,20 @@ void main() {
     expect(elevatedSeries.dataLabels.position, PieDataLabelPosition.outside);
     expect(elevatedSeries.dataLabels.outsideOffset, 12);
     expect(elevatedSeries.pieStyle.gradient?.type, PieGradientType.radial);
+    expect(elevatedSeries.selectionStyle.effect, RadialSelectionEffect.lift);
+    expect(elevatedSeries.selectionStyle.liftScale, 1.12);
+    expect(elevatedSeries.selectionStyle.liftOffset, 8);
+    expect(elevatedSeries.selectionStyle.backdropBlur, 1.5);
     expect(elevatedChart.theme?.pieChartTheme.cornerRadius, 14);
     expect(
       elevatedChart.theme?.pieChartTheme.cornerTreatment,
       PieCornerTreatment.circularCenter,
     );
     expect(elevatedChart.theme?.pieChartTheme.shadow.isVisible, isTrue);
+    expect(
+      elevatedChart.theme?.pieChartTheme.selectedElevation.offset,
+      const Offset(0, 7),
+    );
     expect(elevatedChart.theme?.pieChartTheme.opacity, 0.94);
 
     await tester.scrollUntilVisible(
@@ -255,7 +352,17 @@ void main() {
     expect(variableSeries.sliceRadiusConfig?.label, 'Total area');
     expect(variableSeries.sliceRadiusConfig?.unit, 'km²');
     expect(variableSeries.points.first.pointStyle?.size, isNotNull);
-    expect(find.text('Smallest slice radius'), findsOneWidget);
+    final geometrySection = tester
+        .widget<ChartPageLayout>(find.byType(ChartPageLayout))
+        .optionsChildren
+        .whereType<OptionSection>()
+        .singleWhere((section) => section.title == 'Pie geometry');
+    expect(
+      geometrySection.children.whereType<SliderOption>().any(
+        (option) => option.label == 'Smallest slice radius',
+      ),
+      isTrue,
+    );
 
     await tester.tap(
       find.descendant(
@@ -269,6 +376,172 @@ void main() {
     );
     expect(variableTable.model?.pieRadiusColumnLabel, 'Total area (km²)');
     expect(find.text('Total area (km²)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wires the complete Pie appearance and interaction editors', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 5000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    _pieOption<SliderOption>(tester, 'pie-label-minimum-sweep').onChanged(12);
+    _pieOption<SliderOption>(tester, 'pie-label-padding').onChanged(10);
+    _pieOption<SliderOption>(tester, 'pie-label-inside-offset').onChanged(-14);
+    _pieOption<SliderOption>(tester, 'pie-label-outside-offset').onChanged(18);
+    _pieOption<SliderOption>(tester, 'pie-connector-length').onChanged(24);
+    _pieOption<SliderOption>(tester, 'pie-connector-width').onChanged(2.5);
+    _pieOption<BoolOption>(
+      tester,
+      'pie-custom-connector-color',
+    ).onChanged(true);
+
+    final dynamic gradient = _pieOption(tester, 'pie-gradient');
+    gradient.onChanged(gradient.values[1]);
+    await tester.pump();
+    _pieOption<BoolOption>(tester, 'pie-fixed-gradient-colors').onChanged(true);
+    final dynamic border = _pieOption(tester, 'pie-border-color');
+    border.onChanged(border.values.last);
+    await tester.pump();
+
+    const gradientStart = Color(0xFF67E8F9);
+    const gradientEnd = Color(0xFF1D4ED8);
+    const fixedBorder = Color(0xFFEF4444);
+    const connector = Color(0xFF0D9488);
+    _pieOption<ColorOption>(
+      tester,
+      'pie-gradient-start-color',
+    ).onChanged(gradientStart);
+    _pieOption<ColorOption>(
+      tester,
+      'pie-gradient-end-color',
+    ).onChanged(gradientEnd);
+    _pieOption<ColorOption>(
+      tester,
+      'pie-fixed-border-color',
+    ).onChanged(fixedBorder);
+    _pieOption<ColorOption>(tester, 'pie-connector-color').onChanged(connector);
+    _pieOption<EnumOption<LegendMarkerShape>>(
+      tester,
+      'pie-legend-marker-shape',
+    ).onChanged(LegendMarkerShape.diamond);
+    _pieOption<SliderOption>(tester, 'pie-legend-marker-size').onChanged(14);
+    _pieOption<SliderOption>(tester, 'pie-legend-font-size').onChanged(12);
+    _pieOption<SliderOption>(tester, 'pie-legend-opacity').onChanged(70);
+    _pieOption<EnumOption<TooltipPosition>>(
+      tester,
+      'pie-tooltip-position',
+    ).onChanged(TooltipPosition.left);
+    _pieOption<BoolOption>(tester, 'pie-tooltip-follow-cursor').onChanged(true);
+    _pieOption<SliderOption>(tester, 'pie-tooltip-offset').onChanged(16);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('pie-showcase-chart')),
+    );
+    final series = chart.series.single as PieChartSeries;
+    expect(series.dataLabels.minimumSweepDegrees, 12);
+    expect(series.dataLabels.padding, 10);
+    expect(series.dataLabels.insideOffset, -14);
+    expect(series.dataLabels.outsideOffset, 18);
+    expect(series.dataLabels.connectorLength, 24);
+    expect(series.dataLabels.connectorWidth, 2.5);
+    expect(series.dataLabels.connectorColor, connector);
+    expect(series.pieStyle.borderColor, fixedBorder);
+    expect(series.pieStyle.gradient?.type, PieGradientType.linear);
+    expect(series.pieStyle.gradient?.startColor, gradientStart);
+    expect(series.pieStyle.gradient?.endColor, gradientEnd);
+    expect(chart.theme?.legendStyle.markerShape, LegendMarkerShape.diamond);
+    expect(chart.theme?.legendStyle.markerSize, 14);
+    expect(chart.theme?.legendStyle.textStyle.fontSize, 12);
+    expect(chart.theme?.legendStyle.opacity, 0.7);
+    expect(
+      chart.interactionConfig?.tooltip.preferredPosition,
+      TooltipPosition.left,
+    );
+    expect(chart.interactionConfig?.tooltip.followCursor, isTrue);
+    expect(chart.interactionConfig?.tooltip.offsetFromPoint, 16);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('randomizes the requested Pie data point count', (tester) async {
+    tester.view.physicalSize = const Size(1600, 5000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PieChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final dataPointCount = find.byKey(const ValueKey('pie-data-point-count'));
+    var slider = tester.widget<IntSliderOption>(dataPointCount);
+    expect(slider.value, 5);
+    expect(slider.min, 3);
+    expect(slider.max, 20);
+
+    slider.onChanged(20);
+    await tester.pumpAndSettle();
+
+    PieChartSeries series() =>
+        tester
+                .widget<BravenChartPlus>(
+                  find.byKey(const ValueKey('pie-showcase-chart')),
+                )
+                .series
+                .single
+            as PieChartSeries;
+
+    expect(series().points, hasLength(20));
+    expect(series().total, closeTo(100, 0.000001));
+    expect(
+      series().points,
+      everyElement(
+        predicate<ChartDataPoint>((point) {
+          return point.y > 0;
+        }),
+      ),
+    );
+    final firstDistribution = series().points
+        .map((point) => point.y)
+        .toList(growable: false);
+
+    tester
+        .widget<ElevatedButton>(
+          find.byKey(const ValueKey('regenerate-pie-values')),
+        )
+        .onPressed!();
+    await tester.pumpAndSettle();
+    expect(series().points, hasLength(20));
+    expect(series().total, closeTo(100, 0.000001));
+    expect(
+      series().points.map((point) => point.y),
+      isNot(orderedEquals(firstDistribution)),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-dataset-countries')));
+    await tester.pumpAndSettle();
+    slider = tester.widget<IntSliderOption>(dataPointCount);
+    expect(slider.value, 7);
+    slider.onChanged(20);
+    await tester.pumpAndSettle();
+
+    expect(series().points, hasLength(20));
+    expect(series().hasVariableSliceRadius, isTrue);
+    expect(
+      series().points,
+      everyElement(
+        predicate<ChartDataPoint>((point) {
+          return point.pointStyle?.size != null && point.pointStyle!.size! > 0;
+        }),
+      ),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -577,6 +850,20 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+}
+
+T _pieOption<T extends Widget>(WidgetTester tester, String key) {
+  final layout = tester.widget<ChartPageLayout>(find.byType(ChartPageLayout));
+  final widgets = <Widget>[
+    for (final child in layout.optionsChildren)
+      if (child is OptionSection)
+        ...child.children
+      else if (child is StandardChartOptions)
+        ...?child.additionalOptions,
+  ];
+  return widgets.whereType<T>().singleWhere(
+    (widget) => widget.key == ValueKey(key),
+  );
 }
 
 Future<void> _settleCapture(WidgetTester tester) async {

@@ -354,13 +354,30 @@ void main() {
           ),
           animationMode: PieAnimationMode.none,
         ),
+        selectionStyle: const RadialSelectionStyle(
+          effect: RadialSelectionEffect.lift,
+          liftScale: 1.14,
+          liftOffset: 9,
+          backdropBlur: 1.75,
+        ),
         dataLabels: const PieDataLabelConfig(
           isVisible: false,
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.categoryValueAndPercentage,
+          secondaryContent: PieDataLabelContent.category,
+          secondaryPosition: PieDataLabelPosition.outside,
+          secondaryCalloutStyle: LabelStyle(
+            textStyle: TextStyle(color: Color(0xFF223344), fontSize: 10),
+            backgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: EdgeInsets.zero,
+          ),
           minimumShare: 0.05,
           minimumSweepDegrees: 12,
           padding: 8,
+          insideOffset: -11,
           outsideOffset: 18,
           connectorLength: 16,
           connectorWidth: 2,
@@ -387,6 +404,14 @@ void main() {
 
       final decoded = _roundTrip(source) as PieChartSeries;
 
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.radial.dual-labels.v1'),
+      );
+
       expect(decoded.id, source.id);
       expect(decoded.name, source.name);
       expect(decoded.points, source.points);
@@ -394,6 +419,7 @@ void main() {
       expect(decoded.metadata, source.metadata);
       expect(decoded.unit, source.unit);
       expect(decoded.pieStyle, source.pieStyle);
+      expect(decoded.selectionStyle, source.selectionStyle);
       expect(decoded.dataLabels, source.dataLabels);
       expect(decoded.sliceRadiusConfig, source.sliceRadiusConfig);
       expect(decoded.visiblePointIndices, [0]);
@@ -584,6 +610,12 @@ void main() {
           cornerTreatment: PieCornerTreatment.roundAll,
           animationMode: PieAnimationMode.sweep,
         ),
+        selectionStyle: const RadialSelectionStyle(
+          effect: RadialSelectionEffect.lift,
+          liftScale: 1.12,
+          liftOffset: 8,
+          backdropBlur: 1.5,
+        ),
         centerContent: const DonutCenterContent(
           label: 'Total vehicles',
           valueMode: DonutCenterValueMode.selectedOrTotal,
@@ -621,6 +653,7 @@ void main() {
         'series.donut.center-content.v1',
         'series.donut.variable-radius.v1',
         'series.radial.data-transitions.v1',
+        'series.radial.selection-lift.v1',
       });
 
       final decoded = ChartSeriesDocumentCodec.decode(document);
@@ -630,6 +663,7 @@ void main() {
               as DonutChartSeries;
       expect(restored.points, source.points);
       expect(restored.donutStyle, source.donutStyle);
+      expect(restored.selectionStyle, source.selectionStyle);
       expect(restored.centerContent, source.centerContent);
       expect(restored.dataLabels, source.dataLabels);
       expect(restored.sliceRadiusConfig, source.sliceRadiusConfig);
@@ -679,7 +713,11 @@ void main() {
         final json = Map<String, Object?>.from(document.toJson());
         final style = Map<String, Object?>.from(json['style']! as Map);
         final labels = Map<String, Object?>.from(style['dataLabels']! as Map)
-          ..remove('outsideOffset');
+          ..remove('insideOffset')
+          ..remove('outsideOffset')
+          ..remove('secondaryContent')
+          ..remove('secondaryPosition')
+          ..remove('secondaryCalloutStyle');
         style['dataLabels'] = labels;
         json['style'] = style;
 
@@ -688,10 +726,44 @@ void main() {
         );
 
         expect(decoded, isA<ChartArtifactSuccess<ChartSeries>>());
-        final series = (decoded as ChartArtifactSuccess<ChartSeries>).value;
-        expect((series as PieChartSeries).dataLabels.outsideOffset, 0);
+        final series =
+            (decoded as ChartArtifactSuccess<ChartSeries>).value
+                as PieChartSeries;
+        expect(series.dataLabels.insideOffset, 0);
+        expect(series.dataLabels.outsideOffset, 0);
+        expect(series.dataLabels.secondaryContent, isNull);
       },
     );
+
+    test('defaults lift offset when an older Pie selection omits it', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                PieChartSeries.fromMap(
+                  id: 'legacy-lifted-pie',
+                  values: const {'A': 2, 'B': 1},
+                  selectionStyle: const RadialSelectionStyle(
+                    effect: RadialSelectionEffect.lift,
+                  ),
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = Map<String, Object?>.from(encoded.value.toJson());
+      final style = Map<String, Object?>.from(json['style']! as Map);
+      final selection = Map<String, Object?>.from(
+        style['selectionStyle']! as Map,
+      )..remove('liftOffset');
+      style['selectionStyle'] = selection;
+      json['style'] = style;
+
+      final decoded =
+          ChartSeriesDocumentCodec.decode(ChartSeriesDocument.fromJson(json))
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(
+        (decoded.value as PieChartSeries).selectionStyle.liftOffset,
+        const RadialSelectionStyle().liftOffset,
+      );
+    });
 
     test('round-trips bullet-chart ranges and capability', () {
       const source = BarChartSeries(

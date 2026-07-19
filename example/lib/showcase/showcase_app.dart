@@ -12,6 +12,7 @@ import 'pages/bar_lab_page.dart';
 import 'pages/chart_types_page.dart';
 import 'pages/chart_workbench_page.dart';
 import 'pages/cartesian_chart_type_pages.dart';
+import 'pages/concentric_donut_page.dart';
 import 'pages/donut_charts_page.dart';
 import 'pages/gallery_page.dart';
 import 'pages/interaction_page.dart';
@@ -259,6 +260,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'scatter-charts' => const ScatterChartsPage(),
     'pie-charts' => const PieChartsPage(),
     'donut-charts' => const DonutChartsPage(),
+    'concentric-donut' => const ConcentricDonutPage(),
     _ => throw StateError('No showcase page is registered for $slug'),
   };
 

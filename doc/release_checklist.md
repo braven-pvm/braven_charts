@@ -90,6 +90,7 @@ appropriate for the animated interaction and live-stream GIFs.
 - [ ] The deployed Gallery route loads directly and after a browser refresh.
 - [ ] The deployed Pie Charts route loads directly and after a browser refresh.
 - [ ] The deployed Donut Charts route loads directly and after a browser refresh.
+- [ ] The deployed Concentric Donut route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.

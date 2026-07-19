@@ -74,6 +74,38 @@ void main() {
       expect(outerOnly.bounds, isNot(Rect.zero));
     });
 
+    test('physical seam insets keep adjacent rounded sides parallel', () {
+      final first = AnnularSectorGeometry(
+        center: const Offset(100, 100),
+        innerRadius: 40,
+        outerRadius: 90,
+        startAngle: 0,
+        sweepAngle: math.pi / 2,
+        cornerRadius: 6,
+        seamInset: 5,
+      );
+      final adjacent = AnnularSectorGeometry(
+        center: const Offset(100, 100),
+        innerRadius: 40,
+        outerRadius: 90,
+        startAngle: math.pi / 2,
+        sweepAngle: math.pi / 2,
+        cornerRadius: 6,
+        seamInset: 5,
+      );
+
+      expect(first.seamInset, 5);
+      expect(adjacent.seamInset, 5);
+      for (final distance in const [60.0, 78.0]) {
+        // The first sector ends at x = 105 and its neighbor starts at x = 95
+        // for the complete straight side, proving a constant 10 px channel.
+        expect(first.contains(Offset(105.1, 100 + distance)), isTrue);
+        expect(first.contains(Offset(104.9, 100 + distance)), isFalse);
+        expect(adjacent.contains(Offset(94.9, 100 + distance)), isTrue);
+        expect(adjacent.contains(Offset(95.1, 100 + distance)), isFalse);
+      }
+    });
+
     test('rejects invalid radii, angles, corners, and lookup fractions', () {
       AnnularSectorGeometry build({
         double innerRadius = 20,
@@ -81,6 +113,7 @@ void main() {
         double startAngle = 0,
         double sweepAngle = math.pi,
         double cornerRadius = 0,
+        double seamInset = 0,
       }) => AnnularSectorGeometry(
         center: Offset.zero,
         innerRadius: innerRadius,
@@ -88,6 +121,7 @@ void main() {
         startAngle: startAngle,
         sweepAngle: sweepAngle,
         cornerRadius: cornerRadius,
+        seamInset: seamInset,
       );
 
       expect(() => build(innerRadius: -1), throwsArgumentError);
@@ -98,6 +132,8 @@ void main() {
       expect(() => build(startAngle: double.infinity), throwsArgumentError);
       expect(() => build(sweepAngle: double.nan), throwsArgumentError);
       expect(() => build(cornerRadius: -1), throwsArgumentError);
+      expect(() => build(seamInset: -1), throwsArgumentError);
+      expect(() => build(seamInset: double.nan), throwsArgumentError);
 
       final geometry = build();
       expect(

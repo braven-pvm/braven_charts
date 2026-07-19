@@ -168,6 +168,7 @@ abstract final class ChartTableExporter {
     headers: headers(model),
     rawValues: [
       displayIndex + 1,
+      if (model.hasMultipleRadialSeries) ...[row.seriesName, row.seriesId],
       row.category,
       row.valueRaw,
       if (model.hasPieRadiusValues) row.radiusRaw,
@@ -175,6 +176,7 @@ abstract final class ChartTableExporter {
     ],
     displayValues: [
       '${displayIndex + 1}',
+      if (model.hasMultipleRadialSeries) ...[row.seriesName, row.seriesId],
       row.category,
       row.valueDisplay,
       if (model.hasPieRadiusValues) row.radiusDisplay ?? 'No value',
@@ -214,10 +216,11 @@ abstract final class ChartTableExporter {
         ],
         ChartTableProjectionKind.pie => [
           '#',
+          if (model.hasMultipleRadialSeries) ...['Ring', 'Series ID'],
           'Category',
-          model.series.single.unit == null
+          model.commonRadialUnit == null
               ? 'Value'
-              : 'Value (${model.series.single.unit})',
+              : 'Value (${model.commonRadialUnit})',
           ?model.pieRadiusColumnLabel,
           'Share',
         ],

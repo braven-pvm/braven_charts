@@ -212,11 +212,13 @@ void main() {
     test('validates geometry and data-label configuration in release code', () {
       PieChartSeries build({
         PieChartStyle style = const PieChartStyle(),
+        RadialSelectionStyle selection = const RadialSelectionStyle(),
         PieDataLabelConfig labels = const PieDataLabelConfig(),
       }) => PieChartSeries.fromMap(
         id: 'config',
         values: const {'A': 1},
         pieStyle: style,
+        selectionStyle: selection,
         dataLabels: labels,
       );
 
@@ -271,6 +273,18 @@ void main() {
         throwsArgumentError,
       );
       expect(
+        () => build(selection: const RadialSelectionStyle(liftScale: 1.51)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(selection: const RadialSelectionStyle(liftOffset: 40.1)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(selection: const RadialSelectionStyle(backdropBlur: 20.1)),
+        throwsArgumentError,
+      );
+      expect(
         () => build(labels: const PieDataLabelConfig(minimumShare: 1.01)),
         throwsArgumentError,
       );
@@ -280,6 +294,26 @@ void main() {
       );
       expect(
         () => build(labels: const PieDataLabelConfig(outsideOffset: -0.1)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(labels: const PieDataLabelConfig(insideOffset: double.nan)),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(
+          labels: const PieDataLabelConfig(insideOffset: double.infinity),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => build(
+          labels: const PieDataLabelConfig(
+            position: PieDataLabelPosition.outside,
+            secondaryContent: PieDataLabelContent.percentage,
+            secondaryPosition: PieDataLabelPosition.outside,
+          ),
+        ),
         throwsArgumentError,
       );
     });
@@ -296,6 +330,9 @@ void main() {
         ),
         dataLabels: original.dataLabels.copyWith(
           content: PieDataLabelContent.categoryValueAndPercentage,
+          secondaryContent: PieDataLabelContent.percentage,
+          secondaryPosition: PieDataLabelPosition.inside,
+          insideOffset: -12,
           outsideOffset: 18,
         ),
       );
@@ -313,7 +350,20 @@ void main() {
         copied.dataLabels.content,
         PieDataLabelContent.categoryValueAndPercentage,
       );
+      expect(copied.dataLabels.insideOffset, -12);
       expect(copied.dataLabels.outsideOffset, 18);
+      expect(
+        copied.dataLabels.secondaryContent,
+        PieDataLabelContent.percentage,
+      );
+      expect(copied.dataLabels.secondaryPosition, PieDataLabelPosition.inside);
+      expect(copied.dataLabels.hasLabelAt(PieDataLabelPosition.inside), isTrue);
+      expect(
+        copied.dataLabels
+            .copyWith(clearSecondaryContent: true)
+            .secondaryContent,
+        isNull,
+      );
       expect(copied.points, original.points);
       expect(copied.style, SeriesStyle.pie);
       expect(

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../braven_chart_plus.dart';
 import '../controllers/annotation_controller.dart';
+import '../layout/concentric_donut_layout.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/donut_center_builder.dart';
+import '../models/donut_chart_series.dart';
 import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
@@ -70,6 +73,7 @@ class HydratedChartConfiguration {
     this.subtitle,
     this.width,
     this.height,
+    this.concentricDonutConfig,
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes);
@@ -102,6 +106,9 @@ class HydratedChartConfiguration {
   final String? subtitle;
   final double? width;
   final double? height;
+
+  /// Plot-level composition restored for two or more Donut series.
+  final ConcentricDonutConfig? concentricDonutConfig;
 
   YAxisConfig? get primaryYAxis {
     for (final axis in axes) {
@@ -213,6 +220,8 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       grid: config.grid,
       legendStyle: config.legendStyle,
       showLegend: config.showLegend,
+      concentricDonutConfig:
+          config.concentricDonutConfig ?? const ConcentricDonutConfig(),
       donutCenterBuilder: widget.donutCenterBuilder,
       onDonutCenterTap: widget.onDonutCenterTap,
       showToolbar: config.showToolbar,
@@ -262,10 +271,13 @@ abstract final class ChartDocumentHydrator {
     'series.donut.style.v1',
     'series.donut.center-content.v1',
     'series.donut.variable-radius.v1',
+    'series.donut.concentric.v1',
     'series.radial.grouping.v1',
     'series.radial.grouped-variable-radius.v1',
     'series.radial.formatters.v1',
     'series.radial.data-transitions.v1',
+    'series.radial.selection-lift.v1',
+    'series.radial.dual-labels.v1',
     'annotation.point',
     'annotation.range',
     'annotation.text',
@@ -567,6 +579,24 @@ abstract final class ChartDocumentHydrator {
               ),
               warnings,
             );
+      final concentricCenterFormatter = _resolveFormatter(
+        _concentricCenterFormatterDescriptor(document.configuration),
+        runtimeBindings.formatters,
+        warnings,
+        r'$.document.configuration.concentricDonut.centerContent.valueFormatter',
+      );
+      final concentricDonutConfig = _requireValue(
+        ChartConfigurationDocumentCodec.decodeConcentricDonut(
+          document.configuration,
+          centerFormatter: concentricCenterFormatter,
+        ),
+        warnings,
+      );
+      _validateConcentricComposition(
+        document: document,
+        series: series,
+        config: concentricDonutConfig,
+      );
       final layout = document.layout;
 
       return ChartArtifactSuccess(
@@ -594,6 +624,7 @@ abstract final class ChartDocumentHydrator {
           subtitle: document.subtitle,
           width: layout.width?.asDouble,
           height: layout.height?.asDouble,
+          concentricDonutConfig: concentricDonutConfig,
         ),
         warnings: warnings,
       );
@@ -730,6 +761,93 @@ abstract final class ChartDocumentHydrator {
       );
     }
     return formatter;
+  }
+
+  static JsonObjectValue? _concentricCenterFormatterDescriptor(
+    JsonObjectValue configuration,
+  ) {
+    final composition = configuration.values['concentricDonut'];
+    if (composition == null) return null;
+    if (composition is! JsonObjectValue) {
+      throw const FormatException(
+        'Concentric Donut configuration must be an object.',
+      );
+    }
+    final center = composition.values['centerContent'];
+    if (center == null) return null;
+    if (center is! JsonObjectValue) {
+      throw const FormatException(
+        'Concentric Donut center content must be an object.',
+      );
+    }
+    final formatter = center.values['valueFormatter'];
+    if (formatter == null) return null;
+    if (formatter is! JsonObjectValue) {
+      throw const FormatException(
+        'Concentric Donut center formatter must be an object.',
+      );
+    }
+    return formatter;
+  }
+
+  static void _validateConcentricComposition({
+    required ChartDocument document,
+    required List<ChartSeries> series,
+    required ConcentricDonutConfig? config,
+  }) {
+    final rings = series.whereType<DonutChartSeries>().toList(growable: false);
+    if (config == null) {
+      if (rings.length > 1) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Multiple Donut series require chart-level Concentric Donut configuration.',
+            path: r'$.document.configuration.concentricDonut',
+          ),
+          [],
+        );
+      }
+      return;
+    }
+    if (!document.requiredCapabilities.contains('series.donut.concentric.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Concentric Donut configuration must declare series.donut.concentric.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (rings.length < 2 || rings.length != series.length) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Concentric Donut configuration requires two or more Donut series and cannot mix chart families.',
+          path: r'$.document.configuration.concentricDonut',
+        ),
+        [],
+      );
+    }
+    try {
+      ConcentricDonutLayoutCalculator.calculate(
+        series: rings,
+        config: config,
+        availableRadius: 100,
+      );
+    } on ArgumentError catch (error) {
+      throw _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Invalid Concentric Donut composition: ${error.message}',
+          path: r'$.document.configuration.concentricDonut',
+        ),
+        const [],
+      );
+    }
   }
 
   static ChartAnnotation _decodeAnnotation(

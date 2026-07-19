@@ -10,6 +10,7 @@ import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
+import '../models/concentric_donut_config.dart';
 import '../models/data_point_label_config.dart';
 import '../models/donut_chart_config.dart';
 import '../models/donut_chart_series.dart';
@@ -19,6 +20,7 @@ import '../models/legend_style.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/radial_category_series.dart';
+import '../models/radial_selection_style.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/x_axis_config.dart';
@@ -113,6 +115,10 @@ class _ChartDartEmitter {
       _optionalString(body, 'title', configuration.title);
       _optionalString(body, 'subtitle', configuration.subtitle);
       _emitSeriesList(body);
+      final concentricDonutConfig = configuration.concentricDonutConfig;
+      if (concentricDonutConfig != null) {
+        _emitConcentricDonutConfig(body, concentricDonutConfig);
+      }
       if (configuration.annotations.isNotEmpty) {
         _emitAnnotationList(body, 'annotations', configuration.annotations);
       }
@@ -1166,8 +1172,33 @@ class _ChartDartEmitter {
     int seriesIndex,
   ) {
     _emitRadialStyle(writer, 'pieStyle', 'PieChartStyle', series.pieStyle);
+    _emitRadialSelectionStyle(writer, series.selectionStyle);
     _emitRadialLabels(writer, series.dataLabels, seriesIndex);
     _emitAdvancedRadial(writer, series, seriesIndex);
+  }
+
+  void _emitRadialSelectionStyle(
+    DartSourceWriter writer,
+    RadialSelectionStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const RadialSelectionStyle()) {
+      return;
+    }
+    writer.writeLine('selectionStyle: RadialSelectionStyle(');
+    writer.indented(() {
+      _enumIf(
+        writer,
+        'effect',
+        'RadialSelectionEffect',
+        style.effect.name,
+        defaultName: 'explode',
+      );
+      _numberIf(writer, 'liftScale', style.liftScale, 1.08);
+      _numberIf(writer, 'liftOffset', style.liftOffset, 6);
+      _numberIf(writer, 'backdropBlur', style.backdropBlur, 1.25);
+    });
+    writer.writeLine('),');
   }
 
   void _emitDonutOptions(
@@ -1183,6 +1214,7 @@ class _ChartDartEmitter {
       innerRadiusFactor: series.donutStyle.innerRadiusFactor,
       sweepAngleDegrees: series.donutStyle.sweepAngleDegrees,
     );
+    _emitRadialSelectionStyle(writer, series.selectionStyle);
     final center = series.centerContent;
     if (center != DonutCenterContent.hidden) {
       writer.writeLine('centerContent: DonutCenterContent(');
@@ -1219,6 +1251,88 @@ class _ChartDartEmitter {
     }
     _emitRadialLabels(writer, series.dataLabels, seriesIndex);
     _emitAdvancedRadial(writer, series, seriesIndex);
+  }
+
+  void _emitConcentricDonutConfig(
+    DartSourceWriter writer,
+    ConcentricDonutConfig config,
+  ) {
+    writer.writeLine('concentricDonutConfig: ConcentricDonutConfig(');
+    writer.indented(() {
+      _numberIf(writer, 'innerRadiusFactor', config.innerRadiusFactor, 0.32);
+      _numberIf(writer, 'outerRadiusFactor', config.outerRadiusFactor, 1);
+      _numberIf(writer, 'ringGap', config.ringGap, 4);
+      _enumIf(
+        writer,
+        'order',
+        'ConcentricRingOrder',
+        config.order.name,
+        defaultName: 'outerToInner',
+      );
+      if (config.ringWeights.isNotEmpty) {
+        final entries = config.ringWeights.entries.toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+        writer.writeLine('ringWeights: {');
+        writer.indented(() {
+          for (final entry in entries) {
+            writer.writeLine(
+              '${DartSourceWriter.stringLiteral(entry.key)}: '
+              '${DartSourceWriter.numberLiteral(entry.value)},',
+            );
+          }
+        });
+        writer.writeLine('},');
+      }
+      _enumIf(
+        writer,
+        'legendMode',
+        'ConcentricDonutLegendMode',
+        config.legendMode.name,
+        defaultName: 'groupedByRing',
+      );
+      if (options.includeDefaultValues ||
+          config.centerContent != const DonutCenterContent()) {
+        _emitConcentricCenterContent(writer, config.centerContent);
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitConcentricCenterContent(
+    DartSourceWriter writer,
+    DonutCenterContent center,
+  ) {
+    writer.writeLine('centerContent: DonutCenterContent(');
+    writer.indented(() {
+      _valueIf(writer, 'isVisible', center.isVisible, defaultValue: true);
+      _optionalString(writer, 'label', center.label);
+      _enumIf(
+        writer,
+        'valueMode',
+        'DonutCenterValueMode',
+        center.valueMode.name,
+        defaultName: 'total',
+      );
+      _optionalString(writer, 'customValue', center.customValue);
+      if (center.labelStyle != null) {
+        _emitLabelStyle(writer, 'labelStyle', center.labelStyle!);
+      }
+      if (center.valueStyle != null) {
+        _emitLabelStyle(writer, 'valueStyle', center.valueStyle!);
+      }
+      if (center.valueFormatter != null) {
+        writer.writeLine(
+          '// valueFormatter: (value) => ..., // Supply application formatting.',
+        );
+        _warn(
+          code: ChartSourceWarningCodes.runtimeValueOmitted,
+          message:
+              'A Concentric Donut center formatter callback was omitted. Provide it from your application.',
+          path: r'$.configuration.concentricDonut.centerContent.valueFormatter',
+        );
+      }
+    });
+    writer.writeLine('),');
   }
 
   void _emitRadialStyle(
@@ -1333,9 +1447,20 @@ class _ChartDartEmitter {
         labels.content.name,
         defaultName: 'categoryAndPercentage',
       );
+      if (labels.secondaryContent != null) {
+        writer.writeLine(
+          'secondaryContent: PieDataLabelContent.'
+          '${labels.secondaryContent!.name},',
+        );
+        writer.writeLine(
+          'secondaryPosition: PieDataLabelPosition.'
+          '${labels.secondaryPosition.name},',
+        );
+      }
       _numberIf(writer, 'minimumShare', labels.minimumShare, 0.03);
       _numberIf(writer, 'minimumSweepDegrees', labels.minimumSweepDegrees, 8);
       _numberIf(writer, 'padding', labels.padding, 6);
+      _numberIf(writer, 'insideOffset', labels.insideOffset, 0);
       _numberIf(writer, 'outsideOffset', labels.outsideOffset, 0);
       _numberIf(writer, 'connectorLength', labels.connectorLength, 14);
       _numberIf(writer, 'connectorWidth', labels.connectorWidth, 1);
@@ -1349,6 +1474,13 @@ class _ChartDartEmitter {
       );
       if (labels.calloutStyle != null) {
         _emitLabelStyle(writer, 'calloutStyle', labels.calloutStyle!);
+      }
+      if (labels.secondaryCalloutStyle != null) {
+        _emitLabelStyle(
+          writer,
+          'secondaryCalloutStyle',
+          labels.secondaryCalloutStyle!,
+        );
       }
       if (labels.valueFormatter != null) {
         writer.writeLine(

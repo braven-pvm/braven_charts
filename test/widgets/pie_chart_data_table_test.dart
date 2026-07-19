@@ -90,6 +90,45 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Subscriptions')).dy),
     );
   });
+
+  testWidgets('shows ring identity and activates exact Concentric rows', (
+    tester,
+  ) async {
+    final model = _concentricModel();
+    List<ChartPointRef>? activated;
+    ChartTableRowExport? copiedRow;
+    await tester.pumpWidget(
+      _host(
+        ChartDataTable(
+          model: model,
+          onRowActivated: (points) => activated = points,
+          onCopyRow: (row) => copiedRow = row,
+        ),
+      ),
+    );
+
+    expect(find.text('Ring'), findsOneWidget);
+    expect(find.text('Current period'), findsNWidgets(2));
+    expect(find.text('Previous period'), findsNWidgets(2));
+    expect(find.text('Subscriptions'), findsNWidgets(2));
+
+    await tester.tap(find.byKey(const ValueKey('previous:0')));
+    await tester.pump();
+    expect(activated, [
+      const ChartPointRef(seriesId: 'previous', pointIndex: 0),
+    ]);
+
+    await tester.tap(find.byTooltip('Copy Subscriptions row').last);
+    await tester.pump();
+    expect(copiedRow?.displayValues, [
+      '3',
+      'Previous period',
+      'previous',
+      'Subscriptions',
+      '50.00',
+      '25.00%',
+    ]);
+  });
 }
 
 Widget _host(Widget child) => MaterialApp(
@@ -131,6 +170,46 @@ ChartTableModel _pieModel({bool variableRadius = false}) {
       documentId: 'pie-table-widget',
       revision: 1,
       series: [series],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _concentricModel() {
+  final rings = [
+    DonutChartSeries.fromMap(
+      id: 'current',
+      name: 'Current period',
+      unit: 'USD',
+      values: const {'Subscriptions': 60, 'Services': 40},
+    ),
+    DonutChartSeries.fromMap(
+      id: 'previous',
+      name: 'Previous period',
+      unit: 'USD',
+      values: const {'Subscriptions': 50, 'Services': 150},
+    ),
+  ];
+  final series = [
+    for (final ring in rings)
+      (ChartSeriesDocumentCodec.encode(ring)
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value,
+  ];
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'concentric-table-widget',
+      revision: 1,
+      series: series,
       xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
       axes: const [],
       theme:

@@ -273,6 +273,7 @@ class ChartDocument {
     ChartGridDocument? grid,
     ChartLayoutDocument? layout,
     this.normalization,
+    JsonObjectValue? configuration,
     Set<String> requiredCapabilities = const {},
     Map<String, JsonValue> extensions = const {},
   }) : series = List.unmodifiable(series),
@@ -281,6 +282,7 @@ class ChartDocument {
        legend = legend ?? ChartLegendDocument(),
        grid = grid ?? ChartGridDocument(),
        layout = layout ?? ChartLayoutDocument(),
+       configuration = configuration ?? JsonObjectValue(const {}),
        requiredCapabilities = Set.unmodifiable(requiredCapabilities),
        extensions = Map.unmodifiable(extensions);
 
@@ -298,6 +300,13 @@ class ChartDocument {
   final ChartGridDocument grid;
   final ChartLayoutDocument layout;
   final ChartNormalizationDocument? normalization;
+
+  /// Portable chart-level composition configuration.
+  ///
+  /// Series-owned appearance remains in each [ChartSeriesDocument]. This
+  /// object stores plot compositions, such as how independent Donut series
+  /// share one concentric pane.
+  final JsonObjectValue configuration;
   final Set<String> requiredCapabilities;
   final Map<String, JsonValue> extensions;
 
@@ -320,6 +329,8 @@ class ChartDocument {
     if (!grid.isDefault) 'grid': grid.toJson(),
     if (!layout.isEmpty) 'layout': layout.toJson(),
     if (normalization != null) 'normalization': normalization!.toJson(),
+    if (configuration.values.isNotEmpty)
+      'configuration': configuration.toJson(),
     if (requiredCapabilities.isNotEmpty)
       'requiredCapabilities': requiredCapabilities.toList()..sort(),
     if (extensions.isNotEmpty) 'extensions': jsonValueMap(extensions),
@@ -360,6 +371,7 @@ class ChartDocument {
         : ChartNormalizationDocument.fromJson(
             readRequiredMap(json, 'normalization'),
           ),
+    configuration: readOptionalJsonObject(json, 'configuration'),
     requiredCapabilities: readOptionalStringSet(json, 'requiredCapabilities'),
     extensions: readOptionalJsonValueMap(json, 'extensions'),
   );

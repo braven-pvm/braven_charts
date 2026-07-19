@@ -1,9 +1,10 @@
 # Chart types
 
 Braven Charts renders six first-class series types through
-`BravenChartPlus`: line, area, bar, scatter, Pie, and Donut. Line, area, bar,
-and scatter use the Cartesian layout and may share one chart. Pie and Donut use
-the radial layout and are intentionally single-series charts.
+`BravenChartPlus`: line, area, bar, scatter, Pie, and Donut. Two or more Donut
+series form the Concentric Donut composition. Line, area, bar, and scatter use
+the Cartesian layout and may share one chart. Pie and standalone Donut are
+single-series partition-radial charts; Concentric Donut is multi-series.
 
 Import only the public package entrypoint:
 
@@ -21,6 +22,7 @@ import 'package:braven_charts/braven_charts.dart';
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
 | `DonutChartSeries` | Parts of one whole with a meaningful center | inner radius, partial sweep, center content, selection |
+| two or more `DonutChartSeries` | Compare several independent wholes | ring allocation, weights, grouped legend, shared center |
 
 Use pie only when every category contributes to the same total. Use bars when
 precise comparison matters more than contribution to a whole, when values may
@@ -240,7 +242,10 @@ final pie = PieChartSeries.fromMap(
   ),
   dataLabels: const PieDataLabelConfig(
     position: PieDataLabelPosition.outside,
-    content: PieDataLabelContent.categoryAndPercentage,
+    content: PieDataLabelContent.category,
+    secondaryContent: PieDataLabelContent.percentage,
+    secondaryPosition: PieDataLabelPosition.inside,
+    insideOffset: 0, // Positive moves outward; negative moves inward.
     outsideOffset: 0,
     collisionStrategy: PieDataLabelCollisionStrategy.shiftAndHide,
   ),
@@ -285,7 +290,8 @@ a `PieSliceRadiusConfig`. Angular share remains driven by `values`; radius is
 normalized independently, shown in tooltips and the native table, and
 transported with capability `series.pie.variable-radius.v1`.
 
-See the complete [Pie chart guide](../../doc/pie_charts.md) for labels,
+See the complete [Pie chart guide](../../doc/pie_charts.md) for single and
+dual-layer labels,
 palettes, solid or gradient fills, callouts, tooltips, legends,
 three corner treatments, translucent slices, elevation, animation, selection,
 tables,
@@ -333,6 +339,35 @@ metric declares `series.donut.variable-radius.v1`.
 See the complete [Donut chart guide](../../doc/donut_charts.md) for geometry,
 center styling, selection, tables, artifacts, AI configuration, theming,
 validation, and accessibility.
+
+## Concentric Donut charts
+
+Two or more `DonutChartSeries` values activate a Concentric Donut composition.
+Each ring keeps its own total; `ConcentricDonutConfig` only allocates bands and
+owns the shared center.
+
+```dart
+BravenChartPlus(
+  series: [currentDonut, previousDonut],
+  concentricDonutConfig: const ConcentricDonutConfig(
+    innerRadiusFactor: 0.28,
+    outerRadiusFactor: 0.92,
+    ringGap: 6,
+    ringWeights: {'current': 1.25},
+    legendMode: ConcentricDonutLegendMode.groupedByRing,
+    centerContent: DonutCenterContent(
+      label: 'Comparison',
+      valueMode: DonutCenterValueMode.custom,
+      customValue: '2 periods',
+    ),
+  ),
+)
+```
+
+The table adds Ring and within-ring Share columns. Selection, tooltips,
+keyboard focus, custom legend items, center builders, artifacts, previews, and
+hydration retain exact series and source-point identity. See the complete
+[Concentric Donut guide](../../doc/concentric_donut_charts.md).
 
 ## Mixed Cartesian charts
 
@@ -423,6 +458,7 @@ identity and type-specific configuration.
 - [Pie Charts](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
   demonstrates labels, geometry, linked data, capture, preview, and restore.
 - [Donut Charts](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
+- [Concentric Donut](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
   demonstrates center content, partial sweeps, linked data, and transport.
 - [Gallery](https://braven-pvm.github.io/braven_charts/) demonstrates radial
   and mixed Cartesian product compositions.

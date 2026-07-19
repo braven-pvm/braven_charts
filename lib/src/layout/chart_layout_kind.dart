@@ -43,20 +43,40 @@ class ChartLayoutResolver {
             : 'SeriesStyle.donut requires a DonutChartSeries',
       );
     }
-    if (radialSeries.length > 1) {
-      throw ArgumentError.value(
-        radialSeries.length,
-        'series',
-        'A radial chart accepts exactly one PieChartSeries or '
-            'DonutChartSeries',
-      );
-    }
-    if (radialSeries.isNotEmpty && allSeries.length != 1) {
+    if (radialSeries.isNotEmpty && allSeries.length != radialSeries.length) {
       throw ArgumentError.value(
         allSeries.length,
         'series',
         'Pie, Donut, and Cartesian series cannot be mixed in one chart',
       );
+    }
+    if (radialSeries.length > 1) {
+      final pies = radialSeries.whereType<PieChartSeries>().length;
+      final donuts = radialSeries.whereType<DonutChartSeries>().length;
+      if (pies > 0 && donuts > 0) {
+        throw ArgumentError.value(
+          radialSeries.length,
+          'series',
+          'Pie and Donut series cannot be mixed in one radial chart',
+        );
+      }
+      if (pies > 1) {
+        throw ArgumentError.value(
+          pies,
+          'series',
+          'A Pie chart accepts exactly one PieChartSeries',
+        );
+      }
+      final ids = <String>{};
+      for (final donut in radialSeries.whereType<DonutChartSeries>()) {
+        if (!ids.add(donut.id)) {
+          throw ArgumentError.value(
+            donut.id,
+            'series',
+            'Concentric Donut series IDs must be unique',
+          );
+        }
+      }
     }
     return radialSeries.isEmpty
         ? ChartLayoutKind.cartesian

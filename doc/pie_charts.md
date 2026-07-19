@@ -197,6 +197,47 @@ an independently sized inner radius or Donut center content. Use
 `DonutChartSeries` when the hole itself carries product meaning; see the
 [Donut chart guide](donut_charts.md).
 
+## Selection presentation
+
+Selection identity and selection presentation are independent. Controllers,
+legends, tables, keyboard focus, artifacts, and callbacks keep using the same
+durable point reference while the shared `RadialSelectionStyle` chooses the
+spatial cue for Pie, Donut, and Concentric Donut series:
+
+```dart
+PieChartSeries.fromMap(
+  id: 'revenue',
+  values: const {'Subscriptions': 42, 'Services': 31, 'Hardware': 27},
+  selectionStyle: const RadialSelectionStyle(
+    effect: RadialSelectionEffect.lift,
+    liftScale: 1.12,
+    liftOffset: 8,
+    backdropBlur: 1.5,
+  ),
+  pieStyle: const PieChartStyle(selectionExplodeOffset: 10),
+)
+```
+
+- `RadialSelectionEffect.explode` is the compatibility default and uses
+  `PieChartStyle.selectionExplodeOffset`;
+- `RadialSelectionEffect.lift` keeps the selected category at the same angle,
+  scales it around its sector centroid, pulls it radially away from the chart,
+  paints it above sibling slices, and optionally blurs the unselected slices
+  to create depth of field;
+- `liftScale` accepts values from 1 through 1.5; 1 disables enlargement;
+- `liftOffset` accepts 0 through 40 logical pixels; 0 keeps the raised slice
+  centered while larger values add a separate outward movement;
+- `backdropBlur` accepts a blur sigma from 0 through 20; 0 keeps the background
+  crisp;
+- `PieChartTheme.selectedElevation` or `PieChartStyle.selectedElevation`
+  controls the accompanying shadow/glow, including color, blur, spread,
+  offset, and opacity.
+
+The lift animation follows the chart interaction duration and curve. Its
+scaled and translated path is also used for hit testing, tooltip placement,
+inside labels, and outside-label connectors, and the renderer reserves its
+maximum configured overflow so the foreground slice is not clipped.
+
 ## Group small categories without losing source data
 
 `RadialSliceGroupingConfig` can project several small positive categories into
@@ -314,6 +355,13 @@ a zero theme duration always win over every entrance mode. A mounted chart can
 replay its configured radial entrance through
 `BravenChartController.replayRadialEntrance()`.
 
+Entrance duration comes from `ChartTheme.animationTheme`. Bounded monotonic
+theme curves are honored. Overshooting or reversing curves such as
+`Curves.elasticOut` use a monotonic `easeOutCubic` reveal fallback so painted
+geometry never advances, retreats, and flashes forward again. This safeguard
+applies to Pie, Donut, and Concentric Donut entrance replays without changing
+the configured curve used by other chart animations.
+
 Entrance motion is independent from mounted data changes. Configure
 `PieChartStyle.dataTransitionMode` with `RadialDataTransitionMode.automatic`
 to interpolate values and optional radius metrics while stable categories keep
@@ -343,6 +391,7 @@ const PieDataLabelConfig(
   content: PieDataLabelContent.categoryAndPercentage,
   minimumShare: 0.03,
   minimumSweepDegrees: 8,
+  insideOffset: 0,
   outsideOffset: 0,
   connectorLength: 14,
   connectorWidth: 1,
@@ -351,12 +400,49 @@ const PieDataLabelConfig(
 ```
 
 Content may be category, value, percentage, or a combined variant. Inside
-labels are centered in eligible slices and omitted when the text does not fit.
+labels use a balanced position within each slice's radial band and are omitted
+when the text does not fit. Set the signed `insideOffset` to move them radially:
+positive values move toward the outer edge and negative values move toward the
+center. `0` keeps the balanced default, and the renderer clamps the resolved
+anchor to the slice's inner and outer radii.
 Outside labels are split into compact left and right lanes beside the painted
 pie, shifted deterministically, and—under `shiftAndHide`—the lowest-priority
 labels are hidden when the lane cannot fit. Set `outsideOffset` to move both
 lanes outwards; `0` is tight to the pie. The renderer clamps the lanes inside
 the plot. The complete legend and table remain available when a label is hidden.
+
+### Split category and share labels
+
+Set `secondaryContent` to paint one independent label at the opposite
+placement. This is useful when the category belongs outside the pie while a
+compact share badge belongs inside its slice:
+
+```dart
+dataLabels: const PieDataLabelConfig(
+  position: PieDataLabelPosition.outside,
+  content: PieDataLabelContent.category,
+  secondaryContent: PieDataLabelContent.percentage,
+  secondaryPosition: PieDataLabelPosition.inside,
+  secondaryCalloutStyle: LabelStyle(
+    textStyle: TextStyle(
+      color: Colors.white,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+    ),
+    backgroundColor: Color(0xD91F2937),
+    borderColor: Color(0x99FFFFFF),
+    borderWidth: 1,
+    borderRadius: 4,
+    padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+  ),
+),
+```
+
+The primary and secondary layers share the same eligibility thresholds and
+numeric formatters. They can use separate `LabelStyle` values. Their positions
+must differ: each slice can own at most one inside and one outside label.
+Outside labels continue through the normal collision-managed connector lane;
+inside labels are painted only when their measured badge fits the slice.
 
 `minimumShare` uses the inclusive range 0–1. `minimumSweepDegrees` uses 0–360.
 Outside offset, connector length, width, and label padding must be finite and
@@ -393,7 +479,8 @@ metric display.
 Set `PieDataLabelConfig.calloutStyle` for one series, or
 `PieChartTheme.calloutStyle` for every Pie chart in a theme. Both use the
 shared `LabelStyle` model, including text, surface, border, radius, padding,
-and shadow. A null callout style preserves plain label text.
+and shadow. `secondaryCalloutStyle` independently styles the optional second
+layer. A null callout style resolves from the active Pie theme.
 
 Tooltips remain part of the shared interaction system. Configure one chart
 with a non-default `TooltipConfig.style`, or theme every chart through
@@ -699,7 +786,9 @@ variable-radius document instead of flattening it into a misleading Pie.
 Source-preserving grouping declares `series.radial.grouping.v1`; grouped
 variable radius adds `series.radial.grouped-variable-radius.v1`; portable
 formatter descriptors add `series.radial.formatters.v1`; and automatic data
-updates add `series.radial.data-transitions.v1`.
+updates add `series.radial.data-transitions.v1`. A configured secondary label
+layer declares `series.radial.dual-labels.v1`, so older readers fail closed
+instead of silently dropping half of the label presentation.
 
 Numeric callbacks are executable behavior and cannot be serialized. If a Pie
 uses `valueFormatter`, `percentageFormatter`, or a radius formatter,
@@ -717,7 +806,9 @@ ordering `x`. Omit Cartesian axes, crosshair, pan, and zoom. Pie-specific style
 keys include start angle, direction, radius, gaps, fixed or slice-derived
 borders (including HSL shifts), linear/radial gradient type and stops, gradient
 angle/lightness shifts, explode offset, opacity, corner radius/treatment, shadow,
-selected glow, animation mode, label position/content, and label thresholds.
+selected glow, animation mode, label position/content, optional
+`pie_secondary_label_content` / `pie_secondary_label_position`, and label
+thresholds. Secondary placement must be opposite the primary placement.
 Use `pie_label_offset` to move outside-label lanes away from their compact
 zero-offset position. Each Pie point may also include `radius`; when one point
 uses it, every point must. Set series-level `radius_label` and `radius_unit`,

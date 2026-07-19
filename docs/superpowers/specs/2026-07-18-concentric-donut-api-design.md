@@ -2,8 +2,10 @@
 
 ## Status and scope
 
-Approved family boundary; focused Phase 1 API design written during Phase 0.
-Implementation remains out of scope until the Phase 0 regression gate passes.
+Implemented Phase 1 family contract. The public API, exact artifacts and
+generated Source, Workbench integration, responsive/accessibility behavior,
+and release-facing showcase are covered by automated tests. Later polar-axis
+families remain separate work.
 
 Concentric Donut compares several independent part-to-whole distributions in
 one radial plot. Each ring is a real `DonutChartSeries` with its own total. It

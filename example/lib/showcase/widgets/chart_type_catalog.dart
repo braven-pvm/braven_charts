@@ -29,6 +29,9 @@ class ShowcaseChartType {
   final IconData icon;
   final Color accent;
   final List<String> highlights;
+
+  /// Stable test and automation suffix, including composition variants.
+  String get cardKeySuffix => slug == '${type.name}-charts' ? type.name : slug;
 }
 
 const showcaseChartTypes = <ShowcaseChartType>[
@@ -36,7 +39,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.line,
     label: 'Line',
     slug: 'line-charts',
-    summary: 'Trends, change, and continuous measurements',
+    summary: 'Continuous trends',
     bestFor: 'Time series and analytical workhorses',
     icon: Icons.show_chart,
     accent: Color(0xFF2563EB),
@@ -46,7 +49,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.area,
     label: 'Area',
     slug: 'area-charts',
-    summary: 'Magnitude, accumulation, and deviation',
+    summary: 'Magnitude and accumulation',
     bestFor: 'Volume, ranges, and baseline comparison',
     icon: Icons.area_chart_outlined,
     accent: Color(0xFF06B6D4),
@@ -56,7 +59,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.bar,
     label: 'Bar',
     slug: 'bar-charts',
-    summary: 'Category comparison and composition',
+    summary: 'Category comparison',
     bestFor: 'Grouped, stacked, range, and waterfall data',
     icon: Icons.bar_chart,
     accent: Color(0xFF10B981),
@@ -66,7 +69,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.scatter,
     label: 'Scatter',
     slug: 'scatter-charts',
-    summary: 'Relationships, cohorts, and outliers',
+    summary: 'Relationships and outliers',
     bestFor: 'Correlation and distinct observation sets',
     icon: Icons.scatter_plot_outlined,
     accent: Color(0xFF8B5CF6),
@@ -76,7 +79,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.pie,
     label: 'Pie',
     slug: 'pie-charts',
-    summary: 'Contribution to a whole',
+    summary: 'Contribution to one whole',
     bestFor: 'Small categorical share datasets',
     icon: Icons.pie_chart_outline,
     accent: Color(0xFFE11D48),
@@ -86,11 +89,21 @@ const showcaseChartTypes = <ShowcaseChartType>[
     type: ChartType.donut,
     label: 'Donut',
     slug: 'donut-charts',
-    summary: 'Contribution with contextual center content',
+    summary: 'Contribution with center context',
     bestFor: 'Part-to-whole data that benefits from a central value',
     icon: Icons.donut_large_outlined,
     accent: Color(0xFF0F766E),
     highlights: ['Center', 'Variable radius', 'Motion'],
+  ),
+  ShowcaseChartType(
+    type: ChartType.donut,
+    label: 'Concentric Donut',
+    slug: 'concentric-donut',
+    summary: 'Independent totals, shared view',
+    bestFor: 'Comparing distributions across periods or groups',
+    icon: Icons.radar_outlined,
+    accent: Color(0xFF7C3AED),
+    highlights: ['Independent totals', 'Ring weights', 'Shared selection'],
   ),
 ];
 
@@ -114,22 +127,42 @@ class ChartTypePreview extends StatelessWidget {
       baseTheme.backgroundColor,
     );
 
-    return IgnorePointer(
-      child: BravenChartPlus(
-        series: _previewSeries(chartType.type),
-        theme: baseTheme.copyWith(backgroundColor: background),
-        showLegend: false,
-        grid: isRadial
-            ? const GridConfig(horizontal: false, vertical: false)
-            : GridConfig(
-                horizontal: true,
-                vertical: false,
-                horizontalColor: chartType.accent.withValues(alpha: 0.10),
+    final preview = BravenChartPlus(
+      key: ValueKey('chart-type-preview-${chartType.cardKeySuffix}'),
+      series: _previewSeries(chartType),
+      concentricDonutConfig: chartType.slug == 'concentric-donut'
+          ? const ConcentricDonutConfig(
+              innerRadiusFactor: 0.25,
+              outerRadiusFactor: 0.94,
+              ringGap: 3,
+              centerContent: DonutCenterContent(
+                label: 'Rings',
+                valueMode: DonutCenterValueMode.custom,
+                customValue: '2',
               ),
-        xAxisConfig: const XAxisConfig(visible: false),
-        yAxis: YAxisConfig(position: YAxisPosition.hidden),
-        interactionConfig: InteractionConfig.none(),
-      ),
+            )
+          : const ConcentricDonutConfig(),
+      theme: baseTheme.copyWith(backgroundColor: background),
+      showLegend: false,
+      grid: isRadial
+          ? const GridConfig(horizontal: false, vertical: false)
+          : GridConfig(
+              horizontal: true,
+              vertical: false,
+              horizontalColor: chartType.accent.withValues(alpha: 0.10),
+            ),
+      xAxisConfig: const XAxisConfig(visible: false),
+      yAxis: YAxisConfig(position: YAxisPosition.hidden),
+      interactionConfig: InteractionConfig.none(),
+    );
+    return IgnorePointer(
+      child: chartType.slug == 'concentric-donut'
+          ? Transform.scale(
+              key: const ValueKey('chart-type-preview-scale-concentric-donut'),
+              scale: 1.18,
+              child: preview,
+            )
+          : preview,
     );
   }
 }
@@ -156,7 +189,7 @@ class ChartTypeCatalogCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        key: ValueKey('chart-type-card-${chartType.type.name}'),
+        key: ValueKey('chart-type-card-${chartType.cardKeySuffix}'),
         onTap: onOpen,
         child: Padding(
           padding: EdgeInsets.all(compact ? 12 : 16),
@@ -192,7 +225,7 @@ class ChartTypeCatalogCard extends StatelessWidget {
                         ),
                         Text(
                           chartType.summary,
-                          maxLines: compact ? 1 : 2,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
@@ -215,7 +248,7 @@ class ChartTypeCatalogCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   chartType.bestFor,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -255,7 +288,9 @@ class ChartTypeCatalogCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Explore ${chartType.label.toLowerCase()} charts',
+                        compact
+                            ? 'View ${_compactGuideName(chartType)}'
+                            : 'Explore ${chartType.label.toLowerCase()} charts',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.end,
@@ -299,8 +334,11 @@ class ChartTypeCatalogStrip extends StatelessWidget {
         final fittedWidth =
             (constraints.maxWidth - (gap * (showcaseChartTypes.length - 1))) /
             showcaseChartTypes.length;
-        final fitAll = fittedWidth >= 170;
-        final cardWidth = fitAll ? fittedWidth : 236.0;
+        // Keep the complete family map visible on the standard 1440px
+        // showcase viewport. Concise copy and enlarged native previews retain
+        // legibility at this density; narrower layouts scroll intentionally.
+        final fitAll = fittedWidth >= 145;
+        final cardWidth = fitAll ? fittedWidth : 220.0;
         final row = Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -330,7 +368,10 @@ class ChartTypeCatalogStrip extends StatelessWidget {
   }
 }
 
-List<ChartSeries> _previewSeries(ChartType type) {
+String _compactGuideName(ShowcaseChartType chartType) =>
+    chartType.slug == 'concentric-donut' ? 'Concentric' : chartType.label;
+
+List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
   const primary = [
     ChartDataPoint(x: 0, y: 18),
     ChartDataPoint(x: 1, y: 27),
@@ -352,7 +393,7 @@ List<ChartSeries> _previewSeries(ChartType type) {
     ChartDataPoint(x: 7, y: 52),
   ];
 
-  return switch (type) {
+  return switch (chartType.type) {
     ChartType.line => const [
       LineChartSeries(
         id: 'catalog-line-primary',
@@ -437,7 +478,7 @@ List<ChartSeries> _previewSeries(ChartType type) {
         id: 'catalog-pie',
         values: const {'Core': 42, 'Growth': 27, 'Income': 18, 'Other': 13},
         pieStyle: const PieChartStyle(
-          radiusFactor: 0.78,
+          radiusFactor: 0.94,
           sliceGap: 3,
           cornerRadius: 7,
           borderWidth: 1,
@@ -447,6 +488,44 @@ List<ChartSeries> _previewSeries(ChartType type) {
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.percentage,
           minimumShare: 0.12,
+        ),
+      ),
+    ],
+    ChartType.donut when chartType.slug == 'concentric-donut' => [
+      DonutChartSeries.fromMap(
+        id: 'catalog-concentric-outer',
+        values: const {'Product': 44, 'Services': 32, 'Other': 24},
+        sliceColors: const {
+          'Product': Color(0xFF7C3AED),
+          'Services': Color(0xFF0EA5E9),
+          'Other': Color(0xFFF59E0B),
+        },
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+        donutStyle: const DonutChartStyle(
+          radiusFactor: 0.94,
+          sliceGap: 2,
+          cornerRadius: 4,
+          selectionExplodeOffset: 0,
+          selectedElevation: PieElevationStyle(),
+          animationMode: PieAnimationMode.none,
+        ),
+      ),
+      DonutChartSeries.fromMap(
+        id: 'catalog-concentric-inner',
+        values: const {'Product': 30, 'Services': 45, 'Other': 25},
+        sliceColors: const {
+          'Product': Color(0xFF7C3AED),
+          'Services': Color(0xFF0EA5E9),
+          'Other': Color(0xFFF59E0B),
+        },
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+        donutStyle: const DonutChartStyle(
+          radiusFactor: 0.94,
+          sliceGap: 2,
+          cornerRadius: 4,
+          selectionExplodeOffset: 0,
+          selectedElevation: PieElevationStyle(),
+          animationMode: PieAnimationMode.none,
         ),
       ),
     ],
@@ -467,7 +546,7 @@ List<ChartSeries> _previewSeries(ChartType type) {
         },
         donutStyle: const DonutChartStyle(
           innerRadiusFactor: 0.58,
-          radiusFactor: 0.78,
+          radiusFactor: 0.94,
           sliceGap: 3,
           cornerRadius: 7,
           borderWidth: 1,

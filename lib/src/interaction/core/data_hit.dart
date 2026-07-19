@@ -25,6 +25,10 @@ class ChartDataHit {
     this.radiusValue,
     this.formattedRadiusValue,
     this.radiusLabel,
+    this.groupLabel,
+    this.groupName,
+    this.groupOrdinal,
+    this.groupCount,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -76,6 +80,22 @@ class ChartDataHit {
   /// Optional human-readable name of the radius metric.
   final String? radiusLabel;
 
+  /// Optional position label for a datum inside a composed data group.
+  ///
+  /// Concentric Donut uses this for values such as `Outer ring` and keeps it
+  /// null for standalone Pie and Donut charts so their existing presentation
+  /// remains unchanged.
+  final String? groupLabel;
+
+  /// Optional user-facing name of the composed data group.
+  final String? groupName;
+
+  /// One-based traversal position of the composed data group.
+  final int? groupOrdinal;
+
+  /// Number of groups participating in the composition.
+  final int? groupCount;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -94,7 +114,7 @@ class ChartDataHit {
   /// Complete non-color-only announcement for assistive technologies.
   String get semanticLabel {
     final name = category ?? point.label ?? 'Data point';
-    final parts = <String>[name, formattedValue];
+    final parts = <String>[?groupLabel, ?groupName, name, formattedValue];
     if (share != null) {
       final display = formattedShare ?? '${(share! * 100).toStringAsFixed(1)}%';
       parts.add(
@@ -113,4 +133,8 @@ class ChartDataHit {
     parts.add(isSelected ? 'selected' : 'not selected');
     return parts.join(', ');
   }
+
+  /// Stable sort position for assistive traversal across composed groups.
+  double get semanticSortOrdinal =>
+      ((groupOrdinal ?? 1) - 1) * 1000000 + ordinal.toDouble();
 }

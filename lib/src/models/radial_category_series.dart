@@ -3,6 +3,7 @@ import 'dart:ui' show Color;
 import 'chart_data_point.dart';
 import 'chart_series.dart';
 import 'pie_chart_config.dart';
+import 'radial_selection_style.dart';
 import 'segment_style.dart';
 
 /// Policy used to combine the second radius metric of grouped radial slices.
@@ -142,6 +143,7 @@ abstract class RadialCategorySeries extends ChartSeries {
     super.unit,
     required SeriesStyle style,
     required this.radialStyle,
+    this.selectionStyle = const RadialSelectionStyle(),
     required this.dataLabels,
     required this.sliceRadiusConfig,
     required this.sliceGroupingConfig,
@@ -153,6 +155,9 @@ abstract class RadialCategorySeries extends ChartSeries {
 
   /// Shared slice geometry and appearance consumed by the radial renderer.
   final RadialChartStyle radialStyle;
+
+  /// Visual treatment applied to durable slice selection.
+  final RadialSelectionStyle selectionStyle;
 
   /// Data-label eligibility and placement configuration.
   final PieDataLabelConfig dataLabels;
@@ -333,6 +338,24 @@ abstract class RadialCategorySeries extends ChartSeries {
     );
     requireNonNegative(radialStyle.sliceGap, 'radialStyle.sliceGap');
     requireNonNegative(radialStyle.borderWidth, 'radialStyle.borderWidth');
+    requireRange(
+      selectionStyle.liftScale,
+      'selectionStyle.liftScale',
+      min: 1,
+      max: 1.5,
+    );
+    requireRange(
+      selectionStyle.liftOffset,
+      'selectionStyle.liftOffset',
+      min: 0,
+      max: 40,
+    );
+    requireRange(
+      selectionStyle.backdropBlur,
+      'selectionStyle.backdropBlur',
+      min: 0,
+      max: 20,
+    );
     if (radialStyle.borderHueShiftDegrees != null) {
       requireFinite(
         radialStyle.borderHueShiftDegrees!,
@@ -402,12 +425,22 @@ abstract class RadialCategorySeries extends ChartSeries {
       max: 360,
     );
     requireNonNegative(dataLabels.padding, 'dataLabels.padding');
+    requireFinite(dataLabels.insideOffset, 'dataLabels.insideOffset');
     requireNonNegative(dataLabels.outsideOffset, 'dataLabels.outsideOffset');
     requireNonNegative(
       dataLabels.connectorLength,
       'dataLabels.connectorLength',
     );
     requireNonNegative(dataLabels.connectorWidth, 'dataLabels.connectorWidth');
+    if (dataLabels.secondaryContent != null &&
+        dataLabels.secondaryPosition == dataLabels.position) {
+      throw ArgumentError.value(
+        dataLabels.secondaryPosition,
+        'dataLabels.secondaryPosition',
+        'Secondary radial labels must use the opposite placement from the '
+            'primary label layer',
+      );
+    }
 
     final radiusSizes = [for (final point in points) point.pointStyle?.size];
     final hasAnyRadiusValue = radiusSizes.any((value) => value != null);

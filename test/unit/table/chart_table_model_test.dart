@@ -576,6 +576,53 @@ void main() {
       );
     });
 
+    test(
+      'projects multiple Donut rings with independent shares and identity',
+      () {
+        final current = DonutChartSeries.fromMap(
+          id: 'current',
+          name: 'Current period',
+          unit: 'USD',
+          values: const {'Subscriptions': 60, 'Services': 40},
+        );
+        final previous = DonutChartSeries.fromMap(
+          id: 'previous',
+          name: 'Previous period',
+          unit: 'USD',
+          values: const {'Subscriptions': 50, 'Services': 150},
+        );
+        final model = ChartTableModel.fromDocument(
+          _document([
+            _success(ChartSeriesDocumentCodec.encode(current)).value,
+            _success(ChartSeriesDocumentCodec.encode(previous)).value,
+          ]),
+        );
+
+        expect(model.projectionKind, ChartTableProjectionKind.pie);
+        expect(model.hasMultipleRadialSeries, isTrue);
+        expect(model.pieRows, hasLength(4));
+        expect(model.pieRows.map((row) => row.ringIndex), [0, 0, 1, 1]);
+        expect(model.pieRows.map((row) => row.seriesId), [
+          'current',
+          'current',
+          'previous',
+          'previous',
+        ]);
+        expect(model.pieRows.map((row) => row.seriesName), [
+          'Current period',
+          'Current period',
+          'Previous period',
+          'Previous period',
+        ]);
+        expect(model.pieRows.map((row) => row.shareDisplay), [
+          '60.00%',
+          '40.00%',
+          '25.00%',
+          '75.00%',
+        ]);
+      },
+    );
+
     test('keeps all-zero pie categories visible with zero shares', () {
       final pie = PieChartSeries.fromMap(
         id: 'zero',

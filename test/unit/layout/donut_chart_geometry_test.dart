@@ -7,6 +7,27 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Donut radial geometry', () {
+    test('honors an explicitly allocated concentric ring band', () {
+      final series = DonutChartSeries.fromMap(
+        id: 'allocated-ring',
+        values: const {'A': 2, 'B': 1},
+      );
+
+      final geometry = PieChartGeometryCalculator.calculate(
+        series: series,
+        size: const Size(300, 200),
+        centerOverride: const Offset(120, 90),
+        innerRadiusOverride: 45,
+        outerRadiusOverride: 80,
+      );
+
+      expect(geometry.center, const Offset(120, 90));
+      expect(geometry.innerRadius, 45);
+      expect(geometry.outerRadius, 80);
+      expect(geometry.slices.every((slice) => slice.innerRadius == 45), isTrue);
+      expect(geometry.slices.every((slice) => slice.outerRadius == 80), isTrue);
+    });
+
     test('creates a shared circular opening with annular hit testing', () {
       final series = DonutChartSeries.fromMap(
         id: 'ring',
@@ -220,14 +241,16 @@ void main() {
       );
     });
 
-    test('uses angular padding while retaining one unexploded ring center', () {
+    test('uses parallel physical padding with one unexploded ring center', () {
       final series = DonutChartSeries.fromMap(
         id: 'gapped-ring',
-        values: const {'A': 1, 'B': 1, 'C': 1},
+        values: const {'A': 1, 'B': 1},
         donutStyle: const DonutChartStyle(
+          startAngleDegrees: 0,
           innerRadiusFactor: 0.55,
           radiusFactor: 1,
           sliceGap: 10,
+          cornerRadius: 8,
         ),
       );
 
@@ -249,6 +272,13 @@ void main() {
       final gapPoint =
           geometry.center + Offset.fromDirection(firstBoundary, 90);
       expect(geometry.sliceAt(gapPoint), isNull);
+      for (final radius in const [80.0, 100.0]) {
+        final x = geometry.center.dx - radius;
+        expect(geometry.slices.first.path.contains(Offset(x, 125.1)), isTrue);
+        expect(geometry.slices.first.path.contains(Offset(x, 124.9)), isFalse);
+        expect(geometry.slices.last.path.contains(Offset(x, 114.9)), isTrue);
+        expect(geometry.slices.last.path.contains(Offset(x, 115.1)), isFalse);
+      }
     });
 
     test('rounded annular sectors retain the circular center opening', () {

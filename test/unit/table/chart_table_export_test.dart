@@ -80,6 +80,42 @@ void main() {
     expect(export.rows.first.references.single.pointIndex, 0);
   });
 
+  test(
+    'grouped concentric export retains every source row and stable ring identity',
+    () {
+      final model = _concentricGroupedModel();
+      final export = ChartTableExporter.csvForDisplayedRows(
+        model,
+        pieRows: model.pieRows,
+      );
+
+      expect(export.headers, [
+        '#',
+        'Ring',
+        'Series ID',
+        'Category',
+        'Value (USD)',
+        'Share',
+      ]);
+      expect(export.rows, hasLength(8));
+      expect(
+        export.rows
+            .where((row) => row.rawValues[2] == 'current')
+            .map((row) => row.rawValues[3]),
+        ['Core', 'Email', 'Chat', 'Other source'],
+      );
+      expect(
+        export.rows
+            .where((row) => row.rawValues[2] == 'previous')
+            .map((row) => row.rawValues[3]),
+        ['Core', 'Email', 'Chat', 'Other source'],
+      );
+      expect(export.rows[5].references, const [
+        ChartPointRef(seriesId: 'previous', pointIndex: 1),
+      ]);
+    },
+  );
+
   test('variable-radius Pie export includes the raw second metric', () {
     final model = _pieModel(variableRadius: true);
     final export = ChartTableExporter.csvForDisplayedRows(
@@ -383,6 +419,47 @@ ChartTableModel _pieModel({bool variableRadius = false}) {
       documentId: 'pie-export',
       revision: 1,
       series: [series],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _concentricGroupedModel() {
+  final rings = [
+    DonutChartSeries.fromMap(
+      id: 'current',
+      name: 'Current period',
+      unit: 'USD',
+      values: const {'Core': 80, 'Email': 8, 'Chat': 7, 'Other source': 5},
+      sliceGroupingConfig: const RadialSliceGroupingConfig(minimumShare: 0.1),
+    ),
+    DonutChartSeries.fromMap(
+      id: 'previous',
+      name: 'Previous period',
+      unit: 'USD',
+      values: const {'Core': 80, 'Email': 8, 'Chat': 7, 'Other source': 5},
+      sliceGroupingConfig: const RadialSliceGroupingConfig(minimumShare: 0.1),
+    ),
+  ];
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'concentric-grouped-export',
+      revision: 1,
+      series: [
+        for (final ring in rings)
+          (ChartSeriesDocumentCodec.encode(ring)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value,
+      ],
       xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
       axes: const [],
       theme:

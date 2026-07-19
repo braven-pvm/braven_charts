@@ -34,6 +34,10 @@ class RadialLegendItemData {
     required this.defaultTextStyle,
     required this.selected,
     required this.animationDuration,
+    this.ringIndex,
+    this.ringCount,
+    this.ringPositionLabel,
+    this.ringTotal,
     String? valueLabel,
     String? shareLabel,
   }) : sourcePointIndices = List<int>.unmodifiable(sourcePointIndices),
@@ -92,6 +96,28 @@ class RadialLegendItemData {
   /// Effective interaction animation duration, or zero when disabled.
   final Duration animationDuration;
 
+  /// Zero-based source-series position in a Concentric Donut composition.
+  ///
+  /// This is `null` for a standalone Pie or Donut chart.
+  final int? ringIndex;
+
+  /// Number of independent rings in the Concentric Donut composition.
+  ///
+  /// This is `null` for a standalone Pie or Donut chart.
+  final int? ringCount;
+
+  /// Human-readable physical position such as `Outer ring` or `Inner ring`.
+  ///
+  /// The label remains stable when selection changes and allows custom legend
+  /// builders to communicate ring identity without relying on color.
+  final String? ringPositionLabel;
+
+  /// Denominator used to calculate this item's [share] within its own ring.
+  ///
+  /// This is `null` for a standalone Pie or Donut chart because [value] and
+  /// [share] already describe the only radial series.
+  final double? ringTotal;
+
   /// Default package value formatting offered as a builder convenience.
   final String valueLabel;
 
@@ -103,7 +129,10 @@ class RadialLegendItemData {
     final semanticShare = shareLabel.endsWith('%')
         ? '${shareLabel.substring(0, shareLabel.length - 1)} percent'
         : shareLabel;
-    return '$category, $valueLabel, $semanticShare, '
+    final ringIdentity = ringPositionLabel == null
+        ? ''
+        : '$ringPositionLabel, ${seriesName ?? seriesId}, ';
+    return '$ringIdentity$category, $valueLabel, $semanticShare, '
         '${selected ? 'selected' : 'not selected'}';
   }
 }

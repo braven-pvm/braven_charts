@@ -85,6 +85,7 @@ class ChartDataTable extends StatefulWidget {
             actionWidth,
       ChartTableProjectionKind.pie =>
         theme.rowNumberWidth +
+            (model.hasMultipleRadialSeries ? 160 : 0) +
             192 +
             theme.seriesColumnWidth * (model.hasPieRadiusValues ? 3 : 2) +
             actionWidth,
@@ -687,7 +688,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
 
   Widget _buildHeader(ChartTableModel model, _ResolvedTableTheme tableTheme) {
     if (model.projectionKind == ChartTableProjectionKind.pie) {
-      final unit = model.series.single.unit;
+      final unit = model.commonRadialUnit;
       return _TableHeader(
         theme: tableTheme,
         children: [
@@ -706,6 +707,15 @@ class _ChartDataTableState extends State<ChartDataTable> {
             theme: tableTheme,
             numeric: true,
           ),
+          if (model.hasMultipleRadialSeries)
+            _SortHeader(
+              key: const ValueKey('chart-table-header-ring'),
+              label: 'Ring',
+              columnId: 'ring',
+              width: 160,
+              controller: _controller,
+              theme: tableTheme,
+            ),
           _SortHeader(
             key: const ValueKey('chart-table-header-category'),
             label: 'Category',
@@ -879,7 +889,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
       return _FocusableTableRow(
         key: ValueKey(row.rowId),
         semanticsLabel:
-            'Row ${index + 1}, ${row.category}, ${row.valueDisplay}$unitSuffix$radiusSemantics, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
+            'Row ${index + 1}, ${model.hasMultipleRadialSeries ? '${row.seriesName} ring, ' : ''}${row.category}, ${row.valueDisplay}$unitSuffix$radiusSemantics, ${row.shareDisplay}, ${row.isValid ? 'valid slice' : 'invalid slice'}',
         references: references,
         displayedPoints: displayedPoints,
         onSelectAllPoints: widget.onSelectAllPoints,
@@ -941,6 +951,13 @@ class _ChartDataTableState extends State<ChartDataTable> {
             theme: theme,
             rowNumber: true,
           ),
+          if (model.hasMultipleRadialSeries)
+            _TableCell(
+              key: ValueKey('chart-table-cell-ring-$index'),
+              text: row.seriesName,
+              width: 160,
+              theme: theme,
+            ),
           _PieCategoryCell(row: row, width: 192, theme: theme),
           _TableCell(
             key: ValueKey('chart-table-cell-value-$index'),
@@ -1326,6 +1343,7 @@ class _ChartDataTableState extends State<ChartDataTable> {
     if (column == null) return rows;
     rows.sort((left, right) {
       final result = switch (column) {
+        'ring' => left.ringIndex.compareTo(right.ringIndex),
         'category' => left.category.toLowerCase().compareTo(
           right.category.toLowerCase(),
         ),

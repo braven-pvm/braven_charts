@@ -8,6 +8,7 @@ import '../../elements/series_element.dart';
 import '../../formatting/multi_axis_value_formatter.dart';
 import '../../interaction/core/chart_element.dart';
 import '../../interaction/core/coordinator.dart';
+import '../../interaction/core/data_hit.dart';
 import '../../models/chart_series.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/chart_theme.dart';
@@ -29,6 +30,30 @@ import 'tooltip_animator.dart';
 /// testability of tooltip rendering logic.
 class TooltipRenderer {
   const TooltipRenderer();
+
+  /// Builds the renderer-neutral tooltip body for one resolved datum.
+  ///
+  /// Composed radial data may add a group heading. Standalone radial and
+  /// Cartesian tooltips keep their existing text because their group fields
+  /// are null.
+  String buildBaseTooltipText({
+    required ChartDataHit dataHit,
+    required String seriesName,
+    required String formattedCartesianY,
+    required String Function(double) formatDataValue,
+  }) {
+    if (dataHit.category == null || dataHit.share == null) {
+      return '$seriesName\nX: ${formatDataValue(dataHit.point.x)}\n'
+          'Y: $formattedCartesianY';
+    }
+    final groupHeading = dataHit.groupLabel == null
+        ? ''
+        : '${dataHit.groupLabel} · ${dataHit.groupName ?? dataHit.seriesId}\n';
+    return '$groupHeading${dataHit.category}\n'
+        'Value: ${dataHit.formattedValue}\n'
+        'Share: ${dataHit.formattedShare ?? '${(dataHit.share! * 100).toStringAsFixed(1)}%'}'
+        '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
+  }
 
   /// Draws a tooltip for the hovered marker.
   ///
@@ -111,11 +136,12 @@ class TooltipRenderer {
       unit: yUnit,
     );
 
-    final baseTooltipText = dataHit.category == null || dataHit.share == null
-        ? '$seriesName\nX: ${formatDataValue(dataPoint.x)}\nY: $formattedY'
-        : '${dataHit.category}\nValue: ${dataHit.formattedValue}\n'
-              'Share: ${dataHit.formattedShare ?? '${(dataHit.share! * 100).toStringAsFixed(1)}%'}'
-              '${dataHit.formattedRadiusValue == null ? '' : '\n${dataHit.radiusLabel ?? 'Radius'}: ${dataHit.formattedRadiusValue}'}';
+    final baseTooltipText = buildBaseTooltipText(
+      dataHit: dataHit,
+      seriesName: seriesName,
+      formattedCartesianY: formattedY,
+      formatDataValue: formatDataValue,
+    );
     final barSeries = dataElement.series is BarChartSeries
         ? dataElement.series as BarChartSeries
         : null;

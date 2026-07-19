@@ -16,6 +16,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 - [guides/chart-types.md](guides/chart-types.md) - Chart type overview
 - [guides/bar-charts.md](guides/bar-charts.md) - Bar orientation, composition, floating ranges, styling, labels, and interaction
 - [guides/pie-charts.md](guides/pie-charts.md) - Pie data, advanced theming, labels, legends, selection, motion, tables, artifacts, and accessibility
+- [../doc/concentric_donut_charts.md](../doc/concentric_donut_charts.md) - independent Donut rings, allocation, legends, tables, selection, centers, and artifacts
 - [guides/theming-usage.md](guides/theming-usage.md) - Theming guide
 - [guides/theming-accessibility.md](guides/theming-accessibility.md) - Accessibility
 - [guides/coordinate-system.md](guides/coordinate-system.md) - Coordinate system

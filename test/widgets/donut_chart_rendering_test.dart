@@ -76,6 +76,60 @@ void main() {
     );
   });
 
+  test(
+    'lifted Donut selection scales, offsets, and remains hit-testable in bounds',
+    () {
+      final series = DonutChartSeries.fromMap(
+        id: 'lifted-ring',
+        values: const {'Selected': 42, 'Other': 58},
+        donutStyle: const DonutChartStyle(
+          innerRadiusFactor: 0.58,
+          radiusFactor: 0.78,
+          sliceGap: 4,
+          selectedElevation: PieElevationStyle(
+            color: Color(0x66000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+          animationMode: PieAnimationMode.none,
+        ),
+        selectionStyle: const RadialSelectionStyle(
+          effect: RadialSelectionEffect.lift,
+          liftScale: 1.12,
+          liftOffset: 8,
+          backdropBlur: 1.5,
+        ),
+        dataLabels: const PieDataLabelConfig(isVisible: false),
+      );
+      final element = PieSeriesElement(
+        series: series,
+        size: const Size.square(220),
+        theme: ChartTheme.light,
+        selectedPointIndices: const {0},
+      );
+      final unselectedElement = PieSeriesElement(
+        series: series,
+        size: const Size.square(220),
+        theme: ChartTheme.light,
+      );
+
+      final selected = element.geometry.slices.first;
+      expect(selected.isSelected, isTrue);
+      expect(selected.selectionScale, closeTo(1.12, 1e-9));
+      expect(selected.liftOffset.distance, closeTo(8, 1e-9));
+      expect(selected.explodeOffset, Offset.zero);
+      expect(
+        element.dataHitAt(selected.tooltipAnchor)?.pointIndex,
+        selected.pointIndex,
+      );
+      expect(selected.path.getBounds().left, greaterThanOrEqualTo(0));
+      expect(selected.path.getBounds().top, greaterThanOrEqualTo(0));
+      expect(selected.path.getBounds().right, lessThanOrEqualTo(220));
+      expect(selected.path.getBounds().bottom, lessThanOrEqualTo(220));
+      expect(element.geometry.center, unselectedElement.geometry.center);
+    },
+  );
+
   testWidgets(
     'center content follows legend and controller selection with one summary node',
     (tester) async {

@@ -83,7 +83,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Six chart families, one native renderer'),
+        find.text('Seven chart guides, one native renderer'),
         findsOneWidget,
       );
       expect(
@@ -93,6 +93,10 @@ void main() {
       expect(find.byKey(const ValueKey('chart-type-card-pie')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('chart-type-card-donut')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('chart-type-card-concentric-donut')),
         findsOneWidget,
       );
 
@@ -218,7 +222,7 @@ void main() {
     expect(find.byType(PortfolioAllocationGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Three measures, three radial encodings'),
+      find.text('Four measures, four radial encodings'),
       500,
       scrollable: galleryScrollable,
     );
@@ -228,10 +232,11 @@ void main() {
       find.byKey(const ValueKey('gallery-donut-compositions')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-donut-compositions'), 3);
+    expect(_gridCount(tester, 'gallery-donut-compositions'), 4);
     expect(find.byType(RevenueRingGalleryCard), findsOneWidget);
     expect(find.byType(DeliveryProgressGalleryCard), findsOneWidget);
     expect(find.byType(CampaignReachGalleryCard), findsOneWidget);
+    expect(find.byType(ConcentricMixGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('gallery-mode-control')),
@@ -255,7 +260,7 @@ void main() {
     expect(_gridCount(tester, 'gallery-advanced-full'), 11);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 17);
   });
-  testWidgets('donut media panel reuses three product-shaped compositions', (
+  testWidgets('donut media panel reuses four product-shaped compositions', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -267,15 +272,24 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(BravenChartPlus), findsNWidgets(3));
+    expect(find.byType(BravenChartPlus), findsNWidgets(4));
     expect(find.text('Subscription MRR'), findsOneWidget);
     expect(find.text('Release readiness'), findsOneWidget);
     expect(find.text('Channel efficiency'), findsOneWidget);
+    expect(find.text('Revenue mix over time'), findsOneWidget);
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
     expect(
-      tester
-          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
-          .every((chart) => chart.series.single is DonutChartSeries),
+      charts.every(
+        (chart) => chart.series.every((series) => series is DonutChartSeries),
+      ),
       isTrue,
+    );
+    expect(charts.map((chart) => chart.series.length), [1, 1, 1, 3]);
+    expect(
+      charts.last.concentricDonutConfig.ringWeights,
+      containsPair('gallery-concentric-current', 1.2),
     );
     expect(tester.takeException(), isNull);
   });

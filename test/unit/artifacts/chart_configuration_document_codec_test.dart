@@ -254,6 +254,97 @@ void main() {
       expect(decoded.maxAxesPerSide, 4);
       expect(decoded.axisSwapMode, AxisSwapMode.revert.name);
     });
+
+    test('round-trips Concentric Donut composition and portable center', () {
+      const source = ConcentricDonutConfig(
+        innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.9,
+        ringGap: 6,
+        order: ConcentricRingOrder.innerToOuter,
+        ringWeights: {'outer': 2, 'inner': 1},
+        legendMode: ConcentricDonutLegendMode.flat,
+        centerContent: DonutCenterContent(
+          label: 'Periods',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: '2 rings',
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodeConcentricDonut(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodeConcentricDonut(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('reports a path-specific invalid concentric radius', () {
+      final result = ChartConfigurationDocumentCodec.decodeConcentricDonut(
+        JsonValue.fromJson({
+              'concentricDonut': {
+                'innerRadiusFactor': 0.9,
+                'outerRadiusFactor': 0.5,
+                'ringGap': 4,
+                'order': 'outerToInner',
+                'ringWeights': <String, Object?>{},
+                'legendMode': 'groupedByRing',
+                'centerContent': {'isVisible': true, 'valueMode': 'total'},
+              },
+            })
+            as JsonObjectValue,
+      );
+
+      expect(result, isA<ChartArtifactFailure<ConcentricDonutConfig?>>());
+      expect(
+        (result as ChartArtifactFailure<ConcentricDonutConfig?>).error.path,
+        r'$.configuration.concentricDonut.innerRadiusFactor',
+      );
+    });
+
+    test(
+      'requires and restores a descriptor for a custom center formatter',
+      () {
+        final missing = ChartConfigurationDocumentCodec.encodeConcentricDonut(
+          ConcentricDonutConfig(
+            centerContent: DonutCenterContent(
+              valueFormatter: (value) => value.toStringAsFixed(1),
+            ),
+          ),
+        );
+        expect(missing, isA<ChartArtifactFailure<JsonObjectValue>>());
+        expect(
+          (missing as ChartArtifactFailure<JsonObjectValue>).error.code,
+          ChartArtifactDiagnosticCodes.runtimeBindingRequired,
+        );
+
+        final descriptor = ChartFormatterDescriptor(
+          id: 'braven.number.fixed',
+          arguments: {'decimals': JsonNumberValue(1)},
+        ).toDocument();
+        final encoded = _success(
+          ChartConfigurationDocumentCodec.encodeConcentricDonut(
+            ConcentricDonutConfig(
+              centerContent: DonutCenterContent(
+                valueFormatter: (value) => value.toStringAsFixed(1),
+              ),
+            ),
+            centerFormatterDescriptor: descriptor,
+          ),
+        );
+        final decoded = _success(
+          ChartConfigurationDocumentCodec.decodeConcentricDonut(
+            encoded,
+            centerFormatter: (value) => value.toStringAsFixed(1),
+          ),
+        );
+
+        expect(decoded?.centerContent.valueFormatter?.call(12.34), '12.3');
+      },
+    );
   });
 }
 

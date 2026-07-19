@@ -74,7 +74,7 @@ void main() {
       );
     });
 
-    test('keeps multiple Donut series unavailable before Phase 1', () {
+    test('uses partition-radial layout for multiple Donut series', () {
       final current = DonutChartSeries.fromMap(
         id: 'current',
         values: const {'A': 1},
@@ -85,14 +85,8 @@ void main() {
       );
 
       expect(
-        () => ChartLayoutResolver.resolve([current, previous]),
-        throwsA(
-          isA<ArgumentError>().having(
-            (error) => error.message,
-            'message',
-            contains('exactly one PieChartSeries or DonutChartSeries'),
-          ),
-        ),
+        ChartLayoutResolver.resolve([current, previous]),
+        ChartLayoutKind.partitionRadial,
       );
     });
 
@@ -109,7 +103,7 @@ void main() {
           isA<ArgumentError>().having(
             (error) => error.message,
             'message',
-            contains('exactly one PieChartSeries or DonutChartSeries'),
+            contains('Pie and Donut series cannot be mixed'),
           ),
         ),
       );

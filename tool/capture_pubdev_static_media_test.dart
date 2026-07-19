@@ -111,6 +111,13 @@ void main() {
       );
     }
 
+    await _capturePie(
+      tester,
+      outputDirectory: outputDirectory,
+      fileName: 'concentric_revenue_mix.png',
+      source: const ConcentricMixGalleryCard(),
+    );
+
     await _captureDonutCollection(
       tester,
       outputDirectory: outputDirectory,
@@ -266,6 +273,7 @@ Future<Uint8List> _capturePie(
             xAxisConfig: galleryChart.xAxisConfig,
             yAxis: galleryChart.yAxis,
             interactionConfig: galleryChart.interactionConfig,
+            concentricDonutConfig: galleryChart.concentricDonutConfig,
           ),
         ),
       ),
