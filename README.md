@@ -21,29 +21,28 @@ streaming path so each sample does not require a widget-tree rebuild.
 
 [Live showcase and runnable examples](https://braven-pvm.github.io/braven_charts/)
 
-## What's new in 0.8.0
+## What's new in 0.9.0
 
-- **Concentric Donut:** render two or more independent `DonutChartSeries` as
-  allocated rings with automatic or explicit ordering, weighted thickness,
-  grouped or flat legends, coordinated labels, one shared center, ring-aware
-  data tables and tooltips, exact generated Source, artifacts, and native image
-  capture. Selection can lift one slice above the complete composition.
-- **Radial presentation controls:** Pie, Donut, and Concentric Donut support
-  constant-width slice channels, signed inside-label offsets, dual inside and
-  outside label layers, and a shared explode-or-lift selection model.
-- **Synchronized Cartesian charts:** `ChartInteractionGroupController` shares
-  a semantic data-X cursor and X-only viewport across independent Line and Area
-  charts while retaining local Y scales, tooltips, selections, annotations,
-  and artifacts.
-- **Portable path patterns:** Line and Area outlines accept `dashPattern`
-  without breaking interpolation, Area fills, glow, generated Source,
-  artifacts, or segment-level style changes.
-- **Bar reliability and scale:** invalid points are isolated from bounds and
-  stack geometry, extreme marks remain safely clipped and hittable, and dense
-  transitions retain the maintained 10,000-mark animation budget.
+- **Expressive Scatter charts:** map independent point values to area-correct
+  marker size, continuous or threshold-based colour, and opacity. Configure
+  marker shape, fill, outline, dimensions, rotation, hover, press, selection,
+  and focus without giving up point-accurate tracking or unsorted data.
+- **Portable analytical channels:** Scatter encodings and resolved values flow
+  through quantitative legends, tooltips, tables, CSV, artifacts, hydration,
+  and deterministic generated Dart source.
+- **Synchronized Cartesian composition:** a caller-owned
+  `ChartInteractionGroupController` shares a semantic data-X cursor and X-only
+  viewport across independent charts while each chart retains its local Y
+  scale, tooltip, selection, annotations, and artifact boundary.
+- **Deeper public examples:** the Scatter guide now covers fixed markers,
+  styling, stress, unsorted data, interaction states, bubbles, colour scales,
+  risk bands, and opacity in the common Chart/Data/Split/Source Workbench. The
+  Gallery adds three production-shaped Scatter compositions and a synchronized
+  route profile.
 
-[Open the Concentric Donut guide](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
-or review the [0.8.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#080---2026-07-19)
+[Open the Scatter guide](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bubble),
+[open the synchronized example](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized),
+or review the [0.9.0 changelog](https://github.com/braven-pvm/braven_charts/blob/master/CHANGELOG.md#090---2026-07-19)
 for the complete API-level release notes.
 
 ## Rendered examples
@@ -58,7 +57,7 @@ package rather than treating a single composition as representative.
 | --- | --- | --- |
 | [![Linear, Bezier, stepped, and monotone line interpolation](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_interpolation.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Positive and negative baseline area fill across independently scaled series](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_baseline.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Grouped bars with gradients, targets, uncertainty intervals, and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts&preset=targets) |
 | **Scatter** | **Pie** | **Donut** |
-| [![Two scatter cohorts with distinct marker sets and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_experiment_cohorts.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+| [![Scatter chart type with independent point markers](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/chart_type_scatter.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
 
 ### Concentric Donut compositions
 
@@ -70,16 +69,18 @@ the composition or series level.
 | --- | --- | --- |
 | [![Three revenue periods compared as independently weighted Concentric Donut rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_revenue_mix.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three service regions compared as partial-sweep status rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_service_health.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three portfolio mandates compared as weighted rings on a dark chart theme](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_portfolio.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) |
 
-### Line and Area workbenches
+### Cartesian composition and Scatter encodings
 
-Line and Area now pair opt-in entrance and data-update motion with the same
-package-owned Chart/Data/Split workflow used by the radial chart guides. The
-wide Split divider is resizable, while compact layouts fall back to a single
-active surface without unmounting the chart unnecessarily.
+Scatter keeps X/Y position independent from marker area, colour, opacity, and
+shape. The same values remain inspectable in the chart, legend, tracking
+surface, table, artifact, and generated Source. Independent Cartesian charts
+can also share a data-X cursor and viewport without merging their local scales.
 
-| Line motion | Area motion |
-| --- | --- |
-| [![Line motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split) | [![Area motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/area_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split) |
+| Synchronized route profile | Bubble area and shape | Continuous colour |
+| --- | --- | --- |
+| [![Three independently scaled route metrics sharing one data-X cursor and viewport](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/synchronized_route_profile.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=synchronized) | [![Market opportunity Scatter chart using area-correct bubbles and distinct marker shapes](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_market_opportunity.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bubble) | [![Athlete Scatter chart mapping recovery readiness to a continuous colour scale](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_athlete_readiness.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=color%20scale) |
+| **Piecewise risk bands** | **Line motion workbench** | **Area motion workbench** |
+| [![Dark equipment Scatter chart with named piecewise risk bands](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/scatter_equipment_risk.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts&preset=bands) | [![Line motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/line_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts&preset=motion&view=split) | [![Area motion example in the resizable Chart and Data workbench](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/area_motion_workbench.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split) |
 
 ### Bar compositions
 
@@ -134,7 +135,7 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter and mixed Cartesian series; and category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; and category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
@@ -171,7 +172,7 @@ Add the package to your app:
 
 ```yaml
 dependencies:
-  braven_charts: ^0.8.0
+  braven_charts: ^0.9.0
 ```
 
 Then fetch dependencies:
@@ -180,7 +181,7 @@ Then fetch dependencies:
 flutter pub get
 ```
 
-Braven Charts 0.8.0 requires Dart 3.9 or later and Flutter 3.35 or later.
+Braven Charts 0.9.0 requires Dart 3.9 or later and Flutter 3.35 or later.
 
 ## Quick start
 

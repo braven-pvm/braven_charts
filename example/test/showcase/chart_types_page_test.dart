@@ -107,7 +107,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-preview-pie')),
     );
     final pieSeries = pie.series.single as PieChartSeries;
-    expect(pieSeries.pieStyle.radiusFactor, 0.94);
+    expect(pieSeries.pieStyle.radiusFactor, 1.0);
 
     final donut = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('chart-type-preview-donut')),

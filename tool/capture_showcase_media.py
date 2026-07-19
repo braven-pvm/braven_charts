@@ -569,6 +569,12 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         )
     elif group == "bar":
         command.extend(["--plain-name", "capture pub.dev Bar media"])
+    elif group == "scatter":
+        command.extend(["--plain-name", "capture pub.dev Scatter media"])
+    elif group == "synchronized":
+        command.extend(
+            ["--plain-name", "capture pub.dev synchronized Cartesian composition"]
+        )
     elif group == "hero":
         command.extend(["--plain-name", "capture pub.dev flagship hero media"])
     elif group == "interaction":
@@ -981,6 +987,8 @@ def main() -> None:
             "hero",
             "pie",
             "bar",
+            "scatter",
+            "synchronized",
             "interaction-still",
             "type-strip",
             "donut",
@@ -998,6 +1006,12 @@ def main() -> None:
         return
     if args.capture == "bar":
         _native_stills(args.output_dir, "bar")
+        return
+    if args.capture == "scatter":
+        _native_stills(args.output_dir, "scatter")
+        return
+    if args.capture == "synchronized":
+        _native_stills(args.output_dir, "synchronized")
         return
     if args.capture == "interaction-still":
         _native_stills(args.output_dir, "interaction")

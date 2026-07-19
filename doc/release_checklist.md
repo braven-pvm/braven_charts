@@ -69,18 +69,22 @@ Use `--capture interaction` for the focused tracking and zoom/pan recordings,
 `--capture selection` for Donut selection, `--capture live-stream` for the
 buffering sequence, or `--capture tracking` and `--capture zoom-pan` when only
 one interaction changed. Use `--capture interaction-still`, `--capture
-stills`, `--capture pie`, `--capture bar`, or `--capture donut` for static
-media. Capture browser media from a local release build with `--url
-http://127.0.0.1:<port>/` before the public site has the change.
+stills`, `--capture pie`, `--capture bar`, `--capture donut`, `--capture
+scatter`, or `--capture synchronized` for static media. Capture browser media
+from a local release build with `--url http://127.0.0.1:<port>/` before the
+public site has the change.
 
-`--capture pie`, `--capture donut`, `--capture bar`, `--capture hero`, and
-`--capture interaction-still` do not take browser screenshots. They mount the
-same Gallery configurations in Flutter's deterministic test renderer, call
-`BravenChartController.capturePreview()`, load Flutter's bundled Roboto font,
-and write the returned PNG bytes. Composite Donut and chart-family strips are
-assembled from those native preview bytes in Flutter. The hero and interaction
-stills preserve transient tracking state. Browser recording remains
-appropriate for the animated interaction and live-stream GIFs.
+`--capture pie`, `--capture donut`, `--capture bar`, `--capture scatter`,
+`--capture synchronized`, `--capture hero`, and `--capture interaction-still`
+do not take browser screenshots. They mount the same Gallery configurations in
+Flutter's deterministic test renderer, call the native preview API for
+individual charts, load Flutter's bundled Roboto font, and write the returned
+PNG bytes. Multi-chart compositions use a deterministic Flutter
+`RepaintBoundary` because no single chart owns the complete image. Composite
+Donut and chart-family strips are assembled from native preview bytes in
+Flutter. The hero and interaction stills preserve transient tracking state.
+Browser recording remains appropriate for animated interaction and live-stream
+GIFs.
 
 ## Public showcase
 

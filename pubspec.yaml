@@ -1,8 +1,9 @@
 name: braven_charts
 description: >-
   Pure Dart Flutter line, area, bar, scatter, Pie, Donut, and Concentric Donut
-  charts with custom rendering, live data, annotations, tables, and generated Dart source.
-version: 0.8.0
+  charts with custom rendering, synchronized interaction, live data,
+  annotations, and Dart source.
+version: 0.9.0
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
@@ -21,13 +22,17 @@ screenshots:
       stage bands, target threshold, tracking, and a highlighted peak.
     path: doc/screenshots/hero_threshold.png
   - description: >-
+      Bubble Scatter chart combining position, area-correct size encoding,
+      distinct marker shapes, a quantitative size legend, and tracking.
+    path: doc/screenshots/scatter_market_opportunity.png
+  - description: >-
+      Three independently scaled Cartesian charts sharing a data-X cursor and
+      synchronized X viewport while retaining local Y axes.
+    path: doc/screenshots/synchronized_route_profile.png
+  - description: >-
       Grouped Bar chart with gradients, targets, uncertainty intervals,
       tracking tooltip, and durable point interaction.
     path: doc/screenshots/bar_targets_interaction.png
-  - description: >-
-      Waterfall Bar chart with positive and negative deltas, connector lines,
-      and a resolved total.
-    path: doc/screenshots/bar_waterfall.png
   - description: >-
       Dark Concentric Donut comparing three independent portfolio mandates with
       weighted rings, a shared center, radial gradients, and stable categories.
@@ -40,9 +45,6 @@ screenshots:
       Dark partial-sweep Donut with center content, compact labels, gradients,
       rounded slices, and a release-readiness status treatment.
     path: doc/screenshots/donut_release_progress.png
-  - description: >-
-      Point, range, and threshold annotations applied to a focused analysis.
-    path: doc/screenshots/gallery_annotated.png
   - description: >-
       Multi-series crosshair tracking across independently scaled line and
       area series.
