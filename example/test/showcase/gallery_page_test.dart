@@ -222,7 +222,7 @@ void main() {
     expect(find.byType(PortfolioAllocationGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('Four measures, four radial encodings'),
+      find.text('Three measures, three radial encodings'),
       500,
       scrollable: galleryScrollable,
     );
@@ -232,11 +232,26 @@ void main() {
       find.byKey(const ValueKey('gallery-donut-compositions')),
       findsOneWidget,
     );
-    expect(_gridCount(tester, 'gallery-donut-compositions'), 4);
+    expect(_gridCount(tester, 'gallery-donut-compositions'), 3);
     expect(find.byType(RevenueRingGalleryCard), findsOneWidget);
     expect(find.byType(DeliveryProgressGalleryCard), findsOneWidget);
     expect(find.byType(CampaignReachGalleryCard), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Independent totals, one shared radial pane'),
+      500,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const ValueKey('gallery-concentric-donut-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-concentric-donut-compositions'), 3);
     expect(find.byType(ConcentricMixGalleryCard), findsOneWidget);
+    expect(find.byType(ConcentricHealthGalleryCard), findsOneWidget);
+    expect(find.byType(ConcentricPortfolioGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('gallery-mode-control')),
@@ -260,7 +275,7 @@ void main() {
     expect(_gridCount(tester, 'gallery-advanced-full'), 11);
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 17);
   });
-  testWidgets('donut media panel reuses four product-shaped compositions', (
+  testWidgets('donut media panel reuses three product-shaped compositions', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -272,11 +287,10 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(BravenChartPlus), findsNWidgets(4));
+    expect(find.byType(BravenChartPlus), findsNWidgets(3));
     expect(find.text('Subscription MRR'), findsOneWidget);
     expect(find.text('Release readiness'), findsOneWidget);
     expect(find.text('Channel efficiency'), findsOneWidget);
-    expect(find.text('Revenue mix over time'), findsOneWidget);
     final charts = tester
         .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
         .toList(growable: false);
@@ -286,11 +300,45 @@ void main() {
       ),
       isTrue,
     );
-    expect(charts.map((chart) => chart.series.length), [1, 1, 1, 3]);
+    expect(charts.map((chart) => chart.series.length), [1, 1, 1]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('concentric media panel presents three distinct compositions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: ConcentricDonutGalleryMediaPanel()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(BravenChartPlus), findsNWidgets(3));
+    expect(find.text('Revenue mix over time'), findsOneWidget);
+    expect(find.text('Service-level health'), findsOneWidget);
+    expect(find.text('Portfolio allocation'), findsOneWidget);
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(charts.map((chart) => chart.series.length), [3, 3, 3]);
     expect(
-      charts.last.concentricDonutConfig.ringWeights,
+      charts.first.concentricDonutConfig.ringWeights,
       containsPair('gallery-concentric-current', 1.2),
     );
+    final health = charts[1].series.first as DonutChartSeries;
+    expect(health.donutStyle.sweepAngleDegrees, 270);
+    final portfolioCard = tester.widget<Card>(
+      find.ancestor(
+        of: find.text('Portfolio allocation'),
+        matching: find.byType(Card),
+      ),
+    );
+    expect(portfolioCard.color, const Color(0xFF101827));
     expect(tester.takeException(), isNull);
   });
 

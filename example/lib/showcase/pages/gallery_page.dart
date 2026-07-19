@@ -290,10 +290,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'DONUT COMPOSITIONS',
-              title: 'Four measures, four radial encodings',
+              title: 'Three measures, three radial encodings',
               subtitle:
-                  'Compare subscription mix, release readiness, channel efficiency, and independent period totals with selection-aware center content.',
-              count: 4,
+                  'Compare subscription mix, release readiness, and channel efficiency with selection-aware center content.',
+              count: 3,
             ),
           ),
           SliverPadding(
@@ -307,6 +307,28 @@ class _GalleryPageState extends State<GalleryPage> {
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate(donutGalleryCards),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'CONCENTRIC DONUT COMPOSITIONS',
+              title: 'Independent totals, one shared radial pane',
+              subtitle:
+                  'Compare time periods, regional service health, and weighted portfolio mandates without forcing the rings onto one total.',
+              count: 3,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+            sliver: SliverGrid(
+              key: const ValueKey('gallery-concentric-donut-compositions'),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 760,
+                mainAxisExtent: 420,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate(concentricDonutGalleryCards),
             ),
           ),
         ],
