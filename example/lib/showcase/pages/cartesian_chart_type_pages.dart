@@ -13,6 +13,12 @@ import '../widgets/standard_options.dart';
 
 enum _CartesianFamily { line, area, scatter }
 
+enum _ScatterFillTone { indigo, teal, coral, amber }
+
+enum _ScatterColorRamp { readiness, thermal, coolWarm }
+
+enum _ScatterRiskPalette { safety, thermal, service }
+
 class LineChartsPage extends StatelessWidget {
   const LineChartsPage({super.key});
 
@@ -67,6 +73,23 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _markerRadius = 5;
   double _lineMarkerRadius = 3;
   DataPointMarkerStyle _lineMarkerStyle = DataPointMarkerStyle.filled;
+  SeriesMarkerShape _scatterMarkerShape = SeriesMarkerShape.circle;
+  _ScatterFillTone _scatterFillTone = _ScatterFillTone.indigo;
+  double _scatterMarkerWidth = 18;
+  double _scatterMarkerHeight = 10;
+  double _scatterMarkerStrokeWidth = 2;
+  double _scatterMarkerOpacity = 0.82;
+  double _scatterMarkerRotation = 24;
+  double _scatterSelectionScale = 1.45;
+  double _scatterDimmedOpacity = 0.22;
+  double _scatterFocusGap = 5;
+  double _scatterBubbleMinimumRadius = 4;
+  double _scatterBubbleMaximumRadius = 24;
+  _ScatterColorRamp _scatterColorRamp = _ScatterColorRamp.readiness;
+  _ScatterRiskPalette _scatterRiskPalette = _ScatterRiskPalette.safety;
+  double _scatterMinimumOpacity = 0.18;
+  int _scatterPointCount = 10000;
+  int _scatterSeriesCount = 3;
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
@@ -293,17 +316,74 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _ChartTypePreset(
         label: 'Cohorts',
         icon: Icons.groups_outlined,
-        description: 'Two populations use distinct size and colour.',
+        description:
+            'Olympic athlete height and body mass reveal sport-specific profiles.',
       ),
       _ChartTypePreset(
         label: 'Correlation',
         icon: Icons.trending_up,
-        description: 'A trend annotation summarizes the relationship.',
+        description:
+            'Weekly training load and 20-minute power show a measurable relationship.',
       ),
       _ChartTypePreset(
         label: 'Outliers',
         icon: Icons.crisis_alert_outlined,
-        description: 'Point-level styling makes unusual observations explicit.',
+        description:
+            'Glucose sensor agreement makes exception readings immediately visible.',
+      ),
+      _ChartTypePreset(
+        label: 'Shapes',
+        icon: Icons.category_outlined,
+        description:
+            'Marker silhouettes separate cohorts without relying on colour.',
+      ),
+      _ChartTypePreset(
+        label: 'Styling',
+        icon: Icons.palette_outlined,
+        description:
+            'Fill, outline, dimensions, opacity, and rotation form one marker style.',
+      ),
+      _ChartTypePreset(
+        label: 'Stress',
+        icon: Icons.speed,
+        description:
+            'Large ordered cohorts exercise viewport culling and indexed hits.',
+      ),
+      _ChartTypePreset(
+        label: 'Unsorted',
+        icon: Icons.shuffle,
+        description:
+            'Source order is deliberately shuffled without changing point identity.',
+      ),
+      _ChartTypePreset(
+        label: 'States',
+        icon: Icons.ads_click_outlined,
+        description:
+            'Hover, press, focus, and durable selection remain visually distinct.',
+      ),
+      _ChartTypePreset(
+        label: 'Bubble',
+        icon: Icons.bubble_chart_outlined,
+        description:
+            'Growth and retention position each market while active accounts control marker area.',
+      ),
+      _ChartTypePreset(
+        label: 'Color scale',
+        icon: Icons.gradient_outlined,
+        description:
+            'Training load and power locate each athlete while recovery readiness drives a continuous color scale.',
+      ),
+      _ChartTypePreset(
+        label: 'Bands',
+        icon: Icons.view_column_outlined,
+        description:
+            'Vibration and bearing temperature locate each asset while a piecewise risk score assigns explicit operating bands.',
+      ),
+      _ChartTypePreset(
+        label: 'Opacity',
+        icon: Icons.opacity_outlined,
+        description:
+            'Forecast horizon and demand locate each estimate while model confidence controls marker opacity.',
       ),
     ],
   };
@@ -344,6 +424,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 selected: {_presetIndex},
                 onSelectionChanged: (selection) {
                   _interactionGroupController.reset();
+                  _chartController.clearPointFocus();
+                  _chartController.clearPointSelection();
                   setState(() {
                     _presetIndex = selection.single;
                     _resetMotionData();
@@ -402,7 +484,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           );
         }
         return ChartCard(
-          title: _presets[_presetIndex].label,
+          title: _chartTitle,
           subtitle: _chartSummary,
           padding: const EdgeInsets.all(8),
           child: BravenChartWorkbench(
@@ -493,19 +575,130 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _CartesianFamily.area =>
       '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
     _CartesianFamily.scatter =>
-      '${_buildSeries().length} cohorts · ${_markerRadius.toStringAsFixed(0)}px markers · tracking enabled',
+      _presetIndex == 8
+          ? 'X: revenue growth · Y: customer retention · Bubble area: active accounts · Shape: market type'
+          : _presetIndex == 9
+          ? 'X: weekly load · Y: 20-minute power · Marker color: recovery readiness · Shape: training block'
+          : _presetIndex == 10
+          ? 'X: vibration · Y: bearing temperature · Marker color: discrete risk band · Threshold equality enters the higher band'
+          : _presetIndex == 11
+          ? 'X: forecast horizon · Y: expected demand · Marker opacity: model confidence · Shape: forecast model'
+          : '$_scatterEffectiveSeriesCount series · $_scatterRawPointCount observations · ${_presetIndex == 4 ? '${_scatterMarkerWidth.toStringAsFixed(0)}×${_scatterMarkerHeight.toStringAsFixed(0)}px styled markers' : '${_markerRadius.toStringAsFixed(0)}px markers'} · ${_presetIndex == 0 || _presetIndex == 3 || _presetIndex == 4 || _presetIndex == 7 ? 'mixed shapes' : _formatMarkerShape(_scatterMarkerShape).toLowerCase()} · ${_presetIndex == 7 ? 'selection-aware states' : 'indexed 2D tracking'}',
   };
+
+  String get _chartTitle {
+    if (widget.family != _CartesianFamily.scatter) {
+      return _presets[_presetIndex].label;
+    }
+    return switch (_presetIndex) {
+      0 => 'Olympic athlete profiles',
+      1 => 'Training load and 20-minute power',
+      2 => 'Glucose sensor agreement',
+      3 => 'Marker shape catalogue',
+      4 => 'Product channel performance',
+      5 => 'Dense cohort stress test',
+      6 => 'Unsorted source order',
+      7 => 'Interactive point states',
+      8 => 'Market opportunity map',
+      9 => 'Athlete readiness map',
+      10 => 'Equipment risk map',
+      11 => 'Demand forecast confidence',
+      _ => _presets[_presetIndex].label,
+    };
+  }
+
+  int get _scatterEffectiveSeriesCount => _presetIndex == 0
+      ? (_showSecondSeries ? 3 : 1)
+      : _presetIndex == 3
+      ? _visibleScatterShapeCount
+      : _presetIndex == 4
+      ? 3
+      : _presetIndex == 7
+      ? 2
+      : _presetIndex == 8
+      ? 2
+      : _presetIndex == 9
+      ? 2
+      : _presetIndex == 10
+      ? 1
+      : _presetIndex == 11
+      ? 2
+      : _presetIndex == 5 || _presetIndex == 6
+      ? _scatterSeriesCount
+      : (_showSecondSeries ? 2 : 1);
+
+  int get _scatterRawPointCount {
+    if (_presetIndex == 0) {
+      return _scatterTriathlon.length +
+          (_showSecondSeries
+              ? _scatterVolleyball.length + _scatterBasketball.length
+              : 0);
+    }
+    if (_presetIndex == 1) {
+      return _scatterTrainingBase.length +
+          (_showSecondSeries ? _scatterTrainingBuild.length : 0);
+    }
+    if (_presetIndex == 2) {
+      return _scatterSensorExpected.length +
+          (_showSecondSeries ? _scatterSensorReview.length : 0);
+    }
+    if (_presetIndex == 3) return _visibleScatterShapeCount * 12;
+    if (_presetIndex == 4) return 3 * 12;
+    if (_presetIndex == 5 || _presetIndex == 6) {
+      return _scatterSeriesCount * _scatterPointCount;
+    }
+    if (_presetIndex == 7) return 24;
+    if (_presetIndex == 8) {
+      return _scatterEnterpriseMarkets.length + _scatterGrowthMarkets.length;
+    }
+    if (_presetIndex == 9) {
+      return _scatterReadyAthletes.length + _scatterFatiguedAthletes.length;
+    }
+    if (_presetIndex == 10) return _scatterEquipmentRisk.length;
+    if (_presetIndex == 11) {
+      return _scatterBaselineForecast.length + _scatterAdaptiveForecast.length;
+    }
+    return 0;
+  }
+
+  int get _visibleScatterShapeCount => SeriesMarkerShape.values
+      .where((shape) => shape != SeriesMarkerShape.none)
+      .length;
 
   String get _xAxisLabel => switch (widget.family) {
     _CartesianFamily.line => _isLineForecast ? 'Hour' : 'Elapsed interval',
     _CartesianFamily.area => 'Period',
-    _CartesianFamily.scatter => 'Input',
+    _CartesianFamily.scatter => switch (_presetIndex) {
+      0 => 'Height (cm)',
+      1 => 'Weekly training load (TSS)',
+      2 => 'Reference glucose (mmol/L)',
+      3 => 'Observation',
+      4 => 'Conversion rate (%)',
+      7 => 'Release week',
+      8 => 'Revenue growth (%)',
+      9 => 'Weekly training load (TSS)',
+      10 => 'Vibration (mm/s)',
+      11 => 'Forecast horizon (days)',
+      _ => 'Input',
+    },
   };
 
   String get _yAxisLabel => switch (widget.family) {
     _CartesianFamily.line => _isLineForecast ? 'Temperature (°C)' : 'Value',
     _CartesianFamily.area => 'Magnitude',
-    _CartesianFamily.scatter => 'Outcome',
+    _CartesianFamily.scatter => switch (_presetIndex) {
+      0 => 'Body mass (kg)',
+      1 => '20-minute power (W)',
+      2 => 'Sensor reading (mmol/L)',
+      3 => 'Cohort band',
+      4 => 'Average order value (USD)',
+      7 => 'Activation rate (%)',
+      8 => 'Customer retention (%)',
+      9 => '20-minute power (W)',
+      10 => 'Bearing temperature (°C)',
+      11 => 'Expected demand (k units)',
+      _ => 'Outcome',
+    },
   };
 
   List<Widget> _buildOptions() {
@@ -555,7 +748,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 2,
           onChanged: (value) => setState(() => _fillOpacity = value),
         ),
-      if (widget.family == _CartesianFamily.scatter)
+      if (widget.family == _CartesianFamily.scatter &&
+          _presetIndex != 4 &&
+          _presetIndex != 8)
         SliderOption(
           label: 'Marker radius',
           value: _markerRadius,
@@ -590,10 +785,113 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 1,
           onChanged: (value) => setState(() => _lineMarkerRadius = value),
         ),
-      if (!_isLineForecast && !_isLineSynchronized)
+      if (widget.family == _CartesianFamily.scatter &&
+          _presetIndex != 0 &&
+          _presetIndex != 3 &&
+          _presetIndex != 4 &&
+          _presetIndex != 7 &&
+          _presetIndex != 8 &&
+          _presetIndex != 9 &&
+          _presetIndex != 10 &&
+          _presetIndex != 11)
+        EnumOption<SeriesMarkerShape>(
+          label: 'Marker shape',
+          value: _scatterMarkerShape,
+          values: SeriesMarkerShape.values
+              .where((shape) => shape != SeriesMarkerShape.none)
+              .toList(),
+          labelBuilder: _formatMarkerShape,
+          onChanged: (value) => setState(() => _scatterMarkerShape = value),
+        ),
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 4) ...[
+        EnumOption<_ScatterFillTone>(
+          label: 'Fill tone',
+          value: _scatterFillTone,
+          values: _ScatterFillTone.values,
+          labelBuilder: _formatScatterFillTone,
+          onChanged: (value) => setState(() => _scatterFillTone = value),
+        ),
+        SliderOption(
+          label: 'Marker width',
+          value: _scatterMarkerWidth,
+          min: 4,
+          max: 28,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _scatterMarkerWidth = value),
+        ),
+        SliderOption(
+          label: 'Marker height',
+          value: _scatterMarkerHeight,
+          min: 4,
+          max: 28,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _scatterMarkerHeight = value),
+        ),
+        SliderOption(
+          label: 'Outline width',
+          value: _scatterMarkerStrokeWidth,
+          min: 0,
+          max: 6,
+          divisions: 6,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) =>
+              setState(() => _scatterMarkerStrokeWidth = value),
+        ),
+        SliderOption(
+          key: const ValueKey('scatter-styling-opacity'),
+          label: 'Opacity',
+          value: _scatterMarkerOpacity,
+          min: 0.2,
+          max: 1,
+          divisions: 8,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _scatterMarkerOpacity = value),
+        ),
+        SliderOption(
+          label: 'Rotation',
+          value: _scatterMarkerRotation,
+          min: 0,
+          max: 180,
+          divisions: 12,
+          suffix: '°',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _scatterMarkerRotation = value),
+        ),
+      ],
+      if (widget.family == _CartesianFamily.scatter &&
+          (_presetIndex == 5 || _presetIndex == 6))
+        EnumOption<int>(
+          label: 'Points per series',
+          value: _scatterPointCount,
+          values: const [100, 1000, 10000, 50000, 100000],
+          labelBuilder: _formatPointCount,
+          onChanged: (value) => setState(() => _scatterPointCount = value),
+        ),
+      if (widget.family == _CartesianFamily.scatter &&
+          (_presetIndex == 5 || _presetIndex == 6))
+        IntSliderOption(
+          label: 'Series count',
+          value: _scatterSeriesCount,
+          min: 1,
+          max: 6,
+          onChanged: (value) => setState(() => _scatterSeriesCount = value),
+        ),
+      if (!_isLineForecast &&
+          !_isLineSynchronized &&
+          (widget.family != _CartesianFamily.scatter || _presetIndex < 3))
         BoolOption(
           label: widget.family == _CartesianFamily.scatter
-              ? 'Show second cohort'
+              ? switch (_presetIndex) {
+                  0 => 'Show comparison sports',
+                  1 => 'Show build block',
+                  2 => 'Show review readings',
+                  _ => 'Show second cohort',
+                }
               : 'Show second series',
           value: _showSecondSeries,
           onChanged: (value) => setState(() => _showSecondSeries = value),
@@ -618,6 +916,99 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           value: _useAreaGradient,
           onChanged: (value) => setState(() => _useAreaGradient = value),
           subtitle: 'Blend configured colors across the plot',
+        ),
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 7) ...[
+        SliderOption(
+          label: 'Selection scale',
+          value: _scatterSelectionScale,
+          min: 1,
+          max: 2,
+          divisions: 10,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _scatterSelectionScale = value),
+        ),
+        SliderOption(
+          label: 'Unselected opacity',
+          value: _scatterDimmedOpacity,
+          min: 0.1,
+          max: 1,
+          divisions: 9,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _scatterDimmedOpacity = value),
+        ),
+        SliderOption(
+          label: 'Focus ring gap',
+          value: _scatterFocusGap,
+          min: 1,
+          max: 10,
+          divisions: 9,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _scatterFocusGap = value),
+        ),
+      ],
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 8) ...[
+        SliderOption(
+          key: const ValueKey('scatter-bubble-minimum-radius'),
+          label: 'Small bubble',
+          value: _scatterBubbleMinimumRadius,
+          min: 2,
+          max: 10,
+          divisions: 8,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) =>
+              setState(() => _scatterBubbleMinimumRadius = value),
+        ),
+        SliderOption(
+          key: const ValueKey('scatter-bubble-maximum-radius'),
+          label: 'Large bubble',
+          value: _scatterBubbleMaximumRadius,
+          min: 12,
+          max: 36,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) =>
+              setState(() => _scatterBubbleMaximumRadius = value),
+        ),
+      ],
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 9)
+        EnumOption<_ScatterColorRamp>(
+          key: const ValueKey('scatter-color-ramp'),
+          label: 'Color ramp',
+          value: _scatterColorRamp,
+          values: _ScatterColorRamp.values,
+          labelBuilder: (value) => switch (value) {
+            _ScatterColorRamp.readiness => 'Readiness',
+            _ScatterColorRamp.thermal => 'Thermal',
+            _ScatterColorRamp.coolWarm => 'Cool–warm',
+          },
+          onChanged: (value) => setState(() => _scatterColorRamp = value),
+        ),
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 10)
+        EnumOption<_ScatterRiskPalette>(
+          key: const ValueKey('scatter-risk-palette'),
+          label: 'Band palette',
+          value: _scatterRiskPalette,
+          values: _ScatterRiskPalette.values,
+          labelBuilder: (value) => switch (value) {
+            _ScatterRiskPalette.safety => 'Safety',
+            _ScatterRiskPalette.thermal => 'Thermal',
+            _ScatterRiskPalette.service => 'Service',
+          },
+          onChanged: (value) => setState(() => _scatterRiskPalette = value),
+        ),
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 11)
+        SliderOption(
+          key: const ValueKey('scatter-minimum-opacity'),
+          label: 'Low-confidence opacity',
+          value: _scatterMinimumOpacity,
+          min: 0.05,
+          max: 0.6,
+          divisions: 11,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _scatterMinimumOpacity = value),
         ),
     ];
 
@@ -663,6 +1054,43 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               subtitle: 'Mark each local curve at the shared X position',
               onChanged: (value) =>
                   setState(() => _showSynchronizedIntersections = value),
+            ),
+          ],
+        ),
+      if (widget.family == _CartesianFamily.scatter && _presetIndex == 7)
+        OptionSection(
+          title: 'Point state',
+          icon: Icons.ads_click_outlined,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: const ValueKey('scatter-select-sample'),
+                  onPressed: _selectScatterSample,
+                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  label: const Text('Select sample'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('scatter-focus-sample'),
+                  onPressed: _focusScatterSample,
+                  icon: const Icon(Icons.center_focus_strong, size: 18),
+                  label: const Text('Focus sample'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('scatter-clear-states'),
+                  onPressed: _clearScatterStates,
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear'),
+                ),
+              ],
+            ),
+            Text(
+              'Move over or press a point in the chart to compare transient states.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -1305,24 +1733,529 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   ];
 
   List<ChartSeries> _buildScatterSeries() {
-    final primary = ScatterChartSeries(
-      id: 'cohort-a',
-      name: _presetIndex == 2 ? 'Expected' : 'Cohort A',
-      points: _scatterPrimary,
-      color: const Color(0xFF8B5CF6),
-      markerRadius: _markerRadius,
-    );
-    final secondary = ScatterChartSeries(
-      id: 'cohort-b',
-      name: _presetIndex == 2 ? 'Review' : 'Cohort B',
-      points: _presetIndex == 2 ? _scatterOutliers : _scatterSecondary,
-      color: _presetIndex == 2
-          ? const Color(0xFFEF4444)
-          : const Color(0xFFF97316),
-      markerRadius: _presetIndex == 2 ? _markerRadius + 2 : _markerRadius - 1,
-    );
-    return [primary, if (_showSecondSeries) secondary];
+    if (_presetIndex == 3) return _buildScatterShapeSeries();
+    if (_presetIndex == 4) return _buildScatterStylingSeries();
+    if (_presetIndex == 7) return _buildScatterStateSeries();
+    if (_presetIndex == 8) return _buildScatterBubbleSeries();
+    if (_presetIndex == 9) return _buildScatterColorSeries();
+    if (_presetIndex == 10) return _buildScatterRiskSeries();
+    if (_presetIndex == 11) return _buildScatterOpacitySeries();
+    if (_presetIndex == 5 || _presetIndex == 6) {
+      const colors = [
+        Color(0xFF2563EB),
+        Color(0xFFF97316),
+        Color(0xFF0F9F8F),
+        Color(0xFF8B5CF6),
+        Color(0xFFE11D48),
+        Color(0xFFD69E00),
+      ];
+      final unordered = _presetIndex == 6;
+      return [
+        for (
+          var seriesIndex = 0;
+          seriesIndex < _scatterSeriesCount;
+          seriesIndex++
+        )
+          ScatterChartSeries(
+            id: 'scatter-${unordered ? 'unsorted' : 'stress'}-$seriesIndex',
+            name: 'Cohort ${seriesIndex + 1}',
+            points: _generatedScatterPoints(
+              seriesIndex: seriesIndex,
+              pointCount: _scatterPointCount,
+              unordered: unordered,
+            ),
+            color: colors[seriesIndex % colors.length],
+            markerRadius: _markerRadius,
+            markerShape: _scatterMarkerShape,
+            isXOrdered: !unordered,
+          ),
+      ];
+    }
+    if (_presetIndex == 0) {
+      return [
+        ScatterChartSeries(
+          id: 'athletes-triathlon',
+          name: 'Triathlon',
+          points: _scatterTriathlon,
+          color: const Color(0xFF0EA5E9),
+          markerRadius: _markerRadius,
+          markerShape: SeriesMarkerShape.triangle,
+          isXOrdered: true,
+        ),
+        if (_showSecondSeries) ...[
+          ScatterChartSeries(
+            id: 'athletes-volleyball',
+            name: 'Volleyball',
+            points: _scatterVolleyball,
+            color: const Color(0xFF6366F1),
+            markerRadius: _markerRadius,
+            markerShape: SeriesMarkerShape.square,
+            isXOrdered: true,
+          ),
+          ScatterChartSeries(
+            id: 'athletes-basketball',
+            name: 'Basketball',
+            points: _scatterBasketball,
+            color: const Color(0xFF10B981),
+            markerRadius: _markerRadius,
+            markerShape: SeriesMarkerShape.circle,
+            isXOrdered: true,
+          ),
+        ],
+      ];
+    }
+    if (_presetIndex == 1) {
+      return [
+        ScatterChartSeries(
+          id: 'training-base',
+          name: 'Base block',
+          points: _scatterTrainingBase,
+          color: const Color(0xFF2563EB),
+          markerRadius: _markerRadius,
+          markerShape: _scatterMarkerShape,
+          isXOrdered: true,
+        ),
+        if (_showSecondSeries)
+          ScatterChartSeries(
+            id: 'training-build',
+            name: 'Build block',
+            points: _scatterTrainingBuild,
+            color: const Color(0xFFF97316),
+            markerRadius: _markerRadius - 1,
+            markerShape: _scatterMarkerShape,
+            isXOrdered: true,
+          ),
+      ];
+    }
+    return [
+      ScatterChartSeries(
+        id: 'sensor-expected',
+        name: 'Within tolerance',
+        points: _scatterSensorExpected,
+        color: const Color(0xFF0F9F8F),
+        markerRadius: _markerRadius,
+        markerShape: _scatterMarkerShape,
+        isXOrdered: true,
+      ),
+      if (_showSecondSeries)
+        ScatterChartSeries(
+          id: 'sensor-review',
+          name: 'Review',
+          points: _scatterSensorReview,
+          color: const Color(0xFFE11D48),
+          markerRadius: _markerRadius + 2,
+          markerShape: SeriesMarkerShape.diamond,
+          isXOrdered: true,
+        ),
+    ];
   }
+
+  List<ChartSeries> _buildScatterShapeSeries() {
+    const shapes = [
+      SeriesMarkerShape.circle,
+      SeriesMarkerShape.square,
+      SeriesMarkerShape.triangle,
+      SeriesMarkerShape.invertedTriangle,
+      SeriesMarkerShape.diamond,
+      SeriesMarkerShape.star,
+      SeriesMarkerShape.cross,
+      SeriesMarkerShape.plus,
+    ];
+    const colors = [
+      Color(0xFF2563EB),
+      Color(0xFFF97316),
+      Color(0xFF0F9F8F),
+      Color(0xFF0891B2),
+      Color(0xFF8B5CF6),
+      Color(0xFFE11D48),
+      Color(0xFFD69E00),
+      Color(0xFF475569),
+    ];
+    return [
+      for (var seriesIndex = 0; seriesIndex < shapes.length; seriesIndex++)
+        ScatterChartSeries(
+          id: 'scatter-shape-${shapes[seriesIndex].name}',
+          name: _formatMarkerShape(shapes[seriesIndex]),
+          color: colors[seriesIndex],
+          markerRadius: _markerRadius,
+          markerShape: shapes[seriesIndex],
+          isXOrdered: true,
+          points: [
+            for (var pointIndex = 0; pointIndex < 12; pointIndex++)
+              ChartDataPoint(
+                x: pointIndex.toDouble(),
+                y:
+                    18 +
+                    seriesIndex * 9 +
+                    math.sin(pointIndex * 0.8 + seriesIndex) * 2.4,
+              ),
+          ],
+        ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterStylingSeries() {
+    final fill = switch (_scatterFillTone) {
+      _ScatterFillTone.indigo => const Color(0xFF6366F1),
+      _ScatterFillTone.teal => const Color(0xFF0F9F8F),
+      _ScatterFillTone.coral => const Color(0xFFF97360),
+      _ScatterFillTone.amber => const Color(0xFFD69E00),
+    };
+    const strokes = [Color(0xFF1E293B), Color(0xFF0F766E), Color(0xFF9F1239)];
+    const shapes = [
+      SeriesMarkerShape.square,
+      SeriesMarkerShape.diamond,
+      SeriesMarkerShape.triangle,
+    ];
+    const channelNames = ['Web', 'Retail', 'Partner'];
+    const channelPoints = [
+      _scatterWebChannel,
+      _scatterRetailChannel,
+      _scatterPartnerChannel,
+    ];
+    return [
+      for (var seriesIndex = 0; seriesIndex < 3; seriesIndex++)
+        ScatterChartSeries(
+          id: 'scatter-styling-$seriesIndex',
+          name: channelNames[seriesIndex],
+          color: strokes[seriesIndex],
+          markerRadius: _markerRadius,
+          markerShape: shapes[seriesIndex],
+          markerStyle: ScatterMarkerStyle(
+            fillColor: fill.withValues(alpha: 0.82 + seriesIndex * 0.06),
+            strokeColor: strokes[seriesIndex],
+            strokeWidth: _scatterMarkerStrokeWidth,
+            opacity: _scatterMarkerOpacity,
+            width: _scatterMarkerWidth,
+            height: _scatterMarkerHeight,
+            rotationDegrees: _scatterMarkerRotation + seriesIndex * 18,
+          ),
+          isXOrdered: true,
+          points: [
+            for (
+              var pointIndex = 0;
+              pointIndex < channelPoints[seriesIndex].length;
+              pointIndex++
+            )
+              channelPoints[seriesIndex][pointIndex].copyWith(
+                pointStyle: pointIndex == 6
+                    ? PointStyle(
+                        scatterMarkerShape: SeriesMarkerShape.star,
+                        scatterMarkerStyle: ScatterMarkerStyle(
+                          fillColor: const Color(0xFFFFFFFF),
+                          strokeColor: strokes[seriesIndex],
+                          strokeWidth: _scatterMarkerStrokeWidth + 1,
+                          width: _scatterMarkerWidth + 6,
+                          height: _scatterMarkerHeight + 6,
+                          rotationDegrees:
+                              _scatterMarkerRotation + seriesIndex * 18,
+                        ),
+                      )
+                    : null,
+              ),
+          ],
+        ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterStateSeries() {
+    final interactionStyle = ScatterInteractionStyle(
+      hoverColor: const Color(0xFF0F172A),
+      hoverScale: 1.55,
+      hoverStrokeWidth: 2.5,
+      pressedColor: const Color(0xFF0F172A),
+      pressedScale: 1.18,
+      selectionColor: const Color(0xFF4F46E5),
+      selectionScale: _scatterSelectionScale,
+      selectionStrokeWidth: 3,
+      focusColor: const Color(0xFF0F172A),
+      focusGap: _scatterFocusGap,
+      focusStrokeWidth: 2.5,
+      dimmedOpacity: _scatterDimmedOpacity,
+    );
+    return [
+      ScatterChartSeries(
+        id: 'scatter-state-current',
+        name: 'Current release',
+        points: _scatterStateCurrent,
+        color: const Color(0xFF0F9F8F),
+        markerRadius: _markerRadius,
+        markerShape: SeriesMarkerShape.circle,
+        interactionStyle: interactionStyle,
+        isXOrdered: true,
+      ),
+      ScatterChartSeries(
+        id: 'scatter-state-previous',
+        name: 'Previous release',
+        points: _scatterStatePrevious,
+        color: const Color(0xFFF97360),
+        markerRadius: _markerRadius,
+        markerShape: SeriesMarkerShape.diamond,
+        interactionStyle: interactionStyle,
+        isXOrdered: true,
+      ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterBubbleSeries() {
+    final encoding = ScatterSizeEncoding(
+      minimumRadius: _scatterBubbleMinimumRadius,
+      maximumRadius: _scatterBubbleMaximumRadius,
+      minimumValue: 95,
+      maximumValue: 600,
+      label: 'Active accounts',
+    );
+    return [
+      ScatterChartSeries(
+        id: 'bubble-enterprise',
+        name: 'Enterprise',
+        points: _scatterEnterpriseMarkets,
+        color: const Color(0xFF0F9F8F),
+        markerShape: SeriesMarkerShape.circle,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFF0F766E),
+          strokeWidth: 1.5,
+          opacity: 0.72,
+        ),
+        sizeEncoding: encoding,
+        isXOrdered: true,
+      ),
+      ScatterChartSeries(
+        id: 'bubble-growth',
+        name: 'Growth market',
+        points: _scatterGrowthMarkets,
+        color: const Color(0xFFF97360),
+        markerShape: SeriesMarkerShape.diamond,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFFBE4937),
+          strokeWidth: 1.5,
+          opacity: 0.72,
+        ),
+        sizeEncoding: encoding,
+        isXOrdered: true,
+      ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterColorSeries() {
+    final colors = switch (_scatterColorRamp) {
+      _ScatterColorRamp.readiness => const [
+        Color(0xFFDC2626),
+        Color(0xFFF59E0B),
+        Color(0xFF16A34A),
+      ],
+      _ScatterColorRamp.thermal => const [
+        Color(0xFF312E81),
+        Color(0xFF2563EB),
+        Color(0xFFFACC15),
+        Color(0xFFDC2626),
+      ],
+      _ScatterColorRamp.coolWarm => const [
+        Color(0xFF2563EB),
+        Color(0xFFF8FAFC),
+        Color(0xFFE11D48),
+      ],
+    };
+    final encoding = ScatterColorEncoding(
+      colors: colors,
+      minimumValue: 45,
+      maximumValue: 95,
+      label: 'Recovery readiness',
+      unit: '%',
+    );
+    return [
+      ScatterChartSeries(
+        id: 'readiness-base',
+        name: 'Base block',
+        points: _scatterReadyAthletes,
+        markerRadius: _markerRadius,
+        markerShape: SeriesMarkerShape.circle,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFFFFFFFF),
+          strokeWidth: 1.25,
+          opacity: 0.9,
+        ),
+        colorEncoding: encoding,
+        isXOrdered: true,
+      ),
+      ScatterChartSeries(
+        id: 'readiness-build',
+        name: 'Build block',
+        points: _scatterFatiguedAthletes,
+        markerRadius: _markerRadius,
+        markerShape: SeriesMarkerShape.diamond,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFFFFFFFF),
+          strokeWidth: 1.25,
+          opacity: 0.9,
+        ),
+        colorEncoding: encoding,
+        isXOrdered: true,
+      ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterRiskSeries() {
+    final colors = switch (_scatterRiskPalette) {
+      _ScatterRiskPalette.safety => const [
+        Color(0xFF16A34A),
+        Color(0xFFEAB308),
+        Color(0xFFF97316),
+        Color(0xFFDC2626),
+      ],
+      _ScatterRiskPalette.thermal => const [
+        Color(0xFF0284C7),
+        Color(0xFF14B8A6),
+        Color(0xFFF59E0B),
+        Color(0xFFB91C1C),
+      ],
+      _ScatterRiskPalette.service => const [
+        Color(0xFF2563EB),
+        Color(0xFF8B5CF6),
+        Color(0xFFE11D48),
+        Color(0xFF7F1D1D),
+      ],
+    };
+    return [
+      ScatterChartSeries(
+        id: 'equipment-risk',
+        name: 'Monitored assets',
+        points: _scatterEquipmentRisk,
+        color: const Color(0xFF64748B),
+        markerRadius: _markerRadius + 1,
+        markerShape: SeriesMarkerShape.circle,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFFFFFFFF),
+          strokeWidth: 1.5,
+          opacity: 0.94,
+        ),
+        colorEncoding: ScatterColorEncoding(
+          colors: colors,
+          scaleType: ScatterColorScaleType.piecewise,
+          thresholds: const [35, 60, 80],
+          bandLabels: const ['Normal', 'Monitor', 'Warning', 'Critical'],
+          minimumValue: 0,
+          maximumValue: 100,
+          label: 'Equipment risk',
+          unit: '%',
+        ),
+        isXOrdered: true,
+      ),
+    ];
+  }
+
+  List<ChartSeries> _buildScatterOpacitySeries() {
+    final encoding = ScatterOpacityEncoding(
+      minimumOpacity: _scatterMinimumOpacity,
+      maximumOpacity: 1,
+      minimumValue: 45,
+      maximumValue: 98,
+      label: 'Model confidence',
+      unit: '%',
+    );
+    return [
+      ScatterChartSeries(
+        id: 'forecast-baseline',
+        name: 'Seasonal baseline',
+        points: _scatterBaselineForecast,
+        color: const Color(0xFF2563EB),
+        markerRadius: _markerRadius + 1,
+        markerShape: SeriesMarkerShape.circle,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFF1D4ED8),
+          strokeWidth: 1.25,
+        ),
+        opacityEncoding: encoding,
+        isXOrdered: true,
+      ),
+      ScatterChartSeries(
+        id: 'forecast-adaptive',
+        name: 'Adaptive model',
+        points: _scatterAdaptiveForecast,
+        color: const Color(0xFFF97316),
+        markerRadius: _markerRadius + 1,
+        markerShape: SeriesMarkerShape.diamond,
+        markerStyle: const ScatterMarkerStyle(
+          strokeColor: Color(0xFFC2410C),
+          strokeWidth: 1.25,
+        ),
+        opacityEncoding: encoding,
+        isXOrdered: true,
+      ),
+    ];
+  }
+
+  void _selectScatterSample() {
+    final revision = _chartController.effectiveDocumentRevision.value;
+    if (revision == null) return;
+    _chartController.selectPoint(
+      const ChartPointRef(seriesId: 'scatter-state-current', pointIndex: 6),
+      revision: revision,
+    );
+  }
+
+  void _focusScatterSample() {
+    final revision = _chartController.effectiveDocumentRevision.value;
+    if (revision == null) return;
+    _chartController.focusPoint(
+      const ChartPointRef(seriesId: 'scatter-state-previous', pointIndex: 8),
+      revision: revision,
+    );
+  }
+
+  void _clearScatterStates() {
+    _chartController.clearPointFocus();
+    _chartController.clearPointSelection();
+  }
+
+  String _formatMarkerShape(SeriesMarkerShape shape) => switch (shape) {
+    SeriesMarkerShape.circle => 'Circle',
+    SeriesMarkerShape.square => 'Square',
+    SeriesMarkerShape.triangle => 'Triangle',
+    SeriesMarkerShape.invertedTriangle => 'Inverted triangle',
+    SeriesMarkerShape.diamond => 'Diamond',
+    SeriesMarkerShape.star => 'Star',
+    SeriesMarkerShape.cross => 'Cross',
+    SeriesMarkerShape.plus => 'Plus',
+    SeriesMarkerShape.none => 'None',
+  };
+
+  String _formatScatterFillTone(_ScatterFillTone tone) => switch (tone) {
+    _ScatterFillTone.indigo => 'Indigo',
+    _ScatterFillTone.teal => 'Teal',
+    _ScatterFillTone.coral => 'Coral',
+    _ScatterFillTone.amber => 'Amber',
+  };
+
+  List<ChartDataPoint> _generatedScatterPoints({
+    required int seriesIndex,
+    required int pointCount,
+    required bool unordered,
+  }) {
+    final points = [
+      for (var index = 0; index < pointCount; index++)
+        ChartDataPoint(
+          x: pointCount == 1 ? 0 : index * 100 / (pointCount - 1),
+          y:
+              50 +
+              seriesIndex * 5 +
+              math.sin(index * 0.071 + seriesIndex) * 18 +
+              math.cos(index * 0.017 + seriesIndex * 0.8) * 7,
+        ),
+    ];
+    if (!unordered || points.length < 2) return points;
+
+    // Interleave the high and low ends. This is deterministic, keeps every
+    // source point exactly once, and makes X-order assumptions fail visibly.
+    return [
+      for (var index = 0; index < points.length; index++)
+        points[index.isEven ? index ~/ 2 : points.length - 1 - index ~/ 2],
+    ];
+  }
+
+  String _formatPointCount(int value) => value >= 1000
+      ? '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}k'
+      : '$value';
 
   List<ChartAnnotation> _buildAnnotations() {
     if (widget.family == _CartesianFamily.line && _presetIndex == 0) {
@@ -1430,9 +2363,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       return [
         TrendAnnotation(
           id: 'scatter-trend',
-          seriesId: 'cohort-a',
+          seriesId: 'training-base',
           trendType: TrendType.linear,
-          label: 'Linear fit',
+          label: 'Base-block trend',
           lineColor: const Color(0xFF2563EB),
           dashPattern: const [6, 4],
           allowDragging: false,
@@ -1457,6 +2390,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   void _reset() {
     _interactionGroupController.reset();
+    _clearScatterStates();
     setState(() {
       _presetIndex = 0;
       _interpolation = LineInterpolation.monotone;
@@ -1466,6 +2400,23 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _markerRadius = 5;
       _lineMarkerRadius = 3;
       _lineMarkerStyle = DataPointMarkerStyle.filled;
+      _scatterMarkerShape = SeriesMarkerShape.circle;
+      _scatterFillTone = _ScatterFillTone.indigo;
+      _scatterMarkerWidth = 18;
+      _scatterMarkerHeight = 10;
+      _scatterMarkerStrokeWidth = 2;
+      _scatterMarkerOpacity = 0.82;
+      _scatterMarkerRotation = 24;
+      _scatterSelectionScale = 1.45;
+      _scatterDimmedOpacity = 0.22;
+      _scatterFocusGap = 5;
+      _scatterBubbleMinimumRadius = 4;
+      _scatterBubbleMaximumRadius = 24;
+      _scatterColorRamp = _ScatterColorRamp.readiness;
+      _scatterRiskPalette = _ScatterRiskPalette.safety;
+      _scatterMinimumOpacity = 0.18;
+      _scatterPointCount = 10000;
+      _scatterSeriesCount = 3;
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
@@ -2177,7 +3128,9 @@ class _FeatureCoverage extends StatelessWidget {
       _CartesianFamily.scatter => const [
         'Multiple cohorts',
         'Marker sizing',
+        'Marker shapes',
         'Point styling',
+        'Quantitative opacity',
         'Trend annotations',
         'Tracking tooltips',
       ],
@@ -2380,29 +3333,330 @@ const _pulseTargetPoints = [
   ChartDataPoint(x: 7, y: 60),
 ];
 
-const _scatterPrimary = [
-  ChartDataPoint(x: 1, y: 18),
-  ChartDataPoint(x: 2, y: 24),
-  ChartDataPoint(x: 3, y: 29),
-  ChartDataPoint(x: 4, y: 35),
-  ChartDataPoint(x: 5, y: 43),
-  ChartDataPoint(x: 6, y: 48),
-  ChartDataPoint(x: 7, y: 56),
-  ChartDataPoint(x: 8, y: 61),
+const _scatterTriathlon = [
+  ChartDataPoint(x: 158, y: 50, label: 'TRI-01'),
+  ChartDataPoint(x: 161, y: 53, label: 'TRI-02'),
+  ChartDataPoint(x: 164, y: 55, label: 'TRI-03'),
+  ChartDataPoint(x: 166, y: 58, label: 'TRI-04'),
+  ChartDataPoint(x: 168, y: 56, label: 'TRI-05'),
+  ChartDataPoint(x: 170, y: 61, label: 'TRI-06'),
+  ChartDataPoint(x: 172, y: 60, label: 'TRI-07'),
+  ChartDataPoint(x: 174, y: 64, label: 'TRI-08'),
+  ChartDataPoint(x: 176, y: 66, label: 'TRI-09'),
+  ChartDataPoint(x: 178, y: 65, label: 'TRI-10'),
+  ChartDataPoint(x: 180, y: 70, label: 'TRI-11'),
+  ChartDataPoint(x: 182, y: 72, label: 'TRI-12'),
+  ChartDataPoint(x: 184, y: 74, label: 'TRI-13'),
 ];
 
-const _scatterSecondary = [
-  ChartDataPoint(x: 1.3, y: 25),
-  ChartDataPoint(x: 2.2, y: 20),
-  ChartDataPoint(x: 3.4, y: 37),
-  ChartDataPoint(x: 4.2, y: 31),
-  ChartDataPoint(x: 5.5, y: 51),
-  ChartDataPoint(x: 6.2, y: 44),
-  ChartDataPoint(x: 7.4, y: 64),
+const _scatterVolleyball = [
+  ChartDataPoint(x: 172, y: 63, label: 'VOL-01'),
+  ChartDataPoint(x: 175, y: 68, label: 'VOL-02'),
+  ChartDataPoint(x: 178, y: 70, label: 'VOL-03'),
+  ChartDataPoint(x: 181, y: 72, label: 'VOL-04'),
+  ChartDataPoint(x: 184, y: 75, label: 'VOL-05'),
+  ChartDataPoint(x: 186, y: 73, label: 'VOL-06'),
+  ChartDataPoint(x: 188, y: 78, label: 'VOL-07'),
+  ChartDataPoint(x: 190, y: 81, label: 'VOL-08'),
+  ChartDataPoint(x: 192, y: 79, label: 'VOL-09'),
+  ChartDataPoint(x: 194, y: 84, label: 'VOL-10'),
+  ChartDataPoint(x: 196, y: 87, label: 'VOL-11'),
+  ChartDataPoint(x: 198, y: 85, label: 'VOL-12'),
+  ChartDataPoint(x: 200, y: 91, label: 'VOL-13'),
+  ChartDataPoint(x: 202, y: 94, label: 'VOL-14'),
+  ChartDataPoint(x: 205, y: 98, label: 'VOL-15'),
 ];
 
-const _scatterOutliers = [
-  ChartDataPoint(x: 1.5, y: 42),
-  ChartDataPoint(x: 4.8, y: 16),
-  ChartDataPoint(x: 7.2, y: 75),
+const _scatterBasketball = [
+  ChartDataPoint(x: 181, y: 76, label: 'BAS-01'),
+  ChartDataPoint(x: 184, y: 78, label: 'BAS-02'),
+  ChartDataPoint(x: 187, y: 82, label: 'BAS-03'),
+  ChartDataPoint(x: 190, y: 84, label: 'BAS-04'),
+  ChartDataPoint(x: 193, y: 88, label: 'BAS-05'),
+  ChartDataPoint(x: 196, y: 86, label: 'BAS-06'),
+  ChartDataPoint(x: 198, y: 92, label: 'BAS-07'),
+  ChartDataPoint(x: 200, y: 95, label: 'BAS-08'),
+  ChartDataPoint(x: 202, y: 93, label: 'BAS-09'),
+  ChartDataPoint(x: 204, y: 99, label: 'BAS-10'),
+  ChartDataPoint(x: 206, y: 101, label: 'BAS-11'),
+  ChartDataPoint(x: 208, y: 105, label: 'BAS-12'),
+  ChartDataPoint(x: 210, y: 103, label: 'BAS-13'),
+  ChartDataPoint(x: 212, y: 110, label: 'BAS-14'),
+  ChartDataPoint(x: 214, y: 113, label: 'BAS-15'),
+  ChartDataPoint(x: 216, y: 116, label: 'BAS-16'),
+];
+
+const _scatterTrainingBase = [
+  ChartDataPoint(x: 260, y: 232, label: 'Week 1'),
+  ChartDataPoint(x: 285, y: 241, label: 'Week 2'),
+  ChartDataPoint(x: 310, y: 248, label: 'Week 3'),
+  ChartDataPoint(x: 335, y: 246, label: 'Week 4'),
+  ChartDataPoint(x: 360, y: 258, label: 'Week 5'),
+  ChartDataPoint(x: 385, y: 266, label: 'Week 6'),
+  ChartDataPoint(x: 410, y: 271, label: 'Week 7'),
+  ChartDataPoint(x: 435, y: 278, label: 'Week 8'),
+  ChartDataPoint(x: 460, y: 283, label: 'Week 9'),
+  ChartDataPoint(x: 490, y: 291, label: 'Week 10'),
+  ChartDataPoint(x: 520, y: 297, label: 'Week 11'),
+  ChartDataPoint(x: 550, y: 304, label: 'Week 12'),
+  ChartDataPoint(x: 585, y: 312, label: 'Week 13'),
+  ChartDataPoint(x: 620, y: 319, label: 'Week 14'),
+];
+
+const _scatterTrainingBuild = [
+  ChartDataPoint(x: 420, y: 286, label: 'Build 1'),
+  ChartDataPoint(x: 455, y: 294, label: 'Build 2'),
+  ChartDataPoint(x: 490, y: 301, label: 'Build 3'),
+  ChartDataPoint(x: 525, y: 308, label: 'Build 4'),
+  ChartDataPoint(x: 560, y: 314, label: 'Build 5'),
+  ChartDataPoint(x: 600, y: 326, label: 'Build 6'),
+  ChartDataPoint(x: 640, y: 331, label: 'Build 7'),
+  ChartDataPoint(x: 680, y: 343, label: 'Build 8'),
+  ChartDataPoint(x: 720, y: 349, label: 'Build 9'),
+  ChartDataPoint(x: 760, y: 361, label: 'Build 10'),
+];
+
+const _scatterSensorExpected = [
+  ChartDataPoint(x: 3.8, y: 3.9, label: 'Pair 01'),
+  ChartDataPoint(x: 4.2, y: 4.1, label: 'Pair 02'),
+  ChartDataPoint(x: 4.7, y: 4.8, label: 'Pair 03'),
+  ChartDataPoint(x: 5.1, y: 5.0, label: 'Pair 04'),
+  ChartDataPoint(x: 5.6, y: 5.8, label: 'Pair 05'),
+  ChartDataPoint(x: 6.0, y: 5.9, label: 'Pair 06'),
+  ChartDataPoint(x: 6.5, y: 6.6, label: 'Pair 07'),
+  ChartDataPoint(x: 7.0, y: 6.8, label: 'Pair 08'),
+  ChartDataPoint(x: 7.4, y: 7.5, label: 'Pair 09'),
+  ChartDataPoint(x: 7.9, y: 8.1, label: 'Pair 10'),
+  ChartDataPoint(x: 8.4, y: 8.3, label: 'Pair 11'),
+  ChartDataPoint(x: 8.9, y: 9.0, label: 'Pair 12'),
+  ChartDataPoint(x: 9.5, y: 9.3, label: 'Pair 13'),
+  ChartDataPoint(x: 10.1, y: 10.2, label: 'Pair 14'),
+  ChartDataPoint(x: 10.8, y: 10.6, label: 'Pair 15'),
+  ChartDataPoint(x: 11.5, y: 11.7, label: 'Pair 16'),
+  ChartDataPoint(x: 12.2, y: 12.0, label: 'Pair 17'),
+];
+
+const _scatterSensorReview = [
+  ChartDataPoint(x: 4.5, y: 6.2, label: 'Review A'),
+  ChartDataPoint(x: 6.8, y: 4.9, label: 'Review B'),
+  ChartDataPoint(x: 8.6, y: 11.1, label: 'Review C'),
+  ChartDataPoint(x: 10.4, y: 7.8, label: 'Review D'),
+  ChartDataPoint(x: 11.8, y: 14.0, label: 'Review E'),
+];
+
+const _scatterWebChannel = [
+  ChartDataPoint(x: 2.8, y: 68, label: 'Jan'),
+  ChartDataPoint(x: 3.1, y: 72, label: 'Feb'),
+  ChartDataPoint(x: 3.4, y: 76, label: 'Mar'),
+  ChartDataPoint(x: 3.7, y: 74, label: 'Apr'),
+  ChartDataPoint(x: 4.0, y: 81, label: 'May'),
+  ChartDataPoint(x: 4.3, y: 84, label: 'Jun'),
+  ChartDataPoint(x: 4.6, y: 88, label: 'Jul'),
+  ChartDataPoint(x: 4.9, y: 91, label: 'Aug'),
+  ChartDataPoint(x: 5.2, y: 89, label: 'Sep'),
+  ChartDataPoint(x: 5.5, y: 97, label: 'Oct'),
+  ChartDataPoint(x: 5.8, y: 101, label: 'Nov'),
+  ChartDataPoint(x: 6.2, y: 105, label: 'Dec'),
+];
+
+const _scatterRetailChannel = [
+  ChartDataPoint(x: 1.2, y: 96, label: 'Jan'),
+  ChartDataPoint(x: 1.4, y: 102, label: 'Feb'),
+  ChartDataPoint(x: 1.6, y: 99, label: 'Mar'),
+  ChartDataPoint(x: 1.8, y: 108, label: 'Apr'),
+  ChartDataPoint(x: 2.0, y: 112, label: 'May'),
+  ChartDataPoint(x: 2.2, y: 118, label: 'Jun'),
+  ChartDataPoint(x: 2.4, y: 115, label: 'Jul'),
+  ChartDataPoint(x: 2.6, y: 123, label: 'Aug'),
+  ChartDataPoint(x: 2.8, y: 129, label: 'Sep'),
+  ChartDataPoint(x: 3.0, y: 134, label: 'Oct'),
+  ChartDataPoint(x: 3.2, y: 139, label: 'Nov'),
+  ChartDataPoint(x: 3.4, y: 145, label: 'Dec'),
+];
+
+const _scatterPartnerChannel = [
+  ChartDataPoint(x: 0.8, y: 132, label: 'Jan'),
+  ChartDataPoint(x: 1.0, y: 138, label: 'Feb'),
+  ChartDataPoint(x: 1.2, y: 145, label: 'Mar'),
+  ChartDataPoint(x: 1.3, y: 149, label: 'Apr'),
+  ChartDataPoint(x: 1.5, y: 153, label: 'May'),
+  ChartDataPoint(x: 1.6, y: 158, label: 'Jun'),
+  ChartDataPoint(x: 1.8, y: 162, label: 'Jul'),
+  ChartDataPoint(x: 1.9, y: 168, label: 'Aug'),
+  ChartDataPoint(x: 2.1, y: 171, label: 'Sep'),
+  ChartDataPoint(x: 2.2, y: 176, label: 'Oct'),
+  ChartDataPoint(x: 2.4, y: 181, label: 'Nov'),
+  ChartDataPoint(x: 2.6, y: 186, label: 'Dec'),
+];
+
+const _scatterStateCurrent = [
+  ChartDataPoint(x: 1.0, y: 54, label: 'Week 1 · 54%'),
+  ChartDataPoint(x: 1.4, y: 61, label: 'Week 1.4 · 61%'),
+  ChartDataPoint(x: 1.8, y: 58, label: 'Week 1.8 · 58%'),
+  ChartDataPoint(x: 2.1, y: 67, label: 'Week 2.1 · 67%'),
+  ChartDataPoint(x: 2.5, y: 64, label: 'Week 2.5 · 64%'),
+  ChartDataPoint(x: 2.8, y: 72, label: 'Week 2.8 · 72%'),
+  ChartDataPoint(x: 3.2, y: 69, label: 'Week 3.2 · 69%'),
+  ChartDataPoint(x: 3.6, y: 78, label: 'Week 3.6 · 78%'),
+  ChartDataPoint(x: 4.0, y: 76, label: 'Week 4 · 76%'),
+  ChartDataPoint(x: 4.4, y: 84, label: 'Week 4.4 · 84%'),
+  ChartDataPoint(x: 4.8, y: 82, label: 'Week 4.8 · 82%'),
+  ChartDataPoint(x: 5.2, y: 89, label: 'Week 5.2 · 89%'),
+];
+
+const _scatterEnterpriseMarkets = [
+  ChartDataPoint(x: 4.2, y: 93, magnitude: 520, label: 'North America'),
+  ChartDataPoint(x: 6.8, y: 89, magnitude: 410, label: 'Western Europe'),
+  ChartDataPoint(x: 9.5, y: 86, magnitude: 285, label: 'Nordics'),
+  ChartDataPoint(x: 12.4, y: 82, magnitude: 190, label: 'Australia'),
+  ChartDataPoint(x: 15.8, y: 79, magnitude: 120, label: 'Japan'),
+];
+
+const _scatterGrowthMarkets = [
+  ChartDataPoint(x: 8.2, y: 75, magnitude: 560, label: 'Brazil'),
+  ChartDataPoint(x: 11.6, y: 84, magnitude: 330, label: 'UAE'),
+  ChartDataPoint(x: 14.1, y: 72, magnitude: 450, label: 'India'),
+  ChartDataPoint(x: 17.5, y: 77, magnitude: 230, label: 'Mexico'),
+  ChartDataPoint(x: 20.3, y: 68, magnitude: 95, label: 'South Africa'),
+];
+
+const _scatterReadyAthletes = [
+  ChartDataPoint(x: 310, y: 286, colorValue: 92, label: 'A. Mokoena'),
+  ChartDataPoint(x: 345, y: 301, colorValue: 88, label: 'L. Jacobs'),
+  ChartDataPoint(x: 375, y: 318, colorValue: 83, label: 'T. Naidoo'),
+  ChartDataPoint(x: 410, y: 329, colorValue: 79, label: 'S. Williams'),
+  ChartDataPoint(x: 455, y: 344, colorValue: 75, label: 'K. Dlamini'),
+  ChartDataPoint(x: 500, y: 351, colorValue: 71, label: 'R. Botha'),
+  ChartDataPoint(x: 540, y: 365, colorValue: 68, label: 'N. Smith'),
+  ChartDataPoint(x: 585, y: 372, colorValue: 64, label: 'P. Nkosi'),
+];
+
+const _scatterFatiguedAthletes = [
+  ChartDataPoint(x: 330, y: 274, colorValue: 78, label: 'C. Meyer'),
+  ChartDataPoint(x: 390, y: 295, colorValue: 72, label: 'B. Khumalo'),
+  ChartDataPoint(x: 430, y: 308, colorValue: 66, label: 'J. van Wyk'),
+  ChartDataPoint(x: 475, y: 321, colorValue: 61, label: 'M. Daniels'),
+  ChartDataPoint(x: 520, y: 327, colorValue: 56, label: 'Z. Cele'),
+  ChartDataPoint(x: 565, y: 339, colorValue: 52, label: 'E. Petersen'),
+  ChartDataPoint(x: 610, y: 346, colorValue: 48, label: 'D. Ncube'),
+];
+
+const _scatterEquipmentRisk = [
+  ChartDataPoint(x: 1.8, y: 52, colorValue: 18, label: 'Cooling pump A'),
+  ChartDataPoint(x: 2.4, y: 58, colorValue: 28, label: 'Conveyor motor 3'),
+  ChartDataPoint(x: 3.1, y: 61, colorValue: 35, label: 'Compressor B'),
+  ChartDataPoint(x: 3.8, y: 67, colorValue: 44, label: 'Feed pump 2'),
+  ChartDataPoint(x: 4.6, y: 64, colorValue: 53, label: 'Blower fan 1'),
+  ChartDataPoint(x: 5.2, y: 74, colorValue: 60, label: 'Hydraulic pack'),
+  ChartDataPoint(x: 6.0, y: 71, colorValue: 68, label: 'Transfer pump'),
+  ChartDataPoint(x: 6.7, y: 82, colorValue: 76, label: 'Crusher bearing'),
+  ChartDataPoint(x: 7.4, y: 86, colorValue: 80, label: 'Kiln fan gearbox'),
+  ChartDataPoint(x: 8.1, y: 91, colorValue: 88, label: 'Main compressor'),
+  ChartDataPoint(x: 8.8, y: 79, colorValue: 72, label: 'Extraction fan'),
+  ChartDataPoint(x: 9.4, y: 96, colorValue: 96, label: 'Turbine bearing'),
+];
+
+const _scatterBaselineForecast = [
+  ChartDataPoint(
+    x: 1,
+    y: 84,
+    opacityValue: 96,
+    label: 'Day 1 · 96% confidence',
+  ),
+  ChartDataPoint(
+    x: 3,
+    y: 88,
+    opacityValue: 91,
+    label: 'Day 3 · 91% confidence',
+  ),
+  ChartDataPoint(
+    x: 5,
+    y: 92,
+    opacityValue: 84,
+    label: 'Day 5 · 84% confidence',
+  ),
+  ChartDataPoint(
+    x: 7,
+    y: 86,
+    opacityValue: 78,
+    label: 'Day 7 · 78% confidence',
+  ),
+  ChartDataPoint(
+    x: 10,
+    y: 97,
+    opacityValue: 69,
+    label: 'Day 10 · 69% confidence',
+  ),
+  ChartDataPoint(
+    x: 14,
+    y: 103,
+    opacityValue: 58,
+    label: 'Day 14 · 58% confidence',
+  ),
+  ChartDataPoint(
+    x: 21,
+    y: 95,
+    opacityValue: 47,
+    label: 'Day 21 · 47% confidence',
+  ),
+];
+
+const _scatterAdaptiveForecast = [
+  ChartDataPoint(
+    x: 1,
+    y: 81,
+    opacityValue: 98,
+    label: 'Day 1 · 98% confidence',
+  ),
+  ChartDataPoint(
+    x: 3,
+    y: 86,
+    opacityValue: 95,
+    label: 'Day 3 · 95% confidence',
+  ),
+  ChartDataPoint(
+    x: 5,
+    y: 90,
+    opacityValue: 92,
+    label: 'Day 5 · 92% confidence',
+  ),
+  ChartDataPoint(
+    x: 7,
+    y: 89,
+    opacityValue: 88,
+    label: 'Day 7 · 88% confidence',
+  ),
+  ChartDataPoint(
+    x: 10,
+    y: 94,
+    opacityValue: 82,
+    label: 'Day 10 · 82% confidence',
+  ),
+  ChartDataPoint(
+    x: 14,
+    y: 99,
+    opacityValue: 74,
+    label: 'Day 14 · 74% confidence',
+  ),
+  ChartDataPoint(
+    x: 21,
+    y: 101,
+    opacityValue: 63,
+    label: 'Day 21 · 63% confidence',
+  ),
+];
+
+const _scatterStatePrevious = [
+  ChartDataPoint(x: 1.1, y: 49, label: 'Week 1.1 · 49%'),
+  ChartDataPoint(x: 1.5, y: 56, label: 'Week 1.5 · 56%'),
+  ChartDataPoint(x: 1.9, y: 53, label: 'Week 1.9 · 53%'),
+  ChartDataPoint(x: 2.2, y: 62, label: 'Week 2.2 · 62%'),
+  ChartDataPoint(x: 2.6, y: 59, label: 'Week 2.6 · 59%'),
+  ChartDataPoint(x: 3.0, y: 67, label: 'Week 3 · 67%'),
+  ChartDataPoint(x: 3.4, y: 65, label: 'Week 3.4 · 65%'),
+  ChartDataPoint(x: 3.8, y: 72, label: 'Week 3.8 · 72%'),
+  ChartDataPoint(x: 4.2, y: 70, label: 'Week 4.2 · 70%'),
+  ChartDataPoint(x: 4.6, y: 77, label: 'Week 4.6 · 77%'),
+  ChartDataPoint(x: 5.0, y: 75, label: 'Week 5 · 75%'),
+  ChartDataPoint(x: 5.4, y: 83, label: 'Week 5.4 · 83%'),
 ];

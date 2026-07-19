@@ -399,6 +399,9 @@ abstract final class ChartArtifactJsonCodec {
     for (final key in const [
       'timestamps',
       'labels',
+      'magnitudes',
+      'colorValues',
+      'opacityValues',
       'metadata',
       'segmentStyles',
       'pointStyles',

@@ -137,6 +137,31 @@ void main() {
           'Value: Previous 50 USD\nShare: Previous 25%',
         );
       });
+
+      test('includes quantitative Scatter opacity details', () {
+        const hit = ChartDataHit(
+          seriesId: 'forecast',
+          pointIndex: 0,
+          plotPosition: Offset(80, 80),
+          semanticBounds: Rect.fromLTWH(40, 40, 80, 80),
+          point: ChartDataPoint(x: 7, y: 92, opacityValue: 84),
+          formattedValue: '92 k units',
+          formattedOpacityValue: '84 %',
+          opacityLabel: 'Model confidence',
+          ordinal: 1,
+          count: 1,
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Adaptive model',
+            formattedCartesianY: '92 k units',
+            formatDataValue: (value) => value.toStringAsFixed(0),
+          ),
+          'Adaptive model\nX: 7\nY: 92 k units\nModel confidence: 84 %',
+        );
+      });
     });
 
     group('drawMarkerTooltip', () {

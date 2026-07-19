@@ -859,14 +859,88 @@ void main() {
           _roundTrip(
                 const ScatterChartSeries(
                   id: 'scatter',
-                  points: [ChartDataPoint(x: 1, y: 3)],
+                  points: [
+                    ChartDataPoint(
+                      x: 1,
+                      y: 3,
+                      pointStyle: PointStyle(
+                        scatterMarkerShape: SeriesMarkerShape.invertedTriangle,
+                        scatterMarkerStyle: ScatterMarkerStyle(
+                          width: 26,
+                          rotationDegrees: 45,
+                        ),
+                      ),
+                    ),
+                  ],
                   style: SeriesStyle.scatter,
                   markerRadius: 8.5,
+                  markerShape: SeriesMarkerShape.diamond,
+                  markerStyle: ScatterMarkerStyle(
+                    fillColor: Color(0xFF2563EB),
+                    strokeColor: Color(0xFF0F172A),
+                    strokeWidth: 2,
+                    opacity: 0.76,
+                    width: 18,
+                    height: 10,
+                    rotationDegrees: 24,
+                  ),
+                  interactionStyle: ScatterInteractionStyle(
+                    hoverColor: Color(0xFF22C55E),
+                    hoverScale: 1.5,
+                    selectionColor: Color(0xFF7C3AED),
+                    selectionScale: 1.4,
+                    focusGap: 6,
+                    dimmedOpacity: 0.2,
+                  ),
                 ),
               )
               as ScatterChartSeries;
       expect(scatter.style, SeriesStyle.scatter);
       expect(scatter.markerRadius, 8.5);
+      expect(scatter.markerShape, SeriesMarkerShape.diamond);
+      expect(
+        scatter.markerStyle,
+        const ScatterMarkerStyle(
+          fillColor: Color(0xFF2563EB),
+          strokeColor: Color(0xFF0F172A),
+          strokeWidth: 2,
+          opacity: 0.76,
+          width: 18,
+          height: 10,
+          rotationDegrees: 24,
+        ),
+      );
+      expect(
+        scatter.interactionStyle,
+        const ScatterInteractionStyle(
+          hoverColor: Color(0xFF22C55E),
+          hoverScale: 1.5,
+          selectionColor: Color(0xFF7C3AED),
+          selectionScale: 1.4,
+          focusGap: 6,
+          dimmedOpacity: 0.2,
+        ),
+      );
+      expect(
+        scatter.points.single.pointStyle?.scatterMarkerShape,
+        SeriesMarkerShape.invertedTriangle,
+      );
+      expect(
+        scatter.points.single.pointStyle?.scatterMarkerStyle,
+        const ScatterMarkerStyle(width: 26, rotationDegrees: 45),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(scatter)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.marker-style.v1'),
+      );
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.interaction.v1'),
+      );
 
       final bar =
           _roundTrip(
@@ -1075,6 +1149,31 @@ void main() {
       );
       expect(base.runtimeType, ChartSeries);
       expect(base.style, SeriesStyle.line);
+    });
+
+    test('rejects malformed Scatter interaction values structurally', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                const ScatterChartSeries(
+                  id: 'scatter-invalid-interaction',
+                  points: [ChartDataPoint(x: 1, y: 2)],
+                  interactionStyle: ScatterInteractionStyle(dimmedOpacity: 0.2),
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = Map<String, Object?>.from(encoded.value.toJson());
+      final style = Map<String, Object?>.from(json['style']! as Map);
+      final interaction = Map<String, Object?>.from(
+        style['interaction']! as Map,
+      )..['dimmedOpacity'] = 2.0;
+      style['interaction'] = interaction;
+      json['style'] = style;
+
+      final result = ChartSeriesDocumentCodec.decode(
+        ChartSeriesDocument.fromJson(json),
+      );
+
+      expect(result, isA<ChartArtifactFailure<ChartSeries>>());
     });
 
     test('round-trips floating range bars and range labels', () {
@@ -1301,6 +1400,171 @@ void main() {
       expect(payload.pointCount, 1);
       expect(payload.labels, ['work']);
       expect(decoded.value.points.single, source.points.single);
+    });
+
+    test('round-trips Scatter size encoding and point magnitude', () {
+      const source = ScatterChartSeries(
+        id: 'bubble',
+        points: [ChartDataPoint(x: 1, y: 2, magnitude: 320)],
+        sizeEncoding: ScatterSizeEncoding(
+          minimumRadius: 3,
+          maximumRadius: 18,
+          maximumValue: 500,
+          label: 'Accounts',
+          unit: 'k',
+          showLegend: false,
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                source,
+                dataStorage: ChartDataStorage.inlineColumns,
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final decoded =
+          ChartSeriesDocumentCodec.decode(encoded.value)
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.size-encoding.v1'),
+      );
+      expect(
+        (encoded.value.data as InlineColumnarPayload).magnitudes,
+        isNotNull,
+      );
+      expect(decoded.value, source);
+    });
+
+    test('round-trips Scatter color encoding and independent color values', () {
+      const source = ScatterChartSeries(
+        id: 'heat',
+        points: [ChartDataPoint(x: 1, y: 2, magnitude: 320, colorValue: 78)],
+        colorEncoding: ScatterColorEncoding(
+          colors: [Color(0xFF2563EB), Color(0xFFF59E0B), Color(0xFFDC2626)],
+          minimumValue: 40,
+          maximumValue: 100,
+          label: 'Readiness',
+          unit: '%',
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                source,
+                dataStorage: ChartDataStorage.inlineColumns,
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final decoded =
+          ChartSeriesDocumentCodec.decode(encoded.value)
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.color-encoding.v1'),
+      );
+      expect(
+        (encoded.value.data as InlineColumnarPayload).colorValues,
+        isNotNull,
+      );
+      expect(decoded.value, source);
+    });
+
+    test('round-trips Scatter opacity encoding and independent values', () {
+      const source = ScatterChartSeries(
+        id: 'confidence',
+        points: [ChartDataPoint(x: 1, y: 2, opacityValue: 78)],
+        opacityEncoding: ScatterOpacityEncoding(
+          minimumOpacity: 0.15,
+          maximumOpacity: 0.95,
+          minimumValue: 40,
+          maximumValue: 100,
+          label: 'Confidence',
+          unit: '%',
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                source,
+                dataStorage: ChartDataStorage.inlineColumns,
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final decoded =
+          ChartSeriesDocumentCodec.decode(encoded.value)
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(
+        encoded.value.requiredCapabilities,
+        contains('series.scatter.opacity-encoding.v1'),
+      );
+      expect(
+        (encoded.value.data as InlineColumnarPayload).opacityValues,
+        isNotNull,
+      );
+      expect(decoded.value, source);
+    });
+
+    test('round-trips a piecewise Scatter color scale', () {
+      const source = ScatterChartSeries(
+        id: 'risk',
+        points: [ChartDataPoint(x: 1, y: 2, colorValue: 80)],
+        colorEncoding: ScatterColorEncoding(
+          colors: [
+            Color(0xFF16A34A),
+            Color(0xFFFACC15),
+            Color(0xFFF97316),
+            Color(0xFFDC2626),
+          ],
+          scaleType: ScatterColorScaleType.piecewise,
+          thresholds: [35, 60, 80],
+          bandLabels: ['Normal', 'Monitor', 'Warning', 'Critical'],
+          label: 'Risk score',
+        ),
+      );
+
+      final encoded =
+          ChartSeriesDocumentCodec.encode(source)
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final decoded =
+          ChartSeriesDocumentCodec.decode(encoded.value)
+              as ChartArtifactSuccess<ChartSeries>;
+
+      expect(decoded.value, source);
+    });
+
+    test('rejects malformed piecewise Scatter color thresholds', () {
+      final encoded =
+          ChartSeriesDocumentCodec.encode(
+                const ScatterChartSeries(
+                  id: 'risk-invalid',
+                  points: [ChartDataPoint(x: 1, y: 2, colorValue: 80)],
+                  colorEncoding: ScatterColorEncoding(
+                    colors: [
+                      Color(0xFF16A34A),
+                      Color(0xFFFACC15),
+                      Color(0xFFDC2626),
+                    ],
+                    scaleType: ScatterColorScaleType.piecewise,
+                    thresholds: [35, 60],
+                  ),
+                ),
+              )
+              as ChartArtifactSuccess<ChartSeriesDocument>;
+      final json = Map<String, Object?>.from(encoded.value.toJson());
+      final style = Map<String, Object?>.from(json['style']! as Map);
+      final colorEncoding = Map<String, Object?>.from(
+        style['colorEncoding']! as Map,
+      )..['thresholds'] = [60, 35];
+      style['colorEncoding'] = colorEncoding;
+      json['style'] = style;
+
+      final result = ChartSeriesDocumentCodec.decode(
+        ChartSeriesDocument.fromJson(json),
+      );
+
+      expect(result, isA<ChartArtifactFailure<ChartSeries>>());
     });
 
     test('fails closed for runtime callbacks', () {

@@ -43,8 +43,17 @@ class TooltipRenderer {
     required String Function(double) formatDataValue,
   }) {
     if (dataHit.category == null || dataHit.share == null) {
+      final sizeLine = dataHit.formattedRadiusValue == null
+          ? ''
+          : '\n${dataHit.radiusLabel ?? 'Magnitude'}: ${dataHit.formattedRadiusValue}';
+      final colorLine = dataHit.formattedColorValue == null
+          ? ''
+          : '\n${dataHit.colorLabel ?? 'Color value'}: ${dataHit.formattedColorValue}';
+      final opacityLine = dataHit.formattedOpacityValue == null
+          ? ''
+          : '\n${dataHit.opacityLabel ?? 'Opacity value'}: ${dataHit.formattedOpacityValue}';
       return '$seriesName\nX: ${formatDataValue(dataHit.point.x)}\n'
-          'Y: $formattedCartesianY';
+          'Y: $formattedCartesianY$sizeLine$colorLine$opacityLine';
     }
     final groupHeading = dataHit.groupLabel == null
         ? ''

@@ -16,6 +16,9 @@ typedef ChartTablePointReference = ChartPointRef;
 /// Additional numeric fields that belong to a Cartesian point without
 /// becoming independent chart series.
 enum ChartTableAuxiliaryField {
+  magnitude,
+  colorValue,
+  opacityValue,
   rangeStart,
   target,
   errorLower,
@@ -29,6 +32,9 @@ enum ChartTableAuxiliaryField {
 extension ChartTableAuxiliaryFieldLabel on ChartTableAuxiliaryField {
   /// Short human-readable heading used by native table and export surfaces.
   String get label => switch (this) {
+    ChartTableAuxiliaryField.magnitude => 'Magnitude',
+    ChartTableAuxiliaryField.colorValue => 'Color value',
+    ChartTableAuxiliaryField.opacityValue => 'Opacity value',
     ChartTableAuxiliaryField.rangeStart => 'Start',
     ChartTableAuxiliaryField.target => 'Target',
     ChartTableAuxiliaryField.errorLower => 'Lower',
@@ -727,6 +733,16 @@ String _xColumnLabel(ChartAxisDocument axis) {
 Set<ChartTableAuxiliaryField> _auxiliaryFieldsForSeries(
   ChartSeriesDocument series,
 ) {
+  if (series.type == 'scatter') {
+    return Set.unmodifiable({
+      if (series.style?.values['sizeEncoding'] is JsonObjectValue)
+        ChartTableAuxiliaryField.magnitude,
+      if (series.style?.values['colorEncoding'] is JsonObjectValue)
+        ChartTableAuxiliaryField.colorValue,
+      if (series.style?.values['opacityEncoding'] is JsonObjectValue)
+        ChartTableAuxiliaryField.opacityValue,
+    });
+  }
   if (series.type != 'bar') return const {};
   final style = series.style?.values;
   if (style == null) return const {};
@@ -761,6 +777,57 @@ _auxiliaryValuesForPoint(
   required String Function(double)? formatter,
   _BarStackTableValue? stackValue,
 }) {
+  if (series.type == 'scatter') {
+    final payload = series.data;
+    if (payload is! InlineChartDataPayload ||
+        pointIndex >= payload.points.length) {
+      return const {};
+    }
+    final values = <ChartTableAuxiliaryField, ChartTableAuxiliaryValue>{};
+    final point = payload.points[pointIndex];
+
+    void addScatterValue(
+      ChartTableAuxiliaryField field,
+      ChartNumberDocument? document,
+      String encodingKey, {
+      required bool Function(double value) isValid,
+    }) {
+      final value = document?.asDouble;
+      if (value == null) return;
+      final encoding = series.style?.values[encodingKey];
+      final unit = encoding is JsonObjectValue
+          ? encoding.values['unit']?.toJson()
+          : null;
+      final baseDisplay = _displayNumber(value, null);
+      values[field] = ChartTableAuxiliaryValue(
+        raw: value,
+        display: unit is String && unit.isNotEmpty
+            ? '$baseDisplay $unit'
+            : baseDisplay,
+        isValid: isValid(value),
+      );
+    }
+
+    addScatterValue(
+      ChartTableAuxiliaryField.magnitude,
+      point.magnitude,
+      'sizeEncoding',
+      isValid: (value) => value.isFinite && value >= 0,
+    );
+    addScatterValue(
+      ChartTableAuxiliaryField.colorValue,
+      point.colorValue,
+      'colorEncoding',
+      isValid: (value) => value.isFinite,
+    );
+    addScatterValue(
+      ChartTableAuxiliaryField.opacityValue,
+      point.opacityValue,
+      'opacityEncoding',
+      isValid: (value) => value.isFinite,
+    );
+    return Map.unmodifiable(values);
+  }
   if (series.type != 'bar') return const {};
   final style = series.style?.values;
   if (style == null) return const {};

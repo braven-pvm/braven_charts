@@ -283,19 +283,20 @@ Map<String, Object?> _encodeSeriesTheme(series_theme.SeriesTheme theme) => {
   'markerShapes': theme.markerShapes.map((shape) => shape.name).toList(),
 };
 
-series_theme.SeriesTheme _decodeSeriesTheme(
-  Map<String, Object?> map,
-) => series_theme.SeriesTheme(
-  colors: _list(map, 'colors').map(_requiredColorValue).toList(),
-  lineWidths: _doubleList(map, 'lineWidths'),
-  markerSizes: _doubleList(map, 'markerSizes'),
-  markerShapes: _list(map, 'markerShapes')
-      .map(
-        (value) =>
-            _enum(_requiredStringValue(value), series_theme.MarkerShape.values),
-      )
-      .toList(),
-);
+series_theme.SeriesTheme _decodeSeriesTheme(Map<String, Object?> map) =>
+    series_theme.SeriesTheme(
+      colors: _list(map, 'colors').map(_requiredColorValue).toList(),
+      lineWidths: _doubleList(map, 'lineWidths'),
+      markerSizes: _doubleList(map, 'markerSizes'),
+      markerShapes: _list(map, 'markerShapes')
+          .map(
+            (value) => _enum(
+              _requiredStringValue(value),
+              series_theme.SeriesMarkerShape.values,
+            ),
+          )
+          .toList(),
+    );
 
 Map<String, Object?> _encodeInteractionTheme(InteractionTheme theme) => {
   'crosshairColor': theme.crosshairColor.toARGB32(),
@@ -417,7 +418,7 @@ PointAnnotationDefaults _decodePointDefaults(Map<String, Object?> map) =>
     PointAnnotationDefaults(
       markerShape: _enum(
         _string(map, 'markerShape'),
-        series_theme.MarkerShape.values,
+        series_theme.SeriesMarkerShape.values,
       ),
       markerSize: _double(map, 'markerSize'),
       normalColor: _color(map, 'normalColor'),

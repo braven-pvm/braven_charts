@@ -13,11 +13,31 @@ void main() {
         name: 'Power',
         points: [ChartDataPoint(x: 0, y: 148), ChartDataPoint(x: 1, y: 162)],
       );
+      final scatter = const ScatterChartSeries(
+        id: 'risk',
+        name: 'Assets',
+        points: [ChartDataPoint(x: 1, y: 2, colorValue: 80, opacityValue: 92)],
+        colorEncoding: ScatterColorEncoding(
+          colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+          scaleType: ScatterColorScaleType.piecewise,
+          thresholds: [60],
+          bandLabels: ['Normal', 'Critical'],
+        ),
+        opacityEncoding: ScatterOpacityEncoding(
+          minimumOpacity: 0.15,
+          maximumOpacity: 0.95,
+          label: 'Confidence',
+          unit: '%',
+        ),
+      );
       final snapshot = ChartDocumentSnapshot(
         document: ChartDocument(
           documentId: 'generated-source-compile',
           revision: 4,
-          series: [_success(ChartSeriesDocumentCodec.encode(series)).value],
+          series: [
+            _success(ChartSeriesDocumentCodec.encode(series)).value,
+            _success(ChartSeriesDocumentCodec.encode(scatter)).value,
+          ],
           annotations: [
             _success(
               ChartAnnotationDocumentCodec.encode(
@@ -26,6 +46,37 @@ void main() {
                   series: [series],
                   legendStyle: const LegendStyle(
                     position: LegendPosition.bottomLeft,
+                  ),
+                ),
+              ),
+            ).value,
+            _success(
+              ChartAnnotationDocumentCodec.encode(
+                LegendAnnotation(
+                  id: 'confidence-key',
+                  opacityScale: const LegendOpacityScale(
+                    label: 'Confidence',
+                    color: Color(0xFF2563EB),
+                    minimumOpacity: 0.15,
+                    maximumOpacity: 0.95,
+                    minimumLabel: '40 %',
+                    midpointLabel: '70 %',
+                    maximumLabel: '100 %',
+                  ),
+                ),
+              ),
+            ).value,
+            _success(
+              ChartAnnotationDocumentCodec.encode(
+                LegendAnnotation(
+                  id: 'risk-key',
+                  colorScale: const LegendColorScale(
+                    label: 'Risk score',
+                    colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+                    minimumLabel: '0',
+                    maximumLabel: '100',
+                    type: LegendColorScaleType.piecewise,
+                    segmentLabels: ['Normal', 'Critical'],
                   ),
                 ),
               ),

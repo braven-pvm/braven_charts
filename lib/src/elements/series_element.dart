@@ -29,6 +29,8 @@ import '../rendering/bar_geometry.dart';
 import '../rendering/bar_bullet_painter.dart';
 import '../rendering/bar_label_layout.dart';
 import '../rendering/bar_pattern_painter.dart';
+import '../rendering/scatter_geometry.dart';
+import '../rendering/scatter_marker_path.dart';
 import '../theming/components/series_theme.dart';
 import '../utils/dashed_path.dart';
 import '../utils/interpolation_geometry.dart';
@@ -47,6 +49,31 @@ bool _dashPatternsEqual(List<double> first, List<double> second) {
     if (first[index] != second[index]) return false;
   }
   return true;
+}
+
+class _ResolvedScatterMarkerStyle {
+  const _ResolvedScatterMarkerStyle({
+    required this.shape,
+    required this.fillColor,
+    required this.strokeColor,
+    required this.strokeWidth,
+    required this.opacity,
+    required this.width,
+    required this.height,
+    required this.rotationRadians,
+  });
+
+  final SeriesMarkerShape shape;
+  final Color? fillColor;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final double opacity;
+  final double width;
+  final double height;
+  final double rotationRadians;
+
+  double get boundingRadius =>
+      math.sqrt(width * width + height * height) / 2 + strokeWidth / 2;
 }
 
 // =============================================================================
@@ -202,6 +229,13 @@ class SeriesElement implements DataHitElement {
   ChartSeries series; // Made mutable for updateSeries()
   final ChartTransform transform; // Initial transform for bounds computation
   ChartTransform _currentTransform; // Current transform for painting
+
+  /// Effective transform used by the current paint and interaction pass.
+  ///
+  /// Scatter tracking uses this rather than the construction transform so
+  /// nearest-point lookup remains correct after zoom, pan, and per-series
+  /// multi-axis normalization.
+  ChartTransform get currentTransform => _currentTransform;
   final SeriesTheme? seriesTheme;
   @override
   final int seriesIndex;
@@ -317,8 +351,8 @@ class SeriesElement implements DataHitElement {
   }
 
   // Get effective marker shape from theme or default
-  MarkerShape get markerShape =>
-      seriesTheme?.markerShapeAt(seriesIndex) ?? MarkerShape.circle;
+  SeriesMarkerShape get markerShape =>
+      seriesTheme?.markerShapeAt(seriesIndex) ?? SeriesMarkerShape.circle;
 
   /// Update the current transform before painting (for real-time pan/zoom).
   /// This allows path caching to work - transform stored at construction stays fixed,
@@ -339,6 +373,7 @@ class SeriesElement implements DataHitElement {
 
     if (transformChanged) {
       _clearResolvedBarGeometry();
+      _clearResolvedScatterGeometry();
       _computeBounds();
     }
   }
@@ -363,7 +398,9 @@ class SeriesElement implements DataHitElement {
 
     series = newSeries;
     _barViewportIndex = null;
+    _scatterViewportIndex = null;
     _clearResolvedBarGeometry();
+    _clearResolvedScatterGeometry();
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -390,6 +427,8 @@ class SeriesElement implements DataHitElement {
     _cachedHasSegmentOverrides = null;
     _barViewportIndex = null;
     _clearResolvedBarGeometry();
+    _scatterViewportIndex = null;
+    _clearResolvedScatterGeometry();
     _labelPainterCache.clear();
   }
 
@@ -428,8 +467,23 @@ class SeriesElement implements DataHitElement {
   Map<(int, int), List<BarGeometry>> _barHitGeometryByCell = const {};
   int _barHitComparisonCount = 0;
   BarLabelLayoutCoordinator? _barLabelLayoutCoordinator;
+  ScatterViewportIndex? _scatterViewportIndex;
+  List<ScatterPointGeometry>? _scatterGeometries;
+  Map<int, ScatterPointGeometry> _scatterGeometryByPointIndex = const {};
+  List<Offset>? _scatterUniformCenters;
+  Path? _scatterUniformMarkerPath;
+  Map<(int, int), List<ScatterPointGeometry>> _scatterHitGeometryByCell =
+      const {};
+  double _resolvedScatterMaxRadius = 0;
+  double? _resolvedScatterMagnitudeMaximum;
+  double? _resolvedScatterColorMinimum;
+  double? _resolvedScatterColorMaximum;
+  double? _resolvedScatterOpacityMinimum;
+  double? _resolvedScatterOpacityMaximum;
+  int _scatterHitComparisonCount = 0;
 
   static const double _barHitCellSize = 48;
+  static const double _scatterHitCellSize = 48;
 
   /// Number of bar geometries materialized for the current viewport.
   int get visibleBarGeometryCount => _resolveBarGeometries().length;
@@ -441,6 +495,17 @@ class SeriesElement implements DataHitElement {
 
   /// Exact rectangle comparisons performed by indexed bar hit testing.
   int get barHitComparisonCount => _barHitComparisonCount;
+
+  /// Number of Scatter marker geometries materialized for the viewport.
+  int get visibleScatterGeometryCount => _resolveScatterGeometries().length;
+
+  /// Original source indices represented by visible Scatter geometries.
+  List<int> get visibleScatterPointIndices => [
+    for (final geometry in _resolveScatterGeometries()) geometry.pointIndex,
+  ];
+
+  /// Exact marker-distance comparisons performed by the latest Scatter hit.
+  int get scatterHitComparisonCount => _scatterHitComparisonCount;
 
   /// Shares one occupied-label registry across every bar series paint pass.
   void setBarLabelLayoutCoordinator(BarLabelLayoutCoordinator? coordinator) {
@@ -503,6 +568,113 @@ class SeriesElement implements DataHitElement {
     _barGeometries = geometries;
     _indexResolvedBarGeometry(geometries);
     return geometries;
+  }
+
+  List<ScatterPointGeometry> _resolveScatterGeometries() {
+    final cached = _scatterGeometries;
+    if (cached != null) return cached;
+    final scatter = series;
+    if (scatter is! ScatterChartSeries) return const [];
+
+    var viewportIndex = _scatterViewportIndex;
+    if (viewportIndex == null) {
+      viewportIndex = ScatterViewportIndex(
+        scatter.points,
+        isXOrdered: scatter.isXOrdered,
+      );
+      _scatterViewportIndex = viewportIndex;
+    }
+
+    // Scatter exposes an explicit series-level radius, so it takes precedence
+    // over the ambient theme. The previous inverse precedence made runtime
+    // marker controls update their model and label without changing geometry.
+    final seriesMarker = _scatterMarkerStyleAt(scatter, -1);
+    final maximumRadius = math.max(
+      math.max(seriesMarker.boundingRadius, viewportIndex.maximumPointRadius),
+      scatter.sizeEncoding?.maximumRadius ?? 0,
+    );
+    _resolvedScatterMaxRadius = maximumRadius;
+    final pointIndices = viewportIndex.pointIndicesForViewport(
+      minX: _currentTransform.dataXMin,
+      maxX: _currentTransform.dataXMax,
+      minY: _currentTransform.dataYMin,
+      maxY: _currentTransform.dataYMax,
+      paddingX: maximumRadius * _currentTransform.dataPerPixelX,
+      paddingY: maximumRadius * _currentTransform.dataPerPixelY,
+    );
+    final plotBounds = Rect.fromLTWH(
+      0,
+      0,
+      _currentTransform.plotWidth,
+      _currentTransform.plotHeight,
+    );
+    final geometries = <ScatterPointGeometry>[];
+    for (final pointIndex in pointIndices) {
+      final point = scatter.points[pointIndex];
+      if (!_scatterPointIsRenderable(scatter, pointIndex)) continue;
+      final center = _currentTransform.dataToPlot(point.x, point.y);
+      if (!center.dx.isFinite || !center.dy.isFinite) continue;
+      final marker = _scatterMarkerStyleAt(scatter, pointIndex);
+      final geometry = ScatterPointGeometry(
+        pointIndex: pointIndex,
+        point: point,
+        center: center,
+        radius: marker.boundingRadius,
+        width: marker.width,
+        height: marker.height,
+        shape: marker.shape,
+        rotationRadians: marker.rotationRadians,
+        strokeWidth: marker.strokeWidth,
+      );
+      if (geometry.paintBounds.overlaps(plotBounds) ||
+          plotBounds.contains(geometry.center)) {
+        geometries.add(geometry);
+      }
+    }
+
+    final byCell = <(int, int), List<ScatterPointGeometry>>{};
+    for (final geometry in geometries) {
+      final clipped = geometry.hitBounds(4).intersect(plotBounds);
+      if (clipped.isEmpty) continue;
+      final minCellX = (clipped.left / _scatterHitCellSize).floor();
+      final maxCellX = (clipped.right / _scatterHitCellSize).floor();
+      final minCellY = (clipped.top / _scatterHitCellSize).floor();
+      final maxCellY = (clipped.bottom / _scatterHitCellSize).floor();
+      for (var cellX = minCellX; cellX <= maxCellX; cellX++) {
+        for (var cellY = minCellY; cellY <= maxCellY; cellY++) {
+          byCell.putIfAbsent((cellX, cellY), () => []).add(geometry);
+        }
+      }
+    }
+    _scatterHitGeometryByCell = byCell;
+    _scatterGeometries = geometries;
+    _scatterGeometryByPointIndex = {
+      for (final geometry in geometries) geometry.pointIndex: geometry,
+    };
+    _scatterUniformCenters = [
+      for (final geometry in geometries) geometry.center,
+    ];
+    return geometries;
+  }
+
+  void _clearResolvedScatterGeometry() {
+    _scatterGeometries = null;
+    _scatterGeometryByPointIndex = const {};
+    _scatterUniformCenters = null;
+    _scatterUniformMarkerPath = null;
+    _scatterHitGeometryByCell = const {};
+    _resolvedScatterMaxRadius = 0;
+    _resolvedScatterMagnitudeMaximum = null;
+    _resolvedScatterColorMinimum = null;
+    _resolvedScatterColorMaximum = null;
+    _resolvedScatterOpacityMinimum = null;
+    _resolvedScatterOpacityMaximum = null;
+    _scatterHitComparisonCount = 0;
+  }
+
+  ScatterPointGeometry? scatterGeometryForPoint(int pointIndex) {
+    _resolveScatterGeometries();
+    return _scatterGeometryByPointIndex[pointIndex];
   }
 
   void _clearResolvedBarGeometry() {
@@ -589,21 +761,62 @@ class SeriesElement implements DataHitElement {
       return;
     }
 
+    if (series case final ScatterChartSeries scatter) {
+      var viewportIndex = _scatterViewportIndex;
+      if (viewportIndex == null) {
+        viewportIndex = ScatterViewportIndex(
+          scatter.points,
+          isXOrdered: scatter.isXOrdered,
+        );
+        _scatterViewportIndex = viewportIndex;
+      }
+      if (viewportIndex.pointCount == 0) {
+        _bounds = Rect.zero;
+        return;
+      }
+      final padding = math.max(
+        math.max(
+          _scatterMarkerStyleAt(scatter, -1).boundingRadius,
+          viewportIndex.maximumPointRadius,
+        ),
+        scatter.sizeEncoding?.maximumRadius ?? 0,
+      );
+      // Scatter manages exact point bounds through its viewport and hit index.
+      // Keep the aggregate element eligible across the plot without rescanning
+      // every source point whenever the viewport transform changes.
+      _bounds = Rect.fromLTRB(
+        -padding,
+        -padding,
+        _currentTransform.plotWidth + padding,
+        _currentTransform.plotHeight + padding,
+      );
+      return;
+    }
+
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
+    var validPointCount = 0;
 
-    for (final point in series.points) {
+    for (var index = 0; index < series.points.length; index++) {
+      final point = series.points[index];
+      if (!point.isValid) continue;
       // Use _currentTransform for perSeries normalization support
       final plotPos = _currentTransform.dataToPlot(point.x, point.y);
+      if (!plotPos.dx.isFinite || !plotPos.dy.isFinite) continue;
+      validPointCount++;
       minX = plotPos.dx < minX ? plotPos.dx : minX;
       maxX = plotPos.dx > maxX ? plotPos.dx : maxX;
       minY = plotPos.dy < minY ? plotPos.dy : minY;
       maxY = plotPos.dy > maxY ? plotPos.dy : maxY;
     }
 
-    // Add padding for stroke width
+    if (validPointCount == 0) {
+      _bounds = Rect.zero;
+      return;
+    }
+
     final padding = strokeWidth / 2;
     _bounds = Rect.fromLTRB(
       minX - padding,
@@ -649,6 +862,11 @@ class SeriesElement implements DataHitElement {
       return barGeometryAt(position) != null;
     }
 
+    if (series is ScatterChartSeries) {
+      return _scatterDataHitAt(position, maxDistance: 0, markerHitSlop: 4) !=
+          null;
+    }
+
     // For line series: check if position is near any line segment
     // For scatter: check if near any point
     // For now: simple line segment hit testing
@@ -684,6 +902,9 @@ class SeriesElement implements DataHitElement {
       final geometry = barGeometryAt(position);
       return geometry == null ? null : _barDataHit(geometry);
     }
+    if (source is ScatterChartSeries) {
+      return _scatterDataHitAt(position, maxDistance: maxDistance);
+    }
 
     ChartDataHit? nearest;
     var nearestDistance = maxDistance;
@@ -702,6 +923,244 @@ class SeriesElement implements DataHitElement {
     }
     return nearest;
   }
+
+  ChartDataHit? _scatterDataHitAt(
+    Offset position, {
+    required double maxDistance,
+    double markerHitSlop = 0,
+  }) {
+    final geometries = _resolveScatterGeometries();
+    final searchRadius = maxDistance.isFinite
+        ? math.max(maxDistance, _resolvedScatterMaxRadius + markerHitSlop)
+        : double.infinity;
+    final candidates = _scatterCandidatesNear(
+      position,
+      geometries,
+      searchRadius,
+    );
+    ChartDataHit? nearest;
+    var nearestDistance = double.infinity;
+    _scatterHitComparisonCount = 0;
+    for (final geometry in candidates) {
+      _scatterHitComparisonCount++;
+      final hit = _dataHitForRenderPointIndex(geometry.pointIndex);
+      if (hit == null) continue;
+      final distance = (position - hit.plotPosition).distance;
+      final markerContains = scatterMarkerContains(
+        position: position,
+        center: geometry.center,
+        radius: geometry.radius,
+        shape: geometry.shape,
+        hitSlop: markerHitSlop,
+        width: geometry.width,
+        height: geometry.height,
+        rotationRadians: geometry.rotationRadians,
+      );
+      if ((distance <= maxDistance || markerContains) &&
+          (distance < nearestDistance ||
+              (distance == nearestDistance &&
+                  (nearest == null ||
+                      geometry.pointIndex < nearest.pointIndex)))) {
+        nearestDistance = distance;
+        nearest = hit;
+      }
+    }
+    return nearest;
+  }
+
+  List<ScatterPointGeometry> _scatterCandidatesNear(
+    Offset position,
+    List<ScatterPointGeometry> geometries,
+    double searchRadius,
+  ) {
+    if (!searchRadius.isFinite) return geometries;
+    final minCellX = ((position.dx - searchRadius) / _scatterHitCellSize)
+        .floor();
+    final maxCellX = ((position.dx + searchRadius) / _scatterHitCellSize)
+        .floor();
+    final minCellY = ((position.dy - searchRadius) / _scatterHitCellSize)
+        .floor();
+    final maxCellY = ((position.dy + searchRadius) / _scatterHitCellSize)
+        .floor();
+    final seen = <int>{};
+    final result = <ScatterPointGeometry>[];
+    for (var cellX = minCellX; cellX <= maxCellX; cellX++) {
+      for (var cellY = minCellY; cellY <= maxCellY; cellY++) {
+        for (final geometry
+            in _scatterHitGeometryByCell[(cellX, cellY)] ??
+                const <ScatterPointGeometry>[]) {
+          if (seen.add(geometry.pointIndex)) result.add(geometry);
+        }
+      }
+    }
+    return result;
+  }
+
+  _ResolvedScatterMarkerStyle _scatterMarkerStyleAt(
+    ScatterChartSeries scatter,
+    int pointIndex,
+  ) {
+    final pointStyle = pointIndex >= 0
+        ? scatter.points[pointIndex].pointStyle
+        : null;
+    final pointMarker = pointStyle?.scatterMarkerStyle;
+    final seriesMarker = scatter.markerStyle;
+    final bubbleRadius = pointIndex >= 0
+        ? _scatterBubbleRadius(scatter, pointIndex)
+        : null;
+    final explicitPointRadius = pointStyle?.size;
+    final legacyRadius =
+        explicitPointRadius ?? bubbleRadius ?? scatter.markerRadius;
+    final safeRadius = legacyRadius.isFinite && legacyRadius >= 0
+        ? legacyRadius
+        : 0.0;
+    final fallbackDiameter = safeRadius * 2;
+    final usesDataOrPointSize =
+        explicitPointRadius != null || bubbleRadius != null;
+    final width = _safeNonNegative(
+      pointMarker?.width ??
+          (usesDataOrPointSize ? fallbackDiameter : seriesMarker?.width) ??
+          fallbackDiameter,
+    );
+    final height = _safeNonNegative(
+      pointMarker?.height ??
+          (usesDataOrPointSize ? fallbackDiameter : seriesMarker?.height) ??
+          fallbackDiameter,
+    );
+    final strokeWidth = _safeNonNegative(
+      pointMarker?.strokeWidth ?? seriesMarker?.strokeWidth ?? 0,
+    );
+    final opacity = _safeUnit(
+      pointMarker?.opacity ??
+          (pointIndex >= 0
+              ? _scatterEncodedOpacity(scatter, pointIndex)
+              : null) ??
+          seriesMarker?.opacity ??
+          1,
+    );
+    final rotationDegrees =
+        pointMarker?.rotationDegrees ?? seriesMarker?.rotationDegrees ?? 0;
+    final rotationRadians = rotationDegrees.isFinite
+        ? rotationDegrees * math.pi / 180
+        : 0.0;
+    return _ResolvedScatterMarkerStyle(
+      shape: pointStyle?.scatterMarkerShape ?? scatter.markerShape,
+      fillColor:
+          pointMarker?.fillColor ??
+          pointStyle?.color ??
+          (pointIndex >= 0
+              ? _scatterEncodedColor(scatter, pointIndex)
+              : null) ??
+          seriesMarker?.fillColor,
+      strokeColor: pointMarker?.strokeColor ?? seriesMarker?.strokeColor,
+      strokeWidth: strokeWidth,
+      opacity: opacity,
+      width: width,
+      height: height,
+      rotationRadians: rotationRadians,
+    );
+  }
+
+  Color? _scatterEncodedColor(ScatterChartSeries scatter, int pointIndex) {
+    final encoding = scatter.colorEncoding;
+    if (encoding == null) return null;
+    if (_resolvedScatterColorMinimum == null ||
+        _resolvedScatterColorMaximum == null) {
+      var minimum = encoding.minimumValue ?? double.infinity;
+      var maximum = encoding.maximumValue ?? double.negativeInfinity;
+      if (encoding.minimumValue == null || encoding.maximumValue == null) {
+        for (final point in scatter.points) {
+          final value = point.colorValue;
+          if (value == null || !value.isFinite) continue;
+          if (encoding.minimumValue == null && value < minimum) {
+            minimum = value;
+          }
+          if (encoding.maximumValue == null && value > maximum) {
+            maximum = value;
+          }
+        }
+      }
+      if (!minimum.isFinite && maximum.isFinite) minimum = maximum;
+      if (!maximum.isFinite && minimum.isFinite) maximum = minimum;
+      if (!minimum.isFinite || !maximum.isFinite) {
+        minimum = 0;
+        maximum = 0;
+      }
+      _resolvedScatterColorMinimum = minimum;
+      _resolvedScatterColorMaximum = maximum;
+    }
+    return encoding.colorFor(
+      scatter.points[pointIndex].colorValue,
+      resolvedMinimumValue: _resolvedScatterColorMinimum!,
+      resolvedMaximumValue: _resolvedScatterColorMaximum!,
+    );
+  }
+
+  double? _scatterEncodedOpacity(ScatterChartSeries scatter, int pointIndex) {
+    final encoding = scatter.opacityEncoding;
+    if (encoding == null) return null;
+    if (_resolvedScatterOpacityMinimum == null ||
+        _resolvedScatterOpacityMaximum == null) {
+      var minimum = encoding.minimumValue ?? double.infinity;
+      var maximum = encoding.maximumValue ?? double.negativeInfinity;
+      if (encoding.minimumValue == null || encoding.maximumValue == null) {
+        for (final point in scatter.points) {
+          final value = point.opacityValue;
+          if (value == null || !value.isFinite) continue;
+          if (encoding.minimumValue == null && value < minimum) {
+            minimum = value;
+          }
+          if (encoding.maximumValue == null && value > maximum) {
+            maximum = value;
+          }
+        }
+      }
+      if (!minimum.isFinite && maximum.isFinite) minimum = maximum;
+      if (!maximum.isFinite && minimum.isFinite) maximum = minimum;
+      if (!minimum.isFinite || !maximum.isFinite) {
+        minimum = 0;
+        maximum = 0;
+      }
+      _resolvedScatterOpacityMinimum = minimum;
+      _resolvedScatterOpacityMaximum = maximum;
+    }
+    return encoding.opacityFor(
+      scatter.points[pointIndex].opacityValue,
+      resolvedMinimumValue: _resolvedScatterOpacityMinimum!,
+      resolvedMaximumValue: _resolvedScatterOpacityMaximum!,
+    );
+  }
+
+  bool _scatterPointIsRenderable(ScatterChartSeries scatter, int pointIndex) {
+    if (scatter.points[pointIndex].pointStyle?.size != null) return true;
+    if (scatter.sizeEncoding == null) return true;
+    final magnitude = scatter.points[pointIndex].magnitude;
+    return magnitude != null && magnitude.isFinite && magnitude >= 0;
+  }
+
+  double? _scatterBubbleRadius(ScatterChartSeries scatter, int pointIndex) {
+    final encoding = scatter.sizeEncoding;
+    if (encoding == null) return null;
+    final magnitude = scatter.points[pointIndex].magnitude;
+    if (magnitude == null || !magnitude.isFinite || magnitude < 0) return null;
+    var maximum = _resolvedScatterMagnitudeMaximum;
+    if (maximum == null) {
+      maximum = encoding.minimumValue;
+      for (final point in scatter.points) {
+        final value = point.magnitude;
+        if (value != null && value.isFinite && value >= 0 && value > maximum!) {
+          maximum = value;
+        }
+      }
+      _resolvedScatterMagnitudeMaximum = maximum;
+    }
+    return encoding.radiusFor(magnitude, resolvedMaximumValue: maximum!);
+  }
+
+  double _safeNonNegative(double value) =>
+      value.isFinite && value >= 0 ? value : 0;
+
+  double _safeUnit(double value) => value.isFinite ? value.clamp(0, 1) : 1;
 
   @override
   ChartDataHit? dataHitForPointIndex(int pointIndex) {
@@ -740,14 +1199,62 @@ class SeriesElement implements DataHitElement {
     if (!point.isValid) return null;
     final position = _currentTransform.dataToPlot(point.x, point.y);
     if (_isPathSeries && position.dx > _revealEdge) return null;
+    final scatter = series is ScatterChartSeries
+        ? series as ScatterChartSeries
+        : null;
+    final rawMagnitude = scatter?.sizeEncoding == null ? null : point.magnitude;
+    final magnitude =
+        rawMagnitude != null && rawMagnitude.isFinite && rawMagnitude >= 0
+        ? rawMagnitude
+        : null;
+    final rawColorValue = scatter?.colorEncoding == null
+        ? null
+        : point.colorValue;
+    final colorValue = rawColorValue != null && rawColorValue.isFinite
+        ? rawColorValue
+        : null;
+    final rawOpacityValue = scatter?.opacityEncoding == null
+        ? null
+        : point.opacityValue;
+    final opacityValue = rawOpacityValue != null && rawOpacityValue.isFinite
+        ? rawOpacityValue
+        : null;
+    final scatterGeometry = scatter == null
+        ? null
+        : scatterGeometryForPoint(renderIndex);
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: targetIndex,
       plotPosition: position,
-      semanticBounds: Rect.fromCircle(center: position, radius: 24),
+      semanticBounds:
+          scatterGeometry?.hitBounds(4) ??
+          Rect.fromCircle(center: position, radius: 24),
       point: point,
       formattedValue:
           '${point.y.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      radiusValue: magnitude,
+      formattedRadiusValue: magnitude == null
+          ? null
+          : scatter!.sizeEncoding!.format(magnitude),
+      radiusLabel: magnitude == null ? null : scatter!.sizeEncoding!.label,
+      colorValue: colorValue,
+      formattedColorValue: colorValue == null
+          ? null
+          : scatter!.colorEncoding!.formatForInteraction(colorValue),
+      colorLabel: colorValue == null ? null : scatter!.colorEncoding!.label,
+      opacityValue: opacityValue,
+      formattedOpacityValue: opacityValue == null
+          ? null
+          : scatter!.opacityEncoding!.format(opacityValue),
+      opacityLabel: opacityValue == null
+          ? null
+          : scatter!.opacityEncoding!.label,
+      markerOpacity: scatter == null
+          ? point.pointStyle?.scatterMarkerStyle?.opacity
+          : _scatterMarkerStyleAt(scatter, renderIndex).opacity,
+      markerColor: scatter == null
+          ? point.pointStyle?.color
+          : _scatterMarkerStyleAt(scatter, renderIndex).fillColor,
       ordinal: targetIndex + 1,
       count: pointCount,
       isSelected: selectedPointIndices.contains(targetIndex),
@@ -823,6 +1330,10 @@ class SeriesElement implements DataHitElement {
       _paintLinkedBars(canvas, baseColor);
       return;
     }
+    if (series is ScatterChartSeries) {
+      _paintLinkedScatter(canvas);
+      return;
+    }
     final focusPaint = Paint()
       ..color = pointFocusColor ?? const Color(0xFF616161)
       ..style = PaintingStyle.stroke
@@ -843,6 +1354,7 @@ class SeriesElement implements DataHitElement {
       if (renderIndex == null) continue;
       if (renderIndex < 0 || renderIndex >= series.points.length) continue;
       final point = series.points[renderIndex];
+      if (!point.isValid) continue;
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 5, selectionFill);
       canvas.drawCircle(offset, markerSize + 3, selectionBorder);
@@ -853,9 +1365,82 @@ class SeriesElement implements DataHitElement {
       if (renderIndex == null) continue;
       if (renderIndex < 0 || renderIndex >= series.points.length) continue;
       final point = series.points[renderIndex];
+      if (!point.isValid) continue;
       final offset = _currentTransform.dataToPlot(point.x, point.y);
       canvas.drawCircle(offset, markerSize + 7, focusPaint);
     }
+  }
+
+  void _paintLinkedScatter(Canvas canvas) {
+    final currentSeries = series as ScatterChartSeries;
+    final interaction = currentSeries.interactionStyle;
+    final selectionColor =
+        interaction.selectionColor ??
+        pointSelectionColor ??
+        const Color(0xFF2563EB);
+    final focusColor =
+        interaction.focusColor ?? pointFocusColor ?? const Color(0xFF334155);
+
+    for (final pointIndex in selectedPointIndices) {
+      final geometry = scatterGeometryForPoint(pointIndex);
+      if (geometry == null) continue;
+      final path = _scatterStatePath(
+        geometry,
+        scale: interaction.selectionScale,
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = selectionColor.withValues(
+            alpha: interaction.selectionOpacity,
+          )
+          ..style = PaintingStyle.fill,
+      );
+      if (interaction.selectionStrokeWidth > 0) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = selectionColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = interaction.selectionStrokeWidth,
+        );
+      }
+    }
+
+    for (final pointIndex in focusedPointIndices) {
+      final geometry = scatterGeometryForPoint(pointIndex);
+      if (geometry == null) continue;
+      final path = _scatterStatePath(geometry, gap: interaction.focusGap);
+      if (interaction.focusStrokeWidth > 0) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = focusColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = interaction.focusStrokeWidth,
+        );
+      }
+    }
+  }
+
+  Path _scatterStatePath(
+    ScatterPointGeometry geometry, {
+    double scale = 1,
+    double gap = 0,
+  }) {
+    final width = geometry.width * scale + gap * 2;
+    final height = geometry.height * scale + gap * 2;
+    final path = Path();
+    addScatterMarkerPath(
+      path,
+      center: geometry.center,
+      radius: math.max(width, height) / 2,
+      shape: geometry.shape,
+      width: width,
+      height: height,
+      rotationRadians: geometry.rotationRadians,
+    );
+    return path;
   }
 
   void _paintLinkedBars(Canvas canvas, Color baseColor) {
@@ -1005,6 +1590,47 @@ class SeriesElement implements DataHitElement {
     }
   }
 
+  /// Paints transient hover and press feedback for a Scatter point.
+  ///
+  /// The overlay reuses the point's effective shape, dimensions, and rotation
+  /// while leaving the cached base-series picture untouched.
+  void paintScatterInteractionOverlay(
+    Canvas canvas, {
+    int? hoveredPointIndex,
+    int? pressedPointIndex,
+  }) {
+    final currentSeries = series;
+    if (currentSeries is! ScatterChartSeries) return;
+    final activeIndex = pressedPointIndex ?? hoveredPointIndex;
+    if (activeIndex == null) return;
+    final geometry = scatterGeometryForPoint(activeIndex);
+    if (geometry == null) return;
+    final interaction = currentSeries.interactionStyle;
+    final style = _scatterMarkerStyleAt(currentSeries, activeIndex);
+    final pointColor = style.fillColor ?? currentSeries.color ?? themeColor;
+
+    if (pressedPointIndex != null) {
+      canvas.drawPath(
+        _scatterStatePath(geometry, scale: interaction.pressedScale),
+        Paint()
+          ..color = interaction.pressedColor.withValues(
+            alpha: interaction.pressedOpacity,
+          )
+          ..style = PaintingStyle.fill,
+      );
+      return;
+    }
+
+    if (interaction.hoverStrokeWidth <= 0) return;
+    canvas.drawPath(
+      _scatterStatePath(geometry, scale: interaction.hoverScale),
+      Paint()
+        ..color = interaction.hoverColor ?? pointColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = interaction.hoverStrokeWidth,
+    );
+  }
+
   void _paintLineSeries(
     Canvas canvas,
     LineChartSeries series,
@@ -1041,7 +1667,7 @@ class SeriesElement implements DataHitElement {
     LineChartSeries series,
     Color baseColor,
   ) {
-    // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
+    // Interaction opacity composes with the explicit marker opacity.
     final opacity = isSelected
         ? 1.0
         : isHovered
@@ -1360,42 +1986,129 @@ class SeriesElement implements DataHitElement {
     Color baseColor,
   ) {
     // Use theme-based opacity values: selected=1.0, hovered=0.8, normal=0.7
-    final opacity = isSelected
+    final interactionOpacity = series.opacityEncoding != null
+        ? 1.0
+        : isSelected
         ? 1.0
         : isHovered
         ? 0.8
         : 0.7;
     // Use theme marker size if available, otherwise series-specific size
-    final defaultMarkerSize =
-        seriesTheme?.markerSizeAt(seriesIndex) ?? series.markerRadius;
+    final geometries = _resolveScatterGeometries();
+    if (geometries.isEmpty) return;
 
-    // Check if any point has style overrides
-    final hasOverrides = series.points.any((p) => p.pointStyle != null);
+    // Check visible points only; offscreen overrides cannot affect this paint.
+    final hasOverrides =
+        hasAnySelectedPoints ||
+        series.sizeEncoding != null ||
+        series.colorEncoding != null ||
+        series.opacityEncoding != null ||
+        geometries.any((g) => g.point.pointStyle != null);
 
-    if (!hasOverrides) {
-      // FAST PATH: Single color/size for all points
+    final uniformStyle = _scatterMarkerStyleAt(series, -1);
+    if (!hasOverrides &&
+        uniformStyle.shape == SeriesMarkerShape.circle &&
+        uniformStyle.width == uniformStyle.height &&
+        uniformStyle.strokeWidth == 0) {
+      // FAST PATH: one native canvas operation for all uniform markers. A
+      // round-capped point stroke has the same circular footprint as the
+      // previous drawCircle loop while avoiding one draw call per point.
+      final radius = uniformStyle.width / 2;
+      if (radius <= 0) return;
       final pointPaint = Paint()
-        ..color = baseColor.withValues(alpha: opacity)
-        ..style = PaintingStyle.fill;
-
-      for (final point in series.points) {
-        final plotPos = _currentTransform.dataToPlot(point.x, point.y);
-        canvas.drawCircle(plotPos, defaultMarkerSize, pointPaint);
-      }
+        ..color = (uniformStyle.fillColor ?? baseColor).withValues(
+          alpha: interactionOpacity * uniformStyle.opacity,
+        )
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = radius * 2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawPoints(
+        PointMode.points,
+        _scatterUniformCenters ??
+            [for (final geometry in geometries) geometry.center],
+        pointPaint,
+      );
+    } else if (!hasOverrides) {
+      final markerPath = _scatterUniformMarkerPath ??= _buildScatterMarkerPath(
+        geometries,
+        uniformStyle.shape,
+      );
+      _paintScatterMarkerPath(
+        canvas,
+        markerPath,
+        uniformStyle,
+        baseColor,
+        interactionOpacity,
+      );
     } else {
-      // STYLED PATH: Per-point styling
-      for (final point in series.points) {
-        final plotPos = _currentTransform.dataToPlot(point.x, point.y);
-        final pointColor = point.pointStyle?.color ?? baseColor;
-        final pointSize = point.pointStyle?.size ?? defaultMarkerSize;
-
-        final pointPaint = Paint()
-          ..color = pointColor.withValues(alpha: opacity)
-          ..style = PaintingStyle.fill;
-
-        canvas.drawCircle(plotPos, pointSize, pointPaint);
+      // STYLED PATH: Per-point styling.
+      for (final geometry in geometries) {
+        final markerPath = Path();
+        addScatterMarkerPath(
+          markerPath,
+          center: geometry.center,
+          radius: geometry.radius,
+          width: geometry.width,
+          height: geometry.height,
+          rotationRadians: geometry.rotationRadians,
+          shape: geometry.shape,
+        );
+        _paintScatterMarkerPath(
+          canvas,
+          markerPath,
+          _scatterMarkerStyleAt(series, geometry.pointIndex),
+          baseColor,
+          hasAnySelectedPoints &&
+                  !selectedPointIndices.contains(geometry.pointIndex)
+              ? interactionOpacity * series.interactionStyle.dimmedOpacity
+              : interactionOpacity,
+        );
       }
     }
+  }
+
+  Path _buildScatterMarkerPath(
+    List<ScatterPointGeometry> geometries,
+    SeriesMarkerShape shape,
+  ) {
+    final path = Path();
+    for (final geometry in geometries) {
+      addScatterMarkerPath(
+        path,
+        center: geometry.center,
+        radius: geometry.radius,
+        width: geometry.width,
+        height: geometry.height,
+        rotationRadians: geometry.rotationRadians,
+        shape: shape,
+      );
+    }
+    return path;
+  }
+
+  void _paintScatterMarkerPath(
+    Canvas canvas,
+    Path path,
+    _ResolvedScatterMarkerStyle style,
+    Color baseColor,
+    double interactionOpacity,
+  ) {
+    if (style.width <= 0 || style.height <= 0) return;
+    final alpha = interactionOpacity * style.opacity;
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = (style.fillColor ?? baseColor).withValues(alpha: alpha)
+        ..style = PaintingStyle.fill,
+    );
+    if (style.strokeWidth <= 0 || style.strokeColor == null) return;
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = style.strokeColor!.withValues(alpha: alpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = style.strokeWidth,
+    );
   }
 
   void _paintAreaSeries(

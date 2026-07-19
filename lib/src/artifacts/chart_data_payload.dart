@@ -57,6 +57,9 @@ class ChartPointDocument {
   ChartPointDocument({
     required this.x,
     required this.y,
+    this.magnitude,
+    this.colorValue,
+    this.opacityValue,
     this.timestamp,
     this.label,
     this.metadata,
@@ -67,6 +70,9 @@ class ChartPointDocument {
 
   final ChartNumberDocument x;
   final ChartNumberDocument y;
+  final ChartNumberDocument? magnitude;
+  final ChartNumberDocument? colorValue;
+  final ChartNumberDocument? opacityValue;
   final DateTime? timestamp;
   final String? label;
   final JsonObjectValue? metadata;
@@ -77,6 +83,9 @@ class ChartPointDocument {
   Map<String, Object?> toJson() => {
     'x': x.toJson(),
     'y': y.toJson(),
+    if (magnitude != null) 'magnitude': magnitude!.toJson(),
+    if (colorValue != null) 'colorValue': colorValue!.toJson(),
+    if (opacityValue != null) 'opacityValue': opacityValue!.toJson(),
     if (timestamp != null) 'timestamp': timestamp!.toUtc().toIso8601String(),
     if (label != null) 'label': label,
     if (metadata != null) 'metadata': metadata!.toJson(),
@@ -89,6 +98,16 @@ class ChartPointDocument {
       ChartPointDocument(
         x: ChartNumberDocument.fromJson(json['x']),
         y: ChartNumberDocument.fromJson(json['y']),
+        magnitude: json.containsKey('magnitude') && json['magnitude'] != null
+            ? ChartNumberDocument.fromJson(json['magnitude'])
+            : null,
+        colorValue: json.containsKey('colorValue') && json['colorValue'] != null
+            ? ChartNumberDocument.fromJson(json['colorValue'])
+            : null,
+        opacityValue:
+            json.containsKey('opacityValue') && json['opacityValue'] != null
+            ? ChartNumberDocument.fromJson(json['opacityValue'])
+            : null,
         timestamp: readOptionalDateTime(json, 'timestamp'),
         label: readOptionalString(json, 'label'),
         metadata: readOptionalJsonObject(json, 'metadata'),
@@ -267,6 +286,9 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
   InlineColumnarPayload({
     required Iterable<ChartNumberDocument> xValues,
     required Iterable<ChartNumberDocument> yValues,
+    Iterable<ChartNumberDocument?>? magnitudes,
+    Iterable<ChartNumberDocument?>? colorValues,
+    Iterable<ChartNumberDocument?>? opacityValues,
     Iterable<DateTime?>? timestamps,
     Iterable<String?>? labels,
     Iterable<JsonObjectValue?>? metadata,
@@ -275,6 +297,9 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     Iterable<Map<String, JsonValue>?>? pointExtensions,
   }) : xValues = List.unmodifiable(xValues),
        yValues = List.unmodifiable(yValues),
+       magnitudes = _immutableOptionalColumn(magnitudes),
+       colorValues = _immutableOptionalColumn(colorValues),
+       opacityValues = _immutableOptionalColumn(opacityValues),
        timestamps = _immutableOptionalColumn(timestamps),
        labels = _immutableOptionalColumn(labels),
        metadata = _immutableOptionalColumn(metadata),
@@ -291,6 +316,9 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
              ) {
     _validateColumnLength('y', this.yValues.length);
     _validateColumnLength('timestamps', this.timestamps?.length);
+    _validateColumnLength('magnitudes', this.magnitudes?.length);
+    _validateColumnLength('colorValues', this.colorValues?.length);
+    _validateColumnLength('opacityValues', this.opacityValues?.length);
     _validateColumnLength('labels', this.labels?.length);
     _validateColumnLength('metadata', this.metadata?.length);
     _validateColumnLength('segmentStyles', this.segmentStyles?.length);
@@ -305,6 +333,12 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     return InlineColumnarPayload(
       xValues: [for (final point in points) point.x],
       yValues: [for (final point in points) point.y],
+      magnitudes: _optionalPointColumn(points, (point) => point.magnitude),
+      colorValues: _optionalPointColumn(points, (point) => point.colorValue),
+      opacityValues: _optionalPointColumn(
+        points,
+        (point) => point.opacityValue,
+      ),
       timestamps: _optionalPointColumn(points, (point) => point.timestamp),
       labels: _optionalPointColumn(points, (point) => point.label),
       metadata: _optionalPointColumn(points, (point) => point.metadata),
@@ -322,6 +356,9 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
 
   final List<ChartNumberDocument> xValues;
   final List<ChartNumberDocument> yValues;
+  final List<ChartNumberDocument?>? magnitudes;
+  final List<ChartNumberDocument?>? colorValues;
+  final List<ChartNumberDocument?>? opacityValues;
   final List<DateTime?>? timestamps;
   final List<String?>? labels;
   final List<JsonObjectValue?>? metadata;
@@ -341,6 +378,9 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
       ChartPointDocument(
         x: xValues[index],
         y: yValues[index],
+        magnitude: magnitudes?[index],
+        colorValue: colorValues?[index],
+        opacityValue: opacityValues?[index],
         timestamp: timestamps?[index],
         label: labels?[index],
         metadata: metadata?[index],
@@ -355,6 +395,12 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
     'storage': storage,
     'x': [for (final value in xValues) value.toJson()],
     'y': [for (final value in yValues) value.toJson()],
+    if (magnitudes != null)
+      'magnitudes': [for (final value in magnitudes!) value?.toJson()],
+    if (colorValues != null)
+      'colorValues': [for (final value in colorValues!) value?.toJson()],
+    if (opacityValues != null)
+      'opacityValues': [for (final value in opacityValues!) value?.toJson()],
     if (timestamps != null)
       'timestamps': [
         for (final value in timestamps!) value?.toUtc().toIso8601String(),
@@ -381,6 +427,24 @@ final class InlineColumnarPayload extends InlineChartDataPayload {
   }) => InlineColumnarPayload(
     xValues: xValues,
     yValues: yValues,
+    magnitudes: _readOptionalColumn(
+      optionalColumns,
+      'magnitudes',
+      (value, path) =>
+          value == null ? null : ChartNumberDocument.fromJson(value),
+    ),
+    colorValues: _readOptionalColumn(
+      optionalColumns,
+      'colorValues',
+      (value, path) =>
+          value == null ? null : ChartNumberDocument.fromJson(value),
+    ),
+    opacityValues: _readOptionalColumn(
+      optionalColumns,
+      'opacityValues',
+      (value, path) =>
+          value == null ? null : ChartNumberDocument.fromJson(value),
+    ),
     timestamps: _readOptionalColumn(optionalColumns, 'timestamps', (
       value,
       path,

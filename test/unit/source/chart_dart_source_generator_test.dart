@@ -153,6 +153,185 @@ void main() {
       expect(generated.source, isNot(contains('package:braven_charts')));
     });
 
+    test('emits non-default Scatter marker geometry', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'shaped-cohort',
+              points: [
+                ChartDataPoint(
+                  x: 1,
+                  y: 2,
+                  pointStyle: PointStyle(
+                    scatterMarkerShape: SeriesMarkerShape.invertedTriangle,
+                    scatterMarkerStyle: ScatterMarkerStyle(width: 24),
+                  ),
+                ),
+              ],
+              markerRadius: 9,
+              markerShape: SeriesMarkerShape.star,
+              markerStyle: ScatterMarkerStyle(
+                fillColor: Color(0xFF2563EB),
+                strokeColor: Color(0xFF0F172A),
+                strokeWidth: 2,
+                opacity: 0.75,
+                width: 18,
+                height: 10,
+                rotationDegrees: 30,
+              ),
+              interactionStyle: ScatterInteractionStyle(
+                hoverColor: Color(0xFF22C55E),
+                hoverScale: 1.5,
+                selectionColor: Color(0xFF7C3AED),
+                selectionScale: 1.4,
+                focusGap: 6,
+                dimmedOpacity: 0.2,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('markerRadius: 9.0,'));
+      expect(
+        generated.source,
+        contains('markerShape: SeriesMarkerShape.star,'),
+      );
+      for (final source in const [
+        'markerStyle: ScatterMarkerStyle(',
+        'fillColor: Color(0xFF2563EB),',
+        'strokeColor: Color(0xFF0F172A),',
+        'strokeWidth: 2.0,',
+        'opacity: 0.75,',
+        'width: 18.0,',
+        'height: 10.0,',
+        'rotationDegrees: 30.0,',
+        'scatterMarkerStyle: ScatterMarkerStyle(',
+        'scatterMarkerShape: SeriesMarkerShape.invertedTriangle,',
+        'width: 24.0,',
+        'interactionStyle: ScatterInteractionStyle(',
+        'hoverColor: Color(0xFF22C55E),',
+        'hoverScale: 1.5,',
+        'selectionColor: Color(0xFF7C3AED),',
+        'selectionScale: 1.4,',
+        'focusGap: 6.0,',
+        'dimmedOpacity: 0.2,',
+      ]) {
+        expect(generated.source, contains(source));
+      }
+    });
+
+    test('emits Scatter magnitude and size encoding', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'bubble',
+              points: [ChartDataPoint(x: 1, y: 2, magnitude: 80)],
+              sizeEncoding: ScatterSizeEncoding(
+                minimumRadius: 3,
+                maximumRadius: 20,
+                maximumValue: 100,
+                label: 'Accounts',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('magnitude: 80.0,'));
+      expect(generated.source, contains('sizeEncoding: ScatterSizeEncoding('));
+      expect(generated.source, contains('minimumRadius: 3.0,'));
+      expect(generated.source, contains('maximumRadius: 20.0,'));
+      expect(generated.source, contains("label: 'Accounts',"));
+    });
+
+    test('emits independent Scatter color values and encoding', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'readiness',
+              points: [ChartDataPoint(x: 1, y: 2, colorValue: 84)],
+              colorEncoding: ScatterColorEncoding(
+                colors: [Color(0xFFDC2626), Color(0xFF16A34A)],
+                minimumValue: 40,
+                maximumValue: 100,
+                label: 'Readiness',
+                unit: '%',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('colorValue: 84.0,'));
+      expect(
+        generated.source,
+        contains('colorEncoding: ScatterColorEncoding('),
+      );
+      expect(generated.source, contains('Color(0xFFDC2626),'));
+      expect(generated.source, contains('Color(0xFF16A34A),'));
+      expect(generated.source, contains("label: 'Readiness',"));
+    });
+
+    test('emits piecewise Scatter color scale configuration', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'risk',
+              points: [ChartDataPoint(x: 1, y: 2, colorValue: 80)],
+              colorEncoding: ScatterColorEncoding(
+                colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+                scaleType: ScatterColorScaleType.piecewise,
+                thresholds: [60],
+                bandLabels: ['Normal', 'Critical'],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('scaleType: ScatterColorScaleType.piecewise'),
+      );
+      expect(generated.source, contains('thresholds: [60.0]'));
+      expect(generated.source, contains("bandLabels: ['Normal', 'Critical']"));
+    });
+
+    test('emits independent Scatter opacity values and encoding', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'confidence',
+              points: [ChartDataPoint(x: 1, y: 2, opacityValue: 84)],
+              opacityEncoding: ScatterOpacityEncoding(
+                minimumOpacity: 0.15,
+                maximumOpacity: 0.95,
+                minimumValue: 40,
+                maximumValue: 100,
+                label: 'Confidence',
+                unit: '%',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('opacityValue: 84.0,'));
+      expect(
+        generated.source,
+        contains('opacityEncoding: ScatterOpacityEncoding('),
+      );
+      expect(generated.source, contains('minimumOpacity: 0.15,'));
+      expect(generated.source, contains('maximumOpacity: 0.95,'));
+      expect(generated.source, contains("label: 'Confidence',"));
+    });
+
     test('emits direct constructors for analytical annotations', () {
       final generated = _success(
         ChartDartSourceGenerator.generate(
@@ -274,6 +453,105 @@ void main() {
       expect(generated.source, contains('position: LegendPosition.bottomLeft'));
       expect(generated.source, contains("hiddenSeriesIds: {'legend-power'}"));
       expect(generated.source, contains('customPosition: Offset(18.0, 24.0)'));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits a native quantitative size legend', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'bubble',
+              points: [ChartDataPoint(x: 1, y: 2, magnitude: 95)],
+            ),
+            annotations: [
+              LegendAnnotation(
+                id: 'bubble-size-key',
+                sizeScale: const LegendSizeScale(
+                  label: 'Active accounts',
+                  color: Color(0xFF0F9F8F),
+                  samples: [
+                    LegendSizeSample(radius: 4, label: '95'),
+                    LegendSizeSample(radius: 24, label: '600'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('sizeScale: LegendSizeScale('));
+      expect(generated.source, contains("label: 'Active accounts'"));
+      expect(generated.source, contains('LegendSizeSample('));
+      expect(generated.source, contains("label: '600'"));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits a native quantitative color legend', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'readiness',
+              points: [ChartDataPoint(x: 1, y: 2, colorValue: 84)],
+            ),
+            annotations: [
+              LegendAnnotation(
+                id: 'readiness-key',
+                colorScale: const LegendColorScale(
+                  label: 'Recovery readiness',
+                  colors: [Color(0xFFDC2626), Color(0xFF16A34A)],
+                  minimumLabel: '45 %',
+                  midpointLabel: '70 %',
+                  maximumLabel: '95 %',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('colorScale: LegendColorScale('));
+      expect(generated.source, contains("label: 'Recovery readiness'"));
+      expect(generated.source, contains("minimumLabel: '45 %'"));
+      expect(generated.source, contains("maximumLabel: '95 %'"));
+      expect(generated.warnings, isEmpty);
+    });
+
+    test('emits a native segmented color legend', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            const ScatterChartSeries(
+              id: 'risk',
+              points: [ChartDataPoint(x: 1, y: 2, colorValue: 80)],
+            ),
+            annotations: [
+              LegendAnnotation(
+                id: 'risk-key',
+                colorScale: const LegendColorScale(
+                  label: 'Risk score',
+                  colors: [Color(0xFF16A34A), Color(0xFFDC2626)],
+                  minimumLabel: '0',
+                  maximumLabel: '100',
+                  type: LegendColorScaleType.piecewise,
+                  segmentLabels: ['Normal', 'Critical'],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('type: LegendColorScaleType.piecewise'),
+      );
+      expect(
+        generated.source,
+        contains("segmentLabels: ['Normal', 'Critical']"),
+      );
       expect(generated.warnings, isEmpty);
     });
 

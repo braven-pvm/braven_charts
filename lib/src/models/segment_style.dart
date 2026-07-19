@@ -5,6 +5,8 @@ import 'dart:ui';
 
 import 'chart_data_point.dart';
 import 'chart_series.dart';
+import 'scatter_marker_style.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 
 // =============================================================================
 // SegmentStyle - For Line and Area Charts
@@ -182,17 +184,28 @@ class PointStyle {
   /// Creates a point style with optional color and size overrides.
   ///
   /// Both parameters are optional. Null values mean "use series default".
-  const PointStyle({this.color, this.size});
+  const PointStyle({
+    this.color,
+    this.size,
+    this.scatterMarkerShape,
+    this.scatterMarkerStyle,
+  });
 
   /// Creates a point style with only a color override.
   ///
   /// Size will inherit from series default.
-  const PointStyle.color(Color this.color) : size = null;
+  const PointStyle.color(Color this.color)
+    : size = null,
+      scatterMarkerShape = null,
+      scatterMarkerStyle = null;
 
   /// Creates a point style with only a size override.
   ///
   /// Color will inherit from series default.
-  const PointStyle.size(double this.size) : color = null;
+  const PointStyle.size(double this.size)
+    : color = null,
+      scatterMarkerShape = null,
+      scatterMarkerStyle = null;
 
   /// Color override for this point.
   ///
@@ -210,21 +223,43 @@ class PointStyle {
   /// If null, uses the series default size.
   final double? size;
 
+  /// Scatter-only marker shape override for this point.
+  ///
+  /// Null inherits [ScatterChartSeries.markerShape].
+  final SeriesMarkerShape? scatterMarkerShape;
+
+  /// Advanced Scatter-only marker overrides for this point.
+  final ScatterMarkerStyle? scatterMarkerStyle;
+
   /// Whether this style has any overrides.
   ///
   /// Returns false if both color and size are null.
-  bool get hasOverrides => color != null || size != null;
+  bool get hasOverrides =>
+      color != null ||
+      size != null ||
+      scatterMarkerShape != null ||
+      scatterMarkerStyle?.hasOverrides == true;
 
   /// Creates a copy of this style with the given overrides.
   PointStyle copyWith({
     Color? color,
     double? size,
+    SeriesMarkerShape? scatterMarkerShape,
+    ScatterMarkerStyle? scatterMarkerStyle,
     bool clearColor = false,
     bool clearSize = false,
+    bool clearScatterMarkerShape = false,
+    bool clearScatterMarkerStyle = false,
   }) {
     return PointStyle(
       color: clearColor ? null : (color ?? this.color),
       size: clearSize ? null : (size ?? this.size),
+      scatterMarkerShape: clearScatterMarkerShape
+          ? null
+          : (scatterMarkerShape ?? this.scatterMarkerShape),
+      scatterMarkerStyle: clearScatterMarkerStyle
+          ? null
+          : (scatterMarkerStyle ?? this.scatterMarkerStyle),
     );
   }
 
@@ -234,13 +269,18 @@ class PointStyle {
       other is PointStyle &&
           runtimeType == other.runtimeType &&
           color == other.color &&
-          size == other.size;
+          size == other.size &&
+          scatterMarkerShape == other.scatterMarkerShape &&
+          scatterMarkerStyle == other.scatterMarkerStyle;
 
   @override
-  int get hashCode => Object.hash(color, size);
+  int get hashCode =>
+      Object.hash(color, size, scatterMarkerShape, scatterMarkerStyle);
 
   @override
-  String toString() => 'PointStyle(color: $color, size: $size)';
+  String toString() =>
+      'PointStyle(color: $color, size: $size, scatterMarkerShape: '
+      '$scatterMarkerShape, scatterMarkerStyle: $scatterMarkerStyle)';
 }
 
 // =============================================================================

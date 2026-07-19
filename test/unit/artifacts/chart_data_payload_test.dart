@@ -10,6 +10,8 @@ void main() {
         ChartPointDocument(
           x: ChartNumberDocument.fromDouble(double.nan),
           y: ChartNumberDocument.fromDouble(double.infinity),
+          magnitude: ChartNumberDocument.fromDouble(42),
+          opacityValue: ChartNumberDocument.fromDouble(0.72),
           timestamp: DateTime.parse('2026-07-15T08:30:00+02:00'),
           label: 'surge',
           metadata: JsonObjectValue({'lap': JsonNumberValue(3)}),
@@ -31,6 +33,8 @@ void main() {
       expect(json, isNot(contains('points')));
       expect(json['x'], hasLength(2));
       expect(json['metadata'], isA<List<Object?>>());
+      expect(json['magnitudes'], isA<List<Object?>>());
+      expect(json['opacityValues'], isA<List<Object?>>());
       expect(decoded, isA<InlineColumnarPayload>());
       expect(
         (decoded as InlineColumnarPayload).points.map(

@@ -127,6 +127,7 @@ export 'src/models/pie_chart_series.dart';
 export 'src/models/radial_category_series.dart';
 export 'src/models/radial_legend_item.dart';
 export 'src/models/segment_style.dart';
+export 'src/models/scatter_marker_style.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';
 export 'src/models/x_axis_config.dart';

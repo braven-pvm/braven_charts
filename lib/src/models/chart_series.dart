@@ -9,8 +9,10 @@ import 'chart_data_point.dart';
 import 'data_point_label_config.dart';
 import 'series_inline_label_config.dart';
 import 'path_animation_style.dart';
+import 'scatter_marker_style.dart';
 import 'y_axis_config.dart';
 import 'y_axis_position.dart';
+import '../theming/components/series_theme.dart' show SeriesMarkerShape;
 
 /// Fill style for data point markers.
 enum DataPointMarkerStyle {
@@ -438,9 +440,21 @@ class ScatterChartSeries extends ChartSeries {
     super.yAxisConfig,
     super.unit,
     this.markerRadius = 5.0,
+    this.markerShape = SeriesMarkerShape.circle,
+    this.markerStyle,
+    this.sizeEncoding,
+    this.colorEncoding,
+    this.opacityEncoding,
+    this.interactionStyle = const ScatterInteractionStyle(),
   });
 
   final double markerRadius;
+  final SeriesMarkerShape markerShape;
+  final ScatterMarkerStyle? markerStyle;
+  final ScatterSizeEncoding? sizeEncoding;
+  final ScatterColorEncoding? colorEncoding;
+  final ScatterOpacityEncoding? opacityEncoding;
+  final ScatterInteractionStyle interactionStyle;
 
   @override
   ScatterChartSeries copyWith({
@@ -456,6 +470,16 @@ class ScatterChartSeries extends ChartSeries {
     YAxisConfig? yAxisConfig,
     String? unit,
     double? markerRadius,
+    SeriesMarkerShape? markerShape,
+    ScatterMarkerStyle? markerStyle,
+    bool clearMarkerStyle = false,
+    ScatterSizeEncoding? sizeEncoding,
+    bool clearSizeEncoding = false,
+    ScatterColorEncoding? colorEncoding,
+    bool clearColorEncoding = false,
+    ScatterOpacityEncoding? opacityEncoding,
+    bool clearOpacityEncoding = false,
+    ScatterInteractionStyle? interactionStyle,
   }) {
     return ScatterChartSeries(
       id: id ?? this.id,
@@ -470,12 +494,50 @@ class ScatterChartSeries extends ChartSeries {
       yAxisConfig: yAxisConfig ?? this.yAxisConfig,
       unit: unit ?? this.unit,
       markerRadius: markerRadius ?? this.markerRadius,
+      markerShape: markerShape ?? this.markerShape,
+      markerStyle: clearMarkerStyle ? null : (markerStyle ?? this.markerStyle),
+      sizeEncoding: clearSizeEncoding
+          ? null
+          : (sizeEncoding ?? this.sizeEncoding),
+      colorEncoding: clearColorEncoding
+          ? null
+          : (colorEncoding ?? this.colorEncoding),
+      opacityEncoding: clearOpacityEncoding
+          ? null
+          : (opacityEncoding ?? this.opacityEncoding),
+      interactionStyle: interactionStyle ?? this.interactionStyle,
     );
   }
 
   @override
   String toString() =>
-      'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius)';
+      'ScatterChartSeries(id: $id, points: ${points.length}, markerRadius: $markerRadius, markerShape: ${markerShape.name}, markerStyle: $markerStyle, sizeEncoding: $sizeEncoding, colorEncoding: $colorEncoding, opacityEncoding: $opacityEncoding, interactionStyle: $interactionStyle)';
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ScatterChartSeries) return false;
+    return super == other &&
+        other.markerRadius == markerRadius &&
+        other.markerShape == markerShape &&
+        other.markerStyle == markerStyle &&
+        other.sizeEncoding == sizeEncoding &&
+        other.colorEncoding == colorEncoding &&
+        other.opacityEncoding == opacityEncoding &&
+        other.interactionStyle == interactionStyle;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    super.hashCode,
+    markerRadius,
+    markerShape,
+    markerStyle,
+    sizeEncoding,
+    colorEncoding,
+    opacityEncoding,
+    interactionStyle,
+  );
 }
 
 /// A linear gradient used to paint the interior of an [AreaChartSeries].
