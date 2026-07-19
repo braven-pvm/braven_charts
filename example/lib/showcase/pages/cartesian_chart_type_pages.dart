@@ -22,6 +22,8 @@ enum _ScatterRiskPalette { safety, thermal, service }
 
 enum _SynchronizedMetric { speed, elevation, heartRate }
 
+enum _SynchronizedDatasetProfile { normal, dense, stress }
+
 class LineChartsPage extends StatelessWidget {
   const LineChartsPage({super.key});
 
@@ -102,6 +104,13 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _synchronizeViewport = true;
   bool _showSynchronizedIntersections = true;
   bool _synchronizedTracking = true;
+  _SynchronizedDatasetProfile _synchronizedDatasetProfile =
+      _SynchronizedDatasetProfile.normal;
+  final Map<
+    _SynchronizedDatasetProfile,
+    Map<_SynchronizedMetric, List<ChartDataPoint>>
+  >
+  _synchronizedPointCache = {};
   final Set<_SynchronizedMetric> _visibleSynchronizedMetrics = {
     ..._SynchronizedMetric.values,
   };
@@ -470,9 +479,13 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           final visibleMetrics = _SynchronizedMetric.values
               .where(_visibleSynchronizedMetrics.contains)
               .toList(growable: false);
+          final pointsByMetric = {
+            for (final metric in visibleMetrics)
+              metric: _synchronizedPoints(metric),
+          };
           final pointCount = visibleMetrics.fold<int>(
             0,
-            (total, metric) => total + _synchronizedPointCount(metric),
+            (total, metric) => total + pointsByMetric[metric]!.length,
           );
           final configuredStackHeight = visibleMetrics.fold<double>(
             0,
@@ -508,6 +521,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                       trackingEnabled: _synchronizedTracking,
                       visibleMetrics: visibleMetrics,
                       chartHeights: _synchronizedChartHeights,
+                      pointsByMetric: pointsByMetric,
                     ),
                   ),
                 ),
@@ -1077,13 +1091,28 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           icon: Icons.view_stream_outlined,
           initiallyExpanded: false,
           children: [
+            EnumOption<_SynchronizedDatasetProfile>(
+              key: const ValueKey('synchronized-dataset-profile'),
+              label: 'Dataset profile',
+              value: _synchronizedDatasetProfile,
+              values: _SynchronizedDatasetProfile.values,
+              labelBuilder: _synchronizedProfileLabel,
+              subtitle: _synchronizedProfileSummary(
+                _synchronizedDatasetProfile,
+              ),
+              onChanged: (profile) {
+                _ensureSynchronizedProfileCached(profile);
+                _interactionGroupController.reset();
+                setState(() => _synchronizedDatasetProfile = profile);
+              },
+            ),
             for (final metric in _SynchronizedMetric.values) ...[
               BoolOption(
                 key: ValueKey('synchronized-${metric.name}-visible'),
                 label: '${_synchronizedMetricLabel(metric)} chart',
                 value: _visibleSynchronizedMetrics.contains(metric),
                 subtitle: _visibleSynchronizedMetrics.contains(metric)
-                    ? '${_synchronizedPointCount(metric)} points · mounted in the shared group'
+                    ? '${_synchronizedPoints(metric).length} points · mounted in the shared group'
                     : 'Removed from the shared group',
                 onChanged: (value) {
                   _interactionGroupController.reset();
@@ -2523,6 +2552,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _synchronizeViewport = true;
       _showSynchronizedIntersections = true;
       _synchronizedTracking = true;
+      _synchronizedDatasetProfile = _SynchronizedDatasetProfile.normal;
       _visibleSynchronizedMetrics
         ..clear()
         ..addAll(_SynchronizedMetric.values);
@@ -2547,11 +2577,63 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         _SynchronizedMetric.heartRate => 'Heart rate',
       };
 
-  int _synchronizedPointCount(_SynchronizedMetric metric) => switch (metric) {
-    _SynchronizedMetric.speed => _synchronizedSpeedPoints.length,
-    _SynchronizedMetric.elevation => _synchronizedElevationPoints.length,
-    _SynchronizedMetric.heartRate => _synchronizedHeartRatePoints.length,
-  };
+  String _synchronizedProfileLabel(_SynchronizedDatasetProfile profile) =>
+      switch (profile) {
+        _SynchronizedDatasetProfile.normal => 'Normal · 52 total',
+        _SynchronizedDatasetProfile.dense => 'Dense · 1,500 total',
+        _SynchronizedDatasetProfile.stress => 'Stress · 15,000 total',
+      };
+
+  int _synchronizedProfilePointCount(_SynchronizedDatasetProfile profile) =>
+      switch (profile) {
+        _SynchronizedDatasetProfile.normal => 0,
+        _SynchronizedDatasetProfile.dense => 500,
+        _SynchronizedDatasetProfile.stress => 5000,
+      };
+
+  String _synchronizedProfileSummary(_SynchronizedDatasetProfile profile) =>
+      switch (profile) {
+        _SynchronizedDatasetProfile.normal =>
+          '52 original samples across all charts',
+        _SynchronizedDatasetProfile.dense =>
+          '500 points per chart · generated once and cached',
+        _SynchronizedDatasetProfile.stress =>
+          '5,000 points per chart · generated once and cached',
+      };
+
+  List<ChartDataPoint> _synchronizedSourcePoints(_SynchronizedMetric metric) =>
+      switch (metric) {
+        _SynchronizedMetric.speed => _synchronizedSpeedPoints,
+        _SynchronizedMetric.elevation => _synchronizedElevationPoints,
+        _SynchronizedMetric.heartRate => _synchronizedHeartRatePoints,
+      };
+
+  List<ChartDataPoint> _synchronizedPoints(_SynchronizedMetric metric) {
+    if (_synchronizedDatasetProfile == _SynchronizedDatasetProfile.normal) {
+      return _synchronizedSourcePoints(metric);
+    }
+    final cachedProfile = _synchronizedPointCache[_synchronizedDatasetProfile];
+    assert(
+      cachedProfile != null,
+      'Expanded synchronized profiles must be prepared before setState.',
+    );
+    return cachedProfile![metric]!;
+  }
+
+  void _ensureSynchronizedProfileCached(_SynchronizedDatasetProfile profile) {
+    if (profile == _SynchronizedDatasetProfile.normal ||
+        _synchronizedPointCache.containsKey(profile)) {
+      return;
+    }
+    final targetCount = _synchronizedProfilePointCount(profile);
+    _synchronizedPointCache[profile] = {
+      for (final metric in _SynchronizedMetric.values)
+        metric: _resampleSynchronizedPoints(
+          _synchronizedSourcePoints(metric),
+          targetCount,
+        ),
+    };
+  }
 
   void _resetMotionData() {
     _motionPrimaryPoints = List<ChartDataPoint>.of(_primaryPoints);
@@ -2708,6 +2790,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required this.trackingEnabled,
     required this.visibleMetrics,
     required this.chartHeights,
+    required this.pointsByMetric,
   });
 
   final ChartInteractionGroupController groupController;
@@ -2723,6 +2806,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
   final bool trackingEnabled;
   final List<_SynchronizedMetric> visibleMetrics;
   final Map<_SynchronizedMetric, double> chartHeights;
+  final Map<_SynchronizedMetric, List<ChartDataPoint>> pointsByMetric;
 
   @override
   Widget build(BuildContext context) {
@@ -2785,7 +2869,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-speed',
           name: 'Speed',
           unit: 'km/h',
-          points: _synchronizedSpeedPoints,
+          points: pointsByMetric[_SynchronizedMetric.speed]!,
           color: const Color(0xFF2196F3),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -2813,7 +2897,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-elevation',
           name: 'Elevation',
           unit: 'm',
-          points: _synchronizedElevationPoints,
+          points: pointsByMetric[_SynchronizedMetric.elevation]!,
           color: const Color(0xFF5B56D6),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -2845,7 +2929,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-heart-rate',
           name: 'Heart rate',
           unit: 'bpm',
-          points: _synchronizedHeartRatePoints,
+          points: pointsByMetric[_SynchronizedMetric.heartRate]!,
           color: const Color(0xFF00B86B),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -3396,6 +3480,35 @@ Column(
   ],
 );
 ''';
+
+List<ChartDataPoint> _resampleSynchronizedPoints(
+  List<ChartDataPoint> source,
+  int targetCount,
+) {
+  assert(source.length >= 2);
+  assert(targetCount >= 2);
+  if (targetCount == source.length) return source;
+
+  final first = source.first;
+  final last = source.last;
+  final span = last.x - first.x;
+  var sourceIndex = 0;
+  final points = List<ChartDataPoint>.generate(targetCount, (index) {
+    if (index == 0) return first;
+    if (index == targetCount - 1) return last;
+
+    final x = first.x + (span * index / (targetCount - 1));
+    while (sourceIndex < source.length - 2 && source[sourceIndex + 1].x < x) {
+      sourceIndex++;
+    }
+    final lower = source[sourceIndex];
+    final upper = source[sourceIndex + 1];
+    final segmentSpan = upper.x - lower.x;
+    final progress = segmentSpan == 0 ? 0.0 : (x - lower.x) / segmentSpan;
+    return ChartDataPoint(x: x, y: lower.y + ((upper.y - lower.y) * progress));
+  }, growable: false);
+  return List<ChartDataPoint>.unmodifiable(points);
+}
 
 const _synchronizedSpeedPoints = <ChartDataPoint>[
   ChartDataPoint(x: 0, y: 13.5),

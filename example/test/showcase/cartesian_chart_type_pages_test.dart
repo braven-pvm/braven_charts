@@ -588,10 +588,104 @@ void main() {
       await tester.pump();
       expect(find.byType(BravenChartPlus), findsOneWidget);
       expect(
-        tester.widget<BravenChartPlus>(find.byType(BravenChartPlus)).xAxisConfig
+        tester
+            .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+            .xAxisConfig
             ?.label,
         'Distance',
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Synchronized dataset profiles scale deterministically and reuse cached points',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chart composition'));
+      await tester.pumpAndSettle();
+
+      List<List<ChartDataPoint>> visibleSeriesPoints() => tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .map((chart) => chart.series.single.points)
+          .toList(growable: false);
+
+      var currentProfileLabel = 'Normal · 52 total';
+      Future<void> selectProfile(String label) async {
+        final selectedLabel = find.descendant(
+          of: find.byKey(
+            const ValueKey('synchronized-dataset-profile'),
+            skipOffstage: false,
+          ),
+          matching: find.text(currentProfileLabel, skipOffstage: false),
+        );
+        await tester.ensureVisible(selectedLabel);
+        await tester.pumpAndSettle();
+        await tester.tap(selectedLabel);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+        currentProfileLabel = label;
+      }
+
+      final normalPoints = visibleSeriesPoints();
+      expect(normalPoints.map((points) => points.length), [17, 14, 21]);
+      final endpoints = [
+        for (final points in normalPoints)
+          (first: points.first, last: points.last),
+      ];
+
+      await selectProfile('Stress · 15,000 total');
+      final firstStressPoints = visibleSeriesPoints();
+      expect(
+        firstStressPoints.map((points) => points.length),
+        everyElement(5000),
+      );
+      expect(find.text('15000'), findsOneWidget);
+      for (var index = 0; index < firstStressPoints.length; index++) {
+        expect(firstStressPoints[index].first.x, endpoints[index].first.x);
+        expect(firstStressPoints[index].first.y, endpoints[index].first.y);
+        expect(firstStressPoints[index].last.x, endpoints[index].last.x);
+        expect(firstStressPoints[index].last.y, endpoints[index].last.y);
+      }
+
+      await selectProfile('Dense · 1,500 total');
+      expect(
+        visibleSeriesPoints().map((points) => points.length),
+        everyElement(500),
+      );
+      expect(find.text('1500'), findsOneWidget);
+
+      await selectProfile('Stress · 15,000 total');
+      final secondStressPoints = visibleSeriesPoints();
+      for (var index = 0; index < firstStressPoints.length; index++) {
+        expect(
+          identical(firstStressPoints[index], secondStressPoints[index]),
+          isTrue,
+        );
+      }
+
+      final elevationToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-elevation-visible'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(elevationToggle).onChanged!(false);
+      await tester.pump();
+      expect(find.text('10000'), findsOneWidget);
+      tester.widget<SwitchListTile>(elevationToggle).onChanged!(true);
+      await tester.pump();
+      expect(find.text('15000'), findsOneWidget);
+      expect(identical(visibleSeriesPoints()[1], firstStressPoints[1]), isTrue);
       expect(tester.takeException(), isNull);
     },
   );

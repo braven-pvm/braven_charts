@@ -8,7 +8,7 @@
 **Sprint 9 lane:** Stable-identity interior topology motion (complete)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Synchronized dataset stress profiles (Sprint 15)
+**Next lane:** Synchronized live-update motion (Sprint 16)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -660,3 +660,48 @@ and expose honest session performance signals while the composition changes.
   base-href builds pass, and wide, tall, and compact release captures render
   the direct Synchronized route without severe browser output. The root build
   is served on port 8193 for pixel review before promotion.
+
+## Sprint 15 — Synchronized dataset stress profiles
+
+**Status:** Local review approved
+
+### Product outcome
+
+The Synchronized composition can be exercised at representative and deliberately
+heavy dataset sizes, so its live frame diagnostics reveal scaling behavior
+instead of measuring only the 52-point showcase sample.
+
+### Scope
+
+- Add deterministic Normal, Dense, and Stress profiles containing 52, 1,500,
+  and 15,000 visible points when all three charts are mounted.
+- Preserve each metric's domain, endpoints, units, and recognizable shape while
+  changing only sampling density.
+- Generate each expanded profile once, outside chart build, and reuse immutable
+  point lists across rebuilds, tracking, theme, and layout changes.
+- Keep the profile control inside the synchronized composition surface and feed
+  its effective point count into the existing passive `FrameTiming` panel.
+
+### Acceptance gates
+
+- Switching among all three profiles updates every mounted series and the
+  visible-point diagnostic without recreating data during ordinary rebuilds.
+- Membership changes report the correct profile-specific total, including the
+  zero-chart state and restoration of a removed participant.
+- Crosshair tracking, synchronized cursor/viewport, independent heights, theme,
+  and compact layout remain functional at Stress density.
+- Permanent tests cover exact point counts, endpoint preservation, cache reuse,
+  profile switching, and safe rendering of the 15,000-point composition;
+  analyzers, affected suites, release builds, and direct-route review pass.
+
+### Delivered local slice
+
+- The Chart composition panel now exposes Normal, Dense, and Stress profiles;
+  effective counts flow through chart membership labels and the live diagnostics.
+- Dense and Stress are linearly resampled from the canonical metric shapes before
+  state changes. Immutable cached lists are reused when a profile is revisited or
+  a chart leaves and rejoins the composition.
+- Permanent showcase coverage verifies 52/1,500/15,000 totals, source endpoints,
+  cache identity, profile switching, membership totals, and Stress rendering.
+- All 199 showcase tests and the showcase analyzer pass. The release web build is
+  clean and the direct route returns HTTP 200 on port 8193 for local review.

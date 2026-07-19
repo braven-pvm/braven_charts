@@ -188,3 +188,15 @@ These values describe the current device, browser, and build mode and should be
 used for same-session comparisons, not as portable package benchmarks. The
 diagnostics subtree refreshes at most twice per second and does not rebuild the
 chart participants.
+
+Use **Dataset profile** for a same-device scaling comparison:
+
+- **Normal** keeps the 52 original samples across the three metrics.
+- **Dense** uses 500 deterministic samples per chart (1,500 total).
+- **Stress** uses 5,000 deterministic samples per chart (15,000 total).
+
+Dense and Stress preserve the original domains and endpoints. Their immutable
+point lists are generated once when first selected and then reused across chart
+rebuilds, participant removal/restoration, tracking, theme, and layout changes.
+Reset the frame samples after switching profiles if you want a clean interaction
+window, then scrub, pan, and zoom the same way in each profile.
