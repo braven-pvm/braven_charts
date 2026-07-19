@@ -671,6 +671,57 @@ void main() {
       expect(model.pieRows.every((row) => row.isValid), isTrue);
     });
 
+    test('projects lossless OHLC rows with exact-X Cartesian overlays', () {
+      final time = DateTime.utc(2026, 7, 18, 9, 30);
+      final candles = CandlestickChartSeries(
+        id: 'price',
+        name: 'Price',
+        unit: 'USD',
+        points: [
+          CandlestickDataPoint.atTime(
+            timestamp: time,
+            open: 100,
+            high: 112,
+            low: 98,
+            close: 110,
+            label: 'Open',
+          ),
+        ],
+      );
+      final volume = LineChartSeries(
+        id: 'volume',
+        name: 'Volume',
+        unit: 'shares',
+        points: [
+          ChartDataPoint(x: time.millisecondsSinceEpoch.toDouble(), y: 2500),
+          ChartDataPoint(
+            x: (time.millisecondsSinceEpoch + 1).toDouble(),
+            y: 9999,
+          ),
+        ],
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(candles)).value,
+          _success(ChartSeriesDocumentCodec.encode(volume)).value,
+        ], xLabel: 'Session'),
+      );
+
+      expect(model.projectionKind, ChartTableProjectionKind.candlestick);
+      expect(model.candlestickRows, hasLength(1));
+      final row = model.candlestickRows.single;
+      expect(row.timestamp, time);
+      expect(
+        [row.openRaw, row.highRaw, row.lowRaw, row.closeRaw],
+        [100, 112, 98, 110],
+      );
+      expect(row.changeRaw, 10);
+      expect(row.changePercentDisplay, '10.00%');
+      expect(row.overlayCells.keys, ['volume']);
+      expect(row.overlayCells['volume']?.yRaw, 2500);
+      expect(row.overlayCells['volume']?.reference.pointIndex, 0);
+    });
+
     test('rejects mixed pie and Cartesian table projections', () {
       final pie = PieChartSeries.fromMap(id: 'pie', values: const {'A': 1});
       final document = _document([

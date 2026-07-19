@@ -76,6 +76,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     highlights: ['Cohorts', 'Point styling', 'Tooltips'],
   ),
   ShowcaseChartType(
+    type: ChartType.candlestick,
+    label: 'Candlestick',
+    slug: 'candlestick-charts',
+    summary: 'Open-high-low-close movement',
+    bestFor: 'Price action and interval-based financial observations',
+    icon: Icons.candlestick_chart,
+    accent: Color(0xFF0F766E),
+    highlights: ['OHLC', 'Hollow + filled', 'Cartesian overlays'],
+  ),
+  ShowcaseChartType(
     type: ChartType.pie,
     label: 'Pie',
     slug: 'pie-charts',
@@ -349,7 +359,7 @@ class ChartTypeCatalogCard extends StatelessWidget {
 ///
 /// Each row scrolls independently only when its cards cannot retain a useful
 /// preview width. The three radial families therefore receive more space than
-/// they would in one seven-card strip.
+/// they would in one mixed-family strip.
 class ChartTypeCatalogStrip extends StatelessWidget {
   const ChartTypeCatalogStrip({super.key, this.onOpenChartType});
 
@@ -362,14 +372,14 @@ class ChartTypeCatalogStrip extends StatelessWidget {
       children: [
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.take(4).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(5).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: _ChartTypeCatalogRow(
-            chartTypes: showcaseChartTypes.skip(4).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(5).toList(growable: false),
             onOpenChartType: onOpenChartType,
           ),
         ),
@@ -529,6 +539,22 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
         points: secondary,
         color: Color(0xFFF97316),
         markerRadius: 4,
+      ),
+    ],
+    ChartType.candlestick => [
+      CandlestickChartSeries(
+        id: 'catalog-candlestick',
+        points: [
+          CandlestickDataPoint(x: 0, open: 28, high: 34, low: 25, close: 32),
+          CandlestickDataPoint(x: 1, open: 32, high: 36, low: 29, close: 30),
+          CandlestickDataPoint(x: 2, open: 30, high: 38, low: 29, close: 36),
+          CandlestickDataPoint(x: 3, open: 36, high: 39, low: 32, close: 34),
+          CandlestickDataPoint(x: 4, open: 34, high: 43, low: 33, close: 41),
+          CandlestickDataPoint(x: 5, open: 41, high: 45, low: 38, close: 39),
+          CandlestickDataPoint(x: 6, open: 39, high: 48, low: 38, close: 46),
+          CandlestickDataPoint(x: 7, open: 46, high: 49, low: 42, close: 46),
+        ],
+        candlestickStyle: const CandlestickChartStyle(maxBodyWidth: 10),
       ),
     ],
     ChartType.pie => [

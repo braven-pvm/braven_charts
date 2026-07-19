@@ -331,6 +331,7 @@ class ChartPageLayout extends StatelessWidget {
                 ],
               );
               final actionGroup = Wrap(
+                alignment: WrapAlignment.end,
                 spacing: 8,
                 runSpacing: 8,
                 children: headerActions,
@@ -345,7 +346,10 @@ class ChartPageLayout extends StatelessWidget {
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: actionGroup,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: actionGroup,
+                        ),
                       ),
                     ],
                   ],

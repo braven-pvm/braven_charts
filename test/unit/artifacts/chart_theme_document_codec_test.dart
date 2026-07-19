@@ -48,6 +48,7 @@ void main() {
         'scrollbarConfig',
         'legendStyle',
         'pieChartTheme',
+        'candlestickTheme',
         'focusBorderColor',
         'focusBorderWidth',
         'focusBorderRadius',
@@ -275,6 +276,11 @@ void _expectThemeFields(ChartTheme actual, ChartTheme expected, String reason) {
   );
   expect(actual.legendStyle, expected.legendStyle, reason: '$reason legend');
   expect(actual.pieChartTheme, expected.pieChartTheme, reason: '$reason pie');
+  expect(
+    actual.candlestickTheme,
+    expected.candlestickTheme,
+    reason: '$reason candlestick',
+  );
   expect(
     actual.focusBorderColor.toARGB32(),
     expected.focusBorderColor.toARGB32(),

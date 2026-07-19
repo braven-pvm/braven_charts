@@ -12,6 +12,7 @@ import '../interaction/core/hit_test_strategy.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
+import '../models/candlestick_chart_series.dart';
 import '../models/data_range.dart';
 import '../models/enums.dart';
 import '../models/legend_style.dart';
@@ -4276,7 +4277,11 @@ class LegendAnnotationElement extends ChartElement {
               _bounds!.top + padding.top + seriesRowHeight / 2,
             );
 
-      _drawMarker(canvas, markerCenter, seriesColor, style);
+      if (series is CandlestickChartSeries) {
+        _drawCandlestickMarker(canvas, markerCenter, seriesColor, style);
+      } else {
+        _drawMarker(canvas, markerCenter, seriesColor, style);
+      }
 
       // Draw text
       final textX = currentX + style.markerSize + style.markerLabelSpacing;
@@ -4561,6 +4566,32 @@ class LegendAnnotationElement extends ChartElement {
       canvas,
       Offset((left + right - midpoint.width) / 2, labelY),
     );
+  }
+
+  /// Draws a marker at the given position.
+  void _drawCandlestickMarker(
+    Canvas canvas,
+    Offset center,
+    Color color,
+    LegendStyle style,
+  ) {
+    final wickPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1, style.markerLineWidth / 2);
+    canvas.drawLine(
+      Offset(center.dx, center.dy - style.markerSize / 2),
+      Offset(center.dx, center.dy + style.markerSize / 2),
+      wickPaint,
+    );
+
+    final body = Rect.fromCenter(
+      center: center,
+      width: math.max(4, style.markerSize * 0.48),
+      height: math.max(6, style.markerSize * 0.68),
+    );
+    canvas.drawRect(body, Paint()..color = color.withValues(alpha: 0.14));
+    canvas.drawRect(body, wickPaint);
   }
 
   /// Draws a marker at the given position.

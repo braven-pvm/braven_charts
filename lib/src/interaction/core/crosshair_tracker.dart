@@ -17,6 +17,9 @@ import 'dart:ui';
 import '../../coordinates/chart_transform.dart';
 import '../../models/chart_data_point.dart';
 import '../../models/bar_chart_style.dart';
+import '../../models/candlestick_chart_series.dart';
+import '../../models/candlestick_chart_style.dart';
+import '../../models/candlestick_interaction_details.dart';
 import '../../models/chart_series.dart';
 import '../../models/interaction_config.dart';
 import '../../utils/interpolation_geometry.dart';
@@ -214,6 +217,9 @@ abstract final class CrosshairTracker {
     if (series is ScatterChartSeries) {
       return _calculateScatterSeriesValue(series, targetX);
     }
+    if (series is CandlestickChartSeries) {
+      return _calculateCandlestickSeriesValue(series, targetX);
+    }
 
     // Bars represent discrete observations. Their crosshair values must snap
     // to an actual mark rather than inventing values between categories.
@@ -384,6 +390,42 @@ abstract final class CrosshairTracker {
     );
   }
 
+  static CrosshairSeriesValue? _calculateCandlestickSeriesValue(
+    CandlestickChartSeries series,
+    double targetX,
+  ) {
+    final points = series.points;
+    if (points.isEmpty) return null;
+    final insertionPoint = _findInsertionPoint(points, targetX);
+    final int pointIndex;
+    if (insertionPoint <= 0) {
+      pointIndex = 0;
+    } else if (insertionPoint >= points.length) {
+      pointIndex = points.length - 1;
+    } else {
+      pointIndex =
+          (targetX - points[insertionPoint - 1].x).abs() <=
+              (points[insertionPoint].x - targetX).abs()
+          ? insertionPoint - 1
+          : insertionPoint;
+    }
+    final point = series.candleAt(pointIndex);
+    return CrosshairSeriesValue(
+      seriesId: series.id,
+      seriesName: series.displayName,
+      seriesColor: _trackedPointColor(series, pointIndex),
+      x: point.x,
+      y: point.close,
+      dataPointIndex: pointIndex,
+      isInterpolated: false,
+      pointLabel: point.label,
+      candlestick: CandlestickInteractionDetails.fromPoint(
+        point,
+        unit: series.unit,
+      ),
+    );
+  }
+
   static double _trackedPointY(ChartSeries series, int pointIndex) {
     if (series case final BarChartSeries barSeries
         when barSeries.layoutMode == BarLayoutMode.waterfall) {
@@ -393,6 +435,25 @@ abstract final class CrosshairTracker {
   }
 
   static Color _trackedPointColor(ChartSeries series, int pointIndex) {
+    if (series case final CandlestickChartSeries candles) {
+      final point = candles.candleAt(pointIndex);
+      final pointColor = point.candlestickStyle?.borderColor;
+      if (pointColor != null) return pointColor;
+      final styleColor = switch (point.direction) {
+        CandlestickDirection.rising =>
+          candles.candlestickStyle.risingBorderColor,
+        CandlestickDirection.falling =>
+          candles.candlestickStyle.fallingBorderColor,
+        CandlestickDirection.doji => candles.candlestickStyle.dojiBorderColor,
+      };
+      return styleColor ??
+          candles.color ??
+          switch (point.direction) {
+            CandlestickDirection.rising => const Color(0xFF0F766E),
+            CandlestickDirection.falling => const Color(0xFFB91C1C),
+            CandlestickDirection.doji => const Color(0xFF475569),
+          };
+    }
     final markerColor =
         series.points[pointIndex].pointStyle?.scatterMarkerStyle?.fillColor;
     if (markerColor != null) return markerColor;

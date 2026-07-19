@@ -213,6 +213,90 @@ void main() {
       },
     );
 
+    test(
+      'accepts one Candlestick series with Line, Area, and Scatter overlays',
+      () {
+        final candle = CandlestickChartSeries(
+          id: 'price',
+          points: [
+            CandlestickDataPoint(x: 1, open: 10, high: 12, low: 9, close: 11),
+          ],
+        );
+
+        expect(
+          ChartLayoutResolver.resolve([
+            candle,
+            const LineChartSeries(id: 'line', points: []),
+            const AreaChartSeries(id: 'area', points: []),
+            const ScatterChartSeries(id: 'scatter', points: []),
+          ]),
+          ChartLayoutKind.cartesian,
+        );
+      },
+    );
+
+    test('rejects more than one Candlestick series', () {
+      CandlestickChartSeries series(String id) => CandlestickChartSeries(
+        id: id,
+        points: [
+          CandlestickDataPoint(x: 1, open: 10, high: 12, low: 9, close: 11),
+        ],
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([series('one'), series('two')]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('at most one CandlestickChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects same-plot Candlestick and Bar series', () {
+      final candle = CandlestickChartSeries(
+        id: 'price',
+        points: [
+          CandlestickDataPoint(x: 1, open: 10, high: 12, low: 9, close: 11),
+        ],
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([
+          candle,
+          const BarChartSeries(id: 'volume', points: [], barWidthPercent: 0.7),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('cannot share one plot'),
+          ),
+        ),
+      );
+    });
+
+    test('rejects a generic series that only claims candlestick style', () {
+      const invalid = ChartSeries(
+        id: 'fake-candle',
+        points: [],
+        style: SeriesStyle.candlestick,
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve(const [invalid]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('requires a CandlestickChartSeries'),
+          ),
+        ),
+      );
+    });
+
     testWidgets('BravenChartPlus applies composition validation at runtime', (
       tester,
     ) async {

@@ -7,6 +7,8 @@ import 'package:braven_charts/src/interaction/core/chart_element.dart';
 import 'package:braven_charts/src/interaction/core/coordinator.dart';
 import 'package:braven_charts/src/interaction/core/data_hit.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
+import 'package:braven_charts/src/models/candlestick_data_point.dart';
+import 'package:braven_charts/src/models/candlestick_interaction_details.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_theme.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
@@ -160,6 +162,43 @@ void main() {
             formatDataValue: (value) => value.toStringAsFixed(0),
           ),
           'Adaptive model\nX: 7\nY: 92 k units\nModel confidence: 84 %',
+        );
+      });
+
+      test('presents complete OHLC values and direction', () {
+        final point = CandlestickDataPoint(
+          x: 7,
+          open: 100,
+          high: 112,
+          low: 98,
+          close: 110,
+          label: 'Jul 19',
+        );
+        final hit = ChartDataHit(
+          seriesId: 'price',
+          pointIndex: 0,
+          plotPosition: const Offset(80, 80),
+          semanticBounds: const Rect.fromLTWH(40, 40, 80, 80),
+          point: point,
+          formattedValue: '110.00 USD',
+          ordinal: 1,
+          count: 1,
+          candlestick: CandlestickInteractionDetails.fromPoint(
+            point,
+            unit: 'USD',
+          ),
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Price',
+            formattedCartesianY: '110.00 USD',
+            formatDataValue: (value) => value.toStringAsFixed(0),
+          ),
+          'Price · Jul 19\nOpen: 100.00 USD\nHigh: 112.00 USD\n'
+          'Low: 98.00 USD\nClose: 110.00 USD\n'
+          'Change: +10.00 USD (+10.00%) · rising',
         );
       });
     });

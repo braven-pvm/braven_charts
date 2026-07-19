@@ -5,10 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../models/chart_data_point.dart';
+import '../models/candlestick_data_point.dart';
 import '../rendering/chart_render_box.dart';
 import '../utils/data_converter.dart';
 import 'buffer_manager.dart';
 import 'streaming_buffer.dart';
+
+enum CandlestickUpsertResult { appended, revised, rejectedOlder }
 
 /// High-performance controller for live streaming data to charts.
 ///
@@ -324,6 +327,41 @@ class LiveStreamController extends ChangeNotifier {
     }
   }
 
+  /// Appends a new candle or revises the latest candle with the same X value.
+  ///
+  /// Older X values are rejected so the X-ordered candlestick contract stays
+  /// valid. The active revision path is O(1) and remains frame-coalesced.
+  CandlestickUpsertResult upsertLatestCandlestick(CandlestickDataPoint point) {
+    if (_isDisposed) return CandlestickUpsertResult.rejectedOlder;
+    final latest = _isStreaming
+        ? _streamingBuffer.latest
+        : _pauseBuffer.latest ?? _streamingBuffer.latest;
+    if (latest != null && point.x < latest.x) {
+      return CandlestickUpsertResult.rejectedOlder;
+    }
+    final revisesLatest = latest != null && point.x == latest.x;
+    if (_isStreaming) {
+      if (revisesLatest) {
+        _streamingBuffer.replaceLatest(point);
+      } else {
+        _streamingBuffer.add(point);
+      }
+      _effectiveDataRevision.value++;
+      _scheduleFrameCallback();
+    } else {
+      if (revisesLatest && _pauseBuffer.isNotEmpty) {
+        _pauseBuffer.replaceLatest(point);
+      } else {
+        _pauseBuffer.add(point);
+      }
+      _effectiveDataRevision.value++;
+      notifyListeners();
+    }
+    return revisesLatest
+        ? CandlestickUpsertResult.revised
+        : CandlestickUpsertResult.appended;
+  }
+
   /// Adds multiple data points to the stream.
   ///
   /// More efficient than calling [addPoint] repeatedly when you have
@@ -401,7 +439,16 @@ class LiveStreamController extends ChangeNotifier {
     // Apply buffered data
     final buffered = _pauseBuffer.removeAll();
     if (buffered.isNotEmpty) {
-      _streamingBuffer.addAll(buffered);
+      for (final point in buffered) {
+        final latest = _streamingBuffer.latest;
+        if (point is CandlestickDataPoint &&
+            latest is CandlestickDataPoint &&
+            point.x == latest.x) {
+          _streamingBuffer.replaceLatest(point);
+        } else {
+          _streamingBuffer.add(point);
+        }
+      }
     }
 
     // Notify RenderBox to unlock viewport and update

@@ -5,10 +5,15 @@
 **Topology continuation:** `feature/line-area-topology-motion`
 **Continuation PR:** #37 (merged)
 **Sprint 8 promotion:** PR #38 (merged)
-**Sprint 9 lane:** Stable-identity interior topology motion (complete)
+**Sprints 9-10 promotion:** PR #43 (merged)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Synchronized consolidation and promotion readiness (Sprint 18)
+**Sprint 13 promotion:** PR #48 (merged)
+**Sprints 14-18 promotion:** PR #53 (merged)
+**Roadmap status:** Complete through Sprint 18
+**Next lane:** Line/Area has no remaining sprint. Candlestick is tracked as a
+separate Cartesian-family lane in
+`docs/superpowers/plans/2026-07-19-candlestick-cartesian-chart-roadmap.md`.
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -265,7 +270,7 @@ The detailed proposal is recorded in
 
 ## Sprint 9 — Stable-identity interior topology motion
 
-**Status:** Local review approved
+**Status:** Complete; promoted in PR #43
 
 ### Product outcome
 
@@ -337,7 +342,7 @@ The detailed contract is recorded in
 
 ## Sprint 10 — Showcase polish and Area gradients
 
-**Status:** Local review ready
+**Status:** Complete; promoted in PR #43
 
 ### Product outcome
 
@@ -609,7 +614,7 @@ makes the custom three-chart synchronization pattern easy to copy and explore.
 
 ## Sprint 14 — Synchronized composition lab and diagnostics
 
-**Status:** Local review approved
+**Status:** Complete; promoted in PR #53
 
 ### Product outcome
 
@@ -663,7 +668,7 @@ and expose honest session performance signals while the composition changes.
 
 ## Sprint 15 — Synchronized dataset stress profiles
 
-**Status:** Local review approved
+**Status:** Complete; promoted in PR #53
 
 ### Product outcome
 
@@ -708,7 +713,7 @@ instead of measuring only the 52-point showcase sample.
 
 ## Sprint 16 — Synchronized live-update motion
 
-**Status:** Local review approved
+**Status:** Complete; promoted in PR #53
 
 ### Product outcome
 
@@ -761,7 +766,7 @@ and synchronized X viewport.
 
 ## Sprint 17 — Synchronized tracking detail controls
 
-**Status:** Local review ready
+**Status:** Complete; promoted in PR #53
 
 ### Product outcome
 
@@ -816,7 +821,7 @@ or axis-label output without disabling synchronization.
 
 ## Sprint 18 — Synchronized consolidation and promotion readiness
 
-**Status:** Local E2E ready; final user approval pending
+**Status:** Complete; promoted in PR #53
 
 ### Product outcome
 
@@ -887,4 +892,5 @@ delivery agree at the final branch tip.
   blank state, visible overflow, or controller warning was observed.
 - The root-path release build remains live at
   `http://127.0.0.1:8193/?page=line-charts&preset=synchronized` for final manual
-  E2E. No push or PR has been performed.
+  E2E. PR #53 passed hosted package-quality CI and merged into `master` as
+  `98f20904` on 2026-07-19.

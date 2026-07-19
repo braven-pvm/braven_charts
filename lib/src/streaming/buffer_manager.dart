@@ -41,9 +41,9 @@ class BufferManager<T> {
   ///
   /// Throws [AssertionError] if [maxSize] is not positive.
   BufferManager({required int maxSize})
-      : assert(maxSize > 0, 'maxSize must be positive'),
-        _maxSize = maxSize,
-        _queue = Queue<T>();
+    : assert(maxSize > 0, 'maxSize must be positive'),
+      _maxSize = maxSize,
+      _queue = Queue<T>();
 
   final int _maxSize;
   final Queue<T> _queue;
@@ -74,6 +74,8 @@ class BufferManager<T> {
   /// Whether the buffer contains at least one element.
   bool get isNotEmpty => _queue.isNotEmpty;
 
+  T? get latest => _queue.isEmpty ? null : _queue.last;
+
   /// Adds an element to the buffer.
   ///
   /// If the buffer is full, the oldest element is automatically removed
@@ -96,6 +98,15 @@ class BufferManager<T> {
     }
     _queue.addLast(element);
     _version++;
+  }
+
+  bool replaceLatest(T element) {
+    if (_queue.isEmpty) return false;
+    _queue
+      ..removeLast()
+      ..addLast(element);
+    _version++;
+    return true;
   }
 
   /// Removes and returns all elements from the buffer in FIFO order.

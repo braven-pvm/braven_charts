@@ -80,6 +80,44 @@ void main() {
     expect(export.rows.first.references.single.pointIndex, 0);
   });
 
+  test('candlestick CSV preserves Time, X, OHLC, change, and overlays', () {
+    final model = _candlestickModel();
+    final export = ChartTableExporter.csvForDisplayedRows(
+      model,
+      candlestickRows: model.candlestickRows,
+    );
+
+    expect(export.headers, [
+      '#',
+      'Time',
+      'Session',
+      'Open',
+      'High',
+      'Low',
+      'Close',
+      'Change',
+      'Change %',
+      'Unit',
+      'Label',
+      'Volume (shares)',
+    ]);
+    expect(export.rows.single.rawValues, [
+      1,
+      '2026-07-18T09:30:00.000Z',
+      1784367000000.0,
+      100.0,
+      112.0,
+      98.0,
+      110.0,
+      10.0,
+      10.0,
+      'USD',
+      'Open',
+      2500.0,
+    ]);
+    expect(export.rows.single.references, hasLength(2));
+  });
+
   test(
     'grouped concentric export retains every source row and stable ring identity',
     () {
@@ -420,6 +458,55 @@ ChartTableModel _pieModel({bool variableRadius = false}) {
       revision: 1,
       series: [series],
       xAxis: ChartAxisDocument(id: 'x', position: 'bottom'),
+      axes: const [],
+      theme:
+          (ChartThemeDocumentCodec.encode(ChartTheme.light)
+                  as ChartArtifactSuccess<ChartThemeDocument>)
+              .value,
+      interaction:
+          (ChartInteractionDocumentCodec.encode(const InteractionConfig())
+                  as ChartArtifactSuccess<ChartInteractionDocument>)
+              .value,
+    ),
+  );
+}
+
+ChartTableModel _candlestickModel() {
+  final time = DateTime.utc(2026, 7, 18, 9, 30);
+  final candles = CandlestickChartSeries(
+    id: 'price',
+    name: 'Price',
+    unit: 'USD',
+    points: [
+      CandlestickDataPoint.atTime(
+        timestamp: time,
+        open: 100,
+        high: 112,
+        low: 98,
+        close: 110,
+        label: 'Open',
+      ),
+    ],
+  );
+  final volume = LineChartSeries(
+    id: 'volume',
+    name: 'Volume',
+    unit: 'shares',
+    points: [
+      ChartDataPoint(x: time.millisecondsSinceEpoch.toDouble(), y: 2500),
+    ],
+  );
+  return ChartTableModel.fromDocument(
+    ChartDocument(
+      documentId: 'candlestick-export',
+      revision: 1,
+      series: [
+        for (final series in [candles, volume])
+          (ChartSeriesDocumentCodec.encode(series)
+                  as ChartArtifactSuccess<ChartSeriesDocument>)
+              .value,
+      ],
+      xAxis: ChartAxisDocument(id: 'x', position: 'bottom', label: 'Session'),
       axes: const [],
       theme:
           (ChartThemeDocumentCodec.encode(ChartTheme.light)

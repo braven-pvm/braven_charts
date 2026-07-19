@@ -21,6 +21,9 @@ import '../interaction/core/coordinator.dart';
 import '../interaction/core/element_types.dart';
 import '../models/bar_group_info.dart';
 import '../models/bar_chart_style.dart';
+import '../models/candlestick_chart_series.dart';
+import '../models/candlestick_chart_style.dart';
+import '../models/candlestick_interaction_details.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
@@ -29,9 +32,11 @@ import '../rendering/bar_geometry.dart';
 import '../rendering/bar_bullet_painter.dart';
 import '../rendering/bar_label_layout.dart';
 import '../rendering/bar_pattern_painter.dart';
+import '../rendering/candlestick_geometry.dart';
 import '../rendering/scatter_geometry.dart';
 import '../rendering/scatter_marker_path.dart';
 import '../theming/components/series_theme.dart';
+import '../theming/components/candlestick_theme.dart';
 import '../utils/dashed_path.dart';
 import '../utils/interpolation_geometry.dart';
 import '../utils/path_series_transition.dart';
@@ -74,6 +79,36 @@ class _ResolvedScatterMarkerStyle {
 
   double get boundingRadius =>
       math.sqrt(width * width + height * height) / 2 + strokeWidth / 2;
+}
+
+class _ResolvedCandlestickVisual {
+  const _ResolvedCandlestickVisual({
+    required this.fillColor,
+    required this.borderColor,
+    required this.wickColor,
+  });
+
+  final Color fillColor;
+  final Color borderColor;
+  final Color wickColor;
+}
+
+class _CandlestickPaintBatch {
+  _CandlestickPaintBatch({
+    required this.fillPath,
+    required this.borderPath,
+    required this.wickPath,
+    required this.fillPaint,
+    required this.borderPaint,
+    required this.wickPaint,
+  });
+
+  final Path fillPath;
+  final Path borderPath;
+  final Path wickPath;
+  final Paint fillPaint;
+  final Paint borderPaint;
+  final Paint wickPaint;
 }
 
 // =============================================================================
@@ -205,6 +240,7 @@ class SeriesElement implements DataHitElement {
     this.isSelected = false,
     this.isHovered = false,
     this.seriesTheme,
+    this.candlestickTheme = CandlestickTheme.light,
     this.seriesIndex = 0,
     this.coordinator,
     this.barGroupInfo,
@@ -244,6 +280,7 @@ class SeriesElement implements DataHitElement {
   Offset dataToCurrentPlot(double x, double y) =>
       _currentTransform.dataToPlot(x, y);
   final SeriesTheme? seriesTheme;
+  final CandlestickTheme candlestickTheme;
   @override
   final int seriesIndex;
 
@@ -272,17 +309,19 @@ class SeriesElement implements DataHitElement {
   /// Ambient reading direction used by canvas value labels.
   final TextDirection textDirection;
 
-  /// Leading-edge reveal progress for Line and Area series.
+  /// Leading-edge reveal progress for Line, Area, and Candlestick series.
   final double revealProgress;
 
   /// Canonical point identities for temporary Line/Area transition geometry.
   final PathSeriesPointMap? pathPointMap;
 
-  bool get _isPathSeries =>
-      series is LineChartSeries || series is AreaChartSeries;
+  bool get _supportsReveal =>
+      series is LineChartSeries ||
+      series is AreaChartSeries ||
+      series is CandlestickChartSeries;
 
   double get _effectiveRevealProgress =>
-      _isPathSeries ? revealProgress.clamp(0.0, 1.0) : 1;
+      _supportsReveal ? revealProgress.clamp(0.0, 1.0) : 1;
 
   double get _revealEdge =>
       _currentTransform.plotWidth * _effectiveRevealProgress;
@@ -381,6 +420,7 @@ class SeriesElement implements DataHitElement {
     if (transformChanged) {
       _clearResolvedBarGeometry();
       _clearResolvedScatterGeometry();
+      _clearResolvedCandlestickGeometry();
       _computeBounds();
     }
   }
@@ -406,8 +446,10 @@ class SeriesElement implements DataHitElement {
     series = newSeries;
     _barViewportIndex = null;
     _scatterViewportIndex = null;
+    _candlestickViewportIndex = null;
     _clearResolvedBarGeometry();
     _clearResolvedScatterGeometry();
+    _clearResolvedCandlestickGeometry();
 
     // PERFORMANCE: Skip bounds computation for streaming updates.
     // Streaming elements use pre-computed bounds from StreamingBuffer
@@ -436,6 +478,8 @@ class SeriesElement implements DataHitElement {
     _clearResolvedBarGeometry();
     _scatterViewportIndex = null;
     _clearResolvedScatterGeometry();
+    _candlestickViewportIndex = null;
+    _clearResolvedCandlestickGeometry();
     _labelPainterCache.clear();
   }
 
@@ -488,6 +532,12 @@ class SeriesElement implements DataHitElement {
   double? _resolvedScatterOpacityMinimum;
   double? _resolvedScatterOpacityMaximum;
   int _scatterHitComparisonCount = 0;
+  CandlestickViewportIndex? _candlestickViewportIndex;
+  List<CandlestickGeometry>? _candlestickGeometries;
+  Map<int, CandlestickGeometry> _candlestickGeometryByPointIndex = const {};
+  List<_CandlestickPaintBatch>? _candlestickUniformPaintBatches;
+  bool? _candlestickHasPointOverrides;
+  int _candlestickHitComparisonCount = 0;
 
   static const double _barHitCellSize = 48;
   static const double _scatterHitCellSize = 48;
@@ -513,6 +563,18 @@ class SeriesElement implements DataHitElement {
 
   /// Exact marker-distance comparisons performed by the latest Scatter hit.
   int get scatterHitComparisonCount => _scatterHitComparisonCount;
+
+  /// Number of Candlestick geometries materialized for the current viewport.
+  int get visibleCandlestickGeometryCount =>
+      _resolveCandlestickGeometries().length;
+
+  /// Original source indices represented by visible candle geometry.
+  List<int> get visibleCandlestickPointIndices => [
+    for (final geometry in _resolveCandlestickGeometries()) geometry.pointIndex,
+  ];
+
+  /// Exact geometry comparisons made by the most recent candle hit test.
+  int get candlestickHitComparisonCount => _candlestickHitComparisonCount;
 
   /// Shares one occupied-label registry across every bar series paint pass.
   void setBarLabelLayoutCoordinator(BarLabelLayoutCoordinator? coordinator) {
@@ -664,6 +726,37 @@ class SeriesElement implements DataHitElement {
     return geometries;
   }
 
+  List<CandlestickGeometry> _resolveCandlestickGeometries() {
+    final cached = _candlestickGeometries;
+    if (cached != null) return cached;
+    final candleSeries = series;
+    if (candleSeries is! CandlestickChartSeries) return const [];
+
+    var viewportIndex = _candlestickViewportIndex;
+    if (viewportIndex == null) {
+      viewportIndex = CandlestickViewportIndex(candleSeries.candles);
+      _candlestickViewportIndex = viewportIndex;
+      _candlestickHasPointOverrides = candleSeries.candles.any(
+        (point) => point.candlestickStyle != null,
+      );
+    }
+    var geometries = CandlestickGeometryEngine.resolve(
+      index: viewportIndex,
+      transform: _currentTransform,
+      style: candleSeries.candlestickStyle,
+    );
+    if (_effectiveRevealProgress < 1) {
+      geometries = geometries
+          .where((geometry) => geometry.centerX <= _revealEdge)
+          .toList(growable: false);
+    }
+    _candlestickGeometries = geometries;
+    _candlestickGeometryByPointIndex = {
+      for (final geometry in geometries) geometry.pointIndex: geometry,
+    };
+    return geometries;
+  }
+
   void _clearResolvedScatterGeometry() {
     _scatterGeometries = null;
     _scatterGeometryByPointIndex = const {};
@@ -677,6 +770,54 @@ class SeriesElement implements DataHitElement {
     _resolvedScatterOpacityMinimum = null;
     _resolvedScatterOpacityMaximum = null;
     _scatterHitComparisonCount = 0;
+  }
+
+  void _clearResolvedCandlestickGeometry() {
+    _candlestickGeometries = null;
+    _candlestickGeometryByPointIndex = const {};
+    _candlestickUniformPaintBatches = null;
+    _candlestickHitComparisonCount = 0;
+  }
+
+  CandlestickGeometry? candlestickGeometryForPoint(int pointIndex) {
+    if (series is! CandlestickChartSeries || pointIndex < 0) return null;
+    _resolveCandlestickGeometries();
+    return _candlestickGeometryByPointIndex[pointIndex];
+  }
+
+  CandlestickGeometry? candlestickGeometryAt(
+    Offset position, {
+    double hitSlop = 4,
+  }) {
+    final geometries = _resolveCandlestickGeometries();
+    if (geometries.isEmpty) return null;
+    var low = 0;
+    var high = geometries.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (geometries[middle].centerX < position.dx) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    final start = math.max(0, low - 2);
+    final end = math.min(geometries.length, low + 3);
+    _candlestickHitComparisonCount = 0;
+
+    for (var index = start; index < end; index++) {
+      _candlestickHitComparisonCount++;
+      final geometry = geometries[index];
+      if (geometry.bodyRRect.contains(position)) return geometry;
+    }
+    for (var index = start; index < end; index++) {
+      _candlestickHitComparisonCount++;
+      final geometry = geometries[index];
+      if (geometry.hitBounds.inflate(hitSlop).contains(position)) {
+        return geometry;
+      }
+    }
+    return null;
   }
 
   ScatterPointGeometry? scatterGeometryForPoint(int pointIndex) {
@@ -755,7 +896,7 @@ class SeriesElement implements DataHitElement {
       return;
     }
 
-    if (series is BarChartSeries) {
+    if (series is BarChartSeries || series is CandlestickChartSeries) {
       // Bar points are virtualized by category viewport. Keep the series
       // eligible for plot-level hit routing without materializing every bar
       // merely to compute one aggregate element rectangle.
@@ -863,10 +1004,14 @@ class SeriesElement implements DataHitElement {
   @override
   bool hitTest(Offset position) {
     if (series.isEmpty) return false;
-    if (_isPathSeries && position.dx > _revealEdge) return false;
+    if (_supportsReveal && position.dx > _revealEdge) return false;
 
     if (series is BarChartSeries) {
       return barGeometryAt(position) != null;
+    }
+
+    if (series is CandlestickChartSeries) {
+      return candlestickGeometryAt(position) != null;
     }
 
     if (series is ScatterChartSeries) {
@@ -908,6 +1053,13 @@ class SeriesElement implements DataHitElement {
     if (source is BarChartSeries) {
       final geometry = barGeometryAt(position);
       return geometry == null ? null : _barDataHit(geometry);
+    }
+    if (source is CandlestickChartSeries) {
+      final geometry = candlestickGeometryAt(
+        position,
+        hitSlop: math.min(12, math.max(4, maxDistance)),
+      );
+      return geometry == null ? null : _candlestickDataHit(geometry);
     }
     if (source is ScatterChartSeries) {
       return _scatterDataHitAt(position, maxDistance: maxDistance);
@@ -1175,6 +1327,10 @@ class SeriesElement implements DataHitElement {
       final geometry = barGeometryForPoint(pointIndex);
       if (geometry != null) return _barDataHit(geometry);
     }
+    if (series is CandlestickChartSeries) {
+      final geometry = candlestickGeometryForPoint(pointIndex);
+      if (geometry != null) return _candlestickDataHit(geometry);
+    }
     final renderIndex = _renderIndexForTargetIndex(pointIndex);
     if (renderIndex == null) return null;
     return _dataHitForRenderPointIndex(renderIndex);
@@ -1197,6 +1353,33 @@ class SeriesElement implements DataHitElement {
     );
   }
 
+  ChartDataHit _candlestickDataHit(CandlestickGeometry geometry) {
+    final point = geometry.point;
+    final visual = _resolveCandlestickVisual(
+      series as CandlestickChartSeries,
+      point.direction,
+      pointStyle: point.candlestickStyle,
+    );
+    return ChartDataHit(
+      seriesId: series.id,
+      pointIndex: geometry.pointIndex,
+      plotPosition: geometry.bodyRect.center,
+      semanticBounds: geometry.hitBounds,
+      point: point,
+      formattedValue:
+          '${point.close.toStringAsFixed(2)}${series.unit == null || series.unit!.isEmpty ? '' : ' ${series.unit}'}',
+      candlestick: CandlestickInteractionDetails.fromPoint(
+        point,
+        unit: series.unit,
+      ),
+      markerColor: visual.borderColor,
+      ordinal: geometry.pointIndex + 1,
+      count: pointCount,
+      isSelected: selectedPointIndices.contains(geometry.pointIndex),
+      isFocused: focusedPointIndices.contains(geometry.pointIndex),
+    );
+  }
+
   ChartDataHit? _dataHitForRenderPointIndex(int renderIndex) {
     if (renderIndex < 0 || renderIndex >= series.points.length) return null;
     final targetIndex = _targetIndexForRenderIndex(renderIndex);
@@ -1205,7 +1388,7 @@ class SeriesElement implements DataHitElement {
     final point = series.points[renderIndex];
     if (!point.isValid) return null;
     final position = _currentTransform.dataToPlot(point.x, point.y);
-    if (_isPathSeries && position.dx > _revealEdge) return null;
+    if (_supportsReveal && position.dx > _revealEdge) return null;
     final scatter = series is ScatterChartSeries
         ? series as ScatterChartSeries
         : null;
@@ -1270,7 +1453,12 @@ class SeriesElement implements DataHitElement {
   }
 
   @override
-  Iterable<ChartDataHit> get semanticDataHits => const <ChartDataHit>[];
+  Iterable<ChartDataHit> get semanticDataHits sync* {
+    if (series is! CandlestickChartSeries) return;
+    for (final geometry in _resolveCandlestickGeometries()) {
+      yield _candlestickDataHit(geometry);
+    }
+  }
 
   /// Calculate distance from point to line segment.
   double _distanceToLineSegment(Offset point, Offset segStart, Offset segEnd) {
@@ -1326,6 +1514,9 @@ class SeriesElement implements DataHitElement {
       case AreaChartSeries():
         _paintAreaSeries(canvas, series as AreaChartSeries, baseColor);
         break;
+      case CandlestickChartSeries():
+        _paintCandlestickSeries(canvas, series as CandlestickChartSeries);
+        break;
     }
     _paintLinkedPoints(canvas, baseColor);
     if (reveal < 1) canvas.restore();
@@ -1339,6 +1530,10 @@ class SeriesElement implements DataHitElement {
     }
     if (series is ScatterChartSeries) {
       _paintLinkedScatter(canvas);
+      return;
+    }
+    if (series is CandlestickChartSeries) {
+      _paintLinkedCandlesticks(canvas);
       return;
     }
     final focusPaint = Paint()
@@ -1428,6 +1623,211 @@ class SeriesElement implements DataHitElement {
         );
       }
     }
+  }
+
+  void _paintLinkedCandlesticks(Canvas canvas) {
+    final selection = Paint()
+      ..color = (pointSelectionColor ?? candlestickTheme.selectionColor)
+          .withValues(alpha: 0.16)
+      ..style = PaintingStyle.fill;
+    final selectionBorder = Paint()
+      ..color = pointSelectionColor ?? candlestickTheme.selectionColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final focus = Paint()
+      ..color = pointFocusColor ?? candlestickTheme.focusColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    for (final pointIndex in selectedPointIndices) {
+      final geometry = candlestickGeometryForPoint(pointIndex);
+      if (geometry == null) continue;
+      final rect = geometry.bodyRect.inflate(4);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+        selection,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+        selectionBorder,
+      );
+    }
+    for (final pointIndex in focusedPointIndices) {
+      final geometry = candlestickGeometryForPoint(pointIndex);
+      if (geometry == null) continue;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          geometry.bodyRect.inflate(6),
+          const Radius.circular(4),
+        ),
+        focus,
+      );
+    }
+  }
+
+  void _paintCandlestickSeries(
+    Canvas canvas,
+    CandlestickChartSeries candleSeries,
+  ) {
+    final geometries = _resolveCandlestickGeometries();
+    if (geometries.isEmpty) return;
+    canvas.save();
+    canvas.clipRect(
+      Rect.fromLTWH(
+        0,
+        0,
+        _currentTransform.plotWidth,
+        _currentTransform.plotHeight,
+      ),
+    );
+    if (_candlestickHasPointOverrides == true) {
+      for (final geometry in geometries) {
+        _paintCandlestickGeometry(canvas, candleSeries, geometry);
+      }
+    } else {
+      final batches = _candlestickUniformPaintBatches ??=
+          _buildCandlestickPaintBatches(candleSeries, geometries);
+      for (final batch in batches) {
+        if (batch.fillPaint.color.a > 0) {
+          canvas.drawPath(batch.fillPath, batch.fillPaint);
+        }
+        if (candleSeries.candlestickStyle.showBodyBorder &&
+            candleSeries.candlestickStyle.bodyBorderWidth > 0) {
+          canvas.drawPath(batch.borderPath, batch.borderPaint);
+        }
+        if (candleSeries.candlestickStyle.showWicks &&
+            candleSeries.candlestickStyle.wickWidth > 0) {
+          canvas.drawPath(batch.wickPath, batch.wickPaint);
+        }
+      }
+    }
+    canvas.restore();
+  }
+
+  List<_CandlestickPaintBatch> _buildCandlestickPaintBatches(
+    CandlestickChartSeries candleSeries,
+    List<CandlestickGeometry> geometries,
+  ) {
+    final batches = <CandlestickDirection, _CandlestickPaintBatch>{};
+    for (final direction in CandlestickDirection.values) {
+      final visual = _resolveCandlestickVisual(candleSeries, direction);
+      batches[direction] = _CandlestickPaintBatch(
+        fillPath: Path(),
+        borderPath: Path(),
+        wickPath: Path(),
+        fillPaint: Paint()
+          ..color = visual.fillColor
+          ..style = PaintingStyle.fill,
+        borderPaint: Paint()
+          ..color = visual.borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = candleSeries.candlestickStyle.bodyBorderWidth,
+        wickPaint: Paint()
+          ..color = visual.wickColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = candleSeries.candlestickStyle.wickWidth
+          ..strokeCap = StrokeCap.square,
+      );
+    }
+    for (final geometry in geometries) {
+      final batch = batches[geometry.direction]!;
+      batch.fillPath.addRRect(geometry.bodyRRect);
+      batch.borderPath.addRRect(geometry.bodyRRect);
+      batch.wickPath
+        ..moveTo(geometry.upperWickStart.dx, geometry.upperWickStart.dy)
+        ..lineTo(geometry.upperWickEnd.dx, geometry.upperWickEnd.dy)
+        ..moveTo(geometry.lowerWickStart.dx, geometry.lowerWickStart.dy)
+        ..lineTo(geometry.lowerWickEnd.dx, geometry.lowerWickEnd.dy);
+    }
+    return [
+      for (final direction in CandlestickDirection.values) batches[direction]!,
+    ];
+  }
+
+  void _paintCandlestickGeometry(
+    Canvas canvas,
+    CandlestickChartSeries candleSeries,
+    CandlestickGeometry geometry,
+  ) {
+    final visual = _resolveCandlestickVisual(
+      candleSeries,
+      geometry.direction,
+      pointStyle: geometry.point.candlestickStyle,
+    );
+    final style = candleSeries.candlestickStyle;
+    if (visual.fillColor.a > 0) {
+      canvas.drawRRect(
+        geometry.bodyRRect,
+        Paint()
+          ..color = visual.fillColor
+          ..style = PaintingStyle.fill,
+      );
+    }
+    if (style.showBodyBorder && style.bodyBorderWidth > 0) {
+      canvas.drawRRect(
+        geometry.bodyRRect,
+        Paint()
+          ..color = visual.borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.bodyBorderWidth,
+      );
+    }
+    if (style.showWicks && style.wickWidth > 0) {
+      final wickPaint = Paint()
+        ..color = visual.wickColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = style.wickWidth
+        ..strokeCap = StrokeCap.square;
+      canvas
+        ..drawLine(geometry.upperWickStart, geometry.upperWickEnd, wickPaint)
+        ..drawLine(geometry.lowerWickStart, geometry.lowerWickEnd, wickPaint);
+    }
+  }
+
+  _ResolvedCandlestickVisual _resolveCandlestickVisual(
+    CandlestickChartSeries candleSeries,
+    CandlestickDirection direction, {
+    CandlestickPointStyle? pointStyle,
+  }) {
+    final style = candleSeries.candlestickStyle;
+    final theme = candlestickTheme;
+    final themeFill = switch (direction) {
+      CandlestickDirection.rising => theme.risingBodyFillColor,
+      CandlestickDirection.falling => theme.fallingBodyFillColor,
+      CandlestickDirection.doji => theme.dojiBodyFillColor,
+    };
+    final seriesFill = switch (direction) {
+      CandlestickDirection.rising => style.risingBodyFillColor,
+      CandlestickDirection.falling => style.fallingBodyFillColor,
+      CandlestickDirection.doji => style.dojiBodyFillColor,
+    };
+    final border = switch (direction) {
+      CandlestickDirection.rising =>
+        style.risingBorderColor ?? theme.risingBorderColor,
+      CandlestickDirection.falling =>
+        style.fallingBorderColor ?? theme.fallingBorderColor,
+      CandlestickDirection.doji =>
+        style.dojiBorderColor ?? theme.dojiBorderColor,
+    };
+    final wick = switch (direction) {
+      CandlestickDirection.rising =>
+        style.risingWickColor ?? theme.risingWickColor,
+      CandlestickDirection.falling =>
+        style.fallingWickColor ?? theme.fallingWickColor,
+      CandlestickDirection.doji => style.dojiWickColor ?? theme.dojiWickColor,
+    };
+    final isHollowRising =
+        direction == CandlestickDirection.rising &&
+        style.bodyFillMode == CandlestickBodyFillMode.hollowRising;
+    return _ResolvedCandlestickVisual(
+      fillColor:
+          pointStyle?.bodyFillColor ??
+          (isHollowRising
+              ? const Color(0x00000000)
+              : (seriesFill ?? themeFill)),
+      borderColor: pointStyle?.borderColor ?? border,
+      wickColor: pointStyle?.wickColor ?? wick,
+    );
   }
 
   Path _scatterStatePath(
@@ -3775,6 +4175,7 @@ class SeriesElement implements DataHitElement {
       isSelected: isSelected ?? this.isSelected,
       isHovered: isHovered ?? this.isHovered,
       seriesTheme: seriesTheme,
+      candlestickTheme: candlestickTheme,
       seriesIndex: seriesIndex,
       coordinator: coordinator,
       barGroupInfo: barGroupInfo, // Preserve bar group info for grouped bars

@@ -5,6 +5,7 @@ import '../models/pie_chart_config.dart';
 import '../theming/components/animation_theme.dart';
 import '../theming/components/annotation_theme.dart';
 import '../theming/components/axis_style.dart';
+import '../theming/components/candlestick_theme.dart';
 import '../theming/components/grid_style.dart';
 import '../theming/components/interaction_theme.dart';
 import '../theming/components/scrollbar_config.dart';
@@ -94,6 +95,7 @@ Map<String, Object?> _encodeTheme(ChartTheme theme) => {
     theme.legendStyle,
   ).toJson(),
   'pieChartTheme': _encodePieChartTheme(theme.pieChartTheme),
+  'candlestickTheme': _encodeCandlestickTheme(theme.candlestickTheme),
   'focusBorderColor': theme.focusBorderColor.toARGB32(),
   'focusBorderWidth': _n(theme.focusBorderWidth),
   'focusBorderRadius': _n(theme.focusBorderRadius),
@@ -117,10 +119,42 @@ ChartTheme _decodeTheme(Map<String, Object?> map) => ChartTheme(
   pieChartTheme: map['pieChartTheme'] == null
       ? const PieChartTheme()
       : _decodePieChartTheme(_requiredMap(map, 'pieChartTheme')),
+  candlestickTheme: map['candlestickTheme'] == null
+      ? CandlestickTheme.light
+      : _decodeCandlestickTheme(_requiredMap(map, 'candlestickTheme')),
   focusBorderColor: _color(map, 'focusBorderColor'),
   focusBorderWidth: _double(map, 'focusBorderWidth'),
   focusBorderRadius: _double(map, 'focusBorderRadius'),
 );
+
+Map<String, Object?> _encodeCandlestickTheme(CandlestickTheme theme) => {
+  'risingBodyFillColor': theme.risingBodyFillColor.toARGB32(),
+  'fallingBodyFillColor': theme.fallingBodyFillColor.toARGB32(),
+  'dojiBodyFillColor': theme.dojiBodyFillColor.toARGB32(),
+  'risingBorderColor': theme.risingBorderColor.toARGB32(),
+  'fallingBorderColor': theme.fallingBorderColor.toARGB32(),
+  'dojiBorderColor': theme.dojiBorderColor.toARGB32(),
+  'risingWickColor': theme.risingWickColor.toARGB32(),
+  'fallingWickColor': theme.fallingWickColor.toARGB32(),
+  'dojiWickColor': theme.dojiWickColor.toARGB32(),
+  'selectionColor': theme.selectionColor.toARGB32(),
+  'focusColor': theme.focusColor.toARGB32(),
+};
+
+CandlestickTheme _decodeCandlestickTheme(Map<String, Object?> map) =>
+    CandlestickTheme(
+      risingBodyFillColor: _color(map, 'risingBodyFillColor'),
+      fallingBodyFillColor: _color(map, 'fallingBodyFillColor'),
+      dojiBodyFillColor: _color(map, 'dojiBodyFillColor'),
+      risingBorderColor: _color(map, 'risingBorderColor'),
+      fallingBorderColor: _color(map, 'fallingBorderColor'),
+      dojiBorderColor: _color(map, 'dojiBorderColor'),
+      risingWickColor: _color(map, 'risingWickColor'),
+      fallingWickColor: _color(map, 'fallingWickColor'),
+      dojiWickColor: _color(map, 'dojiWickColor'),
+      selectionColor: _color(map, 'selectionColor'),
+      focusColor: _color(map, 'focusColor'),
+    );
 
 Map<String, Object?> _encodePieChartTheme(PieChartTheme theme) => {
   'opacity': _n(theme.opacity),

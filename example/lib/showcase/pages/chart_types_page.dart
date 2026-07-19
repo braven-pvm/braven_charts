@@ -32,7 +32,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-cartesian-grid'),
-            chartTypes: showcaseChartTypes.take(4).toList(growable: false),
+            chartTypes: showcaseChartTypes.take(5).toList(growable: false),
             maxColumns: 4,
             onOpenChartType: onOpenChartType,
           ),
@@ -46,7 +46,7 @@ class ChartTypesPage extends StatelessWidget {
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-radial-grid'),
             chartTypes: showcaseChartTypes
-                .skip(4)
+                .skip(5)
                 .take(3)
                 .toList(growable: false),
             maxColumns: 3,
@@ -61,7 +61,7 @@ class ChartTypesPage extends StatelessWidget {
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-polar-grid'),
-            chartTypes: showcaseChartTypes.skip(7).toList(growable: false),
+            chartTypes: showcaseChartTypes.skip(8).toList(growable: false),
             maxColumns: 3,
             onOpenChartType: onOpenChartType,
           ),
@@ -126,7 +126,7 @@ class _ChartTypeCatalogGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final availableColumns = (constraints.crossAxisExtent / 300)
+        final availableColumns = (constraints.crossAxisExtent / 260)
             .floor()
             .clamp(1, maxColumns)
             .toInt();

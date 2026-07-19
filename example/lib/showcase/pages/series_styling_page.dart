@@ -820,7 +820,12 @@ class _SeriesStylingPageState extends State<SeriesStylingPage> {
               label: 'Chart Type',
               value: _conditionalType,
               values: ChartType.values
-                  .where((value) => value != ChartType.pie)
+                  .where(
+                    (value) =>
+                        value != ChartType.pie &&
+                        value != ChartType.donut &&
+                        value != ChartType.candlestick,
+                  )
                   .toList(growable: false),
               labelBuilder: (value) => value.name,
               onChanged: (value) => setState(() => _conditionalType = value),

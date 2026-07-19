@@ -12,8 +12,10 @@ import '../interaction/core/coordinator.dart';
 import '../models/bar_group_info.dart';
 import '../models/bar_chart_style.dart';
 import '../models/chart_series.dart';
+import '../models/candlestick_chart_series.dart';
 import '../models/chart_theme.dart';
 import '../rendering/bar_composition.dart';
+import '../theming/components/candlestick_theme.dart';
 import 'path_series_transition.dart';
 
 /// Converts ChartSeries data to SeriesElements for rendering.
@@ -76,6 +78,7 @@ class DataConverter {
         series: s,
         transform: transform,
         seriesTheme: theme?.seriesTheme,
+        candlestickTheme: theme?.candlestickTheme ?? CandlestickTheme.light,
         seriesIndex: index,
         coordinator: coordinator,
         barGroupInfo: barGroupInfo,
@@ -128,7 +131,11 @@ class DataConverter {
         if (!point.isValid) continue;
         if (point.x < xMin) xMin = point.x;
         if (point.x > xMax) xMax = point.x;
-        if (s is BarChartSeries) {
+        if (s is CandlestickChartSeries) {
+          final candle = s.candleAt(pointIndex);
+          if (candle.low < yMin) yMin = candle.low;
+          if (candle.high > yMax) yMax = candle.high;
+        } else if (s is BarChartSeries) {
           final info = barComposition[s.id];
           final rangeStart = s.rangeStartValueFor(pointIndex);
           final start =
@@ -194,7 +201,7 @@ class DataConverter {
 
     // Add 5% padding to data bounds for visual breathing room
     double xPadding = (xMax - xMin) * 0.05;
-    final yPadding = (yMax - yMin) * 0.05;
+    var yPadding = (yMax - yMin) * 0.05;
 
     // For bar charts, ensure minimum X padding based on bar width (spacing)
     // so edge bars aren't clipped. Bars are centered on data points, so we
@@ -229,6 +236,18 @@ class DataConverter {
       }
     }
 
+    final candleSeries = series.whereType<CandlestickChartSeries>();
+    for (final candles in candleSeries) {
+      final spacing = _medianCandlestickSpacing(candles);
+      final candlePadding = spacing == null
+          ? (xMax == xMin ? 0.5 : 0.0)
+          : spacing * candles.candlestickStyle.bodyWidthFactor / 2;
+      if (candlePadding > xPadding) xPadding = candlePadding;
+    }
+    if (candleSeries.isNotEmpty && yPadding == 0) {
+      yPadding = math.max(yMin.abs() * 0.05, 0.5);
+    }
+
     return DataBounds(
       xMin: xMin - xPadding,
       xMax: xMax + xPadding,
@@ -253,6 +272,16 @@ class DataConverter {
         'Horizontal bars require every series in the chart to be a horizontal BarChartSeries',
       );
     }
+  }
+
+  static double? _medianCandlestickSpacing(CandlestickChartSeries series) {
+    if (series.length < 2) return null;
+    final spacings = List<double>.generate(
+      series.length - 1,
+      (index) => series.candleAt(index + 1).x - series.candleAt(index).x,
+      growable: false,
+    )..sort();
+    return spacings[(spacings.length - 1) >> 1];
   }
 }
 

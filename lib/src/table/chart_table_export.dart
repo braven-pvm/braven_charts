@@ -81,6 +81,7 @@ abstract final class ChartTableExporter {
     Iterable<ChartTableWideRow> wideRows = const [],
     Iterable<ChartTablePieRow> pieRows = const [],
     Iterable<ChartTablePolarRow> polarRows = const [],
+    Iterable<ChartTableCandlestickRow> candlestickRows = const [],
   }) {
     final rows = switch (model.projectionKind) {
       ChartTableProjectionKind.cartesianWide => [
@@ -95,6 +96,10 @@ abstract final class ChartTableExporter {
       ChartTableProjectionKind.polar => [
         for (final (index, row) in polarRows.indexed)
           polarRow(model, row, index),
+      ],
+      ChartTableProjectionKind.candlestick => [
+        for (final (index, row) in candlestickRows.indexed)
+          candlestickRow(model, row, index),
       ],
     };
     return ChartTableCsvExport(headers: headers(model), rows: rows);
@@ -207,6 +212,53 @@ abstract final class ChartTableExporter {
     references: [row.reference],
   );
 
+  static ChartTableRowExport candlestickRow(
+    ChartTableModel model,
+    ChartTableCandlestickRow row,
+    int displayIndex,
+  ) => ChartTableRowExport(
+    rowId: row.rowId,
+    headers: headers(model),
+    rawValues: [
+      displayIndex + 1,
+      row.timestamp?.toUtc().toIso8601String(),
+      row.xRaw,
+      row.openRaw,
+      row.highRaw,
+      row.lowRaw,
+      row.closeRaw,
+      row.changeRaw,
+      row.changePercentRaw,
+      row.unit,
+      row.label,
+      for (final column in model.series.where(
+        (column) => column.seriesId != row.reference.seriesId,
+      ))
+        row.overlayCells[column.seriesId]?.yRaw,
+    ],
+    displayValues: [
+      '${displayIndex + 1}',
+      row.timestamp?.toUtc().toIso8601String() ?? 'No timestamp',
+      row.xDisplay,
+      row.openDisplay,
+      row.highDisplay,
+      row.lowDisplay,
+      row.closeDisplay,
+      row.changeDisplay,
+      row.changePercentDisplay,
+      row.unit ?? 'No unit',
+      row.label ?? 'No label',
+      for (final column in model.series.where(
+        (column) => column.seriesId != row.reference.seriesId,
+      ))
+        row.overlayCells[column.seriesId]?.yDisplay ?? 'No value',
+    ],
+    references: [
+      row.reference,
+      ...row.overlayCells.values.map((e) => e.reference),
+    ],
+  );
+
   static List<String> headers(ChartTableModel model) =>
       switch (model.projectionKind) {
         ChartTableProjectionKind.cartesianWide => [
@@ -253,6 +305,23 @@ abstract final class ChartTableExporter {
           model.commonRadialUnit == null
               ? 'Value'
               : 'Value (${model.commonRadialUnit})',
+        ],
+        ChartTableProjectionKind.candlestick => [
+          '#',
+          'Time',
+          model.xColumnLabel,
+          'Open',
+          'High',
+          'Low',
+          'Close',
+          'Change',
+          'Change %',
+          'Unit',
+          'Label',
+          for (final column in model.series.skip(1))
+            column.unit == null
+                ? column.seriesName
+                : '${column.seriesName} (${column.unit})',
         ],
       };
 }

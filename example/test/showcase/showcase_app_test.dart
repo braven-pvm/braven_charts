@@ -55,6 +55,7 @@ void main() {
     expect(find.text('Area Charts'), findsOneWidget);
     expect(find.text('Bar Charts'), findsOneWidget);
     expect(find.text('Scatter Charts'), findsOneWidget);
+    expect(find.text('Candlestick Charts'), findsOneWidget);
     expect(find.text('Pie Charts'), findsOneWidget);
     expect(find.text('Donut Charts'), findsOneWidget);
     expect(find.text('Concentric Donut Charts'), findsOneWidget);
@@ -91,6 +92,14 @@ void main() {
     expect(selectedDecoration.borderRadius, isNull);
     expect(selectedDecoration.boxShadow, isNull);
     expect(selectedDecoration.color, Colors.transparent);
+
+    await tester.tap(find.text('Candlestick Charts'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Pie Charts'));
     await tester.pump(const Duration(milliseconds: 300));

@@ -82,6 +82,8 @@ export 'src/controllers/annotation_controller.dart';
 export 'src/controllers/chart_controller.dart';
 export 'src/controllers/chart_interaction_group_controller.dart'
     hide ChartInteractionGroupParticipant;
+// Coordinates
+export 'src/coordinates/chart_transform.dart';
 // Comparison
 export 'src/comparison/chart_comparison_builder.dart';
 export 'src/comparison/chart_comparison_export.dart';
@@ -97,6 +99,11 @@ export 'src/models/auto_scroll_config.dart';
 export 'src/models/bar_chart_style.dart';
 export 'src/models/bar_group_info.dart';
 export 'src/models/category_axis_config.dart';
+export 'src/models/candlestick_chart_series.dart';
+export 'src/models/candlestick_chart_style.dart';
+export 'src/models/candlestick_data_point.dart';
+export 'src/models/candlestick_interaction_details.dart';
+export 'src/models/financial_time_domain.dart';
 // X-axis configuration uses XAxisConfig; Y-axis uses YAxisConfig.
 export 'src/models/chart_annotation.dart';
 export 'src/models/chart_data_point.dart';
@@ -139,6 +146,7 @@ export 'src/models/y_axis_config.dart';
 export 'src/models/y_axis_position.dart';
 // Rendering
 export 'src/rendering/axis_color_resolver.dart';
+export 'src/rendering/candlestick_geometry.dart';
 export 'src/rendering/multi_axis_normalizer.dart';
 export 'src/rendering/multi_axis_painter.dart';
 // Generated Dart source
@@ -153,6 +161,7 @@ export 'src/streaming/streaming_controller.dart';
 export 'src/widgets/chart_legend.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
+export 'src/theming/components/candlestick_theme.dart';
 export 'src/theming/components/annotation_theme.dart';
 export 'src/theming/components/axis_style.dart';
 export 'src/theming/components/grid_style.dart';

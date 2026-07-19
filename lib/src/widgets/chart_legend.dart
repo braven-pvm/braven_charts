@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/chart_series.dart';
 import '../models/bar_chart_style.dart';
+import '../models/candlestick_chart_series.dart';
 import '../rendering/bar_pattern_painter.dart';
 import '../utils/dashed_path.dart';
 
@@ -230,6 +231,12 @@ class _LegendSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (series is CandlestickChartSeries) {
+      return CustomPaint(
+        size: const Size(18, 16),
+        painter: _CandlestickLegendSwatchPainter(color: color),
+      );
+    }
     if (series case final BarChartSeries barSeries) {
       return CustomPaint(
         size: const Size(18, 12),
@@ -264,6 +271,33 @@ class _LegendSwatch extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CandlestickLegendSwatchPainter extends CustomPainter {
+  const _CandlestickLegendSwatchPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(center.dx, 1),
+      Offset(center.dx, size.height - 1),
+      stroke,
+    );
+    final body = Rect.fromCenter(center: center, width: 7, height: 10);
+    canvas.drawRect(body, Paint()..color = color.withValues(alpha: 0.14));
+    canvas.drawRect(body, stroke);
+  }
+
+  @override
+  bool shouldRepaint(_CandlestickLegendSwatchPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _PathLegendSwatchPainter extends CustomPainter {
