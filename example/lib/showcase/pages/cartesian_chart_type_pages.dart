@@ -104,6 +104,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   bool _synchronizeViewport = true;
   bool _showSynchronizedIntersections = true;
   bool _synchronizedTracking = true;
+  bool _animateSynchronizedUpdates = true;
+  bool _synchronizedLiveRevision = false;
+  double _synchronizedUpdateDurationMs = 650;
   _SynchronizedDatasetProfile _synchronizedDatasetProfile =
       _SynchronizedDatasetProfile.normal;
   final Map<
@@ -111,6 +114,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     Map<_SynchronizedMetric, List<ChartDataPoint>>
   >
   _synchronizedPointCache = {};
+  final Map<
+    _SynchronizedDatasetProfile,
+    Map<_SynchronizedMetric, List<ChartDataPoint>>
+  >
+  _synchronizedUpdateCache = {};
   final Set<_SynchronizedMetric> _visibleSynchronizedMetrics = {
     ..._SynchronizedMetric.values,
   };
@@ -505,7 +513,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                   child: ChartCard(
                     title: _presets[_presetIndex].label,
                     subtitle:
-                        '${visibleMetrics.length} independent ${visibleMetrics.length == 1 ? 'chart' : 'charts'} · shared distance cursor + X viewport',
+                        '${visibleMetrics.length} independent ${visibleMetrics.length == 1 ? 'chart' : 'charts'} · ${_synchronizedLiveRevision ? 'live update' : 'baseline'} · shared distance cursor + X viewport',
                     padding: const EdgeInsets.all(8),
                     child: _SynchronizedCartesianExample(
                       groupController: _interactionGroupController,
@@ -522,6 +530,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                       visibleMetrics: visibleMetrics,
                       chartHeights: _synchronizedChartHeights,
                       pointsByMetric: pointsByMetric,
+                      pathAnimation: _synchronizedPathAnimation,
                     ),
                   ),
                 ),
@@ -1102,6 +1111,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ),
               onChanged: (profile) {
                 _ensureSynchronizedProfileCached(profile);
+                if (_synchronizedLiveRevision) {
+                  _ensureSynchronizedUpdateCached(profile);
+                }
                 _interactionGroupController.reset();
                 setState(() => _synchronizedDatasetProfile = profile);
               },
@@ -1139,6 +1151,66 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                       setState(() => _synchronizedChartHeights[metric] = value),
                 ),
             ],
+          ],
+        ),
+      if (_isLineSynchronized)
+        OptionSection(
+          title: 'Data updates',
+          icon: Icons.update_outlined,
+          initiallyExpanded: false,
+          children: [
+            Text(
+              _synchronizedLiveRevision
+                  ? 'Current state · Live revision'
+                  : 'Current state · Baseline',
+              key: const ValueKey('synchronized-data-state'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                key: const ValueKey('synchronized-update-data'),
+                onPressed: _toggleSynchronizedDataRevision,
+                icon: Icon(
+                  _synchronizedLiveRevision
+                      ? Icons.undo_outlined
+                      : Icons.auto_graph_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  _synchronizedLiveRevision
+                      ? 'Restore baseline'
+                      : 'Apply live update',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            BoolOption(
+              key: const ValueKey('animate-synchronized-updates'),
+              label: 'Animate data updates',
+              value: _animateSynchronizedUpdates,
+              subtitle: 'Use native Line and Area geometry interpolation',
+              onChanged: (value) =>
+                  setState(() => _animateSynchronizedUpdates = value),
+            ),
+            if (_animateSynchronizedUpdates)
+              SliderOption(
+                key: const ValueKey('synchronized-update-duration'),
+                label: 'Update duration',
+                value: _synchronizedUpdateDurationMs,
+                min: 200,
+                max: 1500,
+                divisions: 13,
+                suffix: 'ms',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _synchronizedUpdateDurationMs = value),
+              ),
           ],
         ),
       if (_isLineSynchronized)
@@ -2552,6 +2624,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _synchronizeViewport = true;
       _showSynchronizedIntersections = true;
       _synchronizedTracking = true;
+      _animateSynchronizedUpdates = true;
+      _synchronizedLiveRevision = false;
+      _synchronizedUpdateDurationMs = 650;
       _synchronizedDatasetProfile = _SynchronizedDatasetProfile.normal;
       _visibleSynchronizedMetrics
         ..clear()
@@ -2609,10 +2684,26 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       };
 
   List<ChartDataPoint> _synchronizedPoints(_SynchronizedMetric metric) {
-    if (_synchronizedDatasetProfile == _SynchronizedDatasetProfile.normal) {
+    if (_synchronizedLiveRevision) {
+      final cachedUpdate =
+          _synchronizedUpdateCache[_synchronizedDatasetProfile];
+      assert(
+        cachedUpdate != null,
+        'Synchronized updates must be prepared before setState.',
+      );
+      return cachedUpdate![metric]!;
+    }
+    return _synchronizedBaselinePoints(_synchronizedDatasetProfile, metric);
+  }
+
+  List<ChartDataPoint> _synchronizedBaselinePoints(
+    _SynchronizedDatasetProfile profile,
+    _SynchronizedMetric metric,
+  ) {
+    if (profile == _SynchronizedDatasetProfile.normal) {
       return _synchronizedSourcePoints(metric);
     }
-    final cachedProfile = _synchronizedPointCache[_synchronizedDatasetProfile];
+    final cachedProfile = _synchronizedPointCache[profile];
     assert(
       cachedProfile != null,
       'Expanded synchronized profiles must be prepared before setState.',
@@ -2634,6 +2725,59 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
     };
   }
+
+  void _ensureSynchronizedUpdateCached(_SynchronizedDatasetProfile profile) {
+    if (_synchronizedUpdateCache.containsKey(profile)) return;
+    _ensureSynchronizedProfileCached(profile);
+    _synchronizedUpdateCache[profile] = {
+      for (final metric in _SynchronizedMetric.values)
+        metric: _buildSynchronizedUpdate(
+          metric,
+          _synchronizedBaselinePoints(profile, metric),
+        ),
+    };
+  }
+
+  List<ChartDataPoint> _buildSynchronizedUpdate(
+    _SynchronizedMetric metric,
+    List<ChartDataPoint> baseline,
+  ) {
+    final (bias, amplitude, cycles, phase) = switch (metric) {
+      _SynchronizedMetric.speed => (0.45, 0.9, 2.0, 0.0),
+      _SynchronizedMetric.elevation => (14.0, 24.0, 1.0, math.pi / 3),
+      _SynchronizedMetric.heartRate => (2.5, 5.0, 2.0, math.pi / 2),
+    };
+    final lastIndex = baseline.length - 1;
+    return List<ChartDataPoint>.unmodifiable([
+      for (var index = 0; index < baseline.length; index++)
+        baseline[index].copyWith(
+          y:
+              baseline[index].y +
+              bias +
+              (math.sin(phase + (index / lastIndex * math.pi * 2 * cycles)) *
+                  amplitude),
+        ),
+    ]);
+  }
+
+  void _toggleSynchronizedDataRevision() {
+    if (!_synchronizedLiveRevision) {
+      _ensureSynchronizedUpdateCached(_synchronizedDatasetProfile);
+    }
+    setState(() => _synchronizedLiveRevision = !_synchronizedLiveRevision);
+  }
+
+  PathAnimationStyle get _synchronizedPathAnimation =>
+      _animateSynchronizedUpdates
+      ? PathAnimationStyle(
+          dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+          dataUpdateTiming: PathAnimationTiming(
+            duration: Duration(
+              milliseconds: _synchronizedUpdateDurationMs.round(),
+            ),
+          ),
+        )
+      : const PathAnimationStyle();
 
   void _resetMotionData() {
     _motionPrimaryPoints = List<ChartDataPoint>.of(_primaryPoints);
@@ -2791,6 +2935,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required this.visibleMetrics,
     required this.chartHeights,
     required this.pointsByMetric,
+    required this.pathAnimation,
   });
 
   final ChartInteractionGroupController groupController;
@@ -2807,6 +2952,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
   final List<_SynchronizedMetric> visibleMetrics;
   final Map<_SynchronizedMetric, double> chartHeights;
   final Map<_SynchronizedMetric, List<ChartDataPoint>> pointsByMetric;
+  final PathAnimationStyle pathAnimation;
 
   @override
   Widget build(BuildContext context) {
@@ -2854,11 +3000,13 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required bool compact,
     required bool showDistanceAxis,
   }) {
+    final points = pointsByMetric[metric]!;
     return switch (metric) {
       _SynchronizedMetric.speed => _SynchronizedMetricPlot(
         title: 'Speed',
-        latestValue: '9.3 km/h',
-        accessibilityValue: '9.3 kilometres per hour',
+        latestValue: '${points.last.y.toStringAsFixed(1)} km/h',
+        accessibilityValue:
+            '${points.last.y.toStringAsFixed(1)} kilometres per hour',
         color: const Color(0xFF2196F3),
         groupController: groupController,
         options: options,
@@ -2869,7 +3017,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-speed',
           name: 'Speed',
           unit: 'km/h',
-          points: pointsByMetric[_SynchronizedMetric.speed]!,
+          points: points,
           color: const Color(0xFF2196F3),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -2877,6 +3025,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           showDataPointMarkers: options.showDataMarkers,
           dataPointMarkerRadius: markerRadius,
           dataPointMarkerStyle: markerStyle,
+          pathAnimation: pathAnimation,
         ),
         synchronizeCursor: synchronizeCursor,
         synchronizeViewport: synchronizeViewport,
@@ -2885,8 +3034,8 @@ class _SynchronizedCartesianExample extends StatelessWidget {
       ),
       _SynchronizedMetric.elevation => _SynchronizedMetricPlot(
         title: 'Elevation',
-        latestValue: '329 m',
-        accessibilityValue: '329 metres',
+        latestValue: '${points.last.y.round()} m',
+        accessibilityValue: '${points.last.y.round()} metres',
         color: const Color(0xFF5B56D6),
         groupController: groupController,
         options: options,
@@ -2897,7 +3046,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-elevation',
           name: 'Elevation',
           unit: 'm',
-          points: pointsByMetric[_SynchronizedMetric.elevation]!,
+          points: points,
           color: const Color(0xFF5B56D6),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -2909,6 +3058,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           showDataPointMarkers: options.showDataMarkers,
           dataPointMarkerRadius: markerRadius,
           dataPointMarkerStyle: markerStyle,
+          pathAnimation: pathAnimation,
         ),
         synchronizeCursor: synchronizeCursor,
         synchronizeViewport: synchronizeViewport,
@@ -2917,8 +3067,8 @@ class _SynchronizedCartesianExample extends StatelessWidget {
       ),
       _SynchronizedMetric.heartRate => _SynchronizedMetricPlot(
         title: 'Heart rate',
-        latestValue: '138 bpm',
-        accessibilityValue: '138 beats per minute',
+        latestValue: '${points.last.y.round()} bpm',
+        accessibilityValue: '${points.last.y.round()} beats per minute',
         color: const Color(0xFF00B86B),
         groupController: groupController,
         options: options,
@@ -2929,7 +3079,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           id: 'synchronized-heart-rate',
           name: 'Heart rate',
           unit: 'bpm',
-          points: pointsByMetric[_SynchronizedMetric.heartRate]!,
+          points: points,
           color: const Color(0xFF00B86B),
           interpolation: interpolation,
           strokeWidth: strokeWidth,
@@ -2941,6 +3091,7 @@ class _SynchronizedCartesianExample extends StatelessWidget {
           showDataPointMarkers: options.showDataMarkers,
           dataPointMarkerRadius: markerRadius,
           dataPointMarkerStyle: markerStyle,
+          pathAnimation: pathAnimation,
         ),
         synchronizeCursor: synchronizeCursor,
         synchronizeViewport: synchronizeViewport,
@@ -3450,6 +3601,12 @@ void dispose() {
 
 const _synchronizedParticipantsSnippet = '''
 final visibleMetrics = metrics.where((metric) => metric.visible);
+const updateMotion = PathAnimationStyle(
+  dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+  dataUpdateTiming: PathAnimationTiming(
+    duration: Duration(milliseconds: 650),
+  ),
+);
 
 Column(
   children: [
@@ -3462,7 +3619,8 @@ Column(
             synchronizeCursor: true,
             synchronizeViewport: true,
           ),
-          series: [metric.series],
+          // Keep the series ID and X coordinates stable when points change.
+          series: [metric.buildSeries(pathAnimation: updateMotion)],
           yAxis: const YAxisConfig(
             minWidth: 56,
             maxWidth: 56,

@@ -8,7 +8,7 @@
 **Sprint 9 lane:** Stable-identity interior topology motion (complete)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Synchronized live-update motion (Sprint 16)
+**Next lane:** Synchronized tracking detail controls (Sprint 17)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -705,3 +705,56 @@ instead of measuring only the 52-point showcase sample.
   cache identity, profile switching, membership totals, and Stress rendering.
 - All 199 showcase tests and the showcase analyzer pass. The release web build is
   clean and the direct route returns HTTP 200 on port 8193 for local review.
+
+## Sprint 16 — Synchronized live-update motion
+
+**Status:** Local review approved
+
+### Product outcome
+
+The synchronized stack demonstrates the same polished data-update motion as the
+ordinary Line and Area workbench presets. One deliberate action updates all
+mounted metrics while each chart keeps its identity, local scale, shared cursor,
+and synchronized X viewport.
+
+### Scope
+
+- Add one deterministic alternate dataset state for Speed, Elevation, and Heart
+  rate at every Normal, Dense, and Stress density.
+- Reuse the native `PathDataUpdateAnimationMode.interpolate` contract for the
+  Line and Area participants; expose animation enablement and 200-1,500 ms
+  duration without adding a synchronization-specific renderer path.
+- Prepare immutable revised point lists before state changes and reuse them when
+  restoring a chart, revisiting a profile, or replaying the same update.
+- Keep the update action and its current Baseline/Live state inside one collapsed
+  Data updates option group, with a 48 px secondary action.
+
+### Acceptance gates
+
+- Apply and restore actions update all mounted series without remounting them;
+  series IDs, X coordinates, point counts, and group-controller identity remain
+  stable while Y values and displayed latest values change.
+- Crosshair data-X and synchronized X viewport survive compatible data updates;
+  disabled motion renders the final state immediately.
+- Duration wiring reaches every effective Line/Area `PathAnimationStyle`, and
+  reduced-motion/zero-duration package behavior remains authoritative.
+- Normal, Dense, and Stress revisions are deterministic and cached. Permanent
+  tests cover replay identity, membership, cursor continuity, option wiring, and
+  a 15,000-point update followed by analyzers, affected suites, release build,
+  and direct-route review.
+
+### Delivered local slice
+
+- The synchronized stack now applies or restores one deterministic update across
+  every mounted Line/Area participant. Latest-value headers and the composition
+  subtitle identify the effective snapshot without replacing chart states.
+- Native compatible-update interpolation is configurable from 200-1,500 ms and
+  can be disabled. Cached immutable revision lists cover Normal, Dense, and
+  Stress, including replay and participant restoration.
+- Render-path coverage proves chart state, series identity, X coordinates, group
+  controller, shared cursor/viewport, and local tracked Y values survive the
+  update; the Stress case animates all 15,000 points without an exception.
+- All 200 showcase tests and both analyzers pass. Current 5,000-point p95 package
+  benchmarks remain below one frame: cold Line 1.60 ms, Area 3.16 ms, baseline
+  Area 3.36 ms, and patterned Forecast 2.97 ms. The release web build is clean,
+  the direct route returns HTTP 200, and port 8193 serves the review build.

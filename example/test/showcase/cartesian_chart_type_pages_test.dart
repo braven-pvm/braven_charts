@@ -401,6 +401,10 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('interactionGroupOptions'), findsOne);
+      expect(
+        find.textContaining('PathDataUpdateAnimationMode.interpolate'),
+        findsOne,
+      );
 
       final charts = tester
           .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
@@ -686,6 +690,214 @@ void main() {
       await tester.pump();
       expect(find.text('15000'), findsOneWidget);
       expect(identical(visibleSeriesPoints()[1], firstStressPoints[1]), isTrue);
+
+      final dataUpdatesHeader = find.ancestor(
+        of: find.text('Data updates'),
+        matching: find.byType(InkWell),
+      );
+      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      await tester.pumpAndSettle();
+      final updateButton = find.byKey(
+        const ValueKey('synchronized-update-data'),
+        skipOffstage: false,
+      );
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+      final firstStressUpdate = visibleSeriesPoints();
+      expect(
+        firstStressUpdate.map((points) => points.length),
+        everyElement(5000),
+      );
+      for (var index = 0; index < firstStressUpdate.length; index++) {
+        expect(
+          firstStressUpdate[index].map((point) => point.x),
+          firstStressPoints[index].map((point) => point.x),
+        );
+        expect(
+          firstStressUpdate[index].map((point) => point.y),
+          isNot(firstStressPoints[index].map((point) => point.y)),
+        );
+      }
+
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pumpAndSettle();
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+      final secondStressUpdate = visibleSeriesPoints();
+      for (var index = 0; index < firstStressUpdate.length; index++) {
+        expect(
+          identical(firstStressUpdate[index], secondStressUpdate[index]),
+          isTrue,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Synchronized live updates preserve interaction state and motion identity',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+
+      List<BravenChartPlus> charts() => tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList(growable: false);
+
+      final baselineCharts = charts();
+      final baselinePoints = [
+        for (final chart in baselineCharts) chart.series.single.points,
+      ];
+      final chartStates = {
+        for (final id in const [
+          'synchronized-speed',
+          'synchronized-elevation',
+          'synchronized-heart-rate',
+        ])
+          id: tester.state(find.byKey(ValueKey(id))),
+      };
+      final group = baselineCharts.first.interactionGroupController!;
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final renderBoxes = renderElements
+          .map((element) => element.renderObject! as ChartRenderBox)
+          .toList(growable: false);
+      renderBoxes.first.zoomChart(1.8, animate: false);
+      await tester.pump();
+      final viewportBeforeUpdate = group.viewport;
+      expect(viewportBeforeUpdate, isNotNull);
+
+      final firstFinder = find.byElementPredicate(
+        (element) => element == renderElements.first,
+      );
+      await tester.ensureVisible(firstFinder);
+      await tester.pumpAndSettle();
+      const dataX = 2.4;
+      final first = renderBoxes.first;
+      final local = first.plotToWidget(
+        first.transform!.dataToPlot(
+          dataX,
+          (first.transform!.dataYMin + first.transform!.dataYMax) / 2,
+        ),
+      );
+      final pointer = await tester.createGesture();
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(tester.getTopLeft(firstFinder) + local);
+      await tester.pump();
+      expect(group.cursorX, closeTo(dataX, 0.0001));
+      final trackedYBeforeUpdate = [
+        for (final renderBox in renderBoxes)
+          renderBox.debugSynchronizedTrackingState!.seriesValues.single.y,
+      ];
+
+      final dataUpdatesHeader = find.ancestor(
+        of: find.text('Data updates'),
+        matching: find.byType(InkWell),
+      );
+      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      await tester.pumpAndSettle();
+      final updateButton = find.byKey(
+        const ValueKey('synchronized-update-data'),
+        skipOffstage: false,
+      );
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final updatedCharts = charts();
+      expect(group.viewport, viewportBeforeUpdate);
+      expect(group.cursorX, closeTo(dataX, 0.0001));
+      expect(find.text('Current state · Live revision'), findsOneWidget);
+      expect(find.text('9.8 km/h'), findsOneWidget);
+      for (var index = 0; index < updatedCharts.length; index++) {
+        final series = updatedCharts[index].series.single;
+        expect(series.id, baselineCharts[index].series.single.id);
+        expect(series.points, hasLength(baselinePoints[index].length));
+        expect(
+          series.points.map((point) => point.x),
+          baselinePoints[index].map((point) => point.x),
+        );
+        expect(
+          series.points.map((point) => point.y),
+          isNot(baselinePoints[index].map((point) => point.y)),
+        );
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(
+          animation.dataUpdateMode,
+          PathDataUpdateAnimationMode.interpolate,
+        );
+        expect(
+          animation.dataUpdateTiming.duration,
+          const Duration(milliseconds: 650),
+        );
+      }
+      for (final entry in chartStates.entries) {
+        expect(
+          tester.state(find.byKey(ValueKey(entry.key))),
+          same(entry.value),
+        );
+      }
+      await tester.pumpAndSettle();
+      for (var index = 0; index < renderBoxes.length; index++) {
+        final tracked = renderBoxes[index]
+            .debugSynchronizedTrackingState!
+            .seriesValues
+            .single;
+        expect(tracked.x, closeTo(dataX, 0.0001));
+        expect(tracked.y, isNot(closeTo(trackedYBeforeUpdate[index], 0.0001)));
+      }
+
+      final animateToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('animate-synchronized-updates'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(animateToggle).onChanged!(false);
+      await tester.pump();
+      for (final chart in charts()) {
+        final series = chart.series.single;
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(animation.dataUpdateMode, PathDataUpdateAnimationMode.none);
+      }
+
+      tester.widget<SwitchListTile>(animateToggle).onChanged!(true);
+      await tester.pump();
+      final durationSlider = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-update-duration'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(Slider, skipOffstage: false),
+      );
+      tester.widget<Slider>(durationSlider).onChanged!(1200);
+      await tester.pump();
+      for (final chart in charts()) {
+        final series = chart.series.single;
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(
+          animation.dataUpdateTiming.duration,
+          const Duration(milliseconds: 1200),
+        );
+      }
       expect(tester.takeException(), isNull);
     },
   );

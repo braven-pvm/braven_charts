@@ -200,3 +200,32 @@ point lists are generated once when first selected and then reused across chart
 rebuilds, participant removal/restoration, tracking, theme, and layout changes.
 Reset the frame samples after switching profiles if you want a clean interaction
 window, then scrub, pan, and zoom the same way in each profile.
+
+## Compatible live updates
+
+Each synchronized participant can opt into the ordinary Line and Area update
+animation. No group-specific animation API is required:
+
+```dart
+const updateMotion = PathAnimationStyle(
+  dataUpdateMode: PathDataUpdateAnimationMode.interpolate,
+  dataUpdateTiming: PathAnimationTiming(
+    duration: Duration(milliseconds: 650),
+  ),
+);
+
+LineChartSeries(
+  id: 'speed', // Keep identity stable across snapshots.
+  points: speedPoints,
+  pathAnimation: updateMotion,
+)
+```
+
+Replace the points while keeping the series ID and compatible X topology. The
+charts interpolate their local geometry independently; the interaction-group
+controller retains the shared data-X cursor and X viewport. Reduced motion and
+zero-duration chart themes still render the final snapshot synchronously.
+
+The showcase's **Data updates** section applies one cached deterministic revision
+to all mounted metrics. Use the duration and animation toggle with Normal, Dense,
+or Stress, then reset frame samples for a same-session comparison.
