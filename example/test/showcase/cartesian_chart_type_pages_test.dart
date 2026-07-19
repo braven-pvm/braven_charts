@@ -145,6 +145,7 @@ void main() {
       expect(find.text('Comparison'), findsWidgets);
       expect(find.text('Envelope'), findsWidgets);
       expect(find.text('Spotlight'), findsWidgets);
+      expect(find.text('Forecast'), findsWidgets);
       expect(find.byType(BravenChartWorkbench), findsOneWidget);
       expect(find.byType(BravenChartPlus), findsOneWidget);
 
@@ -261,6 +262,66 @@ void main() {
     expect(chart.series.whereType<AreaChartSeries>(), hasLength(2));
     expect(chart.series.whereType<LineChartSeries>(), hasLength(1));
   });
+
+  testWidgets(
+    'Line Forecast joins solid history to dotted prognosis at current time',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final forecast = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Forecast'),
+      );
+      await tester.ensureVisible(forecast);
+      await tester.pumpAndSettle();
+      await tester.tap(forecast);
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final path = chart.series.whereType<LineChartSeries>().single;
+      expect(path.id, 'forecast-continuous');
+      expect(path.name, 'Observed + forecast');
+      expect(path.points, hasLength(11));
+      expect(
+        path.points.map((point) => point.x),
+        orderedEquals(List.generate(11, (index) => index)),
+      );
+      expect(path.dashPattern, isEmpty);
+      expect(path.inlineLabel?.text, 'Forecast');
+      expect(path.dataPointMarkerStyle, DataPointMarkerStyle.hollow);
+      expect(
+        path.points.take(4),
+        everyElement(
+          isA<ChartDataPoint>().having(
+            (point) => point.segmentStyle,
+            'observed style',
+            isNull,
+          ),
+        ),
+      );
+      expect(
+        path.points.skip(4).take(6),
+        everyElement(
+          isA<ChartDataPoint>().having(
+            (point) => point.segmentStyle?.dashPattern,
+            'forecast pattern',
+            const [2, 6],
+          ),
+        ),
+      );
+      expect(path.points.last.segmentStyle, isNull);
+      final boundary = chart.annotations
+          .whereType<ThresholdAnnotation>()
+          .single;
+      expect(boundary.axis, AnnotationAxis.x);
+      expect(boundary.value, 4);
+      expect(boundary.label, 'Current time');
+      expect(chart.showLegend, isFalse);
+      expect(find.text('Show Legend'), findsNothing);
+      expect(find.text('Show second series'), findsNothing);
+    },
+  );
 
   testWidgets(
     'Line Spotlight stays focused while showcasing luminous identity',

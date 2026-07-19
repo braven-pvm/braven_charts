@@ -12,9 +12,15 @@ void main() {
           unit: 'W',
           color: const Color(0xFFFF7A26),
           interpolation: LineInterpolation.monotone,
+          dashPattern: const [2, 6],
           showDataPointMarkers: true,
           points: const [
-            ChartDataPoint(x: 0, y: 148, label: 'Start'),
+            ChartDataPoint(
+              x: 0,
+              y: 148,
+              label: 'Start',
+              segmentStyle: SegmentStyle(dashPattern: [8, 4]),
+            ),
             ChartDataPoint(x: 1, y: 162),
           ],
           yAxisConfig: YAxisConfig(
@@ -43,8 +49,11 @@ void main() {
         contains('interpolation: LineInterpolation.monotone,'),
       );
       expect(first.source, contains('showDataPointMarkers: true,'));
+      expect(first.source, contains('dashPattern: [2.0, 6.0],'));
       expect(first.source, contains('yAxisConfig: YAxisConfig('));
       expect(first.source, contains("label: 'Start',"));
+      expect(first.source, contains('segmentStyle: SegmentStyle('));
+      expect(first.source, contains('dashPattern: [8.0, 4.0],'));
       expect(first.source, contains('theme: ChartTheme.light,'));
     });
 

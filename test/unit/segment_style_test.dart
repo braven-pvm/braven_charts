@@ -22,11 +22,16 @@ void main() {
       expect(style.hasOverrides, isTrue);
     });
 
+    test('creates with an outgoing-segment dash pattern', () {
+      const style = SegmentStyle(dashPattern: [2, 6]);
+      expect(style.color, isNull);
+      expect(style.strokeWidth, isNull);
+      expect(style.dashPattern, const [2, 6]);
+      expect(style.hasOverrides, isTrue);
+    });
+
     test('creates with both properties', () {
-      const style = SegmentStyle(
-        color: Color(0xFF00FF00),
-        strokeWidth: 3.0,
-      );
+      const style = SegmentStyle(color: Color(0xFF00FF00), strokeWidth: 3.0);
       expect(style.color, const Color(0xFF00FF00));
       expect(style.strokeWidth, 3.0);
       expect(style.hasOverrides, isTrue);
@@ -35,6 +40,12 @@ void main() {
     test('empty style has no overrides', () {
       const style = SegmentStyle();
       expect(style.hasOverrides, isFalse);
+    });
+
+    test('an empty dash pattern is an explicit solid override', () {
+      const style = SegmentStyle(dashPattern: []);
+      expect(style.dashPattern, isEmpty);
+      expect(style.hasOverrides, isTrue);
     });
 
     test('equality with same values', () {
@@ -57,10 +68,15 @@ void main() {
     });
 
     test('copyWith preserves values', () {
-      const original = SegmentStyle(color: Color(0xFFFF0000), strokeWidth: 2.0);
+      const original = SegmentStyle(
+        color: Color(0xFFFF0000),
+        strokeWidth: 2.0,
+        dashPattern: [2, 6],
+      );
       final copy = original.copyWith();
       expect(copy.color, original.color);
       expect(copy.strokeWidth, original.strokeWidth);
+      expect(copy.dashPattern, original.dashPattern);
     });
 
     test('copyWith overrides values', () {
@@ -75,6 +91,21 @@ void main() {
       final copy = original.copyWith(clearColor: true);
       expect(copy.color, isNull);
       expect(copy.strokeWidth, 2.0);
+    });
+
+    test('copyWith can override and clear the inherited dash decision', () {
+      const original = SegmentStyle(dashPattern: [2, 6]);
+      expect(original.copyWith(dashPattern: const []).dashPattern, isEmpty);
+      expect(original.copyWith(clearDashPattern: true).dashPattern, isNull);
+    });
+
+    test('equality includes dash pattern values', () {
+      const dottedA = SegmentStyle(dashPattern: [2, 6]);
+      const dottedB = SegmentStyle(dashPattern: [2, 6]);
+      const dashed = SegmentStyle(dashPattern: [8, 4]);
+      expect(dottedA, dottedB);
+      expect(dottedA.hashCode, dottedB.hashCode);
+      expect(dottedA, isNot(dashed));
     });
 
     test('toString includes properties', () {
@@ -183,9 +214,7 @@ void main() {
         ],
       );
 
-      final colored = series.withSegmentColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withSegmentColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].segmentStyle, isNull);
       expect(colored.points[1].segmentStyle?.color, const Color(0xFFFF0000));
@@ -196,10 +225,7 @@ void main() {
     test('withSegmentColors ignores invalid indices', () {
       final series = const LineChartSeries(
         id: 'test',
-        points: [
-          ChartDataPoint(x: 0, y: 0),
-          ChartDataPoint(x: 1, y: 1),
-        ],
+        points: [ChartDataPoint(x: 0, y: 0), ChartDataPoint(x: 1, y: 1)],
       );
 
       // Index 1 is last point - should be ignored (no segment after it)
@@ -233,11 +259,17 @@ void main() {
 
       expect(styled.points[0].segmentStyle, isNull); // x=0, outside
       expect(
-          styled.points[1].segmentStyle?.color, const Color(0xFFFF0000)); // x=5
-      expect(styled.points[2].segmentStyle?.color,
-          const Color(0xFFFF0000)); // x=10
+        styled.points[1].segmentStyle?.color,
+        const Color(0xFFFF0000),
+      ); // x=5
       expect(
-          styled.points[3].segmentStyle, isNull); // x=15, excluded (half-open)
+        styled.points[2].segmentStyle?.color,
+        const Color(0xFFFF0000),
+      ); // x=10
+      expect(
+        styled.points[3].segmentStyle,
+        isNull,
+      ); // x=15, excluded (half-open)
       expect(styled.points[4].segmentStyle, isNull); // x=20, outside
     });
 
@@ -310,10 +342,7 @@ void main() {
     });
 
     test('creates with both properties', () {
-      const style = PointStyle(
-        color: Color(0xFF00FF00),
-        size: 12.0,
-      );
+      const style = PointStyle(color: Color(0xFF00FF00), size: 12.0);
       expect(style.color, const Color(0xFF00FF00));
       expect(style.size, 12.0);
       expect(style.hasOverrides, isTrue);
@@ -469,9 +498,7 @@ void main() {
         ],
       );
 
-      final colored = series.withPointColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withPointColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].pointStyle, isNull);
       expect(colored.points[1].pointStyle?.color, const Color(0xFFFF0000));
@@ -530,10 +557,7 @@ void main() {
       final series = const BarChartSeries(
         id: 'test',
         barWidthPercent: 0.8,
-        points: [
-          ChartDataPoint(x: 0, y: 10),
-          ChartDataPoint(x: 1, y: 20),
-        ],
+        points: [ChartDataPoint(x: 0, y: 10), ChartDataPoint(x: 1, y: 20)],
       );
       expect(series.hasPointOverrides, isFalse);
     });
@@ -585,11 +609,7 @@ void main() {
             y: 10,
             pointStyle: PointStyle.color(Color(0xFFFF0000)),
           ),
-          ChartDataPoint(
-            x: 1,
-            y: 20,
-            pointStyle: PointStyle.size(2.0),
-          ),
+          ChartDataPoint(x: 1, y: 20, pointStyle: PointStyle.size(2.0)),
         ],
       );
 
@@ -639,9 +659,7 @@ void main() {
         ],
       );
 
-      final colored = series.withSegmentColors({
-        1: const Color(0xFFFF0000),
-      });
+      final colored = series.withSegmentColors({1: const Color(0xFFFF0000)});
 
       expect(colored.points[0].segmentStyle, isNull);
       expect(colored.points[1].segmentStyle?.color, const Color(0xFFFF0000));

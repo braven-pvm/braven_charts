@@ -246,6 +246,7 @@ abstract final class ChartDocumentHydrator {
     'series.scatter',
     'series.area',
     'series.area.gradient.v1',
+    'series.path-dash.v1',
     'series.bar',
     'series.path-motion.v1',
     'series.path-motion-timing.v1',

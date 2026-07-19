@@ -361,6 +361,7 @@ class _ChartDartEmitter {
     writer.indented(() {
       _optionalColor(writer, 'color', style.color);
       _optionalNumber(writer, 'strokeWidth', style.strokeWidth);
+      _optionalNumberList(writer, 'dashPattern', style.dashPattern);
     });
     writer.writeLine('),');
   }
@@ -739,6 +740,7 @@ class _ChartDartEmitter {
       defaultName: 'filled',
     );
     _numberIf(writer, 'lineGlow', series.lineGlow, 0);
+    _optionalNumberList(writer, 'dashPattern', series.dashPattern);
     _emitSeriesLabelConfig(
       writer,
       dataPointLabels: series.dataPointLabels,
@@ -795,6 +797,7 @@ class _ChartDartEmitter {
       defaultName: 'filled',
     );
     _numberIf(writer, 'lineGlow', series.lineGlow, 0);
+    _optionalNumberList(writer, 'dashPattern', series.dashPattern);
   }
 
   void _emitSeriesLabelConfig(

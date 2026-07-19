@@ -182,6 +182,9 @@ abstract final class ChartSeriesDocumentCodec {
               'series.path-motion-timing.v1',
             if (series is AreaChartSeries && series.fillGradient != null)
               'series.area.gradient.v1',
+            if ((series is LineChartSeries || series is AreaChartSeries) &&
+                _hasPathDashCapability(series))
+              'series.path-dash.v1',
           },
         ),
       );
@@ -313,6 +316,7 @@ abstract final class ChartSeriesDocumentCodec {
           pathAnimation: _decodePathAnimation(
             _optionalMap(style, 'pathAnimation'),
           ),
+          dashPattern: _decodeDashPattern(style['dashPattern']),
         ),
         'scatter' => ScatterChartSeries(
           id: document.id,
@@ -373,6 +377,7 @@ abstract final class ChartSeriesDocumentCodec {
             style['belowBaselineFillColor'],
             r'$.style.belowBaselineFillColor',
           ),
+          dashPattern: _decodeDashPattern(style['dashPattern']),
           pathAnimation: _decodePathAnimation(
             _optionalMap(style, 'pathAnimation'),
           ),
@@ -590,6 +595,11 @@ ChartPointDocument _encodePoint(ChartDataPoint point, int index) =>
                 'color': point.segmentStyle!.color!.toARGB32(),
               if (point.segmentStyle!.strokeWidth != null)
                 'strokeWidth': _number(point.segmentStyle!.strokeWidth!),
+              if (point.segmentStyle!.dashPattern != null)
+                'dashPattern': [
+                  for (final interval in point.segmentStyle!.dashPattern!)
+                    _number(interval),
+                ],
             }, path: r'$.data.points[$index].segmentStyle'),
       pointStyle: point.pointStyle == null
           ? null
@@ -618,6 +628,9 @@ ChartDataPoint _decodePoint(ChartPointDocument point) {
               r'$.data.point.segmentStyle.color',
             ),
             strokeWidth: _optionalDouble(segmentStyle['strokeWidth']),
+            dashPattern: segmentStyle.containsKey('dashPattern')
+                ? _decodeDashPattern(segmentStyle['dashPattern'])
+                : null,
           ),
     pointStyle: point.pointStyle == null
         ? null
@@ -657,6 +670,7 @@ Map<String, Object?> _encodeSeriesStyle(
           lineGlow: series.lineGlow,
           dataPointLabels: series.dataPointLabels,
           inlineLabel: series.inlineLabel,
+          dashPattern: series.dashPattern,
         ),
       );
       result['pathAnimation'] = _encodePathAnimation(series.pathAnimation);
@@ -676,6 +690,7 @@ Map<String, Object?> _encodeSeriesStyle(
             lineGlow: series.lineGlow,
             dataPointLabels: series.dataPointLabels,
             inlineLabel: series.inlineLabel,
+            dashPattern: series.dashPattern,
           ),
         )
         ..['fillOpacity'] = _number(series.fillOpacity)
@@ -815,6 +830,16 @@ PathAnimationStyle? _pathAnimationFor(ChartSeries series) => switch (series) {
   AreaChartSeries() => series.pathAnimation,
   _ => null,
 };
+
+List<double> _dashPatternFor(ChartSeries series) => switch (series) {
+  LineChartSeries() => series.dashPattern,
+  AreaChartSeries() => series.dashPattern,
+  _ => const [],
+};
+
+bool _hasPathDashCapability(ChartSeries series) =>
+    _dashPatternFor(series).isNotEmpty ||
+    series.points.any((point) => point.segmentStyle?.dashPattern != null);
 
 Map<String, Object?> _encodePathAnimation(PathAnimationStyle style) => {
   'entranceMode': style.entranceMode.name,
@@ -1730,6 +1755,7 @@ Map<String, Object?> _encodeLineStyle({
   required double lineGlow,
   required DataPointLabelConfig? dataPointLabels,
   required SeriesInlineLabelConfig? inlineLabel,
+  required List<double> dashPattern,
 }) => {
   'interpolation': interpolation.name,
   'strokeWidth': _number(strokeWidth),
@@ -1742,6 +1768,8 @@ Map<String, Object?> _encodeLineStyle({
   if (dataPointLabels != null)
     'dataPointLabels': _encodeDataPointLabels(dataPointLabels),
   if (inlineLabel != null) 'inlineLabel': _encodeInlineLabel(inlineLabel),
+  if (dashPattern.isNotEmpty)
+    'dashPattern': [for (final interval in dashPattern) _number(interval)],
 };
 
 Map<String, Object?> _encodeDataPointLabels(DataPointLabelConfig config) => {
@@ -1999,6 +2027,26 @@ List<double?> _decodeOptionalDoubleList(Object? value, String path) {
         final item => ChartNumberDocument.fromJson(item).asDouble,
       },
   ];
+}
+
+List<double> _decodeDashPattern(Object? value) {
+  if (value == null) return const [];
+  if (value is! List || value.length.isOdd) {
+    throw const FormatException(
+      'Expected an even-length path dash pattern list.',
+    );
+  }
+  final result = <double>[];
+  for (var index = 0; index < value.length; index++) {
+    final interval = ChartNumberDocument.fromJson(value[index]).asDouble;
+    if (!interval.isFinite || interval <= 0) {
+      throw FormatException(
+        'Expected a positive finite path dash interval at index $index.',
+      );
+    }
+    result.add(interval);
+  }
+  return result;
 }
 
 Set<int> _decodeIntSet(Object? value, String path) {

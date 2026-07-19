@@ -51,6 +51,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   final ChartOptionsController _optionsController = ChartOptionsController(
     const ChartOptions(showDataMarkers: true),
   );
+  final ScrollController _presetScrollController = ScrollController();
+  final Map<int, GlobalKey> _presetLabelKeys = {};
 
   int _presetIndex = 0;
   LineInterpolation _interpolation = LineInterpolation.monotone;
@@ -89,6 +91,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         break;
       }
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _revealActivePreset(animate: false);
+    });
   }
 
   @override
@@ -96,7 +101,20 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     _chartController.dispose();
     _workbenchController.dispose();
     _optionsController.dispose();
+    _presetScrollController.dispose();
     super.dispose();
+  }
+
+  void _revealActivePreset({required bool animate}) {
+    final renderObject = _presetLabelKeys[_presetIndex]?.currentContext
+        ?.findRenderObject();
+    if (!_presetScrollController.hasClients || renderObject == null) return;
+    _presetScrollController.position.ensureVisible(
+      renderObject,
+      alignment: 0.5,
+      duration: animate ? const Duration(milliseconds: 180) : Duration.zero,
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -190,6 +208,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         icon: Icons.blur_on,
         description: 'A luminous focus line stands over soft gradient context.',
       ),
+      _ChartTypePreset(
+        label: 'Forecast',
+        icon: Icons.more_horiz,
+        description: 'Solid observations hand off to a dotted prognosis.',
+      ),
     ],
     _CartesianFamily.area => const [
       _ChartTypePreset(
@@ -265,6 +288,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
             SizedBox(height: compact ? 8 : 10),
             SingleChildScrollView(
+              controller: _presetScrollController,
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<int>(
                 key: ValueKey('${widget.family.name}-preset-picker'),
@@ -274,7 +298,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                     ButtonSegment(
                       value: index,
                       icon: Icon(_presets[index].icon, size: 18),
-                      label: Text(_presets[index].label),
+                      label: Text(
+                        _presets[index].label,
+                        key: _presetLabelKeys.putIfAbsent(index, GlobalKey.new),
+                      ),
                     ),
                 ],
                 selected: {_presetIndex},
@@ -282,6 +309,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                   setState(() {
                     _presetIndex = selection.single;
                     _resetMotionData();
+                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _revealActivePreset(animate: true);
                   });
                 },
               ),
@@ -350,7 +380,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           dataUpdateCurve: Curves.easeInOutCubic,
         ),
       ),
-      showLegend: (_isLineSpotlight || _isAreaPulse)
+      showLegend: (_isLineSpotlight || _isLineForecast || _isAreaPulse)
           ? false
           : options.showLegend,
       showXScrollbar: options.showXScrollbar,
@@ -390,7 +420,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   String get _chartSummary => switch (widget.family) {
     _CartesianFamily.line =>
-      '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
+      _isLineForecast
+          ? 'Observed + prognosis · dotted forecast · current-time boundary'
+          : '${_buildSeries().length} series · ${_interpolation.name} · tracking enabled',
     _CartesianFamily.area =>
       '${_buildSeries().length} series · ${(_fillOpacity * 100).round()}% fill${_presetIndex >= 4 && _useAreaGradient ? ' · gradient' : ''} · ${_interpolation.name}',
     _CartesianFamily.scatter =>
@@ -398,13 +430,13 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   };
 
   String get _xAxisLabel => switch (widget.family) {
-    _CartesianFamily.line => 'Elapsed interval',
+    _CartesianFamily.line => _isLineForecast ? 'Hour' : 'Elapsed interval',
     _CartesianFamily.area => 'Period',
     _CartesianFamily.scatter => 'Input',
   };
 
   String get _yAxisLabel => switch (widget.family) {
-    _CartesianFamily.line => 'Value',
+    _CartesianFamily.line => _isLineForecast ? 'Temperature (°C)' : 'Value',
     _CartesianFamily.area => 'Magnitude',
     _CartesianFamily.scatter => 'Outcome',
   };
@@ -467,13 +499,14 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _markerRadius = value),
         ),
-      BoolOption(
-        label: widget.family == _CartesianFamily.scatter
-            ? 'Show second cohort'
-            : 'Show second series',
-        value: _showSecondSeries,
-        onChanged: (value) => setState(() => _showSecondSeries = value),
-      ),
+      if (!_isLineForecast)
+        BoolOption(
+          label: widget.family == _CartesianFamily.scatter
+              ? 'Show second cohort'
+              : 'Show second series',
+          value: _showSecondSeries,
+          onChanged: (value) => setState(() => _showSecondSeries = value),
+        ),
       if (widget.family != _CartesianFamily.scatter)
         BoolOption(
           label: 'Show point labels',
@@ -624,7 +657,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       StandardChartOptions(
         controller: _optionsController,
         showThemeOption: !_isLineSpotlight,
-        showLegendOption: !_isLineSpotlight && !_isAreaPulse,
+        showLegendOption:
+            !_isLineSpotlight && !_isLineForecast && !_isAreaPulse,
         showLineStyleOption: false,
       ),
     ];
@@ -637,6 +671,33 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   };
 
   List<ChartSeries> _buildLineSeries() {
+    if (_isLineForecast) {
+      const forecastColor = Color(0xFF4F8CFF);
+      return [
+        LineChartSeries(
+          id: 'forecast-continuous',
+          name: 'Observed + forecast',
+          unit: '°C',
+          points: _forecastContinuousPoints,
+          color: forecastColor,
+          interpolation: _interpolation,
+          strokeWidth: _strokeWidth,
+          showDataPointMarkers: true,
+          dataPointMarkerRadius: 4,
+          dataPointMarkerStyle: DataPointMarkerStyle.hollow,
+          dataPointMarkerBackground: const Color(0xFFF8FAFC),
+          lineGlow: _lineGlow,
+          inlineLabel: const SeriesInlineLabelConfig(
+            text: 'Forecast',
+            position: SeriesLabelPosition.right,
+            offsetY: -10,
+            color: forecastColor,
+            fontWeight: FontWeight.w700,
+          ),
+          pathAnimation: _pathAnimationFor(0),
+        ),
+      ];
+    }
     if (_presetIndex == 3) {
       return [
         _line(
@@ -1165,6 +1226,21 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ];
     }
+    if (_isLineForecast) {
+      return [
+        ThresholdAnnotation(
+          id: 'forecast-current-time',
+          axis: AnnotationAxis.x,
+          value: 4,
+          label: 'Current time',
+          lineColor: const Color(0xFF6366F1),
+          lineWidth: 1.5,
+          dashPattern: const [6, 4],
+          allowDragging: false,
+          allowEditing: false,
+        ),
+      ];
+    }
     if (_isLineSpotlight) {
       return [
         ThresholdAnnotation(
@@ -1236,6 +1312,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   bool get _isLineSpotlight =>
       widget.family == _CartesianFamily.line && _presetIndex == 6;
+
+  bool get _isLineForecast =>
+      widget.family == _CartesianFamily.line && _presetIndex == 7;
 
   bool get _isAreaPulse =>
       widget.family == _CartesianFamily.area && _presetIndex == 6;
@@ -1595,6 +1674,40 @@ const _spotlightContextPoints = [
   ChartDataPoint(x: 10, y: 51),
   ChartDataPoint(x: 11, y: 54),
   ChartDataPoint(x: 12, y: 52),
+];
+
+const _forecastContinuousPoints = [
+  ChartDataPoint(x: 0, y: 12.1),
+  ChartDataPoint(x: 1, y: 11.9),
+  ChartDataPoint(x: 2, y: 11.8),
+  ChartDataPoint(x: 3, y: 11.7),
+  ChartDataPoint(
+    x: 4,
+    y: 11.8,
+    segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+  ),
+  ChartDataPoint(
+    x: 5,
+    y: 11.4,
+    segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+  ),
+  ChartDataPoint(
+    x: 6,
+    y: 11.4,
+    segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+  ),
+  ChartDataPoint(
+    x: 7,
+    y: 11.1,
+    segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+  ),
+  ChartDataPoint(
+    x: 8,
+    y: 10.4,
+    segmentStyle: SegmentStyle(dashPattern: [2, 6]),
+  ),
+  ChartDataPoint(x: 9, y: 9.9, segmentStyle: SegmentStyle(dashPattern: [2, 6])),
+  ChartDataPoint(x: 10, y: 9.8),
 ];
 
 const _pulseLivePoints = [

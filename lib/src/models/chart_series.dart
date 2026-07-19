@@ -302,6 +302,7 @@ class LineChartSeries extends ChartSeries {
     this.dataPointLabels,
     this.inlineLabel,
     this.pathAnimation = const PathAnimationStyle(),
+    this.dashPattern = const [],
   });
 
   final LineInterpolation interpolation;
@@ -319,6 +320,12 @@ class LineChartSeries extends ChartSeries {
   final DataPointLabelConfig? dataPointLabels;
   final SeriesInlineLabelConfig? inlineLabel;
   final PathAnimationStyle pathAnimation;
+
+  /// Alternating painted and skipped distances used to stroke the line path.
+  ///
+  /// An empty list renders a solid stroke. Non-empty patterns must contain an
+  /// even number of positive, finite values, for example `[2, 6]` for dots.
+  final List<double> dashPattern;
 
   @override
   LineChartSeries copyWith({
@@ -344,6 +351,7 @@ class LineChartSeries extends ChartSeries {
     DataPointLabelConfig? dataPointLabels,
     SeriesInlineLabelConfig? inlineLabel,
     PathAnimationStyle? pathAnimation,
+    List<double>? dashPattern,
   }) {
     return LineChartSeries(
       id: id ?? this.id,
@@ -370,12 +378,13 @@ class LineChartSeries extends ChartSeries {
       dataPointLabels: dataPointLabels ?? this.dataPointLabels,
       inlineLabel: inlineLabel ?? this.inlineLabel,
       pathAnimation: pathAnimation ?? this.pathAnimation,
+      dashPattern: dashPattern ?? this.dashPattern,
     );
   }
 
   @override
   String toString() =>
-      'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation)';
+      'LineChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, dashPattern: $dashPattern)';
 
   @override
   bool operator ==(Object other) {
@@ -392,7 +401,8 @@ class LineChartSeries extends ChartSeries {
         other.lineGlow == lineGlow &&
         other.dataPointLabels == dataPointLabels &&
         other.inlineLabel == inlineLabel &&
-        other.pathAnimation == pathAnimation;
+        other.pathAnimation == pathAnimation &&
+        ChartSeries._listEquals(other.dashPattern, dashPattern);
   }
 
   @override
@@ -409,6 +419,7 @@ class LineChartSeries extends ChartSeries {
     dataPointLabels,
     inlineLabel,
     pathAnimation,
+    Object.hashAll(dashPattern),
   ]);
 }
 
@@ -549,6 +560,7 @@ class AreaChartSeries extends ChartSeries {
     this.aboveBaselineFillColor,
     this.belowBaselineFillColor,
     this.pathAnimation = const PathAnimationStyle(),
+    this.dashPattern = const [],
   });
 
   final LineInterpolation interpolation;
@@ -575,6 +587,12 @@ class AreaChartSeries extends ChartSeries {
   final Color? aboveBaselineFillColor;
   final Color? belowBaselineFillColor;
   final PathAnimationStyle pathAnimation;
+
+  /// Alternating painted and skipped distances used to stroke the area edge.
+  ///
+  /// The area fill remains continuous. An empty list renders a solid edge;
+  /// non-empty patterns must contain an even number of positive, finite values.
+  final List<double> dashPattern;
 
   @override
   AreaChartSeries copyWith({
@@ -608,6 +626,7 @@ class AreaChartSeries extends ChartSeries {
     Color? aboveBaselineFillColor,
     Color? belowBaselineFillColor,
     PathAnimationStyle? pathAnimation,
+    List<double>? dashPattern,
   }) {
     return AreaChartSeries(
       id: id ?? this.id,
@@ -643,12 +662,13 @@ class AreaChartSeries extends ChartSeries {
       belowBaselineFillColor:
           belowBaselineFillColor ?? this.belowBaselineFillColor,
       pathAnimation: pathAnimation ?? this.pathAnimation,
+      dashPattern: dashPattern ?? this.dashPattern,
     );
   }
 
   @override
   String toString() =>
-      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, fillGradient: $fillGradient, baselineValue: $baselineValue, aboveBaselineFillColor: $aboveBaselineFillColor, belowBaselineFillColor: $belowBaselineFillColor)';
+      'AreaChartSeries(id: $id, points: ${points.length}, interpolation: $interpolation, dashPattern: $dashPattern, fillGradient: $fillGradient, baselineValue: $baselineValue, aboveBaselineFillColor: $aboveBaselineFillColor, belowBaselineFillColor: $belowBaselineFillColor)';
 
   @override
   bool operator ==(Object other) {
@@ -670,7 +690,8 @@ class AreaChartSeries extends ChartSeries {
         other.baselineValue == baselineValue &&
         other.aboveBaselineFillColor == aboveBaselineFillColor &&
         other.belowBaselineFillColor == belowBaselineFillColor &&
-        other.pathAnimation == pathAnimation;
+        other.pathAnimation == pathAnimation &&
+        ChartSeries._listEquals(other.dashPattern, dashPattern);
   }
 
   @override
@@ -692,6 +713,7 @@ class AreaChartSeries extends ChartSeries {
     aboveBaselineFillColor,
     belowBaselineFillColor,
     pathAnimation,
+    Object.hashAll(dashPattern),
   ]);
 }
 

@@ -26,6 +26,26 @@ void main() {
       expect(result.points.map((point) => point.label), ['A', 'B']);
     });
 
+    test('keeps the target dash identity through animated geometry frames', () {
+      const from = LineChartSeries(
+        id: 'forecast',
+        points: fromPoints,
+        dashPattern: [2, 6],
+      );
+      const to = LineChartSeries(
+        id: 'forecast',
+        points: toPoints,
+        dashPattern: [2, 6],
+      );
+
+      final midpoint =
+          PathSeriesTransition.interpolate(from: from, to: to, progress: 0.5)
+              as LineChartSeries;
+
+      expect(midpoint.dashPattern, const [2, 6]);
+      expect(midpoint.points.map((point) => point.y), [20, 30]);
+    });
+
     test('matches timestamp identity before coordinates', () {
       final first = DateTime.utc(2026, 7, 18, 8);
       final second = DateTime.utc(2026, 7, 18, 9);
