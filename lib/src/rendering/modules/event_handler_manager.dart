@@ -69,6 +69,9 @@ abstract class EventHandlerDelegate {
   /// Callback invoked when the user manually manipulates the viewport.
   VoidCallback? get onViewportInteracted;
 
+  /// Callback invoked after visible viewport bounds change.
+  VoidCallback? get onViewportChanged;
+
   // ==================== Delegated Operations ====================
 
   /// Converts widget coordinates to plot coordinates.
@@ -612,6 +615,7 @@ class EventHandlerManager {
     // PRIORITY 1: Handle scrollbar drag if active
     if (_delegate.isScrollbarDragging) {
       _delegate.handleScrollbarDrag(position);
+      _delegate.onViewportChanged?.call();
       return;
     }
 
@@ -940,6 +944,7 @@ class EventHandlerManager {
         _delegate.updateAxesFromTransform();
         _lastPanPosition = position;
         _delegate.markNeedsPaint();
+        _delegate.onViewportChanged?.call();
       }
       return;
     }

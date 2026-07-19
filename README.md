@@ -36,6 +36,10 @@ streaming path so each sample does not require a widget-tree rebuild.
   presentation—and selector visibility—across an application or one chart
   family while leaving each chart's split size, selection, and interaction
   state independent.
+- **Synchronized Cartesian charts:** `ChartInteractionGroupController` shares
+  a semantic data-X cursor and X-only viewport across independent Line and Area
+  charts while keeping Y scales, tooltips, selection, annotations, and
+  artifacts local.
 - **More explicit motion:** Line and Area series now expose opt-in entrance and
   compatible update modes with per-series delay and duration through
   `PathAnimationStyle` and `PathAnimationTiming`. Pie and Donut gain keyed data
@@ -129,14 +133,14 @@ workflows, styling treatments, business charts, and radial presentations.
 | Area | API and behavior |
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
-| Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, and tracking panels |
+| Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
 | Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter and mixed Cartesian series; and category-based Pie and Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
 | Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split/Source workbenches, loading skeletons, progress indicators, and empty states |
 | Developer tooling | Deterministic Dart generation from effective chart documents, selectable dark source viewport, bounded-data and runtime-callback diagnostics, exact copy, and configurable refresh policies |
-| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, synchronized Workbench presentation, and serializable chart configuration |
+| Application control | Controllers, callbacks, runtime series selection, annotation management, axis-slot state, synchronized Workbench presentation, synchronized Cartesian interaction, and serializable chart configuration |
 | Portable artifacts | Capture effective chart state, persist canonical JSON, render exact-X or category/share data tables with native copy/CSV actions, attach previews, and hydrate fresh interactive charts |
 | Document comparison | Explicit semantic series mapping, exact-X or timestamp alignment, safe units, missing values, deltas, and source-preserving CSV export |
 
@@ -566,6 +570,7 @@ fills, and state UX.
 - [Showcase and examples](https://github.com/braven-pvm/braven_charts/blob/master/example/README.md)
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
+- [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)

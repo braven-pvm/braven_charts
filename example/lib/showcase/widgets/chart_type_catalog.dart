@@ -40,7 +40,7 @@ const showcaseChartTypes = <ShowcaseChartType>[
     bestFor: 'Time series and analytical workhorses',
     icon: Icons.show_chart,
     accent: Color(0xFF2563EB),
-    highlights: ['4 interpolations', 'Motion', 'Chart + data'],
+    highlights: ['4 interpolations', 'Motion', 'Synchronized'],
   ),
   ShowcaseChartType(
     type: ChartType.area,

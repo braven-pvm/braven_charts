@@ -4,7 +4,10 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show ValueKey, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show ValueChanged, ValueKey, visibleForTesting;
+import 'package:flutter/gestures.dart'
+    show PointerDeviceKind, PointerHoverEvent;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -16,6 +19,7 @@ import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
+import '../interaction/core/crosshair_tracker.dart';
 import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
@@ -103,6 +107,8 @@ class ChartRenderBox extends RenderBox {
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
     this.onViewportInteracted,
+    this.onViewportChanged,
+    this.onDataXCursorChanged,
     double textScaleFactor = 1,
     TextDirection textDirection = TextDirection.ltr,
   }) : _elementGenerator = elementGenerator,
@@ -269,6 +275,12 @@ class ChartRenderBox extends RenderBox {
   /// Callback for manual viewport interactions such as wheel zoom or scrollbar drag.
   void Function()? onViewportInteracted;
 
+  /// Callback emitted after local viewport bounds actually change.
+  VoidCallback? onViewportChanged;
+
+  /// Callback emitted when local pointer interaction resolves a data-space X.
+  ValueChanged<double?>? onDataXCursorChanged;
+
   // ==================== EVENT STATE (delegated to EventHandlerManager) ====================
   // Resize, move, potential drag state, cursor position, pan position, hit test throttling
   // are now managed by EventHandlerManager module.
@@ -279,6 +291,7 @@ class ChartRenderBox extends RenderBox {
   /// Durable selected datum whose tooltip is independent of pointer hover.
   String? _selectedTooltipSeriesId;
   int? _selectedTooltipPointIndex;
+  double? _synchronizedCursorX;
 
   /// Manages tooltip show/hide animations with configurable delays.
   ///
@@ -495,6 +508,7 @@ class ChartRenderBox extends RenderBox {
     required double xMax,
     required double yMin,
     required double yMax,
+    bool notifyViewportChanged = false,
   }) {
     if (_transform == null ||
         !xMin.isFinite ||
@@ -514,7 +528,102 @@ class ChartRenderBox extends RenderBox {
     _updateAxesFromTransform();
     _rebuildElementsWithTransform();
     markNeedsPaint();
+    if (notifyViewportChanged) onViewportChanged?.call();
     return true;
+  }
+
+  /// Restores only visible data-X bounds while preserving the local Y domain.
+  ///
+  /// This non-broadcasting path is used by synchronized-chart participants and
+  /// therefore deliberately does not invoke [onViewportChanged].
+  bool restoreVisibleXBounds({required double xMin, required double xMax}) {
+    final transform = _transform;
+    if (transform == null || !xMin.isFinite || !xMax.isFinite || xMin >= xMax) {
+      return false;
+    }
+    if (transform.dataXMin == xMin && transform.dataXMax == xMax) return false;
+    _transform = transform.copyWith(dataXMin: xMin, dataXMax: xMax);
+    _updateAxesFromTransform();
+    markNeedsPaint();
+    return true;
+  }
+
+  /// Finalizes geometry and hit-test state after synchronized viewport input
+  /// settles. Continuous updates use [restoreVisibleXBounds]'s paint-only path.
+  void finalizeSynchronizedViewport() {
+    if (_transform == null) return;
+    _rebuildElementsWithTransform();
+    _seriesCacheManager.invalidate();
+    markNeedsPaint();
+  }
+
+  /// Applies a transient synchronized data-X cursor without rebuilding data.
+  void setSynchronizedCursorDataX(double? dataX) {
+    if (dataX != null && !dataX.isFinite) {
+      throw ArgumentError.value(dataX, 'dataX', 'must be finite or null');
+    }
+    if (_synchronizedCursorX == dataX) return;
+    _synchronizedCursorX = dataX;
+    markNeedsPaint();
+  }
+
+  Offset? get _synchronizedCursorPosition {
+    final transform = _transform;
+    final dataX = _synchronizedCursorX;
+    if (transform == null || dataX == null || _plotArea.isEmpty) return null;
+    final plotPosition = transform.dataToPlot(dataX, transform.dataYMin);
+    final widgetPosition = plotToWidget(
+      transform.transposed
+          ? Offset(_plotArea.width / 2, plotPosition.dy)
+          : Offset(plotPosition.dx, _plotArea.height / 2),
+    );
+    return _plotArea.contains(widgetPosition) ? widgetPosition : null;
+  }
+
+  Offset? get _effectiveCrosshairCursorPosition =>
+      _synchronizedCursorPosition ?? _eventHandlerManager.cursorPosition;
+
+  CrosshairConfig _effectiveCrosshairConfig(CrosshairConfig base) {
+    if (_synchronizedCursorPosition == null) return base;
+    return base.copyWith(
+      mode: CrosshairMode.vertical,
+      snapToDataPoint: false,
+      showCoordinateLabels: false,
+      displayMode: CrosshairDisplayMode.tracking,
+      // A shared cursor is a continuous data-X coordinate. Resolve each local
+      // Line/Area value through its rendered interpolation geometry so the
+      // marker remains on both the crosshair and the visible path.
+      interpolateValues: true,
+      showTrackingTooltip: false,
+      showIntersectionMarkers: true,
+    );
+  }
+
+  /// Current synchronized data X for render-path verification.
+  @visibleForTesting
+  double? get debugSynchronizedCursorX => _synchronizedCursorX;
+
+  /// Locally mapped synchronized cursor position for render-path verification.
+  @visibleForTesting
+  Offset? get debugSynchronizedCursorPosition => _synchronizedCursorPosition;
+
+  /// Local rendered-path intersections used by synchronized tracking.
+  @visibleForTesting
+  CrosshairTrackingState? get debugSynchronizedTrackingState {
+    final transform = _transform;
+    final cursor = _synchronizedCursorPosition;
+    if (transform == null || cursor == null) return null;
+    return CrosshairTracker.calculateTrackingState(
+      screenX: transform.transposed ? cursor.dy : cursor.dx,
+      chartBounds: _plotArea,
+      xMin: transform.dataXMin,
+      xMax: transform.dataXMax,
+      seriesList: _elements
+          .whereType<SeriesElement>()
+          .map((element) => element.series)
+          .toList(growable: false),
+      interpolate: true,
+    );
   }
 
   // ==========================================================================
@@ -1171,6 +1280,7 @@ class ChartRenderBox extends RenderBox {
     _updateAxesFromTransform();
     _scrollbarManager.showScrollbarsAndScheduleHide();
     markNeedsPaint();
+    onViewportChanged?.call();
   }
 
   /// Callback invoked when zoom animation completes.
@@ -1188,6 +1298,7 @@ class ChartRenderBox extends RenderBox {
     _updateAxesFromTransform();
     _scrollbarManager.showScrollbarsAndScheduleHide();
     markNeedsPaint();
+    onViewportChanged?.call();
   }
 
   /// Programmatically pan the chart.
@@ -1224,6 +1335,7 @@ class ChartRenderBox extends RenderBox {
 
     // Mark for repaint (will paint existing elements with new transform)
     markNeedsPaint();
+    onViewportChanged?.call();
 
     // [DEBUG OUTPUT REMOVED] Pan constrained/applied - fires frequently during dragging
   }
@@ -1248,6 +1360,8 @@ class ChartRenderBox extends RenderBox {
 
     // Invalidate cache - transform reset to original
     _seriesCacheManager.invalidate();
+    markNeedsPaint();
+    onViewportChanged?.call();
   }
 
   /// Updates the data bounds for streaming data that extends beyond original range.
@@ -2031,10 +2145,33 @@ class ChartRenderBox extends RenderBox {
   void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
     _eventHandlerManager.handleEvent(event);
+    if (onDataXCursorChanged == null) return;
+    final publishesPosition =
+        event is PointerHoverEvent ||
+        event is PointerDownEvent ||
+        event is PointerMoveEvent;
+    if (publishesPosition) {
+      final position = event.localPosition;
+      final transform = _transform;
+      if (transform != null && _plotArea.contains(position)) {
+        final plotPosition = widgetToPlot(position);
+        onDataXCursorChanged?.call(
+          transform.plotToData(plotPosition.dx, plotPosition.dy).dx,
+        );
+      } else {
+        onDataXCursorChanged?.call(null);
+      }
+    } else if ((event is PointerUpEvent || event is PointerCancelEvent) &&
+        event.kind != PointerDeviceKind.mouse) {
+      onDataXCursorChanged?.call(null);
+    }
   }
 
   /// Clears crosshair state when the pointer leaves the chart widget.
-  void clearCursorPosition() => _eventHandlerManager.clearCursorPosition();
+  void clearCursorPosition() {
+    _eventHandlerManager.clearCursorPosition();
+    onDataXCursorChanged?.call(null);
+  }
 
   /// Removes crosshair and tooltip state that is not part of the artifact.
   void clearTransientPreviewState() {
@@ -2247,9 +2384,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Crosshair is visible
-    final crosshairConfig =
-        _interactionConfig?.crosshair ?? const CrosshairConfig();
-    final cursorPos = _eventHandlerManager.cursorPosition;
+    final crosshairConfig = _effectiveCrosshairConfig(
+      _interactionConfig?.crosshair ?? const CrosshairConfig(),
+    );
+    final cursorPos = _effectiveCrosshairCursorPosition;
     if (crosshairConfig.enabled &&
         cursorPos != null &&
         _plotArea.contains(cursorPos) &&
@@ -2425,9 +2563,10 @@ class ChartRenderBox extends RenderBox {
     }
 
     // Draw crosshair at cursor position (in widget space)
-    final cursorPos = _eventHandlerManager.cursorPosition;
-    final crosshairConfig =
-        _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final cursorPos = _effectiveCrosshairCursorPosition;
+    final crosshairConfig = _effectiveCrosshairConfig(
+      _interactionConfig?.crosshair ?? const CrosshairConfig(),
+    );
     final crosshairEnabled = crosshairConfig.enabled;
     if (crosshairEnabled &&
         cursorPos != null &&
@@ -3320,6 +3459,9 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
 
   @override
   VoidCallback? get onViewportInteracted => _renderBox.onViewportInteracted;
+
+  @override
+  VoidCallback? get onViewportChanged => _renderBox.onViewportChanged;
 
   // ============================================================================
   // Hit testing

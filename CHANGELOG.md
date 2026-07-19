@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   interpolation-aware rendering, continuous Area fills, glow, native outgoing-
   segment pattern changes, artifacts, built-in hydration, generated Dart
   source, legend identity, and a continuous observed-versus-forecast showcase.
+- Caller-owned `ChartInteractionGroupController` synchronization for
+  data-space X cursors, local nearest-point tracking, and loop-safe X-only
+  viewports across independent Cartesian charts, plus a responsive
+  Speed/Elevation/Heart-rate showcase.
 
 ### Fixed
 - Invalid or non-finite Bar points no longer poison stacked, normalized,

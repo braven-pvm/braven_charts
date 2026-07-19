@@ -490,20 +490,21 @@ The locked contract and executable work slices are recorded in
 
 ## Sprint 12 — Synchronized Cartesian charts
 
-**Status:** Planned after Sprint 11 promotion
+**Status:** Local review approved; promotion in progress on
+`feature/synchronized-cartesian-charts`
 
 ### Product outcome
 
 Independent Cartesian charts can share a data-X cursor, aligned crosshairs,
-nearest-point focus, and X-only viewport changes while retaining their own
-units, Y domains, titles, and artifacts.
+rendered-path intersections, and X-only viewport changes while retaining their
+own units, Y domains, titles, and artifacts.
 
 ### Scope
 
 - Add a caller-owned `ChartInteractionGroupController`; do not extend the
   presentation-only `ChartWorkbenchGroupController`.
-- Coordinate data-space X, local nearest points, pointer/touch cleanup, and
-  loop-safe X viewport changes.
+- Coordinate data-space X, local rendered-path intersections, pointer/touch
+  cleanup, and loop-safe X viewport changes.
 - Add a stacked Speed, Elevation, and Heart rate showcase at wide and compact
   sizes.
 - Keep Y interaction, annotations, tooltips, durable selection, and artifacts
@@ -511,9 +512,44 @@ units, Y domains, titles, and artifacts.
 
 ### Acceptance gates
 
-- Controller lifecycle, data-X mapping, nearest-point, viewport, opt-out, and
+- Controller lifecycle, data-X mapping, path-intersection, viewport, opt-out, and
   loop-prevention unit coverage.
 - Real render-path crosshair coverage across different sizes, sample counts,
   interpolation modes, and Y domains.
 - Pointer, touch, keyboard, compact, release, publication, and pixel-review
   gates before promotion.
+
+### Delivered local slice
+
+- Added a caller-owned interaction-group controller with lifecycle-safe,
+  deduplicated data-X cursor and X-only viewport broadcasts.
+- Added paint-only synchronized crosshairs and local rendered-path resolution
+  without sharing Y state, tooltips, selection, documents, or artifacts.
+- Added the compact Speed, Elevation, and Heart rate Line-page showcase with
+  one shared interaction group and independent charts.
+- Passed the package and showcase suites, analyzers, release builds, public
+  base-path build, direct-route checks, and wide/compact visual review.
+
+### Final cross-sprint E2E merge gate
+
+- Added a page-level acceptance matrix that enters every Line and Area preset,
+  drives every standard preset through Chart, Data, Split, and Source, verifies
+  generated source and controller attachment, and treats Synchronized as its
+  intentional custom three-chart surface.
+- Added a 390 x 844 matrix across all 16 presets plus explicit light/dark
+  coverage for the standard Area and synchronized Line compositions.
+- The matrix reproduced a real compact Synchronized failure: three plots were
+  compressed below a valid drawable Y range. The composition now preserves a
+  420 px local minimum with contained vertical scrolling only when the card is
+  shorter, keeping each plot legible without changing the approved wide layout.
+- The compiled release browser passed 60 wide preset/Workbench route states,
+  the wide Synchronized route, and all 16 compact preset routes with nonblank
+  frames and no severe console errors. Motion, synchronized hover, pan, and
+  zoom each produced a rendered-frame change without browser errors.
+- Package and showcase analyzers are clean. The complete package suite passes
+  1,982 tests, including the permanent 5,000-point path benchmarks, and the
+  complete showcase suite passes 165 tests.
+- Both `/braven_charts/` and `/` release web builds pass. Dartdoc 9.0.8 reports
+  zero warnings and errors, and the clean-tree pub.dev dry run reports zero
+  warnings. The root build remains served from port 8177 for final review; all
+  mechanical promotion checks are complete.

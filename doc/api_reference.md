@@ -164,6 +164,9 @@ preview/restoration fallback. See [Donut charts](donut_charts.md).
 - `InteractionCallbacks` and chart callbacks — point, series, background, and
   annotation events.
 - `ScrollbarConfig` — chart scrollbar presentation.
+- `ChartInteractionGroupController`, `ChartInteractionGroupOptions`, and
+  `ChartXViewport` — caller-owned data-X cursor and X-only viewport
+  synchronization across independent Cartesian charts.
 
 ## Annotations
 
