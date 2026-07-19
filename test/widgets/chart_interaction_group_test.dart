@@ -76,6 +76,67 @@ void main() {
     },
   );
 
+  testWidgets('keeps shared X aligned while resolving nearest local samples', (
+    tester,
+  ) async {
+    final group = ChartInteractionGroupController();
+    addTearDown(group.dispose);
+
+    await tester.pumpWidget(_host(group, interpolateValues: false));
+    await tester.pumpAndSettle();
+    final renderElements = _chartRenderFinder().evaluate().toList();
+    final firstFinder = find.byElementPredicate(
+      (element) => element == renderElements.first,
+    );
+    final first = renderElements[0].renderObject! as ChartRenderBox;
+    final second = renderElements[1].renderObject! as ChartRenderBox;
+    const dataX = 4.4;
+    final local = first.plotToWidget(
+      first.transform!.dataToPlot(
+        dataX,
+        (first.transform!.dataYMin + first.transform!.dataYMax) / 2,
+      ),
+    );
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(tester.getTopLeft(firstFinder) + local);
+    await tester.pump();
+
+    expect(group.cursorX, closeTo(dataX, 0.0001));
+    final firstValue =
+        first.debugSynchronizedTrackingState!.seriesValues.single;
+    final secondValue =
+        second.debugSynchronizedTrackingState!.seriesValues.single;
+    expect(firstValue.isInterpolated, isFalse);
+    expect(firstValue.dataPointIndex, 2);
+    expect(firstValue.x, 4);
+    expect(firstValue.y, 7);
+    expect(secondValue.isInterpolated, isFalse);
+    expect(secondValue.dataPointIndex, 1);
+    expect(secondValue.x, 3);
+    expect(secondValue.y, 420);
+
+    final expectedSharedX = second
+        .plotToWidget(
+          second.transform!.dataToPlot(dataX, second.transform!.dataYMin),
+        )
+        .dx;
+    expect(
+      second.debugSynchronizedCursorPosition!.dx,
+      closeTo(expectedSharedX, 0.0001),
+    );
+    final expectedLocalY = second
+        .plotToWidget(
+          second.transform!.dataToPlot(secondValue.x, secondValue.y),
+        )
+        .dy;
+    expect(
+      second.debugSynchronizedCursorPosition!.dy,
+      closeTo(expectedLocalY, 0.0001),
+    );
+  });
+
   testWidgets('touch scrub publishes and clears the shared cursor', (
     tester,
   ) async {
@@ -140,7 +201,10 @@ void main() {
   });
 }
 
-Widget _host(ChartInteractionGroupController group) {
+Widget _host(
+  ChartInteractionGroupController group, {
+  bool interpolateValues = true,
+}) {
   return MaterialApp(
     home: Scaffold(
       body: Align(
@@ -154,6 +218,12 @@ Widget _host(ChartInteractionGroupController group) {
               child: BravenChartPlus(
                 interactionGroupController: group,
                 showLegend: false,
+                interactionConfig: InteractionConfig(
+                  crosshair: CrosshairConfig(
+                    displayMode: CrosshairDisplayMode.tracking,
+                    interpolateValues: interpolateValues,
+                  ),
+                ),
                 series: const [
                   LineChartSeries(
                     id: 'speed',
@@ -176,6 +246,12 @@ Widget _host(ChartInteractionGroupController group) {
               child: BravenChartPlus(
                 interactionGroupController: group,
                 showLegend: false,
+                interactionConfig: InteractionConfig(
+                  crosshair: CrosshairConfig(
+                    displayMode: CrosshairDisplayMode.tracking,
+                    interpolateValues: interpolateValues,
+                  ),
+                ),
                 series: const [
                   AreaChartSeries(
                     id: 'elevation',

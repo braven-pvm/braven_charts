@@ -8,7 +8,7 @@
 **Sprint 9 lane:** Stable-identity interior topology motion (complete)
 **Sprint 11 promotion:** PR #45 (merged)
 **Sprint 12 promotion:** PR #46 (merged)
-**Next lane:** Line showcase Workbench and controls polish (Sprint 13)
+**Next lane:** Synchronized consolidation and promotion readiness (Sprint 18)
 
 ## Sprint 1 — Motion and workbench foundation
 
@@ -557,8 +557,7 @@ own units, Y domains, titles, and artifacts.
 
 ## Sprint 13 — Line showcase Workbench and controls polish
 
-**Status:** Complete; promotion in progress on
-`feature/line-showcase-workbench-polish`
+**Status:** Complete; promoted in PR #48
 
 ### Product outcome
 
@@ -607,3 +606,285 @@ makes the custom three-chart synchronization pattern easy to copy and explore.
   `DocumentationComment._stripDocImports` before diagnostics. The package dry
   run otherwise reaches validation; its only warning is the expected dirty-tree
   warning before this promotion commit.
+
+## Sprint 14 — Synchronized composition lab and diagnostics
+
+**Status:** Local review approved
+
+### Product outcome
+
+The Synchronized example becomes a real composition lab: charts can join and
+leave the group, keep independent heights, opt into full local X/Y tracking,
+and expose honest session performance signals while the composition changes.
+
+### Scope
+
+- Model chart membership as ordinary mount/detach lifecycle against one shared
+  `ChartInteractionGroupController`, including a supported empty state.
+- Expose independent 176-400 px heights without compressing chart drawable
+  ranges; scroll the chart stack when its explicit height exceeds the card.
+- Preserve each participant's configured crosshair mode and labels during a
+  synchronized cursor, and align the horizontal guide to its local rendered
+  series value without geometry or axis-bound recomputation.
+- Show rolling `FrameTiming` measurements in an isolated diagnostics subtree,
+  clearly scoped to the current device, browser, and build mode.
+- Add permanent controller-fanout and real render-path regression coverage.
+
+### Acceptance gates
+
+- Add/remove every participant, zero-chart recovery, explicit heights, and
+  last-visible distance-axis behavior at wide and compact widths.
+- Shared cursor X alignment plus local rendered Y alignment with tracking on;
+  no shared overlay when tracking is off.
+- Diagnostics update no more than twice per second and never rebuild chart
+  participants; reset and empty-sample states remain safe.
+- A 12-chart, 1,000-move cursor-fanout batch stays inside one 16.67 ms frame at
+  p95 in the permanent benchmark, followed by full package/showcase analysis,
+  suites, release builds, and direct-route browser review.
+
+### Delivered local slice
+
+- Dynamic Speed, Elevation, and Heart-rate membership and per-chart height
+  controls are live; the options use collapsed progressive disclosure and the
+  stack keeps its final visible chart as the distance-axis owner.
+- Full tracking now preserves participant crosshair configuration and maps the
+  horizontal guide through the already-painted series transform. Its showcase
+  toggle controls the complete crosshair overlay, including X/Y axis values,
+  the local intersection, and the floating tracking-value tooltip.
+- The showcase reports active charts, visible points, rolling sample count,
+  p95 build/raster time, and frames over 16.7 ms from real Flutter frame timing.
+- The complete package suite passes 2,033 tests and the complete showcase suite
+  passes 186 tests; package-library and showcase analyzers are clean.
+- The permanent 12-chart/1,000-move cursor-fanout benchmark records a 4.44 ms
+  p95 inside the full parallel package run on this machine. Both production
+  base-href builds pass, and wide, tall, and compact release captures render
+  the direct Synchronized route without severe browser output. The root build
+  is served on port 8193 for pixel review before promotion.
+
+## Sprint 15 — Synchronized dataset stress profiles
+
+**Status:** Local review approved
+
+### Product outcome
+
+The Synchronized composition can be exercised at representative and deliberately
+heavy dataset sizes, so its live frame diagnostics reveal scaling behavior
+instead of measuring only the 52-point showcase sample.
+
+### Scope
+
+- Add deterministic Normal, Dense, and Stress profiles containing 52, 1,500,
+  and 15,000 visible points when all three charts are mounted.
+- Preserve each metric's domain, endpoints, units, and recognizable shape while
+  changing only sampling density.
+- Generate each expanded profile once, outside chart build, and reuse immutable
+  point lists across rebuilds, tracking, theme, and layout changes.
+- Keep the profile control inside the synchronized composition surface and feed
+  its effective point count into the existing passive `FrameTiming` panel.
+
+### Acceptance gates
+
+- Switching among all three profiles updates every mounted series and the
+  visible-point diagnostic without recreating data during ordinary rebuilds.
+- Membership changes report the correct profile-specific total, including the
+  zero-chart state and restoration of a removed participant.
+- Crosshair tracking, synchronized cursor/viewport, independent heights, theme,
+  and compact layout remain functional at Stress density.
+- Permanent tests cover exact point counts, endpoint preservation, cache reuse,
+  profile switching, and safe rendering of the 15,000-point composition;
+  analyzers, affected suites, release builds, and direct-route review pass.
+
+### Delivered local slice
+
+- The Chart composition panel now exposes Normal, Dense, and Stress profiles;
+  effective counts flow through chart membership labels and the live diagnostics.
+- Dense and Stress are linearly resampled from the canonical metric shapes before
+  state changes. Immutable cached lists are reused when a profile is revisited or
+  a chart leaves and rejoins the composition.
+- Permanent showcase coverage verifies 52/1,500/15,000 totals, source endpoints,
+  cache identity, profile switching, membership totals, and Stress rendering.
+- All 199 showcase tests and the showcase analyzer pass. The release web build is
+  clean and the direct route returns HTTP 200 on port 8193 for local review.
+
+## Sprint 16 — Synchronized live-update motion
+
+**Status:** Local review approved
+
+### Product outcome
+
+The synchronized stack demonstrates the same polished data-update motion as the
+ordinary Line and Area workbench presets. One deliberate action updates all
+mounted metrics while each chart keeps its identity, local scale, shared cursor,
+and synchronized X viewport.
+
+### Scope
+
+- Add one deterministic alternate dataset state for Speed, Elevation, and Heart
+  rate at every Normal, Dense, and Stress density.
+- Reuse the native `PathDataUpdateAnimationMode.interpolate` contract for the
+  Line and Area participants; expose animation enablement and 200-1,500 ms
+  duration without adding a synchronization-specific renderer path.
+- Prepare immutable revised point lists before state changes and reuse them when
+  restoring a chart, revisiting a profile, or replaying the same update.
+- Keep the update action and its current Baseline/Live state inside one collapsed
+  Data updates option group, with a 48 px secondary action.
+
+### Acceptance gates
+
+- Apply and restore actions update all mounted series without remounting them;
+  series IDs, X coordinates, point counts, and group-controller identity remain
+  stable while Y values and displayed latest values change.
+- Crosshair data-X and synchronized X viewport survive compatible data updates;
+  disabled motion renders the final state immediately.
+- Duration wiring reaches every effective Line/Area `PathAnimationStyle`, and
+  reduced-motion/zero-duration package behavior remains authoritative.
+- Normal, Dense, and Stress revisions are deterministic and cached. Permanent
+  tests cover replay identity, membership, cursor continuity, option wiring, and
+  a 15,000-point update followed by analyzers, affected suites, release build,
+  and direct-route review.
+
+### Delivered local slice
+
+- The synchronized stack now applies or restores one deterministic update across
+  every mounted Line/Area participant. Latest-value headers and the composition
+  subtitle identify the effective snapshot without replacing chart states.
+- Native compatible-update interpolation is configurable from 200-1,500 ms and
+  can be disabled. Cached immutable revision lists cover Normal, Dense, and
+  Stress, including replay and participant restoration.
+- Render-path coverage proves chart state, series identity, X coordinates, group
+  controller, shared cursor/viewport, and local tracked Y values survive the
+  update; the Stress case animates all 15,000 points without an exception.
+- All 200 showcase tests and both analyzers pass. Current 5,000-point p95 package
+  benchmarks remain below one frame: cold Line 1.60 ms, Area 3.16 ms, baseline
+  Area 3.36 ms, and patterned Forecast 2.97 ms. The release web build is clean,
+  the direct route returns HTTP 200, and port 8193 serves the review build.
+
+## Sprint 17 — Synchronized tracking detail controls
+
+**Status:** Local review ready
+
+### Product outcome
+
+The synchronized crosshair remains simple by default but no longer hides its
+useful precision and presentation choices. Users can compare interpolated and
+nearest-sample values, tune intersections, and independently simplify tooltip
+or axis-label output without disabling synchronization.
+
+### Scope
+
+- Expose `interpolateValues`, `showTrackingTooltip`,
+  horizontal-guide visibility, `showCoordinateLabels`, and 2-10 px
+  `intersectionMarkerRadius` through the effective participant
+  `CrosshairConfig`.
+- Preserve the existing full-tracking toggle as the master switch and keep the
+  five detailed controls in a separate collapsed Tracking detail group.
+- Keep synchronized data-X publication independent from local value resolution:
+  nearest mode resolves each chart against its own samples and Y scale.
+- Update the synchronized code reference and public guide with both resolution
+  modes and their high-density trade-off.
+
+### Acceptance gates
+
+- Every control changes all currently mounted participant configurations and
+  survives membership, profile, theme, and live-update changes.
+- Interpolated mode returns local curve values at the shared data X; nearest
+  mode returns real local samples while the vertical shared cursor stays aligned.
+- Tooltip and axis-value toggles are independent, intersection radius reaches
+  effective paint configuration, horizontal guides can be removed without
+  removing the shared vertical cursor, and the master tracking switch still
+  removes the complete overlay.
+- Wide/compact widget coverage, both analyzers, affected suites, release build,
+  and direct-route visual review pass without adding a new package API.
+
+### Delivered local slice
+
+- The participant renderer now honors each chart's interpolation preference;
+  the synchronized group continues to publish one shared data X.
+- Nearest-sample mode places each intersection marker on its resolved local
+  sample instead of leaving it at the shared cursor X, while interpolated mode
+  preserves the continuous curve-value behavior.
+- A collapsed Tracking detail section controls interpolation, tooltip output,
+  horizontal-guide visibility, axis values, and 2-10 px intersection markers
+  across every mounted chart. The existing tracking switch remains the master
+  overlay control.
+- The public guide and synchronized code reference document the complete
+  effective `CrosshairConfig`, including the nearest-sample trade-off.
+- Package and showcase analyzers are clean. The complete package suite and all
+  200 showcase tests pass, including direct synchronized behavior and option
+  wiring coverage. The release web build is clean, the direct route returns
+  HTTP 200, and port 8193 serves the browser-reviewed build.
+
+## Sprint 18 — Synchronized consolidation and promotion readiness
+
+**Status:** Local E2E ready; final user approval pending
+
+### Product outcome
+
+The complete synchronized-chart lane is proven as one releasable unit before
+promotion. Runtime behavior, composition controls, stress profiles, live
+updates, tracking detail, documentation, generated source, and public showcase
+delivery agree at the final branch tip.
+
+### Scope
+
+- Review the four synchronized continuation commits as one branch against the
+  current `origin/master`, checking for scope drift and stale roadmap claims.
+- Run package and showcase analyzers and complete suites, including the
+  synchronized render-path, Stress 15k update, compact layout, Workbench, and
+  controller-lifecycle coverage.
+- Re-run synchronized cursor fanout and 5,000-point path benchmarks and record
+  whether each remains within the 16.67 ms frame budget.
+- Validate root and `/braven_charts/` release builds, direct synchronized-route
+  loading, compiled assets, visual states, and severe browser console output.
+- Validate public documentation, generated source, dartdoc, and the pub.dev
+  archive; leave the root-path release build on port 8193 for final review.
+
+### Acceptance gates
+
+- The branch is cleanly based on the current mainline or any incoming drift is
+  resolved before final verification; the aggregate diff contains only the
+  synchronized product lane and its roadmap/public guide changes.
+- Complete package and showcase analyzers/tests pass at the same commit, with
+  permanent behavior assertions for every synchronized control and stress path.
+- Fanout and path benchmarks remain below one 60 fps frame without hiding a
+  regression behind showcase-only instrumentation.
+- Both release bases compile, the direct route and assets return HTTP 200, and
+  browser review finds no blank state, controller warning, visible overflow, or
+  severe console error across wide and compact states.
+- Dartdoc and pub.dev dry run complete without package diagnostics. Any tooling
+  defect or environmental limitation is recorded precisely rather than treated
+  as a product pass.
+- The final root-path build remains available for user E2E approval. No PR is
+  opened until that approval is explicit.
+
+### Local E2E record
+
+- `origin/master` is the direct ancestor of the branch, which is four scoped
+  synchronized commits ahead. The aggregate diff touches nine expected runtime,
+  showcase, test/benchmark, guide, and roadmap files with no unrelated work.
+- Package and showcase analyzers are clean. Serial complete suites pass with
+  2,110 package tests and 200 showcase tests. One deliberately concurrent run
+  produced a timing-sensitive failure under resource contention; the formal
+  serial reruns are green and no product failure reproduced.
+- Targeted performance reruns remain comfortably below 16.67 ms: 12-chart
+  cursor fanout is 2.94 ms p95; cold 5K Line is 1.51 ms p95; 5K Area is
+  2.31 ms p95; baseline Area is 2.25 ms p95; and patterned Forecast is
+  2.19 ms p95.
+- All seven changed Dart files pass the formatter audit. `flutter pub outdated`
+  reports every direct dependency current and the newest mutually resolvable
+  dependency set in use. The pub.dev dry run validates a 9 MB archive with
+  zero warnings.
+- Flutter-bundled dartdoc 9.0.4 still fails internally while precaching 873,756
+  elements: `DocumentationComment._stripDocImports` throws `RangeError (end):
+  Invalid value: Not in inclusive range 0..9089: 9202`. This occurs before
+  package diagnostics and matches the previously recorded tool defect.
+- Root and `/braven_charts/` release builds pass; both base hrefs and compiled
+  assets were verified. The root synchronized route, bootstrap, and application
+  script return HTTP 200 on port 8193.
+- Headless Chrome direct-load/refresh checks at 1600 x 1000 and 430 x 900 each
+  mount one nonblank Flutter view with no severe console entries. Wide tracking
+  review confirms the three local crosshairs align at one shared screen X; no
+  blank state, visible overflow, or controller warning was observed.
+- The root-path release build remains live at
+  `http://127.0.0.1:8193/?page=line-charts&preset=synchronized` for final manual
+  E2E. No push or PR has been performed.

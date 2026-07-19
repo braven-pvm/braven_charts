@@ -388,18 +388,23 @@ void main() {
       );
       expect(find.textContaining('ChartInteractionGroupController'), findsOne);
 
-      await tester.tap(
-        find.descendant(
-          of: find.byKey(const ValueKey('synchronized-code-selector')),
-          matching: find.text('Chart participants'),
-        ),
+      final participantSnippet = find.descendant(
+        of: find.byKey(const ValueKey('synchronized-code-selector')),
+        matching: find.text('Chart participants'),
       );
+      await tester.ensureVisible(participantSnippet);
+      await tester.pumpAndSettle();
+      await tester.tap(participantSnippet);
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('synchronized-code-participants')),
         findsOneWidget,
       );
       expect(find.textContaining('interactionGroupOptions'), findsOne);
+      expect(
+        find.textContaining('PathDataUpdateAnimationMode.interpolate'),
+        findsOne,
+      );
 
       final charts = tester
           .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
@@ -423,6 +428,8 @@ void main() {
       final firstFinder = find.byElementPredicate(
         (element) => element == renderElements.first,
       );
+      await tester.ensureVisible(firstFinder);
+      await tester.pumpAndSettle();
       final first = renderBoxes.first;
       const dataX = 0.2;
       final local = first.plotToWidget(
@@ -445,6 +452,15 @@ void main() {
             renderBox.debugSynchronizedTrackingState!.seriesValues.single;
         expect(tracked.x, closeTo(dataX, 0.0001));
         expect(tracked.isInterpolated, isTrue);
+        final cursor = renderBox.debugSynchronizedCursorPosition!;
+        final expectedY = renderBox
+            .plotToWidget(renderBox.transform!.dataToPlot(tracked.x, tracked.y))
+            .dy;
+        expect(
+          cursor.dy,
+          closeTo(expectedY, 0.01),
+          reason: 'full tracking follows each chart\'s local rendered value',
+        );
       }
       final cursorScreenXs = <double>[
         for (var index = 0; index < renderBoxes.length; index++)
@@ -462,6 +478,424 @@ void main() {
           cursorScreenX,
           closeTo(cursorScreenXs.first, 0.01),
           reason: 'shared data X must align to one screen-space coordinate',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Synchronized composition supports membership, sizing, tracking, and metrics',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('synchronized-performance-panel')),
+        findsOneWidget,
+      );
+      expect(find.byType(BravenChartPlus), findsNWidgets(3));
+      for (final chart in tester.widgetList<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      )) {
+        expect(chart.interactionConfig!.crosshair.enabled, isTrue);
+        expect(chart.interactionConfig!.crosshair.mode, CrosshairMode.both);
+        expect(chart.interactionConfig!.crosshair.showTrackingTooltip, isTrue);
+        expect(chart.yAxis!.showCrosshairLabel, isTrue);
+      }
+
+      await tester.tap(find.text('Chart composition'));
+      await tester.pumpAndSettle();
+      final elevationToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-elevation-visible'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(elevationToggle).onChanged!(false);
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('synchronized-elevation')),
+        findsNothing,
+      );
+      expect(find.byType(BravenChartPlus), findsNWidgets(2));
+
+      final speedHeight = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-speed-height'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(Slider, skipOffstage: false),
+      );
+      tester.widget<Slider>(speedHeight).onChanged!(320);
+      await tester.pump();
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('synchronized-speed-slot')))
+            .height,
+        320,
+      );
+
+      await tester.tap(find.text('Chart composition'));
+      await tester.pumpAndSettle();
+      final trackingToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-tracking'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(trackingToggle).onChanged!(false);
+      await tester.pump();
+      for (final chart in tester.widgetList<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      )) {
+        expect(chart.interactionConfig!.crosshair.enabled, isFalse);
+        expect(chart.interactionConfig!.crosshair.showTrackingTooltip, isFalse);
+        expect(chart.yAxis!.showCrosshairLabel, isFalse);
+      }
+
+      await tester.tap(find.text('Chart composition'));
+      await tester.pumpAndSettle();
+      for (final metric in const ['speed', 'heartRate']) {
+        final toggle = find.descendant(
+          of: find.byKey(
+            ValueKey('synchronized-$metric-visible'),
+            skipOffstage: false,
+          ),
+          matching: find.byType(SwitchListTile, skipOffstage: false),
+        );
+        tester.widget<SwitchListTile>(toggle).onChanged!(false);
+        await tester.pump();
+      }
+      expect(find.byType(BravenChartPlus), findsNothing);
+      expect(
+        find.byKey(const ValueKey('synchronized-empty-state')),
+        findsOneWidget,
+      );
+
+      final addSpeed = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-speed-visible'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(addSpeed).onChanged!(true);
+      await tester.pump();
+      expect(find.byType(BravenChartPlus), findsOneWidget);
+      expect(
+        tester
+            .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+            .xAxisConfig
+            ?.label,
+        'Distance',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Synchronized dataset profiles scale deterministically and reuse cached points',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chart composition'));
+      await tester.pumpAndSettle();
+
+      List<List<ChartDataPoint>> visibleSeriesPoints() => tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .map((chart) => chart.series.single.points)
+          .toList(growable: false);
+
+      var currentProfileLabel = 'Normal · 52 total';
+      Future<void> selectProfile(String label) async {
+        final selectedLabel = find.descendant(
+          of: find.byKey(
+            const ValueKey('synchronized-dataset-profile'),
+            skipOffstage: false,
+          ),
+          matching: find.text(currentProfileLabel, skipOffstage: false),
+        );
+        await tester.ensureVisible(selectedLabel);
+        await tester.pumpAndSettle();
+        await tester.tap(selectedLabel);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+        currentProfileLabel = label;
+      }
+
+      final normalPoints = visibleSeriesPoints();
+      expect(normalPoints.map((points) => points.length), [17, 14, 21]);
+      final endpoints = [
+        for (final points in normalPoints)
+          (first: points.first, last: points.last),
+      ];
+
+      await selectProfile('Stress · 15,000 total');
+      final firstStressPoints = visibleSeriesPoints();
+      expect(
+        firstStressPoints.map((points) => points.length),
+        everyElement(5000),
+      );
+      expect(find.text('15000'), findsOneWidget);
+      for (var index = 0; index < firstStressPoints.length; index++) {
+        expect(firstStressPoints[index].first.x, endpoints[index].first.x);
+        expect(firstStressPoints[index].first.y, endpoints[index].first.y);
+        expect(firstStressPoints[index].last.x, endpoints[index].last.x);
+        expect(firstStressPoints[index].last.y, endpoints[index].last.y);
+      }
+
+      await selectProfile('Dense · 1,500 total');
+      expect(
+        visibleSeriesPoints().map((points) => points.length),
+        everyElement(500),
+      );
+      expect(find.text('1500'), findsOneWidget);
+
+      await selectProfile('Stress · 15,000 total');
+      final secondStressPoints = visibleSeriesPoints();
+      for (var index = 0; index < firstStressPoints.length; index++) {
+        expect(
+          identical(firstStressPoints[index], secondStressPoints[index]),
+          isTrue,
+        );
+      }
+
+      final elevationToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-elevation-visible'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(elevationToggle).onChanged!(false);
+      await tester.pump();
+      expect(find.text('10000'), findsOneWidget);
+      tester.widget<SwitchListTile>(elevationToggle).onChanged!(true);
+      await tester.pump();
+      expect(find.text('15000'), findsOneWidget);
+      expect(identical(visibleSeriesPoints()[1], firstStressPoints[1]), isTrue);
+
+      final dataUpdatesHeader = find.ancestor(
+        of: find.text('Data updates'),
+        matching: find.byType(InkWell),
+      );
+      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      await tester.pumpAndSettle();
+      final updateButton = find.byKey(
+        const ValueKey('synchronized-update-data'),
+        skipOffstage: false,
+      );
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+      final firstStressUpdate = visibleSeriesPoints();
+      expect(
+        firstStressUpdate.map((points) => points.length),
+        everyElement(5000),
+      );
+      for (var index = 0; index < firstStressUpdate.length; index++) {
+        expect(
+          firstStressUpdate[index].map((point) => point.x),
+          firstStressPoints[index].map((point) => point.x),
+        );
+        expect(
+          firstStressUpdate[index].map((point) => point.y),
+          isNot(firstStressPoints[index].map((point) => point.y)),
+        );
+      }
+
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pumpAndSettle();
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+      final secondStressUpdate = visibleSeriesPoints();
+      for (var index = 0; index < firstStressUpdate.length; index++) {
+        expect(
+          identical(firstStressUpdate[index], secondStressUpdate[index]),
+          isTrue,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Synchronized live updates preserve interaction state and motion identity',
+    (tester) async {
+      await pumpPage(tester, const LineChartsPage());
+      final synchronized = find.descendant(
+        of: find.byKey(const ValueKey('line-preset-picker')),
+        matching: find.text('Synchronized'),
+      );
+      await tester.ensureVisible(synchronized);
+      await tester.tap(synchronized);
+      await tester.pumpAndSettle();
+
+      List<BravenChartPlus> charts() => tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList(growable: false);
+
+      final baselineCharts = charts();
+      final baselinePoints = [
+        for (final chart in baselineCharts) chart.series.single.points,
+      ];
+      final chartStates = {
+        for (final id in const [
+          'synchronized-speed',
+          'synchronized-elevation',
+          'synchronized-heart-rate',
+        ])
+          id: tester.state(find.byKey(ValueKey(id))),
+      };
+      final group = baselineCharts.first.interactionGroupController!;
+      final renderElements = _chartRenderFinder().evaluate().toList();
+      final renderBoxes = renderElements
+          .map((element) => element.renderObject! as ChartRenderBox)
+          .toList(growable: false);
+      renderBoxes.first.zoomChart(1.8, animate: false);
+      await tester.pump();
+      final viewportBeforeUpdate = group.viewport;
+      expect(viewportBeforeUpdate, isNotNull);
+
+      final firstFinder = find.byElementPredicate(
+        (element) => element == renderElements.first,
+      );
+      await tester.ensureVisible(firstFinder);
+      await tester.pumpAndSettle();
+      const dataX = 2.4;
+      final first = renderBoxes.first;
+      final local = first.plotToWidget(
+        first.transform!.dataToPlot(
+          dataX,
+          (first.transform!.dataYMin + first.transform!.dataYMax) / 2,
+        ),
+      );
+      final pointer = await tester.createGesture();
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(tester.getTopLeft(firstFinder) + local);
+      await tester.pump();
+      expect(group.cursorX, closeTo(dataX, 0.0001));
+      final trackedYBeforeUpdate = [
+        for (final renderBox in renderBoxes)
+          renderBox.debugSynchronizedTrackingState!.seriesValues.single.y,
+      ];
+
+      final dataUpdatesHeader = find.ancestor(
+        of: find.text('Data updates'),
+        matching: find.byType(InkWell),
+      );
+      tester.widget<InkWell>(dataUpdatesHeader).onTap!();
+      await tester.pumpAndSettle();
+      final updateButton = find.byKey(
+        const ValueKey('synchronized-update-data'),
+        skipOffstage: false,
+      );
+      tester.widget<OutlinedButton>(updateButton).onPressed!();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final updatedCharts = charts();
+      expect(group.viewport, viewportBeforeUpdate);
+      expect(group.cursorX, closeTo(dataX, 0.0001));
+      expect(find.text('Current state · Live revision'), findsOneWidget);
+      expect(find.text('9.8 km/h'), findsOneWidget);
+      for (var index = 0; index < updatedCharts.length; index++) {
+        final series = updatedCharts[index].series.single;
+        expect(series.id, baselineCharts[index].series.single.id);
+        expect(series.points, hasLength(baselinePoints[index].length));
+        expect(
+          series.points.map((point) => point.x),
+          baselinePoints[index].map((point) => point.x),
+        );
+        expect(
+          series.points.map((point) => point.y),
+          isNot(baselinePoints[index].map((point) => point.y)),
+        );
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(
+          animation.dataUpdateMode,
+          PathDataUpdateAnimationMode.interpolate,
+        );
+        expect(
+          animation.dataUpdateTiming.duration,
+          const Duration(milliseconds: 650),
+        );
+      }
+      for (final entry in chartStates.entries) {
+        expect(
+          tester.state(find.byKey(ValueKey(entry.key))),
+          same(entry.value),
+        );
+      }
+      await tester.pumpAndSettle();
+      for (var index = 0; index < renderBoxes.length; index++) {
+        final tracked = renderBoxes[index]
+            .debugSynchronizedTrackingState!
+            .seriesValues
+            .single;
+        expect(tracked.x, closeTo(dataX, 0.0001));
+        expect(tracked.y, isNot(closeTo(trackedYBeforeUpdate[index], 0.0001)));
+      }
+
+      final animateToggle = find.descendant(
+        of: find.byKey(
+          const ValueKey('animate-synchronized-updates'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(animateToggle).onChanged!(false);
+      await tester.pump();
+      for (final chart in charts()) {
+        final series = chart.series.single;
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(animation.dataUpdateMode, PathDataUpdateAnimationMode.none);
+      }
+
+      tester.widget<SwitchListTile>(animateToggle).onChanged!(true);
+      await tester.pump();
+      final durationSlider = find.descendant(
+        of: find.byKey(
+          const ValueKey('synchronized-update-duration'),
+          skipOffstage: false,
+        ),
+        matching: find.byType(Slider, skipOffstage: false),
+      );
+      tester.widget<Slider>(durationSlider).onChanged!(1200);
+      await tester.pump();
+      for (final chart in charts()) {
+        final series = chart.series.single;
+        final animation = switch (series) {
+          LineChartSeries value => value.pathAnimation,
+          AreaChartSeries value => value.pathAnimation,
+          _ => throw StateError('Expected a path series'),
+        };
+        expect(
+          animation.dataUpdateTiming.duration,
+          const Duration(milliseconds: 1200),
         );
       }
       expect(tester.takeException(), isNull);
@@ -526,8 +960,12 @@ void main() {
       ValueKey('synchronize-viewport'),
       ValueKey('synchronized-intersections'),
     ]) {
-      await tester.ensureVisible(find.byKey(optionKey));
-      await tester.tap(find.byKey(optionKey));
+      final option = find.descendant(
+        of: find.byKey(optionKey, skipOffstage: false),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      final tile = tester.widget<SwitchListTile>(option);
+      tile.onChanged!(!tile.value);
       await tester.pump();
     }
     tester
@@ -540,6 +978,35 @@ void main() {
           find.widgetWithText(SwitchListTile, 'Show X Scrollbar'),
         )
         .onChanged!(true);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    final trackingDetailHeader = find.ancestor(
+      of: find.text('Tracking detail'),
+      matching: find.byType(InkWell),
+    );
+    tester.widget<InkWell>(trackingDetailHeader).onTap!();
+    await tester.pumpAndSettle();
+    for (final optionKey in const [
+      ValueKey('synchronized-interpolate-values'),
+      ValueKey('synchronized-tracking-tooltip'),
+      ValueKey('synchronized-horizontal-guide'),
+      ValueKey('synchronized-axis-values'),
+    ]) {
+      final option = find.descendant(
+        of: find.byKey(optionKey, skipOffstage: false),
+        matching: find.byType(SwitchListTile, skipOffstage: false),
+      );
+      tester.widget<SwitchListTile>(option).onChanged!(false);
+      await tester.pump();
+    }
+    final intersectionRadius = find.descendant(
+      of: find.byKey(
+        const ValueKey('synchronized-intersection-radius'),
+        skipOffstage: false,
+      ),
+      matching: find.byType(Slider, skipOffstage: false),
+    );
+    tester.widget<Slider>(intersectionRadius).onChanged!(8);
     await tester.pump();
 
     final charts = tester
@@ -572,6 +1039,38 @@ void main() {
       charts.map(
         (chart) => chart.interactionConfig!.crosshair.showIntersectionMarkers,
       ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.interpolateValues,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.showTrackingTooltip,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map((chart) => chart.interactionConfig!.crosshair.mode),
+      everyElement(CrosshairMode.vertical),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.showCoordinateLabels,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.intersectionMarkerRadius,
+      ),
+      everyElement(8),
+    );
+    expect(
+      charts.map((chart) => chart.yAxis!.showCrosshairLabel),
       everyElement(isFalse),
     );
     expect(
