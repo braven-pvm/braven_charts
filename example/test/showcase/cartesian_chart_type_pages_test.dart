@@ -6,6 +6,7 @@ import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/cartesian_chart_type_pages.dart';
 import 'package:braven_charts_example/showcase/widgets/chart_options.dart';
+import 'package:braven_charts_example/showcase/widgets/standard_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -130,6 +131,33 @@ void main() {
         isNot(contains("id: 'interpolation-linear'")),
       ),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Line surface preserves a generous chart reading height', (
+    tester,
+  ) async {
+    await pumpPage(tester, const LineChartsPage());
+
+    final workhorseCard = tester.getRect(find.byType(ChartCard));
+    expect(workhorseCard.height, greaterThanOrEqualTo(700));
+    expect(find.byKey(const ValueKey('line-showcase-scroll')), findsOneWidget);
+
+    final synchronized = find.descendant(
+      of: find.byKey(const ValueKey('line-preset-picker')),
+      matching: find.text('Synchronized'),
+    );
+    await tester.ensureVisible(synchronized);
+    await tester.pumpAndSettle();
+    await tester.tap(synchronized);
+    await tester.pumpAndSettle();
+
+    final synchronizedCard = tester.getRect(find.byType(ChartCard));
+    final codeReference = tester.getRect(
+      find.byKey(const ValueKey('synchronized-code-reference')),
+    );
+    expect(synchronizedCard.height, greaterThanOrEqualTo(700));
+    expect(codeReference.top, greaterThan(synchronizedCard.bottom));
     expect(tester.takeException(), isNull);
   });
 
@@ -349,6 +377,28 @@ void main() {
       expect(find.text('329 m'), findsOneWidget);
       expect(find.text('138 bpm'), findsOneWidget);
       expect(find.byType(BravenChartWorkbench), findsNothing);
+      expect(
+        find.byKey(const ValueKey('synchronized-code-reference')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('synchronized-code-controller')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('ChartInteractionGroupController'), findsOne);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('synchronized-code-selector')),
+          matching: find.text('Chart participants'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('synchronized-code-participants')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('interactionGroupOptions'), findsOne);
 
       final charts = tester
           .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
@@ -416,6 +466,127 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Line appearance and synchronization controls are live', (
+    tester,
+  ) async {
+    await pumpPage(tester, const LineChartsPage());
+
+    final markerStyle = find.descendant(
+      of: find.byKey(const ValueKey('line-marker-style')),
+      matching: find.byType(DropdownButtonFormField<DataPointMarkerStyle>),
+    );
+    tester
+        .widget<DropdownButtonFormField<DataPointMarkerStyle>>(markerStyle)
+        .onChanged!(DataPointMarkerStyle.hollow);
+    final markerRadius = find.descendant(
+      of: find.byKey(const ValueKey('line-marker-radius')),
+      matching: find.byType(Slider),
+    );
+    tester.widget<Slider>(markerRadius).onChanged!(6);
+    await tester.pump();
+
+    var lineSeries = tester
+        .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+        .series
+        .whereType<LineChartSeries>();
+    expect(
+      lineSeries,
+      everyElement(
+        isA<LineChartSeries>()
+            .having(
+              (series) => series.dataPointMarkerStyle,
+              'marker style',
+              DataPointMarkerStyle.hollow,
+            )
+            .having(
+              (series) => series.dataPointMarkerRadius,
+              'marker radius',
+              6,
+            ),
+      ),
+    );
+
+    final synchronized = find.descendant(
+      of: find.byKey(const ValueKey('line-preset-picker')),
+      matching: find.text('Synchronized'),
+    );
+    await tester.ensureVisible(synchronized);
+    await tester.pumpAndSettle();
+    await tester.tap(synchronized);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Show Legend'), findsNothing);
+    expect(find.text('Show Y Scrollbar'), findsNothing);
+    expect(find.text('Show X Scrollbar'), findsOneWidget);
+
+    for (final optionKey in const [
+      ValueKey('synchronize-cursor'),
+      ValueKey('synchronize-viewport'),
+      ValueKey('synchronized-intersections'),
+    ]) {
+      await tester.ensureVisible(find.byKey(optionKey));
+      await tester.tap(find.byKey(optionKey));
+      await tester.pump();
+    }
+    tester
+        .widget<SwitchListTile>(
+          find.widgetWithText(SwitchListTile, 'Show Data Markers'),
+        )
+        .onChanged!(false);
+    tester
+        .widget<SwitchListTile>(
+          find.widgetWithText(SwitchListTile, 'Show X Scrollbar'),
+        )
+        .onChanged!(true);
+    await tester.pump();
+
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList();
+    expect(charts, hasLength(3));
+    expect(
+      charts.map((chart) => chart.interactionGroupOptions.synchronizeCursor),
+      everyElement(isFalse),
+    );
+    expect(
+      charts
+          .expand((chart) => chart.series)
+          .map(
+            (series) => switch (series) {
+              LineChartSeries() => series.showDataPointMarkers,
+              AreaChartSeries() => series.showDataPointMarkers,
+              _ => null,
+            },
+          ),
+      everyElement(isFalse),
+    );
+    expect(charts.take(2).map((chart) => chart.showXScrollbar), [false, false]);
+    expect(charts.last.showXScrollbar, isTrue);
+    expect(
+      charts.map((chart) => chart.interactionGroupOptions.synchronizeViewport),
+      everyElement(isFalse),
+    );
+    expect(
+      charts.map(
+        (chart) => chart.interactionConfig!.crosshair.showIntersectionMarkers,
+      ),
+      everyElement(isFalse),
+    );
+    expect(
+      charts
+          .expand((chart) => chart.series)
+          .map(
+            (series) => switch (series) {
+              LineChartSeries() => series.dataPointMarkerRadius,
+              AreaChartSeries() => series.dataPointMarkerRadius,
+              _ => null,
+            },
+          ),
+      everyElement(6),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('compact synchronized stack removes repeated distance axes', (
     tester,
@@ -921,6 +1092,16 @@ void main() {
   testWidgets(
     'every Line and Area preset completes the wide Workbench surface matrix',
     (tester) async {
+      const lineSourceSeriesByPreset = <String, String>{
+        'Workhorse': 'observed',
+        'Interpolation': 'interpolation-linear',
+        'Multi-axis': 'power',
+        'Motion': 'motion-observed',
+        'Comparison': 'comparison-current',
+        'Envelope': 'capacity-envelope',
+        'Spotlight': 'spotlight-signal',
+        'Forecast': 'forecast-continuous',
+      };
       const families = <({String name, Widget page, List<String> presets})>[
         (
           name: 'line',
@@ -1042,6 +1223,13 @@ void main() {
                   controller.generatedSource!.source,
                   contains('final ${family.name}Chart = BravenChartPlus('),
                 );
+                if (family.name == 'line') {
+                  expect(
+                    controller.generatedSource!.source,
+                    contains("id: '${lineSourceSeriesByPreset[preset]}'"),
+                    reason: '$preset generated source matches its live series',
+                  );
+                }
             }
             expect(
               find.textContaining('not attached to a mounted chart'),

@@ -29,6 +29,8 @@ class StandardChartOptions extends StatelessWidget {
     this.showAxisOption = true,
     this.showMarkerOption = true,
     this.showScrollbarOptions = true,
+    this.showXScrollbarOption = true,
+    this.showYScrollbarOption = true,
     this.showLegendOption = true,
     this.showInteractionOptions = true,
     this.showLineStyleOption = true,
@@ -44,6 +46,8 @@ class StandardChartOptions extends StatelessWidget {
   final bool showAxisOption;
   final bool showMarkerOption;
   final bool showScrollbarOptions;
+  final bool showXScrollbarOption;
+  final bool showYScrollbarOption;
   final bool showLegendOption;
   final bool showInteractionOptions;
   final bool showLineStyleOption;
@@ -102,16 +106,18 @@ class StandardChartOptions extends StatelessWidget {
 
             // Scrollbars
             if (showScrollbarOptions) ...[
-              BoolOption(
-                label: 'Show X Scrollbar',
-                value: controller.showXScrollbar,
-                onChanged: (v) => controller.showXScrollbar = v,
-              ),
-              BoolOption(
-                label: 'Show Y Scrollbar',
-                value: controller.showYScrollbar,
-                onChanged: (v) => controller.showYScrollbar = v,
-              ),
+              if (showXScrollbarOption)
+                BoolOption(
+                  label: 'Show X Scrollbar',
+                  value: controller.showXScrollbar,
+                  onChanged: (v) => controller.showXScrollbar = v,
+                ),
+              if (showYScrollbarOption)
+                BoolOption(
+                  label: 'Show Y Scrollbar',
+                  value: controller.showYScrollbar,
+                  onChanged: (v) => controller.showYScrollbar = v,
+                ),
             ],
 
             // Legend

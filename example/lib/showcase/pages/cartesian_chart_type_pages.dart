@@ -1,8 +1,11 @@
 // Copyright 2026 Braven Charts contributors
 // SPDX-License-Identifier: MIT
 
+import 'dart:math' as math;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
@@ -62,11 +65,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _lineGlow = 0;
   double _fillOpacity = 0.24;
   double _markerRadius = 5;
+  double _lineMarkerRadius = 3;
+  DataPointMarkerStyle _lineMarkerStyle = DataPointMarkerStyle.filled;
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
   bool _useAreaGradient = true;
   bool _animatePaths = true;
+  bool _synchronizeCursor = true;
+  bool _synchronizeViewport = true;
+  bool _showSynchronizedIntersections = true;
   double _motionDurationMs = 650;
   late double _motionSeriesDelayMs;
   int _motionValueRevision = 0;
@@ -136,17 +144,37 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       chart: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 600;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildPresetPicker(compact: compact),
-              SizedBox(height: compact ? 8 : 16),
-              Expanded(child: _buildChartCard()),
-              if (!compact) ...[
-                const SizedBox(height: 16),
-                _FeatureCoverage(family: widget.family),
+          final preferredHeight = switch ((widget.family, compact)) {
+            (_CartesianFamily.line, true) =>
+              _isLineSynchronized ? 1136.0 : 820.0,
+            (_CartesianFamily.line, false) =>
+              _isLineSynchronized ? 1260.0 : 960.0,
+            _ => constraints.maxHeight,
+          };
+          final contentHeight = math.max(
+            constraints.maxHeight,
+            preferredHeight,
+          );
+          final content = SizedBox(
+            height: contentHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildPresetPicker(compact: compact),
+                SizedBox(height: compact ? 8 : 16),
+                Expanded(child: _buildChartCard()),
+                if (!compact) ...[
+                  const SizedBox(height: 16),
+                  _FeatureCoverage(family: widget.family),
+                ],
               ],
-            ],
+            ),
+          );
+          if (contentHeight <= constraints.maxHeight) return content;
+          return SingleChildScrollView(
+            key: const ValueKey('line-showcase-scroll'),
+            primary: false,
+            child: content,
           );
         },
       ),
@@ -345,18 +373,32 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       builder: (context, _) {
         final options = _optionsController.options;
         if (_isLineSynchronized) {
-          return ChartCard(
-            title: _presets[_presetIndex].label,
-            subtitle:
-                '3 independent charts · shared distance cursor + X viewport',
-            padding: const EdgeInsets.all(8),
-            child: _SynchronizedCartesianExample(
-              groupController: _interactionGroupController,
-              options: options,
-              interpolation: _interpolation,
-              strokeWidth: _strokeWidth,
-              lineGlow: _lineGlow,
-            ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ChartCard(
+                  title: _presets[_presetIndex].label,
+                  subtitle:
+                      '3 independent charts · shared distance cursor + X viewport',
+                  padding: const EdgeInsets.all(8),
+                  child: _SynchronizedCartesianExample(
+                    groupController: _interactionGroupController,
+                    options: options,
+                    interpolation: _interpolation,
+                    strokeWidth: _strokeWidth,
+                    lineGlow: _lineGlow,
+                    markerRadius: _lineMarkerRadius,
+                    markerStyle: _lineMarkerStyle,
+                    synchronizeCursor: _synchronizeCursor,
+                    synchronizeViewport: _synchronizeViewport,
+                    showIntersectionMarkers: _showSynchronizedIntersections,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const SizedBox(height: 304, child: _SynchronizedCodeReference()),
+            ],
           );
         }
         return ChartCard(
@@ -524,6 +566,30 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _markerRadius = value),
         ),
+      if (widget.family == _CartesianFamily.line && !_isLineForecast)
+        EnumOption<DataPointMarkerStyle>(
+          key: const ValueKey('line-marker-style'),
+          label: 'Marker style',
+          value: _lineMarkerStyle,
+          values: DataPointMarkerStyle.values,
+          labelBuilder: (value) => switch (value) {
+            DataPointMarkerStyle.filled => 'Filled',
+            DataPointMarkerStyle.hollow => 'Hollow',
+          },
+          onChanged: (value) => setState(() => _lineMarkerStyle = value),
+        ),
+      if (widget.family == _CartesianFamily.line)
+        SliderOption(
+          key: const ValueKey('line-marker-radius'),
+          label: 'Marker radius',
+          value: _lineMarkerRadius,
+          min: 2,
+          max: 7,
+          divisions: 10,
+          suffix: 'px',
+          decimalPlaces: 1,
+          onChanged: (value) => setState(() => _lineMarkerRadius = value),
+        ),
       if (!_isLineForecast && !_isLineSynchronized)
         BoolOption(
           label: widget.family == _CartesianFamily.scatter
@@ -565,6 +631,41 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         },
         children: typeOptions,
       ),
+      if (_isLineSynchronized)
+        OptionSection(
+          title: 'Synchronization',
+          icon: Icons.sync_alt,
+          children: [
+            BoolOption(
+              key: const ValueKey('synchronize-cursor'),
+              label: 'Synchronize cursor',
+              value: _synchronizeCursor,
+              subtitle: 'Share the active data-X position across all plots',
+              onChanged: (value) {
+                _interactionGroupController.reset();
+                setState(() => _synchronizeCursor = value);
+              },
+            ),
+            BoolOption(
+              key: const ValueKey('synchronize-viewport'),
+              label: 'Synchronize viewport',
+              value: _synchronizeViewport,
+              subtitle: 'Share horizontal pan, zoom, and reset bounds',
+              onChanged: (value) {
+                _interactionGroupController.reset();
+                setState(() => _synchronizeViewport = value);
+              },
+            ),
+            BoolOption(
+              key: const ValueKey('synchronized-intersections'),
+              label: 'Show intersections',
+              value: _showSynchronizedIntersections,
+              subtitle: 'Mark each local curve at the shared X position',
+              onChanged: (value) =>
+                  setState(() => _showSynchronizedIntersections = value),
+            ),
+          ],
+        ),
       if (widget.family != _CartesianFamily.scatter && _presetIndex == 3)
         OptionSection(
           title: 'Motion',
@@ -683,7 +784,11 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         controller: _optionsController,
         showThemeOption: !_isLineSpotlight,
         showLegendOption:
-            !_isLineSpotlight && !_isLineForecast && !_isAreaPulse,
+            !_isLineSpotlight &&
+            !_isLineForecast &&
+            !_isLineSynchronized &&
+            !_isAreaPulse,
+        showYScrollbarOption: !_isLineSynchronized,
         showLineStyleOption: false,
       ),
     ];
@@ -707,8 +812,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           color: forecastColor,
           interpolation: _interpolation,
           strokeWidth: _strokeWidth,
-          showDataPointMarkers: true,
-          dataPointMarkerRadius: 4,
+          showDataPointMarkers: _optionsController.showDataMarkers,
+          dataPointMarkerRadius: _lineMarkerRadius,
           dataPointMarkerStyle: DataPointMarkerStyle.hollow,
           dataPointMarkerBackground: const Color(0xFFF8FAFC),
           lineGlow: _lineGlow,
@@ -770,8 +875,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             color: colors[index],
             interpolation: modes[index],
             strokeWidth: _strokeWidth,
-            showDataPointMarkers: true,
-            dataPointMarkerRadius: 2.5,
+            showDataPointMarkers: _optionsController.showDataMarkers,
+            dataPointMarkerRadius: _lineMarkerRadius,
+            dataPointMarkerStyle: _lineMarkerStyle,
             lineGlow: _lineGlow,
           ),
       ];
@@ -892,7 +998,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           strokeWidth: 3,
           lineGlow: 8,
           showDataPointMarkers: _optionsController.showDataMarkers,
-          dataPointMarkerRadius: 3,
+          dataPointMarkerRadius: _lineMarkerRadius,
+          dataPointMarkerStyle: _lineMarkerStyle,
           dataPointLabels: DataPointLabelConfig(show: _showPointLabels),
           inlineLabel: const SeriesInlineLabelConfig(
             text: 'Live signal',
@@ -941,7 +1048,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       interpolation: _interpolation,
       strokeWidth: _strokeWidth,
       showDataPointMarkers: _optionsController.showDataMarkers,
-      dataPointMarkerRadius: 3,
+      dataPointMarkerRadius: _lineMarkerRadius,
+      dataPointMarkerStyle: _lineMarkerStyle,
       lineGlow: _lineGlow,
       dataPointLabels: DataPointLabelConfig(
         show: _showPointLabels,
@@ -1356,11 +1464,16 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _lineGlow = 0;
       _fillOpacity = 0.24;
       _markerRadius = 5;
+      _lineMarkerRadius = 3;
+      _lineMarkerStyle = DataPointMarkerStyle.filled;
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
       _useAreaGradient = true;
       _animatePaths = true;
+      _synchronizeCursor = true;
+      _synchronizeViewport = true;
+      _showSynchronizedIntersections = true;
       _motionDurationMs = 650;
       _motionSeriesDelayMs = _defaultMotionSeriesDelayMs;
       _resetMotionData();
@@ -1515,6 +1628,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     required this.interpolation,
     required this.strokeWidth,
     required this.lineGlow,
+    required this.markerRadius,
+    required this.markerStyle,
+    required this.synchronizeCursor,
+    required this.synchronizeViewport,
+    required this.showIntersectionMarkers,
   });
 
   final ChartInteractionGroupController groupController;
@@ -1522,6 +1640,11 @@ class _SynchronizedCartesianExample extends StatelessWidget {
   final LineInterpolation interpolation;
   final double strokeWidth;
   final double lineGlow;
+  final double markerRadius;
+  final DataPointMarkerStyle markerStyle;
+  final bool synchronizeCursor;
+  final bool synchronizeViewport;
+  final bool showIntersectionMarkers;
 
   @override
   Widget build(BuildContext context) {
@@ -1551,7 +1674,13 @@ class _SynchronizedCartesianExample extends StatelessWidget {
                   interpolation: interpolation,
                   strokeWidth: strokeWidth,
                   lineGlow: lineGlow,
+                  showDataPointMarkers: options.showDataMarkers,
+                  dataPointMarkerRadius: markerRadius,
+                  dataPointMarkerStyle: markerStyle,
                 ),
+                synchronizeCursor: synchronizeCursor,
+                synchronizeViewport: synchronizeViewport,
+                showIntersectionMarkers: showIntersectionMarkers,
               ),
             ),
             const Divider(height: 1),
@@ -1579,7 +1708,13 @@ class _SynchronizedCartesianExample extends StatelessWidget {
                   fillGradient: const AreaGradient(
                     colors: [Color(0x665B56D6), Color(0x125B56D6)],
                   ),
+                  showDataPointMarkers: options.showDataMarkers,
+                  dataPointMarkerRadius: markerRadius,
+                  dataPointMarkerStyle: markerStyle,
                 ),
+                synchronizeCursor: synchronizeCursor,
+                synchronizeViewport: synchronizeViewport,
+                showIntersectionMarkers: showIntersectionMarkers,
               ),
             ),
             const Divider(height: 1),
@@ -1607,7 +1742,13 @@ class _SynchronizedCartesianExample extends StatelessWidget {
                   fillGradient: const AreaGradient(
                     colors: [Color(0x6600B86B), Color(0x1000B86B)],
                   ),
+                  showDataPointMarkers: options.showDataMarkers,
+                  dataPointMarkerRadius: markerRadius,
+                  dataPointMarkerStyle: markerStyle,
                 ),
+                synchronizeCursor: synchronizeCursor,
+                synchronizeViewport: synchronizeViewport,
+                showIntersectionMarkers: showIntersectionMarkers,
               ),
             ),
           ],
@@ -1642,6 +1783,9 @@ class _SynchronizedMetricPlot extends StatelessWidget {
     required this.showDistanceAxis,
     required this.showXScrollbar,
     required this.series,
+    required this.synchronizeCursor,
+    required this.synchronizeViewport,
+    required this.showIntersectionMarkers,
   });
 
   final String title;
@@ -1654,6 +1798,9 @@ class _SynchronizedMetricPlot extends StatelessWidget {
   final bool showDistanceAxis;
   final bool showXScrollbar;
   final ChartSeries series;
+  final bool synchronizeCursor;
+  final bool synchronizeViewport;
+  final bool showIntersectionMarkers;
 
   @override
   Widget build(BuildContext context) {
@@ -1705,6 +1852,10 @@ class _SynchronizedMetricPlot extends StatelessWidget {
             child: BravenChartPlus(
               key: ValueKey(series.id),
               interactionGroupController: groupController,
+              interactionGroupOptions: ChartInteractionGroupOptions(
+                synchronizeCursor: synchronizeCursor,
+                synchronizeViewport: synchronizeViewport,
+              ),
               series: [series],
               theme: chartTheme,
               showLegend: false,
@@ -1740,13 +1891,13 @@ class _SynchronizedMetricPlot extends StatelessWidget {
               interactionConfig: InteractionConfig(
                 enableZoom: options.enableZoom,
                 enablePan: options.enablePan,
-                crosshair: const CrosshairConfig(
+                crosshair: CrosshairConfig(
                   enabled: true,
                   mode: CrosshairMode.vertical,
                   displayMode: CrosshairDisplayMode.tracking,
                   interpolateValues: true,
                   showTrackingTooltip: false,
-                  showIntersectionMarkers: true,
+                  showIntersectionMarkers: showIntersectionMarkers,
                   showCoordinateLabels: false,
                 ),
                 tooltip: const TooltipConfig(enabled: true),
@@ -1758,6 +1909,161 @@ class _SynchronizedMetricPlot extends StatelessWidget {
     );
   }
 }
+
+class _SynchronizedCodeReference extends StatefulWidget {
+  const _SynchronizedCodeReference();
+
+  @override
+  State<_SynchronizedCodeReference> createState() =>
+      _SynchronizedCodeReferenceState();
+}
+
+class _SynchronizedCodeReferenceState
+    extends State<_SynchronizedCodeReference> {
+  var _selectedSnippet = 0;
+
+  String get _source => _selectedSnippet == 0
+      ? _synchronizedControllerSnippet
+      : _synchronizedParticipantsSnippet;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final controls = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SegmentedButton<int>(
+          key: const ValueKey('synchronized-code-selector'),
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: 0, label: Text('Shared controller')),
+            ButtonSegment(value: 1, label: Text('Chart participants')),
+          ],
+          selected: {_selectedSnippet},
+          onSelectionChanged: (selection) =>
+              setState(() => _selectedSnippet = selection.single),
+        ),
+        OutlinedButton.icon(
+          key: const ValueKey('copy-synchronized-code'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: _source));
+            if (!context.mounted) return;
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              const SnackBar(content: Text('Synchronized chart code copied')),
+            );
+          },
+          icon: const Icon(Icons.copy_all_outlined, size: 18),
+          label: const Text('Copy code'),
+        ),
+      ],
+    );
+    return Card(
+      key: const ValueKey('synchronized-code-reference'),
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final heading = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Build synchronized charts',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Reuse one interaction controller; each chart keeps its own series and Y axis.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                );
+                if (constraints.maxWidth < 760) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [heading, const SizedBox(height: 12), controls],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: heading),
+                    const SizedBox(width: 16),
+                    controls,
+                  ],
+                );
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ColoredBox(
+              color: const Color(0xFF0F172A),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SelectionArea(
+                    child: Text(
+                      _source,
+                      key: ValueKey(
+                        'synchronized-code-${_selectedSnippet == 0 ? 'controller' : 'participants'}',
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFFE5E7EB),
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _synchronizedControllerSnippet = '''
+final interactions = ChartInteractionGroupController();
+
+@override
+void dispose() {
+  interactions.dispose();
+  super.dispose();
+}
+''';
+
+const _synchronizedParticipantsSnippet = '''
+BravenChartPlus(
+  interactionGroupController: interactions,
+  interactionGroupOptions: const ChartInteractionGroupOptions(
+    synchronizeCursor: true,
+    synchronizeViewport: true,
+  ),
+  series: [metricSeries],
+  yAxis: const YAxisConfig(minWidth: 56, maxWidth: 56),
+);
+''';
 
 const _synchronizedSpeedPoints = <ChartDataPoint>[
   ChartDataPoint(x: 0, y: 13.5),
