@@ -328,13 +328,13 @@ void main() {
     expect(charts.map((chart) => chart.series.length), [3, 3, 3]);
     expect(
       charts.map(
-        (chart) => chart.concentricDonutConfig.centerContent?.label,
+        (chart) => chart.concentricDonutConfig.centerContent.label,
       ),
       ['Periods', 'Regions', 'Funds'],
     );
     expect(
       charts.map(
-        (chart) => chart.concentricDonutConfig.centerContent?.customValue,
+        (chart) => chart.concentricDonutConfig.centerContent.customValue,
       ),
       ['3', '3', '3'],
     );
