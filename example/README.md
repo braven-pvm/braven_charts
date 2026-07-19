@@ -13,6 +13,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Donut Charts directly →**](https://braven-pvm.github.io/braven_charts/?page=donut-charts)
 
+[**Open Concentric Donut directly →**](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
+
 ## Run locally
 
 From the repository root:
@@ -33,14 +35,15 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Start with a native-rendered six-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Cartesian, and mixed-series examples |
-| Chart Types | Choose between line, area, bar, scatter, Pie, and Donut from a concise visual overview; each family links to its own runnable guide |
+| Gallery | Start with a native-rendered seven-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Concentric Donut, Cartesian, and mixed-series examples |
+| Chart Types | Choose between line, area, bar, scatter, Pie, Donut, and Concentric Donut from a concise visual overview; each family links to its own runnable guide |
 | Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source |
 | Scatter Charts | Compare cohorts, correlation with a trend annotation, and explicit outlier styling; tune marker size and point-level inspection; then inspect the effective Dart source |
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; inspect generated source; and capture or restore a portable artifact |
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
+| Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
 | Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
@@ -96,7 +99,8 @@ Chart Artifacts page, see [Portable chart artifacts](../doc/chart_artifacts.md).
 For the reusable Chart/Data/Split/Source composition shown by Chart Workbench, see
 [Chart Workbench](../doc/chart_workbench.md) and
 [Chart Document Comparison](../doc/chart_comparison.md).
-For radial series contracts, see [Pie charts](../doc/pie_charts.md) and
-[Donut charts](../doc/donut_charts.md).
+For radial series contracts, see [Pie charts](../doc/pie_charts.md),
+[Donut charts](../doc/donut_charts.md), and
+[Concentric Donut charts](../doc/concentric_donut_charts.md).
 For path-series motion, streaming boundaries, and the Line/Area workbench, see
 [Line and Area charts](../doc/line_area_charts.md).

@@ -120,8 +120,15 @@ accepts exactly one pie series and cannot mix with Cartesian series.
 - `pieStyle`: `PieChartStyle` geometry, physical separation, border, solid or
   `PieGradientStyle` fill, explode, opacity, `PieCornerTreatment`, elevation,
   and animation overrides
-- `dataLabels`: `PieDataLabelConfig` content, position, eligibility, compact
-  outside-lane offset, connector, collision, and callout policy
+- `selectionStyle`: shared `RadialSelectionStyle` for Pie, Donut, and
+  Concentric Donut, choosing the compatibility
+  `RadialSelectionEffect.explode` treatment or a centroid-scaled
+  `RadialSelectionEffect.lift`, plus lift scale, radial offset, and
+  unselected-slice blur
+- `dataLabels`: `PieDataLabelConfig` primary and optional opposite-placement
+  secondary content, independent callout styles, eligibility, compact
+  outside-lane offset, signed inside radial offset, connector, and collision
+  policy
 - `ChartTheme.pieChartTheme`: shared `PieChartTheme` defaults, including
   `PieGradientStyle` fills, `PieCornerTreatment`, `PieElevationStyle`
   shadows/glows, and `PieAnimationMode.none`, `grow`, `sweep`, or `fade`

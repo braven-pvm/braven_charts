@@ -171,6 +171,9 @@ class ChartTablePieRow {
   const ChartTablePieRow({
     required this.rowId,
     required this.reference,
+    String? seriesId,
+    String? seriesName,
+    this.ringIndex = 0,
     required this.category,
     required this.valueRaw,
     required this.valueDisplay,
@@ -183,10 +186,25 @@ class ChartTablePieRow {
     this.radiusLabel,
     this.radiusUnit,
     this.colorValue,
-  });
+  }) : _seriesId = seriesId,
+       _seriesName = seriesName;
 
   final String rowId;
   final ChartTablePointReference reference;
+
+  /// Stable radial series identity retained by table, selection, and export.
+  String get seriesId => _seriesId ?? reference.seriesId;
+
+  final String? _seriesId;
+
+  /// User-facing ring name, falling back to [seriesId].
+  String get seriesName => _seriesName ?? seriesId;
+
+  final String? _seriesName;
+
+  /// Zero-based source-series order within the radial document.
+  final int ringIndex;
+
   final String category;
   final double valueRaw;
   final String valueDisplay;
@@ -262,11 +280,10 @@ class ChartTableModel {
     final radialSeries = selected
         .where((series) => series.type == 'pie' || series.type == 'donut')
         .toList();
-    if (radialSeries.isNotEmpty &&
-        (radialSeries.length != 1 || selected.length != 1)) {
+    if (radialSeries.isNotEmpty && radialSeries.length != selected.length) {
       throw UnsupportedError(
-        'Radial table projection requires exactly one Pie or Donut series and '
-        'cannot mix radial and Cartesian series.',
+        'Radial table projection cannot mix Pie or Donut series with '
+        'Cartesian series.',
       );
     }
     final projectionKind = radialSeries.isNotEmpty
@@ -340,6 +357,7 @@ class ChartTableModel {
           _projectPieRows(
             series,
             payload.points,
+            ringIndex: document.series.indexOf(series),
             unit: unit,
             themeSeriesColors: themeSeriesColors,
           ),
@@ -431,6 +449,19 @@ class ChartTableModel {
 
   bool get isEmpty => rowCount == 0;
 
+  /// Whether this radial projection contains independent Concentric rings.
+  bool get hasMultipleRadialSeries =>
+      projectionKind == ChartTableProjectionKind.pie && series.length > 1;
+
+  /// Common unit shared by every radial series, or `null` when units differ.
+  String? get commonRadialUnit {
+    if (projectionKind != ChartTableProjectionKind.pie || series.isEmpty) {
+      return null;
+    }
+    final first = series.first.unit;
+    return series.every((column) => column.unit == first) ? first : null;
+  }
+
   /// Whether this Pie projection carries a variable-radius metric.
   bool get hasPieRadiusValues => pieRadiusColumnLabel != null;
 
@@ -439,7 +470,8 @@ class ChartTableModel {
     if (projectionKind != ChartTableProjectionKind.pie || pieRows.isEmpty) {
       return null;
     }
-    final row = pieRows.first;
+    final row = pieRows.where((row) => row.radiusLabel != null).firstOrNull;
+    if (row == null) return null;
     final label = row.radiusLabel;
     if (label == null) return null;
     return row.radiusUnit == null ? label : '$label (${row.radiusUnit})';
@@ -456,6 +488,7 @@ class ChartTableModel {
 List<ChartTablePieRow> _projectPieRows(
   ChartSeriesDocument series,
   List<ChartPointDocument> points, {
+  required int ringIndex,
   required String? unit,
   required List<int> themeSeriesColors,
 }) {
@@ -514,6 +547,9 @@ List<ChartTablePieRow> _projectPieRows(
           seriesId: series.id,
           pointIndex: pointIndex,
         ),
+        seriesId: series.id,
+        seriesName: series.name ?? series.id,
+        ringIndex: ringIndex,
         category: category == null || category.isEmpty
             ? 'No category'
             : category,

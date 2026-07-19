@@ -84,6 +84,10 @@ dedicated animation and do not also run path interpolation. See
   separation, fixed or `PieBorderColorMode` slice-derived borders, selection
   explode offset, and optional per-series opacity, `PieCornerTreatment`,
   elevation, and animation overrides.
+- `RadialSelectionStyle` keeps selection identity unchanged while choosing
+  `RadialSelectionEffect.explode` or a centroid-scaled foreground
+  `RadialSelectionEffect.lift` with configurable scale, radial offset, and
+  backdrop blur.
 - `PieChartTheme`, `PieElevationStyle`, and `PieAnimationMode` provide
   theme-level radial styling, independently configurable shadows/glows,
   callouts, and motion defaults.
@@ -91,7 +95,11 @@ dedicated animation and do not also run path interpolation. See
   from first-mount/replay entrance motion.
 - `PieDataLabelConfig`, `PieDataLabelPosition`, `PieDataLabelContent`, and
   `PieDataLabelCollisionStrategy` control label eligibility, placement, and
-  optional shared-`LabelStyle` callouts.
+  optional shared-`LabelStyle` callouts. `secondaryContent`,
+  `secondaryPosition`, and `secondaryCalloutStyle` add one independently
+  styled label at the opposite placement. Signed `insideOffset` moves inside
+  labels radially within their slice, while `outsideOffset` controls the
+  compact outside-label lanes.
 - `RadialValueFormatter` supplies complete value/share/radius text reused by
   labels, legends, tooltips, center content, and accessibility as applicable.
 - `RadialSliceGroupingConfig` keeps source rows while projecting small slices;
@@ -128,7 +136,7 @@ re-anchors after geometry or responsive layout changes.
 - Optional radius values use `RadialSliceRadiusConfig` and never cross the
   shared circular opening.
 
-Donut is single-series, has no Cartesian axes/pan/zoom/crosshair, and shares
+Standalone Donut is single-series, has no Cartesian axes/pan/zoom/crosshair, and shares
 the Pie category table, CSV, tooltip, legend, selection, controller, artifact,
 and accessibility contracts. Pie and Donut also accept the runtime-only
 `BravenChartPlus.radialLegendItemBuilder`, whose `RadialLegendItemData` gives
@@ -137,6 +145,35 @@ grouped source points while the package retains layout, activation, and
 semantics. Runtime legend and center builders/actions must be rebound after
 artifact hydration; portable legend style and `DonutCenterContent` remain the
 preview/restoration fallback. See [Donut charts](donut_charts.md).
+
+### Concentric Donut charts
+
+- Two or more `DonutChartSeries` values form one Concentric Donut composition;
+  every series keeps its independent total, formatter, grouping, source rows,
+  and durable `(seriesId, pointIndex)` identity.
+- `ConcentricDonutConfig` controls plot-level inner/outer radius factors, ring
+  gap, source-to-radial order, optional thickness weights keyed by series ID,
+  legend grouping, and one portable center fallback.
+- `ConcentricRingOrder` chooses whether the first source series is outside or
+  inside. `ConcentricDonutLegendMode` provides grouped ring sections or a flat
+  sequence whose items retain ring identity.
+- `DonutCenterData.rings` exposes one `DonutCenterRingSummary` per series;
+  selected ring, series, and point identity remain available to runtime center
+  builders.
+- `RadialLegendItemData` adds ring index, ring count, physical position, and
+  ring total for custom Concentric legend content.
+- Every ring accepts the shared `RadialSelectionStyle`. A lifted selection
+  scales and offsets the selected slice above the complete composition while
+  backdrop blur is coordinated across all rings without reallocating bands.
+
+The native table adds Ring identity and CSV adds the stable Series ID. Shares
+are calculated within each ring. Outside labels use one cross-ring collision
+layout. Chart/Data/Split/Source workbenches generate the exact
+`ConcentricDonutConfig`, including deterministic ring weights. Artifacts
+declare `series.donut.concentric.v1` and preserve the chart-level composition,
+every ordinary Donut series document, selection, portable center, and preview.
+See
+[Concentric Donut charts](concentric_donut_charts.md).
 
 ## Axes, normalization, and layout
 

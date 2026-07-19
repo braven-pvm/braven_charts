@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/chart_types_page.dart';
+import 'package:braven_charts_example/showcase/widgets/chart_type_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,8 +23,16 @@ void main() {
       find.byKey(const ValueKey('chart-type-catalog-grid')),
       findsOneWidget,
     );
-    expect(find.byType(BravenChartPlus), findsNWidgets(6));
-    for (final family in ['Line', 'Area', 'Bar', 'Scatter', 'Pie', 'Donut']) {
+    expect(find.byType(BravenChartPlus), findsNWidgets(7));
+    for (final family in [
+      'Line',
+      'Area',
+      'Bar',
+      'Scatter',
+      'Pie',
+      'Donut',
+      'Concentric Donut',
+    ]) {
       expect(find.text(family), findsOneWidget);
     }
     expect(find.text('Motion'), findsNWidgets(3));
@@ -55,5 +64,55 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chart-type-card-donut')));
     await tester.pump();
     expect(selectedSlug, 'donut-charts');
+
+    await tester.tap(
+      find.byKey(const ValueKey('chart-type-card-concentric-donut')),
+    );
+    await tester.pump();
+    expect(selectedSlug, 'concentric-donut');
+  });
+
+  testWidgets('radial catalog previews fill their cards with concise actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 310,
+            child: ChartTypeCatalogStrip(onOpenChartType: (_) {}),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final pie = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-pie')),
+    );
+    final pieSeries = pie.series.single as PieChartSeries;
+    expect(pieSeries.pieStyle.radiusFactor, 0.94);
+
+    final donut = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-donut')),
+    );
+    final donutSeries = donut.series.single as DonutChartSeries;
+    expect(donutSeries.donutStyle.radiusFactor, 0.94);
+
+    final concentric = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-concentric-donut')),
+    );
+    expect(concentric.concentricDonutConfig.outerRadiusFactor, 0.94);
+    expect(concentric.concentricDonutConfig.centerContent.customValue, '2');
+    final concentricScale = tester.widget<Transform>(
+      find.byKey(const ValueKey('chart-type-preview-scale-concentric-donut')),
+    );
+    expect(concentricScale.transform.getMaxScaleOnAxis(), closeTo(1.18, 0.001));
+    expect(find.text('View Concentric'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

@@ -112,6 +112,55 @@ void main() {
     await _expectGolden(tester, 'goldens/pie_selected_legend.png');
   });
 
+  testWidgets('lifted Pie selection reads as foreground depth', (tester) async {
+    final base = ChartTheme.light;
+    await _pumpSurface(
+      tester,
+      size: const Size(600, 500),
+      theme: _goldenTheme(
+        base.copyWith(
+          pieChartTheme: const PieChartTheme(
+            cornerRadius: 10,
+            selectedElevation: PieElevationStyle(
+              color: Color(0x66111827),
+              blurRadius: 18,
+              spreadRadius: 2,
+              offset: Offset(0, 8),
+              opacity: 0.55,
+            ),
+            animationMode: PieAnimationMode.none,
+          ),
+        ),
+      ),
+      showLegend: true,
+      series:
+          _standardSeries(
+            labels: const PieDataLabelConfig(
+              position: PieDataLabelPosition.inside,
+              content: PieDataLabelContent.percentage,
+            ),
+          ).copyWith(
+            pieStyle: const PieChartStyle(
+              radiusFactor: 0.78,
+              sliceGap: 5,
+              borderColorMode: PieBorderColorMode.slice,
+              borderLightnessShift: -0.16,
+              gradient: PieGradientStyle(type: PieGradientType.radial),
+            ),
+            selectionStyle: const RadialSelectionStyle(
+              effect: RadialSelectionEffect.lift,
+              liftScale: 1.12,
+              liftOffset: 8,
+              backdropBlur: 1.5,
+            ),
+          ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('pie-legend-item-0')));
+    await tester.pumpAndSettle();
+    await _expectGolden(tester, 'goldens/pie_lifted_selection.png');
+  });
+
   testWidgets('advanced Pie styling and right-side legend', (tester) async {
     final base = ChartTheme.light;
     final theme = _goldenTheme(

@@ -16,6 +16,12 @@ void main() {
             innerRadiusFactor: 0.62,
             sweepAngleDegrees: 270,
           ),
+          selectionStyle: const RadialSelectionStyle(
+            effect: RadialSelectionEffect.lift,
+            liftScale: 1.12,
+            liftOffset: 8,
+            backdropBlur: 1.5,
+          ),
           centerContent: const DonutCenterContent(
             label: 'Total',
             valueMode: DonutCenterValueMode.selectedOrTotal,
@@ -35,6 +41,8 @@ void main() {
         expect(series.total, 100);
         expect(series.innerRadiusFactor, 0.62);
         expect(series.sweepAngleDegrees, 270);
+        expect(series.selectionStyle.effect, RadialSelectionEffect.lift);
+        expect(series.selectionStyle.liftScale, 1.12);
         expect(series.unit, 'vehicles');
         expect(series.centerContent.label, 'Total');
         expect(
@@ -122,6 +130,9 @@ void main() {
           valueMode: DonutCenterValueMode.custom,
           customValue: 'Ready',
         ),
+        selectionStyle: const RadialSelectionStyle(
+          effect: RadialSelectionEffect.lift,
+        ),
       );
 
       expect(copied, isA<DonutChartSeries>());
@@ -129,11 +140,39 @@ void main() {
       expect(copied.innerRadiusFactor, 0.7);
       expect(copied.sweepAngleDegrees, 180);
       expect(copied.centerContent.customValue, 'Ready');
+      expect(copied.selectionStyle.effect, RadialSelectionEffect.lift);
       expect(
         () => source.copyWith(style: SeriesStyle.pie),
         throwsArgumentError,
       );
       expect(() => source.copyWith(isXOrdered: false), throwsArgumentError);
+    });
+
+    test('validates shared radial selection bounds', () {
+      expect(
+        () => DonutChartSeries.fromMap(
+          id: 'invalid-selection-scale',
+          values: const {'A': 1},
+          selectionStyle: const RadialSelectionStyle(liftScale: 1.51),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => DonutChartSeries.fromMap(
+          id: 'invalid-selection-offset',
+          values: const {'A': 1},
+          selectionStyle: const RadialSelectionStyle(liftOffset: 40.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => DonutChartSeries.fromMap(
+          id: 'invalid-selection-blur',
+          values: const {'A': 1},
+          selectionStyle: const RadialSelectionStyle(backdropBlur: 20.1),
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('validates portable center labels and custom values', () {

@@ -45,8 +45,8 @@ class DonutCenterContent {
 
   /// Optional short label displayed above the resolved value.
   ///
-  /// When omitted, selected modes use the selected category. Total mode uses
-  /// the series name when available and otherwise falls back to `Total`.
+  /// When omitted, selected modes use the selected category. An unselected
+  /// total or custom value renders without a secondary label.
   final String? label;
 
   /// Source used for the primary center value.

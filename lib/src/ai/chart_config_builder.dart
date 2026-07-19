@@ -15,6 +15,7 @@ import '../models/interaction_config.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/radial_category_series.dart';
+import '../models/radial_selection_style.dart';
 import '../models/segment_style.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
@@ -378,6 +379,7 @@ class ChartConfigBuilder {
           sweepAngleDegrees:
               (chartStyle?['donut_sweep_angle'] as num?)?.toDouble() ?? 360,
         ),
+        selectionStyle: _parseRadialSelectionStyle(chartStyle),
         centerContent: _parseDonutCenterContent(chartStyle),
         dataLabels: _parsePieDataLabels(chartStyle),
         sliceRadiusConfig: _parsePieSliceRadiusConfig(
@@ -945,6 +947,7 @@ class ChartConfigBuilder {
         color: color,
         unit: unit,
         pieStyle: _parsePieChartStyle(chartStyle),
+        selectionStyle: _parseRadialSelectionStyle(chartStyle),
         dataLabels: _parsePieDataLabels(chartStyle),
         sliceRadiusConfig: _parsePieSliceRadiusConfig(
           points,
@@ -1184,6 +1187,31 @@ class ChartConfigBuilder {
     );
   }
 
+  static RadialSelectionStyle _parseRadialSelectionStyle(
+    Map<String, dynamic>? json,
+  ) {
+    const defaults = RadialSelectionStyle();
+    return RadialSelectionStyle(
+      effect: switch (json?['pie_selection_effect']) {
+        null => defaults.effect,
+        'explode' => RadialSelectionEffect.explode,
+        'lift' => RadialSelectionEffect.lift,
+        final value => throw FormatException(
+          'Unknown pie_selection_effect "$value".',
+        ),
+      },
+      liftScale:
+          (json?['pie_selection_lift_scale'] as num?)?.toDouble() ??
+          defaults.liftScale,
+      liftOffset:
+          (json?['pie_selection_lift_offset'] as num?)?.toDouble() ??
+          defaults.liftOffset,
+      backdropBlur:
+          (json?['pie_selection_backdrop_blur'] as num?)?.toDouble() ??
+          defaults.backdropBlur,
+    );
+  }
+
   static PieGradientStyle? _parsePieGradient(Map<String, dynamic>? json) {
     if (json == null) return null;
     final typeValue = json['pie_gradient_type'];
@@ -1260,15 +1288,30 @@ class ChartConfigBuilder {
 
   static PieDataLabelConfig _parsePieDataLabels(Map<String, dynamic>? json) {
     const defaults = PieDataLabelConfig();
+    final position = switch (json?['pie_label_position']) {
+      'inside' => PieDataLabelPosition.inside,
+      'outside' || null => PieDataLabelPosition.outside,
+      final value => throw FormatException(
+        'Unknown pie_label_position "$value".',
+      ),
+    };
+    final secondaryContent = switch (json?['pie_secondary_label_content']) {
+      null => null,
+      'category' => PieDataLabelContent.category,
+      'value' => PieDataLabelContent.value,
+      'percentage' => PieDataLabelContent.percentage,
+      'category_and_value' => PieDataLabelContent.categoryAndValue,
+      'category_and_percentage' => PieDataLabelContent.categoryAndPercentage,
+      'value_and_percentage' => PieDataLabelContent.valueAndPercentage,
+      'category_value_and_percentage' =>
+        PieDataLabelContent.categoryValueAndPercentage,
+      final value => throw FormatException(
+        'Unknown pie_secondary_label_content "$value".',
+      ),
+    };
     return PieDataLabelConfig(
       isVisible: json?['show_data_labels'] as bool? ?? defaults.isVisible,
-      position: switch (json?['pie_label_position']) {
-        'inside' => PieDataLabelPosition.inside,
-        'outside' || null => PieDataLabelPosition.outside,
-        final value => throw FormatException(
-          'Unknown pie_label_position "$value".',
-        ),
-      },
+      position: position,
       content: switch (json?['pie_label_content']) {
         'category' => PieDataLabelContent.category,
         'value' => PieDataLabelContent.value,
@@ -1283,12 +1326,27 @@ class ChartConfigBuilder {
           'Unknown pie_label_content "$value".',
         ),
       },
+      secondaryContent: secondaryContent,
+      secondaryPosition: switch (json?['pie_secondary_label_position']) {
+        'inside' => PieDataLabelPosition.inside,
+        'outside' => PieDataLabelPosition.outside,
+        null =>
+          position == PieDataLabelPosition.inside
+              ? PieDataLabelPosition.outside
+              : PieDataLabelPosition.inside,
+        final value => throw FormatException(
+          'Unknown pie_secondary_label_position "$value".',
+        ),
+      },
       minimumShare:
           (json?['pie_label_minimum_share'] as num?)?.toDouble() ??
           defaults.minimumShare,
       minimumSweepDegrees:
           (json?['pie_label_minimum_sweep'] as num?)?.toDouble() ??
           defaults.minimumSweepDegrees,
+      insideOffset:
+          (json?['pie_inside_label_offset'] as num?)?.toDouble() ??
+          defaults.insideOffset,
       outsideOffset:
           (json?['pie_label_offset'] as num?)?.toDouble() ??
           defaults.outsideOffset,

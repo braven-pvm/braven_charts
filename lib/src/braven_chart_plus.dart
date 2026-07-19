@@ -36,6 +36,7 @@ import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'layout/chart_layout_kind.dart';
+import 'layout/concentric_donut_layout.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
 import 'models/bar_chart_style.dart';
@@ -46,8 +47,10 @@ import 'models/chart_series.dart';
 import 'models/chart_state_config.dart';
 import 'models/chart_theme.dart';
 import 'models/chart_type.dart';
+import 'models/concentric_donut_config.dart';
 import 'models/data_range.dart';
 import 'models/donut_center_builder.dart';
+import 'models/donut_chart_config.dart';
 import 'models/donut_chart_series.dart';
 import 'models/enums.dart';
 import 'models/grid_config.dart';
@@ -82,6 +85,55 @@ import 'widgets/dialogs/trend_annotation_dialog.dart';
 import 'widgets/chart_state_view.dart';
 import 'widgets/pie_chart_legend.dart';
 import 'widgets/web_context_menu.dart';
+
+Curve _monotonicRadialRevealCurve(Curve requested) {
+  // A reveal is directional: already-visible geometry must never disappear.
+  // Preserve bounded monotonic theme curves, but replace overshooting or
+  // reversing curves (for example elasticOut) with a lively safe fallback.
+  const sampleCount = 64;
+  const epsilon = 1e-6;
+  var previous = requested.transform(0);
+  if (!previous.isFinite || previous.abs() > epsilon) {
+    return Curves.easeOutCubic;
+  }
+  for (var index = 1; index <= sampleCount; index++) {
+    final current = requested.transform(index / sampleCount);
+    if (!current.isFinite ||
+        current < -epsilon ||
+        current > 1 + epsilon ||
+        current + epsilon < previous) {
+      return Curves.easeOutCubic;
+    }
+    previous = current;
+  }
+  return (previous - 1).abs() <= epsilon ? requested : Curves.easeOutCubic;
+}
+
+Color _contrastSafeChartTextColor({
+  required Color? preferred,
+  required Color? chartFallback,
+  required Color background,
+  double minimumRatio = 4.5,
+}) {
+  bool isReadable(Color color) {
+    final foreground = Color.alphaBlend(color, background);
+    final lighter = math.max(
+      foreground.computeLuminance(),
+      background.computeLuminance(),
+    );
+    final darker = math.min(
+      foreground.computeLuminance(),
+      background.computeLuminance(),
+    );
+    return (lighter + 0.05) / (darker + 0.05) >= minimumRatio;
+  }
+
+  if (preferred != null && isReadable(preferred)) return preferred;
+  if (chartFallback != null && isReadable(chartFallback)) {
+    return chartFallback;
+  }
+  return background.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+}
 
 /// BravenChartPlus renders interactive, multi-series charts with annotations.
 ///
@@ -140,6 +192,7 @@ class BravenChartPlus extends StatefulWidget {
     this.showLegend = true,
     this.legendStyle,
     this.radialLegendItemBuilder,
+    this.concentricDonutConfig = const ConcentricDonutConfig(),
     this.donutCenterBuilder,
     this.onDonutCenterTap,
     this.showToolbar = false,
@@ -825,12 +878,21 @@ class BravenChartPlus extends StatefulWidget {
   /// Braven Charts keeps the legend layout, tap target, selection action, and
   /// assistive semantics around the returned widget. The builder receives the
   /// resolved slice color, value, share, source points, and selection state.
+  /// Concentric Donut items additionally expose ring index, position, count,
+  /// and the independent total used as their share denominator.
   /// It is ignored for Cartesian series.
   ///
   /// This is a runtime-only binding. Widget builders are not serialized into
   /// chart artifacts; portable documents retain legend visibility, style, and
   /// data, and the hydrating host must bind the builder again.
   final RadialLegendItemBuilder? radialLegendItemBuilder;
+
+  /// Plot-level composition used when [series] contains multiple Donut rings.
+  ///
+  /// A single [DonutChartSeries] retains its existing per-series geometry.
+  /// With two or more Donut series, this config allocates their shared center,
+  /// outer edge, gap, radial order, and relative band thickness.
+  final ConcentricDonutConfig concentricDonutConfig;
 
   /// Builds runtime-only content inside a Donut chart's shared center opening.
   ///
@@ -1025,7 +1087,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   double _textScaleFactor = 1;
   TextDirection _textDirection = TextDirection.ltr;
   bool _disableAnimations = false;
-  int? _radialKeyboardFocusIndex;
+  ChartPointRef? _radialKeyboardFocusRef;
   bool _radialFocusIndicatorVisible = false;
 
   // Element generator function for pan/zoom regeneration
@@ -1107,6 +1169,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   late final AnimationController _radialRevealAnimationController;
   late final AnimationController _radialDataAnimationController;
   late final AnimationController _radialSelectionAnimationController;
+  Curve _radialRevealCurve = Curves.easeOutCubic;
 
   // Internal annotation controller - created automatically when user doesn't provide one
   // This allows static annotations to be editable/draggable without explicit controller
@@ -1523,6 +1586,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         transitionKeyChanged ||
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations ||
+        widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
@@ -2300,6 +2364,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       subtitle: widget.subtitle,
       width: widget.width,
       height: widget.height,
+      concentricDonutConfig:
+          resolved.allSeries.whereType<DonutChartSeries>().length > 1
+          ? widget.concentricDonutConfig
+          : null,
       backgroundColor: widget.backgroundColor,
       showToolbar: widget.showToolbar,
       interactiveAnnotations: widget.interactiveAnnotations,
@@ -2347,18 +2415,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
-    if (_layoutKind == ChartLayoutKind.partitionRadial &&
-        _resolvedChartData.allSeries.single is RadialCategorySeries) {
-      final visibleIndices =
-          (_resolvedChartData.allSeries.single as RadialCategorySeries)
-              .visiblePointIndices;
-      if (_radialKeyboardFocusIndex != null &&
-          !visibleIndices.contains(_radialKeyboardFocusIndex)) {
-        _radialKeyboardFocusIndex = null;
-        _radialFocusIndicatorVisible = false;
+    if (_layoutKind == ChartLayoutKind.partitionRadial) {
+      final focusRef = _radialKeyboardFocusRef;
+      if (focusRef != null) {
+        final focusedSeries = _resolvedChartData.allSeries
+            .whereType<RadialCategorySeries>()
+            .where((series) => series.id == focusRef.seriesId)
+            .firstOrNull;
+        if (focusedSeries == null ||
+            !focusedSeries.visiblePointIndices.contains(focusRef.pointIndex)) {
+          _radialKeyboardFocusRef = null;
+          _radialFocusIndicatorVisible = false;
+        }
       }
     } else {
-      _radialKeyboardFocusIndex = null;
+      _radialKeyboardFocusRef = null;
       _radialFocusIndicatorVisible = false;
     }
     if (_layoutKind == ChartLayoutKind.partitionRadial &&
@@ -2598,38 +2669,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Generate series elements from effective series (with streaming data)
       final List<ChartElement> elements;
       if (_layoutKind == ChartLayoutKind.partitionRadial) {
-        if (_effectiveRenderSeries.isEmpty) {
-          elements = <ChartElement>[];
-        } else {
-          final radialSeries =
-              _effectiveRenderSeries.single as RadialCategorySeries;
-          elements = <ChartElement>[
-            PieSeriesElement(
-              series: radialSeries,
-              size: Size(transform.plotWidth, transform.plotHeight),
-              theme: widget.theme ?? ChartTheme.light,
-              textScaleFactor: _textScaleFactor,
-              focusedPointIndices: {
-                for (final ref in _focusedPointRefs)
-                  if (ref.seriesId == radialSeries.id) ref.pointIndex,
-                if (_radialFocusIndicatorVisible) ?_radialKeyboardFocusIndex,
-              },
-              selectedPointIndices: {
-                for (final ref in _selectedPointRefs)
-                  if (ref.seriesId == radialSeries.id) ref.pointIndex,
-              },
-              coordinator: _coordinator,
-              animationProgress: _radialRevealProgress,
-              isEntranceAnimationComplete:
-                  _radialRevealAnimationController.value >= 1,
-              selectionProgress: _radialSelectionProgress,
-              paintCenterContent: widget.donutCenterBuilder == null,
-              includeCenterSemantics:
-                  widget.donutCenterBuilder == null &&
-                  widget.onDonutCenterTap == null,
-            ),
-          ];
-        }
+        elements = _buildRadialElements(transform);
       } else {
         elements = DataConverter.seriesToElements(
           series: _effectiveRenderSeries,
@@ -2752,6 +2792,200 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     // Increment version to signal that regeneration is needed
     _elementGeneratorVersion++;
+  }
+
+  List<ChartElement> _buildRadialElements(ChartTransform transform) {
+    final radialSeries = _effectiveRenderSeries
+        .whereType<RadialCategorySeries>()
+        .toList(growable: false);
+    if (radialSeries.isEmpty) return <ChartElement>[];
+
+    final size = Size(transform.plotWidth, transform.plotHeight);
+    final theme = widget.theme ?? ChartTheme.light;
+    if (radialSeries.length == 1) {
+      final series = radialSeries.single;
+      return <ChartElement>[
+        PieSeriesElement(
+          series: series,
+          size: size,
+          theme: theme,
+          textScaleFactor: _textScaleFactor,
+          focusedPointIndices: {
+            for (final ref in _focusedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+            if (_radialFocusIndicatorVisible &&
+                _radialKeyboardFocusRef?.seriesId == series.id)
+              _radialKeyboardFocusRef!.pointIndex,
+          },
+          selectedPointIndices: {
+            for (final ref in _selectedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+          },
+          coordinator: _coordinator,
+          animationProgress: _radialRevealProgress,
+          isEntranceAnimationComplete:
+              _radialRevealAnimationController.value >= 1,
+          selectionProgress: _radialSelectionProgress,
+          paintCenterContent: widget.donutCenterBuilder == null,
+          includeCenterSemantics:
+              widget.donutCenterBuilder == null &&
+              widget.onDonutCenterTap == null,
+        ),
+      ];
+    }
+
+    final donutSeries = radialSeries.cast<DonutChartSeries>();
+    var sharedPadding = EdgeInsets.zero;
+    for (final series in donutSeries) {
+      final padding = PieSeriesElement.geometryPaddingFor(
+        series,
+        size,
+        theme,
+        _textScaleFactor,
+      );
+      sharedPadding = EdgeInsets.fromLTRB(
+        math.max(sharedPadding.left, padding.left),
+        math.max(sharedPadding.top, padding.top),
+        math.max(sharedPadding.right, padding.right),
+        math.max(sharedPadding.bottom, padding.bottom),
+      );
+    }
+    final contentRect = Rect.fromLTRB(
+      sharedPadding.left,
+      sharedPadding.top,
+      math.max(sharedPadding.left, size.width - sharedPadding.right),
+      math.max(sharedPadding.top, size.height - sharedPadding.bottom),
+    );
+    final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
+    if (!availableRadius.isFinite || availableRadius <= 0) {
+      return const <ChartElement>[];
+    }
+    final layout = ConcentricDonutLayoutCalculator.calculate(
+      series: donutSeries,
+      config: widget.concentricDonutConfig,
+      availableRadius: availableRadius,
+      fitRingGap: true,
+    );
+
+    String ringPositionLabel(int sourceIndex) {
+      final physicalIndex = switch (widget.concentricDonutConfig.order) {
+        ConcentricRingOrder.outerToInner => sourceIndex,
+        ConcentricRingOrder.innerToOuter =>
+          donutSeries.length - sourceIndex - 1,
+      };
+      if (physicalIndex == 0) return 'Outer ring';
+      if (physicalIndex == donutSeries.length - 1) return 'Inner ring';
+      return 'Ring ${physicalIndex + 1} of ${donutSeries.length}';
+    }
+
+    PieSeriesElement buildRing(
+      int index, {
+      bool ownsCenter = false,
+      double compositionBackdropBlur = 0,
+      ChartDataPoint? centerSelectedPoint,
+      int? centerSelectedPointIndex,
+      double? centerTotal,
+      String? centerUnit,
+    }) {
+      final series = donutSeries[index];
+      return PieSeriesElement(
+        series: series,
+        seriesIndex: index,
+        size: size,
+        theme: theme,
+        textScaleFactor: _textScaleFactor,
+        focusedPointIndices: {
+          for (final ref in _focusedPointRefs)
+            if (ref.seriesId == series.id) ref.pointIndex,
+          if (_radialFocusIndicatorVisible &&
+              _radialKeyboardFocusRef?.seriesId == series.id)
+            _radialKeyboardFocusRef!.pointIndex,
+        },
+        selectedPointIndices: {
+          for (final ref in _selectedPointRefs)
+            if (ref.seriesId == series.id) ref.pointIndex,
+        },
+        coordinator: _coordinator,
+        animationProgress: _radialRevealProgress,
+        isEntranceAnimationComplete:
+            _radialRevealAnimationController.value >= 1,
+        selectionProgress: _radialSelectionProgress,
+        geometryCenter: contentRect.center,
+        geometryInnerRadius: layout.rings[index].innerRadius,
+        geometryOuterRadius: layout.rings[index].outerRadius,
+        insideLabelRadiusFactor: 0.5,
+        groupLabel: ringPositionLabel(index),
+        groupName: series.name ?? series.id,
+        groupOrdinal: index + 1,
+        groupCount: donutSeries.length,
+        centerContentOverride: ownsCenter
+            ? widget.concentricDonutConfig.centerContent
+            : null,
+        centerTotalOverride: ownsCenter ? centerTotal : null,
+        centerUnitOverride: ownsCenter ? centerUnit : null,
+        centerSelectionUsesOverride: ownsCenter,
+        centerSelectedPointOverride: ownsCenter ? centerSelectedPoint : null,
+        centerSelectedPointIndexOverride: ownsCenter
+            ? centerSelectedPointIndex
+            : null,
+        paintCenterContent: ownsCenter && widget.donutCenterBuilder == null,
+        includeCenterSemantics:
+            ownsCenter &&
+            widget.donutCenterBuilder == null &&
+            widget.onDonutCenterTap == null,
+        coordinateOutsideLabels: true,
+        compositionBackdropBlur: compositionBackdropBlur,
+      );
+    }
+
+    final probeElements = <PieSeriesElement>[
+      for (var index = 0; index < donutSeries.length; index++) buildRing(index),
+    ];
+    PieSeriesElement? selectedElement;
+    for (final element in probeElements) {
+      if (element.selectedCenterSlice != null) {
+        selectedElement = element;
+        break;
+      }
+    }
+    final selectedSlice = selectedElement?.selectedCenterSlice;
+    final compositionBackdropBlur = probeElements
+        .where((element) => element.usesLiftSelection)
+        .map(
+          (element) =>
+              element.series.selectionStyle.backdropBlur *
+              _radialSelectionProgress,
+        )
+        .fold<double>(0, math.max);
+    var centerOwnerIndex = 0;
+    for (var index = 1; index < layout.rings.length; index++) {
+      if (layout.rings[index].innerRadius <
+          layout.rings[centerOwnerIndex].innerRadius) {
+        centerOwnerIndex = index;
+      }
+    }
+    final centerTotal =
+        (selectedElement?.series as DonutChartSeries?)?.total ??
+        donutSeries.first.total;
+
+    return <ChartElement>[
+      for (var index = 0; index < donutSeries.length; index++)
+        index == centerOwnerIndex
+            ? buildRing(
+                index,
+                ownsCenter: true,
+                compositionBackdropBlur: compositionBackdropBlur,
+                centerSelectedPoint: selectedSlice?.point,
+                centerSelectedPointIndex: selectedSlice?.pointIndex,
+                centerTotal: centerTotal,
+                centerUnit:
+                    selectedElement?.series.unit ?? donutSeries.first.unit,
+              )
+            : buildRing(
+                index,
+                compositionBackdropBlur: compositionBackdropBlur,
+              ),
+    ];
   }
 
   void _handleIncomingDataAnimationTick() {
@@ -3324,11 +3558,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _selectedPointRefs
       ..clear()
       ..addAll(selected);
-    final keyboardIndex = _radialKeyboardFocusIndex;
-    if (keyboardIndex != null &&
-        keyboardIndex >= 0 &&
-        keyboardIndex < fromKeys.length) {
-      _radialKeyboardFocusIndex = nextIndexByKey[fromKeys[keyboardIndex]];
+    final keyboardRef = _radialKeyboardFocusRef;
+    if (keyboardRef?.seriesId == from.id &&
+        keyboardRef!.pointIndex >= 0 &&
+        keyboardRef.pointIndex < fromKeys.length) {
+      final nextIndex = nextIndexByKey[fromKeys[keyboardRef.pointIndex]];
+      _radialKeyboardFocusRef = nextIndex == null
+          ? null
+          : ChartPointRef(seriesId: to.id, pointIndex: nextIndex);
     }
     _syncControllerPointState();
   }
@@ -3373,6 +3610,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       return;
     }
     final animationTheme = (widget.theme ?? ChartTheme.light).animationTheme;
+    _radialRevealCurve = _monotonicRadialRevealCurve(
+      animationTheme.dataUpdateCurve,
+    );
     final duration = animationTheme.dataUpdateDuration;
     if (!_canAnimateRadial(series, duration)) {
       _radialRevealAnimationController
@@ -3409,8 +3649,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   double get _radialRevealProgress {
-    final theme = (widget.theme ?? ChartTheme.light).animationTheme;
-    return theme.dataUpdateCurve
+    return _radialRevealCurve
         .transform(_radialRevealAnimationController.value)
         .clamp(0.0, 1.0);
   }
@@ -4402,6 +4641,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }) {
     _focusRadialPoint(
       hit.pointIndex,
+      seriesId: hit.seriesId,
       announceHover: false,
       showFocusIndicator: showFocusIndicator,
     );
@@ -4446,9 +4686,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _activateRadialPointIndex(
     int pointIndex, {
+    String? seriesId,
     bool showFocusIndicator = false,
   }) {
-    final series = _effectiveRadialSeries;
+    final series = seriesId == null
+        ? _effectiveRadialSeries
+        : _effectiveRadialSeriesForId(seriesId);
     if (series == null) return;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -4463,7 +4706,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
     final visibleSlice = series.visibleSliceForSourcePointIndex(pointIndex);
     if (visibleSlice == null) return;
-    _radialKeyboardFocusIndex = visibleSlice.pointIndex;
+    _radialKeyboardFocusRef = ChartPointRef(
+      seriesId: series.id,
+      pointIndex: visibleSlice.pointIndex,
+    );
     _radialFocusIndicatorVisible = showFocusIndicator;
     _commitRadialPointActivation(
       point: visibleSlice.point,
@@ -4500,15 +4746,21 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   void _focusRadialPoint(
     int pointIndex, {
+    String? seriesId,
     bool announceHover = true,
     bool showFocusIndicator = true,
   }) {
-    final series = _effectiveRadialSeries;
+    final series = seriesId == null
+        ? _effectiveRadialSeries
+        : _effectiveRadialSeriesForId(seriesId);
     final visibleSlice = series?.visibleSliceForSourcePointIndex(pointIndex);
     if (series == null || visibleSlice == null) {
       return;
     }
-    _radialKeyboardFocusIndex = visibleSlice.pointIndex;
+    _radialKeyboardFocusRef = ChartPointRef(
+      seriesId: series.id,
+      pointIndex: visibleSlice.pointIndex,
+    );
     _radialFocusIndicatorVisible = showFocusIndicator;
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
@@ -4537,9 +4789,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (event is! KeyDownEvent) return false;
     final interaction = _effectiveRadialInteractionConfig();
     if (!interaction.enabled || !interaction.keyboard.enabled) return false;
-    final series = _effectiveRadialSeries;
-    if (series == null || series.visiblePointIndices.isEmpty) return false;
-    final visible = series.visiblePointIndices;
+    final radialSeries = _effectiveRenderSeries
+        .whereType<RadialCategorySeries>()
+        .toList(growable: false);
+    final visible = <ChartPointRef>[
+      for (final series in radialSeries)
+        for (final pointIndex in series.visiblePointIndices)
+          ChartPointRef(seriesId: series.id, pointIndex: pointIndex),
+    ];
+    if (visible.isEmpty) return false;
+
+    RadialCategorySeries? seriesForRef(ChartPointRef ref) {
+      for (final series in radialSeries) {
+        if (series.id == ref.seriesId) return series;
+      }
+      return null;
+    }
 
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.arrowDown ||
@@ -4548,12 +4813,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final forward =
           event.logicalKey == LogicalKeyboardKey.arrowRight ||
           event.logicalKey == LogicalKeyboardKey.arrowDown;
-      final current = visible.indexOf(_radialKeyboardFocusIndex ?? -1);
+      final current = visible.indexOf(
+        _radialKeyboardFocusRef ??
+            const ChartPointRef(seriesId: '', pointIndex: -1),
+      );
       final next = current < 0
           ? (forward ? 0 : visible.length - 1)
           : (current + (forward ? 1 : -1)) % visible.length;
-      _focusRadialPoint(visible[next]);
-      final point = series.points[visible[next]];
+      final nextRef = visible[next];
+      _focusRadialPoint(nextRef.pointIndex, seriesId: nextRef.seriesId);
+      final nextSeries = seriesForRef(nextRef)!;
+      final point = nextSeries.points[nextRef.pointIndex];
       interaction.onKeyboardAction?.call(
         forward ? 'focus_next_slice' : 'focus_previous_slice',
         point,
@@ -4563,17 +4833,22 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     if (event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.space) {
-      final pointIndex = _radialKeyboardFocusIndex ?? visible.first;
-      _activateRadialPointIndex(pointIndex, showFocusIndicator: true);
+      final ref = _radialKeyboardFocusRef ?? visible.first;
+      final series = seriesForRef(ref)!;
+      _activateRadialPointIndex(
+        ref.pointIndex,
+        seriesId: ref.seriesId,
+        showFocusIndicator: true,
+      );
       interaction.onKeyboardAction?.call(
         'select_slice',
-        series.points[pointIndex],
+        series.points[ref.pointIndex],
       );
       return true;
     }
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
-      _radialKeyboardFocusIndex = null;
+      _radialKeyboardFocusRef = null;
       _radialFocusIndicatorVisible = false;
       _coordinator.setHoveredMarker(null);
       _clearRadialPointSelection();
@@ -4587,6 +4862,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   RadialCategorySeries? get _effectiveRadialSeries {
     for (final series in _effectiveRenderSeries) {
       if (series is RadialCategorySeries) return series;
+    }
+    return null;
+  }
+
+  RadialCategorySeries? _effectiveRadialSeriesForId(String seriesId) {
+    for (final series in _effectiveRenderSeries) {
+      if (series is RadialCategorySeries && series.id == seriesId) {
+        return series;
+      }
     }
     return null;
   }
@@ -4651,6 +4935,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _restoreViewState(ChartViewState viewState) {
+    final restoredPointRefs = _expandRadialPointRefs(
+      _validPointRefs(viewState.selectedPointRefs).toList(growable: false),
+    );
     _captureStateRevision++;
     setState(() {
       _hiddenSeriesIds
@@ -4659,7 +4946,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _selectedSeriesId = viewState.selectedSeriesId;
       _selectedPointRefs
         ..clear()
-        ..addAll(_validPointRefs(viewState.selectedPointRefs));
+        ..addAll(restoredPointRefs);
       _focusedPointRefs.clear();
       if (viewState.selectedAnnotationId != null &&
           _effectiveAnnotationController?.containsId(
@@ -4771,11 +5058,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   List<ChartPointRef> _expandRadialPointRefs(List<ChartPointRef> refs) {
-    final series = _effectiveRadialSeries;
-    if (series == null) return refs;
     final expanded = <ChartPointRef>{};
     for (final ref in refs) {
-      if (ref.seriesId != series.id) {
+      final series = _effectiveRadialSeriesForId(ref.seriesId);
+      if (series == null) {
         expanded.add(ref);
         continue;
       }
@@ -5678,12 +5964,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
     ChartPointRef? selectedTooltipPoint;
-    final radialSeries = isRadial ? _effectiveRadialSeries : null;
-    if (radialSeries != null) {
+    final donutCenterSeries = isRadial
+        ? _effectiveRenderSeries.whereType<DonutChartSeries>().toList(
+            growable: false,
+          )
+        : const <DonutChartSeries>[];
+    if (isRadial) {
       for (final pointRef in _selectedPointRefs) {
-        if (pointRef.seriesId == radialSeries.id &&
-            radialSeries.visibleSliceForSourcePointIndex(pointRef.pointIndex) !=
-                null) {
+        final selectedSeries = _effectiveRadialSeriesForId(pointRef.seriesId);
+        if (selectedSeries?.visibleSliceForSourcePointIndex(
+              pointRef.pointIndex,
+            ) !=
+            null) {
           selectedTooltipPoint = pointRef;
           break;
         }
@@ -5795,8 +6087,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           position: _widgetPositionForDataHit(hit),
                           showFocusIndicator: true,
                         ),
-                        onDataHitFocus: (hit) =>
-                            _focusRadialPoint(hit.pointIndex),
+                        onDataHitFocus: (hit) => _focusRadialPoint(
+                          hit.pointIndex,
+                          seriesId: hit.seriesId,
+                        ),
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
                         onViewportChanged:
@@ -5822,19 +6116,24 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                       ),
                     ),
                   ),
-                  if (radialSeries is DonutChartSeries &&
-                      radialSeries.centerContent.isVisible &&
+                  if (donutCenterSeries.isNotEmpty &&
+                      (donutCenterSeries.length == 1
+                          ? donutCenterSeries.single.centerContent.isVisible
+                          : widget
+                                .concentricDonutConfig
+                                .centerContent
+                                .isVisible) &&
                       (widget.donutCenterBuilder != null ||
                           widget.onDonutCenterTap != null))
                     Positioned.fill(
                       child: _DonutCenterOverlay(
-                        series: radialSeries,
+                        series: donutCenterSeries,
+                        concentricConfig: donutCenterSeries.length > 1
+                            ? widget.concentricDonutConfig
+                            : null,
                         chartTheme: widget.theme ?? ChartTheme.light,
                         textScaleFactor: _textScaleFactor,
-                        selectedPointIndices: {
-                          for (final ref in _selectedPointRefs)
-                            if (ref.seriesId == radialSeries.id) ref.pointIndex,
-                        },
+                        selectedPointRefs: _selectedPointRefs,
                         animationProgress: _radialRevealProgress,
                         isEntranceAnimationComplete:
                             _radialRevealAnimationController.value >= 1,
@@ -5924,6 +6223,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     // Add title, subtitle, and legend
     if (widget.title != null || widget.subtitle != null || widget.showLegend) {
       final children = <Widget>[];
+      final chartTheme = widget.theme ?? ChartTheme.light;
+      final materialTextTheme = Theme.of(context).textTheme;
 
       if (widget.title != null) {
         children.add(
@@ -5931,7 +6232,15 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             padding: const EdgeInsets.all(8.0),
             child: Text(
               widget.title!,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: materialTextTheme.titleLarge?.copyWith(
+                color: _contrastSafeChartTextColor(
+                  preferred: materialTextTheme.titleLarge?.color,
+                  chartFallback:
+                      chartTheme.axisStyle.titleStyle.color ??
+                      chartTheme.axisStyle.labelStyle.color,
+                  background: chartTheme.backgroundColor,
+                ),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -5944,27 +6253,51 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               widget.subtitle!,
-              style: Theme.of(context).textTheme.titleSmall,
+              style: materialTextTheme.titleSmall?.copyWith(
+                color: _contrastSafeChartTextColor(
+                  preferred: materialTextTheme.titleSmall?.color,
+                  chartFallback: chartTheme.axisStyle.labelStyle.color,
+                  background: chartTheme.backgroundColor,
+                ),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
         );
       }
 
-      final radialSeries = isRadial ? _effectiveRadialSeries : null;
-      if (widget.showLegend && radialSeries != null) {
-        final theme = widget.theme ?? ChartTheme.light;
-        final legend = PieChartLegend(
-          series: radialSeries,
-          chartTheme: theme,
-          selectedPointIndices: {
-            for (final ref in _selectedPointRefs)
-              if (ref.seriesId == radialSeries.id) ref.pointIndex,
-          },
-          onSliceTap: _activateRadialPointIndex,
-          itemBuilder: widget.radialLegendItemBuilder,
-          disableAnimations: _disableAnimations,
-        );
+      final radialSeries = isRadial
+          ? _effectiveRenderSeries.whereType<RadialCategorySeries>().toList(
+              growable: false,
+            )
+          : const <RadialCategorySeries>[];
+      if (widget.showLegend && radialSeries.isNotEmpty) {
+        final theme = chartTheme;
+        final legend = radialSeries.length == 1
+            ? PieChartLegend(
+                series: radialSeries.single,
+                chartTheme: theme,
+                selectedPointIndices: {
+                  for (final ref in _selectedPointRefs)
+                    if (ref.seriesId == radialSeries.single.id) ref.pointIndex,
+                },
+                onSliceTap: _activateRadialPointIndex,
+                itemBuilder: widget.radialLegendItemBuilder,
+                disableAnimations: _disableAnimations,
+              )
+            : ConcentricDonutLegend(
+                key: const ValueKey('concentric-donut-legend'),
+                series: radialSeries.cast<DonutChartSeries>(),
+                config: widget.concentricDonutConfig,
+                chartTheme: theme,
+                selectedPointRefs: _selectedPointRefs,
+                onSliceTap: (ref) => _activateRadialPointIndex(
+                  ref.pointIndex,
+                  seriesId: ref.seriesId,
+                ),
+                itemBuilder: widget.radialLegendItemBuilder,
+                disableAnimations: _disableAnimations,
+              );
         children.add(
           Expanded(
             child: _buildPieLegendLayout(
@@ -6264,9 +6597,10 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
 class _DonutCenterOverlay extends StatelessWidget {
   const _DonutCenterOverlay({
     required this.series,
+    required this.concentricConfig,
     required this.chartTheme,
     required this.textScaleFactor,
-    required this.selectedPointIndices,
+    required this.selectedPointRefs,
     required this.animationProgress,
     required this.isEntranceAnimationComplete,
     required this.selectionProgress,
@@ -6274,10 +6608,11 @@ class _DonutCenterOverlay extends StatelessWidget {
     required this.onTap,
   });
 
-  final DonutChartSeries series;
+  final List<DonutChartSeries> series;
+  final ConcentricDonutConfig? concentricConfig;
   final ChartTheme chartTheme;
   final double textScaleFactor;
-  final Set<int> selectedPointIndices;
+  final Set<ChartPointRef> selectedPointRefs;
   final double animationProgress;
   final bool isEntranceAnimationComplete;
   final double selectionProgress;
@@ -6301,42 +6636,181 @@ class _DonutCenterOverlay extends StatelessWidget {
         );
         if (plotSize.isEmpty) return const SizedBox.shrink();
 
-        final element = PieSeriesElement(
-          series: series,
-          size: plotSize,
-          theme: chartTheme,
-          textScaleFactor: textScaleFactor,
-          selectedPointIndices: selectedPointIndices,
-          animationProgress: animationProgress,
-          isEntranceAnimationComplete: isEntranceAnimationComplete,
-          selectionProgress: selectionProgress,
-          paintCenterContent: false,
-          includeCenterSemantics: false,
-        );
-        final presentation = element.centerPresentation;
-        final diameter = element.geometry.innerRadius * 2;
+        late final PieSeriesElement centerElement;
+        PieSeriesElement? selectedElement;
+        late final DonutCenterContent centerConfig;
+        late final double centerTotal;
+        late final String? centerUnit;
+
+        if (series.length == 1) {
+          final ring = series.single;
+          centerConfig = ring.centerContent;
+          centerTotal = ring.total;
+          centerUnit = ring.unit;
+          centerElement = PieSeriesElement(
+            series: ring,
+            size: plotSize,
+            theme: chartTheme,
+            textScaleFactor: textScaleFactor,
+            selectedPointIndices: {
+              for (final ref in selectedPointRefs)
+                if (ref.seriesId == ring.id) ref.pointIndex,
+            },
+            animationProgress: animationProgress,
+            isEntranceAnimationComplete: isEntranceAnimationComplete,
+            selectionProgress: selectionProgress,
+            paintCenterContent: false,
+            includeCenterSemantics: false,
+          );
+          if (centerElement.selectedCenterSlice != null) {
+            selectedElement = centerElement;
+          }
+        } else {
+          final config = concentricConfig!;
+          centerConfig = config.centerContent;
+          var sharedPadding = EdgeInsets.zero;
+          for (final ring in series) {
+            final padding = PieSeriesElement.geometryPaddingFor(
+              ring,
+              plotSize,
+              chartTheme,
+              textScaleFactor,
+            );
+            sharedPadding = EdgeInsets.fromLTRB(
+              math.max(sharedPadding.left, padding.left),
+              math.max(sharedPadding.top, padding.top),
+              math.max(sharedPadding.right, padding.right),
+              math.max(sharedPadding.bottom, padding.bottom),
+            );
+          }
+          final contentRect = Rect.fromLTRB(
+            sharedPadding.left,
+            sharedPadding.top,
+            math.max(sharedPadding.left, plotSize.width - sharedPadding.right),
+            math.max(sharedPadding.top, plotSize.height - sharedPadding.bottom),
+          );
+          final availableRadius =
+              math.min(contentRect.width, contentRect.height) / 2;
+          if (!availableRadius.isFinite || availableRadius <= 0) {
+            return const SizedBox.shrink();
+          }
+          final layout = ConcentricDonutLayoutCalculator.calculate(
+            series: series,
+            config: config,
+            availableRadius: availableRadius,
+            fitRingGap: true,
+          );
+
+          PieSeriesElement buildRing(int index) {
+            final ring = series[index];
+            return PieSeriesElement(
+              series: ring,
+              seriesIndex: index,
+              size: plotSize,
+              theme: chartTheme,
+              textScaleFactor: textScaleFactor,
+              selectedPointIndices: {
+                for (final ref in selectedPointRefs)
+                  if (ref.seriesId == ring.id) ref.pointIndex,
+              },
+              animationProgress: animationProgress,
+              isEntranceAnimationComplete: isEntranceAnimationComplete,
+              selectionProgress: selectionProgress,
+              geometryCenter: contentRect.center,
+              geometryInnerRadius: layout.rings[index].innerRadius,
+              geometryOuterRadius: layout.rings[index].outerRadius,
+              insideLabelRadiusFactor: 0.5,
+              paintCenterContent: false,
+              includeCenterSemantics: false,
+            );
+          }
+
+          final elements = <PieSeriesElement>[
+            for (var index = 0; index < series.length; index++)
+              buildRing(index),
+          ];
+          for (final element in elements) {
+            if (element.selectedCenterSlice != null) {
+              selectedElement = element;
+              break;
+            }
+          }
+          var ownerIndex = 0;
+          for (var index = 1; index < layout.rings.length; index++) {
+            if (layout.rings[index].innerRadius <
+                layout.rings[ownerIndex].innerRadius) {
+              ownerIndex = index;
+            }
+          }
+          final selectedSlice = selectedElement?.selectedCenterSlice;
+          centerUnit = selectedElement?.series.unit ?? series.first.unit;
+          centerTotal =
+              (selectedElement?.series as DonutChartSeries?)?.total ??
+              series.first.total;
+          final owner = series[ownerIndex];
+          centerElement = PieSeriesElement(
+            series: owner,
+            seriesIndex: ownerIndex,
+            size: plotSize,
+            theme: chartTheme,
+            textScaleFactor: textScaleFactor,
+            animationProgress: animationProgress,
+            isEntranceAnimationComplete: isEntranceAnimationComplete,
+            selectionProgress: selectionProgress,
+            geometryCenter: contentRect.center,
+            geometryInnerRadius: layout.rings[ownerIndex].innerRadius,
+            geometryOuterRadius: layout.rings[ownerIndex].outerRadius,
+            insideLabelRadiusFactor: 0.5,
+            centerContentOverride: centerConfig,
+            centerTotalOverride: centerTotal,
+            centerUnitOverride: centerUnit,
+            centerSelectionUsesOverride: true,
+            centerSelectedPointOverride: selectedSlice?.point,
+            centerSelectedPointIndexOverride: selectedSlice?.pointIndex,
+            paintCenterContent: false,
+            includeCenterSemantics: false,
+          );
+        }
+
+        final presentation = centerElement.centerPresentation;
+        final diameter = centerElement.geometry.innerRadius * 2;
         if (presentation == null || diameter < 16) {
           return const SizedBox.shrink();
         }
 
-        final selectedSlice = element.selectedCenterSlice;
+        final selectedSlice = selectedElement?.selectedCenterSlice;
+        final selectedSeries = selectedElement?.series as DonutChartSeries?;
+        final selectedRingIndex = selectedSeries == null
+            ? null
+            : series.indexWhere((ring) => ring.id == selectedSeries.id);
         final selectedIndices =
             selectedSlice?.sourcePointIndices ?? const <int>[];
         final selectedSources = <ChartDataPoint>[
-          for (final index in selectedIndices) series.points[index],
+          for (final index in selectedIndices) selectedSeries!.points[index],
         ];
+        ChartPointRef? selectedRef;
+        if (selectedSeries != null) {
+          for (final ref in selectedPointRefs) {
+            if (ref.seriesId == selectedSeries.id &&
+                selectedIndices.contains(ref.pointIndex)) {
+              selectedRef = ref;
+              break;
+            }
+          }
+        }
+        final primarySeries = selectedSeries ?? series.first;
         final data = DonutCenterData(
-          seriesId: series.id,
-          seriesName: series.name,
-          unit: series.unit,
-          total: series.total,
+          seriesId: primarySeries.id,
+          seriesName: primarySeries.name,
+          unit: centerUnit,
+          total: centerTotal,
           label: presentation.label,
           valueLabel: presentation.value,
           semanticLabel: presentation.semanticLabel,
           availableDiameter: diameter,
           defaultLabelStyle: _centerTextStyle(
             source:
-                series.centerContent.labelStyle?.textStyle ??
+                centerConfig.labelStyle?.textStyle ??
                 chartTheme.pieChartTheme.centerLabelStyle?.textStyle,
             chartTheme: chartTheme,
             defaultFontSize: 12,
@@ -6344,7 +6818,7 @@ class _DonutCenterOverlay extends StatelessWidget {
           ),
           defaultValueStyle: _centerTextStyle(
             source:
-                series.centerContent.valueStyle?.textStyle ??
+                centerConfig.valueStyle?.textStyle ??
                 chartTheme.pieChartTheme.centerValueStyle?.textStyle,
             chartTheme: chartTheme,
             defaultFontSize: 22,
@@ -6354,18 +6828,34 @@ class _DonutCenterOverlay extends StatelessWidget {
           selectedPoint: selectedSlice?.point,
           selectedCategory: selectedSlice?.point.label?.trim(),
           selectedValue: selectedSlice?.point.y,
-          selectedShare: selectedSlice == null || series.total <= 0
+          selectedShare: selectedSlice == null || selectedSeries!.total <= 0
               ? null
-              : selectedSlice.point.y / series.total,
+              : selectedSlice.point.y / selectedSeries.total,
+          selectedSeriesId: selectedSeries?.id,
+          selectedRingIndex: selectedRingIndex,
+          selectedPointIndex:
+              selectedRef?.pointIndex ?? selectedSlice?.pointIndex,
+          rings: [
+            for (final (index, ring) in series.indexed)
+              DonutCenterRingSummary(
+                seriesId: ring.id,
+                seriesName: ring.name,
+                unit: ring.unit,
+                total: ring.total,
+                ringIndex: index,
+                ringCount: series.length,
+                positionLabel: _ringPositionLabel(index, series.length),
+              ),
+          ],
           selectedSourcePointIndices: selectedIndices,
           selectedSourcePoints: selectedSources,
         );
 
         final plotOffset = Offset(insets.left, insets.top);
-        final center = element.geometry.center + plotOffset;
+        final center = centerElement.geometry.center + plotOffset;
         final centerRect = Rect.fromCircle(
           center: center,
-          radius: element.geometry.innerRadius,
+          radius: centerElement.geometry.innerRadius,
         );
         final customContent = builder?.call(context, data);
         final centerContent = Padding(
@@ -6386,7 +6876,7 @@ class _DonutCenterOverlay extends StatelessWidget {
                 ),
               );
         final animationMode =
-            series.radialStyle.animationMode ??
+            primarySeries.radialStyle.animationMode ??
             chartTheme.pieChartTheme.animationMode;
         final opacity = animationMode == PieAnimationMode.fade
             ? animationProgress.clamp(0.0, 1.0)
@@ -6414,6 +6904,17 @@ class _DonutCenterOverlay extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _ringPositionLabel(int sourceIndex, int count) {
+    if (count == 1) return 'Only ring';
+    final physicalIndex = switch (concentricConfig!.order) {
+      ConcentricRingOrder.outerToInner => sourceIndex,
+      ConcentricRingOrder.innerToOuter => count - sourceIndex - 1,
+    };
+    if (physicalIndex == 0) return 'Outer ring';
+    if (physicalIndex == count - 1) return 'Inner ring';
+    return 'Ring ${physicalIndex + 1} of $count';
   }
 
   TextStyle _centerTextStyle({

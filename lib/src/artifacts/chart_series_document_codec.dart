@@ -12,6 +12,7 @@ import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
 import '../models/radial_category_series.dart';
+import '../models/radial_selection_style.dart';
 import '../models/segment_style.dart';
 import '../models/series_inline_label_config.dart';
 import '../models/y_axis_config.dart';
@@ -23,6 +24,7 @@ import 'chart_data_payload.dart';
 import 'chart_data_storage.dart';
 import 'chart_model_codec_context.dart';
 import 'chart_style_document_codec.dart';
+import 'donut_center_content_document_codec.dart';
 import 'json_value.dart';
 import 'radial_formatter_document_descriptors.dart';
 
@@ -174,6 +176,12 @@ abstract final class ChartSeriesDocumentCodec {
                 series.radialStyle.dataTransitionMode ==
                     RadialDataTransitionMode.automatic)
               'series.radial.data-transitions.v1',
+            if (series is RadialCategorySeries &&
+                series.selectionStyle.effect == RadialSelectionEffect.lift)
+              'series.radial.selection-lift.v1',
+            if (series is RadialCategorySeries &&
+                series.dataLabels.secondaryContent != null)
+              'series.radial.dual-labels.v1',
             if ((series is LineChartSeries || series is AreaChartSeries) &&
                 _pathAnimationFor(series) != const PathAnimationStyle())
               'series.path-motion.v1',
@@ -471,6 +479,9 @@ abstract final class ChartSeriesDocumentCodec {
           metadata: metadata,
           unit: document.unit,
           pieStyle: _decodePieStyle(_map(style, 'pieStyle')),
+          selectionStyle: _optionalMap(style, 'selectionStyle') == null
+              ? const RadialSelectionStyle()
+              : _decodeRadialSelectionStyle(_map(style, 'selectionStyle')),
           dataLabels: _decodePieDataLabels(
             _map(style, 'dataLabels'),
             valueFormatter: radialValueFormatter,
@@ -497,9 +508,12 @@ abstract final class ChartSeriesDocumentCodec {
           metadata: metadata,
           unit: document.unit,
           donutStyle: _decodeDonutStyle(_map(style, 'donutStyle')),
+          selectionStyle: _optionalMap(style, 'selectionStyle') == null
+              ? const RadialSelectionStyle()
+              : _decodeRadialSelectionStyle(_map(style, 'selectionStyle')),
           centerContent: _optionalMap(style, 'centerContent') == null
               ? DonutCenterContent.hidden
-              : _decodeDonutCenterContent(
+              : DonutCenterContentDocumentCodec.decode(
                   _map(style, 'centerContent'),
                   valueFormatter: donutCenterFormatter,
                 ),
@@ -779,6 +793,9 @@ Map<String, Object?> _encodeSeriesStyle(
     case PieChartSeries():
       result
         ..['pieStyle'] = _encodePieStyle(series.pieStyle)
+        ..['selectionStyle'] = _encodeRadialSelectionStyle(
+          series.selectionStyle,
+        )
         ..['dataLabels'] = _encodePieDataLabels(
           series.dataLabels,
           valueFormatter: radialFormatters?.value,
@@ -798,7 +815,10 @@ Map<String, Object?> _encodeSeriesStyle(
     case DonutChartSeries():
       result
         ..['donutStyle'] = _encodeDonutStyle(series.donutStyle)
-        ..['centerContent'] = _encodeDonutCenterContent(
+        ..['selectionStyle'] = _encodeRadialSelectionStyle(
+          series.selectionStyle,
+        )
+        ..['centerContent'] = DonutCenterContentDocumentCodec.encode(
           series.centerContent,
           valueFormatter: radialFormatters?.center,
         )
@@ -1489,51 +1509,23 @@ Map<String, Object?> _encodeDonutStyle(DonutChartStyle style) => {
   'sweepAngleDegrees': _number(style.sweepAngleDegrees),
 };
 
-Map<String, Object?> _encodeDonutCenterContent(
-  DonutCenterContent content, {
-  JsonObjectValue? valueFormatter,
-}) => {
-  'isVisible': content.isVisible,
-  if (content.label != null) 'label': content.label,
-  'valueMode': content.valueMode.name,
-  if (content.customValue != null) 'customValue': content.customValue,
-  if (content.labelStyle != null)
-    'labelStyle': ChartStyleDocumentCodec.encodeLabelStyle(
-      content.labelStyle!,
-    ).toJson(),
-  if (content.valueStyle != null)
-    'valueStyle': ChartStyleDocumentCodec.encodeLabelStyle(
-      content.valueStyle!,
-    ).toJson(),
-  if (valueFormatter != null) 'valueFormatter': valueFormatter.toJson(),
-};
+Map<String, Object?> _encodeRadialSelectionStyle(RadialSelectionStyle style) =>
+    {
+      'effect': style.effect.name,
+      'liftScale': _number(style.liftScale),
+      'liftOffset': _number(style.liftOffset),
+      'backdropBlur': _number(style.backdropBlur),
+    };
 
-DonutCenterContent _decodeDonutCenterContent(
-  Map<String, Object?> value, {
-  RadialValueFormatter? valueFormatter,
-}) => DonutCenterContent(
-  isVisible: _bool(value, 'isVisible'),
-  label: _optionalString(value['label']),
-  valueMode: _enum(value, 'valueMode', DonutCenterValueMode.values),
-  customValue: _optionalString(value['customValue']),
-  labelStyle: _optionalMap(value, 'labelStyle') == null
-      ? null
-      : ChartStyleDocumentCodec.decodeLabelStyle(
-          _jsonObject(
-            _map(value, 'labelStyle'),
-            path: r'$.style.centerContent.labelStyle',
-          ),
-        ),
-  valueStyle: _optionalMap(value, 'valueStyle') == null
-      ? null
-      : ChartStyleDocumentCodec.decodeLabelStyle(
-          _jsonObject(
-            _map(value, 'valueStyle'),
-            path: r'$.style.centerContent.valueStyle',
-          ),
-        ),
-  valueFormatter: valueFormatter,
-);
+RadialSelectionStyle _decodeRadialSelectionStyle(Map<String, Object?> value) {
+  const defaults = RadialSelectionStyle();
+  return RadialSelectionStyle(
+    effect: _enum(value, 'effect', RadialSelectionEffect.values),
+    liftScale: _double(value, 'liftScale'),
+    liftOffset: _optionalDouble(value['liftOffset']) ?? defaults.liftOffset,
+    backdropBlur: _double(value, 'backdropBlur'),
+  );
+}
 
 Map<String, Object?> _encodePieSliceRadiusConfig(
   PieSliceRadiusConfig config, {
@@ -1666,9 +1658,14 @@ Map<String, Object?> _encodePieDataLabels(
   'isVisible': config.isVisible,
   'position': config.position.name,
   'content': config.content.name,
+  if (config.secondaryContent != null)
+    'secondaryContent': config.secondaryContent!.name,
+  if (config.secondaryContent != null)
+    'secondaryPosition': config.secondaryPosition.name,
   'minimumShare': _number(config.minimumShare),
   'minimumSweepDegrees': _number(config.minimumSweepDegrees),
   'padding': _number(config.padding),
+  'insideOffset': _number(config.insideOffset),
   'outsideOffset': _number(config.outsideOffset),
   'connectorLength': _number(config.connectorLength),
   'connectorWidth': _number(config.connectorWidth),
@@ -1678,6 +1675,10 @@ Map<String, Object?> _encodePieDataLabels(
   if (config.calloutStyle != null)
     'calloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
       config.calloutStyle!,
+    ).toJson(),
+  if (config.secondaryCalloutStyle != null)
+    'secondaryCalloutStyle': ChartStyleDocumentCodec.encodeLabelStyle(
+      config.secondaryCalloutStyle!,
     ).toJson(),
   if (valueFormatter != null) 'valueFormatter': valueFormatter.toJson(),
   if (percentageFormatter != null)
@@ -1692,9 +1693,22 @@ PieDataLabelConfig _decodePieDataLabels(
   isVisible: _bool(value, 'isVisible'),
   position: _enum(value, 'position', PieDataLabelPosition.values),
   content: _enum(value, 'content', PieDataLabelContent.values),
+  secondaryContent: _optionalEnum(
+    value['secondaryContent'],
+    PieDataLabelContent.values,
+    r'$.style.dataLabels.secondaryContent',
+  ),
+  secondaryPosition:
+      _optionalEnum(
+        value['secondaryPosition'],
+        PieDataLabelPosition.values,
+        r'$.style.dataLabels.secondaryPosition',
+      ) ??
+      PieDataLabelPosition.inside,
   minimumShare: _double(value, 'minimumShare'),
   minimumSweepDegrees: _double(value, 'minimumSweepDegrees'),
   padding: _double(value, 'padding'),
+  insideOffset: _optionalDouble(value['insideOffset']) ?? 0,
   outsideOffset: _optionalDouble(value['outsideOffset']) ?? 0,
   connectorLength: _double(value, 'connectorLength'),
   connectorWidth: _double(value, 'connectorWidth'),
@@ -1713,6 +1727,14 @@ PieDataLabelConfig _decodePieDataLabels(
           _jsonObject(
             _map(value, 'calloutStyle'),
             path: r'$.style.dataLabels.calloutStyle',
+          ),
+        ),
+  secondaryCalloutStyle: _optionalMap(value, 'secondaryCalloutStyle') == null
+      ? null
+      : ChartStyleDocumentCodec.decodeLabelStyle(
+          _jsonObject(
+            _map(value, 'secondaryCalloutStyle'),
+            path: r'$.style.dataLabels.secondaryCalloutStyle',
           ),
         ),
   valueFormatter: valueFormatter,

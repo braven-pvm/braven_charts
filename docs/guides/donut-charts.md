@@ -34,10 +34,11 @@ The public contract covers:
 
 - complete or partial annular geometry;
 - clockwise/counter-clockwise ordering and configurable start angle;
-- solid or gradient fills, physical gaps, three corner treatments, opacity,
+- solid or gradient fills, constant-width parallel-sided physical gaps, three
+  corner treatments, opacity,
   borders, shadows, selected elevation, and `none`, `grow`, `sweep`, or `fade`
   reduced-motion-aware entrance animation;
-- inside or collision-managed outside labels and positioned legends;
+- inside, outside, or split category/share labels and positioned legends;
 - total, selected, selected-or-total, or custom portable center text;
 - optional complete second-metric values for variable outer radii;
 - optional small-slice grouping that preserves every original source point;
@@ -56,6 +57,11 @@ arrow keys while it is focused, or press Escape/double-click to fit the data
 table again.
 Use the Motion controls to compare modes and replay the entrance without
 changing the chart data.
+
+To compare two or more independent totals, compose multiple Donut series with
+`ConcentricDonutConfig`. See the
+[Concentric Donut guide](../../doc/concentric_donut_charts.md) and
+[live showcase](https://braven-pvm.github.io/braven_charts/?page=concentric-donut).
 
 When grouping is enabled, qualifying positive categories render as one
 aggregate slice at the end of the visible order. The data table and CSV still

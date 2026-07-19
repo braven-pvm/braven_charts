@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-
 - Portable `dashPattern` outlines for ordinary Line and Area series, including
   interpolation-aware rendering, continuous Area fills, glow, native outgoing-
   segment pattern changes, artifacts, built-in hydration, generated Dart
@@ -17,6 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   data-space X cursors, local nearest-point tracking, and loop-safe X-only
   viewports across independent Cartesian charts, plus a responsive
   Speed/Elevation/Heart-rate showcase.
+- Donut and Concentric Donut slice gaps now form constant-width physical
+  channels with parallel sides from the center opening to the outer arc,
+  including rounded sectors and independently allocated rings.
+- Signed inside-label radial offsets for Pie, Donut, and Concentric Donut
+  charts. Positive values move labels toward the outer edge, negative values
+  move them toward the center, and resolved anchors remain inside each slice.
+  A zero offset centers Concentric labels within each allocated ring band.
+- Optional dual radial data-label layers, including independently styled
+  outside category callouts and inside value/share badges for Pie, Donut, and
+  per-ring Concentric Donut presentations. The model, generated Source, AI
+  schema, artifacts, collision layout, and public showcases share one contract.
+- Concentric Donut compositions built from two or more independent
+  `DonutChartSeries` rings, with automatic or weighted band allocation,
+  configurable ordering and gaps, one shared center, grouped or flat legends,
+  coordinated labels, ring-aware tables/tooltips/semantics, exact generated
+  Source, canonical artifacts, preview capture, and hydration.
+- Shared `RadialSelectionStyle` presentation across Pie, Donut, and Concentric
+  Donut charts. Selection can retain the established explode treatment or lift
+  a scaled, radially offset foreground slice with configurable composition
+  backdrop blur while preserving durable point identity and ring allocation.
 
 ### Fixed
 - Invalid or non-finite Bar points no longer poison stacked, normalized,
@@ -30,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transition before the destination chart enters.
 - The Bar Lab maximum stress configuration no longer rebuilds its 10,000-item
   category list once per data point.
+- Source capture preserves chart-level `ConcentricDonutConfig`, including
+  deterministic ring weights, order, legend mode, and portable center content.
+- Lifted Concentric selections paint and hit-test above the complete radial
+  composition, with backdrop blur coordinated across rings and stable layout.
 
 ## 0.7.0 - 2026-07-18
 

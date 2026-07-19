@@ -14,6 +14,7 @@ import 'package:flutter/scheduler.dart';
 import '../axis/axis.dart' as chart_axis;
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
+import '../elements/pie_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
@@ -2054,7 +2055,9 @@ class ChartRenderBox extends RenderBox {
   /// Resolves one renderer-neutral datum from widget-local coordinates.
   ChartDataHit? dataHitAtWidgetPosition(Offset widgetPosition) {
     final plotPosition = widgetToPlot(widgetPosition);
-    for (final element in _elements.whereType<DataHitElement>()) {
+    final elements = _elements.whereType<DataHitElement>().toList()
+      ..sort((a, b) => b.priority.compareTo(a.priority));
+    for (final element in elements) {
       final hit = element.dataHitAt(plotPosition);
       if (hit != null) return hit;
     }
@@ -2321,6 +2324,17 @@ class ChartRenderBox extends RenderBox {
         }
       }
       series.paint(canvas, size);
+    }
+
+    final coordinatedRadialLabels = seriesElements
+        .whereType<PieSeriesElement>()
+        .where((element) => element.coordinateOutsideLabels)
+        .toList(growable: false);
+    if (coordinatedRadialLabels.length > 1) {
+      PieSeriesElement.paintCoordinatedOutsideLabels(
+        canvas,
+        coordinatedRadialLabels,
+      );
     }
 
     // NOTE: Streaming elements are NOT painted here - they're painted
@@ -3111,20 +3125,27 @@ class ChartRenderBox extends RenderBox {
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
-    final hitCount = _elements
+    final hits = _elements
         .whereType<DataHitElement>()
         .expand((element) => element.semanticDataHits)
-        .length;
+        .toList();
+    final hitCount = hits.length;
     final summaryCount = _elements
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .length;
     if (hitCount == 0 && summaryCount == 0) return;
+    int? groupCount;
+    for (final hit in hits) {
+      groupCount ??= hit.groupCount;
+    }
     config
       ..isSemanticBoundary = true
       ..explicitChildNodes = true
       ..textDirection = _textDirection
-      ..label = 'Radial chart with $hitCount slices';
+      ..label = groupCount == null
+          ? 'Radial chart with $hitCount slices'
+          : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
   }
 
   @override
@@ -3170,7 +3191,7 @@ class ChartRenderBox extends RenderBox {
     for (final hit in hits) {
       final identity = '${hit.seriesId}:${hit.pointIndex}';
       final semanticConfig = SemanticsConfiguration()
-        ..sortKey = OrdinalSortKey(hit.ordinal.toDouble() + 1)
+        ..sortKey = OrdinalSortKey(hit.semanticSortOrdinal + 1)
         ..textDirection = _textDirection
         ..identifier = identity
         ..label = hit.semanticLabel

@@ -5,6 +5,71 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('elastic sweep replay never retreats after revealing geometry', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    final base = ChartTheme.vibrant;
+    final theme = base.copyWith(
+      animationTheme: base.animationTheme.copyWith(
+        dataUpdateDuration: const Duration(milliseconds: 600),
+        dataUpdateCurve: Curves.elasticOut,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 480,
+          height: 360,
+          child: BravenChartPlus(
+            bravenChartController: controller,
+            showLegend: false,
+            theme: theme,
+            series: [
+              PieChartSeries.fromMap(
+                id: 'elastic-sweep',
+                values: const {'A': 42, 'B': 28, 'C': 16, 'D': 9, 'E': 5},
+                pieStyle: const PieChartStyle(
+                  animationMode: PieAnimationMode.sweep,
+                ),
+                dataLabels: const PieDataLabelConfig(isVisible: false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    PieSeriesElement currentElement() => tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single
+        .debugElements
+        .whereType<PieSeriesElement>()
+        .single;
+
+    controller.replayRadialEntrance();
+    await tester.pump();
+    final samples = <double>[currentElement().animationProgress];
+    for (var elapsed = 50; elapsed <= 600; elapsed += 50) {
+      await tester.pump(const Duration(milliseconds: 50));
+      samples.add(currentElement().animationProgress);
+    }
+
+    for (var index = 1; index < samples.length; index++) {
+      expect(
+        samples[index],
+        greaterThanOrEqualTo(samples[index - 1]),
+        reason: 'Sweep reveal retreated in $samples',
+      );
+    }
+    expect(samples.first, 0);
+    await tester.pumpAndSettle();
+    expect(currentElement().animationProgress, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('radial data updates morph without replaying entrance', (
     tester,
   ) async {

@@ -27,8 +27,8 @@ class ChartTypesPage extends StatelessWidget {
           SliverGrid(
             key: const ValueKey('chart-type-catalog-grid'),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 430,
-              mainAxisExtent: 370,
+              maxCrossAxisExtent: 400,
+              mainAxisExtent: 360,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
@@ -73,7 +73,7 @@ class _OverviewIntroduction extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, and Pie or Donut charts for a small part-to-whole story.',
+                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, and radial charts for part-to-whole stories.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     height: 1.45,
@@ -172,8 +172,13 @@ class _SelectionGuide extends StatelessWidget {
                 ),
                 _GuideItem(
                   icon: Icons.donut_large_outlined,
-                  title: 'Contribution to a whole',
+                  title: 'One total',
                   body: 'Start with Pie or Donut.',
+                ),
+                _GuideItem(
+                  icon: Icons.radar_outlined,
+                  title: 'Several independent totals',
+                  body: 'Start with Concentric Donut.',
                 ),
               ],
             ),

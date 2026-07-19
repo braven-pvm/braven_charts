@@ -16,8 +16,9 @@ is added to package marketing.
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, inherited RTL canvas text and semantics, `rangeStartValues`, `BarLayoutMode`, first-class diverging/Likert roles and center line, `BarChartStyle`, non-colour `BarPatternStyle`, `BarTrackStyle`, `BarLollipopStyle`, first-class `BarBulletStyle`, `ParetoChartData` mixed bar-line compositions, `HistogramChartData` continuous-sample binning, keyed entrance/update/exit `BarMotionStyle`, viewport-virtualized geometry and indexed hit testing, spatially indexed chart-wide collision-aware `BarLabelStyle`, stack totals, `BarGroupInfo` | Bar Lab Stress, Bar Lab RTL, Bar Lab Histogram, Bar Lab Pareto, Bar Lab Lollipop, Bar Lab Likert, Bar Lab Bullet, Bar Lab Patterns, Bar Lab, Chart Types, Gallery |
 | Scatter plots | `ScatterChartSeries` | Chart Types, Gallery |
-| Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, `PieDataLabelConfig` | Pie Charts, Chart Types |
-| Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, partial sweeps and variable radii | Donut Charts, Chart Types, Gallery |
+| Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
+| Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
+| Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
@@ -30,7 +31,7 @@ is added to package marketing.
 | Native chart data | `ChartTableModel`, `ChartDataTable`, copy and CSV export | Chart Artifacts, Chart Workbench, Pie Charts |
 | Portable chart artifacts | `ChartArtifact`, canonical JSON, preview capture, hydration | Chart Artifacts, Pie Charts |
 | Reusable chart workbench | `BravenChartWorkbench`, resizable Split view, revision-safe linked point identity, nestable shared mode and selector scope | Chart Workbench; all chart-family guides |
-| Generated Dart source | `ChartDartSourceGenerator`, `ChartDartSourceOptions`, `ChartDisplayMode.source`, `ChartWorkbenchSourceState` | Chart Workbench; Line, Area, Bar, Scatter, Pie, and Donut guides |
+| Generated Dart source | `ChartDartSourceGenerator`, `ChartDartSourceOptions`, `ChartDisplayMode.source`, `ChartWorkbenchSourceState` | Chart Workbench; Line, Area, Bar, Scatter, Pie, Donut, and Concentric Donut guides |
 | Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
 | Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including complete advanced `bar`, `pie`, and `donut` contracts | Bar Lab, Pie Charts, API documentation |
 | Dense-data performance | bounded buffers, viewport culling, render caches | Performance, Live Stream |
@@ -38,6 +39,8 @@ is added to package marketing.
 ## Current boundary
 
 Cartesian charts support one configurable X axis and multiple independent Y
-axes. Multiple simultaneous X axes are not part of the public contract. A pie
-chart accepts exactly one `PieChartSeries`, has no Cartesian axes, and cannot
-be mixed with line, area, bar, or scatter series.
+axes. Multiple simultaneous X axes are not part of the public contract. A Pie
+accepts exactly one `PieChartSeries`; a standalone Donut accepts one
+`DonutChartSeries`; and two or more Donut series form one Concentric Donut
+composition. Partition-radial charts have no Cartesian axes and cannot mix
+with line, area, bar, or scatter series.

@@ -439,8 +439,17 @@ void main() {
                     offset: Offset(0, 3),
                   ),
                 ),
+                selectionStyle: const RadialSelectionStyle(
+                  effect: RadialSelectionEffect.lift,
+                  liftScale: 1.1,
+                  liftOffset: 7,
+                  backdropBlur: 1.4,
+                ),
                 dataLabels: const PieDataLabelConfig(
                   position: PieDataLabelPosition.inside,
+                  insideOffset: -12,
+                  secondaryContent: PieDataLabelContent.category,
+                  secondaryPosition: PieDataLabelPosition.outside,
                   calloutStyle: LabelStyle(
                     textStyle: TextStyle(color: Colors.white, fontSize: 11),
                     backgroundColor: Color(0xCC0F172A),
@@ -448,6 +457,14 @@ void main() {
                     borderWidth: 0,
                     borderRadius: 5,
                     padding: EdgeInsets.all(4),
+                  ),
+                  secondaryCalloutStyle: LabelStyle(
+                    textStyle: TextStyle(color: Colors.black, fontSize: 10),
+                    backgroundColor: Colors.transparent,
+                    borderColor: Colors.transparent,
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    padding: EdgeInsets.zero,
                   ),
                 ),
                 sliceRadiusConfig: const PieSliceRadiusConfig(
@@ -475,7 +492,14 @@ void main() {
           'gradient: PieGradientStyle(',
           'type: PieGradientType.radial',
           'shadow: PieElevationStyle(',
+          'selectionStyle: RadialSelectionStyle(',
+          'effect: RadialSelectionEffect.lift',
+          'liftOffset: 7.0',
+          'insideOffset: -12.0',
           'calloutStyle: LabelStyle(',
+          'secondaryContent: PieDataLabelContent.category',
+          'secondaryPosition: PieDataLabelPosition.outside',
+          'secondaryCalloutStyle: LabelStyle(',
           'sliceRadiusConfig: PieSliceRadiusConfig(',
           'sliceGroupingConfig: RadialSliceGroupingConfig(',
           'radiusAggregation: RadialSliceRadiusAggregation.mean',
@@ -485,6 +509,88 @@ void main() {
         }
       },
     );
+
+    test('emits lifted radial selection presentation', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            PieChartSeries.fromMap(
+              id: 'lifted-pie',
+              values: const {'Core': 60, 'Edge': 40},
+              selectionStyle: const RadialSelectionStyle(
+                effect: RadialSelectionEffect.lift,
+                liftScale: 1.12,
+                liftOffset: 8,
+                backdropBlur: 1.5,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('selectionStyle: RadialSelectionStyle('),
+      );
+      expect(generated.source, contains('effect: RadialSelectionEffect.lift'));
+      expect(generated.source, contains('liftScale: 1.12'));
+      expect(generated.source, contains('liftOffset: 8'));
+      expect(generated.source, contains('backdropBlur: 1.5'));
+    });
+
+    test('emits the complete Concentric Donut composition', () {
+      const config = ConcentricDonutConfig(
+        innerRadiusFactor: 0.24,
+        outerRadiusFactor: 0.92,
+        ringGap: 7,
+        order: ConcentricRingOrder.innerToOuter,
+        ringWeights: {'previous': 0.8, 'current': 1.4},
+        legendMode: ConcentricDonutLegendMode.flat,
+        centerContent: DonutCenterContent(
+          label: 'Periods',
+          valueMode: DonutCenterValueMode.custom,
+          customValue: '2 compared',
+        ),
+      );
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            DonutChartSeries.fromMap(
+              id: 'current',
+              values: const {'Subscriptions': 60, 'Services': 40},
+            ),
+            additionalSeries: [
+              DonutChartSeries.fromMap(
+                id: 'previous',
+                values: const {'Subscriptions': 50, 'Services': 50},
+              ),
+            ],
+            concentricDonutConfig: config,
+          ),
+        ),
+      );
+
+      expect(generated.seriesCount, 2);
+      expect(
+        generated.source,
+        contains('concentricDonutConfig: ConcentricDonutConfig('),
+      );
+      expect(generated.source, contains('innerRadiusFactor: 0.24'));
+      expect(generated.source, contains('outerRadiusFactor: 0.92'));
+      expect(generated.source, contains('ringGap: 7.0'));
+      expect(
+        generated.source,
+        contains('order: ConcentricRingOrder.innerToOuter'),
+      );
+      expect(generated.source, contains("'current': 1.4"));
+      expect(generated.source, contains("'previous': 0.8"));
+      expect(
+        generated.source,
+        contains('legendMode: ConcentricDonutLegendMode.flat'),
+      );
+      expect(generated.source, contains("label: 'Periods'"));
+      expect(generated.source, contains("customValue: '2 compared'"));
+    });
 
     test('returns a structured failure for an invalid variable name', () {
       final result = ChartDartSourceGenerator.generate(
@@ -515,13 +621,20 @@ ChartGeneratedSource _success(
 
 ChartDocumentSnapshot _snapshot(
   ChartSeries series, {
+  List<ChartSeries> additionalSeries = const [],
+  ConcentricDonutConfig? concentricDonutConfig,
   String? title,
   List<ChartAnnotation> annotations = const [],
   ChartTheme? theme,
   String? themeReference = 'braven.light',
   ChartViewState? viewState,
 }) {
-  final encodedSeries = ChartSeriesDocumentCodec.encode(series);
+  final encodedSeries = [
+    for (final item in [series, ...additionalSeries])
+      (ChartSeriesDocumentCodec.encode(item)
+              as ChartArtifactSuccess<ChartSeriesDocument>)
+          .value,
+  ];
   final encodedTheme = ChartThemeDocumentCodec.encode(
     theme ?? ChartTheme.light,
     reference: themeReference,
@@ -541,9 +654,7 @@ ChartDocumentSnapshot _snapshot(
       documentId: 'source-test',
       revision: 1,
       title: title,
-      series: [
-        (encodedSeries as ChartArtifactSuccess<ChartSeriesDocument>).value,
-      ],
+      series: encodedSeries,
       annotations: [
         for (final annotation in annotations)
           (ChartAnnotationDocumentCodec.encode(annotation)
@@ -556,6 +667,16 @@ ChartDocumentSnapshot _snapshot(
       interaction:
           (encodedInteraction as ChartArtifactSuccess<ChartInteractionDocument>)
               .value,
+      configuration: concentricDonutConfig == null
+          ? null
+          : (ChartConfigurationDocumentCodec.encodeConcentricDonut(
+                      concentricDonutConfig,
+                    )
+                    as ChartArtifactSuccess<JsonObjectValue>)
+                .value,
+      requiredCapabilities: {
+        if (concentricDonutConfig != null) 'series.donut.concentric.v1',
+      },
     ),
     viewState: viewState,
   );

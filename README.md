@@ -9,7 +9,7 @@ rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
 `BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
-and single-series Pie and Donut charts; multiple independent axes and normalization;
+Pie, Donut, and multi-ring Concentric Donut charts; multiple independent axes and normalization;
 zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
 frame-coalesced live data; configurable themes and state views; chart, table,
 split, and generated Dart source modes; and portable chart artifacts. Rendering, input handling, and
@@ -69,6 +69,10 @@ package rather than treating a single composition as representative.
 | [![Linear, Bezier, stepped, and monotone line interpolation](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_interpolation.png)](https://braven-pvm.github.io/braven_charts/?page=line-charts) | [![Positive and negative baseline area fill across independently scaled series](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_baseline.png)](https://braven-pvm.github.io/braven_charts/?page=area-charts) | [![Grouped bars with gradients, targets, uncertainty intervals, and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/bar_targets_interaction.png)](https://braven-pvm.github.io/braven_charts/?page=bar-charts&preset=targets) |
 | **Scatter** | **Pie** | **Donut** |
 | [![Two scatter cohorts with distinct marker sets and tracking](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/gallery_experiment_cohorts.png)](https://braven-pvm.github.io/braven_charts/?page=scatter-charts) | [![Pie allocation with gradients, rounded slices, elevation, and a positioned legend](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/pie_portfolio_allocation.png)](https://braven-pvm.github.io/braven_charts/?page=pie-charts) | [![Dark partial-sweep Donut with center content and compact labels](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/donut_release_progress.png)](https://braven-pvm.github.io/braven_charts/?page=donut-charts) |
+
+### Multi-ring radial composition
+
+[![Concentric Donut comparing three independent revenue totals in weighted rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_revenue_mix.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
 
 ### Line and Area workbenches
 
@@ -134,7 +138,7 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter and mixed Cartesian series; and category-based Pie and Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter and mixed Cartesian series; and category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
@@ -161,6 +165,9 @@ content, Chart/Data/Split views, native tables, and portable restoration.
 or [open Area motion directly](https://braven-pvm.github.io/braven_charts/?page=area-charts&preset=motion&view=split)
 to inspect entrance replay, compatible data updates, target-state tables, and
 the resizable package-owned workbench.
+[Open Concentric Donut directly](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
+to compare independent totals across weighted rings, linked table rows,
+grouped legends, one shared center, and portable restoration.
 
 ## Install
 
@@ -297,7 +304,10 @@ BravenChartPlus(
       ),
       dataLabels: const PieDataLabelConfig(
         position: PieDataLabelPosition.outside,
-        content: PieDataLabelContent.categoryAndPercentage,
+        content: PieDataLabelContent.category,
+        secondaryContent: PieDataLabelContent.percentage,
+        secondaryPosition: PieDataLabelPosition.inside,
+        insideOffset: 0, // Positive moves outward; negative moves inward.
       ),
     ),
   ],
@@ -353,6 +363,33 @@ Slice, legend, table, keyboard, and controller selection share one
 The complete Donut document—including center content and optional
 variable-radius values—round-trips through canonical JSON and PNG previews.
 See the [Donut chart guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md).
+
+### Concentric Donut
+
+Pass two or more `DonutChartSeries` values to compare independent totals in one
+pane. `ConcentricDonutConfig` controls ring allocation, order, weights, legend
+grouping, and the one portable center without merging any series data.
+
+```dart
+BravenChartPlus(
+  series: [currentPeriod, previousPeriod],
+  concentricDonutConfig: const ConcentricDonutConfig(
+    innerRadiusFactor: 0.28,
+    ringGap: 6,
+    ringWeights: {'current': 1.25},
+    legendMode: ConcentricDonutLegendMode.groupedByRing,
+    centerContent: DonutCenterContent(
+      label: 'Comparison',
+      valueMode: DonutCenterValueMode.custom,
+      customValue: '2 periods',
+    ),
+  ),
+)
+```
+
+Selection identity remains `(seriesId, pointIndex)`, shares use each ring's
+own total, and saved artifacts retain every ring plus the chart-level
+composition. See the [Concentric Donut guide](https://github.com/braven-pvm/braven_charts/blob/master/doc/concentric_donut_charts.md).
 
 ## Loading and empty states
 
@@ -560,7 +597,7 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, Pie and Donut charts, interaction, tracking, annotations,
+focused pages for chart types, Pie, Donut, and Concentric Donut charts, interaction, tracking, annotations,
 streaming, theming, performance, multi-axis layouts, scientific data, baseline
 fills, and state UX.
 
@@ -573,6 +610,7 @@ fills, and state UX.
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
+- [Concentric Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/concentric_donut_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)
 - [Chart Workbench](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
 - [Chart family integration](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_family_integration.md)

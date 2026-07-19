@@ -13,6 +13,42 @@ typedef DonutCenterBuilder =
 /// Handles activation of the package-owned Donut center interaction shell.
 typedef DonutCenterTapCallback = void Function(DonutCenterData center);
 
+/// One independent Donut ring represented by a shared Concentric Donut center.
+@immutable
+class DonutCenterRingSummary {
+  /// Creates immutable ring summary data for a runtime center builder.
+  const DonutCenterRingSummary({
+    required this.seriesId,
+    required this.seriesName,
+    required this.unit,
+    required this.total,
+    required this.ringIndex,
+    required this.ringCount,
+    required this.positionLabel,
+  });
+
+  /// Stable source-series identity.
+  final String seriesId;
+
+  /// Optional user-facing series name.
+  final String? seriesName;
+
+  /// Optional unit supplied by the ring series.
+  final String? unit;
+
+  /// Sum of every positive source contribution in this ring.
+  final double total;
+
+  /// Source-series index used by legend, table, and controller identity.
+  final int ringIndex;
+
+  /// Number of rings sharing the center.
+  final int ringCount;
+
+  /// Human-readable radial position such as `Outer ring` or `Inner ring`.
+  final String positionLabel;
+}
+
 /// Resolved data and presentation state for one Donut center.
 ///
 /// A selected grouped slice exposes the aggregate [selectedPoint] together
@@ -36,9 +72,14 @@ class DonutCenterData {
     this.selectedCategory,
     this.selectedValue,
     this.selectedShare,
+    this.selectedSeriesId,
+    this.selectedRingIndex,
+    this.selectedPointIndex,
+    List<DonutCenterRingSummary> rings = const <DonutCenterRingSummary>[],
     List<int> selectedSourcePointIndices = const <int>[],
     List<ChartDataPoint> selectedSourcePoints = const <ChartDataPoint>[],
-  }) : selectedSourcePointIndices = List<int>.unmodifiable(
+  }) : rings = List<DonutCenterRingSummary>.unmodifiable(rings),
+       selectedSourcePointIndices = List<int>.unmodifiable(
          selectedSourcePointIndices,
        ),
        selectedSourcePoints = List<ChartDataPoint>.unmodifiable(
@@ -89,6 +130,24 @@ class DonutCenterData {
 
   /// Selected contribution divided by [total].
   final double? selectedShare;
+
+  /// Stable series identity that owns [selectedPoint], when selected.
+  ///
+  /// This is especially useful for Concentric Donut centers, where [seriesId]
+  /// continues to identify the primary ring when no selection exists.
+  final String? selectedSeriesId;
+
+  /// Source-series index that owns [selectedPoint], when selected.
+  final int? selectedRingIndex;
+
+  /// Source point index represented by [selectedPoint], when selected.
+  final int? selectedPointIndex;
+
+  /// Every independent ring sharing this center, in source-series order.
+  ///
+  /// A single Donut supplies one summary. Concentric Donut supplies one entry
+  /// per ring without merging their independent totals.
+  final List<DonutCenterRingSummary> rings;
 
   /// Stable source point indices represented by [selectedPoint].
   final List<int> selectedSourcePointIndices;

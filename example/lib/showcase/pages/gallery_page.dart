@@ -164,11 +164,11 @@ class _GalleryPageState extends State<GalleryPage> {
           ),
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
-              eyebrow: 'CHART TYPE SAMPLER',
-              title: 'Six chart families, one native renderer',
+              eyebrow: 'CHART TYPE GUIDES',
+              title: 'Seven chart guides, one native renderer',
               subtitle:
                   'Start with the shape of the data, then open a focused guide for the complete feature set.',
-              count: 6,
+              count: 7,
             ),
           ),
           SliverToBoxAdapter(
@@ -290,10 +290,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'DONUT COMPOSITIONS',
-              title: 'Three measures, three radial encodings',
+              title: 'Four measures, four radial encodings',
               subtitle:
-                  'Compare subscription mix, release readiness, and channel efficiency with selection-aware center content.',
-              count: 3,
+                  'Compare subscription mix, release readiness, channel efficiency, and independent period totals with selection-aware center content.',
+              count: 4,
             ),
           ),
           SliverPadding(

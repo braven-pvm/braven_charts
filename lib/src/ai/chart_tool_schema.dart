@@ -1075,6 +1075,33 @@ same radial interaction contract.
               'description':
                   'Radial Pie/Donut offset applied to a selected slice.',
             },
+            'pie_selection_effect': {
+              'type': 'string',
+              'enum': ['explode', 'lift'],
+              'description':
+                  'Pie-only selected-slice treatment: move outward or lift towards the viewer.',
+            },
+            'pie_selection_lift_scale': {
+              'type': 'number',
+              'minimum': 1,
+              'maximum': 1.5,
+              'description':
+                  'Pie-only final scale applied around a lifted slice centroid.',
+            },
+            'pie_selection_lift_offset': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 40,
+              'description':
+                  'Pie-only radial offset that pulls a lifted slice away from the chart center.',
+            },
+            'pie_selection_backdrop_blur': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 20,
+              'description':
+                  'Pie-only blur sigma applied to unselected slices during a lift.',
+            },
             'pie_opacity': {
               'type': 'number',
               'minimum': 0,
@@ -1201,6 +1228,26 @@ same radial interaction contract.
               ],
               'description': 'Radial Pie/Donut label content.',
             },
+            'pie_secondary_label_content': {
+              'type': 'string',
+              'enum': [
+                'category',
+                'value',
+                'percentage',
+                'category_and_value',
+                'category_and_percentage',
+                'value_and_percentage',
+                'category_value_and_percentage',
+              ],
+              'description':
+                  'Optional second radial label layer, such as a percentage badge inside a slice whose category label is outside.',
+            },
+            'pie_secondary_label_position': {
+              'type': 'string',
+              'enum': ['inside', 'outside'],
+              'description':
+                  'Placement for the optional secondary label. It must differ from pie_label_position.',
+            },
             'pie_label_minimum_share': {
               'type': 'number',
               'minimum': 0,
@@ -1213,6 +1260,11 @@ same radial interaction contract.
               'maximum': 360,
               'description':
                   'Minimum radial-slice sweep in degrees eligible for a label.',
+            },
+            'pie_inside_label_offset': {
+              'type': 'number',
+              'description':
+                  'Signed logical-pixel radial offset for inside Pie/Donut labels. Positive moves toward the outer edge; negative moves toward the center.',
             },
             'pie_label_offset': {
               'type': 'number',

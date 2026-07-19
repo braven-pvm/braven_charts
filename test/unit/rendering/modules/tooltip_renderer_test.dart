@@ -5,6 +5,7 @@ import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/interaction/core/chart_element.dart';
 import 'package:braven_charts/src/interaction/core/coordinator.dart';
+import 'package:braven_charts/src/interaction/core/data_hit.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/chart_theme.dart';
@@ -101,6 +102,40 @@ void main() {
         const renderer1 = TooltipRenderer();
         const renderer2 = TooltipRenderer();
         expect(identical(renderer1, renderer2), isTrue);
+      });
+    });
+
+    group('buildBaseTooltipText', () {
+      test('qualifies a repeated radial category with its ring identity', () {
+        const hit = ChartDataHit(
+          seriesId: 'previous',
+          pointIndex: 0,
+          plotPosition: Offset(80, 80),
+          semanticBounds: Rect.fromLTWH(40, 40, 80, 80),
+          point: ChartDataPoint(x: 0, y: 50, label: 'Subscriptions'),
+          formattedValue: 'Previous 50 USD',
+          ordinal: 1,
+          count: 2,
+          category: 'Subscriptions',
+          total: 200,
+          share: 0.25,
+          formattedShare: 'Previous 25%',
+          groupLabel: 'Inner ring',
+          groupName: 'Previous period',
+          groupOrdinal: 2,
+          groupCount: 2,
+        );
+
+        expect(
+          renderer.buildBaseTooltipText(
+            dataHit: hit,
+            seriesName: 'Previous period',
+            formattedCartesianY: '50.00 USD',
+            formatDataValue: (value) => value.toStringAsFixed(0),
+          ),
+          'Inner ring · Previous period\nSubscriptions\n'
+          'Value: Previous 50 USD\nShare: Previous 25%',
+        );
       });
     });
 

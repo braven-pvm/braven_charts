@@ -1745,7 +1745,10 @@ class EventHandlerManager {
       break;
     }
 
-    for (final element in _delegate.elements.whereType<DataHitElement>()) {
+    final dataHitElements =
+        _delegate.elements.whereType<DataHitElement>().toList()
+          ..sort((a, b) => b.priority.compareTo(a.priority));
+    for (final element in dataHitElements) {
       if (minDistance == 0) break;
       final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
       if (hit == null) continue;

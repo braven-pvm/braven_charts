@@ -5,6 +5,7 @@ import 'chart_data_point.dart';
 import 'chart_series.dart';
 import 'pie_chart_config.dart';
 import 'radial_category_series.dart';
+import 'radial_selection_style.dart';
 import 'segment_style.dart';
 import 'y_axis_config.dart';
 
@@ -24,6 +25,7 @@ class PieChartSeries extends RadialCategorySeries {
     super.metadata,
     super.unit,
     PieChartStyle pieStyle = const PieChartStyle(),
+    super.selectionStyle = const RadialSelectionStyle(),
     super.dataLabels = const PieDataLabelConfig(),
     super.sliceRadiusConfig,
     super.sliceGroupingConfig,
@@ -49,6 +51,7 @@ class PieChartSeries extends RadialCategorySeries {
     Map<String, dynamic>? metadata,
     String? unit,
     PieChartStyle pieStyle = const PieChartStyle(),
+    RadialSelectionStyle selectionStyle = const RadialSelectionStyle(),
     PieDataLabelConfig dataLabels = const PieDataLabelConfig(),
   }) {
     if (radiusValues.isNotEmpty &&
@@ -91,6 +94,7 @@ class PieChartSeries extends RadialCategorySeries {
       metadata: metadata,
       unit: unit,
       pieStyle: pieStyle,
+      selectionStyle: selectionStyle,
       dataLabels: dataLabels,
       sliceRadiusConfig: radiusValues.isEmpty
           ? null
@@ -123,6 +127,7 @@ class PieChartSeries extends RadialCategorySeries {
     YAxisConfig? yAxisConfig,
     String? unit,
     PieChartStyle? pieStyle,
+    RadialSelectionStyle? selectionStyle,
     PieDataLabelConfig? dataLabels,
     PieSliceRadiusConfig? sliceRadiusConfig,
     bool clearSliceRadiusConfig = false,
@@ -158,6 +163,7 @@ class PieChartSeries extends RadialCategorySeries {
       metadata: metadata ?? this.metadata,
       unit: unit ?? this.unit,
       pieStyle: pieStyle ?? this.pieStyle,
+      selectionStyle: selectionStyle ?? this.selectionStyle,
       dataLabels: dataLabels ?? this.dataLabels,
       sliceRadiusConfig: clearSliceRadiusConfig
           ? null
@@ -174,6 +180,7 @@ class PieChartSeries extends RadialCategorySeries {
       other is PieChartSeries &&
           super == other &&
           pieStyle == other.pieStyle &&
+          selectionStyle == other.selectionStyle &&
           dataLabels == other.dataLabels &&
           sliceRadiusConfig == other.sliceRadiusConfig &&
           sliceGroupingConfig == other.sliceGroupingConfig;
@@ -182,6 +189,7 @@ class PieChartSeries extends RadialCategorySeries {
   int get hashCode => Object.hash(
     super.hashCode,
     pieStyle,
+    selectionStyle,
     dataLabels,
     sliceRadiusConfig,
     sliceGroupingConfig,

@@ -57,6 +57,7 @@ void main() {
     expect(find.text('Scatter Charts'), findsOneWidget);
     expect(find.text('Pie Charts'), findsOneWidget);
     expect(find.text('Donut Charts'), findsOneWidget);
+    expect(find.text('Concentric Donut Charts'), findsOneWidget);
     expect(find.text('Power + Lactate'), findsNothing);
     expect(find.text('Lactate Threshold'), findsNothing);
     expect(find.text('Multi-Axis'), findsOneWidget);

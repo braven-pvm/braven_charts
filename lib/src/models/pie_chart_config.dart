@@ -759,7 +759,7 @@ class PieChartStyle implements RadialChartStyle {
           dataTransitionMode == other.dataTransitionMode;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     startAngleDegrees,
     clockwise,
     radiusFactor,
@@ -779,7 +779,7 @@ class PieChartStyle implements RadialChartStyle {
     selectedElevation,
     animationMode,
     dataTransitionMode,
-  );
+  ]);
 }
 
 /// Immutable eligibility, placement, connector, and callout policy for labels.
@@ -790,9 +790,13 @@ class PieDataLabelConfig {
     this.isVisible = true,
     this.position = PieDataLabelPosition.outside,
     this.content = PieDataLabelContent.categoryAndPercentage,
+    this.secondaryContent,
+    this.secondaryPosition = PieDataLabelPosition.inside,
+    this.secondaryCalloutStyle,
     this.minimumShare = 0.03,
     this.minimumSweepDegrees = 8,
     this.padding = 6,
+    this.insideOffset = 0,
     this.outsideOffset = 0,
     this.connectorLength = 14,
     this.connectorWidth = 1,
@@ -812,6 +816,29 @@ class PieDataLabelConfig {
   /// Category/value/share content shown by each label.
   final PieDataLabelContent content;
 
+  /// Optional content for a second label layer on the opposite placement.
+  ///
+  /// This supports radial compositions such as an outside category callout
+  /// paired with a compact percentage badge inside the same slice. Leave null
+  /// to render only the primary [content] layer.
+  final PieDataLabelContent? secondaryContent;
+
+  /// Placement of [secondaryContent].
+  ///
+  /// When [secondaryContent] is not null this must differ from [position], so
+  /// each placement owns at most one deterministic label layer.
+  final PieDataLabelPosition secondaryPosition;
+
+  /// Optional callout style for [secondaryContent].
+  ///
+  /// Null resolves from [PieChartTheme], independently of [calloutStyle].
+  final LabelStyle? secondaryCalloutStyle;
+
+  /// Whether this configuration paints a label at [placement].
+  bool hasLabelAt(PieDataLabelPosition placement) =>
+      position == placement ||
+      (secondaryContent != null && secondaryPosition == placement);
+
   /// Minimum share in the inclusive range 0–1 required for a label.
   final double minimumShare;
 
@@ -820,6 +847,14 @@ class PieDataLabelConfig {
 
   /// Logical-pixel padding between a label and its anchor or lane.
   final double padding;
+
+  /// Signed radial offset applied to labels painted inside a slice.
+  ///
+  /// Zero uses the renderer's balanced position within the radial band.
+  /// Positive values move the label toward the outer edge; negative values
+  /// move it toward the chart center. The resolved anchor remains inside the
+  /// slice's radial band.
+  final double insideOffset;
 
   /// Horizontal gap between the painted pie and an outside-label lane.
   ///
@@ -855,9 +890,15 @@ class PieDataLabelConfig {
     bool? isVisible,
     PieDataLabelPosition? position,
     PieDataLabelContent? content,
+    PieDataLabelContent? secondaryContent,
+    bool clearSecondaryContent = false,
+    PieDataLabelPosition? secondaryPosition,
+    LabelStyle? secondaryCalloutStyle,
+    bool clearSecondaryCalloutStyle = false,
     double? minimumShare,
     double? minimumSweepDegrees,
     double? padding,
+    double? insideOffset,
     double? outsideOffset,
     double? connectorLength,
     double? connectorWidth,
@@ -875,9 +916,17 @@ class PieDataLabelConfig {
       isVisible: isVisible ?? this.isVisible,
       position: position ?? this.position,
       content: content ?? this.content,
+      secondaryContent: clearSecondaryContent
+          ? null
+          : (secondaryContent ?? this.secondaryContent),
+      secondaryPosition: secondaryPosition ?? this.secondaryPosition,
+      secondaryCalloutStyle: clearSecondaryCalloutStyle
+          ? null
+          : (secondaryCalloutStyle ?? this.secondaryCalloutStyle),
       minimumShare: minimumShare ?? this.minimumShare,
       minimumSweepDegrees: minimumSweepDegrees ?? this.minimumSweepDegrees,
       padding: padding ?? this.padding,
+      insideOffset: insideOffset ?? this.insideOffset,
       outsideOffset: outsideOffset ?? this.outsideOffset,
       connectorLength: connectorLength ?? this.connectorLength,
       connectorWidth: connectorWidth ?? this.connectorWidth,
@@ -904,9 +953,13 @@ class PieDataLabelConfig {
           isVisible == other.isVisible &&
           position == other.position &&
           content == other.content &&
+          secondaryContent == other.secondaryContent &&
+          secondaryPosition == other.secondaryPosition &&
+          secondaryCalloutStyle == other.secondaryCalloutStyle &&
           minimumShare == other.minimumShare &&
           minimumSweepDegrees == other.minimumSweepDegrees &&
           padding == other.padding &&
+          insideOffset == other.insideOffset &&
           outsideOffset == other.outsideOffset &&
           connectorLength == other.connectorLength &&
           connectorWidth == other.connectorWidth &&
@@ -921,9 +974,13 @@ class PieDataLabelConfig {
     isVisible,
     position,
     content,
+    secondaryContent,
+    secondaryPosition,
+    secondaryCalloutStyle,
     minimumShare,
     minimumSweepDegrees,
     padding,
+    insideOffset,
     outsideOffset,
     connectorLength,
     connectorWidth,

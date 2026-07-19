@@ -381,6 +381,57 @@ void main() {
       },
     );
 
+    test(
+      'lift scales the selected slice around its centroid without exploding',
+      () {
+        final series = PieChartSeries.fromMap(
+          id: 'lifted',
+          values: const {'A': 2, 'B': 1, 'C': 1},
+          pieStyle: const PieChartStyle(
+            startAngleDegrees: 0,
+            radiusFactor: 0.8,
+            sliceGap: 0,
+            selectionExplodeOffset: 24,
+          ),
+          selectionStyle: const RadialSelectionStyle(
+            effect: RadialSelectionEffect.lift,
+            liftScale: 1.12,
+            liftOffset: 8,
+          ),
+        );
+
+        final base = PieChartGeometryCalculator.calculate(
+          series: series,
+          size: const Size.square(240),
+        );
+        final lifted = PieChartGeometryCalculator.calculate(
+          series: series,
+          size: const Size.square(240),
+          explodedPointIndices: const {0},
+          selectionEffect: RadialSelectionEffect.lift,
+          selectionLiftScale: 1.12,
+          selectionLiftOffset: 8,
+        );
+        final baseSlice = base.slices.first;
+        final liftedSlice = lifted.slices.first;
+
+        expect(liftedSlice.isSelected, isTrue);
+        expect(liftedSlice.explodeOffset, Offset.zero);
+        expect(liftedSlice.liftOffset.distance, closeTo(8, 1e-9));
+        expect(liftedSlice.selectionScale, closeTo(1.12, 1e-9));
+        expect(
+          liftedSlice.path.getBounds().width,
+          greaterThan(baseSlice.path.getBounds().width),
+        );
+        expect(
+          liftedSlice.path.getBounds().height,
+          greaterThan(baseSlice.path.getBounds().height),
+        );
+        expect(liftedSlice.tooltipAnchor, isNot(baseSlice.tooltipAnchor));
+        expect(lifted.sliceAt(liftedSlice.tooltipAnchor)?.pointIndex, 0);
+      },
+    );
+
     test('anchors are deterministic functions of the slice mid-angle', () {
       final series = PieChartSeries.fromMap(
         id: 'anchors',
@@ -409,6 +460,71 @@ void main() {
         closeTo(115, 1e-9),
       );
       expect(first.path.getBounds(), isNot(Rect.zero));
+    });
+
+    test(
+      'inside label offset moves radially and stays inside the slice band',
+      () {
+        PieSliceGeometry sliceAt(double offset) {
+          final series = PieChartSeries.fromMap(
+            id: 'inside-label-offset-$offset',
+            values: const {'Only': 1},
+            pieStyle: const PieChartStyle(sliceGap: 0, radiusFactor: 1),
+            dataLabels: PieDataLabelConfig(insideOffset: offset),
+          );
+          return PieChartGeometryCalculator.calculate(
+            series: series,
+            size: const Size.square(200),
+          ).slices.single;
+        }
+
+        double anchorRadius(PieSliceGeometry slice) =>
+            (slice.insideLabelAnchor - slice.center).distance;
+
+        expect(anchorRadius(sliceAt(0)), closeTo(58, 1e-9));
+        expect(anchorRadius(sliceAt(20)), closeTo(78, 1e-9));
+        expect(anchorRadius(sliceAt(-20)), closeTo(38, 1e-9));
+        expect(anchorRadius(sliceAt(200)), closeTo(100, 1e-9));
+        expect(anchorRadius(sliceAt(-200)), closeTo(0, 1e-9));
+      },
+    );
+
+    test('inside label radius factor can center an allocated ring band', () {
+      PieSliceGeometry sliceAt({
+        double insideLabelRadiusFactor = 0.58,
+        double insideOffset = 0,
+      }) {
+        final series = DonutChartSeries.fromMap(
+          id: 'allocated-ring',
+          values: const {'Only': 1},
+          dataLabels: PieDataLabelConfig(insideOffset: insideOffset),
+          donutStyle: const DonutChartStyle(
+            sliceGap: 0,
+            animationMode: PieAnimationMode.none,
+          ),
+        );
+        return PieChartGeometryCalculator.calculate(
+          series: series,
+          size: const Size.square(200),
+          centerOverride: const Offset(100, 100),
+          innerRadiusOverride: 20,
+          outerRadiusOverride: 80,
+          insideLabelRadiusFactor: insideLabelRadiusFactor,
+        ).slices.single;
+      }
+
+      double anchorRadius(PieSliceGeometry slice) =>
+          (slice.insideLabelAnchor - slice.center).distance;
+
+      expect(anchorRadius(sliceAt()), closeTo(54.8, 1e-9));
+      expect(
+        anchorRadius(sliceAt(insideLabelRadiusFactor: 0.5)),
+        closeTo(50, 1e-9),
+      );
+      expect(
+        anchorRadius(sliceAt(insideLabelRadiusFactor: 0.5, insideOffset: 8)),
+        closeTo(58, 1e-9),
+      );
     });
 
     test('inner-radius seam rejects the center and accepts the ring', () {

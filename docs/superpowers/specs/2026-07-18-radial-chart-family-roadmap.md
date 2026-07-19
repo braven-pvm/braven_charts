@@ -371,6 +371,8 @@ radial series base.
 
 ### Phase 1 — Concentric Donut V1
 
+Status: implementation complete and in release validation.
+
 Deliver:
 
 - multiple independent `DonutChartSeries` rings;
@@ -387,7 +389,8 @@ V1 limits:
 - independent totals; no parent-child inference;
 - no drilldown;
 - no cross-ring stacking;
-- one selection model shared with current Pie/Donut behavior.
+- one shared explode/lift selection model across Pie, Donut, and Concentric
+  Donut behavior.
 
 Exit gate: a saved multi-ring artifact restores with identical rings, totals,
 selection identity, table rows, and portable center fallback.

@@ -54,10 +54,12 @@ chart, legend, table, controller, artifact, and restored runtime.
 
 ## Data and validation
 
-Donut accepts exactly one `DonutChartSeries` and cannot mix with Cartesian or
-Pie series. Contributions must be finite and non-negative, and category labels
-must not be empty. Zero values remain in JSON and the native table but do not
-paint a slice. An all-zero series uses the configured empty state.
+A standalone Donut accepts exactly one `DonutChartSeries` and cannot mix with
+Cartesian or Pie series. Two or more Donut series activate the separately
+documented Concentric Donut composition. Contributions must be finite and
+non-negative, and category labels must not be empty. Zero values remain in
+JSON and the native table but do not paint a slice. An all-zero series uses the
+configured empty state.
 
 The defining geometry is `innerRadiusFactor`. It must be greater than `0` and
 less than `1`. `sweepAngleDegrees` must be greater than `0` and at most `360`.
@@ -72,7 +74,8 @@ outer radii.
 - `sweepAngleDegrees`: full or partial angular span;
 - `startAngleDegrees` and `clockwise`: orientation and ordering;
 - `radiusFactor`: chart size within the measured viewport;
-- `sliceGap`: physical separation without changing category share;
+- `sliceGap`: constant-width physical separation with parallel slice sides,
+  without changing category share;
 - border, gradient, opacity, corner, elevation, selection, and animation
   options shared with Pie.
 
@@ -88,6 +91,12 @@ const DonutChartStyle(
   cornerTreatment: PieCornerTreatment.circularCenter,
 )
 ```
+
+Each slice receives half of `sliceGap` on both radial seams. Adjacent seams are
+shifted along the same boundary normal, so the open channel stays the requested
+width from the center opening to the outer arc instead of widening into an
+angular wedge. Narrow slices clamp oversized gaps before their inner arc can
+collapse.
 
 Use `PieCornerTreatment.circularCenter` when rounded outer slices must retain a
 perfect circular opening. `outerOnly` keeps inner corners sharp, while
@@ -127,10 +136,12 @@ controller.replayRadialEntrance();
 ```
 
 The entrance duration and curve come from `ChartTheme.animationTheme`.
-`MediaQuery.disableAnimationsOf`, `PieAnimationMode.none`, and a zero duration
-always render the final frame immediately, including controller-triggered
-replays. Labels wait until the entrance lifecycle completes so elastic curves
-cannot flash them on and off. Entrance modes do not change source data,
+Bounded monotonic curves are honored. Overshooting or reversing curves such as
+`Curves.elasticOut` use a monotonic `easeOutCubic` reveal fallback so geometry
+cannot advance, retreat, and flash forward again. `MediaQuery.disableAnimationsOf`,
+`PieAnimationMode.none`, and a zero duration always render the final frame
+immediately, including controller-triggered replays. Labels wait until the
+entrance lifecycle completes. Entrance modes do not change source data,
 selection identity, artifact content, or the native table.
 
 ## Data updates
@@ -279,6 +290,18 @@ The formatter owns the complete returned text, including units. Percentage
 callbacks receive a fractional share from `0` to `1`. Resolved value/share
 formatting is reused by data labels, legends, tooltips, and accessibility;
 radius and center callbacks additionally own their corresponding surfaces.
+
+Donut uses the same two-layer radial label contract as Pie. For a category
+callout outside the ring and a percentage badge inside it, set primary
+`content: PieDataLabelContent.category`, then add
+`secondaryContent: PieDataLabelContent.percentage` with
+`secondaryPosition: PieDataLabelPosition.inside`. The two layers share
+eligibility and formatting but may use separate callout styles. The shared
+signed `insideOffset` moves inside labels toward the outer edge when positive
+or toward the center opening when negative; the anchor stays inside its ring.
+See
+[Pie data labels](pie_charts.md#split-category-and-share-labels) for the full
+configuration.
 
 ## Variable outer radius
 
@@ -508,7 +531,8 @@ Center content adds `series.donut.center-content.v1`; variable radius adds
 `series.radial.grouping.v1`; grouped variable radius adds
 `series.radial.grouped-variable-radius.v1`; numeric formatter descriptors add
 `series.radial.formatters.v1`; and automatic data updates add
-`series.radial.data-transitions.v1`. Unsupported readers fail with a capability
+`series.radial.data-transitions.v1`. A secondary label layer adds
+`series.radial.dual-labels.v1`. Unsupported readers fail with a capability
 diagnostic instead of silently rendering a different chart.
 
 Formatter callbacks are executable behavior and cannot be serialized. If any
@@ -569,8 +593,9 @@ the shared `LegendStyle` and `InteractionTheme` contracts.
   crosshairs, scrollbars, pan, or zoom.
 - Portable center content is text configuration. Arbitrary widgets and actions
   are supported as runtime bindings and must be rebound after hydration.
-- Multiple concentric rings, hierarchy/drill-down, radial bars, per-slice
-  staggering, spring choreography, 3D effects, and image shaders are outside
-  this single-ring Donut contract.
+- Multiple independent rings use the chart-level
+  [`ConcentricDonutConfig`](concentric_donut_charts.md) contract. Hierarchy,
+  drill-down, radial bars, per-slice staggering, spring choreography, 3D
+  effects, and image shaders remain outside this single-ring Donut contract.
 - Prefer bars when precise comparison matters more than part-to-whole meaning
   or when categories are too dense for readable slices.

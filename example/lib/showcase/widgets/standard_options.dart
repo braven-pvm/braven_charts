@@ -32,6 +32,9 @@ class StandardChartOptions extends StatelessWidget {
     this.showLegendOption = true,
     this.showInteractionOptions = true,
     this.showLineStyleOption = true,
+    this.sectionTitle = 'Chart Options',
+    this.sectionIcon = Icons.settings,
+    this.themeOptionKey,
     this.additionalOptions,
   });
 
@@ -44,6 +47,9 @@ class StandardChartOptions extends StatelessWidget {
   final bool showLegendOption;
   final bool showInteractionOptions;
   final bool showLineStyleOption;
+  final String sectionTitle;
+  final IconData sectionIcon;
+  final Key? themeOptionKey;
 
   /// Additional widgets to include in the options panel.
   final List<Widget>? additionalOptions;
@@ -54,12 +60,13 @@ class StandardChartOptions extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         return OptionSection(
-          title: 'Chart Options',
-          icon: Icons.settings,
+          title: sectionTitle,
+          icon: sectionIcon,
           children: [
             // Theme Selection
             if (showThemeOption)
               EnumOption<ThemePreset>(
+                key: themeOptionKey,
                 label: 'Theme',
                 value: _currentThemePreset,
                 values: ThemePreset.values,

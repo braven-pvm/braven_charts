@@ -29,9 +29,9 @@ screenshots:
       and a resolved total.
     path: doc/screenshots/bar_waterfall.png
   - description: >-
-      Horizontal Bar chart comparing revenue, orders, conversion, and margin
-      across four independently scaled and colored axes.
-    path: doc/screenshots/bar_axes.png
+      Concentric Donut comparing three independent revenue totals with weighted
+      rings, a shared center, gradients, and stable category identity.
+    path: doc/screenshots/concentric_revenue_mix.png
   - description: >-
       Pie allocation chart with radial gradients, rounded separated slices,
       elevation, inside percentages, and a positioned legend.

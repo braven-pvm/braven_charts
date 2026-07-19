@@ -7,8 +7,10 @@ import 'dart:typed_data';
 import 'package:braven_charts/braven_charts.dart';
 import 'package:flutter/material.dart' hide TooltipTriggerMode;
 
+import '../data/radial_demo_data.dart';
 import '../widgets/chart_options.dart';
 import '../widgets/options_panel.dart';
+import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
 import '../widgets/standard_options.dart';
 
@@ -31,13 +33,22 @@ class _PieChartsPageState extends State<PieChartsPage> {
   _PieShowcasePreset _showcasePreset = _PieShowcasePreset.editorial;
   late Map<String, num> _values;
   late Map<String, num> _radiusValues;
+  late int _categoryCount;
   bool _showLabels = true;
+  _PieLabelLayout _labelLayout = _PieLabelLayout.split;
   PieDataLabelPosition _labelPosition = PieDataLabelPosition.outside;
   PieDataLabelContent _labelContent = PieDataLabelContent.categoryAndPercentage;
   PieDataLabelCollisionStrategy _collisionStrategy =
       PieDataLabelCollisionStrategy.shiftAndHide;
   double _minimumShare = 0.03;
+  double _minimumSweepDegrees = 0;
+  double _labelPadding = 6;
+  double _insideLabelOffset = 0;
   double _outsideLabelOffset = 0;
+  double _connectorLength = 14;
+  double _connectorWidth = 1;
+  bool _useCustomConnectorColor = false;
+  Color _connectorColor = const Color(0xFF475569);
   double _startAngle = -90;
   bool _clockwise = true;
   double _radiusFactor = 0.86;
@@ -46,8 +57,19 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _sliceGap = 4;
   double _borderWidth = 1;
   _PieBorderPreset _borderPreset = _PieBorderPreset.darkerSlice;
+  Color _fixedBorderColor = const Color(0xFF334155);
   _PieGradientPreset _gradientPreset = _PieGradientPreset.radial;
+  bool _useFixedGradientColors = false;
+  Color _gradientStartColor = const Color(0xFF67E8F9);
+  Color _gradientEndColor = const Color(0xFF1D4ED8);
+  double _gradientStartLightnessShift = 0.2;
+  double _gradientEndLightnessShift = -0.12;
+  double _gradientAngleDegrees = -50;
   double _selectionExplodeOffset = 10;
+  RadialSelectionEffect _selectionEffect = RadialSelectionEffect.explode;
+  double _selectionLiftScale = 1.1;
+  double _selectionLiftOffset = 6;
+  double _selectionBackdropBlur = 1.25;
   double _cornerRadius = 8;
   PieCornerTreatment _cornerTreatment = PieCornerTreatment.roundAll;
   double _sliceOpacity = 1;
@@ -57,6 +79,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
   double _selectedGlowBlur = 12;
   double _selectedGlowSpread = 2;
   double _selectedGlowOpacity = 0.48;
+  double _selectedGlowOffsetY = 0;
   PieAnimationMode _animationMode = PieAnimationMode.grow;
   RadialDataTransitionMode _dataTransitionMode =
       RadialDataTransitionMode.automatic;
@@ -66,13 +89,21 @@ class _PieChartsPageState extends State<PieChartsPage> {
       RadialSliceRadiusAggregation.weightedMean;
   _PiePalette _palette = _PiePalette.theme;
   _PieCalloutPreset _calloutPreset = _PieCalloutPreset.none;
+  _PieInsideShareStyle _insideShareStyle = _PieInsideShareStyle.darkBadge;
   _PieTooltipPreset _tooltipPreset = _PieTooltipPreset.theme;
   _PieLegendPreset _legendPreset = _PieLegendPreset.theme;
   _PieLegendContent _legendContent = _PieLegendContent.standard;
   bool _showLegend = true;
   LegendPosition _legendPosition = LegendPosition.bottomCenter;
   LegendOrientation _legendOrientation = LegendOrientation.horizontal;
+  LegendMarkerShape _legendMarkerShape = LegendMarkerShape.circle;
+  double _legendMarkerSize = 10;
+  double _legendFontSize = 10;
+  double _legendOpacity = 1;
   bool _showTooltips = true;
+  TooltipPosition _tooltipPosition = TooltipPosition.auto;
+  bool _tooltipFollowsCursor = false;
+  double _tooltipOffset = 8;
   String? _selectedCategory;
   ChartArtifact? _capturedArtifact;
   HydratedChartConfiguration? _restoredConfiguration;
@@ -81,6 +112,28 @@ class _PieChartsPageState extends State<PieChartsPage> {
   bool _isCapturing = false;
   bool _showRestoredCopy = false;
 
+  static const _colorChoices = <Color>[
+    Color(0xFF2563EB),
+    Color(0xFF0D9488),
+    Color(0xFFF59E0B),
+    Color(0xFF7C3AED),
+    Color(0xFFEF4444),
+    Color(0xFF334155),
+    Color(0xFFF8FAFC),
+  ];
+
+  static const _simpleValues = <String, num>{
+    'Subscriptions': 0.8404721477638243,
+    'Services': 16.291963338129094,
+    'Hardware': 8.058886416022458,
+    'Training': 3.1698479487445628,
+    'Other': 13.011006858125905,
+    'Category 6': 9.51274790876786,
+    'Category 7': 20.4515616038186,
+    'Category 8': 18.874973095668356,
+    'Category 9': 9.78854068295935,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +141,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _radiusValues = Map<String, num>.of(
       _dataset.radiusValues ?? const <String, num>{},
     );
+    _categoryCount = _values.length;
   }
 
   @override
@@ -106,6 +160,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _radiusValues = Map<String, num>.of(
         dataset.radiusValues ?? const <String, num>{},
       );
+      _categoryCount = _values.length;
       _selectedCategory = null;
       _clearPortableState();
     });
@@ -120,37 +175,83 @@ class _PieChartsPageState extends State<PieChartsPage> {
       _clearPortableState();
       _animationMode = PieAnimationMode.grow;
       _showTooltips = true;
+      _minimumSweepDegrees = 0;
+      _labelPadding = 6;
+      _insideLabelOffset = 0;
+      _connectorLength = 14;
+      _connectorWidth = 1;
+      _useCustomConnectorColor = false;
+      _connectorColor = const Color(0xFF475569);
+      _fixedBorderColor = const Color(0xFF334155);
+      _useFixedGradientColors = false;
+      _gradientStartColor = const Color(0xFF67E8F9);
+      _gradientEndColor = const Color(0xFF1D4ED8);
+      _gradientStartLightnessShift = 0.2;
+      _gradientEndLightnessShift = -0.12;
+      _gradientAngleDegrees = -50;
+      _legendMarkerShape = LegendMarkerShape.circle;
+      _legendMarkerSize = 10;
+      _legendFontSize = 10;
+      _legendOpacity = 1;
+      _tooltipPosition = TooltipPosition.auto;
+      _tooltipFollowsCursor = false;
+      _tooltipOffset = 8;
       switch (preset) {
         case _PieShowcasePreset.simple:
+          _dataset = _PieDataset.revenue;
+          _values = Map<String, num>.of(_simpleValues);
+          _radiusValues = const <String, num>{};
+          _categoryCount = _values.length;
           _showLabels = true;
-          _labelPosition = PieDataLabelPosition.inside;
-          _labelContent = PieDataLabelContent.value;
+          _labelLayout = _PieLabelLayout.split;
+          _labelPosition = PieDataLabelPosition.outside;
+          _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
-          _minimumShare = 0.2;
+          _minimumShare = 0.06;
+          _minimumSweepDegrees = 2;
+          _labelPadding = 3;
           _outsideLabelOffset = 0;
-          _startAngle = -90;
+          _connectorLength = 20;
+          _connectorWidth = 1.5;
+          _startAngle = -45;
           _clockwise = true;
           _radiusFactor = 0.92;
           _sliceGap = 2;
-          _borderWidth = 1.5;
+          _borderWidth = 1;
           _borderPreset = _PieBorderPreset.darkerSlice;
-          _gradientPreset = _PieGradientPreset.linear;
+          _gradientPreset = _PieGradientPreset.radial;
+          _gradientStartLightnessShift = 0.25;
+          _gradientEndLightnessShift = -0.15;
           _selectionExplodeOffset = 8;
-          _cornerRadius = 6;
+          _selectionEffect = RadialSelectionEffect.lift;
+          _selectionLiftScale = 1.18;
+          _selectionLiftOffset = 8;
+          _selectionBackdropBlur = 0;
+          _cornerRadius = 4;
           _cornerTreatment = PieCornerTreatment.outerOnly;
-          _sliceOpacity = 1;
-          _showShadow = false;
-          _showSelectedGlow = false;
+          _sliceOpacity = 0.8;
+          _showShadow = true;
+          _showSelectedGlow = true;
+          _selectedGlowColor = _PieGlowColor.slice;
+          _selectedGlowBlur = 10;
+          _selectedGlowSpread = 2;
+          _selectedGlowOpacity = 0.48;
+          _selectedGlowOffsetY = 0;
           _palette = _PiePalette.sunset;
           _calloutPreset = _PieCalloutPreset.simpleValues;
-          _tooltipPreset = _PieTooltipPreset.contrast;
+          _insideShareStyle = _PieInsideShareStyle.autoContrast;
+          _tooltipPreset = _PieTooltipPreset.theme;
           _legendPreset = _PieLegendPreset.compact;
           _legendContent = _PieLegendContent.standard;
           _showLegend = false;
           _legendPosition = LegendPosition.bottomCenter;
           _legendOrientation = LegendOrientation.horizontal;
+          _animationMode = PieAnimationMode.sweep;
+          _dataTransitionMode = RadialDataTransitionMode.automatic;
+          _groupSmallSlices = false;
         case _PieShowcasePreset.editorial:
           _showLabels = true;
+          _labelLayout = _PieLabelLayout.split;
           _labelPosition = PieDataLabelPosition.outside;
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
@@ -164,6 +265,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _borderPreset = _PieBorderPreset.darkerSlice;
           _gradientPreset = _PieGradientPreset.radial;
           _selectionExplodeOffset = 10;
+          _selectionEffect = RadialSelectionEffect.explode;
+          _selectionLiftScale = 1.08;
+          _selectionLiftOffset = 6;
+          _selectionBackdropBlur = 1.25;
           _cornerRadius = 8;
           _cornerTreatment = PieCornerTreatment.roundAll;
           _sliceOpacity = 1;
@@ -173,8 +278,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _selectedGlowBlur = 12;
           _selectedGlowSpread = 2;
           _selectedGlowOpacity = 0.48;
+          _selectedGlowOffsetY = 0;
           _palette = _PiePalette.theme;
           _calloutPreset = _PieCalloutPreset.none;
+          _insideShareStyle = _PieInsideShareStyle.darkBadge;
           _tooltipPreset = _PieTooltipPreset.theme;
           _legendPreset = _PieLegendPreset.theme;
           _legendContent = _PieLegendContent.standard;
@@ -183,6 +290,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _legendOrientation = LegendOrientation.horizontal;
         case _PieShowcasePreset.compact:
           _showLabels = true;
+          _labelLayout = _PieLabelLayout.single;
           _labelPosition = PieDataLabelPosition.inside;
           _labelContent = PieDataLabelContent.percentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
@@ -196,13 +304,19 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _borderPreset = _PieBorderPreset.darkerSlice;
           _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 8;
+          _selectionEffect = RadialSelectionEffect.explode;
+          _selectionLiftScale = 1.06;
+          _selectionLiftOffset = 6;
+          _selectionBackdropBlur = 0;
           _cornerRadius = 4;
           _cornerTreatment = PieCornerTreatment.outerOnly;
           _sliceOpacity = 1;
           _showShadow = false;
           _showSelectedGlow = false;
+          _selectedGlowOffsetY = 0;
           _palette = _PiePalette.ocean;
           _calloutPreset = _PieCalloutPreset.none;
+          _insideShareStyle = _PieInsideShareStyle.autoContrast;
           _tooltipPreset = _PieTooltipPreset.contrast;
           _legendPreset = _PieLegendPreset.compact;
           _legendContent = _PieLegendContent.valueCards;
@@ -211,6 +325,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _legendOrientation = LegendOrientation.horizontal;
         case _PieShowcasePreset.elevated:
           _showLabels = true;
+          _labelLayout = _PieLabelLayout.split;
           _labelPosition = PieDataLabelPosition.outside;
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
@@ -223,18 +338,24 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _borderWidth = 1.5;
           _borderPreset = _PieBorderPreset.shiftedHue;
           _gradientPreset = _PieGradientPreset.radial;
-          _selectionExplodeOffset = 14;
+          _selectionExplodeOffset = 0;
+          _selectionEffect = RadialSelectionEffect.lift;
+          _selectionLiftScale = 1.12;
+          _selectionLiftOffset = 8;
+          _selectionBackdropBlur = 1.5;
           _cornerRadius = 14;
           _cornerTreatment = PieCornerTreatment.circularCenter;
           _sliceOpacity = 0.94;
           _showShadow = true;
           _showSelectedGlow = true;
-          _selectedGlowColor = _PieGlowColor.accent;
+          _selectedGlowColor = _PieGlowColor.neutral;
           _selectedGlowBlur = 18;
           _selectedGlowSpread = 3;
-          _selectedGlowOpacity = 0.45;
+          _selectedGlowOpacity = 0.38;
+          _selectedGlowOffsetY = 7;
           _palette = _PiePalette.sunset;
           _calloutPreset = _PieCalloutPreset.surface;
+          _insideShareStyle = _PieInsideShareStyle.lightBadge;
           _tooltipPreset = _PieTooltipPreset.elevated;
           _legendPreset = _PieLegendPreset.surface;
           _legendContent = _PieLegendContent.standard;
@@ -243,6 +364,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _legendOrientation = LegendOrientation.horizontal;
         case _PieShowcasePreset.highContrast:
           _showLabels = true;
+          _labelLayout = _PieLabelLayout.split;
           _labelPosition = PieDataLabelPosition.outside;
           _labelContent = PieDataLabelContent.categoryAndPercentage;
           _collisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
@@ -256,6 +378,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _borderPreset = _PieBorderPreset.chartTheme;
           _gradientPreset = _PieGradientPreset.solid;
           _selectionExplodeOffset = 10;
+          _selectionEffect = RadialSelectionEffect.explode;
+          _selectionLiftScale = 1.08;
+          _selectionLiftOffset = 6;
+          _selectionBackdropBlur = 0;
           _cornerRadius = 4;
           _cornerTreatment = PieCornerTreatment.circularCenter;
           _sliceOpacity = 1;
@@ -265,8 +391,10 @@ class _PieChartsPageState extends State<PieChartsPage> {
           _selectedGlowBlur = 10;
           _selectedGlowSpread = 1;
           _selectedGlowOpacity = 0.45;
+          _selectedGlowOffsetY = 0;
           _palette = _PiePalette.monochrome;
           _calloutPreset = _PieCalloutPreset.highContrast;
+          _insideShareStyle = _PieInsideShareStyle.lightBadge;
           _tooltipPreset = _PieTooltipPreset.contrast;
           _legendPreset = _PieLegendPreset.surface;
           _legendContent = _PieLegendContent.standard;
@@ -276,9 +404,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
       }
     });
     _optionsController.theme = switch (preset) {
-      _PieShowcasePreset.simple => ChartTheme.dark.copyWith(
-        backgroundColor: const Color(0xFF1F1F1F),
-      ),
+      _PieShowcasePreset.simple => ChartTheme.light,
       _PieShowcasePreset.editorial => ChartTheme.light,
       _PieShowcasePreset.compact => ChartTheme.corporateBlue,
       _PieShowcasePreset.elevated => ChartTheme.vibrant,
@@ -291,22 +417,50 @@ class _PieChartsPageState extends State<PieChartsPage> {
     setState(() {
       _selectedCategory = null;
       _clearPortableState();
-      _values = {
-        for (final entry in _dataset.categoryValues.entries)
-          entry.key: math.max(
-            1,
-            entry.value * (0.72 + _random.nextDouble() * 0.56),
-          ),
-      };
-      _radiusValues = {
-        for (final entry
-            in (_dataset.radiusValues ?? const <String, num>{}).entries)
-          entry.key: math.max(
-            1,
-            entry.value * (0.82 + _random.nextDouble() * 0.36),
-          ),
-      };
+      _randomizeDataset();
     });
+  }
+
+  void _setCategoryCount(int count) {
+    if (_categoryCount == count) return;
+    _chartController.clearPointSelection();
+    setState(() {
+      _categoryCount = count;
+      _selectedCategory = null;
+      _clearPortableState();
+      _randomizeDataset();
+    });
+  }
+
+  void _randomizeDataset() {
+    final labels = radialDemoLabels(
+      preferredLabels: _dataset.categoryValues.keys,
+      count: _categoryCount,
+    );
+    final total = _dataset.categoryValues.values.fold<double>(
+      0,
+      (sum, value) => sum + value.toDouble(),
+    );
+    _values = randomRadialDistribution(
+      labels: labels,
+      total: total,
+      random: _random,
+    );
+
+    final authoredRadiusValues = _dataset.radiusValues;
+    if (authoredRadiusValues == null) {
+      _radiusValues = const <String, num>{};
+      return;
+    }
+    final radiusRange = authoredRadiusValues.values
+        .map((value) => value.toDouble())
+        .toList(growable: false);
+    _radiusValues = randomRadialMetric(
+      labels: labels,
+      minimum: radiusRange.reduce((a, b) => a < b ? a : b),
+      maximum: radiusRange.reduce((a, b) => a > b ? a : b),
+      random: _random,
+    );
   }
 
   void _clearPortableState() {
@@ -384,429 +538,829 @@ class _PieChartsPageState extends State<PieChartsPage> {
   }
 
   List<Widget> _buildOptions() {
-    return [
-      OptionSection(
-        title: 'Data labels',
-        icon: Icons.label_outline,
-        children: [
-          BoolOption(
-            label: 'Show labels',
-            value: _showLabels,
-            onChanged: (value) => setState(() => _showLabels = value),
-            subtitle: 'Keep category meaning next to each contribution',
-          ),
-          if (_showLabels) ...[
-            EnumOption<PieDataLabelPosition>(
-              label: 'Position',
-              value: _labelPosition,
-              values: PieDataLabelPosition.values,
-              labelBuilder: _labelPositionName,
-              onChanged: (value) => setState(() => _labelPosition = value),
+    return orderRadialOptionSections([
+      RadialOptionEntry(
+        RadialOptionSectionKind.dataLabels,
+        OptionSection(
+          title: 'Data labels',
+          icon: Icons.label_outline,
+          children: [
+            BoolOption(
+              key: const ValueKey('pie-show-labels'),
+              label: 'Show labels',
+              value: _showLabels,
+              onChanged: (value) => setState(() => _showLabels = value),
+              subtitle: 'Keep category meaning next to each contribution',
             ),
-            EnumOption<PieDataLabelContent>(
-              label: 'Content',
-              value: _labelContent,
-              values: PieDataLabelContent.values,
-              labelBuilder: _labelContentName,
-              onChanged: (value) => setState(() => _labelContent = value),
-            ),
-            if (_labelPosition == PieDataLabelPosition.outside) ...[
-              EnumOption<PieDataLabelCollisionStrategy>(
-                label: 'Collision handling',
-                value: _collisionStrategy,
-                values: PieDataLabelCollisionStrategy.values,
-                labelBuilder: _collisionName,
-                onChanged: (value) =>
-                    setState(() => _collisionStrategy = value),
+            if (_showLabels) ...[
+              EnumOption<_PieLabelLayout>(
+                key: const ValueKey('pie-label-layout'),
+                label: 'Layout',
+                value: _labelLayout,
+                values: _PieLabelLayout.values,
+                labelBuilder: (value) => switch (value) {
+                  _PieLabelLayout.single => 'One label per slice',
+                  _PieLabelLayout.split => 'Category outside + share inside',
+                },
+                onChanged: (value) => setState(() => _labelLayout = value),
               ),
+              if (_labelLayout == _PieLabelLayout.single) ...[
+                EnumOption<PieDataLabelPosition>(
+                  key: const ValueKey('pie-label-position'),
+                  label: 'Position',
+                  value: _labelPosition,
+                  values: PieDataLabelPosition.values,
+                  labelBuilder: _labelPositionName,
+                  onChanged: (value) => setState(() => _labelPosition = value),
+                ),
+                EnumOption<PieDataLabelContent>(
+                  key: const ValueKey('pie-label-content'),
+                  label: 'Content',
+                  value: _labelContent,
+                  values: PieDataLabelContent.values,
+                  labelBuilder: _labelContentName,
+                  onChanged: (value) => setState(() => _labelContent = value),
+                ),
+              ],
+              EnumOption<_PieCalloutPreset>(
+                key: const ValueKey('pie-primary-label-style'),
+                label: _labelLayout == _PieLabelLayout.split
+                    ? 'Outside callout style'
+                    : 'Label style',
+                value: _calloutPreset,
+                values: _PieCalloutPreset.values,
+                labelBuilder: _calloutPresetName,
+                onChanged: (value) => setState(() => _calloutPreset = value),
+              ),
+              if (_labelLayout == _PieLabelLayout.split)
+                EnumOption<_PieInsideShareStyle>(
+                  key: const ValueKey('pie-inside-share-style'),
+                  label: 'Inside share style',
+                  subtitle: 'Styled independently from the outside category',
+                  value: _insideShareStyle,
+                  values: _PieInsideShareStyle.values,
+                  labelBuilder: _insideShareStyleName,
+                  onChanged: (value) =>
+                      setState(() => _insideShareStyle = value),
+                ),
               SliderOption(
-                label: 'Label offset',
-                value: _outsideLabelOffset,
+                key: const ValueKey('pie-label-minimum-share'),
+                label: 'Minimum share',
+                value: _minimumShare * 100,
                 min: 0,
-                max: 64,
-                divisions: 16,
-                suffix: ' px',
+                max: 20,
+                divisions: 20,
+                suffix: '%',
                 decimalPlaces: 0,
                 onChanged: (value) =>
-                    setState(() => _outsideLabelOffset = value),
+                    setState(() => _minimumShare = value / 100),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-label-minimum-sweep'),
+                label: 'Minimum sweep',
+                value: _minimumSweepDegrees,
+                min: 0,
+                max: 24,
+                divisions: 12,
+                suffix: '°',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _minimumSweepDegrees = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-label-padding'),
+                label: 'Label padding',
+                value: _labelPadding,
+                min: 0,
+                max: 16,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _labelPadding = value),
+              ),
+              if (_labelLayout == _PieLabelLayout.split ||
+                  _labelPosition == PieDataLabelPosition.inside)
+                SliderOption(
+                  key: const ValueKey('pie-label-inside-offset'),
+                  label: 'Inside radial offset',
+                  value: _insideLabelOffset,
+                  min: -32,
+                  max: 32,
+                  divisions: 32,
+                  suffix: 'px',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _insideLabelOffset = value),
+                ),
+              if (_labelLayout == _PieLabelLayout.split ||
+                  _labelPosition == PieDataLabelPosition.outside) ...[
+                EnumOption<PieDataLabelCollisionStrategy>(
+                  key: const ValueKey('pie-label-collision'),
+                  label: 'Collision handling',
+                  value: _collisionStrategy,
+                  values: PieDataLabelCollisionStrategy.values,
+                  labelBuilder: _collisionName,
+                  onChanged: (value) =>
+                      setState(() => _collisionStrategy = value),
+                ),
+                SliderOption(
+                  key: const ValueKey('pie-label-outside-offset'),
+                  label: 'Outside offset',
+                  value: _outsideLabelOffset,
+                  min: 0,
+                  max: 64,
+                  divisions: 16,
+                  suffix: 'px',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _outsideLabelOffset = value),
+                ),
+                SliderOption(
+                  key: const ValueKey('pie-connector-length'),
+                  label: 'Connector length',
+                  value: _connectorLength,
+                  min: 0,
+                  max: 32,
+                  divisions: 16,
+                  suffix: 'px',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _connectorLength = value),
+                ),
+                SliderOption(
+                  key: const ValueKey('pie-connector-width'),
+                  label: 'Connector width',
+                  value: _connectorWidth,
+                  min: 0.5,
+                  max: 4,
+                  divisions: 7,
+                  suffix: 'px',
+                  decimalPlaces: 1,
+                  onChanged: (value) => setState(() => _connectorWidth = value),
+                ),
+                BoolOption(
+                  key: const ValueKey('pie-custom-connector-color'),
+                  label: 'Custom connector color',
+                  value: _useCustomConnectorColor,
+                  onChanged: (value) =>
+                      setState(() => _useCustomConnectorColor = value),
+                ),
+                if (_useCustomConnectorColor)
+                  ColorOption(
+                    key: const ValueKey('pie-connector-color'),
+                    label: 'Connector color',
+                    value: _connectorColor,
+                    colors: _colorChoices,
+                    onChanged: (value) =>
+                        setState(() => _connectorColor = value),
+                  ),
+              ],
+            ],
+          ],
+        ),
+      ),
+      RadialOptionEntry(
+        RadialOptionSectionKind.geometry,
+        OptionSection(
+          title: 'Pie geometry',
+          icon: Icons.pie_chart_outline,
+          children: [
+            SliderOption(
+              label: 'Start angle',
+              value: _startAngle,
+              min: -180,
+              max: 180,
+              divisions: 24,
+              suffix: '°',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _startAngle = value),
+            ),
+            BoolOption(
+              label: 'Clockwise order',
+              value: _clockwise,
+              onChanged: (value) => setState(() => _clockwise = value),
+            ),
+            SliderOption(
+              label: 'Radius',
+              value: _radiusFactor * 100,
+              min: 55,
+              max: 100,
+              divisions: 9,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _radiusFactor = value / 100),
+            ),
+            if (_dataset.hasVariableSliceRadius) ...[
+              SliderOption(
+                label: 'Smallest slice radius',
+                value: _minimumSliceRadiusFactor * 100,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _minimumSliceRadiusFactor = value / 100),
+              ),
+              EnumOption<PieSliceRadiusScale>(
+                label: 'Radius scale',
+                value: _sliceRadiusScale,
+                values: PieSliceRadiusScale.values,
+                labelBuilder: (value) => switch (value) {
+                  PieSliceRadiusScale.area => 'Perceptual area',
+                  PieSliceRadiusScale.linear => 'Linear radius',
+                },
+                onChanged: (value) => setState(() => _sliceRadiusScale = value),
               ),
             ],
-            SliderOption(
-              label: 'Minimum share',
-              value: _minimumShare * 100,
-              min: 0,
-              max: 20,
-              divisions: 20,
-              suffix: '%',
-              decimalPlaces: 0,
-              onChanged: (value) => setState(() => _minimumShare = value / 100),
-            ),
-            EnumOption<_PieCalloutPreset>(
-              label: 'Callout style',
-              value: _calloutPreset,
-              values: _PieCalloutPreset.values,
-              labelBuilder: _calloutPresetName,
-              onChanged: (value) => setState(() => _calloutPreset = value),
-            ),
           ],
-        ],
+        ),
       ),
-      OptionSection(
-        title: 'Pie geometry',
-        icon: Icons.pie_chart_outline,
-        children: [
-          SliderOption(
-            label: 'Start angle',
-            value: _startAngle,
-            min: -180,
-            max: 180,
-            divisions: 24,
-            suffix: '°',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _startAngle = value),
-          ),
-          BoolOption(
-            label: 'Clockwise order',
-            value: _clockwise,
-            onChanged: (value) => setState(() => _clockwise = value),
-          ),
-          SliderOption(
-            label: 'Radius',
-            value: _radiusFactor * 100,
-            min: 55,
-            max: 100,
-            divisions: 9,
-            suffix: '%',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _radiusFactor = value / 100),
-          ),
-          if (_dataset.hasVariableSliceRadius) ...[
+      RadialOptionEntry(
+        RadialOptionSectionKind.sliceAppearance,
+        OptionSection(
+          title: 'Slice appearance',
+          icon: Icons.palette_outlined,
+          children: [
+            EnumOption<_PieGradientPreset>(
+              key: const ValueKey('pie-gradient'),
+              label: 'Slice fill',
+              value: _gradientPreset,
+              values: _PieGradientPreset.values,
+              labelBuilder: _gradientPresetName,
+              onChanged: (value) => setState(() => _gradientPreset = value),
+            ),
+            if (_gradientPreset != _PieGradientPreset.solid) ...[
+              BoolOption(
+                key: const ValueKey('pie-fixed-gradient-colors'),
+                label: 'Use fixed gradient colors',
+                value: _useFixedGradientColors,
+                onChanged: (value) =>
+                    setState(() => _useFixedGradientColors = value),
+                subtitle: 'Off derives both stops from each category color',
+              ),
+              if (_useFixedGradientColors) ...[
+                ColorOption(
+                  key: const ValueKey('pie-gradient-start-color'),
+                  label: 'Gradient start',
+                  value: _gradientStartColor,
+                  colors: _colorChoices,
+                  onChanged: (value) =>
+                      setState(() => _gradientStartColor = value),
+                ),
+                ColorOption(
+                  key: const ValueKey('pie-gradient-end-color'),
+                  label: 'Gradient end',
+                  value: _gradientEndColor,
+                  colors: _colorChoices,
+                  onChanged: (value) =>
+                      setState(() => _gradientEndColor = value),
+                ),
+              ] else ...[
+                SliderOption(
+                  key: const ValueKey('pie-gradient-start-shift'),
+                  label: 'Start lightness',
+                  value: _gradientStartLightnessShift * 100,
+                  min: -40,
+                  max: 40,
+                  divisions: 16,
+                  suffix: '%',
+                  decimalPlaces: 0,
+                  onChanged: (value) => setState(
+                    () => _gradientStartLightnessShift = value / 100,
+                  ),
+                ),
+                SliderOption(
+                  key: const ValueKey('pie-gradient-end-shift'),
+                  label: 'End lightness',
+                  value: _gradientEndLightnessShift * 100,
+                  min: -40,
+                  max: 40,
+                  divisions: 16,
+                  suffix: '%',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _gradientEndLightnessShift = value / 100),
+                ),
+              ],
+              if (_gradientPreset == _PieGradientPreset.linear)
+                SliderOption(
+                  key: const ValueKey('pie-gradient-angle'),
+                  label: 'Gradient angle',
+                  value: _gradientAngleDegrees,
+                  min: -180,
+                  max: 180,
+                  divisions: 24,
+                  suffix: '°',
+                  decimalPlaces: 0,
+                  onChanged: (value) =>
+                      setState(() => _gradientAngleDegrees = value),
+                ),
+            ],
             SliderOption(
-              label: 'Smallest slice radius',
-              value: _minimumSliceRadiusFactor * 100,
-              min: 0,
+              key: const ValueKey('pie-opacity'),
+              label: 'Transparency',
+              value: _sliceOpacity * 100,
+              min: 25,
               max: 100,
-              divisions: 20,
+              divisions: 15,
               suffix: '%',
               decimalPlaces: 0,
-              onChanged: (value) =>
-                  setState(() => _minimumSliceRadiusFactor = value / 100),
-            ),
-            EnumOption<PieSliceRadiusScale>(
-              label: 'Radius scale',
-              value: _sliceRadiusScale,
-              values: PieSliceRadiusScale.values,
-              labelBuilder: (value) => switch (value) {
-                PieSliceRadiusScale.area => 'Perceptual area',
-                PieSliceRadiusScale.linear => 'Linear radius',
-              },
-              onChanged: (value) => setState(() => _sliceRadiusScale = value),
-            ),
-          ],
-          SliderOption(
-            label: 'Slice gap',
-            value: _sliceGap,
-            min: 0,
-            max: 8,
-            divisions: 8,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _sliceGap = value),
-          ),
-          SliderOption(
-            label: 'Border width',
-            value: _borderWidth,
-            min: 0,
-            max: 4,
-            divisions: 8,
-            suffix: 'px',
-            decimalPlaces: 1,
-            onChanged: (value) => setState(() => _borderWidth = value),
-          ),
-          if (_borderWidth > 0)
-            EnumOption<_PieBorderPreset>(
-              label: 'Border color',
-              value: _borderPreset,
-              values: _PieBorderPreset.values,
-              labelBuilder: _borderPresetName,
-              onChanged: (value) => setState(() => _borderPreset = value),
-            ),
-          SliderOption(
-            label: 'Selected slice offset',
-            value: _selectionExplodeOffset,
-            min: 0,
-            max: 24,
-            divisions: 12,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) =>
-                setState(() => _selectionExplodeOffset = value),
-          ),
-        ],
-      ),
-      OptionSection(
-        title: 'Slice appearance',
-        icon: Icons.palette_outlined,
-        children: [
-          EnumOption<_PiePalette>(
-            label: 'Color palette',
-            value: _palette,
-            values: _PiePalette.values,
-            labelBuilder: _paletteName,
-            onChanged: (value) => setState(() => _palette = value),
-          ),
-          EnumOption<_PieGradientPreset>(
-            label: 'Slice fill',
-            value: _gradientPreset,
-            values: _PieGradientPreset.values,
-            labelBuilder: _gradientPresetName,
-            onChanged: (value) => setState(() => _gradientPreset = value),
-          ),
-          SliderOption(
-            label: 'Transparency',
-            value: _sliceOpacity * 100,
-            min: 25,
-            max: 100,
-            divisions: 15,
-            suffix: '%',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _sliceOpacity = value / 100),
-          ),
-          SliderOption(
-            label: 'Rounded corners',
-            value: _cornerRadius,
-            min: 0,
-            max: 20,
-            divisions: 10,
-            suffix: 'px',
-            decimalPlaces: 0,
-            onChanged: (value) => setState(() => _cornerRadius = value),
-          ),
-          if (_cornerRadius > 0)
-            EnumOption<PieCornerTreatment>(
-              label: 'Corner treatment',
-              value: _cornerTreatment,
-              values: PieCornerTreatment.values,
-              labelBuilder: _cornerTreatmentName,
-              onChanged: (value) => setState(() => _cornerTreatment = value),
-            ),
-          BoolOption(
-            label: 'Slice shadow',
-            value: _showShadow,
-            onChanged: (value) => setState(() => _showShadow = value),
-          ),
-          BoolOption(
-            label: 'Selected slice glow',
-            value: _showSelectedGlow,
-            onChanged: (value) => setState(() => _showSelectedGlow = value),
-          ),
-          if (_showSelectedGlow) ...[
-            EnumOption<_PieGlowColor>(
-              label: 'Glow color',
-              value: _selectedGlowColor,
-              values: _PieGlowColor.values,
-              labelBuilder: _glowColorName,
-              onChanged: (value) => setState(() => _selectedGlowColor = value),
+              onChanged: (value) => setState(() => _sliceOpacity = value / 100),
             ),
             SliderOption(
-              label: 'Glow blur',
-              value: _selectedGlowBlur,
+              key: const ValueKey('pie-slice-gap'),
+              label: 'Slice gap',
+              value: _sliceGap,
               min: 0,
-              max: 24,
+              max: 12,
               divisions: 12,
               suffix: 'px',
               decimalPlaces: 0,
-              onChanged: (value) => setState(() => _selectedGlowBlur = value),
+              onChanged: (value) => setState(() => _sliceGap = value),
             ),
             SliderOption(
-              label: 'Glow spread',
-              value: _selectedGlowSpread,
+              key: const ValueKey('pie-border-width'),
+              label: 'Border width',
+              value: _borderWidth,
               min: 0,
-              max: 6,
-              divisions: 12,
+              max: 4,
+              divisions: 8,
               suffix: 'px',
               decimalPlaces: 1,
-              onChanged: (value) => setState(() => _selectedGlowSpread = value),
+              onChanged: (value) => setState(() => _borderWidth = value),
             ),
-            SliderOption(
-              label: 'Glow opacity',
-              value: _selectedGlowOpacity * 100,
-              min: 0,
-              max: 100,
-              divisions: 20,
-              suffix: '%',
-              decimalPlaces: 0,
-              onChanged: (value) =>
-                  setState(() => _selectedGlowOpacity = value / 100),
-            ),
-          ],
-        ],
-      ),
-      OptionSection(
-        title: 'Motion',
-        icon: Icons.animation_outlined,
-        children: [
-          EnumOption<PieAnimationMode>(
-            key: const ValueKey('pie-animation-mode'),
-            label: 'Entrance',
-            value: _animationMode,
-            values: PieAnimationMode.values,
-            labelBuilder: _animationModeName,
-            onChanged: _setAnimationMode,
-            subtitle: 'Grow, reveal around the pie, fade, or render instantly',
-          ),
-          EnumOption<RadialDataTransitionMode>(
-            key: const ValueKey('pie-data-transition-mode'),
-            label: 'Data updates',
-            value: _dataTransitionMode,
-            values: RadialDataTransitionMode.values,
-            labelBuilder: (value) => switch (value) {
-              RadialDataTransitionMode.none => 'Instant',
-              RadialDataTransitionMode.automatic => 'Identity-aware',
-            },
-            onChanged: (value) => setState(() => _dataTransitionMode = value),
-            subtitle: 'Morph stable categories; fade structural changes',
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              key: const ValueKey('replay-pie-entrance'),
-              onPressed: _animationMode == PieAnimationMode.none
-                  ? null
-                  : _chartController.replayRadialEntrance,
-              icon: const Icon(Icons.replay_outlined, size: 18),
-              label: const Text('Replay entrance'),
-            ),
-          ),
-        ],
-      ),
-      OptionSection(
-        title: 'Small categories',
-        icon: Icons.call_merge_outlined,
-        children: [
-          BoolOption(
-            key: const ValueKey('pie-group-small-slices'),
-            label: 'Group small slices',
-            value: _groupSmallSlices,
-            onChanged: _setGroupingEnabled,
-            subtitle: _dataset.hasVariableSliceRadius
-                ? 'Group angle and aggregate radius by the policy below'
-                : 'Render one Other slice while preserving every source row',
-          ),
-          if (_groupSmallSlices) ...[
-            SliderOption(
-              key: const ValueKey('pie-grouping-threshold'),
-              label: 'Share threshold',
-              value: _groupingMinimumShare * 100,
-              min: 1,
-              max: 15,
-              divisions: 14,
-              suffix: '%',
-              decimalPlaces: 0,
-              onChanged: _setGroupingThreshold,
-            ),
-            if (_dataset.hasVariableSliceRadius)
-              EnumOption<RadialSliceRadiusAggregation>(
-                key: const ValueKey('pie-radius-aggregation'),
-                label: 'Radius aggregation',
-                value: _radiusAggregation,
-                values: RadialSliceRadiusAggregation.values,
-                labelBuilder: _radiusAggregationName,
-                onChanged: (value) => setState(() {
-                  _radiusAggregation = value;
-                  _clearPortableState();
-                }),
-                subtitle: 'Explicit policy for the grouped second metric',
+            if (_borderWidth > 0) ...[
+              EnumOption<_PieBorderPreset>(
+                key: const ValueKey('pie-border-color'),
+                label: 'Border color',
+                value: _borderPreset,
+                values: _PieBorderPreset.values,
+                labelBuilder: _borderPresetName,
+                onChanged: (value) => setState(() => _borderPreset = value),
               ),
+              if (_borderPreset == _PieBorderPreset.fixedAccent)
+                ColorOption(
+                  key: const ValueKey('pie-fixed-border-color'),
+                  label: 'Fixed border',
+                  value: _fixedBorderColor,
+                  colors: _colorChoices,
+                  onChanged: (value) =>
+                      setState(() => _fixedBorderColor = value),
+                ),
+            ],
+            SliderOption(
+              key: const ValueKey('pie-corner-radius'),
+              label: 'Rounded corners',
+              value: _cornerRadius,
+              min: 0,
+              max: 20,
+              divisions: 10,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _cornerRadius = value),
+            ),
+            if (_cornerRadius > 0)
+              EnumOption<PieCornerTreatment>(
+                key: const ValueKey('pie-corner-treatment'),
+                label: 'Corner treatment',
+                value: _cornerTreatment,
+                values: PieCornerTreatment.values,
+                labelBuilder: _cornerTreatmentName,
+                onChanged: (value) => setState(() => _cornerTreatment = value),
+              ),
+            BoolOption(
+              key: const ValueKey('pie-slice-shadow'),
+              label: 'Slice shadow',
+              value: _showShadow,
+              onChanged: (value) => setState(() => _showShadow = value),
+            ),
+            BoolOption(
+              key: const ValueKey('pie-selected-glow'),
+              label: 'Selected slice glow',
+              value: _showSelectedGlow,
+              onChanged: (value) => setState(() => _showSelectedGlow = value),
+            ),
+            if (_showSelectedGlow) ...[
+              EnumOption<_PieGlowColor>(
+                key: const ValueKey('pie-glow-color'),
+                label: 'Glow color',
+                value: _selectedGlowColor,
+                values: _PieGlowColor.values,
+                labelBuilder: _glowColorName,
+                onChanged: (value) =>
+                    setState(() => _selectedGlowColor = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-glow-blur'),
+                label: 'Glow blur',
+                value: _selectedGlowBlur,
+                min: 0,
+                max: 24,
+                divisions: 12,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _selectedGlowBlur = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-glow-spread'),
+                label: 'Glow spread',
+                value: _selectedGlowSpread,
+                min: 0,
+                max: 6,
+                divisions: 12,
+                suffix: 'px',
+                decimalPlaces: 1,
+                onChanged: (value) =>
+                    setState(() => _selectedGlowSpread = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-glow-opacity'),
+                label: 'Glow opacity',
+                value: _selectedGlowOpacity * 100,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _selectedGlowOpacity = value / 100),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-glow-offset'),
+                label: 'Depth offset',
+                value: _selectedGlowOffsetY,
+                min: -12,
+                max: 12,
+                divisions: 24,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _selectedGlowOffsetY = value),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-      OptionSection(
-        title: 'Legend',
-        icon: Icons.view_list_outlined,
-        children: [
-          BoolOption(
-            label: 'Show slice legend',
-            value: _showLegend,
-            onChanged: (value) => setState(() => _showLegend = value),
-            subtitle: 'Legend items select slices; they do not hide data',
-          ),
-          if (_showLegend) ...[
-            EnumOption<_PieLegendPreset>(
-              label: 'Legend style',
-              value: _legendPreset,
-              values: _PieLegendPreset.values,
-              labelBuilder: _legendPresetName,
-              onChanged: (value) => setState(() => _legendPreset = value),
+      RadialOptionEntry(
+        RadialOptionSectionKind.selection,
+        OptionSection(
+          title: 'Selection',
+          icon: Icons.layers_outlined,
+          children: [
+            EnumOption<RadialSelectionEffect>(
+              key: const ValueKey('pie-selection-effect'),
+              label: 'Selection treatment',
+              value: _selectionEffect,
+              values: RadialSelectionEffect.values,
+              labelBuilder: _selectionEffectName,
+              subtitle: 'Pull a slice outward or lift it towards the viewer',
+              onChanged: (value) => setState(() => _selectionEffect = value),
             ),
-            EnumOption<_PieLegendContent>(
-              key: const ValueKey('pie-legend-content'),
-              label: 'Item content',
-              value: _legendContent,
-              values: _PieLegendContent.values,
-              labelBuilder: _legendContentName,
-              onChanged: (value) => setState(() => _legendContent = value),
+            if (_selectionEffect == RadialSelectionEffect.explode)
+              SliderOption(
+                key: const ValueKey('pie-selection-explode-offset'),
+                label: 'Selected slice offset',
+                value: _selectionExplodeOffset,
+                min: 0,
+                max: 24,
+                divisions: 12,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _selectionExplodeOffset = value),
+              )
+            else ...[
+              SliderOption(
+                key: const ValueKey('pie-selection-lift-scale'),
+                label: 'Lift scale',
+                value: _selectionLiftScale * 100,
+                min: 100,
+                max: 125,
+                divisions: 25,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _selectionLiftScale = value / 100),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-selection-lift-offset'),
+                label: 'Lift offset',
+                value: _selectionLiftOffset,
+                min: 0,
+                max: 24,
+                divisions: 12,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _selectionLiftOffset = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-selection-backdrop-blur'),
+                label: 'Backdrop blur',
+                value: _selectionBackdropBlur,
+                min: 0,
+                max: 8,
+                divisions: 16,
+                suffix: 'px',
+                decimalPlaces: 1,
+                onChanged: (value) =>
+                    setState(() => _selectionBackdropBlur = value),
+              ),
+            ],
+          ],
+        ),
+      ),
+      RadialOptionEntry(
+        RadialOptionSectionKind.motion,
+        OptionSection(
+          title: 'Motion',
+          icon: Icons.animation_outlined,
+          children: [
+            EnumOption<PieAnimationMode>(
+              key: const ValueKey('pie-animation-mode'),
+              label: 'Entrance',
+              value: _animationMode,
+              values: PieAnimationMode.values,
+              labelBuilder: _animationModeName,
+              onChanged: _setAnimationMode,
+              subtitle:
+                  'Grow, reveal around the pie, fade, or render instantly',
             ),
-            EnumOption<LegendPosition>(
-              label: 'Position',
-              value: _legendPosition,
-              values: LegendPosition.values,
-              labelBuilder: _legendPositionName,
-              onChanged: (value) => setState(() => _legendPosition = value),
+            EnumOption<RadialDataTransitionMode>(
+              key: const ValueKey('pie-data-transition-mode'),
+              label: 'Data updates',
+              value: _dataTransitionMode,
+              values: RadialDataTransitionMode.values,
+              labelBuilder: (value) => switch (value) {
+                RadialDataTransitionMode.none => 'Instant',
+                RadialDataTransitionMode.automatic => 'Identity-aware',
+              },
+              onChanged: (value) => setState(() => _dataTransitionMode = value),
+              subtitle: 'Morph stable categories; fade structural changes',
             ),
-            EnumOption<LegendOrientation>(
-              label: 'Orientation',
-              value: _legendOrientation,
-              values: LegendOrientation.values,
-              labelBuilder: _legendOrientationName,
-              onChanged: (value) => setState(() => _legendOrientation = value),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const ValueKey('replay-pie-entrance'),
+                onPressed: _animationMode == PieAnimationMode.none
+                    ? null
+                    : _chartController.replayRadialEntrance,
+                icon: const Icon(Icons.replay_outlined, size: 18),
+                label: const Text('Replay entrance'),
+              ),
             ),
           ],
-        ],
+        ),
       ),
-      OptionSection(
-        title: 'Interaction',
-        icon: Icons.touch_app_outlined,
-        children: [
-          BoolOption(
-            label: 'Show tooltips',
-            value: _showTooltips,
-            onChanged: (value) => setState(() => _showTooltips = value),
-            subtitle:
-                'Hover, tap, or select from the legend or table; deselect to hide',
-          ),
-          if (_showTooltips)
-            EnumOption<_PieTooltipPreset>(
-              label: 'Tooltip style',
-              value: _tooltipPreset,
-              values: _PieTooltipPreset.values,
-              labelBuilder: _tooltipPresetName,
-              onChanged: (value) => setState(() => _tooltipPreset = value),
+      RadialOptionEntry(
+        RadialOptionSectionKind.smallCategories,
+        OptionSection(
+          title: 'Small categories',
+          icon: Icons.call_merge_outlined,
+          children: [
+            BoolOption(
+              key: const ValueKey('pie-group-small-slices'),
+              label: 'Group small slices',
+              value: _groupSmallSlices,
+              onChanged: _setGroupingEnabled,
+              subtitle: _dataset.hasVariableSliceRadius
+                  ? 'Group angle and aggregate radius by the policy below'
+                  : 'Render one Other slice while preserving every source row',
             ),
-        ],
+            if (_groupSmallSlices) ...[
+              SliderOption(
+                key: const ValueKey('pie-grouping-threshold'),
+                label: 'Share threshold',
+                value: _groupingMinimumShare * 100,
+                min: 1,
+                max: 15,
+                divisions: 14,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: _setGroupingThreshold,
+              ),
+              if (_dataset.hasVariableSliceRadius)
+                EnumOption<RadialSliceRadiusAggregation>(
+                  key: const ValueKey('pie-radius-aggregation'),
+                  label: 'Radius aggregation',
+                  value: _radiusAggregation,
+                  values: RadialSliceRadiusAggregation.values,
+                  labelBuilder: _radiusAggregationName,
+                  onChanged: (value) => setState(() {
+                    _radiusAggregation = value;
+                    _clearPortableState();
+                  }),
+                  subtitle: 'Explicit policy for the grouped second metric',
+                ),
+            ],
+          ],
+        ),
       ),
-      StandardChartOptions(
-        controller: _optionsController,
-        showGridOption: false,
-        showAxisOption: false,
-        showMarkerOption: false,
-        showScrollbarOptions: false,
-        showLegendOption: false,
-        showInteractionOptions: false,
-        showLineStyleOption: false,
+      RadialOptionEntry(
+        RadialOptionSectionKind.legend,
+        OptionSection(
+          title: 'Legend',
+          icon: Icons.view_list_outlined,
+          children: [
+            BoolOption(
+              key: const ValueKey('pie-show-legend'),
+              label: 'Show slice legend',
+              value: _showLegend,
+              onChanged: (value) => setState(() => _showLegend = value),
+              subtitle: 'Legend items select slices; they do not hide data',
+            ),
+            if (_showLegend) ...[
+              EnumOption<_PieLegendPreset>(
+                key: const ValueKey('pie-legend-style'),
+                label: 'Legend style',
+                value: _legendPreset,
+                values: _PieLegendPreset.values,
+                labelBuilder: _legendPresetName,
+                onChanged: (value) => setState(() => _legendPreset = value),
+              ),
+              EnumOption<_PieLegendContent>(
+                key: const ValueKey('pie-legend-content'),
+                label: 'Item content',
+                value: _legendContent,
+                values: _PieLegendContent.values,
+                labelBuilder: _legendContentName,
+                onChanged: (value) => setState(() => _legendContent = value),
+              ),
+              EnumOption<LegendPosition>(
+                key: const ValueKey('pie-legend-position'),
+                label: 'Position',
+                value: _legendPosition,
+                values: LegendPosition.values,
+                labelBuilder: _legendPositionName,
+                onChanged: (value) => setState(() => _legendPosition = value),
+              ),
+              EnumOption<LegendOrientation>(
+                key: const ValueKey('pie-legend-orientation'),
+                label: 'Orientation',
+                value: _legendOrientation,
+                values: LegendOrientation.values,
+                labelBuilder: _legendOrientationName,
+                onChanged: (value) =>
+                    setState(() => _legendOrientation = value),
+              ),
+              EnumOption<LegendMarkerShape>(
+                key: const ValueKey('pie-legend-marker-shape'),
+                label: 'Marker shape',
+                value: _legendMarkerShape,
+                values: LegendMarkerShape.values,
+                labelBuilder: _legendMarkerShapeName,
+                onChanged: (value) =>
+                    setState(() => _legendMarkerShape = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-legend-marker-size'),
+                label: 'Marker size',
+                value: _legendMarkerSize,
+                min: 6,
+                max: 20,
+                divisions: 14,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _legendMarkerSize = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-legend-font-size'),
+                label: 'Text size',
+                value: _legendFontSize,
+                min: 8,
+                max: 16,
+                divisions: 8,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _legendFontSize = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-legend-opacity'),
+                label: 'Legend opacity',
+                value: _legendOpacity * 100,
+                min: 25,
+                max: 100,
+                divisions: 15,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _legendOpacity = value / 100),
+              ),
+            ],
+          ],
+        ),
       ),
-      OptionSection(
-        title: 'Dataset',
-        icon: Icons.refresh,
-        children: [
-          ActionButton(
-            label: 'Regenerate values',
-            icon: Icons.casino_outlined,
-            onPressed: _regenerateValues,
-          ),
-        ],
+      RadialOptionEntry(
+        RadialOptionSectionKind.interaction,
+        OptionSection(
+          title: 'Interaction',
+          icon: Icons.touch_app_outlined,
+          children: [
+            BoolOption(
+              key: const ValueKey('pie-show-tooltips'),
+              label: 'Show tooltips',
+              value: _showTooltips,
+              onChanged: (value) => setState(() => _showTooltips = value),
+              subtitle:
+                  'Hover, tap, or select from the legend or table; deselect to hide',
+            ),
+            if (_showTooltips) ...[
+              EnumOption<_PieTooltipPreset>(
+                key: const ValueKey('pie-tooltip-style'),
+                label: 'Tooltip style',
+                value: _tooltipPreset,
+                values: _PieTooltipPreset.values,
+                labelBuilder: _tooltipPresetName,
+                onChanged: (value) => setState(() => _tooltipPreset = value),
+              ),
+              EnumOption<TooltipPosition>(
+                key: const ValueKey('pie-tooltip-position'),
+                label: 'Preferred position',
+                value: _tooltipPosition,
+                values: TooltipPosition.values,
+                labelBuilder: _tooltipPositionName,
+                onChanged: (value) => setState(() => _tooltipPosition = value),
+              ),
+              BoolOption(
+                key: const ValueKey('pie-tooltip-follow-cursor'),
+                label: 'Follow pointer',
+                value: _tooltipFollowsCursor,
+                onChanged: (value) =>
+                    setState(() => _tooltipFollowsCursor = value),
+              ),
+              SliderOption(
+                key: const ValueKey('pie-tooltip-offset'),
+                label: 'Point offset',
+                value: _tooltipOffset,
+                min: 0,
+                max: 24,
+                divisions: 12,
+                suffix: 'px',
+                decimalPlaces: 0,
+                onChanged: (value) => setState(() => _tooltipOffset = value),
+              ),
+            ],
+          ],
+        ),
       ),
-    ];
+      RadialOptionEntry(
+        RadialOptionSectionKind.chartTheme,
+        StandardChartOptions(
+          controller: _optionsController,
+          sectionTitle: 'Chart theme',
+          sectionIcon: Icons.contrast_outlined,
+          themeOptionKey: const ValueKey('pie-theme'),
+          showGridOption: false,
+          showAxisOption: false,
+          showMarkerOption: false,
+          showScrollbarOptions: false,
+          showLegendOption: false,
+          showInteractionOptions: false,
+          showLineStyleOption: false,
+          additionalOptions: [
+            EnumOption<_PiePalette>(
+              key: const ValueKey('pie-palette'),
+              label: 'Color palette',
+              value: _palette,
+              values: _PiePalette.values,
+              labelBuilder: _paletteName,
+              onChanged: (value) => setState(() => _palette = value),
+            ),
+          ],
+        ),
+      ),
+      RadialOptionEntry(
+        RadialOptionSectionKind.demoData,
+        OptionSection(
+          title: 'Demo data',
+          icon: Icons.dataset_outlined,
+          children: [
+            IntSliderOption(
+              key: const ValueKey('pie-data-point-count'),
+              label: 'Data points',
+              value: _categoryCount,
+              min: radialDemoMinimumDataPoints,
+              max: radialDemoMaximumDataPoints,
+              suffix: 'points',
+              onChanged: _setCategoryCount,
+            ),
+            Text(
+              'Changing the count creates a new random distribution while '
+              'preserving the ${_dataset.unit} total.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            ActionButton(
+              label: 'Regenerate values',
+              icon: Icons.casino_outlined,
+              onPressed: _regenerateValues,
+            ),
+          ],
+        ),
+      ),
+    ]);
   }
 
   Widget _buildWorkspace() {
@@ -916,6 +1470,9 @@ class _PieChartsPageState extends State<PieChartsPage> {
         tooltip: TooltipConfig(
           enabled: _showTooltips,
           triggerMode: TooltipTriggerMode.both,
+          preferredPosition: _tooltipPosition,
+          followCursor: _tooltipFollowsCursor,
+          offsetFromPoint: _tooltipOffset,
         ),
         enableZoom: false,
         enablePan: false,
@@ -1751,8 +2308,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
               "      type: PieGradientType.radial,\n"
               "    ),\n"
               "  ),\n"
+              "  selectionStyle: RadialSelectionStyle(\n"
+              "    effect: RadialSelectionEffect.lift,\n"
+              "    liftScale: 1.12,\n"
+              "    liftOffset: 8,\n"
+              "    backdropBlur: 1.5,\n"
+              "  ),\n"
               "  dataLabels: PieDataLabelConfig(\n"
               "    position: PieDataLabelPosition.outside,\n"
+              "    insideOffset: 0, // Signed radial adjustment\n"
               "    outsideOffset: 0, // Tight to the pie\n"
               "  ),\n"
               ");\n\n"
@@ -1805,11 +2369,14 @@ class _PieChartsPageState extends State<PieChartsPage> {
 
   PieChartSeries _buildSeries(ChartTheme theme) {
     final borderColor = _borderPreset == _PieBorderPreset.fixedAccent
-        ? theme.focusBorderColor
+        ? _fixedBorderColor
         : null;
-    final borderColorMode = _borderPreset == _PieBorderPreset.chartTheme
-        ? PieBorderColorMode.chartTheme
-        : PieBorderColorMode.slice;
+    final borderColorMode = switch (_borderPreset) {
+      _PieBorderPreset.chartTheme => PieBorderColorMode.chartTheme,
+      _PieBorderPreset.darkerSlice ||
+      _PieBorderPreset.shiftedHue => PieBorderColorMode.slice,
+      _PieBorderPreset.fixedAccent => null,
+    };
     final borderHueShift = _borderPreset == _PieBorderPreset.shiftedHue
         ? 28.0
         : 0.0;
@@ -1855,29 +2422,57 @@ class _PieChartsPageState extends State<PieChartsPage> {
         borderLightnessShift: borderLightnessShift,
         gradient: switch (_gradientPreset) {
           _PieGradientPreset.solid => null,
-          _PieGradientPreset.linear => const PieGradientStyle(
+          _PieGradientPreset.linear => PieGradientStyle(
             type: PieGradientType.linear,
-            startLightnessShift: 0.2,
-            endLightnessShift: -0.14,
-            angleDegrees: -50,
+            startColor: _useFixedGradientColors ? _gradientStartColor : null,
+            endColor: _useFixedGradientColors ? _gradientEndColor : null,
+            startLightnessShift: _gradientStartLightnessShift,
+            endLightnessShift: _gradientEndLightnessShift,
+            angleDegrees: _gradientAngleDegrees,
           ),
-          _PieGradientPreset.radial => const PieGradientStyle(
+          _PieGradientPreset.radial => PieGradientStyle(
             type: PieGradientType.radial,
-            startLightnessShift: 0.2,
-            endLightnessShift: -0.12,
+            startColor: _useFixedGradientColors ? _gradientStartColor : null,
+            endColor: _useFixedGradientColors ? _gradientEndColor : null,
+            startLightnessShift: _gradientStartLightnessShift,
+            endLightnessShift: _gradientEndLightnessShift,
           ),
         },
         selectionExplodeOffset: _selectionExplodeOffset,
         cornerTreatment: _cornerTreatment,
         dataTransitionMode: _dataTransitionMode,
       ),
+      selectionStyle: RadialSelectionStyle(
+        effect: _selectionEffect,
+        liftScale: _selectionLiftScale,
+        liftOffset: _selectionLiftOffset,
+        backdropBlur: _selectionBackdropBlur,
+      ),
       dataLabels: PieDataLabelConfig(
         isVisible: _showLabels,
-        position: _labelPosition,
-        content: _labelContent,
+        position: _labelLayout == _PieLabelLayout.split
+            ? PieDataLabelPosition.outside
+            : _labelPosition,
+        content: _labelLayout == _PieLabelLayout.split
+            ? PieDataLabelContent.category
+            : _labelContent,
+        secondaryContent: _labelLayout == _PieLabelLayout.split
+            ? PieDataLabelContent.percentage
+            : null,
+        secondaryPosition: PieDataLabelPosition.inside,
+        secondaryCalloutStyle: _labelLayout == _PieLabelLayout.split
+            ? _insidePercentageStyle
+            : null,
         minimumShare: _minimumShare,
+        minimumSweepDegrees: _minimumSweepDegrees,
+        padding: _labelPadding,
+        insideOffset: _insideLabelOffset,
         outsideOffset: _outsideLabelOffset,
+        connectorLength: _connectorLength,
+        connectorWidth: _connectorWidth,
+        connectorColor: _useCustomConnectorColor ? _connectorColor : null,
         collisionStrategy: _collisionStrategy,
+        calloutStyle: _calloutStyle(theme),
         valueFormatter: (value) =>
             '${value.toStringAsFixed(1)} ${_dataset.unit}',
         percentageFormatter: (share) => '${(share * 100).toStringAsFixed(0)}%',
@@ -1896,15 +2491,15 @@ class _PieChartsPageState extends State<PieChartsPage> {
     final legendBase = base.legendStyle.copyWith(
       position: _legendPosition,
       orientation: _legendOrientation,
-      markerShape: LegendMarkerShape.circle,
-      markerSize: 14,
+      markerShape: _legendMarkerShape,
+      markerSize: _legendMarkerSize,
+      textStyle: base.legendStyle.textStyle.copyWith(fontSize: _legendFontSize),
+      opacity: _legendOpacity,
       markerLabelSpacing: 8,
     );
     final legendStyle = switch (_legendPreset) {
       _PieLegendPreset.theme => legendBase,
       _PieLegendPreset.compact => legendBase.copyWith(
-        textStyle: legendBase.textStyle.copyWith(fontSize: 10),
-        markerSize: 10,
         markerLabelSpacing: 5,
         itemSpacing: 3,
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -1948,6 +2543,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
                 color: selectedGlowColor,
                 blurRadius: _selectedGlowBlur,
                 spreadRadius: _selectedGlowSpread,
+                offset: Offset(0, _selectedGlowOffsetY),
                 opacity: _selectedGlowOpacity,
               )
             : const PieElevationStyle(),
@@ -1962,6 +2558,11 @@ class _PieChartsPageState extends State<PieChartsPage> {
     PieAnimationMode.grow => 'Grow',
     PieAnimationMode.sweep => 'Sweep',
     PieAnimationMode.fade => 'Fade',
+  };
+
+  String _selectionEffectName(RadialSelectionEffect effect) => switch (effect) {
+    RadialSelectionEffect.explode => 'Pull outward',
+    RadialSelectionEffect.lift => 'Lift towards viewer',
   };
 
   void _setAnimationMode(PieAnimationMode mode) {
@@ -2075,17 +2676,60 @@ class _PieChartsPageState extends State<PieChartsPage> {
       borderRadius: 4,
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     ),
-    _PieCalloutPreset.simpleValues => const LabelStyle(
+    _PieCalloutPreset.simpleValues => LabelStyle(
       textStyle: TextStyle(
-        color: Color(0xFFFFFFFF),
+        color:
+            (_labelLayout == _PieLabelLayout.split ||
+                _labelPosition == PieDataLabelPosition.outside)
+            ? (theme.axisStyle.labelStyle.color ?? const Color(0xFF374151))
+            : const Color(0xFFFFFFFF),
         fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
+      backgroundColor: const Color(0x00000000),
+      borderColor: const Color(0x00000000),
+      borderWidth: 0,
+      borderRadius: 0,
+      padding: const EdgeInsets.all(2),
+    ),
+  };
+
+  LabelStyle get _insidePercentageStyle => switch (_insideShareStyle) {
+    _PieInsideShareStyle.autoContrast => const LabelStyle(
+      textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
       backgroundColor: Color(0x00000000),
       borderColor: Color(0x00000000),
       borderWidth: 0,
       borderRadius: 0,
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.all(2),
+    ),
+    _PieInsideShareStyle.darkBadge => const LabelStyle(
+      textStyle: TextStyle(
+        color: Color(0xFFFFFFFF),
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: Color(0xD91F2937),
+      borderColor: Color(0x99FFFFFF),
+      borderWidth: 1,
+      borderRadius: 4,
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      shadowColor: Color(0x26000000),
+      shadowBlurRadius: 3,
+    ),
+    _PieInsideShareStyle.lightBadge => const LabelStyle(
+      textStyle: TextStyle(
+        color: Color(0xFF1A1A1A),
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor: Color(0xF2FFFFFF),
+      borderColor: Color(0x661A1A1A),
+      borderWidth: 1,
+      borderRadius: 4,
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      shadowColor: Color(0x26000000),
+      shadowBlurRadius: 3,
     ),
   };
 
@@ -2171,7 +2815,7 @@ class _PieChartsPageState extends State<PieChartsPage> {
 
   String _presentationDescription(_PieShowcasePreset value) => switch (value) {
     _PieShowcasePreset.simple =>
-      'Dark canvas, warm slices, dominant values, and no legend',
+      'Radial gradients, dual labels, lifted selection, and no legend',
     _PieShowcasePreset.editorial =>
       'Readable outside callouts with restrained spacing and borders',
     _PieShowcasePreset.compact =>
@@ -2196,6 +2840,12 @@ class _PieChartsPageState extends State<PieChartsPage> {
     _PieCalloutPreset.accent => 'Palette accent',
     _PieCalloutPreset.highContrast => 'High contrast',
     _PieCalloutPreset.simpleValues => 'Simple values',
+  };
+
+  String _insideShareStyleName(_PieInsideShareStyle value) => switch (value) {
+    _PieInsideShareStyle.autoContrast => 'Auto-contrast text',
+    _PieInsideShareStyle.darkBadge => 'Dark badge',
+    _PieInsideShareStyle.lightBadge => 'Light badge',
   };
 
   String _tooltipPresetName(_PieTooltipPreset value) => switch (value) {
@@ -2256,13 +2906,32 @@ class _PieChartsPageState extends State<PieChartsPage> {
     LegendOrientation.horizontal => 'Horizontal',
     LegendOrientation.vertical => 'Vertical',
   };
+
+  String _legendMarkerShapeName(LegendMarkerShape value) => switch (value) {
+    LegendMarkerShape.circle => 'Circle',
+    LegendMarkerShape.square => 'Square',
+    LegendMarkerShape.line => 'Line',
+    LegendMarkerShape.diamond => 'Diamond',
+  };
+
+  String _tooltipPositionName(TooltipPosition value) => switch (value) {
+    TooltipPosition.auto => 'Automatic',
+    TooltipPosition.top => 'Above',
+    TooltipPosition.bottom => 'Below',
+    TooltipPosition.left => 'Left',
+    TooltipPosition.right => 'Right',
+  };
 }
 
 enum _PieShowcasePreset { simple, editorial, compact, elevated, highContrast }
 
+enum _PieLabelLayout { single, split }
+
 enum _PiePalette { theme, ocean, sunset, earth, monochrome }
 
 enum _PieCalloutPreset { none, surface, accent, highContrast, simpleValues }
+
+enum _PieInsideShareStyle { autoContrast, darkBadge, lightBadge }
 
 enum _PieTooltipPreset { theme, elevated, contrast }
 

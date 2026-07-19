@@ -6,6 +6,7 @@ import 'chart_series.dart';
 import 'donut_chart_config.dart';
 import 'pie_chart_config.dart';
 import 'radial_category_series.dart';
+import 'radial_selection_style.dart';
 import 'segment_style.dart';
 import 'y_axis_config.dart';
 
@@ -24,6 +25,7 @@ class DonutChartSeries extends RadialCategorySeries {
     super.metadata,
     super.unit,
     this.donutStyle = const DonutChartStyle(),
+    super.selectionStyle = const RadialSelectionStyle(),
     this.centerContent = DonutCenterContent.hidden,
     super.dataLabels = const PieDataLabelConfig(),
     super.sliceRadiusConfig,
@@ -86,6 +88,7 @@ class DonutChartSeries extends RadialCategorySeries {
     Map<String, dynamic>? metadata,
     String? unit,
     DonutChartStyle donutStyle = const DonutChartStyle(),
+    RadialSelectionStyle selectionStyle = const RadialSelectionStyle(),
     DonutCenterContent centerContent = DonutCenterContent.hidden,
     PieDataLabelConfig dataLabels = const PieDataLabelConfig(),
   }) {
@@ -129,6 +132,7 @@ class DonutChartSeries extends RadialCategorySeries {
       metadata: metadata,
       unit: unit,
       donutStyle: donutStyle,
+      selectionStyle: selectionStyle,
       centerContent: centerContent,
       dataLabels: dataLabels,
       sliceRadiusConfig: radiusValues.isEmpty
@@ -165,6 +169,7 @@ class DonutChartSeries extends RadialCategorySeries {
     YAxisConfig? yAxisConfig,
     String? unit,
     DonutChartStyle? donutStyle,
+    RadialSelectionStyle? selectionStyle,
     DonutCenterContent? centerContent,
     PieDataLabelConfig? dataLabels,
     RadialSliceRadiusConfig? sliceRadiusConfig,
@@ -201,6 +206,7 @@ class DonutChartSeries extends RadialCategorySeries {
       metadata: metadata ?? this.metadata,
       unit: unit ?? this.unit,
       donutStyle: donutStyle ?? this.donutStyle,
+      selectionStyle: selectionStyle ?? this.selectionStyle,
       centerContent: centerContent ?? this.centerContent,
       dataLabels: dataLabels ?? this.dataLabels,
       sliceRadiusConfig: clearSliceRadiusConfig
@@ -218,6 +224,7 @@ class DonutChartSeries extends RadialCategorySeries {
       other is DonutChartSeries &&
           super == other &&
           donutStyle == other.donutStyle &&
+          selectionStyle == other.selectionStyle &&
           centerContent == other.centerContent &&
           dataLabels == other.dataLabels &&
           sliceRadiusConfig == other.sliceRadiusConfig &&
@@ -227,6 +234,7 @@ class DonutChartSeries extends RadialCategorySeries {
   int get hashCode => Object.hash(
     super.hashCode,
     donutStyle,
+    selectionStyle,
     centerContent,
     dataLabels,
     sliceRadiusConfig,

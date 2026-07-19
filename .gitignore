@@ -41,6 +41,7 @@ hash.txt
 *.tmp
 *.temp
 terminal_input.txt
+/tmp_*.png
 
 # Orchestra workflow
 .orchestra/.signal

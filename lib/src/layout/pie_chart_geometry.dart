@@ -1,9 +1,11 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
 import '../models/chart_data_point.dart';
 import '../models/pie_chart_config.dart';
+import '../models/radial_selection_style.dart';
 import '../models/radial_category_series.dart';
 import 'annular_sector_geometry.dart';
 
@@ -26,11 +28,14 @@ class PieSliceGeometry {
     required this.radiusFactor,
     required this.spacingOffset,
     required this.explodeOffset,
+    required this.liftOffset,
     required this.path,
     required this.tooltipAnchor,
     required this.insideLabelAnchor,
     required this.connectorOrigin,
     required this.outsideLabelAnchor,
+    required this.isSelected,
+    required this.selectionScale,
   });
 
   /// Original, transportable source point.
@@ -60,7 +65,7 @@ class PieSliceGeometry {
   /// Angular center in radians.
   final double midAngle;
 
-  /// Slice center after any explode offset.
+  /// Slice center after any explode or lift offset and selection scale.
   final Offset center;
 
   /// Inner radius. Slice 1 keeps this at zero while retaining the radial seam.
@@ -81,6 +86,9 @@ class PieSliceGeometry {
   /// Applied explode vector.
   final Offset explodeOffset;
 
+  /// Applied lift translation, independent of the lift scale.
+  final Offset liftOffset;
+
   /// Closed wedge or annular-sector path.
   final Path path;
 
@@ -95,6 +103,12 @@ class PieSliceGeometry {
 
   /// Desired outside-label anchor before collision resolution.
   final Offset outsideLabelAnchor;
+
+  /// Whether this slice represents the current durable selection.
+  final bool isSelected;
+
+  /// Scale applied around the slice's visual centroid.
+  final double selectionScale;
 
   /// Axis-aligned bounds of [path].
   Rect get bounds => path.getBounds();
@@ -130,8 +144,13 @@ class PieChartGeometry {
 
   /// Returns the topmost slice containing [position], if any.
   PieSliceGeometry? sliceAt(Offset position) {
-    for (final slice in slices.reversed) {
+    for (final slice in slices.reversed.where((slice) => slice.isSelected)) {
       if (slice.contains(position)) {
+        return slice;
+      }
+    }
+    for (final slice in slices.reversed) {
+      if (!slice.isSelected && slice.contains(position)) {
         return slice;
       }
     }
@@ -153,11 +172,18 @@ class PieChartGeometryCalculator {
     EdgeInsets padding = EdgeInsets.zero,
     Set<int> explodedPointIndices = const <int>{},
     double? innerRadiusFactor,
+    Offset? centerOverride,
+    double? innerRadiusOverride,
+    double? outerRadiusOverride,
+    double insideLabelRadiusFactor = 0.58,
     double? cornerRadius,
     PieCornerTreatment? cornerTreatment,
     PieAnimationMode animationMode = PieAnimationMode.grow,
     double animationProgress = 1,
     double selectionProgress = 1,
+    RadialSelectionEffect selectionEffect = RadialSelectionEffect.explode,
+    double selectionLiftScale = 1.08,
+    double selectionLiftOffset = 6,
   }) {
     if (!size.width.isFinite ||
         !size.height.isFinite ||
@@ -167,6 +193,45 @@ class PieChartGeometryCalculator {
         size,
         'size',
         'Size must be finite and positive',
+      );
+    }
+    if (centerOverride != null &&
+        (!centerOverride.dx.isFinite || !centerOverride.dy.isFinite)) {
+      throw ArgumentError.value(
+        centerOverride,
+        'centerOverride',
+        'Center must be finite',
+      );
+    }
+    if ((innerRadiusOverride == null) != (outerRadiusOverride == null)) {
+      throw ArgumentError(
+        'innerRadiusOverride and outerRadiusOverride must be supplied together',
+      );
+    }
+    if (innerRadiusOverride != null &&
+        (!innerRadiusOverride.isFinite || innerRadiusOverride < 0)) {
+      throw ArgumentError.value(
+        innerRadiusOverride,
+        'innerRadiusOverride',
+        'Inner radius must be finite and non-negative',
+      );
+    }
+    if (outerRadiusOverride != null &&
+        (!outerRadiusOverride.isFinite ||
+            outerRadiusOverride <= innerRadiusOverride!)) {
+      throw ArgumentError.value(
+        outerRadiusOverride,
+        'outerRadiusOverride',
+        'Outer radius must be finite and greater than inner radius',
+      );
+    }
+    if (!insideLabelRadiusFactor.isFinite ||
+        insideLabelRadiusFactor < 0 ||
+        insideLabelRadiusFactor > 1) {
+      throw ArgumentError.value(
+        insideLabelRadiusFactor,
+        'insideLabelRadiusFactor',
+        'Value must be finite and in [0, 1]',
       );
     }
     final effectiveInnerRadiusFactor =
@@ -196,6 +261,24 @@ class PieChartGeometryCalculator {
         selectionProgress,
         'selectionProgress',
         'Value must be finite and in [0, 1]',
+      );
+    }
+    if (!selectionLiftScale.isFinite ||
+        selectionLiftScale < 1 ||
+        selectionLiftScale > 1.5) {
+      throw ArgumentError.value(
+        selectionLiftScale,
+        'selectionLiftScale',
+        'Value must be finite and in [1, 1.5]',
+      );
+    }
+    if (!selectionLiftOffset.isFinite ||
+        selectionLiftOffset < 0 ||
+        selectionLiftOffset > 40) {
+      throw ArgumentError.value(
+        selectionLiftOffset,
+        'selectionLiftOffset',
+        'Value must be finite and in [0, 40]',
       );
     }
     final requestedCornerRadius =
@@ -237,13 +320,17 @@ class PieChartGeometryCalculator {
       math.max(padding.left, size.width - padding.right),
       math.max(padding.top, size.height - padding.bottom),
     );
-    final center = contentRect.center;
+    final center = centerOverride ?? contentRect.center;
     final availableRadius = math.min(contentRect.width, contentRect.height) / 2;
     final visibleSlices = series.visibleSlices;
     final visibleSliceCount = visibleSlices.length;
-    final fullOuterRadius = availableRadius * series.radialStyle.radiusFactor;
+    final fullOuterRadius =
+        outerRadiusOverride ??
+        availableRadius * series.radialStyle.radiusFactor;
     final outerRadius = fullOuterRadius * geometryProgress;
-    final configuredInnerRadius = outerRadius * effectiveInnerRadiusFactor;
+    final fullInnerRadius =
+        innerRadiusOverride ?? fullOuterRadius * effectiveInnerRadiusFactor;
+    final configuredInnerRadius = fullInnerRadius * geometryProgress;
     final total = series.total;
     final sliceRadiusFactors = _sliceRadiusFactors(series);
     final effectiveCornerRadius = requestedCornerRadius * geometryProgress;
@@ -303,19 +390,15 @@ class PieChartGeometryCalculator {
       final sweepAngle = direction * revealedSweepMagnitude;
       final midAngle = startAngle + direction * revealedSweepMagnitude / 2;
       final isAnnular = configuredInnerRadius > _angleEpsilon;
-      final angularGap = isAnnular
-          ? _annularSliceGapAngle(
+      final annularSeamInset = isAnnular
+          ? _annularSliceSeamInset(
               sliceGap: series.radialStyle.sliceGap,
               animationProgress: geometryProgress * sliceRevealProgress,
               visibleSliceCount: visibleSliceCount,
-              sweepMagnitude: revealedSweepMagnitude,
-              innerRadius: configuredInnerRadius,
-              outerRadius: sliceFullOuterRadius,
             )
           : 0.0;
-      final pathStartAngle = startAngle + direction * angularGap / 2;
-      final pathSweepAngle =
-          direction * math.max(0, revealedSweepMagnitude - angularGap);
+      final pathStartAngle = startAngle;
+      final pathSweepAngle = sweepAngle;
       final spacingDistance = isAnnular
           ? 0.0
           : _sliceSpacingDistance(
@@ -334,12 +417,20 @@ class PieChartGeometryCalculator {
       final sliceInnerRadius = math
           .min(innerRadius, sliceOuterRadius)
           .toDouble();
+      final isSelected = projectedSlice.sourcePointIndices.any(
+        explodedPointIndices.contains,
+      );
       final explodeDistance =
-          projectedSlice.sourcePointIndices.any(explodedPointIndices.contains)
+          isSelected && selectionEffect == RadialSelectionEffect.explode
           ? series.radialStyle.selectionExplodeOffset * selectionProgress
           : 0.0;
       final explodeOffset = Offset.fromDirection(midAngle, explodeDistance);
-      final outerArcCenter = center + explodeOffset;
+      final liftDistance =
+          isSelected && selectionEffect == RadialSelectionEffect.lift
+          ? selectionLiftOffset * selectionProgress
+          : 0.0;
+      final liftOffset = Offset.fromDirection(midAngle, liftDistance);
+      final outerArcCenter = center + explodeOffset + liftOffset;
       final sliceCenter = outerArcCenter + spacingOffset;
       final usesCircularCenter = circularCenterRadius > _angleEpsilon;
       final roundsInnerCorners =
@@ -365,18 +456,47 @@ class PieChartGeometryCalculator {
               sweepAngle: pathSweepAngle,
               cornerRadius: sliceCornerRadius,
               roundInnerCorners: roundsInnerCorners,
+              seamInset: annularSeamInset,
             ).path;
-      final path = usesCircularCenter
+      final unscaledPath = usesCircularCenter
           ? _subtractCircularCenter(
               basePath,
               center: outerArcCenter,
               radius: circularCenterRadius,
             )
           : basePath;
+      final selectionScale =
+          isSelected && selectionEffect == RadialSelectionEffect.lift
+          ? 1 + (selectionLiftScale - 1) * selectionProgress
+          : 1.0;
+      final selectionPivot = _annularSectorCentroid(
+        center: sliceCenter,
+        innerRadius: sliceInnerRadius,
+        outerRadius: sliceOuterRadius,
+        sweepAngle: pathSweepAngle,
+        midAngle: midAngle,
+      );
+      final path = selectionScale == 1
+          ? unscaledPath
+          : _scalePathAround(
+              unscaledPath,
+              pivot: selectionPivot,
+              scale: selectionScale,
+            );
+      final effectiveSliceCenter = _scalePointAround(
+        sliceCenter,
+        pivot: selectionPivot,
+        scale: selectionScale,
+      );
       final tooltipRadius =
           sliceInnerRadius + (sliceOuterRadius - sliceInnerRadius) * 0.62;
       final insideRadius =
-          sliceInnerRadius + (sliceOuterRadius - sliceInnerRadius) * 0.58;
+          (sliceInnerRadius +
+                  (sliceOuterRadius - sliceInnerRadius) *
+                      insideLabelRadiusFactor +
+                  series.dataLabels.insideOffset)
+              .clamp(sliceInnerRadius, sliceOuterRadius)
+              .toDouble();
       final connectorRadius = sliceOuterRadius;
       final outsideRadius =
           sliceOuterRadius +
@@ -392,21 +512,36 @@ class PieChartGeometryCalculator {
           startAngle: startAngle,
           sweepAngle: sweepAngle,
           midAngle: midAngle,
-          center: sliceCenter,
-          innerRadius: sliceInnerRadius,
-          outerRadius: sliceOuterRadius,
+          center: effectiveSliceCenter,
+          innerRadius: sliceInnerRadius * selectionScale,
+          outerRadius: sliceOuterRadius * selectionScale,
           radiusFactor: sliceRadiusFactor,
           spacingOffset: spacingOffset,
           explodeOffset: explodeOffset,
+          liftOffset: liftOffset,
           path: path,
-          tooltipAnchor:
-              sliceCenter + Offset.fromDirection(midAngle, tooltipRadius),
-          insideLabelAnchor:
-              sliceCenter + Offset.fromDirection(midAngle, insideRadius),
-          connectorOrigin:
-              sliceCenter + Offset.fromDirection(midAngle, connectorRadius),
-          outsideLabelAnchor:
-              sliceCenter + Offset.fromDirection(midAngle, outsideRadius),
+          tooltipAnchor: _scalePointAround(
+            sliceCenter + Offset.fromDirection(midAngle, tooltipRadius),
+            pivot: selectionPivot,
+            scale: selectionScale,
+          ),
+          insideLabelAnchor: _scalePointAround(
+            sliceCenter + Offset.fromDirection(midAngle, insideRadius),
+            pivot: selectionPivot,
+            scale: selectionScale,
+          ),
+          connectorOrigin: _scalePointAround(
+            sliceCenter + Offset.fromDirection(midAngle, connectorRadius),
+            pivot: selectionPivot,
+            scale: selectionScale,
+          ),
+          outsideLabelAnchor: _scalePointAround(
+            sliceCenter + Offset.fromDirection(midAngle, outsideRadius),
+            pivot: selectionPivot,
+            scale: selectionScale,
+          ),
+          isSelected: isSelected,
+          selectionScale: selectionScale,
         ),
       );
     }
@@ -421,19 +556,73 @@ class PieChartGeometryCalculator {
   }
 }
 
-double _annularSliceGapAngle({
+Offset _annularSectorCentroid({
+  required Offset center,
+  required double innerRadius,
+  required double outerRadius,
+  required double sweepAngle,
+  required double midAngle,
+}) {
+  final theta = sweepAngle.abs();
+  final squaredDifference =
+      outerRadius * outerRadius - innerRadius * innerRadius;
+  if (theta <= _angleEpsilon || squaredDifference <= _angleEpsilon) {
+    return center +
+        Offset.fromDirection(midAngle, (innerRadius + outerRadius) / 2);
+  }
+  final cubedDifference =
+      outerRadius * outerRadius * outerRadius -
+      innerRadius * innerRadius * innerRadius;
+  final radius =
+      4 *
+      math.sin(theta / 2).abs() *
+      cubedDifference /
+      (3 * theta * squaredDifference);
+  return center + Offset.fromDirection(midAngle, radius);
+}
+
+Offset _scalePointAround(
+  Offset point, {
+  required Offset pivot,
+  required double scale,
+}) => pivot + (point - pivot) * scale;
+
+Path _scalePathAround(
+  Path path, {
+  required Offset pivot,
+  required double scale,
+}) {
+  final translateX = pivot.dx * (1 - scale);
+  final translateY = pivot.dy * (1 - scale);
+  return path.transform(
+    Float64List.fromList(<double>[
+      scale,
+      0,
+      0,
+      0,
+      0,
+      scale,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      translateX,
+      translateY,
+      0,
+      1,
+    ]),
+  );
+}
+
+double _annularSliceSeamInset({
   required double sliceGap,
   required double animationProgress,
   required int visibleSliceCount,
-  required double sweepMagnitude,
-  required double innerRadius,
-  required double outerRadius,
 }) {
-  if (visibleSliceCount <= 1 || sliceGap <= 0 || sweepMagnitude <= 0) return 0;
-  final middleRadius = innerRadius + (outerRadius - innerRadius) / 2;
-  if (middleRadius <= _angleEpsilon) return 0;
-  final requested = sliceGap * animationProgress / middleRadius;
-  return math.min(requested, sweepMagnitude * 0.8);
+  if (visibleSliceCount <= 1 || sliceGap <= 0) return 0;
+  return sliceGap * animationProgress / 2;
 }
 
 double _sliceSpacingDistance({

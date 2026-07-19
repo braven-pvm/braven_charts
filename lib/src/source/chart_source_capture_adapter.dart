@@ -123,6 +123,11 @@ abstract final class ChartSourceCaptureAdapter {
       yAxisFormatterDescriptors: yAxisDescriptors,
       interactionBindingDescriptors: interactionDescriptors,
       radialFormatterDescriptors: radialDescriptors,
+      concentricCenterFormatterDescriptor:
+          options.concentricCenterFormatterDescriptor ??
+          (source.concentricDonutConfig?.centerContent.valueFormatter == null
+              ? null
+              : _formatterPlaceholder('concentric.center.value')),
       maxSnapshotAttempts: options.maxSnapshotAttempts,
     );
     final warnings = <ChartArtifactWarning>[];
@@ -212,6 +217,7 @@ abstract final class ChartSourceCaptureAdapter {
       subtitle: source.subtitle,
       width: source.width,
       height: source.height,
+      concentricDonutConfig: source.concentricDonutConfig,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,
       interactiveAnnotations: source.interactiveAnnotations,

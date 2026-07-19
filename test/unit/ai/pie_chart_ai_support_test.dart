@@ -55,6 +55,10 @@ void main() {
           'pie_gradient_end_lightness_shift': -0.16,
           'pie_gradient_angle': 35,
           'pie_selection_explode_offset': 12,
+          'pie_selection_effect': 'lift',
+          'pie_selection_lift_scale': 1.12,
+          'pie_selection_lift_offset': 8,
+          'pie_selection_backdrop_blur': 1.5,
           'pie_opacity': 0.78,
           'pie_corner_radius': 10,
           'pie_corner_treatment': 'circular_center',
@@ -72,8 +76,11 @@ void main() {
           'show_data_labels': true,
           'pie_label_position': 'inside',
           'pie_label_content': 'category_value_and_percentage',
+          'pie_secondary_label_content': 'category',
+          'pie_secondary_label_position': 'outside',
           'pie_label_minimum_share': 0.05,
           'pie_label_minimum_sweep': 10,
+          'pie_inside_label_offset': -12,
           'pie_label_offset': 24,
         },
       });
@@ -117,6 +124,10 @@ void main() {
       expect(series.pieStyle.gradient?.endLightnessShift, -0.16);
       expect(series.pieStyle.gradient?.angleDegrees, 35);
       expect(series.pieStyle.selectionExplodeOffset, 12);
+      expect(series.selectionStyle.effect, RadialSelectionEffect.lift);
+      expect(series.selectionStyle.liftScale, 1.12);
+      expect(series.selectionStyle.liftOffset, 8);
+      expect(series.selectionStyle.backdropBlur, 1.5);
       expect(series.pieStyle.opacity, 0.78);
       expect(series.pieStyle.cornerRadius, 10);
       expect(
@@ -139,8 +150,11 @@ void main() {
         series.dataLabels.content,
         PieDataLabelContent.categoryValueAndPercentage,
       );
+      expect(series.dataLabels.secondaryContent, PieDataLabelContent.category);
+      expect(series.dataLabels.secondaryPosition, PieDataLabelPosition.outside);
       expect(series.dataLabels.minimumShare, 0.05);
       expect(series.dataLabels.minimumSweepDegrees, 10);
+      expect(series.dataLabels.insideOffset, -12);
       expect(series.dataLabels.outsideOffset, 24);
     });
 
@@ -275,6 +289,10 @@ void main() {
           'pie_start_angle': -135,
           'pie_slice_gap': 4,
           'pie_corner_radius': 6,
+          'pie_selection_effect': 'lift',
+          'pie_selection_lift_scale': 1.12,
+          'pie_selection_lift_offset': 8,
+          'pie_selection_backdrop_blur': 1.5,
           'donut_center_visible': true,
           'donut_center_value_mode': 'selected_or_total',
           'donut_center_label': 'Registrations',
@@ -290,6 +308,10 @@ void main() {
       expect(series.donutStyle.startAngleDegrees, -135);
       expect(series.donutStyle.sliceGap, 4);
       expect(series.donutStyle.cornerRadius, 6);
+      expect(series.selectionStyle.effect, RadialSelectionEffect.lift);
+      expect(series.selectionStyle.liftScale, 1.12);
+      expect(series.selectionStyle.liftOffset, 8);
+      expect(series.selectionStyle.backdropBlur, 1.5);
       expect(series.centerContent.isVisible, isTrue);
       expect(series.centerContent.label, 'Registrations');
       expect(
@@ -383,12 +405,16 @@ void main() {
     expect(styleProperties.keys, contains('pie_corner_treatment'));
     expect(styleProperties.keys, contains('pie_gradient_type'));
     expect(styleProperties.keys, contains('pie_gradient_angle'));
+    expect(styleProperties.keys, contains('pie_selection_lift_offset'));
     expect(styleProperties.keys, contains('pie_selected_glow_blur'));
     expect(styleProperties.keys, contains('pie_grouping_minimum_share'));
     expect(styleProperties.keys, contains('pie_grouping_minimum_source_count'));
     expect(styleProperties.keys, contains('pie_grouping_label'));
     expect(styleProperties.keys, contains('pie_grouping_color'));
     expect(styleProperties.keys, contains('pie_label_content'));
+    expect(styleProperties.keys, contains('pie_secondary_label_content'));
+    expect(styleProperties.keys, contains('pie_secondary_label_position'));
+    expect(styleProperties.keys, contains('pie_inside_label_offset'));
     expect(styleProperties.keys, contains('pie_label_offset'));
     expect(
       (properties['x_axis'] as Map<String, dynamic>)['description'],
