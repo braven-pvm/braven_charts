@@ -5,6 +5,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/cartesian_chart_type_pages.dart';
+import 'package:braven_charts_example/showcase/widgets/chart_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -916,6 +917,270 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets(
+    'every Line and Area preset completes the wide Workbench surface matrix',
+    (tester) async {
+      const families = <({String name, Widget page, List<String> presets})>[
+        (
+          name: 'line',
+          page: LineChartsPage(),
+          presets: [
+            'Workhorse',
+            'Interpolation',
+            'Multi-axis',
+            'Motion',
+            'Comparison',
+            'Envelope',
+            'Spotlight',
+            'Forecast',
+            'Synchronized',
+          ],
+        ),
+        (
+          name: 'area',
+          page: AreaChartsPage(),
+          presets: [
+            'Layered',
+            'Baseline',
+            'Forecast',
+            'Motion',
+            'Gradient',
+            'Composition',
+            'Pulse',
+          ],
+        ),
+      ];
+
+      for (final family in families) {
+        await pumpPage(tester, family.page);
+        final picker = find.byKey(ValueKey('${family.name}-preset-picker'));
+
+        for (final preset in family.presets) {
+          final presetControl = find.descendant(
+            of: picker,
+            matching: find.text(preset),
+          );
+          await tester.ensureVisible(presetControl);
+          await tester.pumpAndSettle();
+          await tester.tap(presetControl);
+          await tester.pumpAndSettle();
+
+          final charts = find.byType(BravenChartPlus);
+          if (preset == 'Synchronized') {
+            expect(charts, findsNWidgets(3), reason: '$preset chart count');
+            expect(find.byType(BravenChartWorkbench), findsNothing);
+            expect(
+              find.byKey(const ValueKey('synchronized-cartesian-stack')),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull, reason: '$preset surface');
+            continue;
+          }
+
+          expect(charts, findsOneWidget, reason: '$preset chart surface');
+          expect(
+            tester.widget<BravenChartPlus>(charts).series,
+            isNotEmpty,
+            reason: '$preset canonical series',
+          );
+          final switcher = find.byKey(
+            const ValueKey('chart-workbench-mode-switcher'),
+          );
+          expect(switcher, findsOneWidget, reason: '$preset mode switcher');
+
+          for (final mode in const <(String, ChartDisplayMode)>[
+            ('Chart', ChartDisplayMode.chart),
+            ('Data', ChartDisplayMode.data),
+            ('Split', ChartDisplayMode.split),
+            ('Source', ChartDisplayMode.source),
+          ]) {
+            final (label, displayMode) = mode;
+            await tester.tap(
+              find.descendant(of: switcher, matching: find.text(label)),
+            );
+            await tester.pumpAndSettle();
+
+            final workbench = tester.widget<BravenChartWorkbench>(
+              find.byType(BravenChartWorkbench),
+            );
+            final controller = workbench.workbenchController!;
+            expect(
+              controller.requestedMode,
+              displayMode,
+              reason: '$preset requested $label mode',
+            );
+            expect(
+              controller.effectiveMode,
+              displayMode,
+              reason: '$preset effective $label mode',
+            );
+
+            switch (displayMode) {
+              case ChartDisplayMode.chart:
+                expect(find.byType(BravenChartPlus), findsOneWidget);
+              case ChartDisplayMode.data:
+                expect(find.byType(ChartDataTable), findsOneWidget);
+                expect(
+                  controller.tableState.phase,
+                  ChartWorkbenchTablePhase.ready,
+                );
+              case ChartDisplayMode.split:
+                expect(find.byType(BravenChartPlus), findsOneWidget);
+                expect(find.byType(ChartDataTable), findsOneWidget);
+                expect(
+                  find.byKey(const ValueKey('chart-workbench-split-handle')),
+                  findsOneWidget,
+                );
+              case ChartDisplayMode.source:
+                expect(find.byType(ChartSourceView), findsOneWidget);
+                expect(
+                  controller.sourceState.phase,
+                  ChartWorkbenchSourcePhase.ready,
+                );
+                expect(
+                  controller.generatedSource!.source,
+                  contains('final ${family.name}Chart = BravenChartPlus('),
+                );
+            }
+            expect(
+              find.textContaining('not attached to a mounted chart'),
+              findsNothing,
+              reason: '$preset $label controller attachment',
+            );
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: '$preset $label surface',
+            );
+          }
+        }
+      }
+    },
+  );
+
+  testWidgets('every Line and Area preset renders inside a compact viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    const families = <({String name, Widget page, List<String> presets})>[
+      (
+        name: 'line',
+        page: LineChartsPage(),
+        presets: [
+          'Workhorse',
+          'Interpolation',
+          'Multi-axis',
+          'Motion',
+          'Comparison',
+          'Envelope',
+          'Spotlight',
+          'Forecast',
+          'Synchronized',
+        ],
+      ),
+      (
+        name: 'area',
+        page: AreaChartsPage(),
+        presets: [
+          'Layered',
+          'Baseline',
+          'Forecast',
+          'Motion',
+          'Gradient',
+          'Composition',
+          'Pulse',
+        ],
+      ),
+    ];
+
+    for (final family in families) {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: family.page)));
+      await tester.pump(const Duration(milliseconds: 300));
+      final picker = find.byKey(ValueKey('${family.name}-preset-picker'));
+
+      for (final preset in family.presets) {
+        final presetControl = find.descendant(
+          of: picker,
+          matching: find.text(preset),
+        );
+        await tester.ensureVisible(presetControl);
+        await tester.pumpAndSettle();
+        await tester.tap(presetControl);
+        await tester.pumpAndSettle();
+
+        final activeLabel = tester.getRect(presetControl);
+        expect(activeLabel.left, greaterThanOrEqualTo(0), reason: preset);
+        expect(activeLabel.right, lessThanOrEqualTo(390), reason: preset);
+        final charts = find.byType(BravenChartPlus);
+        expect(
+          charts,
+          preset == 'Synchronized' ? findsNWidgets(3) : findsOneWidget,
+          reason: '$preset compact chart count',
+        );
+        for (final render in _chartRenderFinder().evaluate()) {
+          final size = (render.renderObject! as ChartRenderBox).size;
+          expect(size.width, greaterThanOrEqualTo(48), reason: preset);
+          expect(size.height, greaterThanOrEqualTo(48), reason: preset);
+        }
+        expect(tester.takeException(), isNull, reason: '$preset compact');
+      }
+    }
+  });
+
+  testWidgets(
+    'Line synchronized and Area standard surfaces honor light and dark',
+    (tester) async {
+      for (final entry
+          in const <({Widget page, String? preset, int chartCount})>[
+            (page: LineChartsPage(), preset: 'Synchronized', chartCount: 3),
+            (page: AreaChartsPage(), preset: null, chartCount: 1),
+          ]) {
+        await pumpPage(tester, entry.page);
+        if (entry.preset case final preset?) {
+          final presetControl = find.descendant(
+            of: find.byKey(const ValueKey('line-preset-picker')),
+            matching: find.text(preset),
+          );
+          await tester.ensureVisible(presetControl);
+          await tester.pumpAndSettle();
+          await tester.tap(presetControl);
+          await tester.pumpAndSettle();
+        }
+
+        final themeControl = find.byType(DropdownButtonFormField<ThemePreset>);
+        expect(themeControl, findsOneWidget);
+        await tester.tap(themeControl);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Dark').last);
+        await tester.pumpAndSettle();
+        var charts = tester
+            .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+            .toList();
+        expect(charts, hasLength(entry.chartCount));
+        expect(
+          charts.map((chart) => chart.theme?.backgroundColor),
+          everyElement(ChartTheme.dark.backgroundColor),
+        );
+
+        await tester.tap(find.byType(DropdownButtonFormField<ThemePreset>));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Light').last);
+        await tester.pumpAndSettle();
+        charts = tester
+            .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+            .toList();
+        expect(
+          charts.map((chart) => chart.theme?.backgroundColor),
+          everyElement(ChartTheme.light.backgroundColor),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
 
   testWidgets('compact Line and Area Motion sheets run backfill updates', (
     tester,

@@ -1528,94 +1528,102 @@ class _SynchronizedCartesianExample extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 640;
+        final stack = Column(
+          key: const ValueKey('synchronized-cartesian-stack'),
+          children: [
+            Expanded(
+              child: _SynchronizedMetricPlot(
+                title: 'Speed',
+                latestValue: '9.3 km/h',
+                accessibilityValue: '9.3 kilometres per hour',
+                color: const Color(0xFF2196F3),
+                groupController: groupController,
+                options: options,
+                compact: compact,
+                showDistanceAxis: false,
+                showXScrollbar: false,
+                series: LineChartSeries(
+                  id: 'synchronized-speed',
+                  name: 'Speed',
+                  unit: 'km/h',
+                  points: _synchronizedSpeedPoints,
+                  color: const Color(0xFF2196F3),
+                  interpolation: interpolation,
+                  strokeWidth: strokeWidth,
+                  lineGlow: lineGlow,
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _SynchronizedMetricPlot(
+                title: 'Elevation',
+                latestValue: '329 m',
+                accessibilityValue: '329 metres',
+                color: const Color(0xFF5B56D6),
+                groupController: groupController,
+                options: options,
+                compact: compact,
+                showDistanceAxis: false,
+                showXScrollbar: false,
+                series: AreaChartSeries(
+                  id: 'synchronized-elevation',
+                  name: 'Elevation',
+                  unit: 'm',
+                  points: _synchronizedElevationPoints,
+                  color: const Color(0xFF5B56D6),
+                  interpolation: interpolation,
+                  strokeWidth: strokeWidth,
+                  lineGlow: lineGlow,
+                  fillOpacity: 0.28,
+                  fillGradient: const AreaGradient(
+                    colors: [Color(0x665B56D6), Color(0x125B56D6)],
+                  ),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _SynchronizedMetricPlot(
+                title: 'Heart rate',
+                latestValue: '138 bpm',
+                accessibilityValue: '138 beats per minute',
+                color: const Color(0xFF00B86B),
+                groupController: groupController,
+                options: options,
+                compact: compact,
+                showDistanceAxis: true,
+                showXScrollbar: options.showXScrollbar,
+                series: AreaChartSeries(
+                  id: 'synchronized-heart-rate',
+                  name: 'Heart rate',
+                  unit: 'bpm',
+                  points: _synchronizedHeartRatePoints,
+                  color: const Color(0xFF00B86B),
+                  interpolation: interpolation,
+                  strokeWidth: strokeWidth,
+                  lineGlow: lineGlow,
+                  fillOpacity: 0.24,
+                  fillGradient: const AreaGradient(
+                    colors: [Color(0x6600B86B), Color(0x1000B86B)],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+        const compactMinimumHeight = 420.0;
+        final content = compact && constraints.maxHeight < compactMinimumHeight
+            ? SingleChildScrollView(
+                key: const ValueKey('synchronized-cartesian-scroll'),
+                child: SizedBox(height: compactMinimumHeight, child: stack),
+              )
+            : stack;
         return Semantics(
           container: true,
           label:
               'Synchronized distance charts. Touch and drag any plot to inspect all three.',
-          child: Column(
-            key: const ValueKey('synchronized-cartesian-stack'),
-            children: [
-              Expanded(
-                child: _SynchronizedMetricPlot(
-                  title: 'Speed',
-                  latestValue: '9.3 km/h',
-                  accessibilityValue: '9.3 kilometres per hour',
-                  color: const Color(0xFF2196F3),
-                  groupController: groupController,
-                  options: options,
-                  compact: compact,
-                  showDistanceAxis: false,
-                  showXScrollbar: false,
-                  series: LineChartSeries(
-                    id: 'synchronized-speed',
-                    name: 'Speed',
-                    unit: 'km/h',
-                    points: _synchronizedSpeedPoints,
-                    color: const Color(0xFF2196F3),
-                    interpolation: interpolation,
-                    strokeWidth: strokeWidth,
-                    lineGlow: lineGlow,
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: _SynchronizedMetricPlot(
-                  title: 'Elevation',
-                  latestValue: '329 m',
-                  accessibilityValue: '329 metres',
-                  color: const Color(0xFF5B56D6),
-                  groupController: groupController,
-                  options: options,
-                  compact: compact,
-                  showDistanceAxis: false,
-                  showXScrollbar: false,
-                  series: AreaChartSeries(
-                    id: 'synchronized-elevation',
-                    name: 'Elevation',
-                    unit: 'm',
-                    points: _synchronizedElevationPoints,
-                    color: const Color(0xFF5B56D6),
-                    interpolation: interpolation,
-                    strokeWidth: strokeWidth,
-                    lineGlow: lineGlow,
-                    fillOpacity: 0.28,
-                    fillGradient: const AreaGradient(
-                      colors: [Color(0x665B56D6), Color(0x125B56D6)],
-                    ),
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: _SynchronizedMetricPlot(
-                  title: 'Heart rate',
-                  latestValue: '138 bpm',
-                  accessibilityValue: '138 beats per minute',
-                  color: const Color(0xFF00B86B),
-                  groupController: groupController,
-                  options: options,
-                  compact: compact,
-                  showDistanceAxis: true,
-                  showXScrollbar: options.showXScrollbar,
-                  series: AreaChartSeries(
-                    id: 'synchronized-heart-rate',
-                    name: 'Heart rate',
-                    unit: 'bpm',
-                    points: _synchronizedHeartRatePoints,
-                    color: const Color(0xFF00B86B),
-                    interpolation: interpolation,
-                    strokeWidth: strokeWidth,
-                    lineGlow: lineGlow,
-                    fillOpacity: 0.24,
-                    fillGradient: const AreaGradient(
-                      colors: [Color(0x6600B86B), Color(0x1000B86B)],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: content,
         );
       },
     );

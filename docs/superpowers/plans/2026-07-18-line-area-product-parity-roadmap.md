@@ -529,3 +529,27 @@ own units, Y domains, titles, and artifacts.
   one shared interaction group and independent charts.
 - Passed the package and showcase suites, analyzers, release builds, public
   base-path build, direct-route checks, and wide/compact visual review.
+
+### Final cross-sprint E2E merge gate
+
+- Added a page-level acceptance matrix that enters every Line and Area preset,
+  drives every standard preset through Chart, Data, Split, and Source, verifies
+  generated source and controller attachment, and treats Synchronized as its
+  intentional custom three-chart surface.
+- Added a 390 x 844 matrix across all 16 presets plus explicit light/dark
+  coverage for the standard Area and synchronized Line compositions.
+- The matrix reproduced a real compact Synchronized failure: three plots were
+  compressed below a valid drawable Y range. The composition now preserves a
+  420 px local minimum with contained vertical scrolling only when the card is
+  shorter, keeping each plot legible without changing the approved wide layout.
+- The compiled release browser passed 60 wide preset/Workbench route states,
+  the wide Synchronized route, and all 16 compact preset routes with nonblank
+  frames and no severe console errors. Motion, synchronized hover, pan, and
+  zoom each produced a rendered-frame change without browser errors.
+- Package and showcase analyzers are clean. The complete package suite passes
+  1,982 tests, including the permanent 5,000-point path benchmarks, and the
+  complete showcase suite passes 165 tests.
+- Both `/braven_charts/` and `/` release web builds pass. Dartdoc 9.0.8 reports
+  zero warnings and errors, and the clean-tree pub.dev dry run reports zero
+  warnings. The root build remains served from port 8177 for final review; all
+  mechanical promotion checks are complete.
