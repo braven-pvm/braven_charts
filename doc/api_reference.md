@@ -16,8 +16,8 @@ types and where to begin.
   `fromMap` convenience factories.
 - `ChartSeries` — common immutable series model.
 - `LineChartSeries`, `AreaChartSeries`, `BarChartSeries`,
-  `ScatterChartSeries`, `PieChartSeries`, and `DonutChartSeries` — concrete
-  renderable series.
+  `ScatterChartSeries`, `PieChartSeries`, `DonutChartSeries`, and
+  `PolarColumnChartSeries` — concrete renderable series.
 - `ChartDataPoint`, `DataRange`, `ChartType` — core data types.
 - `LineInterpolation`, `SeriesStyle`, `SegmentStyle`,
   `DataPointLabelConfig`, `SeriesInlineLabelConfig` — series presentation.
@@ -195,6 +195,32 @@ every ordinary Donut series document, selection, portable center, and preview.
 See
 [Concentric Donut charts](concentric_donut_charts.md).
 
+### Polar Column and Rose charts
+
+- `PolarColumnChartSeries.fromMap` creates stable equal-angle categories whose
+  numeric values grow outward against a radial scale.
+- `PolarColumnChartSeries.rose` selects the named Nightingale/Rose preset. It
+  keeps equal angular bandwidth and defaults to area-correct radial scaling.
+- `PolarColumnStyle` controls corner radius, opacity, border treatment, and
+  direct value labels. Per-category colors may be supplied through
+  `columnColors` or point styles.
+- `PolarChartConfig` groups the dedicated `PolarPaneConfig`,
+  `PolarCategoryAxisConfig`, and `PolarNumericAxisConfig` contracts.
+- `PolarRadialScaleMode.linear` maps equal value differences to equal radial
+  distances; `areaCorrect` maps equal value proportions to equal annular-sector
+  areas.
+- `RadialSelectionStyle` provides the same durable explode or lift selection
+  vocabulary used by the partition-radial families without converting values
+  into shares.
+
+Polar Column V1 accepts one non-empty series with finite, non-negative values.
+It cannot mix with Cartesian or partition-radial series. Its native table is
+`# | Category | Series | Value (unit)`, and Chart/Data/Split/Source views,
+controller selection, deterministic artifacts, hydration, and generated Dart
+all preserve that value-only meaning. Artifacts declare
+`series.polar.column.v1`. See
+[Polar Column and Rose charts](polar_column_charts.md).
+
 ## Axes, normalization, and layout
 
 - `XAxisConfig`, `CategoryAxisConfig` — numeric bounds plus native categorical
@@ -210,6 +236,8 @@ See
   integration.
 - `AxisSwapMode` and `BravenChartController` — visible-axis slot behavior and
   runtime series selection.
+- `PolarPaneConfig`, `PolarCategoryAxisConfig`, and `PolarNumericAxisConfig` —
+  independent angular-category and radial-value axes for Polar Column/Rose.
 
 ## Interaction
 

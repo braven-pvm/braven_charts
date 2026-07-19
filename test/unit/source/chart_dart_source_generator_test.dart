@@ -57,7 +57,7 @@ void main() {
       expect(first.source, contains('theme: ChartTheme.light,'));
     });
 
-    test('generates the six built-in chart family constructors', () {
+    test('generates every built-in chart family constructor', () {
       final series = <ChartSeries>[
         const LineChartSeries(id: 'line', points: [ChartDataPoint(x: 0, y: 1)]),
         const AreaChartSeries(id: 'area', points: [ChartDataPoint(x: 0, y: 2)]),
@@ -80,11 +80,19 @@ void main() {
             customValue: 'Ready',
           ),
         ),
+        PolarColumnChartSeries.fromMap(id: 'polar', values: const {'North': 7}),
       ];
 
       for (final item in series) {
         final generated = _success(
-          ChartDartSourceGenerator.generate(_snapshot(item)),
+          ChartDartSourceGenerator.generate(
+            _snapshot(
+              item,
+              polarChartConfig: item is PolarColumnChartSeries
+                  ? const PolarChartConfig()
+                  : null,
+            ),
+          ),
         );
         final constructor = switch (item) {
           LineChartSeries() => 'LineChartSeries(',
@@ -93,6 +101,7 @@ void main() {
           BarChartSeries() => 'BarChartSeries(',
           PieChartSeries() => 'PieChartSeries(',
           DonutChartSeries() => 'DonutChartSeries(',
+          PolarColumnChartSeries() => 'PolarColumnChartSeries(',
           ChartSeries() => 'ChartSeries(',
         };
         expect(generated.source, contains(constructor));
@@ -870,6 +879,73 @@ void main() {
       expect(generated.source, contains("customValue: '2 compared'"));
     });
 
+    test('emits Polar Column series style and complete pane axes', () {
+      const config = PolarChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: 20,
+          sweepAngleDegrees: 240,
+          clockwise: false,
+          innerRadiusFactor: 0.2,
+          outerRadiusFactor: 0.9,
+          clipMarks: false,
+        ),
+        angularAxis: PolarCategoryAxisConfig(
+          innerPadding: 0.18,
+          outerPadding: 0.08,
+          showLabels: false,
+          showGridLines: false,
+        ),
+        radialAxis: PolarNumericAxisConfig(
+          minimum: 10,
+          maximum: 90,
+          scaleMode: PolarRadialScaleMode.areaCorrect,
+          tickCount: 7,
+          showLabels: false,
+          showGridLines: true,
+        ),
+      );
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            PolarColumnChartSeries.rose(
+              id: 'demand',
+              unit: 'orders',
+              values: const {'North': 42, 'South': 68},
+              polarStyle: const PolarColumnStyle(
+                cornerRadius: 10,
+                opacity: 0.75,
+                borderColor: Color(0xFF102030),
+                borderWidth: 2,
+                showDataLabels: false,
+              ),
+              selectionStyle: const RadialSelectionStyle(
+                effect: RadialSelectionEffect.lift,
+                liftScale: 1.1,
+                liftOffset: 9,
+                backdropBlur: 2,
+              ),
+            ),
+            polarChartConfig: config,
+          ),
+        ),
+      );
+
+      expect(generated.source, contains('PolarColumnChartSeries('));
+      expect(generated.source, contains('preset: PolarColumnPreset.rose'));
+      expect(generated.source, contains('polarStyle: PolarColumnStyle('));
+      expect(generated.source, contains('cornerRadius: 10.0'));
+      expect(generated.source, contains('Color(0xFF102030)'));
+      expect(generated.source, contains('polarChartConfig: PolarChartConfig('));
+      expect(generated.source, contains('startAngleDegrees: 20.0'));
+      expect(generated.source, contains('sweepAngleDegrees: 240.0'));
+      expect(generated.source, contains('clockwise: false'));
+      expect(
+        generated.source,
+        contains('scaleMode: PolarRadialScaleMode.areaCorrect'),
+      );
+      expect(generated.source, contains('tickCount: 7'));
+    });
+
     test('returns a structured failure for an invalid variable name', () {
       final result = ChartDartSourceGenerator.generate(
         _snapshot(
@@ -901,6 +977,7 @@ ChartDocumentSnapshot _snapshot(
   ChartSeries series, {
   List<ChartSeries> additionalSeries = const [],
   ConcentricDonutConfig? concentricDonutConfig,
+  PolarChartConfig? polarChartConfig,
   String? title,
   List<ChartAnnotation> annotations = const [],
   ChartTheme? theme,
@@ -945,15 +1022,23 @@ ChartDocumentSnapshot _snapshot(
       interaction:
           (encodedInteraction as ChartArtifactSuccess<ChartInteractionDocument>)
               .value,
-      configuration: concentricDonutConfig == null
-          ? null
-          : (ChartConfigurationDocumentCodec.encodeConcentricDonut(
-                      concentricDonutConfig,
-                    )
-                    as ChartArtifactSuccess<JsonObjectValue>)
-                .value,
+      configuration: JsonObjectValue({
+        if (concentricDonutConfig != null)
+          ...(ChartConfigurationDocumentCodec.encodeConcentricDonut(
+                    concentricDonutConfig,
+                  )
+                  as ChartArtifactSuccess<JsonObjectValue>)
+              .value
+              .values,
+        if (polarChartConfig != null)
+          ...(ChartConfigurationDocumentCodec.encodePolarChart(polarChartConfig)
+                  as ChartArtifactSuccess<JsonObjectValue>)
+              .value
+              .values,
+      }),
       requiredCapabilities: {
         if (concentricDonutConfig != null) 'series.donut.concentric.v1',
+        if (polarChartConfig != null) 'chart.polar.config.v1',
       },
     ),
     viewState: viewState,

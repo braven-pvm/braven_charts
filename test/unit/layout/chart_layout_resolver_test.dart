@@ -147,6 +147,72 @@ void main() {
       );
     });
 
+    test('uses polar-axis layout for one PolarColumnChartSeries', () {
+      final polar = PolarColumnChartSeries.fromMap(
+        id: 'polar',
+        values: const {'A': 1, 'B': 2},
+      );
+
+      expect(ChartLayoutResolver.resolve([polar]), ChartLayoutKind.polarAxis);
+    });
+
+    test('rejects mixed and multi-series Polar Column compositions in V1', () {
+      final first = PolarColumnChartSeries.fromMap(
+        id: 'first',
+        values: const {'A': 1},
+      );
+      final second = PolarColumnChartSeries.fromMap(
+        id: 'second',
+        values: const {'A': 2},
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([
+          first,
+          const LineChartSeries(id: 'line', points: []),
+        ]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('cannot be mixed'),
+          ),
+        ),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([first, second]),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('exactly one PolarColumnChartSeries'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'rejects a generic series that only claims the polar-column style',
+      () {
+        const invalid = ChartSeries(
+          id: 'fake-polar',
+          points: [],
+          style: SeriesStyle.polarColumn,
+        );
+
+        expect(
+          () => ChartLayoutResolver.resolve(const [invalid]),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.message,
+              'message',
+              contains('requires a PolarColumnChartSeries'),
+            ),
+          ),
+        );
+      },
+    );
+
     testWidgets('BravenChartPlus applies composition validation at runtime', (
       tester,
     ) async {

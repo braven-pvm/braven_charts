@@ -489,6 +489,40 @@ void main() {
       );
     });
 
+    test(
+      'projects Polar Column as category, series, and value without share',
+      () {
+        final polar = PolarColumnChartSeries.fromMap(
+          id: 'demand',
+          name: 'Demand',
+          unit: 'orders',
+          values: const {'North': 42, 'East': 68, 'South': 31},
+          columnColors: const {'East': Color(0xFF00A878)},
+        );
+        final model = ChartTableModel.fromDocument(
+          _document([_success(ChartSeriesDocumentCodec.encode(polar)).value]),
+        );
+
+        expect(model.projectionKind, ChartTableProjectionKind.polar);
+        expect(model.xColumnLabel, 'Category');
+        expect(model.polarRows, hasLength(3));
+        expect(model.longRows, hasLength(3));
+        expect(model.polarRows.first.category, 'North');
+        expect(model.polarRows.first.seriesName, 'Demand');
+        expect(model.polarRows.first.valueDisplay, '42.00');
+        expect(model.polarRows.first.unit, 'orders');
+        expect(model.polarRows[1].colorValue, 0xFF00A878);
+        expect(model.longRows.first.xDisplay, 'North');
+        expect(ChartTableExporter.headers(model), [
+          '#',
+          'Category',
+          'Series',
+          'Value (orders)',
+        ]);
+        expect(ChartTableExporter.headers(model), isNot(contains('Share')));
+      },
+    );
+
     test('projects pie documents as category, value, and share rows', () {
       final pie = PieChartSeries(
         id: 'revenue',

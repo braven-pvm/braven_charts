@@ -4,6 +4,7 @@ import 'package:braven_charts_example/showcase/widgets/bar_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/donut_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/gallery_flagships.dart';
 import 'package:braven_charts_example/showcase/widgets/pie_gallery_cards.dart';
+import 'package:braven_charts_example/showcase/widgets/polar_column_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/scatter_gallery_cards.dart';
 import 'package:braven_charts_example/showcase/widgets/synchronized_cartesian_gallery_card.dart';
 import 'package:flutter/material.dart';
@@ -85,7 +86,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(
-        find.text('Seven chart guides, grouped by visual grammar'),
+        find.text('Eight chart guides, grouped by visual grammar'),
         findsOneWidget,
       );
       expect(
@@ -280,6 +281,22 @@ void main() {
     expect(find.byType(ConcentricPortfolioGalleryCard), findsOneWidget);
 
     await tester.scrollUntilVisible(
+      find.text('Three views of cyclical magnitude'),
+      500,
+      scrollable: galleryScrollable,
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const ValueKey('gallery-polar-column-compositions')),
+      findsOneWidget,
+    );
+    expect(_gridCount(tester, 'gallery-polar-column-compositions'), 3);
+    expect(find.byType(ChannelMagnitudePolarGalleryCard), findsOneWidget);
+    expect(find.byType(SeasonalRoseGalleryCard), findsOneWidget);
+    expect(find.byType(LifecycleArcPolarGalleryCard), findsOneWidget);
+
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('gallery-mode-control')),
       -800,
       scrollable: galleryScrollable,
@@ -408,6 +425,37 @@ void main() {
       isTrue,
     );
     expect(charts.map((chart) => chart.series.length), [1, 1, 1]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('polar media panel presents three axis-based compositions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnGalleryMediaPanel())),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(BravenChartPlus), findsNWidgets(3));
+    expect(find.text('Channel demand'), findsOneWidget);
+    expect(find.text('Seasonal request profile'), findsOneWidget);
+    expect(find.text('Lifecycle conversion'), findsOneWidget);
+    final charts = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .toList(growable: false);
+    expect(
+      charts.every((chart) => chart.series.single is PolarColumnChartSeries),
+      isTrue,
+    );
+    expect(
+      (charts[1].series.single as PolarColumnChartSeries).preset,
+      PolarColumnPreset.rose,
+    );
+    expect(charts[2].polarChartConfig.pane.sweepAngleDegrees, 240);
     expect(tester.takeException(), isNull);
   });
 

@@ -27,7 +27,7 @@ void main() {
       find.byKey(const ValueKey('chart-type-radial-grid')),
       findsOneWidget,
     );
-    expect(find.byType(BravenChartPlus), findsNWidgets(7));
+    expect(showcaseChartTypes, hasLength(8));
     for (final family in [
       'Line',
       'Area',
@@ -52,6 +52,13 @@ void main() {
             .width,
       ),
     );
+    await tester.drag(
+      find.byKey(const ValueKey('chart-types-overview')),
+      const Offset(0, -700),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chart-type-polar-grid')), findsOneWidget);
+    expect(find.text('Polar Column'), findsOneWidget);
   });
 
   testWidgets('family cards open the matching deep guides', (tester) async {
@@ -82,6 +89,17 @@ void main() {
     );
     await tester.pump();
     expect(selectedSlug, 'concentric-donut');
+
+    await tester.drag(
+      find.byKey(const ValueKey('chart-types-overview')),
+      const Offset(0, -700),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('chart-type-card-polar-column')),
+    );
+    await tester.pump();
+    expect(selectedSlug, 'polar-column');
   });
 
   testWidgets('radial catalog previews fill their cards with concise actions', (
@@ -127,13 +145,15 @@ void main() {
     expect(concentricScale.transform.getMaxScaleOnAxis(), closeTo(1.12, 0.001));
     expect(
       tester.getSize(find.byKey(const ValueKey('chart-type-card-pie'))).width,
-      greaterThan(
-        tester
-            .getSize(find.byKey(const ValueKey('chart-type-card-line')))
-            .width,
-      ),
+      tester.getSize(find.byKey(const ValueKey('chart-type-card-line'))).width,
     );
     expect(find.text('View Concentric'), findsOneWidget);
+    final polar = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('chart-type-preview-polar-column')),
+    );
+    expect(polar.series.single, isA<PolarColumnChartSeries>());
+    expect(polar.polarChartConfig.angularAxis.showLabels, isFalse);
+    expect(find.text('View Polar Column'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

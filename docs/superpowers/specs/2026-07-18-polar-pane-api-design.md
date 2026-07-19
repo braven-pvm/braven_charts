@@ -3,8 +3,18 @@
 ## Status and scope
 
 Approved family boundary; focused Phase 2 API design written during Phase 0.
-Implementation remains out of scope until Concentric Donut and the Phase 0
-foundation have passed their own review gates.
+The Phase 0 foundation and Concentric Donut review gates are complete. Phase 2
+implementation is complete for the V1 boundary and ready for PR review. The
+pane geometry, coordinate transforms, public series and axis
+configuration, renderer, controller selection, native table, artifact and
+hydration codecs, Workbench, generated source, and showcase route now implement
+the contract below. Chart Types, a three-composition Gallery, deterministic
+pub.dev media, and public documentation are also in place. Local regression,
+native media capture, release-web verification, and pub archive dry-run are
+green. Compact, constrained, high-contrast, large-text, reduced-motion, and
+deterministic label-density hardening is also complete. Final visual acceptance
+was recorded on 2026-07-19 after reconciliation with the published `0.9.0`
+mainline; PR review and merge remain pending.
 
 This design establishes axis-based polar charts. It does not add axes to Pie or
 Donut, and it does not make Cartesian bars responsible for radial geometry.

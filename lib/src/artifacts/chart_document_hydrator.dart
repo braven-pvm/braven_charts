@@ -15,6 +15,8 @@ import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
+import '../models/polar_chart_config.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_annotation_document_codec.dart';
@@ -74,6 +76,7 @@ class HydratedChartConfiguration {
     this.width,
     this.height,
     this.concentricDonutConfig,
+    this.polarChartConfig,
   }) : series = List.unmodifiable(series),
        annotations = List.unmodifiable(annotations),
        axes = List.unmodifiable(axes);
@@ -109,6 +112,9 @@ class HydratedChartConfiguration {
 
   /// Plot-level composition restored for two or more Donut series.
   final ConcentricDonutConfig? concentricDonutConfig;
+
+  /// Plot-level pane and axes restored for an axis-based polar chart.
+  final PolarChartConfig? polarChartConfig;
 
   YAxisConfig? get primaryYAxis {
     for (final axis in axes) {
@@ -222,6 +228,7 @@ class _HydratedBravenChartState extends State<HydratedBravenChart> {
       showLegend: config.showLegend,
       concentricDonutConfig:
           config.concentricDonutConfig ?? const ConcentricDonutConfig(),
+      polarChartConfig: config.polarChartConfig ?? const PolarChartConfig(),
       donutCenterBuilder: widget.donutCenterBuilder,
       onDonutCenterTap: widget.onDonutCenterTap,
       showToolbar: config.showToolbar,
@@ -277,6 +284,9 @@ abstract final class ChartDocumentHydrator {
     'series.donut.center-content.v1',
     'series.donut.variable-radius.v1',
     'series.donut.concentric.v1',
+    'series.polarColumn',
+    'series.polar.column.v1',
+    'chart.polar.config.v1',
     'series.radial.grouping.v1',
     'series.radial.grouped-variable-radius.v1',
     'series.radial.formatters.v1',
@@ -303,6 +313,7 @@ abstract final class ChartDocumentHydrator {
     'bar',
     'pie',
     'donut',
+    'polarColumn',
   };
   static const _builtInAnnotationTypes = <String>{
     'point',
@@ -605,6 +616,17 @@ abstract final class ChartDocumentHydrator {
         series: series,
         config: concentricDonutConfig,
       );
+      final polarChartConfig = _requireValue(
+        ChartConfigurationDocumentCodec.decodePolarChart(
+          document.configuration,
+        ),
+        warnings,
+      );
+      _validatePolarComposition(
+        document: document,
+        series: series,
+        config: polarChartConfig,
+      );
       final layout = document.layout;
 
       return ChartArtifactSuccess(
@@ -633,6 +655,7 @@ abstract final class ChartDocumentHydrator {
           width: layout.width?.asDouble,
           height: layout.height?.asDouble,
           concentricDonutConfig: concentricDonutConfig,
+          polarChartConfig: polarChartConfig,
         ),
         warnings: warnings,
       );
@@ -854,6 +877,51 @@ abstract final class ChartDocumentHydrator {
           path: r'$.document.configuration.concentricDonut',
         ),
         const [],
+      );
+    }
+  }
+
+  static void _validatePolarComposition({
+    required ChartDocument document,
+    required List<ChartSeries> series,
+    required PolarChartConfig? config,
+  }) {
+    final polarSeries = series.whereType<PolarColumnChartSeries>().toList(
+      growable: false,
+    );
+    if (config == null) {
+      if (polarSeries.isNotEmpty) {
+        throw const _HydrationFailure(
+          ChartArtifactError(
+            code: ChartArtifactDiagnosticCodes.invalidArtifact,
+            message:
+                'Polar Column series require chart-level Polar configuration.',
+            path: r'$.document.configuration.polarChart',
+          ),
+          [],
+        );
+      }
+      return;
+    }
+    if (!document.requiredCapabilities.contains('chart.polar.config.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Polar configuration must declare chart.polar.config.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.length != 1 || series.length != 1) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Polar Column V1 requires exactly one Polar Column series and cannot mix chart families.',
+          path: r'$.document.configuration.polarChart',
+        ),
+        [],
       );
     }
   }

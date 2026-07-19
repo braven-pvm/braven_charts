@@ -70,19 +70,19 @@ Use `--capture interaction` for the focused tracking and zoom/pan recordings,
 buffering sequence, or `--capture tracking` and `--capture zoom-pan` when only
 one interaction changed. Use `--capture interaction-still`, `--capture
 stills`, `--capture pie`, `--capture bar`, `--capture donut`, `--capture
-scatter`, or `--capture synchronized` for static media. Capture browser media
-from a local release build with `--url http://127.0.0.1:<port>/` before the
-public site has the change.
+scatter`, `--capture synchronized`, or `--capture polar` for static media.
+Capture browser media from a local release build with `--url
+http://127.0.0.1:<port>/` before the public site has the change.
 
 `--capture pie`, `--capture donut`, `--capture bar`, `--capture scatter`,
-`--capture synchronized`, `--capture hero`, and `--capture interaction-still`
-do not take browser screenshots. They mount the same Gallery configurations in
-Flutter's deterministic test renderer, call the native preview API for
-individual charts, load Flutter's bundled Roboto font, and write the returned
-PNG bytes. Multi-chart compositions use a deterministic Flutter
-`RepaintBoundary` because no single chart owns the complete image. Composite
-Donut and chart-family strips are assembled from native preview bytes in
-Flutter. The hero and interaction stills preserve transient tracking state.
+`--capture synchronized`, `--capture polar`, `--capture hero`, and `--capture
+interaction-still` do not take browser screenshots. They mount the same Gallery
+configurations in Flutter's deterministic test renderer, call the native
+preview API for individual charts, load Flutter's bundled Roboto font, and
+write the returned PNG bytes. Multi-chart compositions use a deterministic
+Flutter `RepaintBoundary` because no single chart owns the complete image.
+Composite Donut and chart-family strips are assembled from native preview bytes
+in Flutter. The hero and interaction stills preserve transient tracking state.
 Browser recording remains appropriate for animated interaction and live-stream
 GIFs.
 
@@ -95,6 +95,7 @@ GIFs.
 - [ ] The deployed Pie Charts route loads directly and after a browser refresh.
 - [ ] The deployed Donut Charts route loads directly and after a browser refresh.
 - [ ] The deployed Concentric Donut route loads directly and after a browser refresh.
+- [ ] The deployed Polar Column route loads directly and after a browser refresh.
 - [ ] Desktop and narrow navigation, pointer interactions, and live demos are
   smoke tested from the public URL.
 - [ ] Add the verified public demo URL to package metadata and README.
