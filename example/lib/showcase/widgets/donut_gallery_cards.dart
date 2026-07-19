@@ -365,9 +365,9 @@ class ConcentricMixGalleryCard extends StatelessWidget {
           'gallery-concentric-baseline': 0.8,
         },
         centerContent: DonutCenterContent(
-          label: 'Comparison',
+          label: 'Periods',
           valueMode: DonutCenterValueMode.custom,
-          customValue: '3 rings',
+          customValue: '3',
         ),
       ),
       concentricSeries: [
@@ -438,9 +438,9 @@ class ConcentricHealthGalleryCard extends StatelessWidget {
         outerRadiusFactor: 0.88,
         ringGap: 5,
         centerContent: DonutCenterContent(
-          label: 'SLO status',
+          label: 'Regions',
           valueMode: DonutCenterValueMode.custom,
-          customValue: '3 zones',
+          customValue: '3',
         ),
       ),
       concentricSeries: [
@@ -522,9 +522,9 @@ class ConcentricPortfolioGalleryCard extends StatelessWidget {
           'gallery-portfolio-income': 0.78,
         },
         centerContent: DonutCenterContent(
-          label: 'Capital',
+          label: 'Funds',
           valueMode: DonutCenterValueMode.custom,
-          customValue: '3 funds',
+          customValue: '3',
         ),
       ),
       concentricSeries: [

@@ -327,6 +327,18 @@ void main() {
         .toList(growable: false);
     expect(charts.map((chart) => chart.series.length), [3, 3, 3]);
     expect(
+      charts.map(
+        (chart) => chart.concentricDonutConfig.centerContent?.label,
+      ),
+      ['Periods', 'Regions', 'Funds'],
+    );
+    expect(
+      charts.map(
+        (chart) => chart.concentricDonutConfig.centerContent?.customValue,
+      ),
+      ['3', '3', '3'],
+    );
+    expect(
       charts.first.concentricDonutConfig.ringWeights,
       containsPair('gallery-concentric-current', 1.2),
     );
