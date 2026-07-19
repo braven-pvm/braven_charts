@@ -15,6 +15,8 @@ also the source for pub.dev screenshots and the public web demo.
 
 [**Open Concentric Donut directly →**](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
 
+[**Open Polar Column directly →**](https://braven-pvm.github.io/braven_charts/?page=polar-column)
+
 ## Run locally
 
 From the repository root:
@@ -35,8 +37,8 @@ flutter build web --release --base-href /braven_charts/
 
 | Showcase page | What to try |
 | --- | --- |
-| Gallery | Start with a native-rendered seven-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Pie, Donut, Concentric Donut, Cartesian, and mixed-series examples |
-| Chart Types | Choose between line, area, bar, scatter, Pie, Donut, and Concentric Donut from a concise visual overview; each family links to its own runnable guide |
+| Gallery | Start with a native-rendered eight-family sampler, then compare a readable multi-axis session profile, a dense analytical composition, and production-shaped Cartesian, partition-radial, and Polar Column examples |
+| Chart Types | Choose between line, area, bar, scatter, Pie, Donut, Concentric Donut, and Polar Column from a concise visual overview; each family links to its own runnable guide |
 | Line Charts | Compare the workhorse composition, four interpolation modes, independently scaled multi-axis signals, and explicit three-series entrance/value/append/remove/rolling-window timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Area Charts | Compare layered magnitude, positive and negative baseline fills, observed-versus-forecast compositions, and explicit two-layer fill/outline value and boundary-topology timing; inspect the same mounted chart in resizable Chart/Data/Split/Source views and copy its effective Dart |
 | Bar Charts | Explore grouped, stacked, normalized, overlaid, horizontal, range, waterfall, tracked, target-marked, uncertainty-aware, animated, and precision-styled bars through the complete Bar API and generated source |
@@ -44,6 +46,7 @@ flutter build web --release --base-href /braven_charts/
 | Pie Charts | Apply complete simple, editorial, compact, elevated, or high-contrast presentations; compare category stories; refine palettes, solid/linear/radial fills, labels, geometry, callouts, tooltips, legends, and motion; select linked rows; inspect generated source; and capture or restore a portable artifact |
 | Donut Charts | Compare full, partial, and variable-radius rings; switch Chart/Data/Split/Source views; replace legend items with host-built Flutter widgets; link center content to slice, legend, table, and controller selection; then capture JSON and PNG and restore a fresh runtime |
 | Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
+| Polar Column | Compare standard linear-radius columns, an area-correct Nightingale rose, and a partial annular sweep; tune both Polar axes; then inspect the value-only native table, generated Source, and portable document |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
 | Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
@@ -76,6 +79,7 @@ the mode or show/hide the selector for the entire application.
 - Select a legend entry or series in multi-axis demos to exercise axis slots.
 - Select a pie slice, legend item, or table row and confirm all three surfaces stay linked.
 - Select a Donut slice, legend item, or table row and confirm the center follows the same identity.
+- Select a Polar column or table row and confirm its category/value identity remains linked without a derived share.
 - Pause live streams, allow points to buffer, then resume.
 - Open annotation controls to create, edit, drag, or remove overlays.
 
@@ -88,10 +92,11 @@ bar.
 ## Screenshot routes
 
 The Gallery is designed as the primary pub.dev image. Focused screenshots can
-also be captured from Line Charts, Area Charts, Pie Charts, Donut Charts, Bar
-Charts, Multi-Axis, Live Stream, Annotations, and Loading States to show path
-motion, workbench composition, radial rendering, categorical composition, the
-interaction engine, and application states in more detail.
+also be captured from Line Charts, Area Charts, Pie Charts, Donut Charts,
+Polar Column, Bar Charts, Multi-Axis, Live Stream, Annotations, and Loading
+States to show path motion, workbench composition, radial rendering,
+categorical composition, the interaction engine, and application states in
+more detail.
 
 See the repository [release checklist](../doc/release_checklist.md) for capture
 sizes and the public deployment workflow. For the API contract behind the
@@ -102,5 +107,7 @@ For the reusable Chart/Data/Split/Source composition shown by Chart Workbench, s
 For radial series contracts, see [Pie charts](../doc/pie_charts.md),
 [Donut charts](../doc/donut_charts.md), and
 [Concentric Donut charts](../doc/concentric_donut_charts.md).
+For axis-based cyclical magnitude, see
+[Polar Column and Rose charts](../doc/polar_column_charts.md).
 For path-series motion, streaming boundaries, and the Line/Area workbench, see
 [Line and Area charts](../doc/line_area_charts.md).

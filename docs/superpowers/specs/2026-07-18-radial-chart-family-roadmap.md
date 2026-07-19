@@ -3,9 +3,19 @@
 ## Status
 
 Approved on 2026-07-18. The six decisions in this document are the governing
-boundaries for the radial chart-family programme. Delivery remains phase-gated:
-approval of this roadmap authorizes Phase 0, not an unreviewed implementation
-of every later chart family.
+boundaries for the radial chart-family programme. Phase 0 and Concentric Donut
+Phase 1 are complete and merged. Phase 2 is complete on its review branch
+through its V1 public series, renderer, controller selection, native table,
+portable artifact/hydration, Workbench, generated source, and public showcase
+surfaces, including Chart Types, three Gallery compositions, deterministic
+pub.dev media, and public documentation. Package and showcase regressions, the
+release-web build, native media capture, and the pub archive dry-run are green.
+Compact, constrained, high-contrast, large-text, reduced-motion, and
+deterministic label-density hardening is complete. Final visual acceptance was
+recorded on 2026-07-19 after rebasing onto the published `0.9.0` mainline. The
+branch is ready for PR review and is not yet merged or released.
+Delivery remains phase-gated, and later families are not authorized by the
+start of Phase 2.
 
 ## Executive decision
 
@@ -371,7 +381,9 @@ radial series base.
 
 ### Phase 1 — Concentric Donut V1
 
-Status: implementation complete and in release validation.
+Status: complete and merged. The V1 family contract, portable document,
+Workbench integration, public showcase, and release-facing documentation have
+passed their Phase 1 gates.
 
 Deliver:
 
@@ -397,6 +409,20 @@ selection identity, table rows, and portable center fallback.
 
 ### Phase 2 — Polar coordinate foundation + Polar Column V1
 
+Status: complete on the review branch and ready for PR. The radial-pane geometry,
+bidirectional polar transform, category and numeric scales, public V1 series
+and configuration, renderer, selection, native table, deterministic artifact
+and hydration, Workbench, generated source, dedicated showcase, Chart Types,
+three-composition Gallery, deterministic media capture, and public guide are in
+place. Package and showcase regressions and the release-web build are green;
+the native media capture and pub archive dry-run pass, and final visual
+acceptance is recorded.
+Focused goldens now cover normal, compact dense, constrained partial-sweep, and
+high-contrast large-text layouts. Reduced motion resolves immediately to final
+geometry, and dense angular/direct labels thin without removing semantic or
+table data. The branch is rebased onto the published `0.9.0` mainline; PR review
+and merge remain before release.
+
 Deliver:
 
 - radial pane and polar transform;
@@ -405,7 +431,8 @@ Deliver:
   testing, zoom policy, and semantics;
 - one non-negative `PolarColumnChartSeries` with explicit category/value data;
 - a Rose/Nightingale preset with area-correct default scaling;
-- native table, artifacts, controller, workbench, and showcase integration.
+- native table, artifacts, controller, workbench, showcase, Gallery, media,
+  and documentation integration.
 
 V1 limits:
 

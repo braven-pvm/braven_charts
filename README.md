@@ -9,7 +9,8 @@ rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
 `BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
-Pie, Donut, and multi-ring Concentric Donut charts; multiple independent axes
+Pie, Donut, multi-ring Concentric Donut, and axis-based Polar Column/Rose
+charts; multiple independent axes
 and normalization; zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
 frame-coalesced live data; configurable themes and state views; chart, table,
 split, and generated Dart source modes; and portable chart artifacts. Rendering,
@@ -68,6 +69,16 @@ the composition or series level.
 | Period comparison | Service-level health | Portfolio allocation |
 | --- | --- | --- |
 | [![Three revenue periods compared as independently weighted Concentric Donut rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_revenue_mix.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three service regions compared as partial-sweep status rings](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_service_health.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) | [![Three portfolio mandates compared as weighted rings on a dark chart theme](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/concentric_portfolio.png)](https://braven-pvm.github.io/braven_charts/?page=concentric-donut) |
+
+### Polar Column compositions
+
+Polar Column uses angular categories and a numeric radial scale. Standard
+columns compare radius directly, Rose uses area-correct scaling, and partial
+panes preserve the same value-only data and artifact contract.
+
+| Channel demand | Seasonal Rose | Lifecycle arc |
+| --- | --- | --- |
+| [![Channel demand compared as linear-radius Polar Columns](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_channel_demand.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) | [![Monthly request volume shown as an area-correct Nightingale Rose](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_seasonal_rose.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) | [![Lifecycle conversion shown on a partial annular Polar pane](https://raw.githubusercontent.com/braven-pvm/braven_charts/master/doc/screenshots/polar_lifecycle_arc.png)](https://braven-pvm.github.io/braven_charts/?page=polar-column) |
 
 ### Cartesian composition and Scatter encodings
 
@@ -135,8 +146,8 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; and category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation |
-| Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, and visible-axis slots |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories and a numeric radial scale |
+| Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, visible-axis slots, and dedicated angular-category/radial-value Polar axes |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |
 | Display | Light/dark and custom themes, inherited right-to-left canvas text and semantics, legends, labels, package-owned Chart/Data/Split/Source workbenches, loading skeletons, progress indicators, and empty states |
@@ -165,6 +176,9 @@ the resizable package-owned workbench.
 [Open Concentric Donut directly](https://braven-pvm.github.io/braven_charts/?page=concentric-donut)
 to compare independent totals across weighted rings, linked table rows,
 grouped legends, one shared center, and portable restoration.
+[Open Polar Column directly](https://braven-pvm.github.io/braven_charts/?page=polar-column)
+to compare linear-radius columns, an area-correct Nightingale rose, and a
+partial polar pane across Chart/Data/Split/Source views.
 
 ## Install
 
@@ -594,7 +608,7 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, Pie, Donut, and Concentric Donut charts, interaction, tracking, annotations,
+focused pages for chart types, Pie, Donut, Concentric Donut, and Polar Column charts, interaction, tracking, annotations,
 streaming, theming, performance, multi-axis layouts, scientific data, baseline
 fills, and state UX.
 
@@ -608,6 +622,7 @@ fills, and state UX.
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
 - [Concentric Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/concentric_donut_charts.md)
+- [Polar Column and Rose charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/polar_column_charts.md)
 - [Portable chart artifacts](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_artifacts.md)
 - [Chart Workbench](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_workbench.md)
 - [Chart family integration](https://github.com/braven-pvm/braven_charts/blob/master/doc/chart_family_integration.md)

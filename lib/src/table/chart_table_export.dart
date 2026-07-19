@@ -80,6 +80,7 @@ abstract final class ChartTableExporter {
     Iterable<ChartTableLongRow> longRows = const [],
     Iterable<ChartTableWideRow> wideRows = const [],
     Iterable<ChartTablePieRow> pieRows = const [],
+    Iterable<ChartTablePolarRow> polarRows = const [],
   }) {
     final rows = switch (model.projectionKind) {
       ChartTableProjectionKind.cartesianWide => [
@@ -90,6 +91,10 @@ abstract final class ChartTableExporter {
       ],
       ChartTableProjectionKind.pie => [
         for (final (index, row) in pieRows.indexed) pieRow(model, row, index),
+      ],
+      ChartTableProjectionKind.polar => [
+        for (final (index, row) in polarRows.indexed)
+          polarRow(model, row, index),
       ],
     };
     return ChartTableCsvExport(headers: headers(model), rows: rows);
@@ -185,6 +190,23 @@ abstract final class ChartTableExporter {
     references: [row.reference],
   );
 
+  static ChartTableRowExport polarRow(
+    ChartTableModel model,
+    ChartTablePolarRow row,
+    int displayIndex,
+  ) => ChartTableRowExport(
+    rowId: row.rowId,
+    headers: headers(model),
+    rawValues: [displayIndex + 1, row.category, row.seriesName, row.valueRaw],
+    displayValues: [
+      '${displayIndex + 1}',
+      row.category,
+      row.seriesName,
+      row.valueDisplay,
+    ],
+    references: [row.reference],
+  );
+
   static List<String> headers(ChartTableModel model) =>
       switch (model.projectionKind) {
         ChartTableProjectionKind.cartesianWide => [
@@ -223,6 +245,14 @@ abstract final class ChartTableExporter {
               : 'Value (${model.commonRadialUnit})',
           ?model.pieRadiusColumnLabel,
           'Share',
+        ],
+        ChartTableProjectionKind.polar => [
+          '#',
+          'Category',
+          'Series',
+          model.commonRadialUnit == null
+              ? 'Value'
+              : 'Value (${model.commonRadialUnit})',
         ],
       };
 }

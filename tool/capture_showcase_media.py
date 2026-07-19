@@ -567,6 +567,8 @@ def _native_stills(output_dir: Path, group: str | None = None) -> None:
         command.extend(
             ["--plain-name", "capture pub.dev Concentric Donut media"]
         )
+    elif group == "polar":
+        command.extend(["--plain-name", "capture pub.dev Polar Column media"])
     elif group == "bar":
         command.extend(["--plain-name", "capture pub.dev Bar media"])
     elif group == "scatter":
@@ -993,6 +995,7 @@ def main() -> None:
             "type-strip",
             "donut",
             "concentric",
+            "polar",
             "line-area",
         ),
         default="all",
@@ -1024,6 +1027,9 @@ def main() -> None:
         return
     if args.capture == "concentric":
         _native_stills(args.output_dir, "concentric")
+        return
+    if args.capture == "polar":
+        _native_stills(args.output_dir, "polar")
         return
     if args.capture == "hero":
         _native_stills(args.output_dir, "hero")

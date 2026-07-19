@@ -19,6 +19,8 @@ import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/polar_chart_config.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
@@ -119,6 +121,9 @@ class _ChartDartEmitter {
       final concentricDonutConfig = configuration.concentricDonutConfig;
       if (concentricDonutConfig != null) {
         _emitConcentricDonutConfig(body, concentricDonutConfig);
+      }
+      if (configuration.polarChartConfig case final polarConfig?) {
+        _emitPolarChartConfig(body, polarConfig);
       }
       if (configuration.annotations.isNotEmpty) {
         _emitAnnotationList(body, 'annotations', configuration.annotations);
@@ -259,6 +264,7 @@ class _ChartDartEmitter {
       BarChartSeries() => 'BarChartSeries',
       PieChartSeries() => 'PieChartSeries',
       DonutChartSeries() => 'DonutChartSeries',
+      PolarColumnChartSeries() => 'PolarColumnChartSeries',
       ChartSeries() => 'ChartSeries',
     };
     writer.writeLine('$constructor(');
@@ -278,12 +284,14 @@ class _ChartDartEmitter {
           pathPrefix: '\$.series[$seriesIndex].annotations',
         );
       }
-      _valueIf(
-        writer,
-        'isXOrdered',
-        series.isXOrdered,
-        defaultValue: series is PieChartSeries || series is DonutChartSeries,
-      );
+      if (series is! PolarColumnChartSeries) {
+        _valueIf(
+          writer,
+          'isXOrdered',
+          series.isXOrdered,
+          defaultValue: series is PieChartSeries || series is DonutChartSeries,
+        );
+      }
       _optionalString(writer, 'yAxisId', series.yAxisId);
       if (series.yAxisConfig != null) {
         _emitYAxis(writer, 'yAxisConfig', series.yAxisConfig!);
@@ -328,6 +336,8 @@ class _ChartDartEmitter {
           _emitPieOptions(writer, series, seriesIndex);
         case DonutChartSeries():
           _emitDonutOptions(writer, series, seriesIndex);
+        case PolarColumnChartSeries():
+          _emitPolarColumnOptions(writer, series);
         case ChartSeries():
           break;
       }
@@ -1489,6 +1499,37 @@ class _ChartDartEmitter {
     _emitAdvancedRadial(writer, series, seriesIndex);
   }
 
+  void _emitPolarColumnOptions(
+    DartSourceWriter writer,
+    PolarColumnChartSeries series,
+  ) {
+    _enumIf(
+      writer,
+      'preset',
+      'PolarColumnPreset',
+      series.preset.name,
+      defaultName: 'standard',
+    );
+    final style = series.polarStyle;
+    if (options.includeDefaultValues || style != const PolarColumnStyle()) {
+      writer.writeLine('polarStyle: PolarColumnStyle(');
+      writer.indented(() {
+        _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
+        _numberIf(writer, 'opacity', style.opacity, 1);
+        _optionalColor(writer, 'borderColor', style.borderColor);
+        _numberIf(writer, 'borderWidth', style.borderWidth, 1);
+        _valueIf(
+          writer,
+          'showDataLabels',
+          style.showDataLabels,
+          defaultValue: true,
+        );
+      });
+      writer.writeLine('),');
+    }
+    _emitRadialSelectionStyle(writer, series.selectionStyle);
+  }
+
   void _emitRadialSelectionStyle(
     DartSourceWriter writer,
     RadialSelectionStyle style,
@@ -1605,6 +1646,74 @@ class _ChartDartEmitter {
       if (options.includeDefaultValues ||
           config.centerContent != const DonutCenterContent()) {
         _emitConcentricCenterContent(writer, config.centerContent);
+      }
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitPolarChartConfig(DartSourceWriter writer, PolarChartConfig config) {
+    writer.writeLine('polarChartConfig: PolarChartConfig(');
+    writer.indented(() {
+      final pane = config.pane;
+      if (options.includeDefaultValues || pane != const PolarPaneConfig()) {
+        writer.writeLine('pane: PolarPaneConfig(');
+        writer.indented(() {
+          _numberIf(writer, 'startAngleDegrees', pane.startAngleDegrees, -90);
+          _numberIf(writer, 'sweepAngleDegrees', pane.sweepAngleDegrees, 360);
+          _valueIf(writer, 'clockwise', pane.clockwise, defaultValue: true);
+          _numberIf(writer, 'innerRadiusFactor', pane.innerRadiusFactor, 0);
+          _numberIf(writer, 'outerRadiusFactor', pane.outerRadiusFactor, 0.88);
+          _valueIf(writer, 'clipMarks', pane.clipMarks, defaultValue: true);
+        });
+        writer.writeLine('),');
+      }
+      final angular = config.angularAxis;
+      if (options.includeDefaultValues ||
+          angular != const PolarCategoryAxisConfig()) {
+        writer.writeLine('angularAxis: PolarCategoryAxisConfig(');
+        writer.indented(() {
+          _numberIf(writer, 'innerPadding', angular.innerPadding, 0.12);
+          _numberIf(writer, 'outerPadding', angular.outerPadding, 0.04);
+          _valueIf(
+            writer,
+            'showLabels',
+            angular.showLabels,
+            defaultValue: true,
+          );
+          _valueIf(
+            writer,
+            'showGridLines',
+            angular.showGridLines,
+            defaultValue: true,
+          );
+        });
+        writer.writeLine('),');
+      }
+      final radial = config.radialAxis;
+      if (options.includeDefaultValues ||
+          radial != const PolarNumericAxisConfig()) {
+        writer.writeLine('radialAxis: PolarNumericAxisConfig(');
+        writer.indented(() {
+          _optionalNumber(writer, 'minimum', radial.minimum);
+          _optionalNumber(writer, 'maximum', radial.maximum);
+          if (radial.scaleMode case final scaleMode?) {
+            writer.namedArgument(
+              'scaleMode',
+              'PolarRadialScaleMode.${scaleMode.name}',
+            );
+          }
+          if (options.includeDefaultValues || radial.tickCount != 5) {
+            writer.namedArgument('tickCount', radial.tickCount.toString());
+          }
+          _valueIf(writer, 'showLabels', radial.showLabels, defaultValue: true);
+          _valueIf(
+            writer,
+            'showGridLines',
+            radial.showGridLines,
+            defaultValue: true,
+          );
+        });
+        writer.writeLine('),');
       }
     });
     writer.writeLine('),');

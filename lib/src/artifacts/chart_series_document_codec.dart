@@ -11,6 +11,7 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
 import '../models/scatter_marker_style.dart';
@@ -180,6 +181,7 @@ abstract final class ChartSeriesDocumentCodec {
               'series.donut.center-content.v1',
             if (series is DonutChartSeries && series.hasVariableSliceRadius)
               'series.donut.variable-radius.v1',
+            if (series is PolarColumnChartSeries) 'series.polar.column.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -574,6 +576,19 @@ abstract final class ChartSeriesDocumentCodec {
                   _map(style, 'sliceGroupingConfig'),
                 ),
         ),
+        'polarColumn' => PolarColumnChartSeries(
+          id: document.id,
+          name: document.name,
+          points: points,
+          color: _optionalColor(style['color'], r'$.style.color'),
+          metadata: metadata,
+          unit: document.unit,
+          preset: _enum(style, 'preset', PolarColumnPreset.values),
+          polarStyle: _decodePolarColumnStyle(_map(style, 'polarStyle')),
+          selectionStyle: _optionalMap(style, 'selectionStyle') == null
+              ? const RadialSelectionStyle()
+              : _decodeRadialSelectionStyle(_map(style, 'selectionStyle')),
+        ),
         final type => throw _UnsupportedModelException(
           'Unsupported built-in series type: $type.',
           r'$.type',
@@ -628,6 +643,7 @@ String _typeOf(ChartSeries series) => switch (series) {
   BarChartSeries() => 'bar',
   PieChartSeries() => 'pie',
   DonutChartSeries() => 'donut',
+  PolarColumnChartSeries() => 'polarColumn',
   ChartSeries() => 'base',
 };
 
@@ -929,6 +945,13 @@ Map<String, Object?> _encodeSeriesStyle(
           groupingConfig,
         );
       }
+    case PolarColumnChartSeries():
+      result
+        ..['preset'] = series.preset.name
+        ..['polarStyle'] = _encodePolarColumnStyle(series.polarStyle)
+        ..['selectionStyle'] = _encodeRadialSelectionStyle(
+          series.selectionStyle,
+        );
     case ChartSeries():
       break;
   }
@@ -1977,6 +2000,26 @@ RadialSelectionStyle _decodeRadialSelectionStyle(Map<String, Object?> value) {
     backdropBlur: _double(value, 'backdropBlur'),
   );
 }
+
+Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
+  'cornerRadius': _number(style.cornerRadius),
+  'opacity': _number(style.opacity),
+  if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
+  'borderWidth': _number(style.borderWidth),
+  'showDataLabels': style.showDataLabels,
+};
+
+PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
+    PolarColumnStyle(
+      cornerRadius: _double(value, 'cornerRadius'),
+      opacity: _double(value, 'opacity'),
+      borderColor: _optionalColor(
+        value['borderColor'],
+        r'$.style.polarStyle.borderColor',
+      ),
+      borderWidth: _double(value, 'borderWidth'),
+      showDataLabels: _bool(value, 'showDataLabels'),
+    );
 
 Map<String, Object?> _encodePieSliceRadiusConfig(
   PieSliceRadiusConfig config, {

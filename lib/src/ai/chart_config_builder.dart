@@ -327,6 +327,10 @@ class ChartConfigBuilder {
         chartStyle: chartStyle,
         seriesJson: json,
       ),
+      SeriesStyle.polarColumn => throw const FormatException(
+        'Polar Column is not yet part of the agentic chart schema; construct '
+        'PolarColumnChartSeries through the public API.',
+      ),
     };
   }
 

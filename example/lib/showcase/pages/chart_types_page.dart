@@ -39,13 +39,29 @@ class ChartTypesPage extends StatelessWidget {
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
           const SliverToBoxAdapter(
             child: _CatalogSectionHeader(
-              eyebrow: 'RADIAL FAMILIES',
+              eyebrow: 'PARTITION-RADIAL FAMILIES',
               title: 'Explain contribution to one or several totals',
             ),
           ),
           _ChartTypeCatalogGrid(
             gridKey: const ValueKey('chart-type-radial-grid'),
-            chartTypes: showcaseChartTypes.skip(4).toList(growable: false),
+            chartTypes: showcaseChartTypes
+                .skip(4)
+                .take(3)
+                .toList(growable: false),
+            maxColumns: 3,
+            onOpenChartType: onOpenChartType,
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          const SliverToBoxAdapter(
+            child: _CatalogSectionHeader(
+              eyebrow: 'POLAR-AXIS FAMILIES',
+              title: 'Compare magnitudes around angular categories',
+            ),
+          ),
+          _ChartTypeCatalogGrid(
+            gridKey: const ValueKey('chart-type-polar-grid'),
+            chartTypes: showcaseChartTypes.skip(7).toList(growable: false),
             maxColumns: 3,
             onOpenChartType: onOpenChartType,
           ),
@@ -159,7 +175,7 @@ class _OverviewIntroduction extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, and radial charts for part-to-whole stories.',
+                  'Use trends for change, areas for magnitude, bars for categories, scatter plots for relationships, partition-radial charts for shares, and polar axes for cyclical magnitude.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                     height: 1.45,

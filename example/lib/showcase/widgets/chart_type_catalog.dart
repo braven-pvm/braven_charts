@@ -105,6 +105,16 @@ const showcaseChartTypes = <ShowcaseChartType>[
     accent: Color(0xFF7C3AED),
     highlights: ['Independent totals', 'Ring weights', 'Shared selection'],
   ),
+  ShowcaseChartType(
+    type: ChartType.polarColumn,
+    label: 'Polar Column',
+    slug: 'polar-column',
+    summary: 'Magnitude on polar axes',
+    bestFor: 'Cyclical categories and compact magnitude profiles',
+    icon: Icons.rotate_right_outlined,
+    accent: Color(0xFF0369A1),
+    highlights: ['Numeric radius', 'Rose preset', 'Partial sweeps'],
+  ),
 ];
 
 ShowcaseChartType showcaseChartTypeForSlug(String slug) =>
@@ -119,7 +129,9 @@ class ChartTypePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRadial =
-        chartType.type == ChartType.pie || chartType.type == ChartType.donut;
+        chartType.type == ChartType.pie ||
+        chartType.type == ChartType.donut ||
+        chartType.type == ChartType.polarColumn;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseTheme = isDark ? ChartTheme.dark : ChartTheme.light;
     final background = Color.alphaBlend(
@@ -142,6 +154,20 @@ class ChartTypePreview extends StatelessWidget {
               ),
             )
           : const ConcentricDonutConfig(),
+      polarChartConfig: chartType.type == ChartType.polarColumn
+          ? const PolarChartConfig(
+              pane: PolarPaneConfig(outerRadiusFactor: 0.8),
+              angularAxis: PolarCategoryAxisConfig(
+                innerPadding: 0.16,
+                showLabels: false,
+                showGridLines: false,
+              ),
+              radialAxis: PolarNumericAxisConfig(
+                showLabels: false,
+                showGridLines: false,
+              ),
+            )
+          : const PolarChartConfig(),
       theme: baseTheme.copyWith(backgroundColor: background),
       showLegend: false,
       grid: isRadial
@@ -632,6 +658,36 @@ List<ChartSeries> _previewSeries(ShowcaseChartType chartType) {
           position: PieDataLabelPosition.inside,
           content: PieDataLabelContent.percentage,
           minimumShare: 0.14,
+        ),
+      ),
+    ],
+    ChartType.polarColumn => [
+      PolarColumnChartSeries.rose(
+        id: 'catalog-polar-column',
+        values: const {
+          'North': 52,
+          'North-east': 76,
+          'East': 64,
+          'South-east': 88,
+          'South': 46,
+          'South-west': 70,
+          'West': 58,
+          'North-west': 82,
+        },
+        columnColors: const {
+          'North': Color(0xFF0EA5E9),
+          'North-east': Color(0xFF0891B2),
+          'East': Color(0xFF0D9488),
+          'South-east': Color(0xFF16A34A),
+          'South': Color(0xFFF59E0B),
+          'South-west': Color(0xFFF97316),
+          'West': Color(0xFFE11D48),
+          'North-west': Color(0xFF7C3AED),
+        },
+        polarStyle: const PolarColumnStyle(
+          cornerRadius: 3,
+          borderWidth: 0.5,
+          showDataLabels: false,
         ),
       ),
     ],

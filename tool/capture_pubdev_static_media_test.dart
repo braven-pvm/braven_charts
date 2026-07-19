@@ -18,6 +18,8 @@ import '../example/lib/showcase/widgets/donut_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/pie_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
+import '../example/lib/showcase/widgets/polar_column_gallery_cards.dart';
+// ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/scatter_gallery_cards.dart';
 // ignore: avoid_relative_lib_imports
 import '../example/lib/showcase/widgets/synchronized_cartesian_gallery_card.dart';
@@ -141,6 +143,37 @@ void main() {
         (
           fileName: 'concentric_portfolio.png',
           widget: ConcentricPortfolioGalleryCard(),
+        ),
+      ]) {
+        await _capturePie(
+          tester,
+          outputDirectory: outputDirectory,
+          fileName: source.fileName,
+          source: source.widget,
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'capture pub.dev Polar Column media through the public preview API',
+    (tester) async {
+      await tester.runAsync(_loadCaptureFont);
+      final outputDirectory = Directory(_outputDirectory)
+        ..createSync(recursive: true);
+
+      for (final source in const [
+        (
+          fileName: 'polar_channel_demand.png',
+          widget: ChannelMagnitudePolarGalleryCard(),
+        ),
+        (
+          fileName: 'polar_seasonal_rose.png',
+          widget: SeasonalRoseGalleryCard(),
+        ),
+        (
+          fileName: 'polar_lifecycle_arc.png',
+          widget: LifecycleArcPolarGalleryCard(),
         ),
       ]) {
         await _capturePie(
@@ -346,6 +379,7 @@ Future<Uint8List> _capturePie(
             yAxis: galleryChart.yAxis,
             interactionConfig: galleryChart.interactionConfig,
             concentricDonutConfig: galleryChart.concentricDonutConfig,
+            polarChartConfig: galleryChart.polarChartConfig,
           ),
         ),
       ),

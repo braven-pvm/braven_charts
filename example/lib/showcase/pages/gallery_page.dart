@@ -11,6 +11,7 @@ import '../widgets/bar_gallery_cards.dart';
 import '../widgets/donut_gallery_cards.dart';
 import '../widgets/gallery_flagships.dart';
 import '../widgets/pie_gallery_cards.dart';
+import '../widgets/polar_column_gallery_cards.dart';
 import '../widgets/scatter_gallery_cards.dart';
 import '../widgets/synchronized_cartesian_gallery_card.dart';
 import '../widgets/chart_type_catalog.dart';
@@ -167,10 +168,10 @@ class _GalleryPageState extends State<GalleryPage> {
           const SliverToBoxAdapter(
             child: _GallerySectionHeader(
               eyebrow: 'CHART TYPE GUIDES',
-              title: 'Seven chart guides, grouped by visual grammar',
+              title: 'Eight chart guides, grouped by visual grammar',
               subtitle:
                   'Compare Cartesian families together, then give every radial preview enough room to explain its shape.',
-              count: 7,
+              count: 8,
             ),
           ),
           SliverToBoxAdapter(
@@ -327,6 +328,19 @@ class _GalleryPageState extends State<GalleryPage> {
           const _RadialGalleryGrid(
             gridKey: ValueKey('gallery-concentric-donut-compositions'),
             cards: concentricDonutGalleryCards,
+          ),
+          const SliverToBoxAdapter(
+            child: _GallerySectionHeader(
+              eyebrow: 'POLAR AXIS COMPOSITIONS',
+              title: 'Three views of cyclical magnitude',
+              subtitle:
+                  'Compare direct radial magnitude, an area-correct Nightingale rose, and a controlled partial sweep without turning values into Pie shares.',
+              count: 3,
+            ),
+          ),
+          const _RadialGalleryGrid(
+            gridKey: ValueKey('gallery-polar-column-compositions'),
+            cards: polarColumnGalleryCards,
           ),
         ],
       ),

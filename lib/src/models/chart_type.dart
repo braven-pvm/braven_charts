@@ -1,8 +1,8 @@
 /// Built-in series type rendered by `BravenChartPlus`.
 ///
 /// Line, area, bar, and scatter are Cartesian and may share one chart. Pie and
-/// Donut are radial, accept exactly one radial category series, and cannot mix
-/// with the Cartesian types or each other.
+/// Donut are partition-radial. Polar Column is axis-based polar. Radial and
+/// polar families cannot mix with Cartesian series or each other.
 enum ChartType {
   /// Line chart with connected points.
   line,
@@ -21,4 +21,7 @@ enum ChartType {
 
   /// Donut chart with category contributions rendered as annular slices.
   donut,
+
+  /// Category columns rendered against angular and radial polar axes.
+  polarColumn,
 }

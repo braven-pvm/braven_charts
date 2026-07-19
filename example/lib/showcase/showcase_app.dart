@@ -21,6 +21,7 @@ import 'pages/loading_states_page.dart';
 import 'pages/multi_axis_page.dart';
 import 'pages/performance_page.dart';
 import 'pages/pie_charts_page.dart';
+import 'pages/polar_column_page.dart';
 import 'pages/scientific_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
@@ -28,6 +29,7 @@ import 'pages/series_styling_page.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
+import 'widgets/polar_column_gallery_cards.dart';
 import 'widgets/gallery_flagships.dart';
 
 /// Main showcase application demonstrating all BravenChartPlus capabilities.
@@ -261,6 +263,7 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     'pie-charts' => const PieChartsPage(),
     'donut-charts' => const DonutChartsPage(),
     'concentric-donut' => const ConcentricDonutPage(),
+    'polar-column' => const PolarColumnPage(),
     _ => throw StateError('No showcase page is registered for $slug'),
   };
 
@@ -351,6 +354,9 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
     }
     if (capture == 'donut-gallery') {
       return const DonutGalleryMediaPanel();
+    }
+    if (capture == 'polar-column-gallery') {
+      return const PolarColumnGalleryMediaPanel();
     }
     final width = MediaQuery.of(context).size.width;
 

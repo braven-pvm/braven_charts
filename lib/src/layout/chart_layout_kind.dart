@@ -1,6 +1,7 @@
 import '../models/chart_series.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
+import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 
 /// Internal coordinate/composition family selected for a chart.
@@ -25,10 +26,12 @@ class ChartLayoutResolver {
   static ChartLayoutKind resolve(Iterable<ChartSeries> series) {
     final allSeries = List<ChartSeries>.unmodifiable(series);
     final radialSeries = allSeries.whereType<RadialCategorySeries>().toList();
+    final polarSeries = allSeries.whereType<PolarColumnChartSeries>().toList();
     final invalidRadialHints = allSeries.where(
       (candidate) => switch (candidate.style) {
         SeriesStyle.pie => candidate is! PieChartSeries,
         SeriesStyle.donut => candidate is! DonutChartSeries,
+        SeriesStyle.polarColumn => candidate is! PolarColumnChartSeries,
         _ => false,
       },
     );
@@ -38,10 +41,31 @@ class ChartLayoutResolver {
       throw ArgumentError.value(
         invalid.runtimeType,
         'series',
-        invalid.style == SeriesStyle.pie
-            ? 'SeriesStyle.pie requires a PieChartSeries'
-            : 'SeriesStyle.donut requires a DonutChartSeries',
+        switch (invalid.style) {
+          SeriesStyle.pie => 'SeriesStyle.pie requires a PieChartSeries',
+          SeriesStyle.donut => 'SeriesStyle.donut requires a DonutChartSeries',
+          SeriesStyle.polarColumn =>
+            'SeriesStyle.polarColumn requires a PolarColumnChartSeries',
+          _ => 'Unsupported series style',
+        },
       );
+    }
+    if (polarSeries.isNotEmpty) {
+      if (allSeries.length != polarSeries.length) {
+        throw ArgumentError.value(
+          allSeries.length,
+          'series',
+          'Polar Column cannot be mixed with Cartesian, Pie, or Donut series',
+        );
+      }
+      if (polarSeries.length != 1) {
+        throw ArgumentError.value(
+          polarSeries.length,
+          'series',
+          'Polar Column V1 accepts exactly one PolarColumnChartSeries',
+        );
+      }
+      return ChartLayoutKind.polarAxis;
     }
     if (radialSeries.isNotEmpty && allSeries.length != radialSeries.length) {
       throw ArgumentError.value(

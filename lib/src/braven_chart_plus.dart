@@ -28,6 +28,7 @@ import 'controllers/chart_interaction_group_controller.dart';
 import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
 import 'elements/pie_series_element.dart';
+import 'elements/polar_column_series_element.dart';
 import 'elements/series_element.dart';
 import 'interaction/core/chart_element.dart';
 import 'interaction/core/coordinator.dart';
@@ -58,6 +59,8 @@ import 'models/interaction_config.dart';
 import 'models/legend_style.dart';
 import 'models/pie_chart_series.dart';
 import 'models/pie_chart_config.dart';
+import 'models/polar_chart_config.dart';
+import 'models/polar_column_chart_series.dart';
 import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
@@ -194,6 +197,7 @@ class BravenChartPlus extends StatefulWidget {
     this.legendStyle,
     this.radialLegendItemBuilder,
     this.concentricDonutConfig = const ConcentricDonutConfig(),
+    this.polarChartConfig = const PolarChartConfig(),
     this.donutCenterBuilder,
     this.onDonutCenterTap,
     this.showToolbar = false,
@@ -290,6 +294,12 @@ class BravenChartPlus extends StatefulWidget {
         'Use DonutChartSeries.fromMap with BravenChartPlus instead.',
       );
     }
+    if (chartType == ChartType.polarColumn) {
+      throw ArgumentError(
+        'BravenChartPlus.fromValues cannot infer Polar Column category labels. '
+        'Use PolarColumnChartSeries.fromMap with BravenChartPlus instead.',
+      );
+    }
 
     // Generate x-values if not provided
     final xVals = xValues ?? List.generate(yValues.length, (i) => i.toDouble());
@@ -357,9 +367,9 @@ class BravenChartPlus extends StatefulWidget {
   /// Creates a chart from a map.
   ///
   /// For Cartesian chart types, keys must be numbers or numeric strings and
-  /// are interpreted as X values. For [ChartType.pie] and [ChartType.donut],
-  /// keys become category labels and map insertion order becomes stable slice
-  /// order.
+  /// are interpreted as X values. For [ChartType.pie], [ChartType.donut], and
+  /// [ChartType.polarColumn], keys become category labels and insertion order
+  /// becomes stable angular order.
   factory BravenChartPlus.fromMap({
     Key? key,
     ChartType chartType = ChartType.line,
@@ -409,7 +419,9 @@ class BravenChartPlus extends StatefulWidget {
     onAxisSwapped,
   }) {
     final ChartSeries series;
-    if (chartType == ChartType.pie || chartType == ChartType.donut) {
+    if (chartType == ChartType.pie ||
+        chartType == ChartType.donut ||
+        chartType == ChartType.polarColumn) {
       final values = <String, num>{
         for (final entry in data.entries) entry.key.toString(): entry.value,
       };
@@ -421,6 +433,12 @@ class BravenChartPlus extends StatefulWidget {
           color: seriesColor,
         ),
         ChartType.donut => DonutChartSeries.fromMap(
+          id: seriesId,
+          name: seriesName ?? seriesId,
+          values: values,
+          color: seriesColor,
+        ),
+        ChartType.polarColumn => PolarColumnChartSeries.fromMap(
           id: seriesId,
           name: seriesName ?? seriesId,
           values: values,
@@ -676,6 +694,10 @@ class BravenChartPlus extends StatefulWidget {
         points: points,
         color: color,
       ),
+      ChartType.polarColumn => throw ArgumentError(
+        'Polar Column requires category labels. Use '
+        'PolarColumnChartSeries.fromMap instead.',
+      ),
     };
   }
 
@@ -894,6 +916,12 @@ class BravenChartPlus extends StatefulWidget {
   /// With two or more Donut series, this config allocates their shared center,
   /// outer edge, gap, radial order, and relative band thickness.
   final ConcentricDonutConfig concentricDonutConfig;
+
+  /// Plot-level pane and axes used by [PolarColumnChartSeries].
+  ///
+  /// Cartesian axis arguments are ignored by Polar Column. Pie and Donut do
+  /// not consume this configuration.
+  final PolarChartConfig polarChartConfig;
 
   /// Builds runtime-only content inside a Donut chart's shared center opening.
   ///
@@ -1588,6 +1616,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         widget.theme != oldWidget.theme ||
         widget.annotations != oldWidget.annotations ||
         widget.concentricDonutConfig != oldWidget.concentricDonutConfig ||
+        widget.polarChartConfig != oldWidget.polarChartConfig ||
         radialCenterRuntimeChanged) {
       // Removed excessive debugPrint (theme/series/annotations changed)
       _rebuildElements(
@@ -2369,6 +2398,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           resolved.allSeries.whereType<DonutChartSeries>().length > 1
           ? widget.concentricDonutConfig
           : null,
+      polarChartConfig:
+          resolved.allSeries.whereType<PolarColumnChartSeries>().isNotEmpty
+          ? widget.polarChartConfig
+          : null,
       backgroundColor: widget.backgroundColor,
       showToolbar: widget.showToolbar,
       interactiveAnnotations: widget.interactiveAnnotations,
@@ -2416,6 +2449,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
+    if (_layoutKind == ChartLayoutKind.polarAxis) {
+      widget.polarChartConfig.validate();
+    }
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
       final focusRef = _radialKeyboardFocusRef;
       if (focusRef != null) {
@@ -2433,9 +2469,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _radialKeyboardFocusRef = null;
       _radialFocusIndicatorVisible = false;
     }
-    if (_layoutKind == ChartLayoutKind.partitionRadial &&
+    if (_layoutKind != ChartLayoutKind.cartesian &&
         _resolveEffectiveAnnotations().isNotEmpty) {
-      throw ArgumentError('Radial charts do not support Cartesian annotations');
+      throw ArgumentError(
+        'Radial and polar charts do not support Cartesian annotations',
+      );
     }
     if (detectPathAnimations) {
       _remapPathPointState(previousSeriesById, _effectiveDataSeries);
@@ -2671,6 +2709,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final List<ChartElement> elements;
       if (_layoutKind == ChartLayoutKind.partitionRadial) {
         elements = _buildRadialElements(transform);
+      } else if (_layoutKind == ChartLayoutKind.polarAxis) {
+        elements = _buildPolarElements(transform);
       } else {
         elements = DataConverter.seriesToElements(
           series: _effectiveRenderSeries,
@@ -3017,6 +3057,32 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                 index,
                 compositionBackdropBlur: compositionBackdropBlur,
               ),
+    ];
+  }
+
+  List<ChartElement> _buildPolarElements(ChartTransform transform) {
+    final polarSeries = _effectiveRenderSeries
+        .whereType<PolarColumnChartSeries>()
+        .toList(growable: false);
+    if (polarSeries.length != 1) return const <ChartElement>[];
+
+    final series = polarSeries.single;
+    return <ChartElement>[
+      PolarColumnSeriesElement(
+        series: series,
+        config: widget.polarChartConfig,
+        size: Size(transform.plotWidth, transform.plotHeight),
+        theme: widget.theme ?? ChartTheme.light,
+        textScaleFactor: _textScaleFactor,
+        focusedPointIndices: {
+          for (final ref in _focusedPointRefs)
+            if (ref.seriesId == series.id) ref.pointIndex,
+        },
+        selectedPointIndices: {
+          for (final ref in _selectedPointRefs)
+            if (ref.seriesId == series.id) ref.pointIndex,
+        },
+      ),
     ];
   }
 
@@ -4747,14 +4813,14 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    if (_layoutKind == ChartLayoutKind.partitionRadial) {
+    if (_layoutKind != ChartLayoutKind.cartesian) {
       final interaction = _effectiveRadialInteractionConfig();
       if (!interaction.enabled) return;
       final renderBox =
           _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
       final hit = renderBox?.dataHitAtWidgetPosition(details.localPosition);
       if (hit != null) {
-        _activateRadialDataHit(hit, position: details.localPosition);
+        _activateNonCartesianDataHit(hit, position: details.localPosition);
       } else {
         if (interaction.enableSelection) _clearRadialPointSelection();
         widget.onBackgroundTap?.call(details.localPosition);
@@ -4937,6 +5003,28 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
   }
 
+  void _activateNonCartesianDataHit(
+    ChartDataHit hit, {
+    required Offset position,
+    bool showFocusIndicator = false,
+  }) {
+    if (_layoutKind == ChartLayoutKind.polarAxis) {
+      _focusPolarPoint(hit.pointIndex, seriesId: hit.seriesId);
+      _commitRadialPointActivation(
+        point: hit.point,
+        seriesId: hit.seriesId,
+        sourcePointIndices: hit.effectiveSourcePointIndices,
+        position: position,
+      );
+      return;
+    }
+    _activateRadialDataHit(
+      hit,
+      position: position,
+      showFocusIndicator: showFocusIndicator,
+    );
+  }
+
   void _commitRadialPointActivation({
     required ChartDataPoint point,
     required String seriesId,
@@ -5067,6 +5155,115 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
     }
     _refreshLinkedPointRendering();
+  }
+
+  void _focusPolarPoint(
+    int pointIndex, {
+    required String seriesId,
+    bool announceHover = true,
+  }) {
+    final series = _effectiveRenderSeries
+        .whereType<PolarColumnChartSeries>()
+        .where((candidate) => candidate.id == seriesId)
+        .firstOrNull;
+    if (series == null ||
+        pointIndex < 0 ||
+        pointIndex >= series.points.length) {
+      return;
+    }
+
+    final ref = ChartPointRef(seriesId: seriesId, pointIndex: pointIndex);
+    _focusedPointRefs
+      ..clear()
+      ..add(ref);
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final hit = renderBox?.dataHitForPointIndex(seriesId, pointIndex);
+    if (hit != null) {
+      _coordinator.setHoveredMarker(
+        HoveredMarkerInfo(
+          seriesId: hit.seriesId,
+          markerIndex: hit.pointIndex,
+          plotPosition: hit.plotPosition,
+          dataHit: hit,
+        ),
+      );
+      if (announceHover) {
+        widget.onPointHover?.call(hit.point, hit.seriesId);
+        widget.interactionConfig?.onDataPointHover?.call(
+          hit.point,
+          _widgetPositionForDataHit(hit),
+        );
+      }
+    }
+    _refreshLinkedPointRendering();
+    _syncControllerPointState();
+  }
+
+  bool _handlePolarKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final interaction = _effectiveRadialInteractionConfig();
+    if (!interaction.enabled || !interaction.keyboard.enabled) return false;
+    final series = _effectiveRenderSeries
+        .whereType<PolarColumnChartSeries>()
+        .firstOrNull;
+    if (series == null || series.points.isEmpty) return false;
+
+    final visible = <ChartPointRef>[
+      for (var index = 0; index < series.points.length; index++)
+        ChartPointRef(seriesId: series.id, pointIndex: index),
+    ];
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown ||
+        event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      final forward =
+          event.logicalKey == LogicalKeyboardKey.arrowRight ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown;
+      final currentRef = _focusedPointRefs.firstOrNull;
+      final current = currentRef == null ? -1 : visible.indexOf(currentRef);
+      final next = current < 0
+          ? (forward ? 0 : visible.length - 1)
+          : (current + (forward ? 1 : -1)) % visible.length;
+      final nextRef = visible[next];
+      _focusPolarPoint(nextRef.pointIndex, seriesId: series.id);
+      interaction.onKeyboardAction?.call(
+        forward ? 'focus_next_column' : 'focus_previous_column',
+        series.points[nextRef.pointIndex],
+      );
+      return true;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      final ref = _focusedPointRefs.firstOrNull ?? visible.first;
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      final hit = renderBox?.dataHitForPointIndex(series.id, ref.pointIndex);
+      if (hit != null) {
+        _activateNonCartesianDataHit(
+          hit,
+          position: _widgetPositionForDataHit(hit),
+          showFocusIndicator: true,
+        );
+      }
+      interaction.onKeyboardAction?.call(
+        'select_column',
+        series.points[ref.pointIndex],
+      );
+      return true;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _focusedPointRefs.clear();
+      _coordinator.setHoveredMarker(null);
+      _clearRadialPointSelection();
+      _refreshLinkedPointRendering();
+      _syncControllerPointState();
+      interaction.onKeyboardAction?.call('clear_column_selection', null);
+      return true;
+    }
+    return false;
   }
 
   bool _handleRadialKeyEvent(KeyEvent event) {
@@ -6243,17 +6440,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       BrowserContextMenu.disableContextMenu();
     }
 
-    final isRadial = _layoutKind == ChartLayoutKind.partitionRadial;
-    final effectiveInteractionConfig = isRadial
+    final isPartitionRadial = _layoutKind == ChartLayoutKind.partitionRadial;
+    final isPolarAxis = _layoutKind == ChartLayoutKind.polarAxis;
+    final isNonCartesian = isPartitionRadial || isPolarAxis;
+    final effectiveInteractionConfig = isNonCartesian
         ? _effectiveRadialInteractionConfig()
         : widget.interactionConfig;
     ChartPointRef? selectedTooltipPoint;
-    final donutCenterSeries = isRadial
+    final donutCenterSeries = isPartitionRadial
         ? _effectiveRenderSeries.whereType<DonutChartSeries>().toList(
             growable: false,
           )
         : const <DonutChartSeries>[];
-    if (isRadial) {
+    if (isPartitionRadial) {
       for (final pointRef in _selectedPointRefs) {
         final selectedSeries = _effectiveRadialSeriesForId(pointRef.seriesId);
         if (selectedSeries?.visibleSliceForSourcePointIndex(
@@ -6264,16 +6463,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           break;
         }
       }
+    } else if (isPolarAxis) {
+      selectedTooltipPoint = _selectedPointRefs.firstOrNull;
     }
 
     final focusChart = Focus(
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
-        if (isRadial) {
-          return _handleRadialKeyEvent(event)
-              ? KeyEventResult.handled
-              : KeyEventResult.ignored;
+        if (isNonCartesian) {
+          final handled = isPolarAxis
+              ? _handlePolarKeyEvent(event)
+              : _handleRadialKeyEvent(event);
+          return handled ? KeyEventResult.handled : KeyEventResult.ignored;
         }
         _handleKeyEvent(event);
         return KeyEventResult.handled;
@@ -6343,10 +6545,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         spatialIndex: _spatialIndex,
                         elementGenerator: _elementGenerator,
                         elementGeneratorVersion: _elementGeneratorVersion,
-                        xAxis: isRadial ? null : _xAxis,
-                        xAxisConfig: isRadial ? null : widget.xAxisConfig,
-                        yAxis: isRadial ? null : _yAxis,
-                        primaryYAxisConfig: isRadial ? null : widget.yAxis,
+                        xAxis: isNonCartesian ? null : _xAxis,
+                        xAxisConfig: isNonCartesian ? null : widget.xAxisConfig,
+                        yAxis: isNonCartesian ? null : _yAxis,
+                        primaryYAxisConfig: isNonCartesian
+                            ? null
+                            : widget.yAxis,
                         theme: widget.theme,
                         tooltipsEnabled:
                             (effectiveInteractionConfig?.enabled ?? true) &&
@@ -6357,8 +6561,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                             selectedTooltipPoint?.pointIndex,
                         // Prioritize widget's direct showXScrollbar/showYScrollbar properties
                         // InteractionConfig's defaults are false, so ?? doesn't work correctly
-                        showXScrollbar: !isRadial && widget.showXScrollbar,
-                        showYScrollbar: !isRadial && widget.showYScrollbar,
+                        showXScrollbar:
+                            !isNonCartesian && widget.showXScrollbar,
+                        showYScrollbar:
+                            !isNonCartesian && widget.showYScrollbar,
                         scrollbarTheme: widget.scrollbarTheme,
                         interactionConfig: effectiveInteractionConfig,
                         textScaleFactor: _textScaleFactor,
@@ -6366,33 +6572,39 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         onCursorChange: _handleCursorChange,
                         onAnnotationChanged: _handleAnnotationChanged,
                         onElementHover: _handleElementHover,
-                        onDataHitActivate: (hit) => _activateRadialDataHit(
-                          hit,
-                          position: _widgetPositionForDataHit(hit),
-                          showFocusIndicator: true,
-                        ),
-                        onDataHitFocus: (hit) => _focusRadialPoint(
-                          hit.pointIndex,
-                          seriesId: hit.seriesId,
-                        ),
+                        onDataHitActivate: (hit) =>
+                            _activateNonCartesianDataHit(
+                              hit,
+                              position: _widgetPositionForDataHit(hit),
+                              showFocusIndicator: true,
+                            ),
+                        onDataHitFocus: (hit) => isPolarAxis
+                            ? _focusPolarPoint(
+                                hit.pointIndex,
+                                seriesId: hit.seriesId,
+                              )
+                            : _focusRadialPoint(
+                                hit.pointIndex,
+                                seriesId: hit.seriesId,
+                              ),
                         onRangeCreationComplete: _onRangeCreationComplete,
                         onViewportInteracted: _handleViewportInteractionPulse,
                         onViewportChanged:
-                            !isRadial &&
+                            !isNonCartesian &&
                                 widget.interactionGroupController != null
                             ? _handleViewportChanged
                             : null,
                         onDataXCursorChanged:
-                            !isRadial &&
+                            !isNonCartesian &&
                                 widget.interactionGroupController != null
                             ? _handleLocalDataXCursorChanged
                             : null,
-                        gridConfig: isRadial ? null : widget.grid,
+                        gridConfig: isNonCartesian ? null : widget.grid,
                         // Multi-axis parameters
-                        normalizationMode: isRadial
+                        normalizationMode: isNonCartesian
                             ? NormalizationMode.none
                             : _effectiveNormalizationMode,
-                        series: isRadial
+                        series: isNonCartesian
                             ? const <ChartSeries>[]
                             : _effectiveRenderSeries,
                         maxAxesPerSide: widget.maxAxesPerSide,
@@ -6476,7 +6688,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     );
 
     final hasOnlyBars =
-        !isRadial &&
+        !isNonCartesian &&
         _effectiveDataSeries.isNotEmpty &&
         _effectiveDataSeries.every((series) => series is BarChartSeries);
     final focusedBar = hasOnlyBars ? _focusedBarSemantics() : null;
@@ -6550,7 +6762,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         );
       }
 
-      final radialSeries = isRadial
+      final radialSeries = isPartitionRadial
           ? _effectiveRenderSeries.whereType<RadialCategorySeries>().toList(
               growable: false,
             )

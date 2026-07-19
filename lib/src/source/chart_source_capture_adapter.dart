@@ -11,6 +11,7 @@ import '../models/data_point_label_config.dart';
 import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
+import '../models/polar_column_chart_series.dart';
 
 /// Builds source-only extraction options for runtime-owned chart values.
 ///
@@ -198,6 +199,7 @@ abstract final class ChartSourceCaptureAdapter {
         BarChartSeries() => withoutCallbacks.copyWith(annotations: annotations),
         DonutChartSeries() => withoutCallbacks,
         PieChartSeries() => withoutCallbacks,
+        PolarColumnChartSeries() => withoutCallbacks,
         ChartSeries() => withoutCallbacks.copyWith(annotations: annotations),
       };
     };
@@ -221,6 +223,7 @@ abstract final class ChartSourceCaptureAdapter {
       width: source.width,
       height: source.height,
       concentricDonutConfig: source.concentricDonutConfig,
+      polarChartConfig: source.polarChartConfig,
       backgroundColor: source.backgroundColor,
       showToolbar: source.showToolbar,
       interactiveAnnotations: source.interactiveAnnotations,

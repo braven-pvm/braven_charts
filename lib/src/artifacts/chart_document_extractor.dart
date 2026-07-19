@@ -11,6 +11,7 @@ import '../models/grid_config.dart';
 import '../models/interaction_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
+import '../models/polar_chart_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import 'chart_annotation_document_codec.dart';
@@ -192,6 +193,7 @@ class ChartDocumentExtractionSource {
     this.width,
     this.height,
     this.concentricDonutConfig,
+    this.polarChartConfig,
   }) : allSeries = List.unmodifiable(allSeries),
        visibleSeries = List.unmodifiable(visibleSeries),
        declaredSeries = List.unmodifiable(declaredSeries),
@@ -216,6 +218,7 @@ class ChartDocumentExtractionSource {
   final double? width;
   final double? height;
   final ConcentricDonutConfig? concentricDonutConfig;
+  final PolarChartConfig? polarChartConfig;
   final Color backgroundColor;
   final bool showToolbar;
   final bool interactiveAnnotations;
@@ -306,21 +309,34 @@ abstract final class ChartDocumentExtractor {
         ),
         warnings,
       );
-      final configuration = source.concentricDonutConfig == null
-          ? JsonObjectValue(const {})
-          : _requireValue(
-              ChartConfigurationDocumentCodec.encodeConcentricDonut(
-                source.concentricDonutConfig!,
-                centerFormatterDescriptor:
-                    options.concentricCenterFormatterDescriptor,
-              ),
-              warnings,
-            );
+      final configurationValues = <String, JsonValue>{};
+      if (source.concentricDonutConfig case final concentricConfig?) {
+        configurationValues.addAll(
+          _requireValue(
+            ChartConfigurationDocumentCodec.encodeConcentricDonut(
+              concentricConfig,
+              centerFormatterDescriptor:
+                  options.concentricCenterFormatterDescriptor,
+            ),
+            warnings,
+          ).values,
+        );
+      }
+      if (source.polarChartConfig case final polarConfig?) {
+        configurationValues.addAll(
+          _requireValue(
+            ChartConfigurationDocumentCodec.encodePolarChart(polarConfig),
+            warnings,
+          ).values,
+        );
+      }
+      final configuration = JsonObjectValue(configurationValues);
       final requiredCapabilities = <String>{
         for (final series in seriesDocuments) ...series.requiredCapabilities,
         for (final annotation in annotationDocuments)
           ...annotation.requiredCapabilities,
         if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
+        if (source.polarChartConfig != null) 'chart.polar.config.v1',
         if (options.concentricCenterFormatterDescriptor != null)
           'series.radial.formatters.v1',
       };

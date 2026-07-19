@@ -240,6 +240,34 @@ class ChartTablePieRow {
   final int? colorValue;
 }
 
+/// Native category/value projection for one Polar Column mark.
+@immutable
+class ChartTablePolarRow {
+  const ChartTablePolarRow({
+    required this.rowId,
+    required this.reference,
+    required this.seriesId,
+    required this.seriesName,
+    required this.category,
+    required this.valueRaw,
+    required this.valueDisplay,
+    required this.isValid,
+    this.unit,
+    this.colorValue,
+  });
+
+  final String rowId;
+  final ChartTablePointReference reference;
+  final String seriesId;
+  final String seriesName;
+  final String category;
+  final double valueRaw;
+  final String valueDisplay;
+  final String? unit;
+  final bool isValid;
+  final int? colorValue;
+}
+
 /// Renderer-aware shape exposed by a derived chart table.
 enum ChartTableProjectionKind {
   /// Canonical one-point-per-row Cartesian projection.
@@ -250,6 +278,9 @@ enum ChartTableProjectionKind {
 
   /// Category, value, and share projection for one radial category series.
   pie,
+
+  /// Category, series, and value projection for an axis-based polar series.
+  polar,
 }
 
 /// Immutable chart-table projection derived exclusively from [ChartDocument].
@@ -268,11 +299,13 @@ class ChartTableModel {
     required Iterable<ChartTableLongRow> longRows,
     required Iterable<ChartTableWideRow> wideRows,
     required Iterable<ChartTablePieRow> pieRows,
+    required Iterable<ChartTablePolarRow> polarRows,
     required Iterable<ChartArtifactWarning> warnings,
   }) : series = List.unmodifiable(series),
        longRows = List.unmodifiable(longRows),
        wideRows = List.unmodifiable(wideRows),
        pieRows = List.unmodifiable(pieRows),
+       polarRows = List.unmodifiable(polarRows),
        warnings = List.unmodifiable(warnings);
 
   factory ChartTableModel.fromDocument(
@@ -286,14 +319,19 @@ class ChartTableModel {
     final radialSeries = selected
         .where((series) => series.type == 'pie' || series.type == 'donut')
         .toList();
-    if (radialSeries.isNotEmpty && radialSeries.length != selected.length) {
+    final polarSeries = selected
+        .where((series) => series.type == 'polarColumn')
+        .toList();
+    if ((radialSeries.isNotEmpty && radialSeries.length != selected.length) ||
+        (polarSeries.isNotEmpty && polarSeries.length != selected.length)) {
       throw UnsupportedError(
-        'Radial table projection cannot mix Pie or Donut series with '
-        'Cartesian series.',
+        'Radial table projection cannot mix chart families.',
       );
     }
     final projectionKind = radialSeries.isNotEmpty
         ? ChartTableProjectionKind.pie
+        : polarSeries.isNotEmpty
+        ? ChartTableProjectionKind.polar
         : options.rowLayout == ChartTableRowLayout.long
         ? ChartTableProjectionKind.cartesianLong
         : ChartTableProjectionKind.cartesianWide;
@@ -311,6 +349,7 @@ class ChartTableModel {
     final seriesColumns = <ChartTableSeriesColumn>[];
     final longRows = <ChartTableLongRow>[];
     final pieRows = <ChartTablePieRow>[];
+    final polarRows = <ChartTablePolarRow>[];
 
     for (final series in selected) {
       final inlineAxis = series.inlineAxis?.values;
@@ -369,6 +408,16 @@ class ChartTableModel {
           ),
         );
       }
+      if (series.type == 'polarColumn') {
+        polarRows.addAll(
+          _projectPolarRows(
+            series,
+            payload.points,
+            unit: unit,
+            themeSeriesColors: themeSeriesColors,
+          ),
+        );
+      }
       for (
         var pointIndex = 0;
         pointIndex < payload.points.length;
@@ -388,7 +437,11 @@ class ChartTableModel {
             reference: reference,
             seriesName: series.name ?? series.id,
             xRaw: x,
-            xDisplay: _displayNumber(x, xFormatter),
+            xDisplay: series.type == 'polarColumn'
+                ? (point.label?.trim().isNotEmpty == true
+                      ? point.label!.trim()
+                      : 'No category')
+                : _displayNumber(x, xFormatter),
             yRaw: y,
             yDisplay: _displayNumber(y, yFormatter),
             unit: unit,
@@ -411,7 +464,9 @@ class ChartTableModel {
     return ChartTableModel._(
       documentId: document.documentId,
       documentRevision: document.revision,
-      xColumnLabel: projectionKind == ChartTableProjectionKind.pie
+      xColumnLabel:
+          projectionKind == ChartTableProjectionKind.pie ||
+              projectionKind == ChartTableProjectionKind.polar
           ? 'Category'
           : _xColumnLabel(document.xAxis),
       projectionKind: projectionKind,
@@ -422,6 +477,7 @@ class ChartTableModel {
           ? _pivotExactX(longRows, seriesColumns)
           : const [],
       pieRows: pieRows,
+      polarRows: polarRows,
       warnings: warnings,
     );
   }
@@ -440,6 +496,7 @@ class ChartTableModel {
   final List<ChartTableLongRow> longRows;
   final List<ChartTableWideRow> wideRows;
   final List<ChartTablePieRow> pieRows;
+  final List<ChartTablePolarRow> polarRows;
   final List<ChartArtifactWarning> warnings;
 
   /// Auxiliary fields present in at least one projected Cartesian series.
@@ -451,6 +508,7 @@ class ChartTableModel {
     ChartTableProjectionKind.cartesianLong => longRows.length,
     ChartTableProjectionKind.cartesianWide => wideRows.length,
     ChartTableProjectionKind.pie => pieRows.length,
+    ChartTableProjectionKind.polar => polarRows.length,
   };
 
   bool get isEmpty => rowCount == 0;
@@ -461,7 +519,9 @@ class ChartTableModel {
 
   /// Common unit shared by every radial series, or `null` when units differ.
   String? get commonRadialUnit {
-    if (projectionKind != ChartTableProjectionKind.pie || series.isEmpty) {
+    if ((projectionKind != ChartTableProjectionKind.pie &&
+            projectionKind != ChartTableProjectionKind.polar) ||
+        series.isEmpty) {
       return null;
     }
     final first = series.first.unit;
@@ -489,6 +549,49 @@ class ChartTableModel {
     ChartTableDataScope.selectedSeries => 'Selected series',
     ChartTableDataScope.specifiedSeries => 'Specified series',
   };
+}
+
+List<ChartTablePolarRow> _projectPolarRows(
+  ChartSeriesDocument series,
+  List<ChartPointDocument> points, {
+  required String? unit,
+  required List<int> themeSeriesColors,
+}) {
+  final explicitSeriesColor = _validColorValue(
+    series.style?.values['color']?.toJson(),
+  );
+  return [
+    for (final (pointIndex, point) in points.indexed)
+      ChartTablePolarRow(
+        rowId: '${Uri.encodeComponent(series.id)}:$pointIndex',
+        reference: ChartTablePointReference(
+          seriesId: series.id,
+          pointIndex: pointIndex,
+        ),
+        seriesId: series.id,
+        seriesName: series.name ?? series.id,
+        category: point.label?.trim().isNotEmpty == true
+            ? point.label!.trim()
+            : 'No category',
+        valueRaw: point.y.asDouble,
+        valueDisplay: point.y.asDouble.isFinite
+            ? point.y.asDouble.toStringAsFixed(2)
+            : 'No value',
+        unit: unit,
+        isValid:
+            point.x.asDouble.isFinite &&
+            point.x.asDouble == pointIndex.toDouble() &&
+            point.y.asDouble.isFinite &&
+            point.y.asDouble >= 0 &&
+            point.label?.trim().isNotEmpty == true,
+        colorValue:
+            _validColorValue(point.pointStyle?.values['color']?.toJson()) ??
+            explicitSeriesColor ??
+            (themeSeriesColors.isEmpty
+                ? null
+                : themeSeriesColors[pointIndex % themeSeriesColors.length]),
+      ),
+  ];
 }
 
 List<ChartTablePieRow> _projectPieRows(

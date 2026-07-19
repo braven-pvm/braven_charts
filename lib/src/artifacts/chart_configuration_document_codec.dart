@@ -6,6 +6,7 @@ import '../models/donut_chart_config.dart';
 import '../models/legend_style.dart';
 import '../models/normalization_mode.dart';
 import '../models/pie_chart_config.dart';
+import '../models/polar_chart_config.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_configuration_documents.dart';
 import 'chart_data_payload.dart';
@@ -209,6 +210,139 @@ abstract final class ChartConfigurationDocumentCodec {
       return _configurationFailure(error, path);
     }
   }
+
+  /// Encodes the pane and both axes shared by axis-based polar series.
+  static ChartArtifactResult<JsonObjectValue> encodePolarChart(
+    PolarChartConfig config,
+  ) {
+    const path = r'$.configuration.polarChart';
+    try {
+      config.validate();
+      return ChartArtifactSuccess(
+        value: JsonObjectValue({
+          'polarChart': JsonValue.fromJson({
+            'pane': {
+              'startAngleDegrees': config.pane.startAngleDegrees,
+              'sweepAngleDegrees': config.pane.sweepAngleDegrees,
+              'clockwise': config.pane.clockwise,
+              'innerRadiusFactor': config.pane.innerRadiusFactor,
+              'outerRadiusFactor': config.pane.outerRadiusFactor,
+              'clipMarks': config.pane.clipMarks,
+            },
+            'angularAxis': {
+              'innerPadding': config.angularAxis.innerPadding,
+              'outerPadding': config.angularAxis.outerPadding,
+              'showLabels': config.angularAxis.showLabels,
+              'showGridLines': config.angularAxis.showGridLines,
+            },
+            'radialAxis': {
+              if (config.radialAxis.minimum != null)
+                'minimum': config.radialAxis.minimum,
+              if (config.radialAxis.maximum != null)
+                'maximum': config.radialAxis.maximum,
+              if (config.radialAxis.scaleMode != null)
+                'scaleMode': config.radialAxis.scaleMode!.name,
+              'tickCount': config.radialAxis.tickCount,
+              'showLabels': config.radialAxis.showLabels,
+              'showGridLines': config.radialAxis.showGridLines,
+            },
+          }, path: path),
+        }),
+      );
+    } on Object catch (error) {
+      return _polarConfigurationFailure(error, path);
+    }
+  }
+
+  /// Decodes an optional axis-based polar plot configuration.
+  static ChartArtifactResult<PolarChartConfig?> decodePolarChart(
+    JsonObjectValue configuration,
+  ) {
+    const path = r'$.configuration.polarChart';
+    final raw = configuration.values['polarChart'];
+    if (raw == null) {
+      return ChartArtifactSuccess<PolarChartConfig?>(value: null);
+    }
+    if (raw is! JsonObjectValue) {
+      return _polarConfigurationFailure(
+        'Polar chart configuration must be an object.',
+        path,
+      );
+    }
+    try {
+      final map = raw.toJson() as Map<String, Object?>;
+      final pane = _requiredMap(map, 'pane', path);
+      final angular = _requiredMap(map, 'angularAxis', path);
+      final radial = _requiredMap(map, 'radialAxis', path);
+      final config = PolarChartConfig(
+        pane: PolarPaneConfig(
+          startAngleDegrees: _requiredDouble(
+            pane,
+            'startAngleDegrees',
+            '$path.pane',
+          ),
+          sweepAngleDegrees: _requiredDouble(
+            pane,
+            'sweepAngleDegrees',
+            '$path.pane',
+          ),
+          clockwise: _requiredBool(pane, 'clockwise', '$path.pane'),
+          innerRadiusFactor: _requiredDouble(
+            pane,
+            'innerRadiusFactor',
+            '$path.pane',
+          ),
+          outerRadiusFactor: _requiredDouble(
+            pane,
+            'outerRadiusFactor',
+            '$path.pane',
+          ),
+          clipMarks: _requiredBool(pane, 'clipMarks', '$path.pane'),
+        ),
+        angularAxis: PolarCategoryAxisConfig(
+          innerPadding: _requiredDouble(
+            angular,
+            'innerPadding',
+            '$path.angularAxis',
+          ),
+          outerPadding: _requiredDouble(
+            angular,
+            'outerPadding',
+            '$path.angularAxis',
+          ),
+          showLabels: _requiredBool(angular, 'showLabels', '$path.angularAxis'),
+          showGridLines: _requiredBool(
+            angular,
+            'showGridLines',
+            '$path.angularAxis',
+          ),
+        ),
+        radialAxis: PolarNumericAxisConfig(
+          minimum: _optionalDouble(radial, 'minimum', '$path.radialAxis'),
+          maximum: _optionalDouble(radial, 'maximum', '$path.radialAxis'),
+          scaleMode: _optionalEnum(
+            radial,
+            'scaleMode',
+            PolarRadialScaleMode.values,
+            '$path.radialAxis',
+          ),
+          tickCount: _requiredInt(radial, 'tickCount', '$path.radialAxis'),
+          showLabels: _requiredBool(radial, 'showLabels', '$path.radialAxis'),
+          showGridLines: _requiredBool(
+            radial,
+            'showGridLines',
+            '$path.radialAxis',
+          ),
+        ),
+      );
+      config.validate();
+      return ChartArtifactSuccess(value: config);
+    } on _ConfigurationFormatException catch (error) {
+      return _polarConfigurationFailure(error.message, error.path);
+    } on Object catch (error) {
+      return _polarConfigurationFailure(error, path);
+    }
+  }
 }
 
 Color? _optionalColor(int? value) => value == null ? null : Color(value);
@@ -294,6 +428,40 @@ double _requiredDouble(Map<String, Object?> map, String key, String path) {
   return result;
 }
 
+double? _optionalDouble(Map<String, Object?> map, String key, String path) {
+  final value = map[key];
+  if (value == null) return null;
+  if (value is! num || !value.toDouble().isFinite) {
+    throw _ConfigurationFormatException(
+      'Optional numeric field "$key" is invalid.',
+      '$path.$key',
+    );
+  }
+  return value.toDouble();
+}
+
+int _requiredInt(Map<String, Object?> map, String key, String path) {
+  final value = map[key];
+  if (value is! int) {
+    throw _ConfigurationFormatException(
+      'Required integer field "$key" is missing or invalid.',
+      '$path.$key',
+    );
+  }
+  return value;
+}
+
+bool _requiredBool(Map<String, Object?> map, String key, String path) {
+  final value = map[key];
+  if (value is! bool) {
+    throw _ConfigurationFormatException(
+      'Required boolean field "$key" is missing or invalid.',
+      '$path.$key',
+    );
+  }
+  return value;
+}
+
 Map<String, Object?> _requiredMap(
   Map<String, Object?> map,
   String key,
@@ -347,6 +515,22 @@ T _requiredEnum<T extends Enum>(
   );
 }
 
+T? _optionalEnum<T extends Enum>(
+  Map<String, Object?> map,
+  String key,
+  List<T> values,
+  String path,
+) {
+  final name = map[key];
+  if (name == null) return null;
+  if (name is String) {
+    for (final value in values) {
+      if (value.name == name) return value;
+    }
+  }
+  throw _ConfigurationFormatException('Unknown $key "$name".', '$path.$key');
+}
+
 ChartArtifactFailure<T> _configurationFailure<T>(Object error, String path) =>
     ChartArtifactFailure(
       error: ChartArtifactError(
@@ -355,6 +539,17 @@ ChartArtifactFailure<T> _configurationFailure<T>(Object error, String path) =>
         path: path,
       ),
     );
+
+ChartArtifactFailure<T> _polarConfigurationFailure<T>(
+  Object error,
+  String path,
+) => ChartArtifactFailure(
+  error: ChartArtifactError(
+    code: ChartArtifactDiagnosticCodes.invalidArtifact,
+    message: 'Invalid Polar chart configuration: $error',
+    path: path,
+  ),
+);
 
 class _ConfigurationFormatException implements Exception {
   const _ConfigurationFormatException(this.message, this.path);
