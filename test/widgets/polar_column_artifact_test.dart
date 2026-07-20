@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/elements/polar_column_series_element.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -339,7 +343,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final initial = _snapshot(controller.extractDocument());
+    const selectedRef = ChartPointRef(seriesId: 'west', pointIndex: 1);
+    expect(
+      controller.selectPoint(selectedRef, revision: initial.revision),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pumpAndSettle();
+
     final snapshot = _snapshot(controller.extractDocument());
+    expect(snapshot.viewState?.selectedPointRefs, const [selectedRef]);
     expect(
       snapshot.document.requiredCapabilities,
       containsAll({
@@ -354,12 +367,47 @@ void main() {
       'South',
       'West',
     });
+    final selectedRow = table.polarRows.singleWhere(
+      (row) =>
+          row.reference.seriesId == selectedRef.seriesId &&
+          row.reference.pointIndex == selectedRef.pointIndex,
+    );
+    expect(selectedRow.category, 'Social');
+    expect(selectedRow.valueRaw, 35);
 
     final hydrated = _configuration(
-      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      ChartDocumentHydrator.hydrateDocument(
+        _jsonRoundTripDocument(snapshot.document),
+        viewState: _jsonRoundTripViewState(snapshot.viewState!),
+      ),
     );
     expect(hydrated.polarChartConfig, config);
     expect(hydrated.series.map((item) => item.id), ['north', 'south', 'west']);
+    expect(hydrated.viewState?.selectedPointRefs, const [selectedRef]);
+
+    final restoredController = BravenChartController();
+    addTearDown(restoredController.dispose);
+    await tester.pumpWidget(
+      _host(hydrated.build(bravenChartController: restoredController)),
+    );
+    await tester.pumpAndSettle();
+    expect(restoredController.selectedPointRefs, {selectedRef});
+    final restoredElements = _renderBox(
+      tester,
+    ).debugElements.whereType<PolarColumnSeriesElement>().toList();
+    final restoredWest = restoredElements.singleWhere(
+      (element) => element.series.id == 'west',
+    );
+    expect(restoredWest.selectedPointIndices, const {1});
+    expect(
+      restoredWest.priority,
+      greaterThan(
+        restoredElements
+            .where((element) => element.series.id != 'west')
+            .first
+            .priority,
+      ),
+    );
 
     final generated = ChartDartSourceGenerator.generate(snapshot);
     expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
@@ -428,7 +476,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final initial = _snapshot(controller.extractDocument());
+    const selectedRef = ChartPointRef(seriesId: 'new', pointIndex: 0);
+    expect(
+      controller.selectPoint(selectedRef, revision: initial.revision),
+      isA<ChartArtifactSuccess<void>>(),
+    );
+    await tester.pumpAndSettle();
+
     final snapshot = _snapshot(controller.extractDocument());
+    expect(snapshot.viewState?.selectedPointRefs, const [selectedRef]);
     expect(
       snapshot.document.requiredCapabilities,
       containsAll({
@@ -446,9 +503,19 @@ void main() {
       -15,
       -24,
     ]);
+    final selectedRow = table.polarRows.singleWhere(
+      (row) =>
+          row.reference.seriesId == selectedRef.seriesId &&
+          row.reference.pointIndex == selectedRef.pointIndex,
+    );
+    expect(selectedRow.category, 'Search');
+    expect(selectedRow.valueRaw, 30);
 
     final hydrated = _configuration(
-      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      ChartDocumentHydrator.hydrateDocument(
+        _jsonRoundTripDocument(snapshot.document),
+        viewState: _jsonRoundTripViewState(snapshot.viewState!),
+      ),
     );
     expect(hydrated.polarChartConfig, config);
     expect(hydrated.series.map((item) => item.id), [
@@ -456,6 +523,26 @@ void main() {
       'expansion',
       'churn',
     ]);
+    expect(hydrated.viewState?.selectedPointRefs, const [selectedRef]);
+
+    final restoredController = BravenChartController();
+    addTearDown(restoredController.dispose);
+    await tester.pumpWidget(
+      _host(hydrated.build(bravenChartController: restoredController)),
+    );
+    await tester.pumpAndSettle();
+    expect(restoredController.selectedPointRefs, {selectedRef});
+    final restoredElements = _renderBox(
+      tester,
+    ).debugElements.whereType<PolarColumnSeriesElement>().toList();
+    final restoredBase = restoredElements.singleWhere(
+      (element) => element.series.id == 'new',
+    );
+    final restoredPositiveCap = restoredElements.singleWhere(
+      (element) => element.series.id == 'expansion',
+    );
+    expect(restoredBase.selectedPointIndices, const {0});
+    expect(restoredBase.priority, greaterThan(restoredPositiveCap.priority));
 
     final generated = ChartDartSourceGenerator.generate(snapshot);
     expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
@@ -726,3 +813,28 @@ Future<ChartArtifactResult<ChartArtifact>> _capture(
     () => future.timeout(const Duration(seconds: 10)),
   ))!;
 }
+
+ChartDocument _jsonRoundTripDocument(ChartDocument document) {
+  final firstJson = jsonEncode(document.toJson());
+  final secondJson = jsonEncode(document.toJson());
+  expect(secondJson, firstJson);
+  return ChartDocument.fromJson(
+    Map<String, Object?>.from(jsonDecode(firstJson) as Map),
+  );
+}
+
+ChartViewState _jsonRoundTripViewState(ChartViewState viewState) {
+  final firstJson = jsonEncode(viewState.toJson());
+  final secondJson = jsonEncode(viewState.toJson());
+  expect(secondJson, firstJson);
+  return ChartViewState.fromJson(
+    Map<String, Object?>.from(jsonDecode(firstJson) as Map),
+  );
+}
+
+ChartRenderBox _renderBox(WidgetTester tester) =>
+    tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );

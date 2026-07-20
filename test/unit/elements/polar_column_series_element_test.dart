@@ -149,6 +149,30 @@ void main() {
       expect(element.visibleAngularGridIndices.first, 0);
     });
 
+    test('keeps zero-valued categories in semantic navigation', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'zero-value',
+          unit: 'orders',
+          values: const {'Zero': 0, 'Visible': 10},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.geometry.marks.first.isVisible, isFalse);
+      final semanticHits = element.semanticDataHits.toList();
+      expect(semanticHits, hasLength(2));
+      expect(semanticHits.first.category, 'Zero');
+      expect(semanticHits.first.formattedValue, contains('0 orders'));
+      expect(semanticHits.first.semanticBounds.isEmpty, isFalse);
+      expect(
+        element.dataHitAt(semanticHits.first.plotPosition)?.pointIndex,
+        isNot(0),
+      );
+    });
+
     test('rejects an invalid text scale factor', () {
       expect(
         () => PolarColumnSeriesElement(

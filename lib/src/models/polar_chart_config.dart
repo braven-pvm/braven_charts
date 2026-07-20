@@ -408,15 +408,17 @@ class PolarNumericAxisConfig {
 
   PolarNumericAxisConfig copyWith({
     double? minimum,
+    bool clearMinimum = false,
     double? maximum,
+    bool clearMaximum = false,
     PolarRadialScaleMode? scaleMode,
     bool clearScaleMode = false,
     int? tickCount,
     bool? showLabels,
     bool? showGridLines,
   }) => PolarNumericAxisConfig(
-    minimum: minimum ?? this.minimum,
-    maximum: maximum ?? this.maximum,
+    minimum: clearMinimum ? null : (minimum ?? this.minimum),
+    maximum: clearMaximum ? null : (maximum ?? this.maximum),
     scaleMode: clearScaleMode ? null : (scaleMode ?? this.scaleMode),
     tickCount: tickCount ?? this.tickCount,
     showLabels: showLabels ?? this.showLabels,

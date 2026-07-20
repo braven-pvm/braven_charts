@@ -19,6 +19,12 @@ annular seam,
 selection depth/paint order, partial sweeps, constrained sizing, dark and
 high-contrast themes, large text, and reduced motion across Pie, Donut,
 Concentric Donut, and stacked Polar Column. Delivery remains phase-gated.
+The Polar-specific 2026-07-20 regression pass additionally protects exact
+multi-series selection identity through JSON, hydration, remount, table rows,
+and renderer paint order; zero-valued semantic categories; automatic-axis
+bound reset; safe target lookup; and a layered/grouped/stacked/Rose resize
+matrix. Local verification is complete; final user visual acceptance remains
+the gate before PR handoff.
 
 ## Executive decision
 
@@ -471,6 +477,17 @@ real-renderer goldens for selected depth and z-order, partial sweeps at
 non-default start angles, compact high-contrast layout, large text, and reduced
 motion across all four radial families. Final visual acceptance remains
 pending.
+
+The 2026-07-20 Polar-specific audit closes the remaining API and integration
+gaps found after Phase 3: negative target indices return no target instead of
+throwing, explicit radial-axis bounds can be cleared back to automatic,
+zero-valued columns remain available to semantic navigation without becoming
+physical hit targets, and selected grouped/stacked point identity survives
+deterministic document/view-state JSON, hydration, remount, table projection,
+and paint-priority restoration. A real-renderer matrix now combines full and
+partial sweeps, clockwise and counter-clockwise panes, layered references,
+grouped columns, diverging stacks, both selection effects, area-correct Rose,
+high contrast, and constrained resize.
 
 Deliver in small slices:
 
