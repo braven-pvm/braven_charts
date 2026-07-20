@@ -93,6 +93,9 @@ export 'src/formatting/multi_axis_value_formatter.dart';
 // Layout
 export 'src/layout/axis_layout_manager.dart';
 export 'src/layout/multi_axis_layout.dart';
+// Cartesian navigator
+export 'src/navigator/cartesian_navigator.dart';
+export 'src/navigator/cartesian_navigator_models.dart';
 // Models
 export 'src/models/annotation_style.dart';
 export 'src/models/auto_scroll_config.dart';

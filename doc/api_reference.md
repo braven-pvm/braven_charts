@@ -284,6 +284,15 @@ only when the corresponding data exists. See
 - `ChartInteractionGroupController`, `ChartInteractionGroupOptions`, and
   `ChartXViewport` — caller-owned data-X cursor and X-only viewport
   synchronization across independent Cartesian charts.
+- `CartesianNavigator` — full-domain Line or Area overview with a draggable
+  and resizable X selection shared by synchronized Line, Area, Bar, Scatter,
+  and Candlestick charts.
+- `CartesianNavigatorBehavior` — pan, resize, live-preview, and minimum-span
+  policy.
+- `CartesianNavigatorSnapPolicy` and `CartesianNavigatorSnapMode` — exact,
+  fixed-interval, or ordered-value edge snapping.
+- `CartesianNavigatorStyle` — theme-aware selection, mask, handle, interaction,
+  focus, disabled, and touch-target styling.
 
 ## Annotations
 
@@ -301,7 +310,9 @@ only when the corresponding data exists. See
 - `StreamingController` — follow-latest, paused, and user-controlled viewport
   modes.
 - `LiveStreamController` — direct, frame-coalesced point ingestion with bounded
-  buffers and pause/resume.
+  buffers, pause/resume, and optional external X-viewport ownership through
+  `manageViewport: false`; `dataRevision` plus O(1) retained endpoints support
+  display-frame-coalesced follow-latest hosts.
 - `StreamingBuffer` — bounded point storage and data bounds.
 
 ## Loading and empty states

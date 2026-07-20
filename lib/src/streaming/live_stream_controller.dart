@@ -79,6 +79,9 @@ class LiveStreamController extends ChangeNotifier {
   ///   window behavior. User can still pan back to see older data. Default: 10000.
   /// - [pauseBufferSize]: Maximum points to buffer while paused.
   ///   Older buffered points are discarded (FIFO). Default: 10000.
+  /// - [manageViewport]: Whether this controller owns the chart's X viewport.
+  ///   Set this to false when a `ChartInteractionGroupController` or
+  ///   `CartesianNavigator` is the viewport authority. Default: true.
   ///
   /// **Example**:
   /// ```dart
@@ -98,6 +101,7 @@ class LiveStreamController extends ChangeNotifier {
     this.viewportDataPoints,
     this.maxVisiblePoints = 10000,
     this.pauseBufferSize = 10000,
+    this.manageViewport = true,
   }) : assert(maxPoints > 0, 'maxPoints must be positive'),
        assert(
          autoScrollMarginPercent >= 0 && autoScrollMarginPercent <= 50,
@@ -178,6 +182,15 @@ class LiveStreamController extends ChangeNotifier {
   /// When buffer is full, oldest buffered points are discarded (FIFO).
   final int pauseBufferSize;
 
+  /// Whether live ingestion also controls the chart's X viewport.
+  ///
+  /// The default preserves the standard follow-latest or expand-then-slide
+  /// behavior. Set this to false when the chart is attached to a caller-owned
+  /// `ChartInteractionGroupController`, for example when a
+  /// `CartesianNavigator` must remain the sole viewport authority. Streaming
+  /// data still uses the direct, frame-coalesced render path.
+  final bool manageViewport;
+
   // ============================================================================
   // Internal State
   // ============================================================================
@@ -248,6 +261,12 @@ class LiveStreamController extends ChangeNotifier {
   /// The most recently added point, or null if empty.
   ChartDataPoint? get latestPoint => _streamingBuffer.latest;
 
+  /// The oldest retained point, or null if empty.
+  ///
+  /// This is an O(1) view of the active streaming buffer and does not allocate
+  /// the chronological snapshot returned by [points].
+  ChartDataPoint? get oldestPoint => _streamingBuffer.oldest;
+
   /// All points currently in the streaming buffer.
   ///
   /// Returns points in chronological order (oldest to newest).
@@ -265,6 +284,15 @@ class LiveStreamController extends ChangeNotifier {
 
   /// Revision of points waiting in the pause buffer.
   int get pendingDataRevision => _pauseBuffer.version;
+
+  /// Notifies listeners whenever effective live data changes.
+  ///
+  /// The integer value is a monotonic invalidation token. Hosts that own an
+  /// external viewport can listen for changes and coalesce follow-latest work
+  /// to display frames without copying [points] at ingestion frequency.
+  /// Reading [oldestPoint], [latestPoint], and [pointCount] from that callback
+  /// is O(1). The signal includes both committed and paused-buffer mutations.
+  ValueListenable<int> get dataRevision => _effectiveDataRevision;
 
   /// Effective-data mutation signal used by chart extraction.
   ///
@@ -562,12 +590,12 @@ class LiveStreamController extends ChangeNotifier {
     renderBox.setStreamingData(
       seriesId: seriesId,
       buffer: _streamingBuffer,
-      expandViewportWhenNotAutoScrolling: !autoScroll,
+      expandViewportWhenNotAutoScrolling: manageViewport && !autoScroll,
       maxVisiblePoints: maxVisiblePoints,
     );
 
     // Auto-scroll to latest if enabled
-    if (autoScroll && _streamingBuffer.isNotEmpty) {
+    if (manageViewport && autoScroll && _streamingBuffer.isNotEmpty) {
       renderBox.snapViewportToStreamingData(
         marginPercent: autoScrollMarginPercent,
         viewportDataPoints: viewportDataPoints,
@@ -602,6 +630,7 @@ class LiveStreamController extends ChangeNotifier {
         'points: ${_streamingBuffer.length}/$maxPoints, '
         'buffered: ${_pauseBuffer.length}, '
         'streaming: $_isStreaming, '
+        'manageViewport: $manageViewport, '
         'attached: ${_renderBox != null})';
   }
 }

@@ -319,7 +319,7 @@ void main() {
     expect(_gridCount(tester, 'gallery-building-blocks-full'), 16);
   });
 
-  testWidgets('synchronized Gallery card mounts three independent charts', (
+  testWidgets('synchronized Gallery card mounts charts and navigator', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(900, 700);
@@ -351,6 +351,10 @@ void main() {
       'm',
       'bpm',
     ]);
+    expect(
+      find.byKey(const ValueKey('synchronized-cartesian-navigator')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

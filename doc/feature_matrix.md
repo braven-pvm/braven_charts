@@ -11,6 +11,7 @@ is added to package marketing.
 | Tooltips | `TooltipConfig`, `TooltipStyle`, callbacks | Gallery, Interaction, Tracking Lab |
 | Crosshair tracking | `CrosshairConfig`, `CrosshairMode`, `CrosshairDisplayMode` | Tracking Lab, Gallery |
 | Synchronized Cartesian interaction | `ChartInteractionGroupController`, `ChartInteractionGroupOptions`, `ChartXViewport` | Line Charts — Synchronized |
+| Full-domain Cartesian navigation | `CartesianNavigator`, `CartesianNavigatorBehavior`, `CartesianNavigatorSnapPolicy`, `CartesianNavigatorStyle` | Interaction — Navigator; Live Stream — Live Navigator; Gallery — Synchronized Cartesian; Line — Synchronized; Area — Forecast; Bar — Categories; Scatter — Correlation; Candlestick — Stock |
 | Annotations | `ChartAnnotation` subtypes, `AnnotationController`, editing dialogs | Annotations, Lactate Threshold, Gallery |
 | Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, explicit per-series entrance/update timing, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
@@ -26,7 +27,7 @@ is added to package marketing.
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
 | Configurable X axis | `XAxisConfig`, `CategoryAxisConfig`, `CategoryLabelDensity`, `CategoryLabelOverflow` | Bar Lab Categories, Minor Ticks, Render Range |
 | Streaming data | `StreamingConfig`, `StreamingController` | Streaming |
-| Direct live ingestion | `LiveStreamController`, `StreamingBuffer` | Gallery, Live Stream |
+| Direct live ingestion | `LiveStreamController`, `StreamingBuffer`, external viewport ownership through `manageViewport: false`, frame-coalesced host following through `dataRevision` | Gallery, Live Stream — Live Navigator |
 | Theming | `ChartTheme` and component theme types, including radial defaults | Theming, Pie Charts, Gallery |
 | Loading and empty UX | `isLoading`, `ChartLoadingConfig`, `ChartEmptyStateConfig` | Loading States |
 | Runtime control | `BravenChartController`, `ChartController`, callbacks | Axis Slots, Annotations, Live Stream |

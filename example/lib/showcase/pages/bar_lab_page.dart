@@ -112,6 +112,8 @@ class _BarLabPageState extends State<BarLabPage> {
   final BravenChartController _chartController = BravenChartController();
   final ChartWorkbenchController _workbenchController =
       ChartWorkbenchController();
+  final ChartInteractionGroupController _interactionGroupController =
+      ChartInteractionGroupController();
   static const _dayCategories = [
     'Mon',
     'Tue',
@@ -388,6 +390,7 @@ class _BarLabPageState extends State<BarLabPage> {
       ..removeListener(_onChartInteractionChanged)
       ..dispose();
     _workbenchController.dispose();
+    _interactionGroupController.dispose();
     super.dispose();
   }
 
@@ -565,6 +568,10 @@ class _BarLabPageState extends State<BarLabPage> {
               ),
               SizedBox(height: showWaterfallLegend ? 8 : 0),
               Expanded(child: chart),
+              if (_preset == _BarLabPreset.categories) ...[
+                const SizedBox(height: 8),
+                SizedBox(height: 72, child: _buildCategoryNavigator()),
+              ],
             ],
           );
         },
@@ -585,8 +592,12 @@ class _BarLabPageState extends State<BarLabPage> {
         ? _agentBuildResult
         : null;
     return BravenChartPlus(
+      key: const ValueKey('bar-lab-chart'),
       transitionKey: _preset,
       bravenChartController: controller,
+      interactionGroupController: _preset == _BarLabPreset.categories
+          ? _interactionGroupController
+          : null,
       theme: baseTheme.copyWith(
         animationTheme: baseTheme.animationTheme.copyWith(
           dataUpdateDuration: Duration(milliseconds: _motionDurationMs.round()),
@@ -753,6 +764,33 @@ class _BarLabPageState extends State<BarLabPage> {
               : CrosshairDisplayMode.auto,
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryNavigator() {
+    final source = _buildSeries().whereType<BarChartSeries>().first;
+    final lastCategory = _categories.length - 1;
+    final initialMax = lastCategory > 8 ? 8.0 : lastCategory.toDouble();
+    return CartesianNavigator(
+      key: const ValueKey('bar-categories-navigator'),
+      interactionGroupController: _interactionGroupController,
+      overviewSeries: AreaChartSeries(
+        id: 'bar-categories-overview',
+        name: 'Category overview',
+        points: source.points,
+        color: const Color(0xFF168AAD),
+        interpolation: LineInterpolation.monotone,
+        strokeWidth: 1.5,
+        fillOpacity: .22,
+        showDataPointMarkers: false,
+      ),
+      fullDomain: ChartXViewport(min: 0, max: lastCategory.toDouble()),
+      initialViewport: ChartXViewport(min: 0, max: initialMax),
+      behavior: const CartesianNavigatorBehavior(minimumSpan: 2),
+      snapPolicy: CartesianNavigatorSnapPolicy.interval(1),
+      theme: ChartTheme.light,
+      height: 72,
+      semanticLabel: 'Market segment viewport',
     );
   }
 
@@ -2479,6 +2517,7 @@ class _BarLabPageState extends State<BarLabPage> {
       _preset == _BarLabPreset.rtl;
 
   void _applyPreset(_BarLabPreset preset) {
+    _interactionGroupController.reset();
     _chartController
       ..clearPointFocus()
       ..clearPointSelection();

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/candlestick_charts_page.dart';
 import 'package:braven_charts_example/showcase/widgets/chart_options.dart';
 import 'package:flutter/material.dart';
@@ -741,7 +740,7 @@ void main() {
       final volume = tester.widget<BravenChartPlus>(
         find.byKey(const ValueKey('candlestick-stock-volume-chart')),
       );
-      final navigator = tester.widget<BravenChartPlus>(
+      final navigator = tester.widget<CartesianNavigator>(
         find.byKey(const ValueKey('candlestick-stock-navigator')),
       );
       expect(price.series.first, isA<CandlestickChartSeries>());
@@ -755,40 +754,23 @@ void main() {
         navigator.interactionGroupController,
         same(price.interactionGroupController),
       );
-      expect(navigator.interactionGroupOptions.synchronizeCursor, isFalse);
-      expect(navigator.interactionGroupOptions.synchronizeViewport, isFalse);
-      expect(navigator.persistentRangeAnnotationHandles, isTrue);
-      expect(navigator.annotationController, isNotNull);
-      expect(navigator.onAnnotationDragUpdate, isNotNull);
-      expect(navigator.onAnnotationDragged, isNotNull);
+      expect(navigator.overviewSeries, isA<AreaChartSeries>());
+      expect(navigator.fullDomain, const ChartXViewport(min: 0, max: 419));
       expect(
-        navigator.annotationController!.selectedAnnotationId,
-        'navigator-window',
-      );
-      expect(
-        find.byKey(const ValueKey('candlestick-stock-navigator-range')),
-        findsNothing,
+        navigator.snapPolicy.mode,
+        CartesianNavigatorSnapMode.orderedValues,
       );
       expect(
         find.text('Drag window to pan · drag either edge to zoom'),
         findsOneWidget,
       );
-      navigator.annotationController!.clearSelection();
-      await tester.pump();
-      final navigatorRender = tester.renderObject<ChartRenderBox>(
-        find.descendant(
-          of: find.byKey(const ValueKey('candlestick-stock-navigator')),
-          matching: find.byWidgetPredicate(
-            (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
-          ),
-        ),
+      expect(
+        find.byKey(const ValueKey('cartesian-navigator-start-handle')),
+        findsOneWidget,
       );
       expect(
-        navigatorRender.debugElements.map((element) => element.id),
-        containsAll(const [
-          'navigator-window_handle_left',
-          'navigator-window_handle_right',
-        ]),
+        find.byKey(const ValueKey('cartesian-navigator-end-handle')),
+        findsOneWidget,
       );
       expect(price.yAxis?.unit, 'USD');
       expect(volume.yAxis?.unit, 'M');
@@ -836,23 +818,16 @@ void main() {
     );
     final group = price.interactionGroupController!;
     expect(group.viewport!.max - group.viewport!.min, 21);
-    var navigator = tester.widget<BravenChartPlus>(
+    var navigator = tester.widget<CartesianNavigator>(
       find.byKey(const ValueKey('candlestick-stock-navigator')),
     );
-    var ordinalWindow =
-        navigator.annotationController!.getAnnotation('navigator-window')
-            as RangeAnnotation;
-    expect(ordinalWindow.startX, group.viewport!.min);
-    expect(ordinalWindow.endX, group.viewport!.max);
+    expect(navigator.fullDomain, const ChartXViewport(min: 0, max: 419));
+    expect(navigator.snapPolicy.values.first, 0);
+    expect(navigator.snapPolicy.values.last, 419);
 
     await tester.tap(find.byKey(const ValueKey('candlestick-range-all')));
     await tester.pump();
     expect(group.viewport, const ChartXViewport(min: 0, max: 419));
-    ordinalWindow =
-        navigator.annotationController!.getAnnotation('navigator-window')
-            as RangeAnnotation;
-    expect(ordinalWindow.startX, 0);
-    expect(ordinalWindow.endX, 419);
 
     await tester.tap(
       find.byKey(const ValueKey('candlestick-range-yearToDate')),
@@ -868,50 +843,14 @@ void main() {
     expect(group.viewport!.min, firstCurrentYear.toDouble());
     expect(group.viewport!.max, 419);
 
-    navigator = tester.widget<BravenChartPlus>(
+    navigator = tester.widget<CartesianNavigator>(
       find.byKey(const ValueKey('candlestick-stock-navigator')),
     );
-    final interactiveWindow =
-        navigator.annotationController!.getAnnotation('navigator-window')
-            as RangeAnnotation;
-    expect(interactiveWindow.allowDragging, isTrue);
-    expect(interactiveWindow.allowEditing, isFalse);
-    expect(interactiveWindow.snapToValue, isTrue);
-    navigator.onAnnotationDragged!(
-      interactiveWindow.copyWith(startX: 100, endX: 160),
-      Offset.zero,
-    );
+    expect(navigator.behavior.allowPan, isTrue);
+    expect(navigator.behavior.allowResize, isTrue);
+    group.setViewport(const ChartXViewport(min: 100, max: 160));
     await tester.pump();
     expect(group.viewport, const ChartXViewport(min: 100, max: 160));
-    navigator = tester.widget<BravenChartPlus>(
-      find.byKey(const ValueKey('candlestick-stock-navigator')),
-    );
-    ordinalWindow =
-        navigator.annotationController!.getAnnotation('navigator-window')
-            as RangeAnnotation;
-    expect(ordinalWindow.startX, 100);
-    expect(ordinalWindow.endX, 160);
-
-    navigator.onAnnotationDragged!(
-      ordinalWindow.copyWith(startX: 120, endX: 180),
-      Offset.zero,
-    );
-    await tester.pump();
-    expect(group.viewport, const ChartXViewport(min: 120, max: 180));
-
-    navigator.onAnnotationDragged!(
-      ordinalWindow.copyWith(startX: 120, endX: 210),
-      Offset.zero,
-    );
-    await tester.pump();
-    expect(group.viewport, const ChartXViewport(min: 120, max: 210));
-
-    navigator.onAnnotationDragged!(
-      ordinalWindow.copyWith(startX: -20, endX: 70),
-      Offset.zero,
-    );
-    await tester.pump();
-    expect(group.viewport, const ChartXViewport(min: 0, max: 90));
 
     await tester.tap(
       find.byKey(const ValueKey('candlestick-stock-time-spacing')),
@@ -926,14 +865,13 @@ void main() {
       const Duration(days: 1).inMilliseconds,
     );
     expect(group.viewport!.max - group.viewport!.min, greaterThan(60));
-    navigator = tester.widget<BravenChartPlus>(
+    navigator = tester.widget<CartesianNavigator>(
       find.byKey(const ValueKey('candlestick-stock-navigator')),
     );
-    final elapsedWindow =
-        navigator.annotationController!.getAnnotation('navigator-window')
-            as RangeAnnotation;
-    expect(elapsedWindow.startX, group.viewport!.min);
-    expect(elapsedWindow.endX, group.viewport!.max);
+    expect(navigator.fullDomain.min, elapsed.candleAt(0).x);
+    expect(navigator.fullDomain.max, elapsed.candleAt(419).x);
+    expect(navigator.snapPolicy.values.first, elapsed.candleAt(0).x);
+    expect(navigator.snapPolicy.values.last, elapsed.candleAt(419).x);
 
     final viewportBeforeVolumeToggle = group.viewport;
     await tester.tap(find.byKey(const ValueKey('candlestick-volume-pane')));
@@ -964,35 +902,19 @@ void main() {
       final navigatorFinder = find.byKey(
         const ValueKey('candlestick-stock-navigator'),
       );
-      final renderFinder = find.descendant(
-        of: navigatorFinder,
-        matching: find.byWidgetPredicate(
-          (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
-        ),
+      final windowFinder = find.byKey(
+        const ValueKey('cartesian-navigator-window'),
       );
-      ChartRenderBox renderBox() =>
-          tester.renderObject<ChartRenderBox>(renderFinder);
-      Offset globalElementPoint(
-        String elementId,
-        Offset Function(Rect bounds) pointForBounds,
-      ) {
-        final box = renderBox();
-        final element = box.debugElements.firstWhere(
-          (candidate) => candidate.id == elementId,
-        );
-        return tester.getTopLeft(renderFinder) +
-            box.plotToWidget(pointForBounds(element.bounds));
-      }
+      final startHandleFinder = find.byKey(
+        const ValueKey('cartesian-navigator-start-handle'),
+      );
 
       final price = tester.widget<BravenChartPlus>(
         find.byKey(const ValueKey('candlestick-stock-price-chart')),
       );
       final group = price.interactionGroupController!;
       final original = group.viewport!;
-      final windowCenter = globalElementPoint(
-        'navigator-window',
-        (bounds) => bounds.center,
-      );
+      final windowCenter = tester.getCenter(windowFinder);
 
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(mouse.removePointer);
@@ -1023,7 +945,8 @@ void main() {
             .map((region) => region.cursor),
         contains(SystemMouseCursors.grabbing),
       );
-      await mouse.moveBy(const Offset(-120, 0));
+      await mouse.moveBy(const Offset(-20, 0));
+      await mouse.moveBy(const Offset(-100, 0));
       await tester.pump();
 
       final pannedDuringDrag = group.viewport!;
@@ -1041,19 +964,10 @@ void main() {
       expect(panned.min, lessThan(original.min));
       expect(panned.max - panned.min, original.max - original.min);
 
-      await mouse.moveTo(
-        globalElementPoint(
-          'navigator-window_handle_left',
-          (bounds) => bounds.center,
-        ),
-      );
-      await mouse.down(
-        globalElementPoint(
-          'navigator-window_handle_left',
-          (bounds) => bounds.center,
-        ),
-      );
-      await mouse.moveBy(const Offset(-70, 0));
+      await mouse.moveTo(tester.getCenter(startHandleFinder));
+      await mouse.down(tester.getCenter(startHandleFinder));
+      await mouse.moveBy(const Offset(-20, 0));
+      await mouse.moveBy(const Offset(-50, 0));
       await tester.pump();
 
       final resizedDuringDrag = group.viewport!;
@@ -1134,7 +1048,7 @@ void main() {
     final volume = tester.widget<BravenChartPlus>(
       find.byKey(const ValueKey('candlestick-stock-volume-chart')),
     );
-    final navigator = tester.widget<BravenChartPlus>(
+    final navigator = tester.widget<CartesianNavigator>(
       find.byKey(const ValueKey('candlestick-stock-navigator')),
     );
     expect(price.series, hasLength(1));
@@ -1144,7 +1058,13 @@ void main() {
     expect(volume.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     expect(volume.interactionConfig?.crosshair.enabled, isFalse);
     expect(navigator.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
-    expect(navigator.interactionConfig?.crosshair.enabled, isFalse);
+    final navigatorChart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('candlestick-stock-navigator')),
+        matching: find.byKey(const ValueKey('cartesian-navigator-overview')),
+      ),
+    );
+    expect(navigatorChart.interactionConfig?.crosshair.enabled, isFalse);
     expect(tester.takeException(), isNull);
   });
 

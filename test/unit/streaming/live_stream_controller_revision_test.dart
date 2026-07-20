@@ -31,6 +31,26 @@ void main() {
     expect(controller.bufferedCount, 0);
   });
 
+  test('publishes effective revisions with O(1) retained endpoints', () {
+    final controller = LiveStreamController(seriesId: 'sensor', maxPoints: 2);
+    addTearDown(controller.dispose);
+    var notifications = 0;
+    controller.dataRevision.addListener(() => notifications++);
+
+    expect(controller.dataRevision.value, 0);
+    expect(controller.oldestPoint, isNull);
+    expect(controller.latestPoint, isNull);
+
+    controller.addPoint(const ChartDataPoint(x: 1, y: 10));
+    controller.addPoint(const ChartDataPoint(x: 2, y: 20));
+    controller.addPoint(const ChartDataPoint(x: 3, y: 30));
+
+    expect(notifications, 3);
+    expect(controller.dataRevision.value, 3);
+    expect(controller.oldestPoint, const ChartDataPoint(x: 2, y: 20));
+    expect(controller.latestPoint, const ChartDataPoint(x: 3, y: 30));
+  });
+
   test('revises the latest candle in place and rejects older samples', () {
     final controller = LiveStreamController(seriesId: 'price');
     addTearDown(controller.dispose);
