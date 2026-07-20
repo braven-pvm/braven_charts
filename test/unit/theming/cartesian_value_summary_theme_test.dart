@@ -26,9 +26,9 @@ void main() {
         expect(highContrast.shadow, isNull);
       });
 
-      test('color-blind-safe preset uses a distinct accessible border', () {
+      test('colorblind-friendly preset uses a distinct accessible border', () {
         expect(
-          CartesianValueSummaryTheme.colorBlindSafe.border,
+          CartesianValueSummaryTheme.colorblindFriendly.border,
           isNot(CartesianValueSummaryTheme.light.border),
         );
       });
@@ -38,7 +38,7 @@ void main() {
           CartesianValueSummaryTheme.light,
           CartesianValueSummaryTheme.dark,
           CartesianValueSummaryTheme.highContrast,
-          CartesianValueSummaryTheme.colorBlindSafe,
+          CartesianValueSummaryTheme.colorblindFriendly,
         ];
 
         for (var i = 0; i < presets.length; i++) {
@@ -204,10 +204,10 @@ void main() {
       );
     });
 
-    test('colorblind friendly preset carries the color-blind-safe theme', () {
+    test('colorblind friendly preset carries the colorblind-friendly theme', () {
       expect(
         ChartTheme.colorblindFriendly.cartesianValueSummaryTheme,
-        CartesianValueSummaryTheme.colorBlindSafe,
+        CartesianValueSummaryTheme.colorblindFriendly,
       );
     });
 

@@ -159,7 +159,7 @@ class CartesianValueSummaryTheme {
 
   /// Neutral surface with an Okabe-Ito blue border so the panel never
   /// relies on red/green discrimination.
-  static const colorBlindSafe = CartesianValueSummaryTheme(
+  static const colorblindFriendly = CartesianValueSummaryTheme(
     background: Color(0xFFFFFFFF),
     backgroundOpacity: 0.94,
     border: Color(0xFF0173B2),

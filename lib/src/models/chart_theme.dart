@@ -246,7 +246,7 @@ class ChartTheme {
     scrollbarConfig: ScrollbarConfig.defaultLight,
     legendStyle: LegendStyle.light,
     candlestickTheme: CandlestickTheme.colorblindFriendly,
-    cartesianValueSummaryTheme: CartesianValueSummaryTheme.colorBlindSafe,
+    cartesianValueSummaryTheme: CartesianValueSummaryTheme.colorblindFriendly,
   );
 
   // ========== Customization ==========
