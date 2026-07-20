@@ -166,6 +166,7 @@ export 'src/streaming/streaming_buffer.dart';
 export 'src/streaming/streaming_controller.dart';
 // Widgets
 export 'src/widgets/chart_legend.dart';
+export 'src/widgets/dialogs/annotation_color_palette.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
 export 'src/theming/components/candlestick_theme.dart';

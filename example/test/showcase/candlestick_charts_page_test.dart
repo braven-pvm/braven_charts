@@ -512,6 +512,94 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'uses annotation palettes with clear and selected-colour toggle semantics',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+      );
+      await tester.pumpAndSettle();
+
+      final optionsScroll = find.byType(Scrollable).last;
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('candlestick-custom-direction-colors')),
+        300,
+        scrollable: optionsScroll,
+      );
+      final dynamic customColours = tester.widget(
+        find.byKey(const ValueKey('candlestick-custom-direction-colors')),
+      );
+      customColours.onChanged(true);
+      await tester.pump();
+
+      final risingPalette = find.byKey(
+        const ValueKey('candlestick-rising-body-color'),
+      );
+      expect(
+        find.descendant(
+          of: risingPalette,
+          matching: find.byType(AnnotationColorPalette),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('candlestick-rising-body-color-custom')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('candlestick-rising-body-color-clear')),
+      );
+      await tester.pump();
+      var chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('candlestick-reference-chart')),
+      );
+      var series = chart.series.first as CandlestickChartSeries;
+      expect(series.candlestickStyle.risingBodyFillColor, isNull);
+
+      final blueSwatch = find.byKey(
+        ValueKey('candlestick-rising-body-color-${Colors.blue.toARGB32()}'),
+      );
+      await tester.tap(blueSwatch);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('candlestick-reference-chart')),
+      );
+      series = chart.series.first as CandlestickChartSeries;
+      expect(series.candlestickStyle.risingBodyFillColor, Colors.blue);
+
+      await tester.tap(blueSwatch);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('candlestick-reference-chart')),
+      );
+      series = chart.series.first as CandlestickChartSeries;
+      expect(series.candlestickStyle.risingBodyFillColor, isNull);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('candlestick-average-color')),
+        300,
+        scrollable: optionsScroll,
+      );
+      final averageClear = find.byKey(
+        const ValueKey('candlestick-average-color-clear'),
+      );
+      await tester.ensureVisible(averageClear);
+      await tester.pumpAndSettle();
+      await tester.tap(averageClear);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(
+        find.byKey(const ValueKey('candlestick-reference-chart')),
+      );
+      expect((chart.series.last as LineChartSeries).color, isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('switches financial time spacing and revises the latest candle', (
     tester,
   ) async {
