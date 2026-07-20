@@ -7,7 +7,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show kIsWeb, listEquals, setEquals;
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -29,6 +30,7 @@ import 'coordinates/chart_transform.dart';
 import 'elements/annotation_elements.dart';
 import 'elements/pie_series_element.dart';
 import 'elements/polar_column_series_element.dart';
+import 'elements/resize_handle_element.dart';
 import 'elements/series_element.dart';
 import 'interaction/core/chart_element.dart';
 import 'interaction/core/coordinator.dart';
@@ -46,6 +48,7 @@ import 'models/candlestick_chart_series.dart';
 import 'models/candlestick_chart_style.dart';
 import 'models/candlestick_interaction_details.dart';
 import 'models/chart_annotation.dart';
+import 'models/chart_context_action.dart';
 import 'models/chart_data_point.dart';
 import 'models/chart_series.dart';
 import 'models/chart_state_config.dart';
@@ -88,6 +91,8 @@ import 'widgets/dialogs/chord_annotation_dialog.dart';
 import 'widgets/dialogs/point_annotation_dialog.dart';
 import 'widgets/dialogs/range_annotation_dialog.dart';
 import 'widgets/dialogs/text_annotation_dialog.dart';
+import 'widgets/browser_context_menu_lease.dart';
+import 'workbench/chart_workbench_context_scope.dart';
 import 'widgets/dialogs/threshold_annotation_dialog.dart';
 import 'widgets/dialogs/trend_annotation_dialog.dart';
 import 'widgets/chart_state_view.dart';
@@ -195,6 +200,10 @@ class BravenChartPlus extends StatefulWidget {
     this.liveStreamController,
     this.controller,
     this.interactionConfig,
+    this.contextActionsBuilder,
+    this.contextMenuConfig = const ChartContextMenuConfig(),
+    this.chartActionButtonBuilder,
+    this.chartActionButtonConfig = const ChartOverlayActionButtonConfig(),
     this.title,
     this.subtitle,
     this.showLegend = true,
@@ -273,6 +282,11 @@ class BravenChartPlus extends StatefulWidget {
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
+    ChartContextActionsBuilder? contextActionsBuilder,
+    ChartContextMenuConfig contextMenuConfig = const ChartContextMenuConfig(),
+    ChartOverlayActionBuilder? chartActionButtonBuilder,
+    ChartOverlayActionButtonConfig chartActionButtonConfig =
+        const ChartOverlayActionButtonConfig(),
     int maxAxesPerSide = 3,
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
@@ -364,6 +378,10 @@ class BravenChartPlus extends StatefulWidget {
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
+      contextActionsBuilder: contextActionsBuilder,
+      contextMenuConfig: contextMenuConfig,
+      chartActionButtonBuilder: chartActionButtonBuilder,
+      chartActionButtonConfig: chartActionButtonConfig,
       maxAxesPerSide: maxAxesPerSide,
       axisSwapMode: axisSwapMode,
       bravenChartController: bravenChartController,
@@ -415,6 +433,11 @@ class BravenChartPlus extends StatefulWidget {
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
+    ChartContextActionsBuilder? contextActionsBuilder,
+    ChartContextMenuConfig contextMenuConfig = const ChartContextMenuConfig(),
+    ChartOverlayActionBuilder? chartActionButtonBuilder,
+    ChartOverlayActionButtonConfig chartActionButtonConfig =
+        const ChartOverlayActionButtonConfig(),
     int maxAxesPerSide = 3,
     AxisSwapMode axisSwapMode = AxisSwapMode.sticky,
     BravenChartController? bravenChartController,
@@ -513,6 +536,10 @@ class BravenChartPlus extends StatefulWidget {
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
+      contextActionsBuilder: contextActionsBuilder,
+      contextMenuConfig: contextMenuConfig,
+      chartActionButtonBuilder: chartActionButtonBuilder,
+      chartActionButtonConfig: chartActionButtonConfig,
       maxAxesPerSide: maxAxesPerSide,
       axisSwapMode: axisSwapMode,
       bravenChartController: bravenChartController,
@@ -562,6 +589,11 @@ class BravenChartPlus extends StatefulWidget {
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
+    ChartContextActionsBuilder? contextActionsBuilder,
+    ChartContextMenuConfig contextMenuConfig = const ChartContextMenuConfig(),
+    ChartOverlayActionBuilder? chartActionButtonBuilder,
+    ChartOverlayActionButtonConfig chartActionButtonConfig =
+        const ChartOverlayActionButtonConfig(),
     StreamingConfig? streamingConfig,
     Stream<ChartDataPoint>? dataStream,
     StreamingController? streamingController,
@@ -650,6 +682,10 @@ class BravenChartPlus extends StatefulWidget {
       onAnnotationTap: onAnnotationTap,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
+      contextActionsBuilder: contextActionsBuilder,
+      contextMenuConfig: contextMenuConfig,
+      chartActionButtonBuilder: chartActionButtonBuilder,
+      chartActionButtonConfig: chartActionButtonConfig,
       streamingConfig: streamingConfig,
       dataStream: dataStream,
       streamingController: streamingController,
@@ -884,6 +920,25 @@ class BravenChartPlus extends StatefulWidget {
   /// Controls tooltip visibility via `InteractionConfig.tooltip.enabled`.
   /// If null, defaults to enabled tooltips with standard behavior.
   final InteractionConfig? interactionConfig;
+
+  /// Builds host-defined commands for the native chart context menu.
+  ///
+  /// Workbench hosts normally use the Workbench-level context action builder,
+  /// which also supplies its mounted handle without requiring a parallel
+  /// controller lifecycle.
+  final ChartContextActionsBuilder? contextActionsBuilder;
+
+  /// Keyboard focus and opt-in touch behavior for native context menus.
+  final ChartContextMenuConfig contextMenuConfig;
+
+  /// Builds one optional compact host action over the chart viewport.
+  ///
+  /// Returning null hides it. When this chart is mounted in a Workbench, a
+  /// Workbench-level builder is used unless this lower-level builder is set.
+  final ChartOverlayActionBuilder? chartActionButtonBuilder;
+
+  /// Placement and Material presentation for [chartActionButtonBuilder].
+  final ChartOverlayActionButtonConfig chartActionButtonConfig;
 
   // ==================== NEW PARAMETERS FOR COMPATIBILITY ====================
 
@@ -1182,6 +1237,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   // Guard flag to prevent duplicate context menu opens
   bool _isShowingContextMenu = false;
+  WebContextMenuSession? _activeContextMenuSession;
+  ChartContextInvocationSource? _pendingContextMenuSource;
+  Timer? _contextLongPressTimer;
+  int? _contextLongPressPointer;
+  Offset? _contextLongPressStart;
 
   // Track range creation mode to trigger UI updates
   bool _wasInRangeCreationMode = false;
@@ -1348,6 +1408,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   void initState() {
     super.initState();
 
+    BrowserContextMenuLease.acquire();
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChanged);
     _coordinator = ChartInteractionCoordinator();
@@ -1505,6 +1566,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   @override
   void didUpdateWidget(BravenChartPlus oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.contextMenuConfig.enableLongPress &&
+        oldWidget.contextMenuConfig.enableLongPress) {
+      _cancelContextLongPress();
+    }
     final seriesChanged = !listEquals(widget.series, oldWidget.series);
     if (_documentConfigurationChanged(
       oldWidget,
@@ -1746,6 +1811,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _streamingResumeTimer?.cancel();
     _interactionViewportSettleTimer?.cancel();
     _liveDocumentRevisionTimer?.cancel();
+    _cancelContextLongPress();
+    _activeContextMenuSession?.dismiss();
+    BrowserContextMenuLease.release();
     _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
     _streamSubscription?.cancel();
@@ -4259,23 +4327,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _onCoordinatorChanged() {
-    // CRITICAL: Detect mode transitions to handle context menu
     if (_coordinator.currentMode == InteractionMode.contextMenuOpen &&
-        mounted) {
-      // Only show context menu if we have an effective annotation controller
-      // (all current menu items are annotation-related)
-      if (_effectiveAnnotationController != null) {
-        if (_isShowingContextMenu) {
-        } else {
-          // PERFORMANCE FIX: Call immediately instead of post-frame callback
-          // Post-frame callbacks were being delayed by 2-36 SECONDS when Flutter's
-          // frame scheduler was busy or browser was throttling frames.
-          // Context menus need immediate response for good UX.
-          _showContextMenu();
-        }
-      } else {
-        _coordinator.releaseMode(force: true);
-      }
+        mounted &&
+        !_isShowingContextMenu) {
+      // Context menus need immediate response. Post-frame callbacks can be
+      // substantially delayed when a browser throttles Flutter frames.
+      unawaited(_showContextMenu());
     }
 
     // CRITICAL: Call setState() when mode changes to update overlays (debug, crosshair)
@@ -4290,177 +4347,318 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
   }
 
-  /// Shows context menu at the interaction start position.
-  /// Called when coordinator enters contextMenuOpen mode.
-  void _showContextMenu() async {
-    // Set guard flag to prevent duplicate menu opens
+  Future<void> _showContextMenu() async {
     _isShowingContextMenu = true;
-
     final localPosition = _coordinator.interactionStartPosition;
     final element = _coordinator.interactionStartElement;
+    final source =
+        _pendingContextMenuSource ??
+        ChartContextInvocationSource.secondaryClick;
+    ChartContextAction? selectedAction;
 
-    if (localPosition == null) {
-      _coordinator.releaseMode(force: true);
+    try {
+      if (localPosition == null) return;
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      if (renderBox == null || !renderBox.attached) return;
+
+      if (!_focusNode.hasFocus) _focusNode.requestFocus();
+      final globalPosition = renderBox.localToGlobal(localPosition);
+      final hit = _resolveContextHit(renderBox, localPosition, element);
+      final annotationElement = _contextAnnotationElement(element);
+      final invocation = ChartContextInvocation(
+        localPosition: localPosition,
+        globalPosition: globalPosition,
+        source: source,
+        hit: hit,
+        capabilities: ChartContextCapabilities(
+          annotationsAvailable: _effectiveAnnotationController != null,
+          canEditTargetAnnotation: annotationElement != null,
+          hasDataHit: hit.kind == ChartContextHitKind.point,
+        ),
+      );
+      final actions = _effectiveContextActions(
+        invocation,
+        localPosition,
+        element,
+        annotationElement,
+      );
+      if (actions.isEmpty) return;
+
+      final session = WebContextMenu.show(
+        context: context,
+        position: globalPosition,
+        items: _toMenuItems(actions),
+      );
+      _activeContextMenuSession = session;
+      final selectedId = await session.selection;
+      if (selectedId != null) {
+        selectedAction = actions
+            .where((action) => action.id == selectedId)
+            .firstOrNull;
+      }
+    } catch (error, stackTrace) {
+      _reportContextActionError(
+        error,
+        stackTrace,
+        context: 'while opening the chart context menu',
+      );
+    } finally {
+      _activeContextMenuSession = null;
       _isShowingContextMenu = false;
-      return;
+      _pendingContextMenuSource = null;
+      if (!_coordinator.isDisposed &&
+          _coordinator.currentMode == InteractionMode.contextMenuOpen) {
+        _coordinator.releaseMode(force: true);
+      }
+      if (mounted && widget.contextMenuConfig.restoreChartFocus) {
+        _focusNode.requestFocus();
+      }
     }
 
-    // Convert local position to global coordinates for menu positioning
-    final renderBox =
-        _renderBoxKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      _coordinator.releaseMode(force: true);
-      _isShowingContextMenu = false;
-      return;
-    }
-
-    final globalPosition = renderBox.localToGlobal(localPosition);
-
-    // Determine context for menu items
-    // Show "Add Point Annotation" if hoveredMarker is set (within snap radius of a data point)
-    // This matches the tooltip behavior - if you can see the tooltip, you can add a point annotation
-    final bool isDataPointClick = _coordinator.hoveredMarker != null;
-    final bool isSeriesLineClick =
-        element is SeriesElement && _coordinator.hoveredMarker == null;
-    final bool isExistingAnnotation =
-        element != null && element is! SeriesElement;
-
-    // Check if annotations are supported (effective controller exists)
-    final bool hasAnnotationController = _effectiveAnnotationController != null;
-
-    // Build context-aware web-native menu items
-    final List<WebContextMenuItem> menuItems = [
-      // Annotation creation items - ONLY show when annotationController is available
-      if (hasAnnotationController) ...[
-        // TextAnnotation - ALWAYS available
-        const WebContextMenuAction(
-          value: 'add_text',
-          icon: Icons.text_fields,
-          label: 'Add Text Annotation',
-        ),
-
-        // PinAnnotation - ALWAYS available (arbitrary position marker)
-        const WebContextMenuAction(
-          value: 'add_pin',
-          icon: Icons.push_pin,
-          label: 'Add Pin Annotation',
-        ),
-
-        // PointAnnotation - ONLY when clicking on data point marker
-        if (isDataPointClick)
-          const WebContextMenuAction(
-            value: 'add_point',
-            icon: Icons.place,
-            label: 'Add Point Annotation',
-          ),
-
-        // TrendAnnotation - ONLY when clicking on series line (not marker)
-        if (isSeriesLineClick)
-          const WebContextMenuAction(
-            value: 'add_trend',
-            icon: Icons.trending_up,
-            label: 'Add Trend Annotation',
-          ),
-
-        // ChordAnnotation - ONLY when clicking on series line (not marker)
-        if (isSeriesLineClick)
-          const WebContextMenuAction(
-            value: 'add_chord',
-            icon: Icons.commit,
-            label: 'Add Chord Annotation',
-          ),
-
-        // RangeAnnotation - ALWAYS available (interactive drag mode)
-        const WebContextMenuAction(
-          value: 'add_range',
-          icon: Icons.width_full,
-          label: 'Add Range Annotation',
-        ),
-
-        const WebContextMenuDivider(),
-
-        // ThresholdAnnotation - ALWAYS available
-        const WebContextMenuAction(
-          value: 'add_threshold',
-          icon: Icons.horizontal_rule,
-          label: 'Add Threshold Line',
-        ),
-      ],
-
-      // Edit/Delete for existing annotations - ONLY show when annotationController is available
-      if (hasAnnotationController && isExistingAnnotation) ...[
-        const WebContextMenuDivider(),
-        const WebContextMenuAction(
-          value: 'edit',
-          icon: Icons.edit,
-          label: 'Edit',
-        ),
-        const WebContextMenuAction(
-          value: 'delete',
-          icon: Icons.delete,
-          label: 'Delete',
-          iconColor: Colors.red,
-          textColor: Colors.red,
-        ),
-      ],
-    ];
-
-    // Show the web-native context menu
-    final result = await WebContextMenu.show(
-      context: context,
-      position: globalPosition,
-      items: menuItems,
-    );
-
-    // Clear guard flag now that menu is closed
-    _isShowingContextMenu = false;
-
-    // Release mode BEFORE handling action (so action handlers can claim new modes)
-    // This is critical for modal-to-modal transitions (e.g., contextMenuOpen → rangeAnnotationCreation)
-    _coordinator.releaseMode(force: true);
-
-    // Handle menu selection
-    if (result != null) {
-      await _handleMenuAction(result, localPosition, element);
+    if (selectedAction == null) return;
+    try {
+      await Future<void>.sync(selectedAction.onSelected);
+    } catch (error, stackTrace) {
+      _reportContextActionError(
+        error,
+        stackTrace,
+        context: 'while running chart context action ${selectedAction.id}',
+      );
     }
   }
 
-  /// Handles menu action selection from context menu.
-  Future<void> _handleMenuAction(
-    String action,
+  ChartContextHit _resolveContextHit(
+    ChartRenderBox renderBox,
     Offset localPosition,
     ChartElement? element,
-  ) async {
-    switch (action) {
-      case 'add_text':
-        await _showAddTextAnnotationDialog(localPosition);
-        break;
-      case 'add_pin':
-        await _showAddPinAnnotationDialog(localPosition);
-        break;
-      case 'add_point':
-        await _showAddPointAnnotationDialog(element);
-        break;
-      case 'add_trend':
-        await _showAddTrendAnnotationDialog(element);
-        break;
-      case 'add_chord':
-        await _showAddChordAnnotationDialog(element);
-        break;
-      case 'add_range':
-        await _showAddRangeAnnotationDialog();
-        break;
-      case 'add_threshold':
-        await _showAddThresholdAnnotationDialog();
-        break;
-      case 'edit':
-        await _showEditAnnotationDialog(element);
-        break;
-      case 'delete':
-        await _showDeleteAnnotationConfirmation(element);
-        break;
-      default:
+  ) {
+    final annotationElement = _contextAnnotationElement(element);
+    final annotationId = _contextAnnotationId(annotationElement);
+    final annotationTypeId = _contextAnnotationTypeId(annotationElement);
+    if (annotationId != null && annotationTypeId != null) {
+      return ChartContextHit.annotation(
+        annotationId: annotationId,
+        annotationTypeId: annotationTypeId,
+      );
     }
+    final dataHit = renderBox.dataHitAtWidgetPosition(localPosition);
+    if (dataHit != null) {
+      return ChartContextHit.point(
+        seriesId: dataHit.seriesId,
+        pointIndex: dataHit.pointIndex,
+        point: dataHit.point,
+        sourcePointIndices: dataHit.effectiveSourcePointIndices,
+      );
+    }
+    if (element is DataSeriesElement) {
+      return ChartContextHit.series(seriesId: element.series.id);
+    }
+    return const ChartContextHit.background();
+  }
+
+  List<ChartContextAction> _effectiveContextActions(
+    ChartContextInvocation invocation,
+    Offset localPosition,
+    ChartElement? element,
+    ChartElement? annotationElement,
+  ) {
+    final actions = <ChartContextAction>[
+      ..._packageContextActions(
+        invocation,
+        localPosition,
+        element,
+        annotationElement,
+      ),
+    ];
+    try {
+      final workbenchBuilder = ChartWorkbenchContextActionScope.maybeOf(
+        context,
+      )?.actionsBuilder;
+      if (workbenchBuilder != null) {
+        actions.addAll(workbenchBuilder(context, invocation));
+      }
+      final chartBuilder = widget.contextActionsBuilder;
+      if (chartBuilder != null) {
+        actions.addAll(chartBuilder(context, invocation));
+      }
+    } catch (error, stackTrace) {
+      _reportContextActionError(
+        error,
+        stackTrace,
+        context: 'while building host chart context actions',
+      );
+    }
+
+    final ids = <String>{};
+    final unique = <ChartContextAction>[];
+    for (final section in ChartContextActionSection.values) {
+      for (final action in actions.where((item) => item.section == section)) {
+        if (ids.add(action.id)) unique.add(action);
+      }
+    }
+    return unique;
+  }
+
+  List<ChartContextAction> _packageContextActions(
+    ChartContextInvocation invocation,
+    Offset localPosition,
+    ChartElement? element,
+    ChartElement? annotationElement,
+  ) {
+    final hasAnnotations = _effectiveAnnotationController != null;
+    if (!hasAnnotations) return const <ChartContextAction>[];
+    final isDataPoint =
+        invocation.hit.kind == ChartContextHitKind.point &&
+        element is SeriesElement;
+    final isCartesianSeries =
+        element is SeriesElement &&
+        invocation.hit.kind != ChartContextHitKind.point;
+    return <ChartContextAction>[
+      if (annotationElement != null)
+        ChartContextAction(
+          id: 'braven.annotation.edit',
+          label: 'Edit',
+          icon: Icons.edit_outlined,
+          section: ChartContextActionSection.target,
+          onSelected: () => _showEditAnnotationDialog(annotationElement),
+        ),
+      ChartContextAction(
+        id: 'braven.annotation.addText',
+        label: 'Add Text Annotation',
+        icon: Icons.text_fields,
+        section: ChartContextActionSection.annotation,
+        onSelected: () => _showAddTextAnnotationDialog(localPosition),
+      ),
+      ChartContextAction(
+        id: 'braven.annotation.addPin',
+        label: 'Add Pin Annotation',
+        icon: Icons.push_pin_outlined,
+        section: ChartContextActionSection.annotation,
+        onSelected: () => _showAddPinAnnotationDialog(localPosition),
+      ),
+      if (isDataPoint)
+        ChartContextAction(
+          id: 'braven.annotation.addPoint',
+          label: 'Add Point Annotation',
+          icon: Icons.place_outlined,
+          section: ChartContextActionSection.annotation,
+          onSelected: () => _showAddPointAnnotationDialog(element),
+        ),
+      if (isCartesianSeries) ...[
+        ChartContextAction(
+          id: 'braven.annotation.addTrend',
+          label: 'Add Trend Annotation',
+          icon: Icons.trending_up,
+          section: ChartContextActionSection.annotation,
+          onSelected: () => _showAddTrendAnnotationDialog(element),
+        ),
+        ChartContextAction(
+          id: 'braven.annotation.addChord',
+          label: 'Add Chord Annotation',
+          icon: Icons.commit,
+          section: ChartContextActionSection.annotation,
+          onSelected: () => _showAddChordAnnotationDialog(element),
+        ),
+      ],
+      ChartContextAction(
+        id: 'braven.annotation.addRange',
+        label: 'Add Range Annotation',
+        icon: Icons.width_full,
+        section: ChartContextActionSection.annotation,
+        onSelected: _showAddRangeAnnotationDialog,
+      ),
+      ChartContextAction(
+        id: 'braven.annotation.addThreshold',
+        label: 'Add Threshold Line',
+        icon: Icons.horizontal_rule,
+        section: ChartContextActionSection.annotation,
+        onSelected: _showAddThresholdAnnotationDialog,
+      ),
+      if (annotationElement != null)
+        ChartContextAction(
+          id: 'braven.annotation.delete',
+          label: 'Delete',
+          icon: Icons.delete_outline,
+          section: ChartContextActionSection.destructive,
+          onSelected: () =>
+              _showDeleteAnnotationConfirmation(annotationElement),
+        ),
+    ];
+  }
+
+  List<WebContextMenuItem> _toMenuItems(List<ChartContextAction> actions) {
+    final items = <WebContextMenuItem>[];
+    ChartContextActionSection? previousSection;
+    for (final action in actions) {
+      if (previousSection != null && action.section != previousSection) {
+        items.add(const WebContextMenuDivider());
+      }
+      items.add(
+        WebContextMenuAction(
+          value: action.id,
+          label: action.label,
+          icon: action.icon,
+          shortcut: action.shortcutLabel,
+          enabled: action.enabled,
+          destructive: action.section == ChartContextActionSection.destructive,
+          semanticLabel: action.semanticLabel,
+        ),
+      );
+      previousSection = action.section;
+    }
+    return items;
+  }
+
+  ChartElement? _contextAnnotationElement(ChartElement? element) {
+    if (element is ResizeHandleElement) return element.parentAnnotation;
+    return switch (element) {
+      TextAnnotationElement() ||
+      PointAnnotationElement() ||
+      PinAnnotationElement() ||
+      ThresholdAnnotationElement() ||
+      TrendAnnotationElement() ||
+      ChordAnnotationElement() ||
+      RangeAnnotationElement() => element,
+      _ => null,
+    };
+  }
+
+  String? _contextAnnotationId(ChartElement? element) => switch (element) {
+    TextAnnotationElement(:final annotation) => annotation.id,
+    PointAnnotationElement(:final annotation) => annotation.id,
+    PinAnnotationElement(:final annotation) => annotation.id,
+    ThresholdAnnotationElement(:final annotation) => annotation.id,
+    TrendAnnotationElement(:final annotation) => annotation.id,
+    ChordAnnotationElement(:final annotation) => annotation.id,
+    RangeAnnotationElement(:final annotation) => annotation.id,
+    _ => null,
+  };
+
+  String? _contextAnnotationTypeId(ChartElement? element) => switch (element) {
+    TextAnnotationElement() => 'text',
+    PointAnnotationElement() => 'point',
+    PinAnnotationElement() => 'pin',
+    ThresholdAnnotationElement() => 'threshold',
+    TrendAnnotationElement() => 'trend',
+    ChordAnnotationElement() => 'chord',
+    RangeAnnotationElement() => 'range',
+    _ => null,
+  };
+
+  void _reportContextActionError(
+    Object error,
+    StackTrace stackTrace, {
+    required String context,
+  }) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stackTrace,
+        library: 'braven_charts',
+        context: ErrorDescription(context),
+      ),
+    );
   }
 
   // ============================================================================
@@ -5831,6 +6029,117 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     });
   }
 
+  bool _handleContextMenuKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final isContextMenuKey =
+        event.logicalKey == LogicalKeyboardKey.contextMenu ||
+        (event.logicalKey == LogicalKeyboardKey.f10 &&
+            HardwareKeyboard.instance.isShiftPressed);
+    if (!isContextMenuKey) return false;
+    if (_isShowingContextMenu) return true;
+
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null || !renderBox.attached) return true;
+    final pointRef =
+        _focusedPointRefs.firstOrNull ?? _selectedPointRefs.firstOrNull;
+    final dataHit = pointRef == null
+        ? null
+        : renderBox.dataHitForPointIndex(
+            pointRef.seriesId,
+            pointRef.pointIndex,
+          );
+    final localPosition = dataHit == null
+        ? renderBox.plotToWidget(
+            Offset(renderBox.plotWidth / 2, renderBox.plotHeight / 2),
+          )
+        : renderBox.plotToWidget(dataHit.plotPosition);
+    final element = renderBox.hitTestElements(localPosition);
+    _requestContextMenu(
+      localPosition,
+      source: ChartContextInvocationSource.keyboard,
+      element: element,
+    );
+    return true;
+  }
+
+  void _handleContextLongPressPointerDown(PointerDownEvent event) {
+    if (!widget.contextMenuConfig.enableLongPress ||
+        (event.kind != PointerDeviceKind.touch &&
+            event.kind != PointerDeviceKind.stylus &&
+            event.kind != PointerDeviceKind.invertedStylus) ||
+        event.buttons != kPrimaryButton) {
+      return;
+    }
+    if (_contextLongPressPointer != null) {
+      _cancelContextLongPress();
+      return;
+    }
+    _contextLongPressPointer = event.pointer;
+    _contextLongPressStart = event.localPosition;
+    final duration =
+        widget.contextMenuConfig.longPressDuration ??
+        widget.interactionConfig?.gesture.longPressTimeout ??
+        const Duration(milliseconds: 500);
+    _contextLongPressTimer = Timer(duration, () {
+      final position = _contextLongPressStart;
+      _contextLongPressTimer = null;
+      _contextLongPressPointer = null;
+      _contextLongPressStart = null;
+      if (!mounted || position == null) return;
+      final renderBox =
+          _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+      if (renderBox == null || !renderBox.attached) return;
+      _requestContextMenu(
+        position,
+        source: ChartContextInvocationSource.longPress,
+        element: renderBox.hitTestElements(position),
+      );
+    });
+  }
+
+  void _handleContextLongPressPointerMove(PointerMoveEvent event) {
+    if (event.pointer != _contextLongPressPointer) return;
+    final start = _contextLongPressStart;
+    if (start == null) return;
+    final threshold = widget.interactionConfig?.gesture.panThreshold ?? 10.0;
+    if ((event.localPosition - start).distance > threshold) {
+      _cancelContextLongPress();
+    }
+  }
+
+  void _handleContextLongPressPointerEnd(PointerEvent event) {
+    if (event.pointer == _contextLongPressPointer) {
+      _cancelContextLongPress();
+    }
+  }
+
+  void _cancelContextLongPress() {
+    _contextLongPressTimer?.cancel();
+    _contextLongPressTimer = null;
+    _contextLongPressPointer = null;
+    _contextLongPressStart = null;
+  }
+
+  bool _requestContextMenu(
+    Offset localPosition, {
+    required ChartContextInvocationSource source,
+    ChartElement? element,
+  }) {
+    if (_isShowingContextMenu ||
+        !_coordinator.canStartInteraction(InteractionMode.contextMenuOpen)) {
+      return false;
+    }
+    _coordinator.startInteraction(localPosition, element: element);
+    _pendingContextMenuSource = source;
+    final claimed = _coordinator.claimMode(
+      InteractionMode.contextMenuOpen,
+      element: element,
+    );
+    if (!claimed) _pendingContextMenuSource = null;
+    return claimed;
+  }
+
   void _handleKeyEvent(KeyEvent event) {
     // Removed excessive debugPrint (key event)
 
@@ -6688,11 +6997,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
   @override
   Widget build(BuildContext context) {
-    // Disable browser context menu on web platform
-    if (kIsWeb) {
-      BrowserContextMenu.disableContextMenu();
-    }
-
+    final workbenchActionScope = widget.chartActionButtonBuilder == null
+        ? ChartWorkbenchContextActionScope.dependOn(context)
+        : null;
+    final chartActionButtonBuilder =
+        widget.chartActionButtonBuilder ??
+        workbenchActionScope?.overlayActionBuilder;
+    final chartActionButtonConfig = widget.chartActionButtonBuilder != null
+        ? widget.chartActionButtonConfig
+        : workbenchActionScope?.overlayActionConfig ??
+              widget.chartActionButtonConfig;
+    final chartActionButtonListenable = widget.chartActionButtonBuilder != null
+        ? null
+        : workbenchActionScope?.actionListenable;
     final isPartitionRadial = _layoutKind == ChartLayoutKind.partitionRadial;
     final isPolarAxis = _layoutKind == ChartLayoutKind.polarAxis;
     final isNonCartesian = isPartitionRadial || isPolarAxis;
@@ -6727,6 +7044,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       focusNode: _focusNode,
       autofocus: false,
       onKeyEvent: (node, event) {
+        if (_handleContextMenuKeyEvent(event)) {
+          return KeyEventResult.handled;
+        }
         if (isNonCartesian) {
           final handled = isPolarAxis
               ? _handlePolarKeyEvent(event)
@@ -6784,97 +7104,114 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         ? SystemMouseCursors
                               .precise // Precise crosshair cursor for range selection
                         : _currentCursor,
-                    child: RawGestureDetector(
-                      gestures: {
-                        PriorityPanGestureRecognizer:
-                            GestureRecognizerFactoryWithHandlers<
-                              PriorityPanGestureRecognizer
-                            >(() => _panRecognizer, (recognizer) {}),
-                        PriorityTapGestureRecognizer:
-                            GestureRecognizerFactoryWithHandlers<
-                              PriorityTapGestureRecognizer
-                            >(() => _tapRecognizer, (recognizer) {}),
-                      },
-                      child: _ChartRenderWidget(
-                        key: _renderBoxKey,
-                        coordinator: _coordinator,
-                        spatialIndex: _spatialIndex,
-                        elementGenerator: _elementGenerator,
-                        elementGeneratorVersion: _elementGeneratorVersion,
-                        xAxis: isNonCartesian ? null : _xAxis,
-                        xAxisConfig: isNonCartesian ? null : widget.xAxisConfig,
-                        yAxis: isNonCartesian ? null : _yAxis,
-                        primaryYAxisConfig: isNonCartesian
-                            ? null
-                            : widget.yAxis,
-                        theme: widget.theme,
-                        tooltipsEnabled:
-                            (effectiveInteractionConfig?.enabled ?? true) &&
-                            (effectiveInteractionConfig?.tooltip.enabled ??
-                                true),
-                        selectedTooltipSeriesId: selectedTooltipPoint?.seriesId,
-                        selectedTooltipPointIndex:
-                            selectedTooltipPoint?.pointIndex,
-                        // Prioritize widget's direct showXScrollbar/showYScrollbar properties
-                        // InteractionConfig's defaults are false, so ?? doesn't work correctly
-                        showXScrollbar:
-                            !isNonCartesian && widget.showXScrollbar,
-                        showYScrollbar:
-                            !isNonCartesian && widget.showYScrollbar,
-                        scrollbarTheme: widget.scrollbarTheme,
-                        interactionConfig: effectiveInteractionConfig,
-                        textScaleFactor: _textScaleFactor,
-                        textDirection: _textDirection,
-                        onCursorChange: _handleCursorChange,
-                        onAnnotationChanged: _handleAnnotationChanged,
-                        onElementHover: _handleElementHover,
-                        onDataHitActivate: isNonCartesian
-                            ? (hit) => _activateNonCartesianDataHit(
-                                hit,
-                                position: _widgetPositionForDataHit(hit),
-                                showFocusIndicator: true,
-                              )
-                            : hasCandlesticks
-                            ? _activateCandlestickDataHit
-                            : null,
-                        onDataHitFocus: isNonCartesian
-                            ? (hit) => isPolarAxis
-                                  ? _focusPolarPoint(
-                                      hit.pointIndex,
-                                      seriesId: hit.seriesId,
-                                    )
-                                  : _focusRadialPoint(
-                                      hit.pointIndex,
-                                      seriesId: hit.seriesId,
-                                    )
-                            : hasCandlesticks
-                            ? _focusCandlestickDataHit
-                            : null,
-                        onRangeCreationComplete: _onRangeCreationComplete,
-                        onViewportInteracted: _handleViewportInteractionPulse,
-                        onViewportChanged:
-                            !isNonCartesian &&
-                                widget.interactionGroupController != null
-                            ? _handleViewportChanged
-                            : null,
-                        onDataXCursorChanged:
-                            !isNonCartesian &&
-                                widget.interactionGroupController != null
-                            ? _handleLocalDataXCursorChanged
-                            : null,
-                        gridConfig: isNonCartesian ? null : widget.grid,
-                        // Multi-axis parameters
-                        normalizationMode: isNonCartesian
-                            ? NormalizationMode.none
-                            : _effectiveNormalizationMode,
-                        series: isNonCartesian
-                            ? const <ChartSeries>[]
-                            : _effectiveRenderSeries,
-                        maxAxesPerSide: widget.maxAxesPerSide,
-                        axisSwapMode: widget.axisSwapMode,
+                    child: Listener(
+                      onPointerDown: _handleContextLongPressPointerDown,
+                      onPointerMove: _handleContextLongPressPointerMove,
+                      onPointerUp: _handleContextLongPressPointerEnd,
+                      onPointerCancel: _handleContextLongPressPointerEnd,
+                      child: RawGestureDetector(
+                        gestures: {
+                          PriorityPanGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                PriorityPanGestureRecognizer
+                              >(() => _panRecognizer, (recognizer) {}),
+                          PriorityTapGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                PriorityTapGestureRecognizer
+                              >(() => _tapRecognizer, (recognizer) {}),
+                        },
+                        child: _ChartRenderWidget(
+                          key: _renderBoxKey,
+                          coordinator: _coordinator,
+                          spatialIndex: _spatialIndex,
+                          elementGenerator: _elementGenerator,
+                          elementGeneratorVersion: _elementGeneratorVersion,
+                          xAxis: isNonCartesian ? null : _xAxis,
+                          xAxisConfig: isNonCartesian
+                              ? null
+                              : widget.xAxisConfig,
+                          yAxis: isNonCartesian ? null : _yAxis,
+                          primaryYAxisConfig: isNonCartesian
+                              ? null
+                              : widget.yAxis,
+                          theme: widget.theme,
+                          tooltipsEnabled:
+                              (effectiveInteractionConfig?.enabled ?? true) &&
+                              (effectiveInteractionConfig?.tooltip.enabled ??
+                                  true),
+                          selectedTooltipSeriesId:
+                              selectedTooltipPoint?.seriesId,
+                          selectedTooltipPointIndex:
+                              selectedTooltipPoint?.pointIndex,
+                          // Prioritize widget's direct showXScrollbar/showYScrollbar properties
+                          // InteractionConfig's defaults are false, so ?? doesn't work correctly
+                          showXScrollbar:
+                              !isNonCartesian && widget.showXScrollbar,
+                          showYScrollbar:
+                              !isNonCartesian && widget.showYScrollbar,
+                          scrollbarTheme: widget.scrollbarTheme,
+                          interactionConfig: effectiveInteractionConfig,
+                          textScaleFactor: _textScaleFactor,
+                          textDirection: _textDirection,
+                          onCursorChange: _handleCursorChange,
+                          onAnnotationChanged: _handleAnnotationChanged,
+                          onElementHover: _handleElementHover,
+                          onDataHitActivate: isNonCartesian
+                              ? (hit) => _activateNonCartesianDataHit(
+                                  hit,
+                                  position: _widgetPositionForDataHit(hit),
+                                  showFocusIndicator: true,
+                                )
+                              : hasCandlesticks
+                              ? _activateCandlestickDataHit
+                              : null,
+                          onDataHitFocus: isNonCartesian
+                              ? (hit) => isPolarAxis
+                                    ? _focusPolarPoint(
+                                        hit.pointIndex,
+                                        seriesId: hit.seriesId,
+                                      )
+                                    : _focusRadialPoint(
+                                        hit.pointIndex,
+                                        seriesId: hit.seriesId,
+                                      )
+                              : hasCandlesticks
+                              ? _focusCandlestickDataHit
+                              : null,
+                          onRangeCreationComplete: _onRangeCreationComplete,
+                          onViewportInteracted: _handleViewportInteractionPulse,
+                          onViewportChanged:
+                              !isNonCartesian &&
+                                  widget.interactionGroupController != null
+                              ? _handleViewportChanged
+                              : null,
+                          onDataXCursorChanged:
+                              !isNonCartesian &&
+                                  widget.interactionGroupController != null
+                              ? _handleLocalDataXCursorChanged
+                              : null,
+                          gridConfig: isNonCartesian ? null : widget.grid,
+                          // Multi-axis parameters
+                          normalizationMode: isNonCartesian
+                              ? NormalizationMode.none
+                              : _effectiveNormalizationMode,
+                          series: isNonCartesian
+                              ? const <ChartSeries>[]
+                              : _effectiveRenderSeries,
+                          maxAxesPerSide: widget.maxAxesPerSide,
+                          axisSwapMode: widget.axisSwapMode,
+                        ),
                       ),
                     ),
                   ),
+                  if (chartActionButtonBuilder != null)
+                    Positioned.fill(
+                      child: _ChartOverlayActionButtonHost(
+                        builder: chartActionButtonBuilder,
+                        config: chartActionButtonConfig,
+                        listenable: chartActionButtonListenable,
+                      ),
+                    ),
                   if (donutCenterSeries.isNotEmpty &&
                       (donutCenterSeries.length == 1
                           ? donutCenterSeries.single.centerContent.isVisible
@@ -7216,6 +7553,154 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ),
         };
       },
+    );
+  }
+}
+
+class _ChartOverlayActionButtonHost extends StatelessWidget {
+  const _ChartOverlayActionButtonHost({
+    required this.builder,
+    required this.config,
+    required this.listenable,
+  });
+
+  final ChartOverlayActionBuilder builder;
+  final ChartOverlayActionButtonConfig config;
+  final Listenable? listenable;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget buildButton(BuildContext context) {
+      ChartOverlayAction? action;
+      try {
+        action = builder(context);
+      } catch (error, stackTrace) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'braven_charts',
+            context: ErrorDescription(
+              'while building the chart overlay host action',
+            ),
+          ),
+        );
+      }
+      if (action == null) return const SizedBox.shrink();
+
+      final colors = Theme.of(context).colorScheme;
+      final defaultStyle =
+          IconButton.styleFrom(
+            minimumSize: Size.square(config.buttonSize),
+            maximumSize: Size.square(config.buttonSize),
+            padding: EdgeInsets.zero,
+            foregroundColor: colors.primary.withValues(alpha: 0.76),
+            backgroundColor: colors.surface.withValues(alpha: 0.48),
+            disabledForegroundColor: colors.onSurface.withValues(alpha: 0.24),
+            disabledBackgroundColor: colors.surface.withValues(alpha: 0.28),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ).copyWith(
+            foregroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return colors.onSurface.withValues(alpha: 0.24);
+              }
+              if (states.contains(WidgetState.hovered) ||
+                  states.contains(WidgetState.focused) ||
+                  states.contains(WidgetState.pressed)) {
+                return colors.primary;
+              }
+              return colors.primary.withValues(alpha: 0.76);
+            }),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return colors.surface.withValues(alpha: 0.28);
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return colors.surface.withValues(alpha: 0.84);
+              }
+              if (states.contains(WidgetState.focused)) {
+                return colors.surface.withValues(alpha: 0.76);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return colors.surface.withValues(alpha: 0.68);
+              }
+              return colors.surface.withValues(alpha: 0.48);
+            }),
+            overlayColor: WidgetStatePropertyAll(
+              colors.primary.withValues(alpha: 0.08),
+            ),
+            elevation: const WidgetStatePropertyAll(0),
+            shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+            side: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.focused)) {
+                return BorderSide(color: colors.primary, width: 2);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return BorderSide(
+                  color: colors.outline.withValues(alpha: 0.64),
+                );
+              }
+              return BorderSide(
+                color: colors.outlineVariant.withValues(alpha: 0.42),
+              );
+            }),
+          );
+      final effectiveStyle = config.style?.merge(defaultStyle) ?? defaultStyle;
+      final effectiveAction = action;
+      return Semantics(
+        button: true,
+        enabled: effectiveAction.enabled,
+        label: effectiveAction.semanticLabel ?? effectiveAction.tooltip,
+        child: Tooltip(
+          message: effectiveAction.tooltip,
+          child: ExcludeSemantics(
+            child: IconButton(
+              key: ValueKey(
+                'chart-overlay-action-button-${effectiveAction.id}',
+              ),
+              onPressed: effectiveAction.enabled
+                  ? () => _invoke(effectiveAction)
+                  : null,
+              style: effectiveStyle,
+              iconSize: config.iconSize,
+              icon: Icon(effectiveAction.icon),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final button = listenable == null
+        ? buildButton(context)
+        : ListenableBuilder(
+            listenable: listenable!,
+            builder: (context, child) => buildButton(context),
+          );
+    return Align(
+      alignment: config.alignment,
+      child: Padding(padding: config.margin, child: button),
+    );
+  }
+
+  static void _invoke(ChartOverlayAction action) {
+    unawaited(
+      Future<void>.sync(action.onPressed).catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'braven_charts',
+            context: ErrorDescription(
+              'while running chart overlay action ${action.id}',
+            ),
+          ),
+        );
+      }),
     );
   }
 }

@@ -304,6 +304,18 @@ all preserve that value-only meaning. Artifacts declare
   with responsive fallback, content-aware/resizable Split panes, snapshot
   freshness, independent table/source/artifact operation state, and
   host-defined actions. Source is opt-in through `availableDisplayModes`.
+- `ChartContextAction`, `ChartContextInvocation`, `ChartContextHit`, and
+  `ChartContextMenuConfig` — typed, renderer-neutral host commands for native
+  chart context menus reached by secondary click, keyboard, or opt-in touch
+  long press. `BravenChartWorkbench.contextActionsBuilder` supplies the same
+  stable handle as its visible `actionsBuilder`.
+- `ChartOverlayAction`, `ChartOverlayActionBuilder`, and
+  `ChartOverlayActionButtonConfig` — an independently opt-in compact chart
+  button with host-owned callback, enabled state, semantics, placement, target
+  size, icon size, and Material style. Its default is a translucent,
+  zero-elevation treatment derived from the inherited `ColorScheme`. A
+  Workbench builder receives its stable handle; a direct `BravenChartPlus`
+  builder works without Workbench state.
 - `ChartWorkbenchGroupController` and `ChartWorkbenchScope` — nestable,
   caller-owned system or chart-family coordination for shared display mode,
   selector visibility, and safe common-mode reconciliation across mounted

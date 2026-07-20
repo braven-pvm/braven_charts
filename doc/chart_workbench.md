@@ -230,6 +230,142 @@ Preview capture works from Chart, Data, or Split because the chart remains
 mounted and paintable. The preview is a convenience for thumbnails and loading
 states; the portable `ChartDocument` remains the source used for restoration.
 
+### Put the same host action on the chart
+
+Host actions can be exposed independently in three places: the Workbench action
+row, the chart's native context menu, and a compact button over the chart. The
+context menu and chart button are hidden unless their builders are supplied.
+On a Workbench every builder receives the same stable
+`ChartWorkbenchHandle`:
+
+```dart
+BravenChartWorkbench(
+  chartBuilder: (context, controller) => BravenChartPlus(
+    bravenChartController: controller,
+    series: series,
+    contextMenuConfig: const ChartContextMenuConfig(
+      enableLongPress: true,
+    ),
+  ),
+  contextActionsBuilder: (context, handle, invocation) => [
+    ChartContextAction(
+      id: 'host.addToReport',
+      label: 'Add to report',
+      icon: Icons.bookmark_add_outlined,
+      enabled: !handle.isExtractingArtifact,
+      onSelected: () async {
+        final result = await handle.extractArtifact(
+          const ChartArtifactExtractOptions(
+            artifactId: 'report-chart-42',
+            includePreview: true,
+          ),
+        );
+        // The host decides how to present or persist result.
+      },
+    ),
+  ],
+  chartActionButtonBuilder: (context, handle) => ChartOverlayAction(
+    id: 'host.addToReport',
+    tooltip: 'Add chart to report',
+    semanticLabel: 'Add the current chart to the report',
+    icon: Icons.bookmark_add_outlined,
+    enabled: !handle.isExtractingArtifact,
+    onPressed: () async {
+      await handle.extractArtifact(
+        const ChartArtifactExtractOptions(
+          artifactId: 'report-chart-42',
+          includePreview: true,
+        ),
+      );
+    },
+  ),
+  chartActionButtonConfig: const ChartOverlayActionButtonConfig(
+    alignment: Alignment.topLeft,
+    margin: EdgeInsets.all(8),
+    iconSize: 18,
+  ),
+)
+```
+
+`chartActionButtonBuilder` returning `null` hides the button for the current
+state. `ChartOverlayActionButtonConfig` controls alignment, margin, target size,
+icon size, and optional `ButtonStyle`. The default uses the inherited
+`ColorScheme` with a translucent, zero-elevation surface that becomes clearer
+on hover, focus, and press. Its 48 logical-pixel target is deliberately larger
+than the icon for touch and keyboard accessibility. This is a host action
+surface, not portable chart configuration, so callbacks are not serialized
+into a `ChartDocument` or generated Dart source.
+
+Override only the Material properties your product owns:
+
+```dart
+chartActionButtonConfig: ChartOverlayActionButtonConfig(
+  style: IconButton.styleFrom(
+    foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+    backgroundColor: Theme.of(context)
+        .colorScheme
+        .primaryContainer
+        .withValues(alpha: 0.72),
+  ),
+),
+```
+
+Developers can also render a completely external button through
+`actionsBuilder` or their own application layout when an overlay does not suit
+the product.
+
+The builder works whether or not the chart has an `AnnotationController`.
+Package annotation commands and host commands are composed in deterministic
+groups: target editing, host commands, annotation creation, then destructive
+commands. Duplicate action IDs keep the first registered action.
+
+`ChartContextInvocation` contains only stable public information:
+
+- `source` distinguishes secondary click, keyboard, and long press;
+- `localPosition` and `globalPosition` locate the invocation;
+- `hit` identifies a background, series, data point, or annotation without
+  exposing private render elements; and
+- `capabilities` describes whether annotations and a resolved data hit are
+  available.
+
+Mouse and trackpad secondary click are always supported. The Context Menu key
+and Shift+F10 open the same menu at the focused or selected datum, falling back
+to the plot center. Touch/stylus long press is deliberately opt-in through
+`ChartContextMenuConfig.enableLongPress` so existing pan and zoom gestures do
+not change silently. Menu rows provide 48 logical-pixel targets, keyboard
+navigation, visible focus, theme-derived colours, assistive semantics, and
+viewport clamping.
+
+For a chart outside a Workbench, set
+`BravenChartPlus.contextActionsBuilder` and/or
+`BravenChartPlus.chartActionButtonBuilder` directly. Use these lower-level
+forms when the action does not need artifact or Workbench state:
+
+```dart
+BravenChartPlus(
+  series: series,
+  contextActionsBuilder: (context, invocation) => [
+    ChartContextAction(
+      id: 'host.inspectPoint',
+      label: 'Inspect point',
+      enabled: invocation.hit.kind == ChartContextHitKind.point,
+      onSelected: () => inspect(invocation.hit),
+    ),
+  ],
+  chartActionButtonBuilder: (context) => ChartOverlayAction(
+    id: 'host.saveChart',
+    tooltip: 'Save chart',
+    icon: Icons.save_outlined,
+    onPressed: saveCurrentChart,
+  ),
+)
+```
+
+The chart releases its interaction coordinator before awaiting a selected
+action, reports builder/callback failures through Flutter's error pipeline, and
+restores chart focus when the menu closes. Actions should still perform their
+own permission and lifecycle checks because the host owns action policy.
+
 ## Control the workbench
 
 Provide a `ChartWorkbenchController` when another part of your widget needs to

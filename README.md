@@ -514,8 +514,38 @@ BravenChartWorkbench(
       child: const Text('Add to report'),
     ),
   ],
+  contextActionsBuilder: (context, handle, invocation) => [
+    ChartContextAction(
+      id: 'host.addToReport',
+      label: 'Add to report',
+      icon: Icons.bookmark_add_outlined,
+      onSelected: () => addToReport(handle),
+    ),
+  ],
+  chartActionButtonBuilder: (context, handle) => ChartOverlayAction(
+    id: 'host.addToReport',
+    tooltip: 'Add chart to report',
+    icon: Icons.bookmark_add_outlined,
+    enabled: !handle.isExtractingArtifact,
+    onPressed: () => addToReport(handle),
+  ),
 )
 ```
+
+The compact chart button, visible Workbench action, and typed context action
+are independent opt-ins backed by the same stable Workbench handle. The chart
+button's alignment, margin, target size, icon size, and style are configurable
+with `ChartOverlayActionButtonConfig`; it can also be attached directly to
+`BravenChartPlus` outside a Workbench. Its default is a translucent,
+zero-elevation surface derived from the current `ColorScheme`; pass a
+`ButtonStyle` to match a product-specific theme, or use `actionsBuilder` for a
+completely external button.
+
+The typed context action is available from secondary click and keyboard on all
+platforms. Touch/stylus long press can be enabled explicitly with
+`ChartContextMenuConfig(enableLongPress: true)` on `BravenChartPlus`. The
+invocation exposes stable background, series, point, or annotation identity;
+it never exposes renderer internals.
 
 To keep the selector and selected presentation consistent across an
 application—or across one chart-family subtree—provide a shared, nestable

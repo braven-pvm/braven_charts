@@ -76,6 +76,9 @@ the mode or show/hide the selector for the entire application.
 - Move across a tracking chart to inspect synchronized series values.
 - Drag to pan; hold Shift while using the wheel to zoom around the pointer.
 - Use scrollbars where enabled to inspect a constrained viewport.
+- On Chart Workbench, right-click a chart or press Shift+F10 to run native host
+  actions, or use its compact top-left chart action. Long press is enabled on
+  its focused examples for touch review.
 - Select a legend entry or series in multi-axis demos to exercise axis slots.
 - Select a pie slice, legend item, or table row and confirm all three surfaces stay linked.
 - Select a Donut slice, legend item, or table row and confirm the center follows the same identity.

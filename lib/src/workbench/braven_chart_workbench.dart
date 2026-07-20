@@ -11,6 +11,7 @@ import '../artifacts/chart_artifact_extractor.dart';
 import '../artifacts/chart_document_extractor.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/braven_chart_controller.dart';
+import '../models/chart_context_action.dart';
 import '../source/chart_dart_source_generator.dart';
 import '../source/chart_source_models.dart';
 import '../source/chart_source_view.dart';
@@ -21,6 +22,7 @@ import '../table/chart_table_model.dart';
 import '../table/chart_table_options.dart';
 import 'chart_workbench_models.dart';
 import 'chart_workbench_group.dart';
+import 'chart_workbench_context_scope.dart';
 
 /// Builds the chart managed by a [BravenChartWorkbench].
 typedef BravenChartBuilder =
@@ -32,6 +34,21 @@ typedef BravenChartBuilder =
 /// Builds storage-agnostic host actions for a chart workbench.
 typedef ChartWorkbenchActionsBuilder =
     List<Widget> Function(BuildContext context, ChartWorkbenchHandle handle);
+
+/// Builds native context-menu actions with the mounted Workbench handle.
+typedef ChartWorkbenchContextActionsBuilder =
+    List<ChartContextAction> Function(
+      BuildContext context,
+      ChartWorkbenchHandle handle,
+      ChartContextInvocation invocation,
+    );
+
+/// Builds one optional compact chart-overlay action with the mounted handle.
+typedef ChartWorkbenchOverlayActionBuilder =
+    ChartOverlayAction? Function(
+      BuildContext context,
+      ChartWorkbenchHandle handle,
+    );
 
 /// Stable, observable access to a mounted chart workbench.
 abstract interface class ChartWorkbenchHandle implements Listenable {
@@ -765,6 +782,9 @@ class BravenChartWorkbench extends StatefulWidget {
     this.sourceOptions = const ChartDartSourceOptions(),
     this.sourceRefreshPolicy = ChartSourceRefreshPolicy.onDocumentRevision,
     this.actionsBuilder,
+    this.contextActionsBuilder,
+    this.chartActionButtonBuilder,
+    this.chartActionButtonConfig = const ChartOverlayActionButtonConfig(),
     this.linkTableRowsToChart = true,
     this.onTableRowFocused,
     this.onTableRowFocusCleared,
@@ -838,6 +858,22 @@ class BravenChartWorkbench extends StatefulWidget {
 
   /// Builds storage-agnostic host actions with a stable imperative handle.
   final ChartWorkbenchActionsBuilder? actionsBuilder;
+
+  /// Builds host commands for the mounted chart's native context menu.
+  ///
+  /// The callback receives the same stable handle as [actionsBuilder], so a
+  /// visible action and its context-menu accelerator can share one extraction
+  /// and persistence path.
+  final ChartWorkbenchContextActionsBuilder? contextActionsBuilder;
+
+  /// Builds one compact host action over the mounted chart viewport.
+  ///
+  /// This is independent of [actionsBuilder] and [contextActionsBuilder]. The
+  /// host may expose the same operation in any one, two, or all three places.
+  final ChartWorkbenchOverlayActionBuilder? chartActionButtonBuilder;
+
+  /// Placement and Material presentation of [chartActionButtonBuilder].
+  final ChartOverlayActionButtonConfig chartActionButtonConfig;
 
   /// Enables revision-safe keyboard focus and activation linking by default.
   final bool linkTableRowsToChart;
@@ -1046,9 +1082,26 @@ class _BravenChartWorkbenchState extends State<BravenChartWorkbench> {
 
   @override
   Widget build(BuildContext context) {
-    final chart = KeyedSubtree(
-      key: const ValueKey('chart-workbench-chart'),
-      child: widget.chartBuilder(context, _chartController),
+    final chart = ChartWorkbenchContextActionScope(
+      actionsBuilder: widget.contextActionsBuilder == null
+          ? null
+          : (actionContext, invocation) => widget.contextActionsBuilder!(
+              actionContext,
+              _workbenchController,
+              invocation,
+            ),
+      overlayActionBuilder: widget.chartActionButtonBuilder == null
+          ? null
+          : (actionContext) => widget.chartActionButtonBuilder!(
+              actionContext,
+              _workbenchController,
+            ),
+      overlayActionConfig: widget.chartActionButtonConfig,
+      actionListenable: _workbenchController,
+      child: KeyedSubtree(
+        key: const ValueKey('chart-workbench-chart'),
+        child: widget.chartBuilder(context, _chartController),
+      ),
     );
     return AnimatedBuilder(
       animation: _workbenchController,

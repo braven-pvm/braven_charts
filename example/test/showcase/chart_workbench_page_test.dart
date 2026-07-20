@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/chart_workbench_page.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,7 +20,7 @@ void main() {
     expect(find.text('Chart Workbench'), findsOneWidget);
     expect(find.text('Choose a view'), findsOneWidget);
     expect(find.text('Link rows to points'), findsOneWidget);
-    expect(find.text('Try linked chart and table navigation'), findsOneWidget);
+    expect(find.text('Try linked views and host actions'), findsOneWidget);
     expect(find.text('Run a host action'), findsOneWidget);
     expect(find.byType(BravenChartWorkbench), findsNWidgets(2));
     expect(find.byType(BravenChartPlus), findsNWidgets(5));
@@ -42,6 +43,107 @@ void main() {
     expect(find.text('Shared view'), findsOneWidget);
     expect(find.text('Show view selector'), findsOneWidget);
     expect(find.text('Add to report'), findsOneWidget);
+    expect(
+      find.byKey(
+        const ValueKey('chart-overlay-action-button-showcase.addToReport'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('runs the primary host action from the chart button', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final actionButton = find.byKey(
+      const ValueKey('chart-overlay-action-button-showcase.addToReport'),
+    );
+    expect(actionButton, findsOneWidget);
+    expect(tester.getSize(actionButton), const Size.square(48));
+
+    await tester.tap(actionButton);
+    await _settleWorkbench(tester, includeAsyncDelay: true);
+
+    expect(find.text('Portable copy returned to the host'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('runs the primary host action from the native chart menu', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final chart = find.byKey(const ValueKey('workbench-mounted-chart'));
+    final renderSurface = find.descendant(
+      of: chart,
+      matching: find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(renderSurface),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryMouseButton,
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add to report'), findsOneWidget);
+    await tester.tap(find.text('Add to report'));
+    await _settleWorkbench(tester, includeAsyncDelay: true);
+
+    expect(find.text('Portable copy returned to the host'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('host menu remains available when annotations are absent', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1500, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(subject());
+    await _settleWorkbench(tester);
+
+    final streamWorkbench = find.byKey(
+      const ValueKey('stream-chart-workbench'),
+    );
+    await tester.ensureVisible(streamWorkbench);
+    await _settleWorkbench(tester);
+    final streamChart = find.descendant(
+      of: streamWorkbench,
+      matching: find.byType(BravenChartPlus),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(streamChart),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryMouseButton,
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Capture stream snapshot'), findsOneWidget);
+    expect(find.text('Add Text Annotation'), findsNothing);
+    await tester.tap(find.text('Capture stream snapshot'));
+    await _settleWorkbench(tester, includeAsyncDelay: true);
+
+    expect(
+      find.byKey(const ValueKey('stream-context-capture-status')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
