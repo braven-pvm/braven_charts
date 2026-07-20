@@ -3,7 +3,7 @@ description: >-
   Pure Dart Flutter line, area, bar, scatter, Pie, Donut, and Concentric Donut
   charts with custom rendering, synchronized interaction, live data,
   annotations, and Dart source.
-version: 0.9.0
+version: 0.10.0-dev.1
 homepage: https://braven-pvm.github.io/braven_charts/
 repository: https://github.com/braven-pvm/braven_charts
 issue_tracker: https://github.com/braven-pvm/braven_charts/issues
