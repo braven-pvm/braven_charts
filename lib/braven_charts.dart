@@ -179,6 +179,7 @@ export 'src/widgets/scatter_marginal_composition.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
 export 'src/theming/components/candlestick_theme.dart';
+export 'src/theming/components/cartesian_value_summary_theme.dart';
 export 'src/theming/components/annotation_theme.dart';
 export 'src/theming/components/axis_style.dart';
 export 'src/theming/components/grid_style.dart';
