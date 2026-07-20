@@ -22,6 +22,7 @@ import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import '../../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../../coordinates/chart_transform.dart';
 import '../../elements/series_element.dart' show SeriesElement;
+import '../../elements/value_summary_annotation_element.dart';
 import '../../elements/value_summary_layout.dart'
     show ResolvedValueSummaryStyle;
 import '../../elements/value_summary_overlay_element.dart';
@@ -77,6 +78,9 @@ class ValueSummaryCoordinator {
   final ValueSummaryOverlayElement _overlayElement =
       ValueSummaryOverlayElement();
 
+  final ValueSummaryAnnotationElement _annotationElement =
+      ValueSummaryAnnotationElement();
+
   /// Resolves pinned/selected [ChartPointRef]s (origin `pinned`).
   final CartesianTrackingSnapshotResolver _pointResolver =
       CartesianTrackingSnapshotResolver();
@@ -99,9 +103,21 @@ class ValueSummaryCoordinator {
   /// A drag-committed placement override for the annotation presentation.
   ///
   /// Null means "use the configured placement". The fixed overlay ignores
-  /// it; the draggable annotation presentation (Task 10) writes it during
-  /// drags and [resetPlacementOverride] restores the configured placement.
+  /// it; the draggable annotation presentation writes it live during drags
+  /// and keyboard nudges, and [resetPlacementOverride] restores the
+  /// configured placement.
   ChartOverlayPlacement? placementOverride;
+
+  // Annotation presentation state (drag, keyboard, focus).
+  bool _annotationActive = false;
+  bool _annotationDraggable = false;
+  bool _annotationFocused = false;
+  ChartOverlayPlacement _annotationConfiguredPlacement =
+      ChartOverlayPlacement.topLeft;
+  Offset? _dragOrigin;
+  ChartOverlayPlacement? _preDragOverride;
+  Offset? _keyboardOrigin;
+  bool _keyboardNudgePending = false;
 
   // Change-gate keys for the reduce/adapt stage.
   CartesianValueSummaryConfig? _lastConfig;
@@ -132,10 +148,14 @@ class ValueSummaryCoordinator {
   bool _paintActive = false;
   bool _pinClearScheduled = false;
 
-  /// The overlay element to include in the foreground paint pass, or null
+  /// The active presentation element for one paint frame.
+  ValueSummaryPanelElement get _activeElement =>
+      _annotationActive ? _annotationElement : _overlayElement;
+
+  /// The summary element to include in the foreground paint pass, or null
   /// when the summary is gated off (nothing is painted at all).
   ChartElement? get overlayElementForPaint =>
-      _paintActive ? _overlayElement : null;
+      _paintActive ? _activeElement : null;
 
   /// The policy-resolved snapshot behind the currently displayed content.
   CartesianTrackingSnapshot? get debugReducedSnapshot => _reducedSnapshot;
@@ -147,8 +167,8 @@ class ValueSummaryCoordinator {
   /// not increment this.
   int get debugReduceCount => _reduceCount;
 
-  /// The overlay element's last painted bounds ([Rect.zero] while hidden).
-  Rect get debugOverlayBounds => _overlayElement.bounds;
+  /// The active panel's last painted bounds ([Rect.zero] while hidden).
+  Rect get debugOverlayBounds => _activeElement.bounds;
 
   /// Attaches [controller] by reference.
   ///
@@ -176,7 +196,23 @@ class ValueSummaryCoordinator {
     _listeningToController = false;
   }
 
-  void _handleControllerChanged() => onNeedsRepaint();
+  /// Reacts to any controller notification.
+  ///
+  /// Controllers are observed only as a generic [Listenable], so a
+  /// `resetPlacement()` call is indistinguishable from a pin change — except
+  /// for [DefaultCartesianValueSummaryController], which records the request
+  /// in an internal handshake this coordinator consumes here. Host-initiated
+  /// resets do not re-emit `onPlacementChanged`.
+  void _handleControllerChanged() {
+    final controller = _controller;
+    if (controller is DefaultCartesianValueSummaryController &&
+        controller.consumeResetPlacementRequest()) {
+      _keyboardOrigin = null;
+      _keyboardNudgePending = false;
+      placementOverride = null;
+    }
+    onNeedsRepaint();
+  }
 
   /// Clears the drag-committed placement override (controller
   /// `resetPlacement` semantics; consumed by the annotation presentation).
@@ -185,6 +221,139 @@ class ValueSummaryCoordinator {
     placementOverride = null;
     onNeedsRepaint();
   }
+
+  // ==========================================================================
+  // Annotation presentation: drag, keyboard, and focus surface
+  // ==========================================================================
+
+  /// The annotation panel as a drag-acquisition target, or null when the
+  /// annotation presentation is inactive, non-draggable, or not painted.
+  ValueSummaryAnnotationElement? get annotationDragTarget =>
+      _paintActive &&
+          _annotationActive &&
+          _annotationDraggable &&
+          _annotationElement.bounds != Rect.zero
+      ? _annotationElement
+      : null;
+
+  /// Whether the annotation panel currently owns keyboard focus.
+  bool get annotationFocused => _annotationFocused;
+
+  /// Grants or clears the panel's keyboard focus (pointer-driven).
+  void setAnnotationFocus(bool focused) {
+    if (focused == _annotationFocused) return;
+    _annotationFocused = focused;
+    if (!focused) {
+      _keyboardOrigin = null;
+      _keyboardNudgePending = false;
+    }
+    onNeedsRepaint();
+  }
+
+  /// Captures pre-drag state when `EventHandlerManager` engages a drag.
+  void beginAnnotationDrag() {
+    _preDragOverride = placementOverride;
+    _dragOrigin = _annotationElement.bounds.topLeft;
+  }
+
+  /// Live drag preview: updates the placement override for the panel
+  /// top-left [origin] (plot-local) and requests a feedback repaint.
+  void updateAnnotationDragOrigin(Offset origin) {
+    _dragOrigin = origin;
+    placementOverride = _annotationElement.placementForOrigin(
+      origin,
+      anchor: _annotationConfiguredPlacement.anchor,
+    );
+    onNeedsRepaint();
+  }
+
+  /// Commits an engaged drag: clamps the final origin (when configured),
+  /// stores the committed anchor-relative placement as the override, and
+  /// emits `onPlacementChanged` exactly once.
+  ChartOverlayPlacement? commitAnnotationDrag() {
+    final origin = _dragOrigin;
+    _dragOrigin = null;
+    _preDragOverride = null;
+    if (origin == null) return null;
+    final clamped = _annotationElement.clampToPlot
+        ? _annotationElement.clampOriginToPlot(origin)
+        : origin;
+    final committed = _annotationElement.placementForOrigin(
+      clamped,
+      anchor: _annotationConfiguredPlacement.anchor,
+    );
+    placementOverride = committed;
+    onNeedsRepaint();
+    onPlacementChanged?.call(committed);
+    return committed;
+  }
+
+  /// Abandons an engaged drag (pointer cancel), restoring the pre-drag
+  /// placement without emitting a commit.
+  void cancelAnnotationDrag() {
+    if (_dragOrigin == null) return;
+    _dragOrigin = null;
+    placementOverride = _preDragOverride;
+    _preDragOverride = null;
+    onNeedsRepaint();
+  }
+
+  /// Moves the focused panel by [delta] logical pixels (keyboard).
+  ///
+  /// Nudges accumulate across a held key and clamp immediately (when
+  /// configured); the pending result is committed once by
+  /// [commitKeyboardNudge] on key release.
+  void nudgeAnnotation(Offset delta) {
+    final origin =
+        (_keyboardOrigin ?? _annotationElement.bounds.topLeft) + delta;
+    final clamped = _annotationElement.clampToPlot
+        ? _annotationElement.clampOriginToPlot(origin)
+        : origin;
+    _keyboardOrigin = clamped;
+    _keyboardNudgePending = true;
+    placementOverride = _annotationElement.placementForOrigin(
+      clamped,
+      anchor: _annotationConfiguredPlacement.anchor,
+    );
+    onNeedsRepaint();
+  }
+
+  /// Commits a pending keyboard movement burst, emitting `onPlacementChanged`
+  /// exactly once with the already-clamped anchor-relative placement.
+  ChartOverlayPlacement? commitKeyboardNudge() {
+    if (!_keyboardNudgePending) return null;
+    _keyboardNudgePending = false;
+    _keyboardOrigin = null;
+    final committed = placementOverride;
+    if (committed == null) return null;
+    onPlacementChanged?.call(committed);
+    return committed;
+  }
+
+  /// Restores the configured placement (Escape / semantic reset action).
+  ///
+  /// When [emit] is true the configured placement is surfaced through
+  /// `onPlacementChanged` so hosts holding a dragged placement re-sync.
+  void resetAnnotationPlacement({required bool emit}) {
+    _keyboardOrigin = null;
+    _keyboardNudgePending = false;
+    placementOverride = null;
+    onNeedsRepaint();
+    if (emit) onPlacementChanged?.call(_annotationConfiguredPlacement);
+  }
+
+  /// Basic assistive info for the annotation panel, or null while it is
+  /// inactive or hidden. Full semantics contract lands with Task 15.
+  ({Rect bounds, bool focusable, bool focused})? get annotationSemanticsInfo =>
+      _paintActive &&
+          _annotationActive &&
+          _annotationElement.bounds != Rect.zero
+      ? (
+          bounds: _annotationElement.bounds,
+          focusable: _annotationDraggable,
+          focused: _annotationFocused,
+        )
+      : null;
 
   /// Detaches the controller listener and releases element resources.
   void dispose() {
@@ -214,16 +383,15 @@ class ValueSummaryCoordinator {
     required double textScale,
     ChartPointRef? selection,
   }) {
-    if (config == null ||
-        config.presentation is! CartesianValueSummaryOverlay) {
-      // Gated off (or a presentation this slice does not render). The
-      // disabled path must stay near-free: only tear down when the panel
-      // was active.
+    if (config == null) {
+      // Gated off. The disabled path must stay near-free: only tear down
+      // when the panel was active.
       if (_paintActive) {
         _paintActive = false;
         _model = null;
         _reducedSnapshot = null;
         _lastConfig = null; // Re-enabling must re-reduce.
+        _annotationFocused = false;
         final style =
             _resolvedStyle ??
             ResolvedValueSummaryStyle.resolve(
@@ -231,18 +399,44 @@ class ValueSummaryCoordinator {
               theme,
             );
         _overlayElement.updateContent(null, style);
+        _annotationElement.updateContent(null, style);
       }
       return;
     }
 
     _paintActive = true;
-    final presentation = config.presentation as CartesianValueSummaryOverlay;
-    _overlayElement.updateEnvironment(
-      plotRect: Offset.zero & plotArea.size,
-      textDirection: textDirection,
-      textScale: textScale,
-    );
-    _overlayElement.updatePlacement(presentation.placement);
+    switch (config.presentation) {
+      case final CartesianValueSummaryOverlay presentation:
+        _annotationActive = false;
+        _annotationDraggable = false;
+        _annotationFocused = false;
+        _overlayElement.updateEnvironment(
+          plotRect: Offset.zero & plotArea.size,
+          textDirection: textDirection,
+          textScale: textScale,
+        );
+        _overlayElement.updatePlacement(presentation.placement);
+      case final CartesianValueSummaryAnnotation presentation:
+        _annotationActive = true;
+        _annotationDraggable = presentation.draggable;
+        if (!presentation.draggable) _annotationFocused = false;
+        _annotationConfiguredPlacement = presentation.placement;
+        _annotationElement.updateEnvironment(
+          plotRect: Offset.zero & plotArea.size,
+          textDirection: textDirection,
+          textScale: textScale,
+        );
+        _annotationElement.updateBehavior(
+          draggable: presentation.draggable,
+          clampToPlot: presentation.clampToPlot,
+        );
+        // A drag/keyboard override wins over the configured placement; both
+        // keep flowing during drags (the suspended early-return below only
+        // freezes the displayed content).
+        _annotationElement.updatePlacement(
+          placementOverride ?? presentation.placement,
+        );
+    }
 
     // Effective style resolves only on config-style or theme change.
     if (_resolvedStyle == null ||
@@ -326,7 +520,7 @@ class ValueSummaryCoordinator {
             content: config.content,
             showSeriesAccent: config.showSeriesAccent,
           );
-    _overlayElement.updateContent(_model, _resolvedStyle!);
+    _activeElement.updateContent(_model, _resolvedStyle!);
   }
 
   /// Clears an invalidated pin on the controller after the current frame.

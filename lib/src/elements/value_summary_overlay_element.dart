@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show protected;
 import 'package:flutter/painting.dart';
 
 import '../interaction/core/chart_element.dart';
@@ -12,15 +13,14 @@ import '../models/cartesian_value_summary_config.dart'
 import '../models/chart_overlay_placement.dart';
 import 'value_summary_layout.dart';
 
-/// The fixed-overlay presentation of the Cartesian value summary.
+/// Shared state and painting for the two value summary presentations.
 ///
-/// A passive foreground element anchored to the plot interior through a
-/// [ChartOverlayPlacement]. It never intercepts pointer input ([hitTest] is
-/// always false), does not move with pan or zoom, and paints through the
-/// shared [ValueSummaryLayout] so both summary presentations stay visually
-/// identical.
+/// Both the fixed overlay and the annotation-style panel render the same
+/// policy-resolved content through the shared [ValueSummaryLayout] at a
+/// [ChartOverlayPlacement]-resolved position, so they stay visually
+/// identical; only hit-testing and placement behavior differ per subclass.
 ///
-/// The owning render box drives it per frame:
+/// The owning render box drives an element per frame:
 ///
 /// 1. [updateEnvironment] with the current plot rect, ambient text direction,
 ///    and text scale (cheap; returns whether anything changed);
@@ -37,10 +37,10 @@ import 'value_summary_layout.dart';
 /// the placement offset displaces the panel toward the plot interior on each
 /// anchored edge, so `ChartOverlayPlacement.topLeft`'s baked-in 12 pixel
 /// offset stays a 12 pixel inset at every corner and in both directions.
-class ValueSummaryOverlayElement extends ChartElement {
-  /// Creates a fixed overlay summary element.
-  ValueSummaryOverlayElement({
-    this.id = 'cartesian-value-summary-overlay',
+abstract class ValueSummaryPanelElement extends ChartElement {
+  /// Creates a summary panel element.
+  ValueSummaryPanelElement({
+    required this.id,
     ChartOverlayPlacement placement = ChartOverlayPlacement.topLeft,
   }) : _placement = placement;
 
@@ -58,7 +58,7 @@ class ValueSummaryOverlayElement extends ChartElement {
   Rect _bounds = Rect.zero;
   bool _needsRepaint = false;
 
-  /// The configured anchor-relative placement.
+  /// The effective anchor-relative placement being rendered.
   ChartOverlayPlacement get placement => _placement;
 
   /// Whether an accepted update requires a feedback-layer repaint.
@@ -66,6 +66,18 @@ class ValueSummaryOverlayElement extends ChartElement {
   /// Cleared by [paint]; the render box checks this after feeding the
   /// element to decide whether the feedback layer must repaint at all.
   bool get needsRepaint => _needsRepaint;
+
+  /// The plot rect the placement currently resolves against.
+  @protected
+  Rect? get plotRect => _plotRect;
+
+  /// The ambient reading direction the anchor resolves against.
+  @protected
+  TextDirection get textDirection => _textDirection;
+
+  /// Flags the element as needing a feedback-layer repaint.
+  @protected
+  void markNeedsRepaint() => _needsRepaint = true;
 
   /// Updates the anchor-relative placement.
   ///
@@ -122,12 +134,6 @@ class ValueSummaryOverlayElement extends ChartElement {
   @override
   Rect get bounds => _bounds;
 
-  /// Classified as a passive tooltip-band element: like the tooltip it is a
-  /// display-only feedback surface with passive (zero) hit priority, and it
-  /// must never win an interaction.
-  @override
-  ChartElementType get elementType => ChartElementType.tooltip;
-
   @override
   int get renderOrder => RenderOrder.valueSummary;
 
@@ -140,13 +146,21 @@ class ValueSummaryOverlayElement extends ChartElement {
   @override
   bool get isSelectable => false;
 
-  @override
-  bool get isDraggable => false;
+  /// Maximum layout width for the panel content.
+  ///
+  /// The fixed overlay reserves the configured horizontal inset so the panel
+  /// never exceeds the plot; presentations whose offset changes dynamically
+  /// (dragging) override this so the layout cache is not thrashed per pixel.
+  @protected
+  double layoutMaxWidth(Rect plotRect, Offset offset) =>
+      math.max(0.0, plotRect.width - offset.dx.abs());
 
-  /// Always false: the fixed overlay passes every pointer through to the
-  /// chart beneath it.
-  @override
-  bool hitTest(Offset position) => false;
+  /// Hook to adjust the placement-resolved panel origin before painting.
+  ///
+  /// The base implementation returns [origin] unchanged; the annotation
+  /// presentation clamps it into the plot when configured to.
+  @protected
+  Offset adjustOrigin(Offset origin, Size size, Rect plotRect) => origin;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -163,7 +177,7 @@ class ValueSummaryOverlayElement extends ChartElement {
     }
 
     final offset = _placement.offset;
-    final available = math.max(0.0, plotRect.width - offset.dx.abs());
+    final available = layoutMaxWidth(plotRect, offset);
     final result = _layout.layout(
       model,
       style,
@@ -189,7 +203,11 @@ class ValueSummaryOverlayElement extends ChartElement {
     // a positive inset stays an inset at every corner.
     final dx = resolvedAnchor.x > 0 ? -offset.dx : offset.dx;
     final dy = resolvedAnchor.y > 0 ? -offset.dy : offset.dy;
-    final origin = anchored.topLeft.translate(dx, dy);
+    final origin = adjustOrigin(
+      anchored.topLeft.translate(dx, dy),
+      result.size,
+      plotRect,
+    );
 
     _bounds = origin & result.size;
     result.paint(canvas, origin);
@@ -207,8 +225,37 @@ class ValueSummaryOverlayElement extends ChartElement {
   @override
   void onHoverExit() {}
 
-  /// Hover and selection never apply to a pass-through element, so the
+  /// Hover and selection state never restyles a summary panel, so the
   /// element returns itself unchanged.
   @override
   ChartElement copyWith({bool? isHovered, bool? isSelected}) => this;
+}
+
+/// The fixed-overlay presentation of the Cartesian value summary.
+///
+/// A passive foreground element anchored to the plot interior through a
+/// [ChartOverlayPlacement]. It never intercepts pointer input ([hitTest] is
+/// always false), does not move with pan or zoom, and paints through the
+/// shared [ValueSummaryPanelElement] machinery so both summary presentations
+/// stay visually identical.
+class ValueSummaryOverlayElement extends ValueSummaryPanelElement {
+  /// Creates a fixed overlay summary element.
+  ValueSummaryOverlayElement({
+    super.id = 'cartesian-value-summary-overlay',
+    super.placement,
+  });
+
+  /// Classified as a passive tooltip-band element: like the tooltip it is a
+  /// display-only feedback surface with passive (zero) hit priority, and it
+  /// must never win an interaction.
+  @override
+  ChartElementType get elementType => ChartElementType.tooltip;
+
+  @override
+  bool get isDraggable => false;
+
+  /// Always false: the fixed overlay passes every pointer through to the
+  /// chart beneath it.
+  @override
+  bool hitTest(Offset position) => false;
 }

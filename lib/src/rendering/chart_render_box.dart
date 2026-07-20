@@ -10,6 +10,14 @@ import 'package:flutter/gestures.dart'
     show PointerDeviceKind, PointerHoverEvent;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart'
+    show
+        HardwareKeyboard,
+        KeyDownEvent,
+        KeyEvent,
+        KeyRepeatEvent,
+        KeyUpEvent,
+        LogicalKeyboardKey;
 
 import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../axis/axis.dart' as chart_axis;
@@ -19,6 +27,7 @@ import '../elements/pie_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
+import '../elements/value_summary_annotation_element.dart';
 import '../interaction/core/cartesian_tracking_snapshot.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
@@ -897,7 +906,6 @@ class ChartRenderBox extends RenderBox {
     // input-memo hit — one computation per frame either way.
     CartesianTrackingSnapshot? tracking;
     if (summaryConfig != null &&
-        summaryConfig.presentation is CartesianValueSummaryOverlay &&
         summaryConfig.valuePolicy !=
             CartesianValueSummaryValuePolicy.explicitOnly &&
         !suspended) {
@@ -977,10 +985,95 @@ class ChartRenderBox extends RenderBox {
   int get debugValueSummaryReduceCount =>
       _valueSummaryCoordinator.debugReduceCount;
 
-  /// The overlay panel's last painted bounds ([Rect.zero] while hidden).
+  /// The summary panel's last painted bounds ([Rect.zero] while hidden).
   @visibleForTesting
   Rect get debugValueSummaryBounds =>
       _valueSummaryCoordinator.debugOverlayBounds;
+
+  /// The current plot area rectangle, for widget tests.
+  @visibleForTesting
+  Rect get debugPlotArea => _plotArea;
+
+  // ==========================================================================
+  // Value summary annotation drag + keyboard surface
+  // ==========================================================================
+
+  /// The draggable annotation-style summary panel, or null when inactive.
+  ValueSummaryAnnotationElement? get valueSummaryDragTarget =>
+      _valueSummaryCoordinator.annotationDragTarget;
+
+  /// Captures pre-drag state when `EventHandlerManager` engages a drag.
+  void beginValueSummaryDrag() =>
+      _valueSummaryCoordinator.beginAnnotationDrag();
+
+  /// Live drag preview for the panel top-left (plot-local); repaints the
+  /// feedback layer only.
+  void updateValueSummaryDrag(Offset panelOriginPlot) =>
+      _valueSummaryCoordinator.updateAnnotationDragOrigin(panelOriginPlot);
+
+  /// Commits an engaged drag: clamp (when configured) and exactly one
+  /// `onPlacementChanged`.
+  void commitValueSummaryDrag() =>
+      _valueSummaryCoordinator.commitAnnotationDrag();
+
+  /// Abandons an engaged drag without committing.
+  void cancelValueSummaryDrag() =>
+      _valueSummaryCoordinator.cancelAnnotationDrag();
+
+  /// Grants or clears the summary panel's keyboard focus.
+  void setValueSummaryFocus(bool focused) {
+    _valueSummaryCoordinator.setAnnotationFocus(focused);
+    markNeedsSemanticsUpdate();
+  }
+
+  /// Handles a key event for the focused, draggable summary panel.
+  ///
+  /// Called by the chart widget's `Focus.onKeyEvent` chain before any other
+  /// keyboard handling. Arrow keys move the panel by 1 logical pixel (10
+  /// with Shift) on key-down/repeat; the accumulated movement is committed
+  /// through `onPlacementChanged` exactly once on the arrow's key-up. Escape
+  /// restores the configured placement (emitting it) and releases focus.
+  ///
+  /// Returns true when the event was consumed.
+  bool handleValueSummaryKeyEvent(KeyEvent event) {
+    final coordinator = _valueSummaryCoordinator;
+    if (!coordinator.annotationFocused ||
+        coordinator.annotationDragTarget == null) {
+      return false;
+    }
+
+    final key = event.logicalKey;
+    final isArrow =
+        key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown;
+
+    if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      if (key == LogicalKeyboardKey.escape) {
+        coordinator.resetAnnotationPlacement(emit: true);
+        setValueSummaryFocus(false);
+        return true;
+      }
+      if (!isArrow) return false;
+      final step = HardwareKeyboard.instance.isShiftPressed ? 10.0 : 1.0;
+      final delta = switch (key) {
+        LogicalKeyboardKey.arrowLeft => Offset(-step, 0),
+        LogicalKeyboardKey.arrowRight => Offset(step, 0),
+        LogicalKeyboardKey.arrowUp => Offset(0, -step),
+        _ => Offset(0, step),
+      };
+      coordinator.nudgeAnnotation(delta);
+      return true;
+    }
+
+    if (event is KeyUpEvent && isArrow) {
+      coordinator.commitKeyboardNudge();
+      return true;
+    }
+
+    return false;
+  }
 
   /// The cached series-layer picture, for zero-invalidation proofs: the
   /// instance must stay identical across hover/tracking frames.
@@ -1332,6 +1425,9 @@ class ChartRenderBox extends RenderBox {
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
+    // The value summary annotation panel contributes a semantics node whose
+    // presence depends on this config.
+    markNeedsSemanticsUpdate();
   }
 
   /// Updates canvas text scaling for tooltip content.
@@ -2365,6 +2461,16 @@ class ChartRenderBox extends RenderBox {
   /// - Filter to elements that pass precise hitTest()
   /// - Return highest priority element
   ChartElement? hitTestElements(Offset widgetPosition) {
+    // The draggable value summary annotation panel never enters _elements or
+    // the spatial index; consult it explicitly first so it wins the hit
+    // within its painted bounds (bounds-only hitTest) and can never steal a
+    // hit anywhere else.
+    final summaryPanel = _valueSummaryCoordinator.annotationDragTarget;
+    if (summaryPanel != null &&
+        summaryPanel.hitTest(widgetToPlot(widgetPosition))) {
+      return summaryPanel;
+    }
+
     // Lazily rebuild spatial index if marked dirty (deferred from click handlers)
     if (_spatialIndexDirty) {
       _rebuildSpatialIndex();
@@ -3704,18 +3810,22 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .length;
+    final valueSummaryPanel = _valueSummaryCoordinator.annotationSemanticsInfo;
+    if (hitCount == 0 && summaryCount == 0 && valueSummaryPanel == null) {
+      return;
+    }
+    config
+      ..isSemanticBoundary = true
+      ..explicitChildNodes = true
+      ..textDirection = _textDirection;
     if (hitCount == 0 && summaryCount == 0) return;
     int? groupCount;
     for (final hit in hits) {
       groupCount ??= hit.groupCount;
     }
-    config
-      ..isSemanticBoundary = true
-      ..explicitChildNodes = true
-      ..textDirection = _textDirection
-      ..label = groupCount == null
-          ? 'Radial chart with $hitCount slices'
-          : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
+    config.label = groupCount == null
+        ? 'Radial chart with $hitCount slices'
+        : 'Concentric Donut chart with $groupCount rings and $hitCount slices';
   }
 
   @override
@@ -3732,7 +3842,8 @@ class ChartRenderBox extends RenderBox {
         .whereType<ChartSemanticSummaryProvider>()
         .expand((element) => element.semanticSummaries)
         .toList();
-    if (hits.isEmpty && summaries.isEmpty) {
+    final valueSummaryPanel = _valueSummaryCoordinator.annotationSemanticsInfo;
+    if (hits.isEmpty && summaries.isEmpty && valueSummaryPanel == null) {
       _dataSemanticsNodes.clear();
       super.assembleSemanticsNode(node, config, children);
       return;
@@ -3740,6 +3851,37 @@ class ChartRenderBox extends RenderBox {
 
     final nextNodes = <String, SemanticsNode>{};
     final orderedNodes = <SemanticsNode>[];
+    if (valueSummaryPanel != null) {
+      // Basic label-only node for the annotation-style value summary panel;
+      // the full grouped-region semantics contract (rows, announcements,
+      // move/reset/pin actions) lands with Task 15. A panel dragged fully
+      // outside the chart (clampToPlot false) contributes no node: invisible
+      // semantics nodes are forbidden.
+      final panelRect = valueSummaryPanel.bounds
+          .shift(_plotArea.topLeft)
+          .intersect(Offset.zero & size);
+      if (!panelRect.isEmpty) {
+        const identity = 'value-summary-annotation';
+        final semanticConfig = SemanticsConfiguration()
+          ..sortKey = const OrdinalSortKey(0)
+          ..textDirection = _textDirection
+          ..identifier = identity
+          ..label = 'Value summary';
+        if (valueSummaryPanel.focusable) {
+          semanticConfig
+            ..isFocusable = true
+            ..isFocused = valueSummaryPanel.focused;
+        }
+        final semanticNode =
+            _dataSemanticsNodes[identity] ??
+            SemanticsNode(key: const ValueKey(identity));
+        semanticNode
+          ..rect = panelRect
+          ..updateWith(config: semanticConfig);
+        nextNodes[identity] = semanticNode;
+        orderedNodes.add(semanticNode);
+      }
+    }
     for (final summary in summaries) {
       final identity = 'summary:${summary.id}';
       final semanticConfig = SemanticsConfiguration()
@@ -4194,6 +4336,31 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   void markNeedsPaint() {
     _renderBox.markNeedsPaint();
   }
+
+  // ============================================================================
+  // Value summary annotation drag
+  // ============================================================================
+
+  @override
+  ValueSummaryAnnotationElement? get valueSummaryDragTarget =>
+      _renderBox.valueSummaryDragTarget;
+
+  @override
+  void beginValueSummaryDrag() => _renderBox.beginValueSummaryDrag();
+
+  @override
+  void updateValueSummaryDrag(Offset panelOriginPlot) =>
+      _renderBox.updateValueSummaryDrag(panelOriginPlot);
+
+  @override
+  void commitValueSummaryDrag() => _renderBox.commitValueSummaryDrag();
+
+  @override
+  void cancelValueSummaryDrag() => _renderBox.cancelValueSummaryDrag();
+
+  @override
+  void setValueSummaryFocus(bool focused) =>
+      _renderBox.setValueSummaryFocus(focused);
 
   // ============================================================================
   // Per-series normalization support

@@ -14,7 +14,8 @@ library;
 
 import 'dart:ui' show Color;
 
-import 'package:flutter/foundation.dart' show ValueChanged;
+import 'package:flutter/foundation.dart'
+    show ChangeNotifier, ValueChanged, internal;
 
 import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../interaction/core/cartesian_tracking_snapshot.dart'
@@ -382,6 +383,56 @@ abstract interface class CartesianValueSummaryController {
 
   /// Restores the panel to the placement in the widget configuration.
   void resetPlacement();
+}
+
+/// A ready-to-use, listenable [CartesianValueSummaryController].
+///
+/// Applications may implement [CartesianValueSummaryController] themselves,
+/// but the chart observes controllers only as a generic [ChangeNotifier]-style
+/// listenable: a plain notification carries no verb, so a custom
+/// implementation's [resetPlacement] cannot reach the chart. This class
+/// carries the internal reset handshake the chart consumes on notification —
+/// use it (or subclass it) whenever [resetPlacement] must actually restore a
+/// dragged annotation-style panel to its configured placement.
+class DefaultCartesianValueSummaryController extends ChangeNotifier
+    implements CartesianValueSummaryController {
+  ChartPointRef? _pinnedPoint;
+  bool _resetPlacementRequested = false;
+
+  @override
+  ChartPointRef? get pinnedPoint => _pinnedPoint;
+
+  @override
+  void pin(ChartPointRef point) {
+    if (_pinnedPoint == point) return;
+    _pinnedPoint = point;
+    notifyListeners();
+  }
+
+  @override
+  void clearPin() {
+    if (_pinnedPoint == null) return;
+    _pinnedPoint = null;
+    notifyListeners();
+  }
+
+  @override
+  void resetPlacement() {
+    _resetPlacementRequested = true;
+    notifyListeners();
+  }
+
+  /// Consumes a pending [resetPlacement] request.
+  ///
+  /// Chart-internal handshake: the value summary pipeline calls this on
+  /// every controller notification and clears the flag, so one request
+  /// produces exactly one placement reset.
+  @internal
+  bool consumeResetPlacementRequest() {
+    final requested = _resetPlacementRequested;
+    _resetPlacementRequested = false;
+    return requested;
+  }
 }
 
 /// Configuration for the Cartesian value summary.
