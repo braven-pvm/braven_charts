@@ -201,8 +201,10 @@ See
   numeric values grow outward against a radial scale.
 - `PolarColumnChartSeries.rose` selects the named Nightingale/Rose preset. It
   keeps equal angular bandwidth and defaults to area-correct radial scaling.
-- `PolarColumnStyle` controls corner radius, opacity, border treatment, and
-  direct value labels. Per-category colors may be supplied through
+- `PolarColumnStyle` controls corner radius, opacity, border treatment,
+  baseline-to-value `PolarColumnGradientStyle`, `PolarColumnShadowStyle`,
+  direct value-label placement/style, and `PolarColumnAnimationMode` entrance
+  treatment. Per-category colors may be supplied through
   `columnColors` or point styles. `maximumVisibleDataLabels` places a
   deterministic upper bound on painted value labels without removing values
   from interaction, semantics, tables, or portable documents.
@@ -218,8 +220,11 @@ See
 - `PolarChartConfig` groups the dedicated `PolarPaneConfig`,
   `PolarCategoryAxisConfig`, `PolarNumericAxisConfig`, and
   `PolarColumnCompositionConfig` contracts. The angular axis exposes
-  `maximumVisibleLabels` and `maximumVisibleGridLines`; spatial fit may show
-  fewer labels, while every category retains its exact angular band.
+  `maximumVisibleLabels`, `maximumVisibleGridLines`, outward `labelOffset`, and
+  independent `PolarLabelStyle`. The radial axis can place styled labels on
+  the start, middle, or end sweep ray, rotate that ray, and offset labels along
+  it. Spatial fit may show fewer labels, while every category retains its exact
+  angular band.
 - `PolarColumnCompositionMode.layered` reuses the full category band for every
   series. `grouped` divides it into stable declaration-order sub-bands;
   `groupInnerPadding` controls the fractional gap inside each series slot.
@@ -249,6 +254,8 @@ all preserve that value-only meaning. Artifacts declare
 `chart.polar.stacked-series.v1`. Documents with targets, thresholds, or
 intervals also declare `series.polar.column.targets.v1`,
 `chart.polar.thresholds.v1`, or `series.polar.column.intervals.v1`. The native
+appearance and axis-label additions negotiate
+`series.polar.column.appearance.v1` and `chart.polar.labels.v1`. The native
 table conditionally appends `Target (unit)` and `Lower (unit) | Upper (unit)`
 only when the corresponding data exists. See
 [Polar Column and Rose charts](polar_column_charts.md).

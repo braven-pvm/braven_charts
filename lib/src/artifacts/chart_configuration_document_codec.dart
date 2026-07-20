@@ -237,6 +237,10 @@ abstract final class ChartConfigurationDocumentCodec {
               'maximumVisibleLabels': config.angularAxis.maximumVisibleLabels,
               'maximumVisibleGridLines':
                   config.angularAxis.maximumVisibleGridLines,
+              'labelOffset': config.angularAxis.labelOffset,
+              'labelStyle': _encodePolarLabelStyle(
+                config.angularAxis.labelStyle,
+              ),
             },
             'radialAxis': {
               if (config.radialAxis.minimum != null)
@@ -248,6 +252,13 @@ abstract final class ChartConfigurationDocumentCodec {
               'tickCount': config.radialAxis.tickCount,
               'showLabels': config.radialAxis.showLabels,
               'showGridLines': config.radialAxis.showGridLines,
+              'labelPosition': config.radialAxis.labelPosition.name,
+              'labelAngleOffsetDegrees':
+                  config.radialAxis.labelAngleOffsetDegrees,
+              'labelOffset': config.radialAxis.labelOffset,
+              'labelStyle': _encodePolarLabelStyle(
+                config.radialAxis.labelStyle,
+              ),
             },
             'composition': {
               'mode': config.composition.mode.name,
@@ -356,6 +367,12 @@ abstract final class ChartConfigurationDocumentCodec {
                 '$path.angularAxis',
               ) ??
               72,
+          labelOffset:
+              _optionalDouble(angular, 'labelOffset', '$path.angularAxis') ?? 0,
+          labelStyle: _decodePolarLabelStyle(
+            angular['labelStyle'],
+            '$path.angularAxis.labelStyle',
+          ),
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: _optionalDouble(radial, 'minimum', '$path.radialAxis'),
@@ -372,6 +389,28 @@ abstract final class ChartConfigurationDocumentCodec {
             radial,
             'showGridLines',
             '$path.radialAxis',
+          ),
+          labelPosition:
+              _optionalEnum(
+                radial,
+                'labelPosition',
+                PolarRadialLabelPosition.values,
+                '$path.radialAxis',
+              ) ??
+              PolarRadialLabelPosition.start,
+          labelAngleOffsetDegrees:
+              _optionalDouble(
+                radial,
+                'labelAngleOffsetDegrees',
+                '$path.radialAxis',
+              ) ??
+              0,
+          labelOffset:
+              _optionalDouble(radial, 'labelOffset', '$path.radialAxis') ?? 4,
+          labelStyle: _decodePolarLabelStyle(
+            radial['labelStyle'],
+            '$path.radialAxis.labelStyle',
+            defaults: const PolarLabelStyle(fontSize: 10),
           ),
         ),
         composition: composition == null
@@ -456,6 +495,53 @@ PolarThreshold _decodePolarThreshold(Object? value, String path) {
 }
 
 Color? _optionalColor(int? value) => value == null ? null : Color(value);
+
+Map<String, Object?> _encodePolarLabelStyle(PolarLabelStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  if (style.fontSize != null) 'fontSize': style.fontSize,
+  if (style.fontWeight != null)
+    'fontWeightIndex': FontWeight.values.indexOf(style.fontWeight!),
+};
+
+PolarLabelStyle _decodePolarLabelStyle(
+  Object? value,
+  String path, {
+  PolarLabelStyle defaults = const PolarLabelStyle(),
+}) {
+  if (value == null) return defaults;
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Polar label style must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final rawColor = map['color'];
+  if (rawColor != null && rawColor is! int) {
+    throw _ConfigurationFormatException(
+      'Optional label color must be an ARGB integer.',
+      '$path.color',
+    );
+  }
+  final rawWeight = map['fontWeightIndex'];
+  FontWeight? weight = defaults.fontWeight;
+  if (rawWeight != null) {
+    if (rawWeight is! int ||
+        rawWeight < 0 ||
+        rawWeight >= FontWeight.values.length) {
+      throw _ConfigurationFormatException(
+        'Optional font weight index is invalid.',
+        '$path.fontWeightIndex',
+      );
+    }
+    weight = FontWeight.values[rawWeight];
+  }
+  return PolarLabelStyle(
+    color: rawColor == null ? defaults.color : Color(rawColor as int),
+    fontSize: _optionalDouble(map, 'fontSize', path) ?? defaults.fontSize,
+    fontWeight: weight,
+  );
+}
 
 ChartArtifactFailure<T> _invalidFailure<T>(Object error, String path) =>
     ChartArtifactFailure(

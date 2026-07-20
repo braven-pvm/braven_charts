@@ -45,6 +45,50 @@ void main() {
       );
     });
 
+    test(
+      'appearance copy preserves gradients, shadows, labels, and motion',
+      () {
+        const style = PolarColumnStyle(
+          dataLabelRadialPosition: 0.7,
+          dataLabelStyle: PolarLabelStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+          gradient: PolarColumnGradientStyle(
+            startColor: Colors.cyan,
+            endColor: Colors.indigo,
+          ),
+          shadow: PolarColumnShadowStyle(
+            color: Colors.black,
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: Offset(1, 4),
+            opacity: 0.3,
+          ),
+          animationMode: PolarColumnAnimationMode.fade,
+        );
+
+        expect(
+          style.copyWith(opacity: 0.8).dataLabelStyle,
+          style.dataLabelStyle,
+        );
+        expect(style.copyWith(opacity: 0.8).gradient, style.gradient);
+        expect(style.copyWith(opacity: 0.8).shadow, style.shadow);
+        expect(style.copyWith(opacity: 0.8).animationMode, style.animationMode);
+        expect(style.copyWith(clearGradient: true).gradient, isNull);
+        expect(style.shadow.isVisible, isTrue);
+        expect(style.hasAdvancedAppearance, isTrue);
+        expect(
+          const PolarColumnStyle(
+            opacity: 0.6,
+            showDataLabels: false,
+          ).hasAdvancedAppearance,
+          isFalse,
+        );
+      },
+    );
+
     test('rose selects its named preset without changing source values', () {
       final series = PolarColumnChartSeries.rose(
         id: 'rose',
@@ -154,6 +198,34 @@ void main() {
           id: 'polar',
           values: const {'A': 1},
           polarStyle: const PolarColumnStyle(opacity: 1.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          polarStyle: const PolarColumnStyle(dataLabelRadialPosition: 1.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          polarStyle: const PolarColumnStyle(
+            gradient: PolarColumnGradientStyle(startLightnessShift: 1.1),
+          ),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          polarStyle: const PolarColumnStyle(
+            shadow: PolarColumnShadowStyle(blurRadius: -1),
+          ),
         ),
         throwsArgumentError,
       );
@@ -288,10 +360,50 @@ void main() {
       expect(config.thresholds.single, threshold);
     });
 
+    test('preserves independent category and radial label appearance', () {
+      const config = PolarChartConfig(
+        angularAxis: PolarCategoryAxisConfig(
+          labelOffset: 18,
+          labelStyle: PolarLabelStyle(
+            color: Colors.indigo,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        radialAxis: PolarNumericAxisConfig(
+          labelPosition: PolarRadialLabelPosition.end,
+          labelAngleOffsetDegrees: -15,
+          labelOffset: 8,
+          labelStyle: PolarLabelStyle(color: Colors.teal, fontSize: 11),
+        ),
+      );
+
+      expect(config.validate, returnsNormally);
+      expect(config.copyWith(), config);
+      expect(config.hasCustomLabelAppearance, isTrue);
+      expect(config.radialAxis.labelPosition, PolarRadialLabelPosition.end);
+    });
+
     test('rejects invalid pane, padding, domain, and tick counts', () {
       expect(
         const PolarChartConfig(
           pane: PolarPaneConfig(sweepAngleDegrees: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(
+            labelStyle: PolarLabelStyle(fontSize: 0),
+          ),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          radialAxis: PolarNumericAxisConfig(
+            labelAngleOffsetDegrees: double.nan,
+          ),
         ).validate,
         throwsArgumentError,
       );

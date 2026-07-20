@@ -1169,6 +1169,12 @@ void main() {
           showGridLines: false,
           maximumVisibleLabels: 9,
           maximumVisibleGridLines: 18,
+          labelOffset: 14,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF334155),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 10,
@@ -1177,6 +1183,10 @@ void main() {
           tickCount: 7,
           showLabels: false,
           showGridLines: true,
+          labelPosition: PolarRadialLabelPosition.middle,
+          labelAngleOffsetDegrees: 15,
+          labelOffset: 8,
+          labelStyle: PolarLabelStyle(color: Color(0xFF0D9488), fontSize: 11),
         ),
       );
       final generated = _success(
@@ -1194,6 +1204,23 @@ void main() {
                 borderWidth: 2,
                 showDataLabels: false,
                 maximumVisibleDataLabels: 6,
+                dataLabelRadialPosition: 0.7,
+                dataLabelStyle: PolarLabelStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                gradient: PolarColumnGradientStyle(
+                  startColor: Color(0xFF22D3EE),
+                  endColor: Color(0xFF4338CA),
+                ),
+                shadow: PolarColumnShadowStyle(
+                  blurRadius: 9,
+                  spreadRadius: 1,
+                  offset: Offset(0, 4),
+                  opacity: 0.3,
+                ),
+                animationMode: PolarColumnAnimationMode.sweep,
               ),
               selectionStyle: const RadialSelectionStyle(
                 effect: RadialSelectionEffect.lift,
@@ -1217,6 +1244,13 @@ void main() {
       );
       expect(generated.source, contains('Color(0xFF102030)'));
       expect(generated.source, contains('maximumVisibleDataLabels: 6'));
+      expect(generated.source, contains('dataLabelRadialPosition: 0.7'));
+      expect(generated.source, contains('PolarColumnGradientStyle('));
+      expect(generated.source, contains('PolarColumnShadowStyle('));
+      expect(
+        generated.source,
+        contains('animationMode: PolarColumnAnimationMode.sweep'),
+      );
       expect(generated.source, contains('polarChartConfig: PolarChartConfig('));
       expect(generated.source, contains('startAngleDegrees: 20.0'));
       expect(generated.source, contains('sweepAngleDegrees: 240.0'));
@@ -1228,6 +1262,13 @@ void main() {
       expect(generated.source, contains('tickCount: 7'));
       expect(generated.source, contains('maximumVisibleLabels: 9'));
       expect(generated.source, contains('maximumVisibleGridLines: 18'));
+      expect(generated.source, contains('labelOffset: 14.0'));
+      expect(
+        generated.source,
+        contains('labelPosition: PolarRadialLabelPosition.middle'),
+      );
+      expect(generated.source, contains('labelAngleOffsetDegrees: 15.0'));
+      expect(generated.source, contains('fontWeight: FontWeight.w700'));
     });
 
     test('emits portable chart selection policy', () {
@@ -1483,8 +1524,14 @@ ChartDocumentSnapshot _snapshot(
               item.polarStyle.cornerRadiusMode !=
                   PolarColumnCornerRadiusMode.outerEnd)
             PolarColumnChartSeries.cornerRadiusModeCapability,
+        for (final item in [series, ...additionalSeries])
+          if (item is PolarColumnChartSeries &&
+              item.polarStyle.hasAdvancedAppearance)
+            PolarColumnChartSeries.appearanceCapability,
         if (concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (polarChartConfig != null) 'chart.polar.config.v1',
+        if (polarChartConfig?.hasCustomLabelAppearance == true)
+          PolarChartConfig.labelAppearanceCapability,
         if (polarChartConfig != null && additionalSeries.isNotEmpty)
           'chart.polar.multiple-series.v1',
         if (polarChartConfig?.composition.mode ==

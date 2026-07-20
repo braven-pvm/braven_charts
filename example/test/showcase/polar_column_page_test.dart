@@ -106,14 +106,34 @@ void main() {
       containsAll(['Column gap', 'Outer padding']),
     );
 
-    final labels = section('Labels');
+    final categoryLabels = section('Category labels');
     expect(
-      labels.children.whereType<BoolOption>().map((item) => item.label),
-      containsAll([
-        'Show category labels',
-        'Show radial labels',
-        'Show values inside columns',
-      ]),
+      categoryLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show category labels'),
+    );
+    expect(
+      categoryLabels.children.whereType<SliderOption>().map(
+        (item) => item.label,
+      ),
+      containsAll(['Text size', 'Outer offset']),
+    );
+    final valueLabels = section('Inside value labels');
+    expect(
+      valueLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show values'),
+    );
+    expect(
+      valueLabels.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Text size', 'Radial position']),
+    );
+    final radialLabels = section('Radial axis labels');
+    expect(
+      radialLabels.children.whereType<BoolOption>().map((item) => item.label),
+      contains('Show radial labels'),
+    );
+    expect(
+      radialLabels.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Text size', 'Angular adjustment', 'Ray offset']),
     );
     final gridAndAxes = section('Grid & axes');
     expect(
@@ -148,6 +168,19 @@ void main() {
         .whereType<EnumOption<PolarColumnCornerRadiusMode>>()
         .singleWhere((item) => item.label == 'Corner placement');
     expect(cornerPlacement.values, PolarColumnCornerRadiusMode.values);
+
+    final fillAndElevation = section('Column fill & elevation');
+    expect(
+      fillAndElevation.children.whereType<BoolOption>().map(
+        (item) => item.label,
+      ),
+      containsAll(['Gradient fill', 'Column shadow']),
+    );
+    final motion = section('Motion');
+    expect(
+      motion.children.whereType<EnumOption>().map((item) => item.label),
+      contains('Entrance'),
+    );
 
     final randomizer = section('Property randomizer');
     expect(
@@ -356,6 +389,58 @@ void main() {
           ?.color,
       const Color(0xFF2563EB),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('grid line pattern reaches the public chart theme', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final optionsList = find.descendant(
+      of: find.byType(OptionsPanel),
+      matching: find.byType(ListView),
+    );
+    final control = find.byKey(const ValueKey('polar-grid-line-pattern'));
+    for (
+      var attempt = 0;
+      attempt < 16 && control.evaluate().isEmpty;
+      attempt++
+    ) {
+      await tester.drag(optionsList, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+    expect(control, findsOneWidget);
+    await tester.ensureVisible(control);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: control,
+        matching: find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString().startsWith(
+            'DropdownButtonFormField<',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dotted').last);
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.theme?.gridStyle.majorDashPattern, const <double>[2, 3]);
     expect(tester.takeException(), isNull);
   });
 
@@ -850,8 +935,24 @@ void _expectGeneratedChart(
   expect(config.angularAxis.outerPadding, generated.outerPadding);
   expect(config.angularAxis.showLabels, generated.showAngularLabels);
   expect(config.angularAxis.showGridLines, generated.showAngularGrid);
+  expect(config.angularAxis.labelOffset, generated.categoryLabelOffset);
+  expect(config.angularAxis.labelStyle.color, generated.categoryLabelColor);
+  expect(config.angularAxis.labelStyle.fontSize, generated.categoryLabelSize);
+  expect(
+    config.angularAxis.labelStyle.fontWeight,
+    generated.categoryLabelWeight,
+  );
   expect(config.radialAxis.scaleMode, generated.scaleMode);
   expect(config.radialAxis.tickCount, generated.tickCount);
+  expect(config.radialAxis.labelPosition, generated.radialLabelPosition);
+  expect(
+    config.radialAxis.labelAngleOffsetDegrees,
+    generated.radialLabelAngleOffset,
+  );
+  expect(config.radialAxis.labelOffset, generated.radialLabelOffset);
+  expect(config.radialAxis.labelStyle.color, generated.radialLabelColor);
+  expect(config.radialAxis.labelStyle.fontSize, generated.radialLabelSize);
+  expect(config.radialAxis.labelStyle.fontWeight, generated.radialLabelWeight);
   expect(config.composition.mode, generated.compositionMode);
 
   final primaryId = switch (generated.presentation) {
@@ -877,6 +978,26 @@ void _expectGeneratedChart(
   expect(primary.polarStyle.cornerRadius, generated.cornerRadius);
   expect(primary.polarStyle.cornerRadiusMode, generated.cornerRadiusMode);
   expect(primary.polarStyle.opacity, generated.opacity);
+  expect(
+    primary.polarStyle.dataLabelRadialPosition,
+    generated.dataLabelRadialPosition,
+  );
+  expect(primary.polarStyle.dataLabelStyle.color, generated.dataLabelColor);
+  expect(primary.polarStyle.dataLabelStyle.fontSize, generated.dataLabelSize);
+  expect(
+    primary.polarStyle.dataLabelStyle.fontWeight,
+    generated.dataLabelWeight,
+  );
+  expect(primary.polarStyle.gradient != null, generated.showGradient);
+  if (generated.showGradient) {
+    expect(
+      primary.polarStyle.gradient?.startColor,
+      generated.gradientStartColor,
+    );
+    expect(primary.polarStyle.gradient?.endColor, generated.gradientEndColor);
+  }
+  expect(primary.polarStyle.shadow.isVisible, generated.showColumnShadow);
+  expect(primary.polarStyle.animationMode, generated.animationMode);
   expect(primary.selectionStyle.effect, generated.selectionEffect);
   expect(primary.selectionStyle.liftScale, generated.selectionScale);
   expect(primary.selectionStyle.liftOffset, generated.selectionOffset);
@@ -894,12 +1015,37 @@ void _expectGeneratedChart(
     chart.theme?.backgroundColor,
     generated.canvasColor ?? baseTheme.backgroundColor,
   );
+  expect(
+    chart.theme?.axisStyle.lineColor,
+    generated.axisLineColor ?? baseTheme.axisStyle.lineColor,
+  );
+  expect(chart.theme?.axisStyle.lineWidth, generated.axisLineWidth);
+  expect(
+    chart.theme?.axisStyle.labelStyle.color,
+    generated.axisLabelColor ?? baseTheme.axisStyle.labelStyle.color,
+  );
+  expect(
+    chart.theme?.gridStyle.majorColor,
+    generated.gridLineColor ?? baseTheme.gridStyle.majorColor,
+  );
+  expect(chart.theme?.gridStyle.majorWidth, generated.gridLineWidth);
+  expect(
+    chart.theme?.gridStyle.majorDashPattern,
+    _dashPatternFor(generated.gridLinePattern),
+  );
   expect(chart.interactionConfig!.tooltip.enabled, generated.showTooltip);
   expect(
     chart.interactionConfig!.tooltip.triggerMode,
     generated.tooltipTrigger,
   );
 }
+
+List<double> _dashPatternFor(PolarShowcaseLinePatternKind pattern) =>
+    switch (pattern) {
+      PolarShowcaseLinePatternKind.solid => const <double>[],
+      PolarShowcaseLinePatternKind.dashed => const <double>[7, 4],
+      PolarShowcaseLinePatternKind.dotted => const <double>[2, 3],
+    };
 
 Map<PolarShowcasePresentationKind, int> _firstSeedForEveryPresentation() {
   final seeds = <PolarShowcasePresentationKind, int>{};

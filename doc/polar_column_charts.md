@@ -69,7 +69,7 @@ artifact, and restored order. Use stable, unique labels.
 | `points` | Zero-based ordinal points with a visible unique category label |
 | `unit` | Optional value unit; it does not change numeric scale semantics |
 | `preset` | `standard` or `rose` |
-| `polarStyle` | Corners, opacity, border, and direct value-label visibility |
+| `polarStyle` | Fill, gradient, elevation, corners, border, value labels, and entrance motion |
 | `targetValues` | Optional absolute target aligned one-for-one with source categories |
 | `targetMarkerStyle` | Target color, width, opacity, and angular length |
 | `selectionStyle` | Explode or lift treatment for durable point selection |
@@ -287,6 +287,13 @@ visibility, and scale mode.
 - `linear` maps equal value differences to equal radial distances;
 - `areaCorrect` maps equal value proportions to equal annular-sector areas.
 
+Polar rings and angular grid spokes use `ChartTheme.gridStyle`: set
+`majorColor`, `majorLineWidth`, and `majorDashPattern` to style them together.
+An empty dash pattern is solid; values such as `[7, 4]` or `[2, 3]` create
+dashed or dotted treatments. Pane boundaries and the numeric axis continue to
+use `ChartTheme.axisStyle`, so decorative grid patterns do not weaken the
+structural frame.
+
 When `scaleMode` is omitted, standard Polar Column uses linear radius and the
 Rose preset uses area-correct scaling. Set an explicit minimum/maximum when
 several independently mounted charts must share a comparison domain.
@@ -330,6 +337,22 @@ final styled = PolarColumnChartSeries.fromMap(
     borderColor: Color(0xFF312E81),
     borderWidth: 0.8,
     showDataLabels: true,
+    dataLabelRadialPosition: 0.68,
+    dataLabelStyle: PolarLabelStyle(
+      color: Color(0xFFFFFFFF),
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+    ),
+    gradient: PolarColumnGradientStyle(
+      startLightnessShift: 0.18,
+      endLightnessShift: -0.14,
+    ),
+    shadow: PolarColumnShadowStyle(
+      blurRadius: 10,
+      offset: Offset(0, 4),
+      opacity: 0.28,
+    ),
+    animationMode: PolarColumnAnimationMode.grow,
   ),
   selectionStyle: const RadialSelectionStyle(
     effect: RadialSelectionEffect.lift,
@@ -343,7 +366,60 @@ final styled = PolarColumnChartSeries.fromMap(
 Per-category colors come from `columnColors` or each point's `PointStyle`.
 Otherwise the series color and chart theme palette provide deterministic
 fallbacks. Direct value labels automatically choose black or white text from
-the resolved column luminance.
+the resolved column luminance when `dataLabelStyle.color` is null.
+
+`dataLabelRadialPosition` moves a direct value label through its own physical
+column depth: `0` is the edge nearest the chart center, `0.5` centers it, and
+`1` is the edge nearest the pane boundary. This convention stays stable for
+negative and stacked values and does not alter value or mark geometry.
+
+`PolarColumnGradientStyle` runs from the numeric baseline to the represented
+value. Omitted colors derive lighter and darker variants from each resolved
+category/series color, so grouped and stacked identity remains intact. Supply
+`startColor` or `endColor` for a fixed gradient. `PolarColumnShadowStyle`
+paints configurable color, blur, spread, offset, and opacity beneath each
+mark; null color derives a darker shade from the mark.
+
+`PolarColumnAnimationMode.grow` reveals geometry from the numeric baseline;
+`sweep` reveals final mark geometry continuously from the configured pane start
+angle in its configured direction; `fade` retains final geometry while fading
+its mark appearance; `none` renders
+the final frame immediately. Call
+`BravenChartController.replayRadialEntrance()` to replay the configured mode.
+Reduced-motion environments and zero-duration animation themes still resolve
+directly to the final frame.
+
+### Label placement and appearance
+
+Category, direct-value, and radial-axis labels use separate public settings:
+
+```dart
+const config = PolarChartConfig(
+  angularAxis: PolarCategoryAxisConfig(
+    labelOffset: 12,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF334155),
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  radialAxis: PolarNumericAxisConfig(
+    labelPosition: PolarRadialLabelPosition.end,
+    labelAngleOffsetDegrees: -15,
+    labelOffset: 6,
+    labelStyle: PolarLabelStyle(
+      color: Color(0xFF0D9488),
+      fontSize: 11,
+    ),
+  ),
+);
+```
+
+`PolarCategoryAxisConfig.labelOffset` is an outward radial distance from the
+compact default category-label anchor. `PolarNumericAxisConfig.labelPosition`
+chooses the start, middle, or end ray of the configured sweep;
+`labelAngleOffsetDegrees` rotates that ray and `labelOffset` moves labels along
+it. Null `PolarLabelStyle` properties inherit the active chart theme.
 
 `PolarColumnCornerRadiusMode` makes corner placement explicit:
 
@@ -359,6 +435,11 @@ The corner mode, radius, and stack-terminal identity survive generated source,
 artifact transport, and hydration. A non-default mode declares
 `series.polar.column.corner-radius-mode.v1` so an older runtime cannot silently
 substitute a different shape.
+
+Non-default fill/elevation/value-label/motion properties declare
+`series.polar.column.appearance.v1`. Non-default category or radial-axis label
+appearance declares `chart.polar.labels.v1`. Hydration requires those
+capabilities before interpreting the corresponding portable configuration.
 
 Selection identity is not a paint-only state. Pointer activation, keyboard
 activation, a Workbench table row, and `BravenChartController` all use the same
@@ -457,6 +538,8 @@ integer tick counts, and is compile-checked by the package test suite.
 Documents containing targets declare `series.polar.column.targets.v1`.
 Documents containing pane thresholds declare `chart.polar.thresholds.v1`.
 Documents containing intervals declare `series.polar.column.intervals.v1`.
+Documents containing the appearance or label-placement additions declare
+`series.polar.column.appearance.v1` or `chart.polar.labels.v1` respectively.
 Hydration requires those capabilities before interpreting the corresponding
 configuration.
 

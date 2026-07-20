@@ -3445,6 +3445,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         threshold.value,
     ];
     final theme = widget.theme ?? ChartTheme.light;
+    final revealProgress = _radialRevealProgress;
     final seriesElements = <PolarColumnSeriesElement>[
       for (final (index, series) in polarSeries.indexed)
         PolarColumnSeriesElement(
@@ -3462,6 +3463,18 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           paintAxisLabels: false,
           paintDataLabels: false,
           preferSeriesColor: polarSeries.length > 1,
+          revealProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.grow
+              ? revealProgress
+              : 1,
+          fadeProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.fade
+              ? revealProgress
+              : 1,
+          sweepProgress:
+              series.polarStyle.animationMode == PolarColumnAnimationMode.sweep
+              ? revealProgress
+              : 1,
           textScaleFactor: _textScaleFactor,
           focusedPointIndices: {
             for (final ref in _focusedPointRefs)
@@ -3904,7 +3917,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleRadialAnimationTick() {
-    if (!mounted || _layoutKind != ChartLayoutKind.partitionRadial) return;
+    if (!mounted ||
+        (_layoutKind != ChartLayoutKind.partitionRadial &&
+            _layoutKind != ChartLayoutKind.polarAxis)) {
+      return;
+    }
     setState(() => _elementGeneratorVersion++);
   }
 
@@ -4434,6 +4451,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     required ChartTheme previousTheme,
     required ChartTheme nextTheme,
   }) {
+    final previousPolar = previous.whereType<PolarColumnChartSeries>().toList(
+      growable: false,
+    );
+    final nextPolar = next.whereType<PolarColumnChartSeries>().toList(
+      growable: false,
+    );
+    if (previousPolar.isNotEmpty || nextPolar.isNotEmpty) {
+      if (previousPolar.length != nextPolar.length) return true;
+      return !listEquals(
+        [for (final series in previousPolar) series.polarStyle.animationMode],
+        [for (final series in nextPolar) series.polarStyle.animationMode],
+      );
+    }
     if (previous.length != 1 || next.length != 1) return false;
     final previousSeries = previous.single;
     final nextSeries = next.single;
@@ -4459,9 +4489,20 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       duration > Duration.zero &&
       _effectiveRadialAnimationMode(series) != PieAnimationMode.none;
 
+  bool _canAnimatePolar(Duration duration) =>
+      !_disableAnimations &&
+      duration > Duration.zero &&
+      _effectiveRenderSeries.whereType<PolarColumnChartSeries>().any(
+        (series) =>
+            series.polarStyle.animationMode != PolarColumnAnimationMode.none,
+      );
+
   void _startRadialRevealAnimation() {
     final series = _effectiveRadialSeries;
-    if (series == null) {
+    final hasPolarSeries = _effectiveRenderSeries.any(
+      (series) => series is PolarColumnChartSeries,
+    );
+    if (series == null && !hasPolarSeries) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -4472,7 +4513,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       animationTheme.dataUpdateCurve,
     );
     final duration = animationTheme.dataUpdateDuration;
-    if (!_canAnimateRadial(series, duration)) {
+    final canAnimate = series == null
+        ? _canAnimatePolar(duration)
+        : _canAnimateRadial(series, duration);
+    if (!canAnimate) {
       _radialRevealAnimationController
         ..stop()
         ..value = 1;
@@ -4483,7 +4527,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ..stop()
       ..value = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _effectiveRadialSeries == null) return;
+      if (!mounted ||
+          (_effectiveRadialSeries == null &&
+              !_effectiveRenderSeries.any(
+                (series) => series is PolarColumnChartSeries,
+              ))) {
+        return;
+      }
       _radialRevealAnimationController.forward();
     });
   }

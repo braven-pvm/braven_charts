@@ -15,6 +15,7 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_config.dart';
 import '../models/pie_chart_series.dart';
 import '../models/path_animation_style.dart';
+import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
 import '../models/radial_selection_style.dart';
@@ -214,6 +215,9 @@ abstract final class ChartSeriesDocumentCodec {
                 series.polarStyle.cornerRadiusMode !=
                     PolarColumnCornerRadiusMode.outerEnd)
               PolarColumnChartSeries.cornerRadiusModeCapability,
+            if (series is PolarColumnChartSeries &&
+                series.polarStyle.hasAdvancedAppearance)
+              PolarColumnChartSeries.appearanceCapability,
             if (series is PolarColumnChartSeries &&
                 series.targetValues.isNotEmpty)
               'series.polar.column.targets.v1',
@@ -2699,6 +2703,12 @@ Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
   'borderWidth': _number(style.borderWidth),
   'showDataLabels': style.showDataLabels,
   'maximumVisibleDataLabels': style.maximumVisibleDataLabels,
+  'dataLabelRadialPosition': _number(style.dataLabelRadialPosition),
+  'dataLabelStyle': _encodePolarLabelStyle(style.dataLabelStyle),
+  if (style.gradient != null)
+    'gradient': _encodePolarColumnGradient(style.gradient!),
+  'shadow': _encodePolarColumnShadow(style.shadow),
+  'animationMode': style.animationMode.name,
 };
 
 PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
@@ -2720,6 +2730,87 @@ PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
       showDataLabels: _bool(value, 'showDataLabels'),
       maximumVisibleDataLabels:
           _optionalInt(value['maximumVisibleDataLabels']) ?? 24,
+      dataLabelRadialPosition:
+          _optionalDouble(value['dataLabelRadialPosition']) ?? 0.5,
+      dataLabelStyle: _decodePolarLabelStyle(value['dataLabelStyle']),
+      gradient: _optionalMap(value, 'gradient') == null
+          ? null
+          : _decodePolarColumnGradient(_map(value, 'gradient')),
+      shadow: _optionalMap(value, 'shadow') == null
+          ? const PolarColumnShadowStyle()
+          : _decodePolarColumnShadow(_map(value, 'shadow')),
+      animationMode: value['animationMode'] == null
+          ? PolarColumnAnimationMode.none
+          : _enum(value, 'animationMode', PolarColumnAnimationMode.values),
+    );
+
+Map<String, Object?> _encodePolarLabelStyle(PolarLabelStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  if (style.fontSize != null) 'fontSize': _number(style.fontSize!),
+  if (style.fontWeight != null)
+    'fontWeightIndex': FontWeight.values.indexOf(style.fontWeight!),
+};
+
+PolarLabelStyle _decodePolarLabelStyle(Object? value) {
+  if (value == null) return const PolarLabelStyle();
+  if (value is! Map) {
+    throw const FormatException('Polar label style must be an object.');
+  }
+  final map = value.cast<String, Object?>();
+  final weightIndex = _optionalInt(map['fontWeightIndex']);
+  if (weightIndex != null &&
+      (weightIndex < 0 || weightIndex >= FontWeight.values.length)) {
+    throw const FormatException('Polar label font weight index is invalid.');
+  }
+  return PolarLabelStyle(
+    color: _optionalColor(map['color'], r'$.style.polarStyle.labelStyle.color'),
+    fontSize: _optionalDouble(map['fontSize']),
+    fontWeight: weightIndex == null ? null : FontWeight.values[weightIndex],
+  );
+}
+
+Map<String, Object?> _encodePolarColumnGradient(
+  PolarColumnGradientStyle style,
+) => {
+  'enabled': style.enabled,
+  if (style.startColor != null) 'startColor': style.startColor!.toARGB32(),
+  if (style.endColor != null) 'endColor': style.endColor!.toARGB32(),
+  'startLightnessShift': _number(style.startLightnessShift),
+  'endLightnessShift': _number(style.endLightnessShift),
+};
+
+PolarColumnGradientStyle _decodePolarColumnGradient(
+  Map<String, Object?> value,
+) => PolarColumnGradientStyle(
+  enabled: _bool(value, 'enabled'),
+  startColor: _optionalColor(
+    value['startColor'],
+    r'$.style.polarStyle.gradient.startColor',
+  ),
+  endColor: _optionalColor(
+    value['endColor'],
+    r'$.style.polarStyle.gradient.endColor',
+  ),
+  startLightnessShift: _double(value, 'startLightnessShift'),
+  endLightnessShift: _double(value, 'endLightnessShift'),
+);
+
+Map<String, Object?> _encodePolarColumnShadow(PolarColumnShadowStyle style) => {
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'blurRadius': _number(style.blurRadius),
+  'spreadRadius': _number(style.spreadRadius),
+  'offsetX': _number(style.offset.dx),
+  'offsetY': _number(style.offset.dy),
+  'opacity': _number(style.opacity),
+};
+
+PolarColumnShadowStyle _decodePolarColumnShadow(Map<String, Object?> value) =>
+    PolarColumnShadowStyle(
+      color: _optionalColor(value['color'], r'$.style.polarStyle.shadow.color'),
+      blurRadius: _double(value, 'blurRadius'),
+      spreadRadius: _double(value, 'spreadRadius'),
+      offset: Offset(_double(value, 'offsetX'), _double(value, 'offsetY')),
+      opacity: _double(value, 'opacity'),
     );
 
 Map<String, Object?> _encodePolarColumnTargetMarker(

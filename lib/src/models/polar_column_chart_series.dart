@@ -1,8 +1,11 @@
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Offset;
+
+import 'package:flutter/foundation.dart' show immutable;
 
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
+import 'polar_chart_config.dart';
 import 'radial_selection_style.dart';
 import 'segment_style.dart';
 import 'y_axis_config.dart';
@@ -43,6 +46,179 @@ enum PolarColumnCornerRadiusMode {
   /// outermost contributor; negative stacks round their innermost contributor.
   /// For non-stacked charts this behaves like rounding the value end.
   stackExterior,
+}
+
+/// Entrance treatment for axis-based Polar Column marks.
+enum PolarColumnAnimationMode {
+  /// Render the final geometry immediately.
+  none,
+
+  /// Grow every mark from its numeric baseline to its resolved value.
+  grow,
+
+  /// Fade the final geometry into view without changing represented values.
+  fade,
+
+  /// Reveal final mark geometry continuously around the configured pane.
+  ///
+  /// The reveal begins at [PolarPane.startAngleDegrees] and follows the
+  /// pane's clockwise or counter-clockwise direction through its configured
+  /// sweep. Grid lines and axis labels remain stable during the entrance.
+  sweep,
+}
+
+/// Serializable baseline-to-value gradient for Polar Column marks.
+///
+/// Null colors are derived from each mark's resolved palette color, preserving
+/// category or series identity across grouped and stacked compositions.
+@immutable
+class PolarColumnGradientStyle {
+  const PolarColumnGradientStyle({
+    this.enabled = true,
+    this.startColor,
+    this.endColor,
+    this.startLightnessShift = 0.16,
+    this.endLightnessShift = -0.12,
+  });
+
+  final bool enabled;
+  final Color? startColor;
+  final Color? endColor;
+  final double startLightnessShift;
+  final double endLightnessShift;
+
+  void validate() {
+    for (final (name, value) in <(String, double)>[
+      ('startLightnessShift', startLightnessShift),
+      ('endLightnessShift', endLightnessShift),
+    ]) {
+      if (!value.isFinite || value < -1 || value > 1) {
+        throw ArgumentError.value(
+          value,
+          'polarStyle.gradient.$name',
+          'Value must be finite and in [-1, 1]',
+        );
+      }
+    }
+  }
+
+  PolarColumnGradientStyle copyWith({
+    bool? enabled,
+    Color? startColor,
+    bool clearStartColor = false,
+    Color? endColor,
+    bool clearEndColor = false,
+    double? startLightnessShift,
+    double? endLightnessShift,
+  }) => PolarColumnGradientStyle(
+    enabled: enabled ?? this.enabled,
+    startColor: clearStartColor ? null : (startColor ?? this.startColor),
+    endColor: clearEndColor ? null : (endColor ?? this.endColor),
+    startLightnessShift: startLightnessShift ?? this.startLightnessShift,
+    endLightnessShift: endLightnessShift ?? this.endLightnessShift,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnGradientStyle &&
+          enabled == other.enabled &&
+          startColor == other.startColor &&
+          endColor == other.endColor &&
+          startLightnessShift == other.startLightnessShift &&
+          endLightnessShift == other.endLightnessShift;
+
+  @override
+  int get hashCode => Object.hash(
+    enabled,
+    startColor,
+    endColor,
+    startLightnessShift,
+    endLightnessShift,
+  );
+}
+
+/// Blurred elevation painted beneath each Polar Column mark.
+@immutable
+class PolarColumnShadowStyle {
+  const PolarColumnShadowStyle({
+    this.color,
+    this.blurRadius = 0,
+    this.spreadRadius = 0,
+    this.offset = Offset.zero,
+    this.opacity = 0.28,
+  });
+
+  /// Fixed shadow color. Null derives a darker shade from each mark.
+  final Color? color;
+  final double blurRadius;
+  final double spreadRadius;
+  final Offset offset;
+  final double opacity;
+
+  bool get isVisible =>
+      opacity > 0 &&
+      (blurRadius > 0 || spreadRadius > 0 || offset != Offset.zero);
+
+  void validate() {
+    if (!blurRadius.isFinite || blurRadius < 0) {
+      throw ArgumentError.value(
+        blurRadius,
+        'polarStyle.shadow.blurRadius',
+        'Value must be finite and non-negative',
+      );
+    }
+    if (!spreadRadius.isFinite || spreadRadius < 0) {
+      throw ArgumentError.value(
+        spreadRadius,
+        'polarStyle.shadow.spreadRadius',
+        'Value must be finite and non-negative',
+      );
+    }
+    if (!offset.dx.isFinite || !offset.dy.isFinite) {
+      throw ArgumentError.value(
+        offset,
+        'polarStyle.shadow.offset',
+        'Components must be finite',
+      );
+    }
+    if (!opacity.isFinite || opacity < 0 || opacity > 1) {
+      throw ArgumentError.value(
+        opacity,
+        'polarStyle.shadow.opacity',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+  }
+
+  PolarColumnShadowStyle copyWith({
+    Color? color,
+    bool clearColor = false,
+    double? blurRadius,
+    double? spreadRadius,
+    Offset? offset,
+    double? opacity,
+  }) => PolarColumnShadowStyle(
+    color: clearColor ? null : (color ?? this.color),
+    blurRadius: blurRadius ?? this.blurRadius,
+    spreadRadius: spreadRadius ?? this.spreadRadius,
+    offset: offset ?? this.offset,
+    opacity: opacity ?? this.opacity,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnShadowStyle &&
+          color == other.color &&
+          blurRadius == other.blurRadius &&
+          spreadRadius == other.spreadRadius &&
+          offset == other.offset &&
+          opacity == other.opacity;
+
+  @override
+  int get hashCode =>
+      Object.hash(color, blurRadius, spreadRadius, offset, opacity);
 }
 
 /// Absolute lower and upper values associated with one polar category.
@@ -272,6 +448,11 @@ class PolarColumnStyle {
     this.borderWidth = 1,
     this.showDataLabels = true,
     this.maximumVisibleDataLabels = 24,
+    this.dataLabelRadialPosition = 0.5,
+    this.dataLabelStyle = const PolarLabelStyle(),
+    this.gradient,
+    this.shadow = const PolarColumnShadowStyle(),
+    this.animationMode = PolarColumnAnimationMode.none,
   });
 
   final double cornerRadius;
@@ -288,6 +469,35 @@ class PolarColumnStyle {
   /// Spatial fit may reduce the visible count further. This never removes
   /// source values from hit testing, semantics, artifacts, or data tables.
   final int maximumVisibleDataLabels;
+
+  /// Label position through each mark's physical radial depth.
+  ///
+  /// Zero is nearest the chart center and one is nearest the pane edge. This
+  /// physical convention remains stable for negative and stacked values.
+  final double dataLabelRadialPosition;
+
+  /// Direct value-label appearance. Null style properties use auto contrast.
+  final PolarLabelStyle dataLabelStyle;
+
+  /// Optional baseline-to-value gradient. Null paints a solid mark color.
+  final PolarColumnGradientStyle? gradient;
+
+  /// Mark elevation. Zero blur, spread, and offset disables visible shadow.
+  final PolarColumnShadowStyle shadow;
+
+  /// Entrance treatment used on mount and controller replay.
+  final PolarColumnAnimationMode animationMode;
+
+  /// Whether the style uses appearance fields introduced after Polar V1.
+  ///
+  /// Legacy corner, opacity, border, and visibility fields deliberately do
+  /// not require the newer appearance capability.
+  bool get hasAdvancedAppearance =>
+      dataLabelRadialPosition != 0.5 ||
+      dataLabelStyle != const PolarLabelStyle() ||
+      gradient != null ||
+      shadow != const PolarColumnShadowStyle() ||
+      animationMode != PolarColumnAnimationMode.none;
 
   void validate() {
     if (!cornerRadius.isFinite || cornerRadius < 0) {
@@ -318,6 +528,18 @@ class PolarColumnStyle {
         'Value must be positive',
       );
     }
+    if (!dataLabelRadialPosition.isFinite ||
+        dataLabelRadialPosition < 0 ||
+        dataLabelRadialPosition > 1) {
+      throw ArgumentError.value(
+        dataLabelRadialPosition,
+        'polarStyle.dataLabelRadialPosition',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+    dataLabelStyle.validate(argumentName: 'polarStyle.dataLabelStyle');
+    gradient?.validate();
+    shadow.validate();
   }
 
   PolarColumnStyle copyWith({
@@ -329,6 +551,12 @@ class PolarColumnStyle {
     double? borderWidth,
     bool? showDataLabels,
     int? maximumVisibleDataLabels,
+    double? dataLabelRadialPosition,
+    PolarLabelStyle? dataLabelStyle,
+    PolarColumnGradientStyle? gradient,
+    bool clearGradient = false,
+    PolarColumnShadowStyle? shadow,
+    PolarColumnAnimationMode? animationMode,
   }) => PolarColumnStyle(
     cornerRadius: cornerRadius ?? this.cornerRadius,
     cornerRadiusMode: cornerRadiusMode ?? this.cornerRadiusMode,
@@ -338,6 +566,12 @@ class PolarColumnStyle {
     showDataLabels: showDataLabels ?? this.showDataLabels,
     maximumVisibleDataLabels:
         maximumVisibleDataLabels ?? this.maximumVisibleDataLabels,
+    dataLabelRadialPosition:
+        dataLabelRadialPosition ?? this.dataLabelRadialPosition,
+    dataLabelStyle: dataLabelStyle ?? this.dataLabelStyle,
+    gradient: clearGradient ? null : (gradient ?? this.gradient),
+    shadow: shadow ?? this.shadow,
+    animationMode: animationMode ?? this.animationMode,
   );
 
   @override
@@ -350,7 +584,12 @@ class PolarColumnStyle {
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
           showDataLabels == other.showDataLabels &&
-          maximumVisibleDataLabels == other.maximumVisibleDataLabels;
+          maximumVisibleDataLabels == other.maximumVisibleDataLabels &&
+          dataLabelRadialPosition == other.dataLabelRadialPosition &&
+          dataLabelStyle == other.dataLabelStyle &&
+          gradient == other.gradient &&
+          shadow == other.shadow &&
+          animationMode == other.animationMode;
 
   @override
   int get hashCode => Object.hash(
@@ -361,6 +600,11 @@ class PolarColumnStyle {
     borderWidth,
     showDataLabels,
     maximumVisibleDataLabels,
+    dataLabelRadialPosition,
+    dataLabelStyle,
+    gradient,
+    shadow,
+    animationMode,
   );
 }
 
@@ -376,6 +620,9 @@ class PolarColumnChartSeries extends ChartSeries {
   /// Artifact capability required by non-default radial corner placement.
   static const cornerRadiusModeCapability =
       'series.polar.column.corner-radius-mode.v1';
+
+  /// Artifact capability required by Polar motion, fills, shadows, or labels.
+  static const appearanceCapability = 'series.polar.column.appearance.v1';
 
   PolarColumnChartSeries({
     required super.id,

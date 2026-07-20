@@ -155,8 +155,9 @@ is single-series and cannot mix with Pie or Cartesian series.
   area or linear scaling
 - `sliceGroupingConfig`: share threshold, minimum source count, aggregate label,
   and optional color; grouped selection expands to the original point refs
-- `BravenChartController.replayRadialEntrance()`: replay the effective entrance
-  while still honoring reduced motion, `none`, and zero-duration themes
+- `BravenChartController.replayRadialEntrance()`: replay the effective Pie,
+  Donut, or Polar Column entrance while still honoring reduced motion, `none`,
+  and zero-duration themes
 
 The center can show total, selected value, selected-or-total fallback, or
 custom text. It follows the same `ChartPointRef` selection used by slices,
