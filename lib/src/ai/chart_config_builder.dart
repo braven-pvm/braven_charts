@@ -452,6 +452,13 @@ class ChartConfigBuilder {
       final labelMinimumPointCount =
           (style?['scatter_cluster_label_minimum_points'] as num?)?.toInt() ??
           2;
+      final showZones = style?['scatter_cluster_show_zones'] as bool? ?? false;
+      final zoneOpacity =
+          (style?['scatter_cluster_zone_opacity'] as num?)?.toDouble() ?? 0.08;
+      final drillOnTap =
+          style?['scatter_cluster_drill_on_tap'] as bool? ?? true;
+      final drillPadding =
+          (style?['scatter_cluster_drill_padding'] as num?)?.toDouble() ?? 0.18;
       if (!cellSize.isFinite ||
           cellSize < 8 ||
           cellSize > 256 ||
@@ -461,7 +468,13 @@ class ChartConfigBuilder {
           minimumRadius <= 0 ||
           minimumRadius > maximumRadius ||
           maximumRadius > 128 ||
-          labelMinimumPointCount < 2) {
+          labelMinimumPointCount < 2 ||
+          !zoneOpacity.isFinite ||
+          zoneOpacity < 0 ||
+          zoneOpacity > 1 ||
+          !drillPadding.isFinite ||
+          drillPadding < 0 ||
+          drillPadding > 1) {
         throw const FormatException(
           'Scatter cluster style values are outside supported bounds.',
         );
@@ -473,6 +486,10 @@ class ChartConfigBuilder {
         maximumRadius: maximumRadius,
         showCountLabels: showCountLabels,
         labelMinimumPointCount: labelMinimumPointCount,
+        showZones: showZones,
+        zoneOpacity: zoneOpacity,
+        drillOnTap: drillOnTap,
+        drillPadding: drillPadding,
       );
     } on TypeError {
       throw const FormatException(

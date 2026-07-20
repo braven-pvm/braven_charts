@@ -36,6 +36,14 @@ void main() {
       expect(layout.clusters[0].dataCentroid.dx, closeTo(0.8, 1e-12));
       expect(layout.clusters[0].dataCentroid.dy, closeTo(0.8, 1e-12));
       expect(layout.clusters[0].dataXRange, (minimum: 0.4, maximum: 1.2));
+      expect(
+        layout.clusters[0].zoneBounds.contains(const Offset(4, 6)),
+        isTrue,
+      );
+      expect(
+        layout.clusters[0].zoneBounds.contains(const Offset(12, 10)),
+        isTrue,
+      );
       expect(layout.clusters[0].radius, 20);
       expect(layout.clusters[1].radius, 8);
     });

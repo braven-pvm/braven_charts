@@ -68,9 +68,19 @@ class TooltipRenderer {
             sampleCount != null && sampleCount < sourceCount
             ? '\nAggregate sample: $sampleCount of $sourceCount observations'
             : '';
+        final rangeLines = [
+          if (dataHit.formattedXRange != null)
+            'X range: ${dataHit.formattedXRange}',
+          if (dataHit.formattedYRange != null)
+            'Y range: ${dataHit.formattedYRange}',
+        ];
+        final rangeSummary = rangeLines.isEmpty
+            ? ''
+            : '\n${rangeLines.join('\n')}';
         return '$seriesName\n$aggregateLabel'
             '\nX mean: ${dataHit.formattedXValue ?? formatDataValue(dataHit.point.x)}'
             '\nY mean: ${dataHit.formattedValue}'
+            '$rangeSummary'
             '${dataHit.formattedAggregateValue == null ? '' : '\n${dataHit.aggregateLabel ?? 'Aggregate'}: ${dataHit.formattedAggregateValue}'}'
             '$aggregateSampleLine';
       }

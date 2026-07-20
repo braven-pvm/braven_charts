@@ -678,6 +678,10 @@ void main() {
                 maximumRadius: 30,
                 showCountLabels: false,
                 labelMinimumPointCount: 5,
+                showZones: true,
+                zoneOpacity: 0.14,
+                drillOnTap: false,
+                drillPadding: 0.24,
               ),
             ),
           ),
@@ -695,6 +699,10 @@ void main() {
       expect(generated.source, contains('cellSize: 52.0'));
       expect(generated.source, contains('minimumPointCount: 3'));
       expect(generated.source, contains('showCountLabels: false'));
+      expect(generated.source, contains('showZones: true'));
+      expect(generated.source, contains('zoneOpacity: 0.14'));
+      expect(generated.source, contains('drillOnTap: false'));
+      expect(generated.source, contains('drillPadding: 0.24'));
       expect(generated.warnings, isEmpty);
     });
 

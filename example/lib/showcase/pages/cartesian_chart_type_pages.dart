@@ -138,6 +138,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _scatterClusterMinimumRadius = 8;
   double _scatterClusterMaximumRadius = 26;
   bool _scatterClusterShowLabels = true;
+  bool _scatterClusterShowZones = true;
+  double _scatterClusterZoneOpacity = 0.08;
+  bool _scatterClusterDrillOnTap = true;
+  double _scatterClusterDrillPadding = 0.18;
   final Map<int, List<ChartDataPoint>> _scatterClusterPointCache = {};
   int _scatterBinPointCount = 50000;
   double _scatterBinCellSize = 36;
@@ -959,7 +963,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           : _isScatterGeneratorPreset
           ? '$_scatterGeneratorSeriesCount generated cohorts · ${_scatterGeneratorSeriesCount * _scatterGeneratorConfig.pointCount} observations · ${_scatterGeneratorConfig.distribution.name} distribution · ${_scatterGeneratorConfig.correlation.toStringAsFixed(2)} correlation · ${(_scatterGeneratorConfig.outlierFraction * 100).round()}% outliers · seed ${_scatterGeneratorConfig.seed}'
           : _isScatterClusterPreset
-          ? '$_scatterClusterPointCount raw observations · ${_scatterClusterCellSize.toStringAsFixed(0)}px screen cells · $_scatterClusterMinimumPoints point minimum · count-scaled markers · zoom reveals detail'
+          ? '$_scatterClusterPointCount raw observations · ${_scatterClusterCellSize.toStringAsFixed(0)}px screen cells · count-scaled markers · ${_scatterClusterShowZones ? 'cluster zones · ' : ''}${_scatterClusterDrillOnTap ? 'tap a cluster to drill in' : 'zoom reveals detail'}'
           : _isScatterBinPreset
           ? '$_scatterBinPointCount raw observations · ${_scatterBinCellSize.toStringAsFixed(0)}px ${_isScatterHexbinPreset ? 'hexagonal' : 'rectangular'} cells · ${_formatScatterBinAggregate(_scatterBinAggregate).toLowerCase()} aggregation${_scatterBinAggregate == ScatterBinAggregate.count || _scatterBinAggregate == ScatterBinAggregate.proportion ? '' : ' of ${_formatScatterBinValueSource(_scatterBinValueSource).toLowerCase()}'} · opacity shows magnitude · raw identities retained'
           : _isScatterDensityPreset
@@ -1706,6 +1710,47 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               onChanged: (value) =>
                   setState(() => _scatterClusterShowLabels = value),
             ),
+            BoolOption(
+              key: const ValueKey('scatter-cluster-zones'),
+              label: 'Cluster zones',
+              subtitle: 'Reveal the source-marker extent behind each cluster',
+              value: _scatterClusterShowZones,
+              onChanged: (value) =>
+                  setState(() => _scatterClusterShowZones = value),
+            ),
+            if (_scatterClusterShowZones)
+              SliderOption(
+                key: const ValueKey('scatter-cluster-zone-opacity'),
+                label: 'Zone opacity',
+                value: _scatterClusterZoneOpacity,
+                min: 0.04,
+                max: 0.24,
+                divisions: 10,
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _scatterClusterZoneOpacity = value),
+              ),
+            BoolOption(
+              key: const ValueKey('scatter-cluster-drill-on-tap'),
+              label: 'Tap to drill',
+              subtitle: 'Zoom to the raw observations represented by a cluster',
+              value: _scatterClusterDrillOnTap,
+              onChanged: (value) =>
+                  setState(() => _scatterClusterDrillOnTap = value),
+            ),
+            if (_scatterClusterDrillOnTap)
+              SliderOption(
+                key: const ValueKey('scatter-cluster-drill-padding'),
+                label: 'Drill padding',
+                value: _scatterClusterDrillPadding,
+                min: 0,
+                max: 0.5,
+                divisions: 10,
+                suffix: '×',
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _scatterClusterDrillPadding = value),
+              ),
           ],
         ),
       if (_isScatterBinPreset)
@@ -3146,6 +3191,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             maximumRadius: _scatterClusterMaximumRadius,
             showCountLabels: _scatterClusterShowLabels,
             labelMinimumPointCount: math.max(2, _scatterClusterMinimumPoints),
+            showZones: _scatterClusterShowZones,
+            zoneOpacity: _scatterClusterZoneOpacity,
+            drillOnTap: _scatterClusterDrillOnTap,
+            drillPadding: _scatterClusterDrillPadding,
           ),
         ),
       ];
@@ -4447,6 +4496,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _scatterClusterMinimumRadius = 8;
       _scatterClusterMaximumRadius = 26;
       _scatterClusterShowLabels = true;
+      _scatterClusterShowZones = true;
+      _scatterClusterZoneOpacity = 0.08;
+      _scatterClusterDrillOnTap = true;
+      _scatterClusterDrillPadding = 0.18;
       _scatterClusterPointCache.clear();
       _scatterBinPointCount = 50000;
       _scatterBinCellSize = 36;

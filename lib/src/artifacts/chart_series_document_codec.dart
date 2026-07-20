@@ -1942,6 +1942,10 @@ Map<String, Object?> _encodeScatterClusterConfig(ScatterClusterConfig config) =>
       'maximumRadius': _number(config.maximumRadius),
       'showCountLabels': config.showCountLabels,
       'labelMinimumPointCount': config.labelMinimumPointCount,
+      'showZones': config.showZones,
+      'zoneOpacity': _number(config.zoneOpacity),
+      'drillOnTap': config.drillOnTap,
+      'drillPadding': _number(config.drillPadding),
     };
 
 ScatterClusterConfig _decodeScatterClusterConfig(Map<String, Object?>? value) {
@@ -1953,13 +1957,21 @@ ScatterClusterConfig _decodeScatterClusterConfig(Map<String, Object?>? value) {
   final showCountLabels = value['showCountLabels'] as bool? ?? true;
   final labelMinimumPointCount =
       _optionalInt(value['labelMinimumPointCount']) ?? 2;
+  final showZones = value['showZones'] as bool? ?? false;
+  final zoneOpacity = _optionalDouble(value['zoneOpacity']) ?? 0.08;
+  final drillOnTap = value['drillOnTap'] as bool? ?? true;
+  final drillPadding = _optionalDouble(value['drillPadding']) ?? 0.18;
   if (cellSize < 8 ||
       cellSize > 256 ||
       minimumPointCount < 2 ||
       minimumRadius <= 0 ||
       minimumRadius > maximumRadius ||
       maximumRadius > 128 ||
-      labelMinimumPointCount < 2) {
+      labelMinimumPointCount < 2 ||
+      zoneOpacity < 0 ||
+      zoneOpacity > 1 ||
+      drillPadding < 0 ||
+      drillPadding > 1) {
     throw const FormatException(
       'Scatter cluster configuration is outside its supported bounds.',
     );
@@ -1971,6 +1983,10 @@ ScatterClusterConfig _decodeScatterClusterConfig(Map<String, Object?>? value) {
     maximumRadius: maximumRadius,
     showCountLabels: showCountLabels,
     labelMinimumPointCount: labelMinimumPointCount,
+    showZones: showZones,
+    zoneOpacity: zoneOpacity,
+    drillOnTap: drillOnTap,
+    drillPadding: drillPadding,
   );
 }
 

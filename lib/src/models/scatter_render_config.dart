@@ -61,11 +61,17 @@ class ScatterClusterConfig {
     this.maximumRadius = 24,
     this.showCountLabels = true,
     this.labelMinimumPointCount = 2,
+    this.showZones = false,
+    this.zoneOpacity = 0.08,
+    this.drillOnTap = true,
+    this.drillPadding = 0.18,
   }) : assert(cellSize >= 8 && cellSize <= 256),
        assert(minimumPointCount >= 2),
        assert(minimumRadius > 0 && minimumRadius <= maximumRadius),
        assert(maximumRadius <= 128),
-       assert(labelMinimumPointCount >= 2);
+       assert(labelMinimumPointCount >= 2),
+       assert(zoneOpacity >= 0 && zoneOpacity <= 1),
+       assert(drillPadding >= 0 && drillPadding <= 1);
 
   /// Width and height of one deterministic plot-space aggregation cell.
   final double cellSize;
@@ -85,6 +91,22 @@ class ScatterClusterConfig {
   /// Smallest cluster count that receives an on-marker label.
   final int labelMinimumPointCount;
 
+  /// Whether to paint the screen-space extent represented by each cluster.
+  ///
+  /// Zones sit behind cluster markers and make dense aggregation boundaries
+  /// inspectable without replacing the source points or chart viewport.
+  final bool showZones;
+
+  /// Fill opacity used by cluster zones.
+  final double zoneOpacity;
+
+  /// Whether activating an aggregate cluster narrows the existing viewport to
+  /// the raw observations represented by that cluster.
+  final bool drillOnTap;
+
+  /// Fractional data-space padding added around drill-to-cluster bounds.
+  final double drillPadding;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -94,7 +116,11 @@ class ScatterClusterConfig {
           other.minimumRadius == minimumRadius &&
           other.maximumRadius == maximumRadius &&
           other.showCountLabels == showCountLabels &&
-          other.labelMinimumPointCount == labelMinimumPointCount;
+          other.labelMinimumPointCount == labelMinimumPointCount &&
+          other.showZones == showZones &&
+          other.zoneOpacity == zoneOpacity &&
+          other.drillOnTap == drillOnTap &&
+          other.drillPadding == drillPadding;
 
   @override
   int get hashCode => Object.hash(
@@ -104,6 +130,10 @@ class ScatterClusterConfig {
     maximumRadius,
     showCountLabels,
     labelMinimumPointCount,
+    showZones,
+    zoneOpacity,
+    drillOnTap,
+    drillPadding,
   );
 
   @override
@@ -111,7 +141,9 @@ class ScatterClusterConfig {
       'ScatterClusterConfig(cellSize: $cellSize, minimumPointCount: '
       '$minimumPointCount, minimumRadius: $minimumRadius, maximumRadius: '
       '$maximumRadius, showCountLabels: $showCountLabels, '
-      'labelMinimumPointCount: $labelMinimumPointCount)';
+      'labelMinimumPointCount: $labelMinimumPointCount, showZones: '
+      '$showZones, zoneOpacity: $zoneOpacity, drillOnTap: $drillOnTap, '
+      'drillPadding: $drillPadding)';
 }
 
 /// Screen-space layout and presentation for rectangular and hexagonal bins.

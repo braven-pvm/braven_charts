@@ -214,6 +214,8 @@ void main() {
             point: ChartDataPoint(x: 32, y: 48),
             formattedXValue: '36.25',
             formattedValue: '52.75 %',
+            formattedXRange: '31.00–42.00',
+            formattedYRange: '45.00–60.00 %',
             ordinal: 1,
             count: 24,
             category: '4 observations',
@@ -227,7 +229,8 @@ void main() {
               formatDataValue: (value) => value.toStringAsFixed(0),
             ),
             'Customer accounts\n4 observations\n'
-            'X mean: 36.25\nY mean: 52.75 %',
+            'X mean: 36.25\nY mean: 52.75 %\n'
+            'X range: 31.00–42.00\nY range: 45.00–60.00 %',
           );
         },
       );

@@ -1163,6 +1163,10 @@ void main() {
           maximumRadius: 31,
           showCountLabels: false,
           labelMinimumPointCount: 6,
+          showZones: true,
+          zoneOpacity: 0.16,
+          drillOnTap: false,
+          drillPadding: 0.28,
         ),
       );
 

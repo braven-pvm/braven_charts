@@ -72,6 +72,7 @@ import 'models/path_animation_style.dart';
 import 'models/radial_category_series.dart';
 import 'models/radial_legend_item.dart';
 import 'models/scatter_marker_style.dart';
+import 'models/scatter_render_config.dart';
 import 'models/streaming_config.dart';
 import 'models/x_axis_config.dart';
 import 'rendering/chart_render_box.dart';
@@ -5383,7 +5384,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           if (tappedElement.series is BarChartSeries ||
               tappedElement.series is ScatterChartSeries ||
               tappedElement.series is CandlestickChartSeries) {
-            _selectCartesianPointFromInteraction(dataHit);
+            if (!_drillIntoScatterCluster(dataHit)) {
+              _selectCartesianPointFromInteraction(dataHit);
+            }
           }
           widget.onPointTap?.call(dataHit.point, tappedElement.series.id);
         } else {
@@ -5397,7 +5400,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       if (series is BarChartSeries ||
           series is ScatterChartSeries ||
           series is CandlestickChartSeries) {
-        _selectCartesianPointFromInteraction(directDataHit);
+        if (!_drillIntoScatterCluster(directDataHit)) {
+          _selectCartesianPointFromInteraction(directDataHit);
+        }
       }
       widget.onPointTap?.call(directDataHit.point, directDataHit.seriesId);
     }
@@ -5425,6 +5430,98 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       alt: _coordinator.isAltPressed,
     );
     _applyPointSelectionOperation(ref, operation);
+  }
+
+  bool _drillIntoScatterCluster(ChartDataHit hit) {
+    if (hit.sourcePointIndices.length < 2) return false;
+    final series = _effectiveDataSeries
+        .whereType<ScatterChartSeries>()
+        .where((candidate) => candidate.id == hit.seriesId)
+        .firstOrNull;
+    if (series == null ||
+        series.renderMode != ScatterRenderMode.clusters ||
+        !series.clusterConfig.drillOnTap) {
+      return false;
+    }
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    final transform = renderBox?.transform;
+    if (renderBox == null || transform == null) return false;
+
+    final points = <ChartDataPoint>[];
+    for (final pointIndex in hit.sourcePointIndices) {
+      if (pointIndex < 0 || pointIndex >= series.points.length) continue;
+      final point = series.points[pointIndex];
+      if (point.isValid) points.add(point);
+    }
+    if (points.length < 2) return false;
+
+    var xMin = points.first.x;
+    var xMax = points.first.x;
+    var yMin = points.first.y;
+    var yMax = points.first.y;
+    for (final point in points.skip(1)) {
+      xMin = math.min(xMin, point.x);
+      xMax = math.max(xMax, point.x);
+      yMin = math.min(yMin, point.y);
+      yMax = math.max(yMax, point.y);
+    }
+    final xBounds = _clusterDrillAxisBounds(
+      minimum: xMin,
+      maximum: xMax,
+      viewportMinimum: transform.dataXMin,
+      viewportMaximum: transform.dataXMax,
+      padding: series.clusterConfig.drillPadding,
+    );
+    final yBounds = _clusterDrillAxisBounds(
+      minimum: yMin,
+      maximum: yMax,
+      viewportMinimum: transform.dataYMin,
+      viewportMaximum: transform.dataYMax,
+      padding: series.clusterConfig.drillPadding,
+    );
+    final changed = renderBox.restoreVisibleDataBounds(
+      xMin: xBounds.minimum,
+      xMax: xBounds.maximum,
+      yMin: yBounds.minimum,
+      yMax: yBounds.maximum,
+      notifyViewportChanged: true,
+    );
+    if (changed) {
+      _captureStateRevision++;
+      _handleViewportInteractionPulse();
+    }
+    return changed;
+  }
+
+  ({double minimum, double maximum}) _clusterDrillAxisBounds({
+    required double minimum,
+    required double maximum,
+    required double viewportMinimum,
+    required double viewportMaximum,
+    required double padding,
+  }) {
+    final viewportSpan = viewportMaximum - viewportMinimum;
+    final sourceSpan = maximum - minimum;
+    final desiredSpan = math.max(
+      viewportSpan * 0.05,
+      sourceSpan * (1 + padding * 2),
+    );
+    if (desiredSpan >= viewportSpan) {
+      return (minimum: viewportMinimum, maximum: viewportMaximum);
+    }
+    final center = (minimum + maximum) / 2;
+    var nextMinimum = center - desiredSpan / 2;
+    var nextMaximum = center + desiredSpan / 2;
+    if (nextMinimum < viewportMinimum) {
+      nextMaximum += viewportMinimum - nextMinimum;
+      nextMinimum = viewportMinimum;
+    }
+    if (nextMaximum > viewportMaximum) {
+      nextMinimum -= nextMaximum - viewportMaximum;
+      nextMaximum = viewportMaximum;
+    }
+    return (minimum: nextMinimum, maximum: nextMaximum);
   }
 
   void _applyPointSelectionOperation(
