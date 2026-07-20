@@ -57,8 +57,11 @@ void main() {
       chart.interactionConfig?.crosshair.displayMode,
       CrosshairDisplayMode.tracking,
     );
-    expect(chart.interactionConfig?.showFocusBorder, isTrue);
+    expect(chart.interactionConfig?.showFocusBorder, isFalse);
     expect(chart.interactionConfig?.enableFocusOnHover, isFalse);
+    expect(chart.interactionConfig?.tooltip.enabled, isFalse);
+    expect(chart.interactionConfig?.crosshair.showTrackingTooltip, isTrue);
+    expect(chart.yAxis?.labelFormatter?.call(133.314099982216), '133.31');
 
     final chartFocus = tester
         .widgetList<Focus>(
@@ -140,6 +143,26 @@ void main() {
       hasLength(6),
     );
     expect(chart.series, hasLength(1));
+
+    await tester.tap(find.byKey(const ValueKey('candlestick-example-events')));
+    await tester.pumpAndSettle();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    candles = chart.series.first as CandlestickChartSeries;
+    expect(candles.candles, hasLength(56));
+    expect(find.text('Events and price levels'), findsOneWidget);
+    expect(chart.annotations, hasLength(3));
+    expect(
+      chart.annotations.map((annotation) => annotation.id),
+      containsAll(const [
+        'candlestick-event-window',
+        'candlestick-risk-level',
+        'candlestick-market-event',
+      ]),
+    );
+    final event = chart.annotations.whereType<PointAnnotation>().single;
+    expect(event.seriesId, 'reference-ohlc');
 
     await tester.tap(find.byKey(const ValueKey('candlestick-example-density')));
     await tester.pumpAndSettle();
@@ -238,6 +261,63 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('wires contextual annotation visibility and styling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final dynamic context = tester.widget(
+      find.byKey(const ValueKey('candlestick-market-context')),
+    );
+    context.onChanged(true);
+    await tester.pump();
+    final dynamic thresholdColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-context-threshold-color')),
+    );
+    thresholdColour.onChanged(const Color(0xFFDC2626));
+    final dynamic windowColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-context-window-color')),
+    );
+    windowColour.onChanged(const Color(0xFF059669));
+    final dynamic eventColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-context-event-color')),
+    );
+    eventColour.onChanged(const Color(0xFF7C3AED));
+    final dynamic strokeWidth = tester.widget(
+      find.byKey(const ValueKey('candlestick-context-line-width')),
+    );
+    strokeWidth.onChanged(2.5);
+    final dynamic dashed = tester.widget(
+      find.byKey(const ValueKey('candlestick-context-dashed')),
+    );
+    dashed.onChanged(false);
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    final threshold = chart.annotations.whereType<ThresholdAnnotation>().single;
+    final range = chart.annotations.whereType<RangeAnnotation>().single;
+    final event = chart.annotations.whereType<PointAnnotation>().single;
+    expect(threshold.lineColor, const Color(0xFFDC2626));
+    expect(threshold.lineWidth, 2.5);
+    expect(threshold.dashPattern, isNull);
+    expect(range.fillColor?.a, closeTo(.1, .001));
+    expect(range.fillColor?.r, closeTo(const Color(0xFF059669).r, .001));
+    expect(range.fillColor?.g, closeTo(const Color(0xFF059669).g, .001));
+    expect(range.fillColor?.b, closeTo(const Color(0xFF059669).b, .001));
+    expect(range.style.borderWidth, 2.5);
+    expect(event.markerColor, const Color(0xFF7C3AED));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('exposes lossless Data, resizable Split, and generated Source', (
     tester,
   ) async {
@@ -263,11 +343,21 @@ void main() {
       find.byKey(const ValueKey('candlestick-workbench')),
     );
     expect(workbench.workbenchController, isNull);
+    final priceFormatter = ChartFormatterDescriptor.fromDocument(
+      workbench.documentOptions.yAxisFormatterDescriptors['y']!,
+    );
+    expect(
+      const ChartFormatterRegistry()
+          .resolve(priceFormatter)
+          .formatter(133.314099982216),
+      '133.31',
+    );
     expect(find.text('Open'), findsWidgets);
     expect(find.text('High'), findsWidgets);
     expect(find.text('Low'), findsWidgets);
     expect(find.text('Close'), findsWidgets);
     expect(find.text('Change %'), findsOneWidget);
+    expect(find.text('228.00'), findsWidgets);
 
     await tester.tap(
       find.descendant(of: switcher, matching: find.text('Split')),
@@ -291,6 +381,290 @@ void main() {
     expect(find.byType(ChartSourceView), findsOneWidget);
     expect(find.textContaining('CandlestickChartSeries('), findsWidgets);
     expect(find.textContaining('CandlestickDataPoint('), findsWidgets);
+    expect(
+      find.textContaining(
+        'Formatter "showcase.candlestick.session" is not registered',
+      ),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps crosshair, hover, and pinned OHLC details independent', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    expect(chart.interactionConfig?.crosshair.showTrackingTooltip, isTrue);
+    expect(chart.interactionConfig?.tooltip.enabled, isFalse);
+    expect(
+      find.byKey(const ValueKey('candlestick-pinned-summary-card')),
+      findsNothing,
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-point-tooltip')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic pointTooltip = tester.widget(
+      find.byKey(const ValueKey('candlestick-point-tooltip')),
+    );
+    pointTooltip.onChanged(true);
+    final dynamic pinnedSummary = tester.widget(
+      find.byKey(const ValueKey('candlestick-pinned-summary')),
+    );
+    pinnedSummary.onChanged(true);
+    final dynamic trackingTooltip = tester.widget(
+      find.byKey(const ValueKey('candlestick-tracking-tooltip')),
+    );
+    trackingTooltip.onChanged(false);
+    await tester.pump();
+
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    expect(chart.interactionConfig?.crosshair.showTrackingTooltip, isFalse);
+    expect(chart.interactionConfig?.tooltip.enabled, isTrue);
+    expect(
+      find.byKey(const ValueKey('candlestick-pinned-summary-card')),
+      findsOneWidget,
+    );
+
+    final candles = (chart.series.first as CandlestickChartSeries).candles;
+    final candle = candles[1];
+    final inBetweenX = candles.first.x + (candle.x - candles.first.x) * .6;
+    chart.onDataXCursorChanged?.call(inBetweenX);
+    await tester.pump();
+    final summary = find.byKey(
+      const ValueKey('candlestick-pinned-summary-card'),
+    );
+    expect(
+      find.descendant(
+        of: summary,
+        matching: find.text('\$${candle.open.toStringAsFixed(2)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: summary,
+        matching: find.text('\$${candle.high.toStringAsFixed(2)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('moves and styles the pinned summary as a chart annotation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final optionsScroll = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-pinned-summary')),
+      300,
+      scrollable: optionsScroll,
+    );
+    final dynamic pinnedSummary = tester.widget(
+      find.byKey(const ValueKey('candlestick-pinned-summary')),
+    );
+    pinnedSummary.onChanged(true);
+    await tester.pump();
+
+    final dynamic presentation = tester.widget(
+      find.byKey(const ValueKey('candlestick-pinned-summary-presentation')),
+    );
+    presentation.onChanged(_testEnumValue('annotation', presentation.values));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('candlestick-pinned-summary-card')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('candlestick-pinned-summary-draggable')),
+      findsOneWidget,
+    );
+
+    for (final entry in <(String, Color)>[
+      ('candlestick-summary-background', const Color(0xFF111827)),
+      ('candlestick-summary-border', const Color(0xFF7C3AED)),
+      ('candlestick-summary-text', const Color(0xFFFFFFFF)),
+      ('candlestick-summary-accent', const Color(0xFFEC4899)),
+    ]) {
+      await tester.scrollUntilVisible(
+        find.byKey(ValueKey(entry.$1)),
+        300,
+        scrollable: optionsScroll,
+      );
+      final dynamic palette = tester.widget(find.byKey(ValueKey(entry.$1)));
+      palette.onChanged(entry.$2);
+      await tester.pump();
+    }
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-summary-opacity')),
+      300,
+      scrollable: optionsScroll,
+    );
+    final dynamic opacity = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-opacity')),
+    );
+    opacity.onChanged(1.0);
+    final dynamic borderWidth = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-border-width')),
+    );
+    borderWidth.onChanged(2.0);
+    final dynamic cornerRadius = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-corner-radius')),
+    );
+    cornerRadius.onChanged(12.0);
+    final dynamic padding = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-padding')),
+    );
+    padding.onChanged(16.0);
+    final dynamic fontSize = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-font-size')),
+    );
+    fontSize.onChanged(14.0);
+    await tester.pump();
+
+    var chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    var annotation = chart.annotations.whereType<TextAnnotation>().singleWhere(
+      (value) => value.label == 'Pinned OHLC summary',
+    );
+    expect(annotation.allowDragging, isTrue);
+    expect(annotation.position, const Offset(96, 48));
+    expect(annotation.style.backgroundColor, const Color(0xFF111827));
+    expect(annotation.style.borderColor, const Color(0xFF7C3AED));
+    expect(annotation.style.borderWidth, 2);
+    expect(annotation.style.borderRadius, BorderRadius.circular(12));
+    expect(annotation.style.padding, const EdgeInsets.all(16));
+    expect(annotation.style.textStyle.fontSize, 14);
+    expect(annotation.plainText, contains('Open'));
+    expect(annotation.plainText, contains(RegExp(r'\$\d+\.\d{2}')));
+
+    final firstCandle =
+        (chart.series.first as CandlestickChartSeries).candles.first;
+    chart.onPointHover?.call(firstCandle, 'candles');
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    annotation = chart.annotations.whereType<TextAnnotation>().singleWhere(
+      (value) => value.label == 'Pinned OHLC summary',
+    );
+    expect(
+      annotation.plainText,
+      contains('\$${firstCandle.open.toStringAsFixed(2)}'),
+    );
+
+    chart.onAnnotationDragged?.call(annotation, const Offset(180, 96));
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    annotation = chart.annotations.whereType<TextAnnotation>().singleWhere(
+      (value) => value.label == 'Pinned OHLC summary',
+    );
+    expect(annotation.position, const Offset(180, 96));
+
+    final dynamic backgroundPalette = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-background')),
+    );
+    final dynamic borderPalette = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-border')),
+    );
+    backgroundPalette.onChanged(null);
+    borderPalette.onChanged(null);
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    annotation = chart.annotations.whereType<TextAnnotation>().singleWhere(
+      (value) => value.label == 'Pinned OHLC summary',
+    );
+    expect(annotation.style.backgroundColor, Colors.transparent);
+    expect(annotation.style.borderColor, Colors.transparent);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('moves the pinned overlay between chart corners', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final optionsScroll = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-pinned-summary')),
+      300,
+      scrollable: optionsScroll,
+    );
+    final dynamic pinnedSummary = tester.widget(
+      find.byKey(const ValueKey('candlestick-pinned-summary')),
+    );
+    pinnedSummary.onChanged(true);
+    await tester.pump();
+    final dynamic corner = tester.widget(
+      find.byKey(const ValueKey('candlestick-pinned-summary-corner')),
+    );
+    corner.onChanged(_testEnumValue('bottomRight', corner.values));
+    await tester.pump();
+
+    final positioned = tester.widget<Positioned>(
+      find.byKey(const ValueKey('candlestick-pinned-summary-position')),
+    );
+    expect(positioned.top, isNull);
+    expect(positioned.left, isNull);
+    expect(positioned.bottom, 12);
+    expect(positioned.right, 12);
+
+    final summary = find.byKey(
+      const ValueKey('candlestick-pinned-summary-card'),
+    );
+    expect(tester.getSize(summary).width, 168);
+
+    final dynamic backgroundPalette = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-background')),
+    );
+    final dynamic borderPalette = tester.widget(
+      find.byKey(const ValueKey('candlestick-summary-border')),
+    );
+    backgroundPalette.onChanged(null);
+    borderPalette.onChanged(null);
+    await tester.pump();
+
+    final card = tester.widget<Container>(summary);
+    final decoration = card.decoration! as BoxDecoration;
+    expect(decoration.color, Colors.transparent);
+    expect((decoration.border! as Border).top.color, Colors.transparent);
+    expect(decoration.boxShadow, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -319,6 +693,11 @@ void main() {
       find.byKey(const ValueKey('candlestick-crosshair-dashed')),
     );
     dashedCrosshair.onChanged(true);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-selection-enabled')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
     final dynamic selection = tester.widget(
       find.byKey(const ValueKey('candlestick-selection-enabled')),
     );
@@ -445,6 +824,14 @@ void main() {
       find.byKey(const ValueKey('candlestick-crosshair-color')),
     );
     crosshairColour.onChanged(const Color(0xFF7C3AED));
+    final dynamic selectionColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-selection-color')),
+    );
+    selectionColour.onChanged(const Color(0xFFDB2777));
+    final dynamic focusColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-focus-color')),
+    );
+    focusColour.onChanged(const Color(0xFF0891B2));
     final dynamic tooltipBackground = tester.widget(
       find.byKey(const ValueKey('candlestick-tooltip-background')),
     );
@@ -458,10 +845,15 @@ void main() {
     );
     tooltipFontSize.onChanged(14.0);
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('candlestick-tooltip-position')),
+      find.byKey(const ValueKey('candlestick-point-tooltip')),
       -300,
       scrollable: find.byType(Scrollable).last,
     );
+    final dynamic pointTooltip = tester.widget(
+      find.byKey(const ValueKey('candlestick-point-tooltip')),
+    );
+    pointTooltip.onChanged(true);
+    await tester.pump();
     final dynamic tooltipPosition = tester.widget(
       find.byKey(const ValueKey('candlestick-tooltip-position')),
     );
@@ -511,6 +903,14 @@ void main() {
     expect(
       chart.interactionConfig?.crosshair.style.lineColor,
       const Color(0xFF7C3AED),
+    );
+    expect(
+      chart.theme?.interactionTheme.selectionColor,
+      const Color(0xFFDB2777),
+    );
+    expect(
+      chart.theme?.interactionTheme.crosshairColor,
+      const Color(0xFF0891B2),
     );
     expect(
       chart.interactionConfig?.tooltip.style.backgroundColor,
@@ -1010,6 +1410,18 @@ void main() {
       find.byKey(const ValueKey('candlestick-tracking-enabled')),
     );
     tracking.onChanged(false);
+    final dynamic selection = tester.widget(
+      find.byKey(const ValueKey('candlestick-selection-enabled')),
+    );
+    selection.onChanged(false);
+    final dynamic keyboard = tester.widget(
+      find.byKey(const ValueKey('candlestick-keyboard-enabled')),
+    );
+    keyboard.onChanged(false);
+    final dynamic focusBorder = tester.widget(
+      find.byKey(const ValueKey('candlestick-focus-border')),
+    );
+    focusBorder.onChanged(false);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('candlestick-show-average')),
@@ -1030,6 +1442,28 @@ void main() {
       find.byKey(const ValueKey('candlestick-series-legend')),
     );
     legend.onChanged(false);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-y-axis-position')),
+      -300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic yAxisPosition = tester.widget(
+      find.byKey(const ValueKey('candlestick-y-axis-position')),
+    );
+    yAxisPosition.onChanged(YAxisPosition.hidden);
+    final dynamic xTickCount = tester.widget(
+      find.byKey(const ValueKey('candlestick-x-tick-count')),
+    );
+    xTickCount.onChanged(5);
+    final dynamic xLabels = tester.widget(
+      find.byKey(const ValueKey('candlestick-x-labels')),
+    );
+    xLabels.onChanged(false);
+    final dynamic yLabels = tester.widget(
+      find.byKey(const ValueKey('candlestick-y-labels')),
+    );
+    yLabels.onChanged(false);
 
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('candlestick-theme')),
@@ -1055,8 +1489,19 @@ void main() {
     expect(price.showLegend, isFalse);
     expect(price.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     expect(price.interactionConfig?.crosshair.enabled, isFalse);
+    expect(price.interactionConfig?.enableSelection, isFalse);
+    expect(price.interactionConfig?.showFocusBorder, isFalse);
+    expect(price.interactionConfig?.keyboard.enabled, isFalse);
+    expect(price.xAxisConfig?.tickCount, 5);
+    expect(price.xAxisConfig?.showTickLabels, isFalse);
+    expect(price.yAxis?.position, YAxisPosition.hidden);
+    expect(price.yAxis?.showTickLabels, isFalse);
     expect(volume.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     expect(volume.interactionConfig?.crosshair.enabled, isFalse);
+    expect(volume.interactionConfig?.enableSelection, isFalse);
+    expect(volume.interactionConfig?.showFocusBorder, isFalse);
+    expect(volume.interactionConfig?.keyboard.enabled, isFalse);
+    expect(volume.yAxis?.showTickLabels, isFalse);
     expect(navigator.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     final navigatorChart = tester.widget<BravenChartPlus>(
       find.descendant(
@@ -1065,6 +1510,12 @@ void main() {
       ),
     );
     expect(navigatorChart.interactionConfig?.crosshair.enabled, isFalse);
+    expect(navigatorChart.xAxisConfig?.visible, isFalse);
+    expect(navigatorChart.xAxisConfig?.showTickLabels, isFalse);
+    expect(
+      find.byKey(const ValueKey('candlestick-direction-key')),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -1079,7 +1530,12 @@ void main() {
       const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Stock composition'));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('candlestick-example-stockComposition')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('candlestick-example-stockComposition')),
+    );
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(

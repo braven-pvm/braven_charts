@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../artifacts/chart_document_extractor.dart';
+import '../artifacts/chart_runtime_bindings.dart';
 
 /// Whether generated Dart fully represents the captured portable chart.
 enum ChartGeneratedSourceCompleteness {
@@ -55,6 +56,7 @@ class ChartDartSourceOptions {
     this.includeDefaultValues = false,
     this.maxInlinePoints = 250,
     this.variableName = 'chart',
+    this.formatters = const ChartFormatterRegistry(),
   }) : assert(maxInlinePoints >= 0, 'maxInlinePoints must be non-negative');
 
   /// Whether package and Material imports precede the generated declaration.
@@ -77,6 +79,14 @@ class ChartDartSourceOptions {
 
   /// Top-level variable assigned to the generated [BravenChartPlus] widget.
   final String variableName;
+
+  /// Runtime formatter implementations used while hydrating the captured
+  /// portable document for source generation.
+  ///
+  /// Generated Dart still reports callbacks that cannot be represented as
+  /// portable configuration, but registered formatter descriptors no longer
+  /// produce a false unregistered-formatter warning during hydration.
+  final ChartFormatterRegistry formatters;
 }
 
 /// Direct Dart source generated from one effective chart revision.

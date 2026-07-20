@@ -1,10 +1,11 @@
 # Candlestick Cartesian Chart — Delivery Roadmap
 
 **Date:** 2026-07-19  
-**Branch:** `feature/candlestick-density-grouping`
-**Status:** PR #58 open; expanded interactive configuration review is in progress
+**Branch:** `feature/candlestick-showcase-completeness`
+**Status:** Core Candlestick clusters are merged; final showcase-completeness review is local
 **Design:** `docs/superpowers/specs/2026-07-19-candlestick-cartesian-chart-design.md`
 **Navigator handoff:** `docs/superpowers/specs/2026-07-20-cartesian-navigator-architecture-handoff.md`
+**Value-summary handoff:** `docs/superpowers/specs/2026-07-20-cartesian-value-summary-architecture-handoff.md`
 
 ## Product outcome
 
@@ -353,7 +354,7 @@ retaining Braven styling and Workbench behavior.
 
 ## Slice 6 — Grouping, performance, and promotion readiness
 
-**Status:** Interactive review in progress; dartdoc tooling qualification recorded
+**Status:** Final showcase-completeness review in progress; dartdoc tooling qualification recorded
 
 ### Scope
 
@@ -452,9 +453,9 @@ retaining Braven styling and Workbench behavior.
 
 ### Landed in the interactive configuration review cluster
 
-- Replaced the two-state surface switch with six wrapping, directly selectable
-  examples: balanced price action, trend, volatility, gaps and doji, density,
-  and the synchronized stock composition.
+- Replaced the two-state surface switch with wrapping, directly selectable
+  examples for balanced price action, trend, volatility, gaps and doji,
+  accessible direction cues, density, and synchronized stock composition.
 - Added deterministic normal-data controls for 12–120 visible sessions, price
   range, trend bias, and opening-gap frequency while retaining the existing
   2,000-source density path and raw Workbench rows.
@@ -516,14 +517,79 @@ retaining Braven styling and Workbench behavior.
   Each cleared value restores the active chart or interaction theme instead of
   retaining a hidden showcase-only colour.
 - Disabled hover-acquired keyboard focus on the Workbench Candlestick chart,
-  removing the misleading blue hover outline while preserving the optional
-  focus border after an intentional click or keyboard focus.
+  removing the misleading blue hover outline. The whole-chart focus outline is
+  now also off by default, while remaining available as an explicit showcase
+  accessibility toggle; candle focus and selection styling remain independent.
 - Increased compact composition height to preserve a valid plot after the
   expanded wrapping preset catalogue and options surface; focused compact and
   full Candlestick showcase tests pass. The Candlestick suite now has 15 tests,
   including renderer-contract assertions for custom element colours, point
   highlighting, native animation configuration, replay, crosshair styling,
   tooltip styling, and shared palette clear/toggle behavior.
+
+### Landed in the final showcase-completeness cluster
+
+- Added an eighth `Events & levels` preset that combines native Candlestick
+  marks with a Cartesian session range, price threshold, and candle-linked
+  point annotation. The preset remains available in Chart, Data, Split, and
+  generated Source modes rather than using a one-off demo renderer.
+- Added progressive annotation controls for visibility, threshold/window/event
+  colours, stroke width, and threshold dash treatment. Every control changes
+  the mounted annotation collection and uses the shared annotation palette.
+- Added selected-candle and focused-candle colour controls alongside the
+  existing crosshair, coordinate-label, and tooltip theme controls. The
+  effective interaction theme now drives the renderer's real selection and
+  focus paint paths.
+- Audited the stock composition for display-only controls. Its price and
+  volume panes now honor selection, keyboard, focus-border, axis-line, and
+  Y-label controls; the price pane and navigator honor X-label/tick density;
+  the price pane honors price-axis position; and its series legend honors
+  position and dragging. The workbench-only direction key is hidden in stock
+  mode instead of presenting a control with no mounted target.
+- Added regression coverage for the eighth preset, annotation style wiring,
+  selection/focus colours, stock-pane axis and interaction wiring, and compact
+  selector scrolling. The focused Candlestick showcase suite now has 16
+  passing tests.
+- Standardized financial display precision at two decimals across price axes,
+  pinned summaries, metric pills, tooltips, and native Workbench OHLC/change
+  cells by attaching the portable `braven.number.fixed` formatter to the
+  extracted price axis.
+- Added an opt-in pinned OHLC summary that remains fixed in the plot's top-left
+  corner, follows the active candle without following the pointer, and falls
+  back to the latest candle. It is implemented as a showcase composition layer,
+  leaving the native Cartesian renderer and artifact contract unchanged.
+- Reorganized the options rail into explicit crosshair, candle-hover, pinned
+  summary, and selection groups. Crosshair panel, axis values, intersection dot,
+  candle hover card, and pinned summary are independently configurable; the
+  hover card now defaults off so first load never presents duplicate OHLC cards.
+- Added focused regression coverage for two-decimal artifact formatting,
+  focus-outline defaults, and independent crosshair/hover/pinned-detail state.
+  The focused Candlestick showcase suite now has 17 passing tests.
+- Promoted the pinned summary from one fixed composition into two explicit
+  presentations. The overlay can occupy any plot corner; the embedded mode is
+  a native draggable `TextAnnotation.rich` included in annotation rendering,
+  portable artifacts, and generated Source. Both modes share background,
+  opacity, border, text, accent, radius, padding, and type-size controls backed
+  by the standard annotation colour palette. The focused suite now has 19
+  passing tests covering style wiring, live candle updates, annotation drag,
+  and overlay positioning.
+- Corrected optional summary-colour semantics so the palette clear action and
+  selected-swatch toggle remove background and border paint instead of
+  restoring a faint theme fallback. A cleared background also removes the
+  overlay shadow. Tightened the default overlay to a 168-pixel width, 8-pixel
+  padding, 11-pixel detail type, smaller identity mark, and denser row rhythm.
+- Fixed the Candlestick Source hydration warning by adding an explicit
+  formatter registry to `ChartDartSourceOptions` and sharing the page's session
+  formatter registry between Data and Source. Generated Source can now hydrate
+  custom portable formatter descriptors without misreporting them as
+  unregistered; genuine non-portable callback omissions remain visible as
+  source-generation notes.
+- Re-ran the complete promotion matrix after the completeness work: package
+  analysis and showcase analysis are clean; all 2,372 package tests and all
+  251 showcase tests pass; the release web build and Wasm dry run pass; and the
+  direct Candlestick route plus compiled script return HTTP 200 on port 8197.
+  The established Candlestick paint, revision, grouping, nearest-X, and
+  synchronized-pane performance gates also pass in the complete package run.
 
 ### Still required before promotion
 
