@@ -563,7 +563,7 @@ void main() {
       expect(
         find.descendant(
           of: risingPalette,
-          matching: find.byType(AnnotationColorPalette),
+          matching: find.byType(ChartColorPalette),
         ),
         findsOneWidget,
       );
