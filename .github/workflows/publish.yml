@@ -1,0 +1,112 @@
+name: Publish to pub.dev
+
+# Publishes braven_charts to pub.dev and deploys the showcase for a release
+# tag. Runs on the tag ref only — pub.dev's trusted publishing validates the
+# OIDC token's ref against the configured tag pattern (v{{version}}) and the
+# version in pubspec.yaml, so the tag and pubspec version must match exactly.
+#
+# Two ways this workflow starts:
+#   - workflow_dispatch on a tag ref: the automated path, dispatched by
+#     release.yml (requires "Enable publishing from workflow_dispatch events"
+#     in the pub.dev admin UI).
+#   - push of a v* tag: the manual fallback — a maintainer pushing a tag from
+#     their own machine triggers this directly.
+#
+# Both paths pass through the preflight job, which refuses to publish a
+# commit that is not on master or that does not have a green Package quality
+# run — a hand-pushed tag gets the same gates as the label-driven path.
+#
+# Authentication is OIDC (no secrets): the reusable dart-lang/setup-dart
+# publish workflow provisions a temporary pub.dev token via id-token: write.
+# It installs a Flutter SDK, so Flutter packages publish out of the box.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  preflight:
+    name: Verify release tag
+    # workflow_dispatch could be pointed at a branch by mistake; pub.dev would
+    # reject that anyway (ref_type must be "tag") — fail fast here instead.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Require the tagged commit to be on master
+        run: |
+          COMMIT=$(git rev-parse HEAD)
+          git fetch origin master
+          if ! git merge-base --is-ancestor "$COMMIT" origin/master; then
+            echo "::error::${GITHUB_REF#refs/} points at $COMMIT, which is not reachable from master. Refusing to publish."
+            exit 1
+          fi
+          echo "$COMMIT is on master."
+
+      - name: Require a green Package quality run on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMIT=$(git rev-parse HEAD)
+          # Instant for the label-driven path (release.yml already waited);
+          # gives a hand-pushed tag up to 30 minutes for CI to finish.
+          for attempt in $(seq 1 60); do
+            STATUS=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow=package-quality.yml \
+              --commit "$COMMIT" \
+              --limit 1 \
+              --json status,conclusion \
+              --jq 'first | if . == null then "missing" elif .status != "completed" then "pending" else (.conclusion // "pending") end' \
+              2> /dev/null || echo "pending")
+            echo "Package quality on $COMMIT: $STATUS (attempt $attempt/60)"
+            case "$STATUS" in
+              success)
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required|stale|neutral|skipped|startup_failure)
+                echo "::error::Package quality concluded '$STATUS' on the tagged commit. Refusing to publish."
+                exit 1
+                ;;
+              *)
+                sleep 30
+                ;;
+            esac
+          done
+          echo "::error::No successful Package quality run found for $COMMIT. Refusing to publish."
+          exit 1
+
+  publish:
+    name: Publish package
+    needs: preflight
+    permissions:
+      id-token: write # required for OIDC authentication with pub.dev
+      contents: read
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+
+  deploy-showcase:
+    name: Deploy showcase
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Serialize with the push-to-master showcase deploys. Note the group is
+    # declared at job level here: a called reusable workflow's own
+    # workflow-level concurrency does not apply to this run.
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy-showcase.yml

@@ -31,6 +31,7 @@ This directory contains release-ready documentation for the BravenChartPlus pack
 ## Development Notes
 
 - [development.md](development.md) - Local development setup
+- [releasing.md](releasing.md) - Label-driven release automation: pub.dev publishing and showcase deployment
 - [technical_debt.md](technical_debt.md) - Known debt and cleanup targets
 
 ## Parked Feature Investigations
