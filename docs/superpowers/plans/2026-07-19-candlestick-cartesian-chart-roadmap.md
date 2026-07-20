@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-19  
 **Branch:** `feature/candlestick-density-grouping`
-**Status:** Slices 1–6 complete locally; interactive showcase review is in progress
+**Status:** PR #58 open; expanded interactive configuration review is in progress
 **Design:** `docs/superpowers/specs/2026-07-19-candlestick-cartesian-chart-design.md`
 **Navigator handoff:** `docs/superpowers/specs/2026-07-20-cartesian-navigator-architecture-handoff.md`
 
@@ -476,6 +476,18 @@ retaining Braven styling and Workbench behavior.
   overlay, and legend wiring. The Candlestick showcase suite now has 13 passing
   tests, including compact coverage and pointer-level navigator pan/resize
   verification against the synchronized viewport.
+- Added dedicated interaction-detail controls for point and tracking tooltips,
+  axis-value labels, intersection markers and radius, crosshair width and dash
+  pattern, selection, keyboard navigation, and focus-border behavior.
+- Added axis-side, X-tick-density, axis-label visibility, and minimum-body-width
+  controls, all wired directly to the mounted chart rather than display-only
+  showcase state.
+- Added an accessibility-focused preset combining blue/orange hues, hollow
+  rising bodies, stronger borders and wicks, visible doji, a close average, and
+  a direction key so financial direction never relies on colour alone.
+- Increased compact composition height to preserve a valid plot after the
+  expanded wrapping preset catalogue and options surface; focused compact and
+  full Candlestick showcase tests pass.
 
 ### Still required before promotion
 

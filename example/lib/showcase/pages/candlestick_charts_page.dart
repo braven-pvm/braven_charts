@@ -38,6 +38,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
 
   CandlestickBodyFillMode _bodyFillMode = CandlestickBodyFillMode.hollowRising;
   double _bodyWidthFactor = 0.7;
+  double _minBodyWidth = 1;
   double _maxBodyWidth = 18;
   double _bodyBorderWidth = 1;
   double _wickWidth = 1;
@@ -52,6 +53,15 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   Color _averageColor = const Color(0xFF6366F1);
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
+  bool _showPointTooltip = true;
+  bool _showCoordinateLabels = true;
+  bool _showIntersectionMarkers = true;
+  double _intersectionMarkerRadius = 4;
+  double _crosshairLineWidth = 1;
+  bool _crosshairDashed = false;
+  bool _selectionEnabled = true;
+  bool _keyboardEnabled = true;
+  bool _showFocusBorder = true;
   bool _animateUpdates = true;
   bool _animateEntrance = true;
   double _entranceStagger = .85;
@@ -68,6 +78,10 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   double _trendBias = 0;
   LegendPosition _legendPosition = LegendPosition.topRight;
   bool _legendDraggable = true;
+  YAxisPosition _yAxisPosition = YAxisPosition.left;
+  int _xTickCount = 8;
+  bool _showXAxisLabels = true;
+  bool _showYAxisLabels = true;
   int _revisionStep = 0;
   int? _activeCandleIndex;
   _CandlestickShowcaseMode _showcaseMode = _CandlestickShowcaseMode.workbench;
@@ -149,8 +163,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           final contentHeight = math.max(
             constraints.maxHeight,
             _showcaseMode == _CandlestickShowcaseMode.stock
-                ? (compact ? 1960.0 : 1360.0)
-                : (compact ? 1220.0 : 960.0),
+                ? (compact ? 2060.0 : 1360.0)
+                : (compact ? 1320.0 : 960.0),
           );
           final content = SizedBox(
             height: contentHeight,
@@ -965,20 +979,22 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           ? 'Trading session'
           : 'Elapsed date',
       showAxisLine: options.showAxisLines,
-      tickCount: compact ? 5 : 8,
+      tickCount: compact ? math.min(5, _xTickCount) : _xTickCount,
+      showTickLabels: _showXAxisLabels,
       labelFormatter: (value) => _formatSession(value, displayCandles),
     ),
     yAxis: YAxisConfig(
-      position: YAxisPosition.left,
+      position: _yAxisPosition,
       label: 'Price',
       unit: 'USD',
       showAxisLine: options.showAxisLines,
+      showTickLabels: _showYAxisLabels,
     ),
     interactionConfig: InteractionConfig(
       enableZoom: options.enableZoom,
       enablePan: options.enablePan,
-      enableSelection: true,
-      showFocusBorder: true,
+      enableSelection: _selectionEnabled,
+      showFocusBorder: _showFocusBorder,
       showXScrollbar: options.showXScrollbar,
       showYScrollbar: options.showYScrollbar,
       crosshair: CrosshairConfig(
@@ -987,11 +1003,16 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         displayMode: CrosshairDisplayMode.tracking,
         interpolateValues: false,
         showTrackingTooltip: _showTrackingTooltip,
-        showIntersectionMarkers: true,
-        showCoordinateLabels: true,
+        showIntersectionMarkers: _showIntersectionMarkers,
+        intersectionMarkerRadius: _intersectionMarkerRadius,
+        showCoordinateLabels: _showCoordinateLabels,
+        style: CrosshairStyle(
+          lineWidth: _crosshairLineWidth,
+          dashPattern: _crosshairDashed ? const [6, 4] : null,
+        ),
       ),
-      tooltip: const TooltipConfig(enabled: true),
-      keyboard: const KeyboardConfig(enabled: true),
+      tooltip: TooltipConfig(enabled: _showPointTooltip),
+      keyboard: KeyboardConfig(enabled: _keyboardEnabled),
     ),
   );
 
@@ -1046,6 +1067,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         candlestickStyle: CandlestickChartStyle(
           bodyFillMode: _bodyFillMode,
           bodyWidthFactor: _bodyWidthFactor,
+          minBodyWidth: _minBodyWidth,
           maxBodyWidth: _maxBodyWidth,
           bodyBorderWidth: _bodyBorderWidth,
           wickWidth: _wickWidth,
@@ -1168,6 +1190,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _showTrackingTooltip,
             onChanged: (value) => setState(() => _showTrackingTooltip = value),
           ),
+        BoolOption(
+          key: const ValueKey('candlestick-point-tooltip'),
+          label: 'Show point tooltip',
+          subtitle: 'Display one candle tooltip on hover or selection',
+          value: _showPointTooltip,
+          onChanged: (value) => setState(() => _showPointTooltip = value),
+        ),
         if (_showcaseMode == _CandlestickShowcaseMode.workbench) ...[
           EnumOption<FinancialTimeSpacing>(
             key: const ValueKey('candlestick-time-spacing'),
@@ -1211,6 +1240,72 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               onChanged: (value) => setState(() => _entranceStagger = value),
             ),
         ],
+      ],
+    ),
+    OptionSection(
+      title: 'Interaction detail',
+      icon: Icons.ads_click_outlined,
+      children: [
+        BoolOption(
+          key: const ValueKey('candlestick-coordinate-labels'),
+          label: 'Show axis values',
+          value: _showCoordinateLabels,
+          onChanged: (value) => setState(() => _showCoordinateLabels = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-intersection-markers'),
+          label: 'Show tracking marker',
+          value: _showIntersectionMarkers,
+          onChanged: (value) =>
+              setState(() => _showIntersectionMarkers = value),
+        ),
+        if (_showIntersectionMarkers)
+          SliderOption(
+            key: const ValueKey('candlestick-marker-radius'),
+            label: 'Tracking marker radius',
+            value: _intersectionMarkerRadius,
+            min: 2,
+            max: 10,
+            divisions: 8,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _intersectionMarkerRadius = value),
+          ),
+        SliderOption(
+          key: const ValueKey('candlestick-crosshair-width'),
+          label: 'Crosshair width',
+          value: _crosshairLineWidth,
+          min: .5,
+          max: 4,
+          divisions: 14,
+          suffix: 'px',
+          onChanged: (value) => setState(() => _crosshairLineWidth = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-crosshair-dashed'),
+          label: 'Use dashed crosshair',
+          value: _crosshairDashed,
+          onChanged: (value) => setState(() => _crosshairDashed = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-selection-enabled'),
+          label: 'Enable candle selection',
+          value: _selectionEnabled,
+          onChanged: (value) => setState(() => _selectionEnabled = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-keyboard-enabled'),
+          label: 'Enable keyboard navigation',
+          value: _keyboardEnabled,
+          onChanged: (value) => setState(() => _keyboardEnabled = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-focus-border'),
+          label: 'Show keyboard focus border',
+          value: _showFocusBorder,
+          onChanged: (value) => setState(() => _showFocusBorder = value),
+        ),
       ],
     ),
     if (_showcaseMode == _CandlestickShowcaseMode.workbench)
@@ -1288,6 +1383,16 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           onChanged: (value) => setState(() => _bodyWidthFactor = value),
         ),
         SliderOption(
+          key: const ValueKey('candlestick-min-width'),
+          label: 'Minimum body width',
+          value: _minBodyWidth,
+          min: .5,
+          max: 6,
+          divisions: 11,
+          suffix: 'px',
+          onChanged: (value) => setState(() => _minBodyWidth = value),
+        ),
+        SliderOption(
           key: const ValueKey('candlestick-max-width'),
           label: 'Maximum body width',
           value: _maxBodyWidth,
@@ -1317,6 +1422,49 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           divisions: 8,
           suffix: 'px',
           onChanged: (value) => setState(() => _minimumBodyHeight = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Axes and labels',
+      icon: Icons.straighten_outlined,
+      children: [
+        EnumOption<YAxisPosition>(
+          key: const ValueKey('candlestick-y-axis-position'),
+          label: 'Price axis position',
+          value: _yAxisPosition,
+          values: const [
+            YAxisPosition.left,
+            YAxisPosition.right,
+            YAxisPosition.hidden,
+          ],
+          labelBuilder: (value) {
+            if (value == YAxisPosition.left) return 'Left';
+            if (value == YAxisPosition.hidden) return 'Hidden';
+            return 'Right';
+          },
+          onChanged: (value) => setState(() => _yAxisPosition = value),
+        ),
+        IntSliderOption(
+          key: const ValueKey('candlestick-x-tick-count'),
+          label: 'X-axis tick count',
+          value: _xTickCount,
+          min: 3,
+          max: 12,
+          suffix: 'ticks',
+          onChanged: (value) => setState(() => _xTickCount = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-x-labels'),
+          label: 'Show X-axis labels',
+          value: _showXAxisLabels,
+          onChanged: (value) => setState(() => _showXAxisLabels = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-y-labels'),
+          label: 'Show Y-axis labels',
+          value: _showYAxisLabels,
+          onChanged: (value) => setState(() => _showYAxisLabels = value),
         ),
       ],
     ),
@@ -1586,6 +1734,22 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           _densityGroupingEnabled = false;
           _showCloseAverage = false;
           break;
+        case _CandlestickExample.accessible:
+          _sessionCount = 40;
+          _rangeScale = 1.15;
+          _trendBias = .08;
+          _gapFrequency = _GapFrequency.occasional;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _candlePalette = _CandlestickPalette.blueOrange;
+          _bodyFillMode = CandlestickBodyFillMode.hollowRising;
+          _bodyBorderWidth = 1.8;
+          _wickWidth = 1.6;
+          _minimumBodyHeight = 2;
+          _showCloseAverage = true;
+          _averageWindow = 8;
+          _showDirectionLegend = true;
+          break;
         case _CandlestickExample.density:
           _useDensityStressData = true;
           _densityGroupingEnabled = true;
@@ -1635,6 +1799,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
     _CandlestickExample.gapsAndDoji =>
       'Discontinuous opens and repeated doji make direction cues explicit.',
+    _CandlestickExample.accessible =>
+      'Blue/orange hues, hollow rising bodies, stronger strokes, and a direction key avoid colour-only meaning.',
     _CandlestickExample.density =>
       '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
     _CandlestickExample.stockComposition =>
@@ -1646,6 +1812,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _CandlestickExample.trend => 'Advancing market trend',
     _CandlestickExample.volatility => 'High-volatility sessions',
     _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
+    _CandlestickExample.accessible => 'Accessible direction cues',
     _ => 'Candlestick price action',
   };
 
@@ -1654,6 +1821,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _CandlestickExample.trend => 'Trend',
     _CandlestickExample.volatility => 'Volatility',
     _CandlestickExample.gapsAndDoji => 'Gaps & doji',
+    _CandlestickExample.accessible => 'Accessible',
     _CandlestickExample.density => 'Density',
     _CandlestickExample.stockComposition => 'Stock composition',
   };
@@ -1663,6 +1831,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _CandlestickExample.trend => Icons.trending_up,
     _CandlestickExample.volatility => Icons.show_chart,
     _CandlestickExample.gapsAndDoji => Icons.space_bar,
+    _CandlestickExample.accessible => Icons.accessibility_new,
     _CandlestickExample.density => Icons.density_medium,
     _CandlestickExample.stockComposition => Icons.monitor_heart_outlined,
   };
@@ -1683,6 +1852,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     setState(() {
       _bodyFillMode = CandlestickBodyFillMode.hollowRising;
       _bodyWidthFactor = 0.7;
+      _minBodyWidth = 1;
       _maxBodyWidth = 18;
       _bodyBorderWidth = 1;
       _wickWidth = 1;
@@ -1697,6 +1867,15 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _averageColor = const Color(0xFF6366F1);
       _trackingEnabled = true;
       _showTrackingTooltip = true;
+      _showPointTooltip = true;
+      _showCoordinateLabels = true;
+      _showIntersectionMarkers = true;
+      _intersectionMarkerRadius = 4;
+      _crosshairLineWidth = 1;
+      _crosshairDashed = false;
+      _selectionEnabled = true;
+      _keyboardEnabled = true;
+      _showFocusBorder = true;
       _animateUpdates = true;
       _animateEntrance = true;
       _entranceStagger = .85;
@@ -1713,6 +1892,10 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _trendBias = 0;
       _legendPosition = LegendPosition.topRight;
       _legendDraggable = true;
+      _yAxisPosition = YAxisPosition.left;
+      _xTickCount = 8;
+      _showXAxisLabels = true;
+      _showYAxisLabels = true;
       _showcaseMode = _CandlestickShowcaseMode.workbench;
       _stockTimeSpacing = FinancialTimeSpacing.ordinal;
       _stockRange = _StockRangePreset.threeMonths;
@@ -2100,6 +2283,7 @@ enum _CandlestickExample {
   trend,
   volatility,
   gapsAndDoji,
+  accessible,
   density,
   stockComposition,
 }

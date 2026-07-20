@@ -287,6 +287,24 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-coordinate-labels')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic coordinateLabels = tester.widget(
+      find.byKey(const ValueKey('candlestick-coordinate-labels')),
+    );
+    coordinateLabels.onChanged(false);
+    final dynamic dashedCrosshair = tester.widget(
+      find.byKey(const ValueKey('candlestick-crosshair-dashed')),
+    );
+    dashedCrosshair.onChanged(true);
+    final dynamic selection = tester.widget(
+      find.byKey(const ValueKey('candlestick-selection-enabled')),
+    );
+    selection.onChanged(false);
+
+    await tester.scrollUntilVisible(
       find.byKey(const ValueKey('candlestick-body-mode')),
       300,
       scrollable: find.byType(Scrollable).last,
@@ -300,6 +318,10 @@ void main() {
       find.byKey(const ValueKey('candlestick-width-factor')),
     );
     widthFactor.onChanged(0.9);
+    final dynamic minWidth = tester.widget(
+      find.byKey(const ValueKey('candlestick-min-width')),
+    );
+    minWidth.onChanged(3.0);
     final dynamic cornerRadius = tester.widget(
       find.byKey(const ValueKey('candlestick-corner-radius')),
     );
@@ -342,10 +364,17 @@ void main() {
       CandlestickBodyFillMode.filled,
     );
     expect(series.candlestickStyle.bodyWidthFactor, 0.9);
+    expect(series.candlestickStyle.minBodyWidth, 3);
     expect(series.candlestickStyle.bodyCornerRadius, 4);
     expect(series.candlestickStyle.showWicks, isFalse);
     expect(chart.theme?.backgroundColor, ChartTheme.dark.backgroundColor);
     expect(chart.theme?.candlestickTheme, CandlestickTheme.dark);
+    expect(chart.interactionConfig?.enableSelection, isFalse);
+    expect(chart.interactionConfig?.crosshair.showCoordinateLabels, isFalse);
+    expect(chart.interactionConfig?.crosshair.style.dashPattern, const [
+      6.0,
+      4.0,
+    ]);
     expect(tester.takeException(), isNull);
   });
 
