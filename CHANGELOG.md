@@ -69,6 +69,16 @@ release-candidate material for 0.10.0.
   long-press entry paths with deterministic command grouping, accessible
   keyboard navigation, 48-pixel rows, theme-derived styling, viewport
   clamping, focus restoration, and safe async callback cleanup.
+- Polar Column baseline-to-value gradients, configurable mark elevation, and
+  grow/sweep/fade/instant entrance modes with controller replay and reduced-motion
+  compliance.
+- Independent category-label outward offset/style, direct value-label radial
+  position/style, and radial-axis label ray/angle/offset/style controls. The
+  appearance additions round-trip through artifacts, hydration, and generated
+  Dart with explicit capability negotiation.
+- Polar radial rings and angular spokes honor the chart theme's solid, dashed,
+  or dotted grid pattern. The seeded showcase now varies contrast-safe label
+  and axis colors together with grid colors, stroke widths, and patterns.
 
 ### Changed
 - The Live Navigator showcase now revision-gates retained-history snapshots and

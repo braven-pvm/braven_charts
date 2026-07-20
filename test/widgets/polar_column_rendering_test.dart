@@ -1017,4 +1017,131 @@ void main() {
     expect(element.geometry.marks.every((mark) => mark.isVisible), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Polar Column grow entrance repaints from baseline to completion',
+    (tester) async {
+      final baseTheme = ChartTheme.light;
+      final theme = baseTheme.copyWith(
+        animationTheme: baseTheme.animationTheme.copyWith(
+          dataUpdateDuration: const Duration(milliseconds: 400),
+          dataUpdateCurve: Curves.linear,
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox.square(
+              dimension: 320,
+              child: BravenChartPlus(
+                theme: theme,
+                series: [
+                  PolarColumnChartSeries.fromMap(
+                    id: 'grow-entrance',
+                    values: const {'North': 12, 'East': 24, 'South': 18},
+                    polarStyle: const PolarColumnStyle(
+                      animationMode: PolarColumnAnimationMode.grow,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      PolarColumnSeriesElement element() => tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single
+          .debugElements
+          .whereType<PolarColumnSeriesElement>()
+          .single;
+
+      await tester.pump();
+      expect(element().revealProgress, 0);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(element().revealProgress, closeTo(0.5, 0.02));
+      expect(element().geometry.marks.every((mark) => mark.isVisible), isTrue);
+
+      await tester.pumpAndSettle();
+      expect(element().revealProgress, 1);
+      expect(element().geometry.marks.every((mark) => mark.isVisible), isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Polar Column sweep entrance advances around the stable pane', (
+    tester,
+  ) async {
+    final baseTheme = ChartTheme.light;
+    final theme = baseTheme.copyWith(
+      animationTheme: baseTheme.animationTheme.copyWith(
+        dataUpdateDuration: const Duration(milliseconds: 400),
+        dataUpdateCurve: Curves.linear,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 320,
+            child: BravenChartPlus(
+              theme: theme,
+              polarChartConfig: const PolarChartConfig(
+                pane: PolarPaneConfig(
+                  startAngleDegrees: 35,
+                  sweepAngleDegrees: 220,
+                  clockwise: false,
+                ),
+              ),
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'sweep-entrance',
+                  values: const {
+                    'Adopt': 12,
+                    'Trial': 24,
+                    'Renew': 18,
+                    'Advocate': 30,
+                  },
+                  polarStyle: const PolarColumnStyle(
+                    animationMode: PolarColumnAnimationMode.sweep,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    PolarColumnSeriesElement element() => tester.allRenderObjects
+        .whereType<ChartRenderBox>()
+        .single
+        .debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .single;
+
+    await tester.pump();
+    expect(element().sweepProgress, 0);
+    expect(
+      List.generate(4, element().isPointRevealedForAnimation),
+      everyElement(isFalse),
+    );
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(element().sweepProgress, closeTo(0.5, 0.02));
+    expect(
+      List.generate(4, element().isPointRevealedForAnimation),
+      orderedEquals([true, true, false, false]),
+    );
+
+    await tester.pumpAndSettle();
+    expect(element().sweepProgress, 1);
+    expect(
+      List.generate(4, element().isPointRevealedForAnimation),
+      everyElement(isTrue),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

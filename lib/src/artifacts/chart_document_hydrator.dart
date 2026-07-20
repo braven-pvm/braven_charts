@@ -297,10 +297,12 @@ abstract final class ChartDocumentHydrator {
     'series.polarColumn',
     'series.polar.column.v1',
     PolarColumnChartSeries.cornerRadiusModeCapability,
+    PolarColumnChartSeries.appearanceCapability,
     'series.polar.column.targets.v1',
     'series.polar.column.intervals.v1',
     'chart.polar.config.v1',
     'chart.polar.thresholds.v1',
+    PolarChartConfig.labelAppearanceCapability,
     PolarColumnComposition.multipleSeriesCapability,
     PolarColumnComposition.groupedSeriesCapability,
     PolarColumnComposition.stackedSeriesCapability,
@@ -956,6 +958,19 @@ abstract final class ChartDocumentHydrator {
         [],
       );
     }
+    if (config.hasCustomLabelAppearance &&
+        !document.requiredCapabilities.contains(
+          PolarChartConfig.labelAppearanceCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Custom Polar labels must declare chart.polar.labels.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
     if (polarSeries.any((series) => series.targetValues.isNotEmpty) &&
         !document.requiredCapabilities.contains(
           'series.polar.column.targets.v1',
@@ -997,6 +1012,20 @@ abstract final class ChartDocumentHydrator {
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
               'Non-default Polar Column corner placement must declare series.polar.column.corner-radius-mode.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any((series) => series.polarStyle.hasAdvancedAppearance) &&
+        !document.requiredCapabilities.contains(
+          PolarColumnChartSeries.appearanceCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Custom Polar Column appearance must declare series.polar.column.appearance.v1.',
           path: r'$.document.requiredCapabilities',
         ),
         [],

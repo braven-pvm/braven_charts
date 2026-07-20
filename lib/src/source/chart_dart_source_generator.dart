@@ -2040,6 +2040,59 @@ class _ChartDartEmitter {
           style.maximumVisibleDataLabels,
           24,
         );
+        _numberIf(
+          writer,
+          'dataLabelRadialPosition',
+          style.dataLabelRadialPosition,
+          0.5,
+        );
+        if (options.includeDefaultValues ||
+            style.dataLabelStyle != const PolarLabelStyle()) {
+          _emitPolarLabelStyle(writer, 'dataLabelStyle', style.dataLabelStyle);
+        }
+        if (style.gradient case final gradient?) {
+          writer.writeLine('gradient: PolarColumnGradientStyle(');
+          writer.indented(() {
+            _valueIf(writer, 'enabled', gradient.enabled, defaultValue: true);
+            _optionalColor(writer, 'startColor', gradient.startColor);
+            _optionalColor(writer, 'endColor', gradient.endColor);
+            _numberIf(
+              writer,
+              'startLightnessShift',
+              gradient.startLightnessShift,
+              0.16,
+            );
+            _numberIf(
+              writer,
+              'endLightnessShift',
+              gradient.endLightnessShift,
+              -0.12,
+            );
+          });
+          writer.writeLine('),');
+        }
+        if (options.includeDefaultValues ||
+            style.shadow != const PolarColumnShadowStyle()) {
+          final shadow = style.shadow;
+          writer.writeLine('shadow: PolarColumnShadowStyle(');
+          writer.indented(() {
+            _optionalColor(writer, 'color', shadow.color);
+            _numberIf(writer, 'blurRadius', shadow.blurRadius, 0);
+            _numberIf(writer, 'spreadRadius', shadow.spreadRadius, 0);
+            if (options.includeDefaultValues || shadow.offset != Offset.zero) {
+              writer.namedArgument('offset', _offsetLiteral(shadow.offset));
+            }
+            _numberIf(writer, 'opacity', shadow.opacity, 0.28);
+          });
+          writer.writeLine('),');
+        }
+        _enumIf(
+          writer,
+          'animationMode',
+          'PolarColumnAnimationMode',
+          style.animationMode.name,
+          defaultName: 'none',
+        );
       });
       writer.writeLine('),');
     }
@@ -2259,6 +2312,11 @@ class _ChartDartEmitter {
             angular.maximumVisibleGridLines,
             72,
           );
+          _numberIf(writer, 'labelOffset', angular.labelOffset, 0);
+          if (options.includeDefaultValues ||
+              angular.labelStyle != const PolarLabelStyle()) {
+            _emitPolarLabelStyle(writer, 'labelStyle', angular.labelStyle);
+          }
         });
         writer.writeLine('),');
       }
@@ -2285,6 +2343,24 @@ class _ChartDartEmitter {
             radial.showGridLines,
             defaultValue: true,
           );
+          _enumIf(
+            writer,
+            'labelPosition',
+            'PolarRadialLabelPosition',
+            radial.labelPosition.name,
+            defaultName: 'start',
+          );
+          _numberIf(
+            writer,
+            'labelAngleOffsetDegrees',
+            radial.labelAngleOffsetDegrees,
+            0,
+          );
+          _numberIf(writer, 'labelOffset', radial.labelOffset, 4);
+          if (options.includeDefaultValues ||
+              radial.labelStyle != const PolarLabelStyle(fontSize: 10)) {
+            _emitPolarLabelStyle(writer, 'labelStyle', radial.labelStyle);
+          }
         });
         writer.writeLine('),');
       }
@@ -3890,6 +3966,22 @@ class _ChartDartEmitter {
 
   String _offsetLiteral(Offset value) =>
       'Offset(${DartSourceWriter.numberLiteral(value.dx)}, ${DartSourceWriter.numberLiteral(value.dy)})';
+
+  void _emitPolarLabelStyle(
+    DartSourceWriter writer,
+    String name,
+    PolarLabelStyle style,
+  ) {
+    writer.writeLine('$name: PolarLabelStyle(');
+    writer.indented(() {
+      _optionalColor(writer, 'color', style.color);
+      _optionalNumber(writer, 'fontSize', style.fontSize);
+      if (style.fontWeight case final weight?) {
+        writer.namedArgument('fontWeight', _fontWeightLiteral(weight));
+      }
+    });
+    writer.writeLine('),');
+  }
 
   void _emitTextStyle(DartSourceWriter writer, String name, TextStyle style) {
     writer.writeLine('$name: TextStyle(');

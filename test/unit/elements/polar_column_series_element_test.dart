@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:braven_charts/braven_charts.dart';
@@ -173,6 +174,183 @@ void main() {
       );
     });
 
+    test(
+      'resolves independent category, value, and radial label positions',
+      () {
+        PolarColumnSeriesElement build({
+          double categoryOffset = 0,
+          double dataPosition = 0.5,
+          PolarRadialLabelPosition radialPosition =
+              PolarRadialLabelPosition.start,
+          double radialAngleOffset = 0,
+        }) => PolarColumnSeriesElement(
+          series: PolarColumnChartSeries.fromMap(
+            id: 'labels',
+            values: const {'Search': 60, 'Social': 40},
+            polarStyle: PolarColumnStyle(dataLabelRadialPosition: dataPosition),
+          ),
+          config: PolarChartConfig(
+            pane: const PolarPaneConfig(
+              startAngleDegrees: -90,
+              sweepAngleDegrees: 240,
+            ),
+            angularAxis: PolarCategoryAxisConfig(labelOffset: categoryOffset),
+            radialAxis: PolarNumericAxisConfig(
+              labelPosition: radialPosition,
+              labelAngleOffsetDegrees: radialAngleOffset,
+            ),
+          ),
+          size: const Size.square(360),
+          theme: ChartTheme.light,
+        );
+
+        final inward = build(dataPosition: 0.25);
+        final outward = build(dataPosition: 0.75);
+        expect(
+          (outward.dataLabelAnchorForPoint(0) - outward.pane.center).distance,
+          greaterThan(
+            (inward.dataLabelAnchorForPoint(0) - inward.pane.center).distance,
+          ),
+        );
+
+        final tight = build(categoryOffset: 0);
+        final spaced = build(categoryOffset: 24);
+        expect(
+          (spaced.categoryLabelAnchorForPoint(0) - spaced.pane.center).distance,
+          greaterThan(
+            (tight.categoryLabelAnchorForPoint(0) - tight.pane.center).distance,
+          ),
+        );
+
+        final radial = build(
+          radialPosition: PolarRadialLabelPosition.middle,
+          radialAngleOffset: 15,
+        );
+        expect(
+          radial.resolvedRadialLabelAngle,
+          closeTo((-90 + 120 + 15) * math.pi / 180, 1e-9),
+        );
+      },
+    );
+
+    test('paints gradient, elevation, and fade entrance together', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'appearance',
+          values: const {'Search': 64, 'Social': 38},
+          polarStyle: const PolarColumnStyle(
+            gradient: PolarColumnGradientStyle(
+              startColor: Color(0xFF22D3EE),
+              endColor: Color(0xFF4338CA),
+            ),
+            shadow: PolarColumnShadowStyle(
+              blurRadius: 8,
+              spreadRadius: 1,
+              offset: Offset(0, 4),
+            ),
+            animationMode: PolarColumnAnimationMode.fade,
+          ),
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.dark,
+        fadeProgress: 0.45,
+      );
+
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(320));
+      expect(recorder.endRecording(), isNotNull);
+      expect(element.fadeProgress, 0.45);
+    });
+
+    test('applies the themed dash pattern to Polar grid contours', () {
+      final dashedTheme = ChartTheme.light.copyWith(
+        gridStyle: ChartTheme.light.gridStyle.copyWith(
+          majorDashPattern: const <double>[4, 3],
+        ),
+      );
+      final dashed = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'dashed-grid',
+          values: const {'North': 12, 'East': 24, 'South': 18},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: dashedTheme,
+      );
+      final source = Path()
+        ..addOval(Rect.fromCircle(center: const Offset(160, 160), radius: 90));
+      final sourceMetrics = source.computeMetrics().toList();
+      final dashedMetrics = dashed
+          .gridStrokePathForTesting(source)
+          .computeMetrics()
+          .toList();
+
+      expect(sourceMetrics, hasLength(1));
+      expect(dashedMetrics.length, greaterThan(1));
+      expect(
+        dashedMetrics.fold<double>(0, (total, metric) => total + metric.length),
+        lessThan(sourceMetrics.single.length),
+      );
+
+      final solid = PolarColumnSeriesElement(
+        series: dashed.series,
+        config: dashed.config,
+        size: dashed.size,
+        theme: ChartTheme.light,
+      );
+      expect(solid.gridStrokePathForTesting(source), same(source));
+    });
+
+    test('sweep entrance reveals a full pane in configured order', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'sweep-full',
+          values: const {'North': 12, 'East': 24, 'South': 18, 'West': 30},
+          polarStyle: const PolarColumnStyle(
+            animationMode: PolarColumnAnimationMode.sweep,
+          ),
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        sweepProgress: 0.25,
+      );
+
+      expect(element.isPointRevealedForAnimation(0), isTrue);
+      expect(element.isPointRevealedForAnimation(1), isFalse);
+      expect(element.isPointRevealedForAnimation(2), isFalse);
+      expect(element.isPointRevealedForAnimation(3), isFalse);
+
+      final recorder = PictureRecorder();
+      element.paint(Canvas(recorder), const Size.square(320));
+      expect(recorder.endRecording(), isNotNull);
+    });
+
+    test('sweep entrance respects a partial counter-clockwise pane', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'sweep-partial-counter-clockwise',
+          values: const {'Adopt': 12, 'Trial': 24, 'Renew': 18, 'Advocate': 30},
+        ),
+        config: const PolarChartConfig(
+          pane: PolarPaneConfig(
+            startAngleDegrees: -30,
+            sweepAngleDegrees: 180,
+            clockwise: false,
+          ),
+        ),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        sweepProgress: 0.5,
+      );
+
+      expect(element.isPointRevealedForAnimation(0), isTrue);
+      expect(element.isPointRevealedForAnimation(1), isTrue);
+      expect(element.isPointRevealedForAnimation(2), isFalse);
+      expect(element.isPointRevealedForAnimation(3), isFalse);
+    });
+
     test('rejects an invalid text scale factor', () {
       expect(
         () => PolarColumnSeriesElement(
@@ -184,6 +362,32 @@ void main() {
           size: const Size.square(240),
           theme: ChartTheme.light,
           textScaleFactor: 0,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnSeriesElement(
+          series: PolarColumnChartSeries.fromMap(
+            id: 'invalid-fade',
+            values: const {'A': 1},
+          ),
+          config: const PolarChartConfig(),
+          size: const Size.square(240),
+          theme: ChartTheme.light,
+          fadeProgress: 1.1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnSeriesElement(
+          series: PolarColumnChartSeries.fromMap(
+            id: 'invalid-sweep',
+            values: const {'A': 1},
+          ),
+          config: const PolarChartConfig(),
+          size: const Size.square(240),
+          theme: ChartTheme.light,
+          sweepProgress: -0.1,
         ),
         throwsArgumentError,
       );

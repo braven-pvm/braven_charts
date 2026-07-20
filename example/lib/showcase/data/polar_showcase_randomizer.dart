@@ -69,9 +69,36 @@ class PolarShowcaseRandomization {
     required this.showRadialGrid,
     required this.showValues,
     required this.maximumDataLabels,
+    required this.categoryLabelOffset,
+    required this.categoryLabelColor,
+    required this.categoryLabelSize,
+    required this.categoryLabelWeight,
+    required this.dataLabelRadialPosition,
+    required this.dataLabelColor,
+    required this.dataLabelSize,
+    required this.dataLabelWeight,
+    required this.radialLabelPosition,
+    required this.radialLabelAngleOffset,
+    required this.radialLabelOffset,
+    required this.radialLabelColor,
+    required this.radialLabelSize,
+    required this.radialLabelWeight,
     required this.cornerRadius,
     required this.cornerRadiusMode,
     required this.opacity,
+    required this.showGradient,
+    required this.gradientStartColor,
+    required this.gradientEndColor,
+    required this.gradientStartLightness,
+    required this.gradientEndLightness,
+    required this.showColumnShadow,
+    required this.columnShadowColor,
+    required this.columnShadowBlur,
+    required this.columnShadowSpread,
+    required this.columnShadowOffsetX,
+    required this.columnShadowOffsetY,
+    required this.columnShadowOpacity,
+    required this.animationMode,
     required this.showTargets,
     required this.showThreshold,
     required this.thresholdValue,
@@ -144,9 +171,36 @@ class PolarShowcaseRandomization {
   final bool showRadialGrid;
   final bool showValues;
   final int maximumDataLabels;
+  final double categoryLabelOffset;
+  final Color? categoryLabelColor;
+  final double categoryLabelSize;
+  final FontWeight categoryLabelWeight;
+  final double dataLabelRadialPosition;
+  final Color? dataLabelColor;
+  final double dataLabelSize;
+  final FontWeight dataLabelWeight;
+  final PolarRadialLabelPosition radialLabelPosition;
+  final double radialLabelAngleOffset;
+  final double radialLabelOffset;
+  final Color? radialLabelColor;
+  final double radialLabelSize;
+  final FontWeight radialLabelWeight;
   final double cornerRadius;
   final PolarColumnCornerRadiusMode cornerRadiusMode;
   final double opacity;
+  final bool showGradient;
+  final Color? gradientStartColor;
+  final Color? gradientEndColor;
+  final double gradientStartLightness;
+  final double gradientEndLightness;
+  final bool showColumnShadow;
+  final Color? columnShadowColor;
+  final double columnShadowBlur;
+  final double columnShadowSpread;
+  final double columnShadowOffsetX;
+  final double columnShadowOffsetY;
+  final double columnShadowOpacity;
+  final PolarColumnAnimationMode animationMode;
 
   final bool showTargets;
   final bool showThreshold;
@@ -265,6 +319,53 @@ abstract final class PolarShowcaseRandomizer {
     Color(0xFF1F2937),
   ];
 
+  static const _lightCanvasTextColors = <Color>[
+    Color(0xFF0F172A),
+    Color(0xFF1E3A8A),
+    Color(0xFF155E75),
+    Color(0xFF14532D),
+    Color(0xFF7C2D12),
+    Color(0xFF7F1D1D),
+    Color(0xFF581C87),
+    Color(0xFF475569),
+  ];
+
+  static const _darkCanvasTextColors = <Color>[
+    Color(0xFFF8FAFC),
+    Color(0xFFBFDBFE),
+    Color(0xFFA5F3FC),
+    Color(0xFFA7F3D0),
+    Color(0xFFFDE68A),
+    Color(0xFFFED7AA),
+    Color(0xFFFECACA),
+    Color(0xFFE9D5FF),
+  ];
+
+  static const _lightCanvasGridColors = <Color>[
+    Color(0x73475569),
+    Color(0x8060A5FA),
+    Color(0x702DD4BF),
+    Color(0x66F59E0B),
+    Color(0x70A78BFA),
+    Color(0x66F472B6),
+  ];
+
+  static const _darkCanvasGridColors = <Color>[
+    Color(0xA6CBD5E1),
+    Color(0x9960A5FA),
+    Color(0x8C5EEAD4),
+    Color(0x80FDE68A),
+    Color(0x99C4B5FD),
+    Color(0x8CF9A8D4),
+  ];
+
+  static const _labelWeights = <FontWeight>[
+    FontWeight.w400,
+    FontWeight.w500,
+    FontWeight.w600,
+    FontWeight.w700,
+  ];
+
   static PolarShowcaseRandomization generate(int seed) {
     final random = math.Random(seed);
     final presentation = _pick(random, PolarShowcasePresentationKind.values);
@@ -299,6 +400,12 @@ abstract final class PolarShowcaseRandomizer {
         ? const Color(0xFFCBD5E1)
         : const Color(0xFF475569);
     final accent = _pick(random, _accentColors);
+    final textColors = canvasIsDark
+        ? _darkCanvasTextColors
+        : _lightCanvasTextColors;
+    final gridColors = canvasIsDark
+        ? _darkCanvasGridColors
+        : _lightCanvasGridColors;
     final showAngularLabels = random.nextDouble() < 0.82;
     final showValues = random.nextDouble() < 0.7 || !showAngularLabels;
 
@@ -355,6 +462,24 @@ abstract final class PolarShowcaseRandomizer {
         categoryCount,
         categoryCount > 12 ? 6 + random.nextInt(7) : categoryCount,
       ),
+      categoryLabelOffset: _stepped(random, -4, 28, 2),
+      categoryLabelColor: random.nextDouble() < 0.9
+          ? _pick(random, textColors)
+          : null,
+      categoryLabelSize: _stepped(random, 9, 15, 1),
+      categoryLabelWeight: _pick(random, _labelWeights),
+      dataLabelRadialPosition: _stepped(random, 0.25, 0.75, 0.05),
+      dataLabelColor: random.nextDouble() < 0.32 ? strongInk : null,
+      dataLabelSize: _stepped(random, 9, 14, 1),
+      dataLabelWeight: _pick(random, _labelWeights),
+      radialLabelPosition: _pick(random, PolarRadialLabelPosition.values),
+      radialLabelAngleOffset: _stepped(random, -30, 30, 5),
+      radialLabelOffset: _stepped(random, -4, 12, 2),
+      radialLabelColor: random.nextDouble() < 0.88
+          ? _pick(random, textColors)
+          : null,
+      radialLabelSize: _stepped(random, 9, 14, 1),
+      radialLabelWeight: _pick(random, _labelWeights),
       cornerRadius: _stepped(random, 0, 14, 1),
       cornerRadiusMode: isStacked
           ? _pick(random, const [
@@ -366,6 +491,27 @@ abstract final class PolarShowcaseRandomizer {
               PolarColumnCornerRadiusMode.bothEnds,
             ]),
       opacity: _stepped(random, 0.72, 1, 0.04),
+      showGradient: random.nextDouble() < 0.68,
+      gradientStartColor: random.nextDouble() < 0.42
+          ? _pick(random, _accentColors)
+          : null,
+      gradientEndColor: random.nextDouble() < 0.42
+          ? _pick(random, _accentColors)
+          : null,
+      gradientStartLightness: _stepped(random, 0.04, 0.24, 0.02),
+      gradientEndLightness: _stepped(random, -0.22, -0.04, 0.02),
+      showColumnShadow: random.nextDouble() < 0.5,
+      columnShadowColor: random.nextDouble() < 0.35 ? accent : null,
+      columnShadowBlur: _stepped(random, 4, 16, 1),
+      columnShadowSpread: _stepped(random, 0, 3, 0.5),
+      columnShadowOffsetX: _stepped(random, -4, 4, 1),
+      columnShadowOffsetY: _stepped(random, 1, 6, 1),
+      columnShadowOpacity: _stepped(random, 0.16, 0.42, 0.02),
+      animationMode: _pick(random, const [
+        PolarColumnAnimationMode.grow,
+        PolarColumnAnimationMode.fade,
+        PolarColumnAnimationMode.sweep,
+      ]),
       showTargets: presentation == PolarShowcasePresentationKind.references,
       showThreshold:
           presentation == PolarShowcasePresentationKind.references &&
@@ -381,14 +527,18 @@ abstract final class PolarShowcaseRandomizer {
       intervalBandLength: _stepped(random, 0.4, 0.95, 0.05),
       intervalOpacity: _stepped(random, 0.55, 1, 0.05),
       canvasColor: canvasColor,
-      axisLineColor: random.nextDouble() < 0.52 ? softInk : null,
-      axisLabelColor: random.nextDouble() < 0.64 ? strongInk : null,
-      axisLineWidth: _stepped(random, 0.5, 2.5, 0.25),
-      axisLabelSize: _stepped(random, 9, 15, 1),
-      gridLineColor: random.nextDouble() < 0.52
-          ? softInk.withValues(alpha: canvasIsDark ? 0.42 : 0.3)
+      axisLineColor: random.nextDouble() < 0.88
+          ? _pick(random, textColors)
           : null,
-      gridLineWidth: _stepped(random, 0.5, 2, 0.25),
+      axisLabelColor: random.nextDouble() < 0.88
+          ? _pick(random, textColors)
+          : null,
+      axisLineWidth: _stepped(random, 0.5, 3.5, 0.25),
+      axisLabelSize: _stepped(random, 9, 15, 1),
+      gridLineColor: random.nextDouble() < 0.9
+          ? _pick(random, gridColors)
+          : null,
+      gridLineWidth: _stepped(random, 0.25, 2.5, 0.25),
       gridLinePattern: _pick(random, PolarShowcaseLinePatternKind.values),
       columnBorderColor: random.nextDouble() < 0.58 ? softInk : null,
       columnBorderWidth: _stepped(random, 0, 2, 0.25),

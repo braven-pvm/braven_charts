@@ -17,12 +17,34 @@ void main() {
     final presentations = <PolarShowcasePresentationKind>{};
     final themes = <PolarShowcaseThemeKind>{};
     final palettes = <PolarShowcasePaletteKind>{};
+    final categoryLabelColors = <Color>{};
+    final axisLineColors = <Color>{};
+    final axisLabelColors = <Color>{};
+    final gridLineColors = <Color>{};
+    final axisLineWidths = <double>{};
+    final gridLineWidths = <double>{};
+    final gridLinePatterns = <PolarShowcaseLinePatternKind>{};
 
     for (var seed = 0; seed < 400; seed++) {
       final generated = PolarShowcaseRandomizer.generate(seed);
       presentations.add(generated.presentation);
       themes.add(generated.theme);
       palettes.add(generated.palette);
+      if (generated.categoryLabelColor case final color?) {
+        categoryLabelColors.add(color);
+      }
+      if (generated.axisLineColor case final color?) {
+        axisLineColors.add(color);
+      }
+      if (generated.axisLabelColor case final color?) {
+        axisLabelColors.add(color);
+      }
+      if (generated.gridLineColor case final color?) {
+        gridLineColors.add(color);
+      }
+      axisLineWidths.add(generated.axisLineWidth);
+      gridLineWidths.add(generated.gridLineWidth);
+      gridLinePatterns.add(generated.gridLinePattern);
 
       expect(generated.categoryCount, inInclusiveRange(4, 18));
       expect(
@@ -37,6 +59,23 @@ void main() {
       expect(generated.maximumAngularLabels, inInclusiveRange(4, 18));
       expect(generated.maximumAngularGridLines, inInclusiveRange(8, 18));
       expect(generated.maximumDataLabels, inInclusiveRange(4, 18));
+      expect(generated.categoryLabelOffset, inInclusiveRange(-4, 28));
+      expect(generated.dataLabelRadialPosition, inInclusiveRange(0.25, 0.75));
+      expect(generated.radialLabelAngleOffset, inInclusiveRange(-30, 30));
+      expect(generated.radialLabelOffset, inInclusiveRange(-4, 12));
+      expect(generated.gradientStartLightness, inInclusiveRange(0.04, 0.24));
+      expect(generated.gradientEndLightness, inInclusiveRange(-0.22, -0.04));
+      expect(generated.columnShadowOpacity, inInclusiveRange(0.16, 0.42));
+      expect(generated.axisLineWidth, inInclusiveRange(0.5, 3.5));
+      expect(generated.gridLineWidth, inInclusiveRange(0.25, 2.5));
+      expect(
+        generated.animationMode,
+        isIn(const [
+          PolarColumnAnimationMode.grow,
+          PolarColumnAnimationMode.fade,
+          PolarColumnAnimationMode.sweep,
+        ]),
+      );
       expect(
         _contrastRatio(
           generated.tooltipTextColor,
@@ -44,6 +83,28 @@ void main() {
         ),
         greaterThanOrEqualTo(4.5),
       );
+      final canvas =
+          generated.canvasColor ?? _themeFor(generated.theme).backgroundColor;
+      for (final labelColor in <Color?>[
+        generated.categoryLabelColor,
+        generated.axisLabelColor,
+        generated.radialLabelColor,
+      ]) {
+        if (labelColor != null) {
+          expect(
+            _contrastRatio(labelColor, canvas),
+            greaterThanOrEqualTo(4.5),
+            reason: 'seed $seed label $labelColor on $canvas',
+          );
+        }
+      }
+      if (generated.axisLineColor case final axisColor?) {
+        expect(
+          _contrastRatio(axisColor, canvas),
+          greaterThanOrEqualTo(3),
+          reason: 'seed $seed axis $axisColor on $canvas',
+        );
+      }
 
       switch (generated.presentation) {
         case PolarShowcasePresentationKind.rose:
@@ -98,8 +159,25 @@ void main() {
     expect(presentations, PolarShowcasePresentationKind.values.toSet());
     expect(themes, PolarShowcaseThemeKind.values.toSet());
     expect(palettes, PolarShowcasePaletteKind.values.toSet());
+    expect(categoryLabelColors.length, greaterThanOrEqualTo(8));
+    expect(axisLineColors.length, greaterThanOrEqualTo(8));
+    expect(axisLabelColors.length, greaterThanOrEqualTo(8));
+    expect(gridLineColors.length, greaterThanOrEqualTo(6));
+    expect(axisLineWidths.length, greaterThanOrEqualTo(12));
+    expect(gridLineWidths.length, greaterThanOrEqualTo(9));
+    expect(gridLinePatterns, PolarShowcaseLinePatternKind.values.toSet());
   });
 }
+
+ChartTheme _themeFor(PolarShowcaseThemeKind theme) => switch (theme) {
+  PolarShowcaseThemeKind.light => ChartTheme.light,
+  PolarShowcaseThemeKind.dark => ChartTheme.dark,
+  PolarShowcaseThemeKind.corporate => ChartTheme.corporateBlue,
+  PolarShowcaseThemeKind.vibrant => ChartTheme.vibrant,
+  PolarShowcaseThemeKind.minimal => ChartTheme.minimal,
+  PolarShowcaseThemeKind.highContrast => ChartTheme.highContrast,
+  PolarShowcaseThemeKind.colorblind => ChartTheme.colorblindFriendly,
+};
 
 List<Object?> _signature(PolarShowcaseRandomization value) => <Object?>[
   value.seed,
@@ -128,9 +206,36 @@ List<Object?> _signature(PolarShowcaseRandomization value) => <Object?>[
   value.showRadialGrid,
   value.showValues,
   value.maximumDataLabels,
+  value.categoryLabelOffset,
+  value.categoryLabelColor,
+  value.categoryLabelSize,
+  value.categoryLabelWeight,
+  value.dataLabelRadialPosition,
+  value.dataLabelColor,
+  value.dataLabelSize,
+  value.dataLabelWeight,
+  value.radialLabelPosition,
+  value.radialLabelAngleOffset,
+  value.radialLabelOffset,
+  value.radialLabelColor,
+  value.radialLabelSize,
+  value.radialLabelWeight,
   value.cornerRadius,
   value.cornerRadiusMode,
   value.opacity,
+  value.showGradient,
+  value.gradientStartColor,
+  value.gradientEndColor,
+  value.gradientStartLightness,
+  value.gradientEndLightness,
+  value.showColumnShadow,
+  value.columnShadowColor,
+  value.columnShadowBlur,
+  value.columnShadowSpread,
+  value.columnShadowOffsetX,
+  value.columnShadowOffsetY,
+  value.columnShadowOpacity,
+  value.animationMode,
   value.showTargets,
   value.showThreshold,
   value.thresholdValue,

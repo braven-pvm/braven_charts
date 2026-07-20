@@ -34,6 +34,10 @@ The eight authored examples remain unchanged. A ninth randomized showcase mode
 can generate one seed on demand or play a pausable sequence at a configurable
 interval, making broad visual review possible without replacing the deliberate
 feature demonstrations.
+The seeded mode now exercises contrast-safe category/radial/axis label colors,
+axis and grid colors, wider stroke ranges, and solid/dashed/dotted grid styles.
+Polar rings and spokes honor the generated grid pattern in the renderer while
+pane and axis boundaries remain solid.
 
 ## Executive decision
 
@@ -505,6 +509,14 @@ same complete Options surface.
 The same surface now includes a dedicated randomized example with deterministic
 Play/Pause sequencing. Selecting any authored example stops playback and
 restores its fixed, documented configuration.
+The Polar-specific polish slice now completes the family appearance contract:
+marks support baseline-to-value gradients, configurable elevation, and
+grow/sweep/fade/instant entrance modes; category, direct-value, and radial-axis
+labels have independent styles and radial/angular placement controls. These
+properties survive artifacts, hydration, generated Dart, and the randomized
+showcase. Public API documentation and capability negotiation use
+`series.polar.column.appearance.v1` and `chart.polar.labels.v1`. Local visual
+acceptance remains the gate before this slice is promoted.
 
 Deliver in small slices:
 

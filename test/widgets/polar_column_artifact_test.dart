@@ -28,6 +28,12 @@ void main() {
           showGridLines: false,
           maximumVisibleLabels: 11,
           maximumVisibleGridLines: 17,
+          labelOffset: 16,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF334155),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 0,
@@ -36,6 +42,14 @@ void main() {
           tickCount: 6,
           showLabels: false,
           showGridLines: true,
+          labelPosition: PolarRadialLabelPosition.end,
+          labelAngleOffsetDegrees: -20,
+          labelOffset: 7,
+          labelStyle: PolarLabelStyle(
+            color: Color(0xFF0D9488),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       );
       final sourceSeries = PolarColumnChartSeries.rose(
@@ -53,6 +67,26 @@ void main() {
           borderWidth: 2,
           showDataLabels: false,
           maximumVisibleDataLabels: 7,
+          dataLabelRadialPosition: 0.68,
+          dataLabelStyle: PolarLabelStyle(
+            color: Color(0xFFFFFFFF),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+          gradient: PolarColumnGradientStyle(
+            startColor: Color(0xFF22D3EE),
+            endColor: Color(0xFF4338CA),
+            startLightnessShift: 0.2,
+            endLightnessShift: -0.16,
+          ),
+          shadow: PolarColumnShadowStyle(
+            color: Color(0xFF0F172A),
+            blurRadius: 11,
+            spreadRadius: 1.5,
+            offset: Offset(1, 4),
+            opacity: 0.32,
+          ),
+          animationMode: PolarColumnAnimationMode.sweep,
         ),
         selectionStyle: const RadialSelectionStyle(
           effect: RadialSelectionEffect.lift,
@@ -96,6 +130,8 @@ void main() {
           'series.polar.column.v1',
           'chart.polar.config.v1',
           PolarColumnChartSeries.cornerRadiusModeCapability,
+          PolarColumnChartSeries.appearanceCapability,
+          PolarChartConfig.labelAppearanceCapability,
         }),
       );
       expect(
@@ -145,6 +181,8 @@ void main() {
       final secondJson = _json(ChartArtifactJsonCodec.encode(artifact));
       expect(secondJson, firstJson);
       expect(firstJson, contains('"cornerRadiusMode":"stackExterior"'));
+      expect(firstJson, contains('"animationMode":"sweep"'));
+      expect(firstJson, contains('"dataLabelRadialPosition":0.68'));
 
       final hydrated = _configuration(
         ChartDocumentHydrator.hydrateJson(firstJson),
@@ -179,6 +217,28 @@ void main() {
             .message,
         contains(PolarColumnChartSeries.cornerRadiusModeCapability),
       );
+
+      for (final missingCapability in <String>[
+        PolarColumnChartSeries.appearanceCapability,
+        PolarChartConfig.labelAppearanceCapability,
+      ]) {
+        final invalidJson = snapshot.document.toJson();
+        invalidJson['requiredCapabilities'] = snapshot
+            .document
+            .requiredCapabilities
+            .where((capability) => capability != missingCapability)
+            .toList();
+        final result = ChartDocumentHydrator.hydrateDocument(
+          ChartDocument.fromJson(invalidJson),
+        );
+        expect(result, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+        expect(
+          (result as ChartArtifactFailure<HydratedChartConfiguration>)
+              .error
+              .message,
+          contains(missingCapability),
+        );
+      }
 
       final restoredController = BravenChartController();
       addTearDown(restoredController.dispose);
@@ -241,6 +301,12 @@ void main() {
       expect(
         snapshot.document.requiredCapabilities,
         contains('chart.polar.multiple-series.v1'),
+      );
+      expect(
+        snapshot.document.requiredCapabilities,
+        isNot(contains(PolarColumnChartSeries.appearanceCapability)),
+        reason:
+            'legacy opacity and data-label visibility must not require the new appearance capability',
       );
 
       final table = ChartTableModel.fromDocument(snapshot.document);
