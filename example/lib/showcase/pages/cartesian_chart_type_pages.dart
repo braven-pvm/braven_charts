@@ -868,7 +868,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             minimumTablePaneExtent: 360,
             maximumAutoTablePaneExtent: 520,
             chartBuilder: (context, controller) =>
-                _buildChart(options, controller),
+                _buildWorkbenchChart(options, controller),
           ),
         );
       },
@@ -890,6 +890,103 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               }
             : const {},
       );
+
+  Widget _buildWorkbenchChart(
+    ChartOptions options,
+    BravenChartController controller,
+  ) {
+    final chart = _buildChart(options, controller);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: chart),
+        if (_showsGuideNavigator) ...[
+          const SizedBox(height: 8),
+          SizedBox(height: 72, child: _buildGuideNavigator(options)),
+        ],
+      ],
+    );
+  }
+
+  bool get _showsGuideNavigator =>
+      (widget.family == _CartesianFamily.area && _presetIndex == 2) ||
+      (widget.family == _CartesianFamily.scatter && _presetIndex == 1);
+
+  Widget _buildGuideNavigator(ChartOptions options) {
+    final detailSeries = _buildSeries();
+    final points = detailSeries
+        .expand((series) => series.points)
+        .where((point) => point.x.isFinite && point.y.isFinite)
+        .toList(growable: false);
+    final minX = points.map((point) => point.x).reduce(math.min);
+    final maxX = points.map((point) => point.x).reduce(math.max);
+    final span = maxX - minX;
+    final overview = widget.family == _CartesianFamily.scatter
+        ? _scatterDistributionOverview(points, minX: minX, maxX: maxX)
+        : _areaGuideOverview(detailSeries);
+    return CartesianNavigator(
+      key: ValueKey('${widget.family.name}-guide-navigator'),
+      interactionGroupController: _interactionGroupController,
+      overviewSeries: overview,
+      fullDomain: ChartXViewport(min: minX, max: maxX),
+      initialViewport: ChartXViewport(
+        min: minX + span * .12,
+        max: minX + span * .68,
+      ),
+      behavior: CartesianNavigatorBehavior(minimumSpan: span / 20),
+      snapPolicy: CartesianNavigatorSnapPolicy.interval(span / 40),
+      theme: options.theme ?? ChartTheme.light,
+      height: 72,
+      semanticLabel: widget.family == _CartesianFamily.scatter
+          ? 'Training-load correlation viewport'
+          : 'Forecast time viewport',
+    );
+  }
+
+  AreaChartSeries _areaGuideOverview(List<ChartSeries> series) {
+    final source = series.whereType<AreaChartSeries>().first;
+    return AreaChartSeries(
+      id: 'area-forecast-navigator-overview',
+      name: 'Forecast overview',
+      points: source.points,
+      color: source.color,
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 1.5,
+      fillOpacity: .22,
+      showDataPointMarkers: false,
+    );
+  }
+
+  AreaChartSeries _scatterDistributionOverview(
+    List<ChartDataPoint> points, {
+    required double minX,
+    required double maxX,
+  }) {
+    const binCount = 20;
+    final span = maxX - minX;
+    final counts = List<int>.filled(binCount, 0);
+    for (final point in points) {
+      final normalized = (point.x - minX) / span;
+      final index = (normalized * binCount).floor().clamp(0, binCount - 1);
+      counts[index]++;
+    }
+    return AreaChartSeries(
+      id: 'scatter-correlation-navigator-overview',
+      name: 'Observation density',
+      points: [
+        for (var index = 0; index < binCount; index++)
+          ChartDataPoint(
+            x: minX + ((index + .5) / binCount * span),
+            y: counts[index].toDouble(),
+          ),
+      ],
+      color: const Color(0xFF0F8CA8),
+      interpolation: LineInterpolation.monotone,
+      strokeWidth: 1.5,
+      fillOpacity: .24,
+      showDataPointMarkers: false,
+    );
+  }
 
   Widget _buildChart(ChartOptions options, BravenChartController controller) {
     final baseTheme = options.theme ?? ChartTheme.light;
@@ -919,6 +1016,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     return BravenChartPlus(
       key: ValueKey('${widget.family.name}-chart'),
       bravenChartController: controller,
+      interactionGroupController: _showsGuideNavigator
+          ? _interactionGroupController
+          : null,
       series: _buildSeries(),
       annotations: _buildAnnotations(),
       theme: effectiveTheme.copyWith(
@@ -5404,14 +5504,62 @@ class _SynchronizedCartesianExample extends StatelessWidget {
             ],
           ],
         );
+        final allPoints = pointsByMetric.values
+            .expand((points) => points)
+            .toList(growable: false);
+        final minX = allPoints.map((point) => point.x).reduce(math.min);
+        final maxX = allPoints.map((point) => point.x).reduce(math.max);
+        final domainSpan = maxX - minX;
+        final overviewPoints =
+            pointsByMetric[_SynchronizedMetric.elevation] ??
+            pointsByMetric[visibleMetrics.first]!;
         return Semantics(
           container: true,
           label:
-              'Synchronized distance charts. Touch and drag any plot to inspect ${visibleMetrics.length == 1 ? 'it' : 'all ${visibleMetrics.length}'}.',
-          child: SingleChildScrollView(
-            key: const ValueKey('synchronized-cartesian-scroll'),
-            primary: false,
-            child: stack,
+              'Synchronized distance charts with one full-distance navigator. Touch and drag any plot to inspect ${visibleMetrics.length == 1 ? 'it' : 'all ${visibleMetrics.length}'}.',
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  key: const ValueKey('synchronized-cartesian-scroll'),
+                  primary: false,
+                  child: stack,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 72,
+                child: CartesianNavigator(
+                  key: const ValueKey('synchronized-cartesian-navigator'),
+                  interactionGroupController: groupController,
+                  overviewSeries: AreaChartSeries(
+                    id: 'synchronized-distance-overview',
+                    name: 'Route overview',
+                    points: overviewPoints,
+                    color: const Color(0xFF5B56D6),
+                    interpolation: LineInterpolation.monotone,
+                    strokeWidth: 1.5,
+                    fillOpacity: .24,
+                    showDataPointMarkers: false,
+                  ),
+                  fullDomain: ChartXViewport(min: minX, max: maxX),
+                  initialViewport: ChartXViewport(
+                    min: minX + domainSpan * .12,
+                    max: minX + domainSpan * .7,
+                  ),
+                  behavior: CartesianNavigatorBehavior(
+                    minimumSpan: domainSpan / 20,
+                  ),
+                  snapPolicy: CartesianNavigatorSnapPolicy.interval(
+                    domainSpan / 50,
+                  ),
+                  theme: options.theme ?? ChartTheme.light,
+                  height: 72,
+                  enabled: synchronizeViewport,
+                  semanticLabel: 'Route distance viewport',
+                ),
+              ),
+            ],
           ),
         );
       },

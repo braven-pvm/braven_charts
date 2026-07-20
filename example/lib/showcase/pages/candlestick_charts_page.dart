@@ -28,7 +28,6 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   final BravenChartController _chartController = BravenChartController();
   final ChartInteractionGroupController _stockGroupController =
       ChartInteractionGroupController();
-  late final AnnotationController _stockNavigatorAnnotationController;
   late List<CandlestickDataPoint> _candles;
   late FinancialTimeDomain _timeDomain;
   late final List<CandlestickDataPoint> _densityCandles;
@@ -119,7 +118,6 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   _StockRangePreset _stockRange = _StockRangePreset.threeMonths;
   FinancialTimeSpacing _stockTimeSpacing = FinancialTimeSpacing.ordinal;
   bool _showVolumePane = true;
-  bool _applyingStockNavigatorPreview = false;
 
   @override
   void initState() {
@@ -137,21 +135,11 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _stockCandles.map((point) => point.timestamp!),
     );
     final initialStockViewport = _stockViewportFor(_stockRange);
-    _stockNavigatorAnnotationController = AnnotationController(
-      initialAnnotations: [_stockNavigatorWindow(initialStockViewport)],
-    )..selectAnnotation(_stockNavigatorWindowId);
-    _stockGroupController.viewportListenable.addListener(
-      _syncStockNavigatorWindow,
-    );
     _stockGroupController.setViewport(initialStockViewport);
   }
 
   @override
   void dispose() {
-    _stockGroupController.viewportListenable.removeListener(
-      _syncStockNavigatorWindow,
-    );
-    _stockNavigatorAnnotationController.dispose();
     _optionsController.dispose();
     _chartController.dispose();
     _stockGroupController.dispose();
@@ -597,57 +585,43 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Expanded(
-        child: BravenChartPlus(
+        child: CartesianNavigator(
           key: const ValueKey('candlestick-stock-navigator'),
           interactionGroupController: _stockGroupController,
-          interactionGroupOptions: const ChartInteractionGroupOptions(
-            synchronizeCursor: false,
-            synchronizeViewport: false,
+          fullDomain: ChartXViewport(min: candles.first.x, max: candles.last.x),
+          behavior: CartesianNavigatorBehavior(
+            minimumSpan: _stockNavigatorMinimumSpan(candles),
           ),
-          annotationController: _stockNavigatorAnnotationController,
-          persistentRangeAnnotationHandles: true,
-          onAnnotationDragUpdate: _handleStockNavigatorWindowPreview,
-          onAnnotationDragged: _handleStockNavigatorWindowChanged,
-          series: [
-            AreaChartSeries(
-              id: 'market-navigator',
-              name: 'Close',
-              points: [
-                for (final candle in candles)
-                  ChartDataPoint(
-                    x: candle.x,
-                    y: candle.close,
-                    timestamp: candle.timestamp,
-                  ),
-              ],
-              color: const Color(0xFF0EA5E9),
-              interpolation: LineInterpolation.monotone,
-              strokeWidth: 1.25,
-              fillOpacity: .12,
-            ),
-          ],
+          snapPolicy: CartesianNavigatorSnapPolicy.values(
+            candles.map((candle) => candle.x),
+          ),
+          overviewSeries: AreaChartSeries(
+            id: 'market-navigator',
+            name: 'Close',
+            points: [
+              for (final candle in candles)
+                ChartDataPoint(
+                  x: candle.x,
+                  y: candle.close,
+                  timestamp: candle.timestamp,
+                ),
+            ],
+            color: const Color(0xFF0EA5E9),
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 1.25,
+            fillOpacity: .12,
+          ),
           theme: _effectiveChartTheme(),
-          showLegend: false,
-          grid: const GridConfig(horizontal: false, vertical: false),
-          xAxisConfig: XAxisConfig(
-            showAxisLine: _optionsController.options.showAxisLines,
-            tickCount: compact ? 3 : 7,
-            labelFormatter: (value) => _formatStockSession(value, candles),
+          style: const CartesianNavigatorStyle(
+            borderRadius: 6,
+            handleVisualHeight: 32,
           ),
-          yAxis: YAxisConfig(
-            position: YAxisPosition.right,
-            visible: false,
-            showAxisLine: false,
-            showTicks: false,
-            showTickLabels: false,
-            showCrosshairLabel: false,
-          ),
-          interactionConfig: const InteractionConfig(
-            enableZoom: false,
-            enablePan: false,
-            crosshair: CrosshairConfig(enabled: false),
-            tooltip: TooltipConfig(enabled: false),
-          ),
+          semanticLabel: 'Market session range',
+          onViewportChanged: (_) {
+            if (_stockRange != _StockRangePreset.custom) {
+              setState(() => _stockRange = _StockRangePreset.custom);
+            }
+          },
         ),
       ),
       const SizedBox(height: 4),
@@ -662,6 +636,14 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       ),
     ],
   );
+
+  double _stockNavigatorMinimumSpan(List<CandlestickDataPoint> candles) {
+    var minimum = double.infinity;
+    for (var index = 1; index < candles.length; index += 1) {
+      minimum = math.min(minimum, candles[index].x - candles[index - 1].x);
+    }
+    return minimum.isFinite && minimum > 0 ? minimum : 1;
+  }
 
   Widget _buildStockCodeReference() {
     final theme = Theme.of(context);
@@ -744,123 +726,6 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   void _applyStockRange(_StockRangePreset preset) {
     setState(() => _stockRange = preset);
     _stockGroupController.setViewport(_stockViewportFor(preset));
-  }
-
-  RangeAnnotation _stockNavigatorWindow(ChartXViewport viewport) =>
-      RangeAnnotation(
-        id: _stockNavigatorWindowId,
-        startX: viewport.min,
-        endX: viewport.max,
-        fillColor: const Color(0x243B82F6),
-        borderColor: const Color(0xCC3B82F6),
-        allowDragging: true,
-        allowEditing: false,
-        snapToValue: true,
-        snapTolerance: .02,
-      );
-
-  void _syncStockNavigatorWindow() {
-    if (_applyingStockNavigatorPreview) return;
-    final viewport = _stockGroupController.viewport;
-    if (viewport == null) return;
-    final current = _stockNavigatorAnnotationController.getAnnotation(
-      _stockNavigatorWindowId,
-    );
-    if (current is RangeAnnotation &&
-        current.startX == viewport.min &&
-        current.endX == viewport.max) {
-      return;
-    }
-    _stockNavigatorAnnotationController.updateAnnotation(
-      _stockNavigatorWindowId,
-      _stockNavigatorWindow(viewport),
-    );
-    if (_stockNavigatorAnnotationController.selectedAnnotationId !=
-        _stockNavigatorWindowId) {
-      _stockNavigatorAnnotationController.selectAnnotation(
-        _stockNavigatorWindowId,
-      );
-    }
-  }
-
-  void _handleStockNavigatorWindowChanged(
-    ChartAnnotation annotation,
-    Offset _,
-  ) {
-    _applyStockNavigatorWindow(annotation, commitPresetState: true);
-    // The final snapped viewport can equal the latest live preview, in which
-    // case the group does not notify its listeners again. Commit the window
-    // annotation explicitly once the gesture ends.
-    _syncStockNavigatorWindow();
-  }
-
-  void _handleStockNavigatorWindowPreview(
-    ChartAnnotation annotation,
-    Offset _,
-  ) {
-    _applyingStockNavigatorPreview = true;
-    try {
-      _applyStockNavigatorWindow(annotation, commitPresetState: false);
-    } finally {
-      _applyingStockNavigatorPreview = false;
-    }
-  }
-
-  void _applyStockNavigatorWindow(
-    ChartAnnotation annotation, {
-    required bool commitPresetState,
-  }) {
-    if (annotation is! RangeAnnotation ||
-        annotation.id != _stockNavigatorWindowId ||
-        annotation.startX == null ||
-        annotation.endX == null) {
-      return;
-    }
-    final domainMin = _stockTimeDomain.xAt(0, _stockTimeSpacing);
-    final domainMax = _stockTimeDomain.xAt(
-      _stockCandles.length - 1,
-      _stockTimeSpacing,
-    );
-    var proposedMin = annotation.startX!.clamp(domainMin, domainMax).toDouble();
-    var proposedMax = annotation.endX!.clamp(domainMin, domainMax).toDouble();
-    final current = _stockGroupController.viewport;
-    if (current != null) {
-      final currentWidth = current.max - current.min;
-      final proposedWidth = annotation.endX! - annotation.startX!;
-      final isWindowMove =
-          (proposedWidth - currentWidth).abs() <= currentWidth * .01;
-      if (isWindowMove && annotation.startX! < domainMin) {
-        proposedMin = domainMin;
-        proposedMax = math.min(domainMax, domainMin + currentWidth);
-      } else if (isWindowMove && annotation.endX! > domainMax) {
-        proposedMax = domainMax;
-        proposedMin = math.max(domainMin, domainMax - currentWidth);
-      }
-    }
-    var start = _stockTimeDomain.nearestIndex(
-      math.min(proposedMin, proposedMax),
-      _stockTimeSpacing,
-    );
-    var end = _stockTimeDomain.nearestIndex(
-      math.max(proposedMin, proposedMax),
-      _stockTimeSpacing,
-    );
-    if (start == end) {
-      if (end < _stockCandles.length - 1) {
-        end++;
-      } else {
-        start--;
-      }
-    }
-    if (commitPresetState && _stockRange != _StockRangePreset.custom) {
-      setState(() => _stockRange = _StockRangePreset.custom);
-    }
-    _stockGroupController.setViewport(
-      ChartXViewport(
-        min: _stockTimeDomain.xAt(start, _stockTimeSpacing),
-        max: _stockTimeDomain.xAt(end, _stockTimeSpacing),
-      ),
-    );
   }
 
   void _toggleStockTimeSpacing() {
@@ -3014,27 +2879,8 @@ const _monthNames = [
 
 const _stockCompositionSnippet = '''
 final viewport = ChartInteractionGroupController();
-final navigatorWindow = AnnotationController(
-  initialAnnotations: [
-    RangeAnnotation(id: 'navigator-window', startX: rangeStart, endX: rangeEnd),
-  ],
-)..selectAnnotation('navigator-window');
 
-// Period buttons and main-chart pan/zoom update the same selected window.
-viewport.viewportListenable.addListener(() {
-  final visible = viewport.viewport;
-  if (visible == null) return;
-  navigatorWindow.updateAnnotation(
-    'navigator-window',
-    RangeAnnotation(
-      id: 'navigator-window',
-      startX: visible.min,
-      endX: visible.max,
-    ),
-  );
-});
-
-// Period buttons and navigator handles issue one host-owned command.
+// Period buttons and every attached chart use the same viewport authority.
 viewport.setViewport(ChartXViewport(min: rangeStart, max: rangeEnd));
 
 BravenChartPlus(
@@ -3048,28 +2894,11 @@ BravenChartPlus(
   ],
 );
 
-BravenChartPlus(
+CartesianNavigator(
   interactionGroupController: viewport,
-  interactionGroupOptions: const ChartInteractionGroupOptions(
-    synchronizeCursor: false,
-    synchronizeViewport: false,
-  ),
-  annotationController: navigatorWindow,
-  persistentRangeAnnotationHandles: true,
-  onAnnotationDragUpdate: (annotation, _) {
-    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
-      // Preview the shared viewport continuously without replacing the
-      // controller-owned annotation during the active pointer gesture.
-      viewport.setViewport(ChartXViewport(min: min, max: max));
-    }
-  },
-  onAnnotationDragged: (annotation, _) {
-    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
-      viewport.setViewport(ChartXViewport(min: min, max: max));
-    }
-  },
-  series: [AreaChartSeries(id: 'navigator', points: closes)],
+  fullDomain: ChartXViewport(min: domainStart, max: domainEnd),
+  initialViewport: ChartXViewport(min: rangeStart, max: rangeEnd),
+  snapPolicy: CartesianNavigatorSnapPolicy.values(sessionXValues),
+  overviewSeries: AreaChartSeries(id: 'navigator', points: closes),
 );
 ''';
-
-const _stockNavigatorWindowId = 'navigator-window';

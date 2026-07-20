@@ -161,8 +161,11 @@ void main() {
     await tester.tap(find.text('Live Stream'));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Choose a streaming strategy'), findsOneWidget);
     expect(find.text('Follow latest'), findsWidgets);
+    expect(find.text('Paused buffer'), findsOneWidget);
+    expect(find.text('Expand then slide'), findsOneWidget);
+    expect(find.text('High frequency'), findsOneWidget);
+    expect(find.text('Live navigator'), findsOneWidget);
   });
 
   testWidgets('Workbench presentation follows chart-family navigation', (

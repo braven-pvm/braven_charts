@@ -223,6 +223,18 @@ void main() {
       final series = chart.series.first as AreaChartSeries;
       expect(series.aboveBaselineFillColor, isNotNull);
       expect(series.belowBaselineFillColor, isNotNull);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('area-preset-picker')),
+          matching: find.text('Forecast'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('area-guide-navigator')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -374,6 +386,10 @@ void main() {
         find.byKey(const ValueKey('synchronized-cartesian-stack')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('synchronized-cartesian-navigator')),
+        findsOneWidget,
+      );
       expect(find.text('Speed'), findsOneWidget);
       expect(find.text('Elevation'), findsOneWidget);
       expect(find.text('Heart rate'), findsOneWidget);
@@ -434,7 +450,8 @@ void main() {
       await tester.ensureVisible(firstFinder);
       await tester.pumpAndSettle();
       final first = renderBoxes.first;
-      const dataX = 0.2;
+      final viewport = charts.first.interactionGroupController!.viewport!;
+      final dataX = (viewport.min + viewport.max) / 2;
       final local = first.plotToWidget(
         first.transform!.dataToPlot(
           dataX,
@@ -1203,6 +1220,10 @@ void main() {
       'Base block',
       'Build block',
     ]);
+    expect(
+      find.byKey(const ValueKey('scatter-guide-navigator')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('scatter Cohorts presents a representative athlete dataset', (
@@ -3848,6 +3869,9 @@ void main() {
   });
 }
 
-Finder _chartRenderFinder() => find.byWidgetPredicate(
-  (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+Finder _chartRenderFinder() => find.descendant(
+  of: find.byType(BravenChartPlus),
+  matching: find.byWidgetPredicate(
+    (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+  ),
 );
