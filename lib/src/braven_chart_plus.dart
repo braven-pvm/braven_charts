@@ -217,6 +217,7 @@ class BravenChartPlus extends StatefulWidget {
     this.onDonutCenterTap,
     this.showToolbar = false,
     this.interactiveAnnotations = true,
+    this.persistentRangeAnnotationHandles = false,
     this.isLoading = false,
     this.loadingConfig = const ChartLoadingConfig.skeleton(),
     this.emptyStateConfig = const ChartEmptyStateConfig(),
@@ -228,6 +229,7 @@ class BravenChartPlus extends StatefulWidget {
     this.onBackgroundTap,
     this.onSeriesSelected,
     this.onAnnotationTap,
+    this.onAnnotationDragUpdate,
     this.onAnnotationDragged,
     // ==================== Y-AXIS SLOT SYSTEM PARAMETERS ====================
     this.maxAxesPerSide = 3,
@@ -271,6 +273,7 @@ class BravenChartPlus extends StatefulWidget {
     RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool persistentRangeAnnotationHandles = false,
     bool isLoading = false,
     ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
     ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
@@ -281,6 +284,8 @@ class BravenChartPlus extends StatefulWidget {
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset previewPosition)?
+    onAnnotationDragUpdate,
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
@@ -368,6 +373,7 @@ class BravenChartPlus extends StatefulWidget {
       radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      persistentRangeAnnotationHandles: persistentRangeAnnotationHandles,
       isLoading: isLoading,
       loadingConfig: loadingConfig,
       emptyStateConfig: emptyStateConfig,
@@ -378,6 +384,7 @@ class BravenChartPlus extends StatefulWidget {
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
+      onAnnotationDragUpdate: onAnnotationDragUpdate,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
       contextActionsBuilder: contextActionsBuilder,
@@ -422,6 +429,7 @@ class BravenChartPlus extends StatefulWidget {
     RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool persistentRangeAnnotationHandles = false,
     bool isLoading = false,
     ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
     ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
@@ -432,6 +440,8 @@ class BravenChartPlus extends StatefulWidget {
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset previewPosition)?
+    onAnnotationDragUpdate,
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
@@ -526,6 +536,7 @@ class BravenChartPlus extends StatefulWidget {
       radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      persistentRangeAnnotationHandles: persistentRangeAnnotationHandles,
       isLoading: isLoading,
       loadingConfig: loadingConfig,
       emptyStateConfig: emptyStateConfig,
@@ -536,6 +547,7 @@ class BravenChartPlus extends StatefulWidget {
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
+      onAnnotationDragUpdate: onAnnotationDragUpdate,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
       contextActionsBuilder: contextActionsBuilder,
@@ -578,6 +590,7 @@ class BravenChartPlus extends StatefulWidget {
     RadialLegendItemBuilder? radialLegendItemBuilder,
     bool showToolbar = false,
     bool interactiveAnnotations = true,
+    bool persistentRangeAnnotationHandles = false,
     bool isLoading = false,
     ChartLoadingConfig loadingConfig = const ChartLoadingConfig.skeleton(),
     ChartEmptyStateConfig emptyStateConfig = const ChartEmptyStateConfig(),
@@ -588,6 +601,8 @@ class BravenChartPlus extends StatefulWidget {
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
+    void Function(ChartAnnotation annotation, Offset previewPosition)?
+    onAnnotationDragUpdate,
     void Function(ChartAnnotation annotation, Offset newPosition)?
     onAnnotationDragged,
     InteractionConfig? interactionConfig,
@@ -672,6 +687,7 @@ class BravenChartPlus extends StatefulWidget {
       radialLegendItemBuilder: radialLegendItemBuilder,
       showToolbar: showToolbar,
       interactiveAnnotations: interactiveAnnotations,
+      persistentRangeAnnotationHandles: persistentRangeAnnotationHandles,
       isLoading: isLoading,
       loadingConfig: loadingConfig,
       emptyStateConfig: emptyStateConfig,
@@ -682,6 +698,7 @@ class BravenChartPlus extends StatefulWidget {
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
+      onAnnotationDragUpdate: onAnnotationDragUpdate,
       onAnnotationDragged: onAnnotationDragged,
       interactionConfig: interactionConfig,
       contextActionsBuilder: contextActionsBuilder,
@@ -1031,6 +1048,14 @@ class BravenChartPlus extends StatefulWidget {
   /// Requires annotations to have `allowDragging = true`.
   final bool interactiveAnnotations;
 
+  /// Whether range-annotation resize handles remain visible and interactive
+  /// without requiring the range to be selected first.
+  ///
+  /// This is useful for persistent viewport windows and other controls where
+  /// the resize affordance must remain discoverable. Defaults to false so
+  /// ordinary chart annotations retain selection-driven handles.
+  final bool persistentRangeAnnotationHandles;
+
   /// Whether the chart data is currently loading.
   ///
   /// Loading takes precedence over both chart content and the empty state while
@@ -1073,6 +1098,13 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Called when an annotation is tapped.
   final void Function(ChartAnnotation annotation)? onAnnotationTap;
+
+  /// Called continuously while an annotation is being moved or resized.
+  ///
+  /// The preview is transient and does not mutate [annotationController]. Use
+  /// [onAnnotationDragged] for the committed value emitted on pointer-up.
+  final void Function(ChartAnnotation annotation, Offset previewPosition)?
+  onAnnotationDragUpdate;
 
   /// Called when an annotation is dragged to a new position.
   final void Function(ChartAnnotation annotation, Offset newPosition)?
@@ -1763,6 +1795,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       widget.legendStyle != oldWidget.legendStyle ||
       widget.showToolbar != oldWidget.showToolbar ||
       widget.interactiveAnnotations != oldWidget.interactiveAnnotations ||
+      widget.persistentRangeAnnotationHandles !=
+          oldWidget.persistentRangeAnnotationHandles ||
       widget.maxAxesPerSide != oldWidget.maxAxesPerSide ||
       widget.axisSwapMode != oldWidget.axisSwapMode ||
       widget.normalizationMode != oldWidget.normalizationMode;
@@ -2082,6 +2116,24 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     setState(() {
       _rebuildElements();
     });
+  }
+
+  /// Publishes transient annotation geometry without committing controller state.
+  void _handleAnnotationDragUpdate(
+    String annotationId,
+    ChartAnnotation updatedAnnotation,
+  ) {
+    if (updatedAnnotation.id != annotationId ||
+        widget.onAnnotationDragUpdate == null) {
+      return;
+    }
+    Offset position = Offset.zero;
+    if (updatedAnnotation is TextAnnotation) {
+      position = updatedAnnotation.position;
+    } else if (updatedAnnotation is PointAnnotation) {
+      position = updatedAnnotation.offset;
+    }
+    widget.onAnnotationDragUpdate!(updatedAnnotation, position);
   }
 
   /// Called when an annotation is modified through user interaction (e.g., drag-to-resize).
@@ -2847,6 +2899,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       // Removed excessive debugPrints (annotation conversion details)
       // Use effective controller (user-provided or internal with static annotations)
       final effectiveAnnotations = _resolveEffectiveAnnotations();
+      final selectedAnnotationId =
+          _effectiveAnnotationController?.selectedAnnotationId;
       for (final annotation in effectiveAnnotations) {
         try {
           final ChartElement element = switch (annotation) {
@@ -2867,6 +2921,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               annotation: annotation,
               transform: transform,
               chartSize: Size(transform.plotWidth, transform.plotHeight),
+              persistentResizeHandles: widget.persistentRangeAnnotationHandles,
             ),
             TextAnnotation() => TextAnnotationElement(annotation: annotation),
             ThresholdAnnotation() => ThresholdAnnotationElement(
@@ -2905,6 +2960,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               chartSize: Size(transform.plotWidth, transform.plotHeight),
             ),
           };
+          if (element.id == selectedAnnotationId) {
+            element.onSelect();
+          }
           elements.add(element);
 
           // For resizable elements, also insert their resize handle elements
@@ -7737,6 +7795,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           textScaleFactor: _textScaleFactor,
                           textDirection: _textDirection,
                           onCursorChange: _handleCursorChange,
+                          onAnnotationDragUpdate: _handleAnnotationDragUpdate,
                           onAnnotationChanged: _handleAnnotationChanged,
                           onElementHover: _handleElementHover,
                           onDataHitActivate: isNonCartesian
@@ -7772,7 +7831,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               : null,
                           onDataXCursorChanged:
                               !isNonCartesian &&
-                                  widget.interactionGroupController != null
+                                  widget.interactionGroupController != null &&
+                                  widget
+                                      .interactionGroupOptions
+                                      .synchronizeCursor
                               ? _handleLocalDataXCursorChanged
                               : null,
                           gridConfig: isNonCartesian ? null : widget.grid,
@@ -8360,6 +8422,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
     this.textScaleFactor = 1,
     this.textDirection = TextDirection.ltr,
     this.onCursorChange,
+    this.onAnnotationDragUpdate,
     this.onAnnotationChanged,
     this.onElementHover,
     this.onDataHitActivate,
@@ -8407,6 +8470,8 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
   final double textScaleFactor;
   final TextDirection textDirection;
   final void Function(MouseCursor cursor)? onCursorChange;
+  final void Function(String annotationId, ChartAnnotation previewAnnotation)?
+  onAnnotationDragUpdate;
   final void Function(String annotationId, ChartAnnotation updatedAnnotation)?
   onAnnotationChanged;
   final void Function(ChartElement? element)? onElementHover;
@@ -8442,6 +8507,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
         normalizationMode: normalizationMode,
         series: series,
         onCursorChange: onCursorChange,
+        onAnnotationDragUpdate: onAnnotationDragUpdate,
         onAnnotationChanged: onAnnotationChanged,
         onElementHover: onElementHover,
         onDataHitActivate: onDataHitActivate,
@@ -8491,6 +8557,7 @@ class _ChartRenderWidget extends LeafRenderObjectWidget {
       ..setGridConfig(gridConfig)
       ..onViewportInteracted = onViewportInteracted
       ..onViewportChanged = onViewportChanged
+      ..onAnnotationDragUpdate = onAnnotationDragUpdate
       ..onDataXCursorChanged = onDataXCursorChanged
       ..onSelectionGestureComplete = onSelectionGestureComplete
       ..onElementHover = onElementHover;

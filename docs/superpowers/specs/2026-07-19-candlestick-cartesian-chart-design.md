@@ -409,13 +409,23 @@ For each ordered group:
 - high = maximum source high;
 - low = minimum source low;
 - close = last source close;
-- timestamp/X = documented group anchor;
+- timestamp/X = the first source candle in the globally aligned source-index
+  bucket;
 - identity = stable group key plus every represented source index.
 
 Grouping affects render and tracking projection only. Artifacts, Data mode,
 copy, and CSV preserve raw source candles unless the user explicitly requests a
 grouped export. Grouping thresholds use visible pixel density and are computed
 outside paint.
+
+The public opt-in is `CandlestickDensityGrouping` on
+`CandlestickChartSeries`. `targetGroupWidth` defines the desired logical-pixel
+width per rendered group and `minimumPointsPerGroup` prevents accidental
+single-point "groups". Buckets align to raw source indices, which keeps the
+group key and represented source span stable while the viewport pans at one
+grouping resolution. A grouped point intentionally drops point-level paint
+overrides because one group can represent conflicting raw styles; series and
+theme direction styling still applies.
 
 ## Portable document and Workbench
 

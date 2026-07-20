@@ -5,6 +5,7 @@ import 'dart:ui';
 
 import 'candlestick_chart_style.dart';
 import 'candlestick_data_point.dart';
+import 'candlestick_density_grouping.dart';
 import 'chart_annotation.dart';
 import 'chart_data_point.dart';
 import 'chart_series.dart';
@@ -24,6 +25,7 @@ final class CandlestickChartSeries extends ChartSeries {
     super.unit,
     this.candlestickStyle = const CandlestickChartStyle(),
     this.animation = const CandlestickAnimationStyle(),
+    this.densityGrouping = const CandlestickDensityGrouping(),
   }) : super(
          points: List<CandlestickDataPoint>.unmodifiable(points),
          style: SeriesStyle.candlestick,
@@ -34,6 +36,7 @@ final class CandlestickChartSeries extends ChartSeries {
 
   final CandlestickChartStyle candlestickStyle;
   final CandlestickAnimationStyle animation;
+  final CandlestickDensityGrouping densityGrouping;
 
   List<CandlestickDataPoint> get candles =>
       List<CandlestickDataPoint>.unmodifiable(
@@ -47,6 +50,7 @@ final class CandlestickChartSeries extends ChartSeries {
   void validateConfiguration() {
     candlestickStyle.validate();
     animation.validate();
+    densityGrouping.validate();
     double? previousX;
     for (var index = 0; index < points.length; index++) {
       final point = points[index];
@@ -91,6 +95,7 @@ final class CandlestickChartSeries extends ChartSeries {
     String? unit,
     CandlestickChartStyle? candlestickStyle,
     CandlestickAnimationStyle? animation,
+    CandlestickDensityGrouping? densityGrouping,
   }) {
     if (style != null && style != SeriesStyle.candlestick) {
       throw ArgumentError.value(
@@ -128,6 +133,7 @@ final class CandlestickChartSeries extends ChartSeries {
       unit: unit ?? this.unit,
       candlestickStyle: candlestickStyle ?? this.candlestickStyle,
       animation: animation ?? this.animation,
+      densityGrouping: densityGrouping ?? this.densityGrouping,
     );
   }
 
@@ -137,10 +143,12 @@ final class CandlestickChartSeries extends ChartSeries {
       other is CandlestickChartSeries &&
           super == other &&
           other.candlestickStyle == candlestickStyle &&
-          other.animation == animation;
+          other.animation == animation &&
+          other.densityGrouping == densityGrouping;
 
   @override
-  int get hashCode => Object.hash(super.hashCode, candlestickStyle, animation);
+  int get hashCode =>
+      Object.hash(super.hashCode, candlestickStyle, animation, densityGrouping);
 
   @override
   String toString() =>

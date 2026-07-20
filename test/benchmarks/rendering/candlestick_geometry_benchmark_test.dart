@@ -1,5 +1,4 @@
 import 'package:braven_charts/braven_charts.dart';
-import 'package:braven_charts/src/coordinates/chart_transform.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -44,6 +43,49 @@ void main() {
     // ignore: avoid_print
     print(
       'Virtualized Candlestick geometry (50,000 source / 1,000 visible): '
+      '${averageMs.toStringAsFixed(3)}ms average',
+    );
+    expect(averageMs, lessThan(16.67));
+  });
+
+  test('groups 50,000 visible candles outside paint within one frame', () {
+    const transform = ChartTransform(
+      dataXMin: 0,
+      dataXMax: 49999,
+      dataYMin: 90,
+      dataYMax: 125,
+      plotWidth: 1600,
+      plotHeight: 900,
+    );
+    const grouping = CandlestickDensityGrouping(enabled: true);
+    for (var warmup = 0; warmup < 5; warmup++) {
+      CandlestickGeometryEngine.resolve(
+        index: index,
+        transform: transform,
+        style: const CandlestickChartStyle(),
+        grouping: grouping,
+      );
+    }
+
+    const iterations = 50;
+    final stopwatch = Stopwatch()..start();
+    for (var iteration = 0; iteration < iterations; iteration++) {
+      final geometry = CandlestickGeometryEngine.resolve(
+        index: index,
+        transform: transform,
+        style: const CandlestickChartStyle(),
+        grouping: grouping,
+      );
+      expect(geometry.length, inInclusiveRange(300, 322));
+      expect(geometry.first.sourceStartIndex, 0);
+      expect(geometry.last.sourceEndIndexExclusive, 50000);
+    }
+    stopwatch.stop();
+
+    final averageMs = stopwatch.elapsedMicroseconds / 1000 / iterations;
+    // ignore: avoid_print
+    print(
+      'Grouped Candlestick geometry (50,000 source): '
       '${averageMs.toStringAsFixed(3)}ms average',
     );
     expect(averageMs, lessThan(16.67));

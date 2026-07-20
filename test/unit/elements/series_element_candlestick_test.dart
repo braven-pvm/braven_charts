@@ -85,6 +85,29 @@ void main() {
       expect(hits.first.semanticLabel, contains('rising'));
     });
 
+    test(
+      'groups dense render and tracking identity without changing points',
+      () {
+        final raw = _denseSeries(
+          grouping: const CandlestickDensityGrouping(enabled: true),
+        );
+        final element = SeriesElement(
+          series: raw,
+          transform: _transform(0, 9999),
+        );
+
+        expect(raw.points, hasLength(10000));
+        expect(element.visibleCandlestickGeometryCount, lessThanOrEqualTo(82));
+        final geometry = element.candlestickGeometryForPoint(64)!;
+        final hit = element.dataHitAt(geometry.bodyRect.center)!;
+        expect(geometry.isGrouped, isTrue);
+        expect(geometry.sourcePointIndices, contains(64));
+        expect(hit.effectiveSourcePointIndices, geometry.sourcePointIndices);
+        expect(hit.candlestick!.sourceCount, geometry.sourceCount);
+        expect(hit.semanticLabel, contains('grouped candles'));
+      },
+    );
+
     test('paints batched uniforms and per-point overrides', () async {
       final uniform = SeriesElement(
         series: _smallSeries(),
@@ -146,8 +169,11 @@ CandlestickChartSeries _smallSeries() => CandlestickChartSeries(
   ],
 );
 
-CandlestickChartSeries _denseSeries() => CandlestickChartSeries(
+CandlestickChartSeries _denseSeries({
+  CandlestickDensityGrouping grouping = const CandlestickDensityGrouping(),
+}) => CandlestickChartSeries(
   id: 'dense-ohlc',
+  densityGrouping: grouping,
   points: [
     for (var index = 0; index < 10000; index++)
       CandlestickDataPoint(

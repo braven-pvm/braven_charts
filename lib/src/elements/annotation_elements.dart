@@ -1056,6 +1056,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     required this.transform,
     required this.chartSize,
     this.axisBounds,
+    this.persistentResizeHandles = false,
   }) : _isSelected = false,
        _isHovered = false,
        _currentTransform = transform,
@@ -1065,6 +1066,9 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   final ChartTransform transform; // Initial transform for construction
   ChartTransform _currentTransform; // Current transform for painting
   final Size chartSize;
+
+  /// Whether resize handles remain visible and hit-testable when unselected.
+  final bool persistentResizeHandles;
 
   /// Optional axis bounds for perSeries normalization.
   ///
@@ -1286,7 +1290,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     }
 
     // Draw resize handles if selected
-    if (_isSelected) {
+    if (_isSelected || persistentResizeHandles) {
       _drawResizeHandles(canvas, fillRect);
     }
 
@@ -1310,20 +1314,8 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    // Get handle positions
-    final handles = [
-      Offset(rect.left, rect.top), // Top-left
-      Offset(rect.right, rect.top), // Top-right
-      Offset(rect.left, rect.bottom), // Bottom-left
-      Offset(rect.right, rect.bottom), // Bottom-right
-      Offset(rect.center.dx, rect.top), // Top
-      Offset(rect.right, rect.center.dy), // Right
-      Offset(rect.center.dx, rect.bottom), // Bottom
-      Offset(rect.left, rect.center.dy), // Left
-    ];
-
     // Draw each handle
-    for (final center in handles) {
+    for (final center in _visibleResizeHandleCenters(rect)) {
       final handleRect = Rect.fromCenter(
         center: center,
         width: handleSize,
@@ -1604,87 +1596,118 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
     final top = rect.top;
     final bottom = rect.bottom;
 
-    return [
-      // Corners
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.topLeft,
-        bounds: Rect.fromCenter(
-          center: Offset(left, top),
-          width: handleSize,
-          height: handleSize,
+    final handles = <ResizeHandleElement>[];
+
+    void addCorner(bool visible, ResizeDirection direction, Offset center) {
+      if (!visible) return;
+      handles.add(
+        ResizeHandleElement(
+          parentAnnotation: this,
+          direction: direction,
+          bounds: Rect.fromCenter(
+            center: center,
+            width: handleSize,
+            height: handleSize,
+          ),
         ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.topRight,
-        bounds: Rect.fromCenter(
-          center: Offset(right, top),
-          width: handleSize,
-          height: handleSize,
+      );
+    }
+
+    addCorner(
+      annotation.startX != null && annotation.endY != null,
+      ResizeDirection.topLeft,
+      Offset(left, top),
+    );
+    addCorner(
+      annotation.endX != null && annotation.endY != null,
+      ResizeDirection.topRight,
+      Offset(right, top),
+    );
+    addCorner(
+      annotation.startX != null && annotation.startY != null,
+      ResizeDirection.bottomLeft,
+      Offset(left, bottom),
+    );
+    addCorner(
+      annotation.endX != null && annotation.startY != null,
+      ResizeDirection.bottomRight,
+      Offset(right, bottom),
+    );
+
+    if (annotation.endY != null) {
+      handles.add(
+        ResizeHandleElement(
+          parentAnnotation: this,
+          direction: ResizeDirection.top,
+          bounds: Rect.fromLTRB(
+            left + (annotation.startX != null ? halfSize : 0),
+            top - halfSize,
+            right - (annotation.endX != null ? halfSize : 0),
+            top + halfSize,
+          ),
         ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.bottomLeft,
-        bounds: Rect.fromCenter(
-          center: Offset(left, bottom),
-          width: handleSize,
-          height: handleSize,
+      );
+    }
+    if (annotation.endX != null) {
+      handles.add(
+        ResizeHandleElement(
+          parentAnnotation: this,
+          direction: ResizeDirection.right,
+          bounds: Rect.fromLTRB(
+            right - halfSize,
+            top + (annotation.endY != null ? halfSize : 0),
+            right + halfSize,
+            bottom - (annotation.startY != null ? halfSize : 0),
+          ),
         ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.bottomRight,
-        bounds: Rect.fromCenter(
-          center: Offset(right, bottom),
-          width: handleSize,
-          height: handleSize,
+      );
+    }
+    if (annotation.startY != null) {
+      handles.add(
+        ResizeHandleElement(
+          parentAnnotation: this,
+          direction: ResizeDirection.bottom,
+          bounds: Rect.fromLTRB(
+            left + (annotation.startX != null ? halfSize : 0),
+            bottom - halfSize,
+            right - (annotation.endX != null ? halfSize : 0),
+            bottom + halfSize,
+          ),
         ),
-      ),
-      // Edges (continuous zones along the edge)
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.top,
-        bounds: Rect.fromLTRB(
-          left + halfSize,
-          top - halfSize,
-          right - halfSize,
-          top + halfSize,
+      );
+    }
+    if (annotation.startX != null) {
+      handles.add(
+        ResizeHandleElement(
+          parentAnnotation: this,
+          direction: ResizeDirection.left,
+          bounds: Rect.fromLTRB(
+            left - halfSize,
+            top + (annotation.endY != null ? halfSize : 0),
+            left + halfSize,
+            bottom - (annotation.startY != null ? halfSize : 0),
+          ),
         ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.right,
-        bounds: Rect.fromLTRB(
-          right - halfSize,
-          top + halfSize,
-          right + halfSize,
-          bottom - halfSize,
-        ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.bottom,
-        bounds: Rect.fromLTRB(
-          left + halfSize,
-          bottom - halfSize,
-          right - halfSize,
-          bottom + halfSize,
-        ),
-      ),
-      ResizeHandleElement(
-        parentAnnotation: this,
-        direction: ResizeDirection.left,
-        bounds: Rect.fromLTRB(
-          left - halfSize,
-          top + halfSize,
-          left + halfSize,
-          bottom - halfSize,
-        ),
-      ),
-    ];
+      );
+    }
+
+    return handles;
   }
+
+  List<Offset> _visibleResizeHandleCenters(Rect rect) => [
+    if (annotation.startX != null && annotation.endY != null)
+      Offset(rect.left, rect.top),
+    if (annotation.endX != null && annotation.endY != null)
+      Offset(rect.right, rect.top),
+    if (annotation.startX != null && annotation.startY != null)
+      Offset(rect.left, rect.bottom),
+    if (annotation.endX != null && annotation.startY != null)
+      Offset(rect.right, rect.bottom),
+    if (annotation.endY != null) Offset(rect.center.dx, rect.top),
+    if (annotation.endX != null) Offset(rect.right, rect.center.dy),
+    if (annotation.startY != null) Offset(rect.center.dx, rect.bottom),
+    if (annotation.startX != null) Offset(rect.left, rect.center.dy),
+  ];
 
   @override
   List<Rect> get resizeHandleBounds {
@@ -1704,16 +1727,15 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
   }
 
   @override
-  bool get showResizeHandles => _isSelected;
+  bool get showResizeHandles => _isSelected || persistentResizeHandles;
 
-  /// Resize handles are only active when the annotation is selected.
+  /// Resize handles are normally active only while the annotation is selected.
   ///
   /// This prevents resize handles from blocking other annotations (like
-  /// ThresholdAnnotations) when the range is not actively being edited.
-  /// User must first select the RangeAnnotation, then resize handles become
-  /// active for hit testing.
+  /// ThresholdAnnotations) when the range is not actively being edited. A
+  /// persistent control surface can opt into always-active handles.
   @override
-  bool get isResizable => _isSelected;
+  bool get isResizable => _isSelected || persistentResizeHandles;
 
   // ============================================================================
 
@@ -1723,6 +1745,7 @@ class RangeAnnotationElement extends ChartElement with ResizableElement {
       annotation: annotation,
       transform: transform,
       chartSize: chartSize,
+      persistentResizeHandles: persistentResizeHandles,
     );
     copy._isSelected = isSelected ?? _isSelected;
     copy._isHovered = isHovered ?? _isHovered;

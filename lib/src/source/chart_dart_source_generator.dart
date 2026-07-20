@@ -9,6 +9,7 @@ import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_data_point.dart';
+import '../models/candlestick_density_grouping.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -1467,6 +1468,22 @@ class _ChartDartEmitter {
           'CandlestickDataUpdateAnimationMode',
           animation.dataUpdateMode.name,
           defaultName: 'interpolate',
+        );
+      });
+      writer.writeLine('),');
+    }
+    final grouping = series.densityGrouping;
+    if (options.includeDefaultValues ||
+        grouping != const CandlestickDensityGrouping()) {
+      writer.writeLine('densityGrouping: CandlestickDensityGrouping(');
+      writer.indented(() {
+        _valueIf(writer, 'enabled', grouping.enabled, defaultValue: false);
+        _numberIf(writer, 'targetGroupWidth', grouping.targetGroupWidth, 5);
+        _numberIf(
+          writer,
+          'minimumPointsPerGroup',
+          grouping.minimumPointsPerGroup,
+          2,
         );
       });
       writer.writeLine('),');

@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../coordinates/chart_transform.dart';
 import '../../models/chart_data_point.dart';
 import '../../models/bar_chart_style.dart';
 import '../../models/candlestick_chart_series.dart';
+import '../../models/candlestick_data_point.dart';
 import '../../models/candlestick_chart_style.dart';
 import '../../models/candlestick_interaction_details.dart';
 import '../../models/chart_series.dart';
@@ -189,6 +191,9 @@ abstract final class CrosshairTracker {
         series: series,
         targetX: dataX,
         interpolate: interpolate,
+        visibleXMin: xMin,
+        visibleXMax: xMax,
+        plotWidth: chartWidth,
       );
 
       if (value != null) {
@@ -213,6 +218,9 @@ abstract final class CrosshairTracker {
     required ChartSeries series,
     required double targetX,
     required bool interpolate,
+    required double visibleXMin,
+    required double visibleXMax,
+    required double plotWidth,
   }) {
     final points = series.points;
     if (points.isEmpty) return null;
@@ -224,7 +232,13 @@ abstract final class CrosshairTracker {
       return _calculateScatterSeriesValue(series, targetX);
     }
     if (series is CandlestickChartSeries) {
-      return _calculateCandlestickSeriesValue(series, targetX);
+      return _calculateCandlestickSeriesValue(
+        series,
+        targetX,
+        visibleXMin: visibleXMin,
+        visibleXMax: visibleXMax,
+        plotWidth: plotWidth,
+      );
     }
 
     // Bars represent discrete observations. Their crosshair values must snap
@@ -398,10 +412,95 @@ abstract final class CrosshairTracker {
 
   static CrosshairSeriesValue? _calculateCandlestickSeriesValue(
     CandlestickChartSeries series,
-    double targetX,
-  ) {
+    double targetX, {
+    required double visibleXMin,
+    required double visibleXMax,
+    required double plotWidth,
+  }) {
     final points = series.points;
     if (points.isEmpty) return null;
+    final grouping = series.densityGrouping;
+    final visibleStart = _findInsertionPoint(points, visibleXMin);
+    final visibleEnd = _findUpperInsertionPoint(points, visibleXMax);
+    final visibleCount = visibleEnd - visibleStart;
+    final maximumGroupCount = plotWidth.isFinite && plotWidth > 0
+        ? math.max(1, (plotWidth / grouping.targetGroupWidth).floor())
+        : visibleCount;
+    final proposedGroupSize = visibleCount <= 0
+        ? 1
+        : (visibleCount / maximumGroupCount).ceil();
+
+    if (grouping.enabled &&
+        proposedGroupSize >= grouping.minimumPointsPerGroup) {
+      final groupSize = math.max(
+        grouping.minimumPointsPerGroup,
+        proposedGroupSize,
+      );
+      final insertionPoint = _findInsertionPoint(points, targetX);
+      final baseStart = (insertionPoint ~/ groupSize) * groupSize;
+      var bestStart = -1;
+      var bestDistance = double.infinity;
+      for (final candidateStart in [
+        baseStart - groupSize,
+        baseStart,
+        baseStart + groupSize,
+      ]) {
+        if (candidateStart < 0 || candidateStart >= points.length) continue;
+        final candidateEnd = math.min(
+          points.length,
+          candidateStart + groupSize,
+        );
+        if (candidateEnd <= visibleStart || candidateStart >= visibleEnd) {
+          continue;
+        }
+        final distance = (targetX - points[candidateStart].x).abs();
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestStart = candidateStart;
+        }
+      }
+      if (bestStart >= 0) {
+        final endExclusive = math.min(points.length, bestStart + groupSize);
+        final first = series.candleAt(bestStart);
+        final last = series.candleAt(endExclusive - 1);
+        var high = first.high;
+        var low = first.low;
+        for (var index = bestStart + 1; index < endExclusive; index++) {
+          final point = series.candleAt(index);
+          if (point.high > high) high = point.high;
+          if (point.low < low) low = point.low;
+        }
+        final point = CandlestickDataPoint(
+          x: first.x,
+          open: first.open,
+          high: high,
+          low: low,
+          close: last.close,
+          timestamp: first.timestamp,
+        );
+        final sourcePointIndices = List<int>.generate(
+          endExclusive - bestStart,
+          (offset) => bestStart + offset,
+          growable: false,
+        );
+        return CrosshairSeriesValue(
+          seriesId: series.id,
+          seriesName: series.displayName,
+          seriesColor: _trackedCandlestickColor(series, point),
+          x: point.x,
+          y: point.close,
+          dataPointIndex: bestStart,
+          sourcePointIndices: sourcePointIndices,
+          isInterpolated: false,
+          candlestick: CandlestickInteractionDetails.fromPoint(
+            point,
+            unit: series.unit,
+            sourceCount: sourcePointIndices.length,
+          ),
+        );
+      }
+    }
+
     final insertionPoint = _findInsertionPoint(points, targetX);
     final int pointIndex;
     if (insertionPoint <= 0) {
@@ -443,23 +542,36 @@ abstract final class CrosshairTracker {
   static Color _trackedPointColor(ChartSeries series, int pointIndex) {
     if (series case final CandlestickChartSeries candles) {
       final point = candles.candleAt(pointIndex);
-      final pointColor = point.candlestickStyle?.borderColor;
-      if (pointColor != null) return pointColor;
-      final styleColor = switch (point.direction) {
-        CandlestickDirection.rising =>
-          candles.candlestickStyle.risingBorderColor,
-        CandlestickDirection.falling =>
-          candles.candlestickStyle.fallingBorderColor,
-        CandlestickDirection.doji => candles.candlestickStyle.dojiBorderColor,
-      };
-      return styleColor ??
-          candles.color ??
-          switch (point.direction) {
-            CandlestickDirection.rising => const Color(0xFF0F766E),
-            CandlestickDirection.falling => const Color(0xFFB91C1C),
-            CandlestickDirection.doji => const Color(0xFF475569),
-          };
+      return _trackedCandlestickColor(candles, point);
     }
+    return _trackedNonCandlestickPointColor(series, pointIndex);
+  }
+
+  static Color _trackedCandlestickColor(
+    CandlestickChartSeries candles,
+    CandlestickDataPoint point,
+  ) {
+    final pointColor = point.candlestickStyle?.borderColor;
+    if (pointColor != null) return pointColor;
+    final styleColor = switch (point.direction) {
+      CandlestickDirection.rising => candles.candlestickStyle.risingBorderColor,
+      CandlestickDirection.falling =>
+        candles.candlestickStyle.fallingBorderColor,
+      CandlestickDirection.doji => candles.candlestickStyle.dojiBorderColor,
+    };
+    return styleColor ??
+        candles.color ??
+        switch (point.direction) {
+          CandlestickDirection.rising => const Color(0xFF0F766E),
+          CandlestickDirection.falling => const Color(0xFFB91C1C),
+          CandlestickDirection.doji => const Color(0xFF475569),
+        };
+  }
+
+  static Color _trackedNonCandlestickPointColor(
+    ChartSeries series,
+    int pointIndex,
+  ) {
     final markerColor =
         series.points[pointIndex].pointStyle?.scatterMarkerStyle?.fillColor;
     if (markerColor != null) return markerColor;
@@ -531,6 +643,23 @@ abstract final class CrosshairTracker {
       }
     }
 
+    return low;
+  }
+
+  static int _findUpperInsertionPoint(
+    List<ChartDataPoint> points,
+    double targetX,
+  ) {
+    var low = 0;
+    var high = points.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (points[middle].x <= targetX) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
     return low;
   }
 

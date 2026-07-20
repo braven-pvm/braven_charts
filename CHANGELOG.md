@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- First-class typed OHLC charts through `CandlestickDataPoint`,
+  `CandlestickChartSeries`, `CandlestickChartStyle`, theme-resolved rising,
+  falling, and doji presentation, viewport-aware wick/body geometry, indexed
+  hit testing, pointer and keyboard selection, and sample-based tracking.
+- Candlestick entrance reveal and compatible OHLC data-update interpolation,
+  plus bounded `LiveStreamController.upsertLatestCandlestick` revision and
+  append behavior.
+- Portable Candlestick artifacts, strict built-in hydration, lossless native
+  OHLC tables, copy and CSV, deterministic generated Dart, explicit AI-builder
+  input, and Chart/Data/Split/Source Workbench integration.
+- Opt-in `CandlestickDensityGrouping` using first open, maximum high, minimum
+  low, and last close while retaining all represented source indices and
+  keeping raw tables and artifacts unchanged.
+- A complete Candlestick showcase with elapsed and ordinal time spacing,
+  configurable geometry and tracking, live revisions, a dense-data laboratory,
+  and synchronized price, volume, and navigator panes.
+- Permanent Candlestick performance and visual regression matrices covering
+  50,000 source candles, 5,000 visible marks, 1,000 animated revisions,
+  grouped tracking, pan/zoom, three-pane fanout, light/dark/doji/time-spacing,
+  compact composition, and grouped-density rendering.
 - Typed, host-extensible native chart context actions through
   `ChartContextAction`, `ChartContextInvocation`, renderer-neutral
   `ChartContextHit`, and `ChartContextMenuConfig`.
@@ -25,9 +45,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   clamping, focus restoration, and safe async callback cleanup.
 
 ### Changed
+- Cartesian composition accepts one Candlestick series with Line, Area, and
+  Scatter overlays. A second Candlestick or same-plot Bar series fails closed;
+  volume remains a separate synchronized chart with its own scale.
+- The Chart Types catalog, navigation, public guide, feature matrix, and
+  package overview include Candlestick as a built-in chart family.
 - Browser context-menu suppression is reference-counted across mounted charts
   and restores the previous application state only after the final chart is
   disposed.
+
+### Fixed
+- Stock navigator window panning and edge resizing now update synchronized
+  viewports continuously during pointer movement, while the navigator remains
+  isolated from chart tracking and cursor fanout.
+- Annotation hosts can consume transient move and resize previews through
+  `onAnnotationDragUpdate` without replacing controller-owned annotations
+  during an active gesture; `onAnnotationDragged` remains the committed
+  pointer-up callback.
+- Range-based control surfaces can keep resize grips persistently visible and
+  interactive, and draggable range bodies now expose platform `grab` and
+  `grabbing` cursors instead of looking like passive chart content.
 
 ## 0.9.0 - 2026-07-19
 

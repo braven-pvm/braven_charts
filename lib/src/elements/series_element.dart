@@ -614,7 +614,8 @@ class SeriesElement implements DataHitElement {
 
   /// Original source indices represented by visible candle geometry.
   List<int> get visibleCandlestickPointIndices => [
-    for (final geometry in _resolveCandlestickGeometries()) geometry.pointIndex,
+    for (final geometry in _resolveCandlestickGeometries())
+      ...geometry.sourcePointIndices,
   ];
 
   /// Exact geometry comparisons made by the most recent candle hit test.
@@ -808,6 +809,7 @@ class SeriesElement implements DataHitElement {
       index: viewportIndex,
       transform: _currentTransform,
       style: candleSeries.candlestickStyle,
+      grouping: candleSeries.densityGrouping,
     );
     if (_effectiveRevealProgress < 1) {
       geometries = geometries
@@ -851,8 +853,22 @@ class SeriesElement implements DataHitElement {
 
   CandlestickGeometry? candlestickGeometryForPoint(int pointIndex) {
     if (series is! CandlestickChartSeries || pointIndex < 0) return null;
-    _resolveCandlestickGeometries();
-    return _candlestickGeometryByPointIndex[pointIndex];
+    final geometries = _resolveCandlestickGeometries();
+    final exact = _candlestickGeometryByPointIndex[pointIndex];
+    if (exact != null) return exact;
+    var low = 0;
+    var high = geometries.length;
+    while (low < high) {
+      final middle = low + ((high - low) >> 1);
+      if (geometries[middle].sourceEndIndexExclusive <= pointIndex) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    if (low >= geometries.length) return null;
+    final candidate = geometries[low];
+    return candidate.representsSourcePoint(pointIndex) ? candidate : null;
   }
 
   CandlestickGeometry? candlestickGeometryAt(
@@ -2011,6 +2027,7 @@ class SeriesElement implements DataHitElement {
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: geometry.pointIndex,
+      sourcePointIndices: geometry.sourcePointIndices,
       plotPosition: geometry.bodyRect.center,
       semanticBounds: geometry.hitBounds,
       point: point,
@@ -2019,12 +2036,15 @@ class SeriesElement implements DataHitElement {
       candlestick: CandlestickInteractionDetails.fromPoint(
         point,
         unit: series.unit,
+        sourceCount: geometry.sourceCount,
       ),
       markerColor: visual.borderColor,
-      ordinal: geometry.pointIndex + 1,
-      count: pointCount,
-      isSelected: selectedPointIndices.contains(geometry.pointIndex),
-      isFocused: focusedPointIndices.contains(geometry.pointIndex),
+      ordinal: geometry.projectionIndex + 1,
+      count: _resolveCandlestickGeometries().length,
+      isSelected: geometry.sourcePointIndices.any(
+        selectedPointIndices.contains,
+      ),
+      isFocused: geometry.sourcePointIndices.any(focusedPointIndices.contains),
     );
   }
 
@@ -2294,9 +2314,12 @@ class SeriesElement implements DataHitElement {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
+    final paintedSelectionGroups = <String>{};
     for (final pointIndex in selectedPointIndices) {
       final geometry = candlestickGeometryForPoint(pointIndex);
-      if (geometry == null) continue;
+      if (geometry == null || !paintedSelectionGroups.add(geometry.groupKey)) {
+        continue;
+      }
       final rect = geometry.bodyRect.inflate(4);
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(3)),
@@ -2307,9 +2330,12 @@ class SeriesElement implements DataHitElement {
         selectionBorder,
       );
     }
+    final paintedFocusGroups = <String>{};
     for (final pointIndex in focusedPointIndices) {
       final geometry = candlestickGeometryForPoint(pointIndex);
-      if (geometry == null) continue;
+      if (geometry == null || !paintedFocusGroups.add(geometry.groupKey)) {
+        continue;
+      }
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           geometry.bodyRect.inflate(6),

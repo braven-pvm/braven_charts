@@ -161,6 +161,11 @@ void main() {
             bodyWidthFactor: .6,
           ),
           animation: const CandlestickAnimationStyle(staggerFraction: .35),
+          densityGrouping: const CandlestickDensityGrouping(
+            enabled: true,
+            targetGroupWidth: 6,
+            minimumPointsPerGroup: 3,
+          ),
         ),
       );
 
@@ -180,6 +185,12 @@ void main() {
         contains('bodyFillMode: CandlestickBodyFillMode.filled,'),
       );
       expect(first.source, contains('staggerFraction: 0.35,'));
+      expect(
+        first.source,
+        contains('densityGrouping: CandlestickDensityGrouping('),
+      );
+      expect(first.source, contains('targetGroupWidth: 6.0,'));
+      expect(first.source, contains('minimumPointsPerGroup: 3,'));
       expect(first.source, contains('wickColor: Color(0xFF334455),'));
     });
 

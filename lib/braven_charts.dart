@@ -102,6 +102,7 @@ export 'src/models/category_axis_config.dart';
 export 'src/models/candlestick_chart_series.dart';
 export 'src/models/candlestick_chart_style.dart';
 export 'src/models/candlestick_data_point.dart';
+export 'src/models/candlestick_density_grouping.dart';
 export 'src/models/candlestick_interaction_details.dart';
 export 'src/models/financial_time_domain.dart';
 // X-axis configuration uses XAxisConfig; Y-axis uses YAxisConfig.

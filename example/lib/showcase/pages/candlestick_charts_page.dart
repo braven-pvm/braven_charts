@@ -23,15 +23,16 @@ class CandlestickChartsPage extends StatefulWidget {
 
 class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   final ChartOptionsController _optionsController = ChartOptionsController(
-    const ChartOptions(showLegend: false),
+    const ChartOptions(showLegend: true),
   );
   final BravenChartController _chartController = BravenChartController();
-  final ChartWorkbenchController _workbenchController =
-      ChartWorkbenchController();
   final ChartInteractionGroupController _stockGroupController =
       ChartInteractionGroupController();
+  late final AnnotationController _stockNavigatorAnnotationController;
   late List<CandlestickDataPoint> _candles;
   late FinancialTimeDomain _timeDomain;
+  late final List<CandlestickDataPoint> _densityCandles;
+  late final FinancialTimeDomain _densityTimeDomain;
   late final List<CandlestickDataPoint> _stockCandles;
   late final FinancialTimeDomain _stockTimeDomain;
 
@@ -45,16 +46,35 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   bool _showBodyBorder = true;
   bool _showWicks = true;
   bool _showCloseAverage = true;
+  bool _showDirectionLegend = true;
+  int _averageWindow = 5;
+  double _averageStrokeWidth = 1.6;
+  Color _averageColor = const Color(0xFF6366F1);
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
   bool _animateUpdates = true;
+  bool _animateEntrance = true;
+  double _entranceStagger = .85;
+  bool _useDensityStressData = false;
+  bool _densityGroupingEnabled = false;
+  double _targetGroupWidth = 5;
+  int _minimumPointsPerGroup = 2;
   FinancialTimeSpacing _timeSpacing = FinancialTimeSpacing.ordinal;
+  _CandlestickExample _selectedExample = _CandlestickExample.priceAction;
+  _CandlestickPalette _candlePalette = _CandlestickPalette.theme;
+  _GapFrequency _gapFrequency = _GapFrequency.occasional;
+  int _sessionCount = 32;
+  double _rangeScale = 1;
+  double _trendBias = 0;
+  LegendPosition _legendPosition = LegendPosition.topRight;
+  bool _legendDraggable = true;
   int _revisionStep = 0;
   int? _activeCandleIndex;
   _CandlestickShowcaseMode _showcaseMode = _CandlestickShowcaseMode.workbench;
   _StockRangePreset _stockRange = _StockRangePreset.threeMonths;
   FinancialTimeSpacing _stockTimeSpacing = FinancialTimeSpacing.ordinal;
   bool _showVolumePane = true;
+  bool _applyingStockNavigatorPreview = false;
 
   @override
   void initState() {
@@ -63,17 +83,31 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _timeDomain = FinancialTimeDomain(
       _candles.map((point) => point.timestamp!),
     );
+    _densityCandles = _buildDensityCandles();
+    _densityTimeDomain = FinancialTimeDomain(
+      _densityCandles.map((point) => point.timestamp!),
+    );
     _stockCandles = _buildStockCandles();
     _stockTimeDomain = FinancialTimeDomain(
       _stockCandles.map((point) => point.timestamp!),
     );
-    _stockGroupController.setViewport(_stockViewportFor(_stockRange));
+    final initialStockViewport = _stockViewportFor(_stockRange);
+    _stockNavigatorAnnotationController = AnnotationController(
+      initialAnnotations: [_stockNavigatorWindow(initialStockViewport)],
+    )..selectAnnotation(_stockNavigatorWindowId);
+    _stockGroupController.viewportListenable.addListener(
+      _syncStockNavigatorWindow,
+    );
+    _stockGroupController.setViewport(initialStockViewport);
   }
 
   @override
   void dispose() {
+    _stockGroupController.viewportListenable.removeListener(
+      _syncStockNavigatorWindow,
+    );
+    _stockNavigatorAnnotationController.dispose();
     _optionsController.dispose();
-    _workbenchController.dispose();
     _chartController.dispose();
     _stockGroupController.dispose();
     super.dispose();
@@ -93,12 +127,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             icon: const Icon(Icons.play_arrow_rounded, size: 18),
             label: const Text('Replay'),
           ),
-          OutlinedButton.icon(
-            key: const ValueKey('candlestick-revise-latest'),
-            onPressed: _reviseLatest,
-            icon: const Icon(Icons.update, size: 18),
-            label: const Text('Revise latest'),
-          ),
+          if (!_useDensityStressData)
+            OutlinedButton.icon(
+              key: const ValueKey('candlestick-revise-latest'),
+              onPressed: _reviseLatest,
+              icon: const Icon(Icons.update, size: 18),
+              label: const Text('Revise latest'),
+            ),
         ],
         OutlinedButton.icon(
           key: const ValueKey('candlestick-reset-example'),
@@ -115,7 +150,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             constraints.maxHeight,
             _showcaseMode == _CandlestickShowcaseMode.stock
                 ? (compact ? 1960.0 : 1360.0)
-                : (compact ? 1100.0 : 860.0),
+                : (compact ? 1220.0 : 960.0),
           );
           final content = SizedBox(
             height: contentHeight,
@@ -129,7 +164,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                       ? _buildStockComposition(compact: compact)
                       : _buildChartCard(compact: compact),
                 ),
-                if (_showcaseMode == _CandlestickShowcaseMode.workbench) ...[
+                if (_showcaseMode == _CandlestickShowcaseMode.workbench &&
+                    _showDirectionLegend) ...[
                   const SizedBox(height: 16),
                   _buildDirectionLegend(),
                 ],
@@ -151,7 +187,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     final theme = Theme.of(context);
     final headerCandles = _showcaseMode == _CandlestickShowcaseMode.stock
         ? _stockCandles
-        : _candles;
+        : _activeWorkbenchCandles;
     final headerSpacing = _showcaseMode == _CandlestickShowcaseMode.stock
         ? _stockTimeSpacing
         : _timeSpacing;
@@ -178,7 +214,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Financial chart workbench',
+                    'Choose a candlestick example',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -186,6 +222,29 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                 ),
                 _FamilyBadge(compact: compact),
               ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              key: const ValueKey('candlestick-surface-selector'),
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final example in _CandlestickExample.values)
+                  ChoiceChip(
+                    key: ValueKey('candlestick-example-${example.name}'),
+                    avatar: Icon(_exampleIcon(example), size: 18),
+                    label: Text(_exampleLabel(example)),
+                    selected: _selectedExample == example,
+                    onSelected: (_) => _applyExample(example),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _exampleDescription,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -218,79 +277,62 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
                 _MetricPill(label: 'Low', value: '\$${low.toStringAsFixed(2)}'),
               ],
             ),
-            const SizedBox(height: 12),
-            SegmentedButton<_CandlestickShowcaseMode>(
-              key: const ValueKey('candlestick-surface-selector'),
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: _CandlestickShowcaseMode.workbench,
-                  icon: Icon(Icons.data_object, size: 18),
-                  label: Text('Chart family'),
-                ),
-                ButtonSegment(
-                  value: _CandlestickShowcaseMode.stock,
-                  icon: Icon(Icons.monitor_heart_outlined, size: 18),
-                  label: Text('Stock composition'),
-                ),
-              ],
-              selected: {_showcaseMode},
-              onSelectionChanged: (selection) =>
-                  setState(() => _showcaseMode = selection.single),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStockComposition({required bool compact}) {
-    final displayCandles = _stockDisplayCandles;
-    final latest = displayCandles.last;
-    return ChartCard(
-      key: const ValueKey('candlestick-stock-composition'),
-      title: 'Market session composition',
-      subtitle:
-          '${_stockCandles.length} source sessions · independent price and volume scales · full-domain navigator',
-      padding: EdgeInsets.all(compact ? 8 : 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildStockControls(latest: latest),
-          const SizedBox(height: 8),
-          Expanded(
-            flex: 5,
-            child: _buildStockPriceChart(displayCandles, compact: compact),
-          ),
-          if (_showVolumePane) ...[
+  Widget _buildStockComposition({required bool compact}) => ListenableBuilder(
+    listenable: _optionsController,
+    builder: (context, _) {
+      final displayCandles = _stockDisplayCandles;
+      final latest = displayCandles.last;
+      return ChartCard(
+        key: const ValueKey('candlestick-stock-composition'),
+        title: 'Market session composition',
+        subtitle:
+            '${_stockCandles.length} source sessions · independent price and volume scales · full-domain navigator',
+        padding: EdgeInsets.all(compact ? 8 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildStockControls(latest: latest),
+            const SizedBox(height: 8),
+            Expanded(
+              flex: 5,
+              child: _buildStockPriceChart(displayCandles, compact: compact),
+            ),
+            if (_showVolumePane) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: compact ? 156 : 138,
+                child: _buildStockVolumeChart(displayCandles, compact: compact),
+              ),
+            ],
             const SizedBox(height: 8),
             SizedBox(
-              height: compact ? 156 : 138,
-              child: _buildStockVolumeChart(displayCandles, compact: compact),
+              height: compact ? 230 : 190,
+              child: _buildStockNavigator(displayCandles, compact: compact),
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: compact ? 172 : 132,
+              child: _StockPerformancePanel(
+                activeChartCount: _showVolumePane ? 3 : 2,
+                sourceSessionCount: _stockCandles.length,
+                timeDomain: _stockTimeDomain,
+                timeSpacing: _stockTimeSpacing,
+                viewportListenable: _stockGroupController.viewportListenable,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(height: 142, child: _buildStockCodeReference()),
           ],
-          const SizedBox(height: 8),
-          SizedBox(
-            height: compact ? 230 : 190,
-            child: _buildStockNavigator(displayCandles, compact: compact),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: compact ? 172 : 132,
-            child: _StockPerformancePanel(
-              activeChartCount: _showVolumePane ? 3 : 2,
-              sourceSessionCount: _stockCandles.length,
-              timeDomain: _stockTimeDomain,
-              timeSpacing: _stockTimeSpacing,
-              viewportListenable: _stockGroupController.viewportListenable,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(height: 142, child: _buildStockCodeReference()),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    },
+  );
 
   Widget _buildStockControls({required CandlestickDataPoint latest}) {
     final theme = Theme.of(context);
@@ -395,24 +437,29 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           bodyCornerRadius: _cornerRadius,
           minimumBodyHeight: _minimumBodyHeight,
         ),
+        densityGrouping: _densityGrouping,
       ),
-      LineChartSeries(
-        id: 'market-average',
-        name: '20-session average',
-        points: _movingAverage(candles, 20),
-        color: const Color(0xFF6366F1),
-        interpolation: LineInterpolation.monotone,
-        strokeWidth: 1.5,
-      ),
+      if (_showCloseAverage)
+        LineChartSeries(
+          id: 'market-average',
+          name: '$_averageWindow-session average',
+          points: _movingAverage(candles, _averageWindow),
+          color: _averageColor,
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: _averageStrokeWidth,
+        ),
     ],
-    theme: _optionsController.options.theme ?? ChartTheme.light,
-    showLegend: false,
+    theme: _effectiveChartTheme(),
+    showLegend: _optionsController.options.showLegend,
+    legendStyle: _effectiveChartTheme().legendStyle,
+    showXScrollbar: _optionsController.options.showXScrollbar,
+    showYScrollbar: _optionsController.options.showYScrollbar,
     grid: GridConfig(
       horizontal: _optionsController.options.showGrid,
       vertical: false,
     ),
     xAxisConfig: XAxisConfig(
-      showAxisLine: true,
+      showAxisLine: _optionsController.options.showAxisLines,
       tickCount: compact ? 4 : 8,
       labelFormatter: (value) => _formatStockSession(value, candles),
     ),
@@ -422,8 +469,10 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       unit: 'USD',
     ),
     interactionConfig: InteractionConfig(
-      enableZoom: true,
-      enablePan: true,
+      enableZoom: _optionsController.options.enableZoom,
+      enablePan: _optionsController.options.enablePan,
+      showXScrollbar: _optionsController.options.showXScrollbar,
+      showYScrollbar: _optionsController.options.showYScrollbar,
       crosshair: CrosshairConfig(
         enabled: _trackingEnabled,
         mode: CrosshairMode.vertical,
@@ -458,8 +507,10 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               timestamp: candles[index].timestamp,
               pointStyle: PointStyle(
                 color: candles[index].direction == CandlestickDirection.falling
-                    ? const Color(0xFFDC2626)
-                    : const Color(0xFF16A34A),
+                    ? _effectiveChartTheme()
+                          .candlestickTheme
+                          .fallingBodyFillColor
+                    : _effectiveChartTheme().candlestickTheme.risingBorderColor,
               ),
             ),
         ],
@@ -467,11 +518,14 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         barStyle: const BarChartStyle(cornerRadius: 1),
       ),
     ],
-    theme: _optionsController.options.theme ?? ChartTheme.light,
+    theme: _effectiveChartTheme(),
     showLegend: false,
-    grid: const GridConfig(horizontal: true, vertical: false),
+    grid: GridConfig(
+      horizontal: _optionsController.options.showGrid,
+      vertical: false,
+    ),
     xAxisConfig: XAxisConfig(
-      showAxisLine: true,
+      showAxisLine: _optionsController.options.showAxisLines,
       showTickLabels: false,
       tickCount: compact ? 4 : 8,
     ),
@@ -481,117 +535,90 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       unit: 'M',
       tickCount: 3,
     ),
-    interactionConfig: const InteractionConfig(
-      enableZoom: true,
-      enablePan: true,
+    interactionConfig: InteractionConfig(
+      enableZoom: _optionsController.options.enableZoom,
+      enablePan: _optionsController.options.enablePan,
       crosshair: CrosshairConfig(
-        enabled: true,
+        enabled: _trackingEnabled,
         mode: CrosshairMode.vertical,
         displayMode: CrosshairDisplayMode.tracking,
-        showTrackingTooltip: true,
+        showTrackingTooltip: _showTrackingTooltip,
       ),
-      tooltip: TooltipConfig(enabled: true),
+      tooltip: const TooltipConfig(enabled: true),
     ),
   );
 
   Widget _buildStockNavigator(
     List<CandlestickDataPoint> candles, {
     required bool compact,
-  }) => ValueListenableBuilder<ChartXViewport?>(
-    valueListenable: _stockGroupController.viewportListenable,
-    builder: (context, viewport, _) {
-      final effective = viewport ?? _stockViewportFor(_stockRange);
-      final startIndex = _stockTimeDomain.nearestIndex(
-        effective.min,
-        _stockTimeSpacing,
-      );
-      final endIndex = _stockTimeDomain.nearestIndex(
-        effective.max,
-        _stockTimeSpacing,
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Expanded(
+        child: BravenChartPlus(
+          key: const ValueKey('candlestick-stock-navigator'),
+          interactionGroupController: _stockGroupController,
+          interactionGroupOptions: const ChartInteractionGroupOptions(
+            synchronizeCursor: false,
+            synchronizeViewport: false,
+          ),
+          annotationController: _stockNavigatorAnnotationController,
+          persistentRangeAnnotationHandles: true,
+          onAnnotationDragUpdate: _handleStockNavigatorWindowPreview,
+          onAnnotationDragged: _handleStockNavigatorWindowChanged,
+          series: [
+            AreaChartSeries(
+              id: 'market-navigator',
+              name: 'Close',
+              points: [
+                for (final candle in candles)
+                  ChartDataPoint(
+                    x: candle.x,
+                    y: candle.close,
+                    timestamp: candle.timestamp,
+                  ),
+              ],
+              color: const Color(0xFF0EA5E9),
+              interpolation: LineInterpolation.monotone,
+              strokeWidth: 1.25,
+              fillOpacity: .12,
+            ),
+          ],
+          theme: _effectiveChartTheme(),
+          showLegend: false,
+          grid: const GridConfig(horizontal: false, vertical: false),
+          xAxisConfig: XAxisConfig(
+            showAxisLine: _optionsController.options.showAxisLines,
+            tickCount: compact ? 3 : 7,
+            labelFormatter: (value) => _formatStockSession(value, candles),
+          ),
+          yAxis: YAxisConfig(
+            position: YAxisPosition.right,
+            visible: false,
+            showAxisLine: false,
+            showTicks: false,
+            showTickLabels: false,
+            showCrosshairLabel: false,
+          ),
+          interactionConfig: const InteractionConfig(
+            enableZoom: false,
+            enablePan: false,
+            crosshair: CrosshairConfig(enabled: false),
+            tooltip: TooltipConfig(enabled: false),
+          ),
+        ),
+      ),
+      const SizedBox(height: 4),
+      const Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Expanded(
-            child: BravenChartPlus(
-              key: const ValueKey('candlestick-stock-navigator'),
-              interactionGroupController: _stockGroupController,
-              interactionGroupOptions: const ChartInteractionGroupOptions(
-                synchronizeViewport: false,
-              ),
-              series: [
-                AreaChartSeries(
-                  id: 'market-navigator',
-                  name: 'Close',
-                  points: [
-                    for (final candle in candles)
-                      ChartDataPoint(
-                        x: candle.x,
-                        y: candle.close,
-                        timestamp: candle.timestamp,
-                      ),
-                  ],
-                  color: const Color(0xFF0EA5E9),
-                  interpolation: LineInterpolation.monotone,
-                  strokeWidth: 1.25,
-                  fillOpacity: .12,
-                ),
-              ],
-              annotations: [
-                RangeAnnotation(
-                  id: 'navigator-window',
-                  startX: effective.min,
-                  endX: effective.max,
-                  fillColor: const Color(0x243B82F6),
-                  borderColor: const Color(0x883B82F6),
-                  allowDragging: false,
-                  allowEditing: false,
-                ),
-              ],
-              theme: _optionsController.options.theme ?? ChartTheme.light,
-              showLegend: false,
-              grid: const GridConfig(horizontal: false, vertical: false),
-              xAxisConfig: XAxisConfig(
-                showAxisLine: true,
-                tickCount: compact ? 3 : 7,
-                labelFormatter: (value) => _formatStockSession(value, candles),
-              ),
-              yAxis: YAxisConfig(
-                position: YAxisPosition.right,
-                visible: false,
-                showAxisLine: false,
-                showTicks: false,
-                showTickLabels: false,
-                showCrosshairLabel: false,
-              ),
-              interactionConfig: const InteractionConfig(
-                enableZoom: false,
-                enablePan: false,
-                crosshair: CrosshairConfig(
-                  enabled: true,
-                  mode: CrosshairMode.vertical,
-                  displayMode: CrosshairDisplayMode.tracking,
-                  showTrackingTooltip: false,
-                ),
-                tooltip: TooltipConfig(enabled: false),
-              ),
-            ),
-          ),
-          RangeSlider(
-            key: const ValueKey('candlestick-stock-navigator-range'),
-            min: 0,
-            max: (_stockCandles.length - 1).toDouble(),
-            divisions: _stockCandles.length - 1,
-            values: RangeValues(startIndex.toDouble(), endIndex.toDouble()),
-            labels: RangeLabels(
-              _stockCandles[startIndex].label ?? '$startIndex',
-              _stockCandles[endIndex].label ?? '$endIndex',
-            ),
-            onChanged: _setStockNavigatorRange,
-          ),
+          Icon(Icons.drag_indicator, size: 14),
+          SizedBox(width: 4),
+          Text('Drag window to pan · drag either edge to zoom'),
         ],
-      );
-    },
+      ),
+    ],
   );
 
   Widget _buildStockCodeReference() {
@@ -677,10 +704,115 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     _stockGroupController.setViewport(_stockViewportFor(preset));
   }
 
-  void _setStockNavigatorRange(RangeValues values) {
-    final start = values.start.round().clamp(0, _stockCandles.length - 2);
-    final end = values.end.round().clamp(start + 1, _stockCandles.length - 1);
-    setState(() => _stockRange = _StockRangePreset.custom);
+  RangeAnnotation _stockNavigatorWindow(ChartXViewport viewport) =>
+      RangeAnnotation(
+        id: _stockNavigatorWindowId,
+        startX: viewport.min,
+        endX: viewport.max,
+        fillColor: const Color(0x243B82F6),
+        borderColor: const Color(0xCC3B82F6),
+        allowDragging: true,
+        allowEditing: false,
+        snapToValue: true,
+        snapTolerance: .02,
+      );
+
+  void _syncStockNavigatorWindow() {
+    if (_applyingStockNavigatorPreview) return;
+    final viewport = _stockGroupController.viewport;
+    if (viewport == null) return;
+    final current = _stockNavigatorAnnotationController.getAnnotation(
+      _stockNavigatorWindowId,
+    );
+    if (current is RangeAnnotation &&
+        current.startX == viewport.min &&
+        current.endX == viewport.max) {
+      return;
+    }
+    _stockNavigatorAnnotationController.updateAnnotation(
+      _stockNavigatorWindowId,
+      _stockNavigatorWindow(viewport),
+    );
+    if (_stockNavigatorAnnotationController.selectedAnnotationId !=
+        _stockNavigatorWindowId) {
+      _stockNavigatorAnnotationController.selectAnnotation(
+        _stockNavigatorWindowId,
+      );
+    }
+  }
+
+  void _handleStockNavigatorWindowChanged(
+    ChartAnnotation annotation,
+    Offset _,
+  ) {
+    _applyStockNavigatorWindow(annotation, commitPresetState: true);
+    // The final snapped viewport can equal the latest live preview, in which
+    // case the group does not notify its listeners again. Commit the window
+    // annotation explicitly once the gesture ends.
+    _syncStockNavigatorWindow();
+  }
+
+  void _handleStockNavigatorWindowPreview(
+    ChartAnnotation annotation,
+    Offset _,
+  ) {
+    _applyingStockNavigatorPreview = true;
+    try {
+      _applyStockNavigatorWindow(annotation, commitPresetState: false);
+    } finally {
+      _applyingStockNavigatorPreview = false;
+    }
+  }
+
+  void _applyStockNavigatorWindow(
+    ChartAnnotation annotation, {
+    required bool commitPresetState,
+  }) {
+    if (annotation is! RangeAnnotation ||
+        annotation.id != _stockNavigatorWindowId ||
+        annotation.startX == null ||
+        annotation.endX == null) {
+      return;
+    }
+    final domainMin = _stockTimeDomain.xAt(0, _stockTimeSpacing);
+    final domainMax = _stockTimeDomain.xAt(
+      _stockCandles.length - 1,
+      _stockTimeSpacing,
+    );
+    var proposedMin = annotation.startX!.clamp(domainMin, domainMax).toDouble();
+    var proposedMax = annotation.endX!.clamp(domainMin, domainMax).toDouble();
+    final current = _stockGroupController.viewport;
+    if (current != null) {
+      final currentWidth = current.max - current.min;
+      final proposedWidth = annotation.endX! - annotation.startX!;
+      final isWindowMove =
+          (proposedWidth - currentWidth).abs() <= currentWidth * .01;
+      if (isWindowMove && annotation.startX! < domainMin) {
+        proposedMin = domainMin;
+        proposedMax = math.min(domainMax, domainMin + currentWidth);
+      } else if (isWindowMove && annotation.endX! > domainMax) {
+        proposedMax = domainMax;
+        proposedMin = math.max(domainMin, domainMax - currentWidth);
+      }
+    }
+    var start = _stockTimeDomain.nearestIndex(
+      math.min(proposedMin, proposedMax),
+      _stockTimeSpacing,
+    );
+    var end = _stockTimeDomain.nearestIndex(
+      math.max(proposedMin, proposedMax),
+      _stockTimeSpacing,
+    );
+    if (start == end) {
+      if (end < _stockCandles.length - 1) {
+        end++;
+      } else {
+        start--;
+      }
+    }
+    if (commitPresetState && _stockRange != _StockRangePreset.custom) {
+      setState(() => _stockRange = _StockRangePreset.custom);
+    }
     _stockGroupController.setViewport(
       ChartXViewport(
         min: _stockTimeDomain.xAt(start, _stockTimeSpacing),
@@ -743,9 +875,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             : _candles[_activeCandleIndex!];
         return ChartCard(
           key: const ValueKey('candlestick-reference-card'),
-          title: 'Thirty-two session price action',
+          title: _useDensityStressData
+              ? '2,000-session density stress'
+              : _exampleChartTitle,
           subtitle: active == null
-              ? 'Hollow rising · filled falling · visible doji'
+              ? _useDensityStressData
+                    ? '${_densityGroupingEnabled ? 'Grouped render' : 'Raw render'} · Data and CSV retain 2,000 source candles'
+                    : '${displayCandles.length} sessions · ${_gapFrequency.label.toLowerCase()} gaps · ${_rangeScale.toStringAsFixed(1)}× range'
               : '${active.label} · close \$${active.close.toStringAsFixed(2)}',
           padding: EdgeInsets.fromLTRB(
             compact ? 8 : 16,
@@ -756,7 +892,6 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           child: BravenChartWorkbench(
             key: const ValueKey('candlestick-workbench'),
             chartController: _chartController,
-            workbenchController: _workbenchController,
             availableDisplayModes: const {
               ChartDisplayMode.chart,
               ChartDisplayMode.data,
@@ -816,8 +951,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     key: const ValueKey('candlestick-reference-chart'),
     bravenChartController: controller,
     series: _buildSeries(displayCandles),
-    theme: options.theme ?? ChartTheme.light,
-    showLegend: false,
+    theme: _effectiveChartTheme(options),
+    showLegend: options.showLegend,
+    legendStyle: _effectiveChartTheme(options).legendStyle.copyWith(
+      position: _legendPosition,
+      allowDragging: _legendDraggable,
+    ),
     showXScrollbar: options.showXScrollbar,
     showYScrollbar: options.showYScrollbar,
     grid: GridConfig(horizontal: options.showGrid, vertical: options.showGrid),
@@ -856,48 +995,159 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     ),
   );
 
+  ChartTheme _effectiveChartTheme([ChartOptions? options]) {
+    final base =
+        options?.theme ?? _optionsController.options.theme ?? ChartTheme.light;
+    final candlestickTheme = switch (_candlePalette) {
+      _CandlestickPalette.theme => base.candlestickTheme,
+      _CandlestickPalette.market =>
+        base.backgroundColor.computeLuminance() < .3
+            ? CandlestickTheme.dark
+            : CandlestickTheme.light,
+      _CandlestickPalette.blueOrange => CandlestickTheme.colorblindFriendly,
+      _CandlestickPalette.monochrome => CandlestickTheme.highContrast,
+    };
+    return base.copyWith(
+      candlestickTheme: candlestickTheme,
+      legendStyle: base.legendStyle.copyWith(
+        position: _legendPosition,
+        allowDragging: _legendDraggable,
+      ),
+    );
+  }
+
   List<CandlestickDataPoint> get _displayCandles => [
-    for (var index = 0; index < _candles.length; index++)
-      _candles[index].copyWith(x: _timeDomain.xAt(index, _timeSpacing)),
+    for (var index = 0; index < _activeWorkbenchCandles.length; index++)
+      _activeWorkbenchCandles[index].copyWith(
+        x: _activeWorkbenchTimeDomain.xAt(index, _timeSpacing),
+      ),
   ];
 
-  List<ChartSeries> _buildSeries(List<CandlestickDataPoint> candles) => [
-    CandlestickChartSeries(
-      id: 'reference-ohlc',
-      name: 'Price',
-      unit: 'USD',
-      points: candles,
-      candlestickStyle: CandlestickChartStyle(
-        bodyFillMode: _bodyFillMode,
-        bodyWidthFactor: _bodyWidthFactor,
-        maxBodyWidth: _maxBodyWidth,
-        bodyBorderWidth: _bodyBorderWidth,
-        wickWidth: _wickWidth,
-        showBodyBorder: _showBodyBorder,
-        showWicks: _showWicks,
-        bodyCornerRadius: _cornerRadius,
-        minimumBodyHeight: _minimumBodyHeight,
+  List<CandlestickDataPoint> get _activeWorkbenchCandles =>
+      _useDensityStressData ? _densityCandles : _candles;
+
+  FinancialTimeDomain get _activeWorkbenchTimeDomain =>
+      _useDensityStressData ? _densityTimeDomain : _timeDomain;
+
+  CandlestickDensityGrouping get _densityGrouping => CandlestickDensityGrouping(
+    enabled: _densityGroupingEnabled,
+    targetGroupWidth: _targetGroupWidth,
+    minimumPointsPerGroup: _minimumPointsPerGroup,
+  );
+
+  List<ChartSeries> _buildSeries(List<CandlestickDataPoint> candles) {
+    final averageWindow = math.min(_averageWindow, candles.length);
+    return [
+      CandlestickChartSeries(
+        id: 'reference-ohlc',
+        name: 'Price',
+        unit: 'USD',
+        points: candles,
+        candlestickStyle: CandlestickChartStyle(
+          bodyFillMode: _bodyFillMode,
+          bodyWidthFactor: _bodyWidthFactor,
+          maxBodyWidth: _maxBodyWidth,
+          bodyBorderWidth: _bodyBorderWidth,
+          wickWidth: _wickWidth,
+          showBodyBorder: _showBodyBorder,
+          showWicks: _showWicks,
+          bodyCornerRadius: _cornerRadius,
+          minimumBodyHeight: _minimumBodyHeight,
+        ),
+        animation: CandlestickAnimationStyle(
+          mode: _animateEntrance
+              ? CandlestickAnimationMode.reveal
+              : CandlestickAnimationMode.none,
+          staggerFraction: _entranceStagger,
+          dataUpdateMode: _animateUpdates
+              ? CandlestickDataUpdateAnimationMode.interpolate
+              : CandlestickDataUpdateAnimationMode.none,
+        ),
+        densityGrouping: _densityGrouping,
       ),
-      animation: CandlestickAnimationStyle(
-        mode: CandlestickAnimationMode.reveal,
-        staggerFraction: .85,
-        dataUpdateMode: _animateUpdates
-            ? CandlestickDataUpdateAnimationMode.interpolate
-            : CandlestickDataUpdateAnimationMode.none,
-      ),
-    ),
-    if (_showCloseAverage)
-      LineChartSeries(
-        id: 'close-average',
-        name: '5-session close average',
-        points: _movingAverage(candles, 5),
-        color: const Color(0xFF6366F1),
-        interpolation: LineInterpolation.monotone,
-        strokeWidth: 1.6,
-      ),
-  ];
+      if (_showCloseAverage)
+        LineChartSeries(
+          id: 'close-average',
+          name: '$averageWindow-session close average',
+          points: _movingAverage(candles, averageWindow),
+          color: _averageColor,
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: _averageStrokeWidth,
+        ),
+    ];
+  }
 
   List<Widget> _buildOptions() => [
+    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+      OptionSection(
+        title: 'Example data',
+        icon: Icons.dataset_outlined,
+        children: [
+          if (!_useDensityStressData) ...[
+            IntSliderOption(
+              key: const ValueKey('candlestick-session-count'),
+              label: 'Visible sessions',
+              value: _sessionCount,
+              min: 12,
+              max: 120,
+              suffix: 'candles',
+              onChanged: (value) => setState(() {
+                _sessionCount = value;
+                _regenerateWorkbenchData();
+              }),
+            ),
+            SliderOption(
+              key: const ValueKey('candlestick-range-scale'),
+              label: 'Price range',
+              value: _rangeScale,
+              min: .4,
+              max: 2.8,
+              divisions: 24,
+              suffix: '×',
+              onChanged: (value) => setState(() {
+                _rangeScale = value;
+                _regenerateWorkbenchData();
+              }),
+            ),
+            SliderOption(
+              key: const ValueKey('candlestick-trend-bias'),
+              label: 'Trend bias',
+              value: _trendBias,
+              min: -1.2,
+              max: 1.2,
+              divisions: 24,
+              suffix: 'USD/session',
+              onChanged: (value) => setState(() {
+                _trendBias = value;
+                _regenerateWorkbenchData();
+              }),
+            ),
+            EnumOption<_GapFrequency>(
+              key: const ValueKey('candlestick-gap-frequency'),
+              label: 'Opening gaps',
+              subtitle: 'Vary discontinuities between consecutive sessions',
+              value: _gapFrequency,
+              values: _GapFrequency.values,
+              labelBuilder: (value) => value.label,
+              onChanged: (value) => setState(() {
+                _gapFrequency = value;
+                _regenerateWorkbenchData();
+              }),
+            ),
+          ],
+          BoolOption(
+            key: const ValueKey('candlestick-density-stress-data'),
+            label: 'Use 2,000 source candles',
+            subtitle: 'Stress the renderer while Data and CSV stay raw',
+            value: _useDensityStressData,
+            onChanged: (value) => setState(() {
+              _useDensityStressData = value;
+              _activeCandleIndex = null;
+              if (value) _densityGroupingEnabled = true;
+            }),
+          ),
+        ],
+      ),
     OptionSection(
       title: 'Tracking and time',
       icon: Icons.track_changes,
@@ -918,34 +1168,103 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             value: _showTrackingTooltip,
             onChanged: (value) => setState(() => _showTrackingTooltip = value),
           ),
-        EnumOption<FinancialTimeSpacing>(
-          key: const ValueKey('candlestick-time-spacing'),
-          label: 'Time spacing',
-          subtitle: 'Compare equal sessions with real weekend and holiday gaps',
-          value: _timeSpacing,
-          values: FinancialTimeSpacing.values,
-          labelBuilder: (value) => switch (value) {
-            FinancialTimeSpacing.ordinal => 'Equal sessions',
-            FinancialTimeSpacing.elapsed => 'Elapsed UTC',
-          },
-          onChanged: (value) => setState(() {
-            _timeSpacing = value;
-            _activeCandleIndex = null;
-          }),
-        ),
-        BoolOption(
-          key: const ValueKey('candlestick-animate-updates'),
-          label: 'Animate OHLC revisions',
-          subtitle: 'Preserves candle identity while values move',
-          value: _animateUpdates,
-          onChanged: (value) => setState(() => _animateUpdates = value),
-        ),
+        if (_showcaseMode == _CandlestickShowcaseMode.workbench) ...[
+          EnumOption<FinancialTimeSpacing>(
+            key: const ValueKey('candlestick-time-spacing'),
+            label: 'Time spacing',
+            subtitle:
+                'Compare equal sessions with real weekend and holiday gaps',
+            value: _timeSpacing,
+            values: FinancialTimeSpacing.values,
+            labelBuilder: (value) => switch (value) {
+              FinancialTimeSpacing.ordinal => 'Equal sessions',
+              FinancialTimeSpacing.elapsed => 'Elapsed UTC',
+            },
+            onChanged: (value) => setState(() {
+              _timeSpacing = value;
+              _activeCandleIndex = null;
+            }),
+          ),
+          BoolOption(
+            key: const ValueKey('candlestick-animate-updates'),
+            label: 'Animate OHLC revisions',
+            subtitle: 'Preserves candle identity while values move',
+            value: _animateUpdates,
+            onChanged: (value) => setState(() => _animateUpdates = value),
+          ),
+          BoolOption(
+            key: const ValueKey('candlestick-animate-entrance'),
+            label: 'Animate entrance',
+            subtitle: 'Reveal candles in session order',
+            value: _animateEntrance,
+            onChanged: (value) => setState(() => _animateEntrance = value),
+          ),
+          if (_animateEntrance)
+            SliderOption(
+              key: const ValueKey('candlestick-entrance-stagger'),
+              label: 'Entrance stagger',
+              value: _entranceStagger,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              suffix: 'timeline',
+              onChanged: (value) => setState(() => _entranceStagger = value),
+            ),
+        ],
       ],
     ),
+    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+      OptionSection(
+        title: 'Data density',
+        icon: Icons.density_medium,
+        children: [
+          BoolOption(
+            key: const ValueKey('candlestick-density-grouping'),
+            label: 'Group dense candles',
+            subtitle: 'First open, maximum high, minimum low, and last close',
+            value: _densityGroupingEnabled,
+            onChanged: (value) =>
+                setState(() => _densityGroupingEnabled = value),
+          ),
+          if (_densityGroupingEnabled) ...[
+            SliderOption(
+              key: const ValueKey('candlestick-target-group-width'),
+              label: 'Target group width',
+              value: _targetGroupWidth,
+              min: 3,
+              max: 12,
+              divisions: 18,
+              suffix: 'px',
+              onChanged: (value) => setState(() => _targetGroupWidth = value),
+            ),
+            SliderOption(
+              key: const ValueKey('candlestick-minimum-group-size'),
+              label: 'Minimum group size',
+              value: _minimumPointsPerGroup.toDouble(),
+              min: 2,
+              max: 8,
+              divisions: 6,
+              suffix: ' candles',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _minimumPointsPerGroup = value.round()),
+            ),
+          ],
+        ],
+      ),
     OptionSection(
       title: 'Candle geometry',
       icon: Icons.candlestick_chart,
       children: [
+        EnumOption<_CandlestickPalette>(
+          key: const ValueKey('candlestick-palette'),
+          label: 'Candle palette',
+          subtitle: 'Theme defaults, market hues, accessible hues, or mono',
+          value: _candlePalette,
+          values: _CandlestickPalette.values,
+          labelBuilder: (value) => value.label,
+          onChanged: (value) => setState(() => _candlePalette = value),
+        ),
         EnumOption<CandlestickBodyFillMode>(
           key: const ValueKey('candlestick-body-mode'),
           label: 'Body mode',
@@ -1046,6 +1365,80 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showCloseAverage,
           onChanged: (value) => setState(() => _showCloseAverage = value),
         ),
+        if (_showCloseAverage) ...[
+          SliderOption(
+            key: const ValueKey('candlestick-average-window'),
+            label: 'Average window',
+            value: _averageWindow.toDouble(),
+            min: 3,
+            max: 24,
+            divisions: 21,
+            suffix: 'sessions',
+            decimalPlaces: 0,
+            onChanged: (value) =>
+                setState(() => _averageWindow = value.round()),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-average-width'),
+            label: 'Average stroke width',
+            value: _averageStrokeWidth,
+            min: .8,
+            max: 4,
+            divisions: 16,
+            suffix: 'px',
+            onChanged: (value) => setState(() => _averageStrokeWidth = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-average-color'),
+            label: 'Average colour',
+            value: _averageColor,
+            colors: const [
+              Color(0xFF6366F1),
+              Color(0xFF0EA5E9),
+              Color(0xFFF59E0B),
+              Color(0xFFEC4899),
+              Color(0xFF111827),
+            ],
+            onChanged: (value) => setState(() => _averageColor = value),
+          ),
+        ],
+      ],
+    ),
+    OptionSection(
+      title: 'Legends',
+      icon: Icons.view_list_outlined,
+      children: [
+        BoolOption(
+          key: const ValueKey('candlestick-series-legend'),
+          label: 'Show series legend',
+          subtitle: 'Identify the OHLC series and optional moving average',
+          value: _optionsController.showLegend,
+          onChanged: (value) {
+            _optionsController.showLegend = value;
+            setState(() {});
+          },
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-direction-key'),
+          label: 'Show direction key',
+          subtitle: 'Explain rising, falling, doji, and overlay marks',
+          value: _showDirectionLegend,
+          onChanged: (value) => setState(() => _showDirectionLegend = value),
+        ),
+        EnumOption<LegendPosition>(
+          key: const ValueKey('candlestick-legend-position'),
+          label: 'Series legend position',
+          value: _legendPosition,
+          values: LegendPosition.values,
+          labelBuilder: _legendPositionLabel,
+          onChanged: (value) => setState(() => _legendPosition = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-legend-draggable'),
+          label: 'Allow legend dragging',
+          value: _legendDraggable,
+          onChanged: (value) => setState(() => _legendDraggable = value),
+        ),
       ],
     ),
     StandardChartOptions(
@@ -1061,6 +1454,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
 
   Widget _buildDirectionLegend() {
     final theme = Theme.of(context);
+    final candleTheme = _effectiveChartTheme().candlestickTheme;
     return Container(
       key: const ValueKey('candlestick-direction-legend'),
       padding: const EdgeInsets.all(16),
@@ -1069,31 +1463,42 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
-      child: const Wrap(
+      child: Wrap(
         spacing: 24,
         runSpacing: 12,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _DirectionLegendItem(
             label: 'Rising',
-            description: 'Hollow body',
+            description: _bodyFillMode == CandlestickBodyFillMode.hollowRising
+                ? 'Hollow body'
+                : 'Filled body',
             kind: _DirectionLegendKind.hollow,
+            color: candleTheme.risingBorderColor,
+            fillBody: _bodyFillMode == CandlestickBodyFillMode.filled,
           ),
           _DirectionLegendItem(
             label: 'Falling',
             description: 'Filled body',
             kind: _DirectionLegendKind.filled,
+            color: candleTheme.fallingBodyFillColor,
+            fillBody: true,
           ),
           _DirectionLegendItem(
             label: 'Doji',
             description: 'Open equals close',
             kind: _DirectionLegendKind.doji,
+            color: candleTheme.dojiBodyFillColor,
+            fillBody: true,
           ),
-          _DirectionLegendItem(
-            label: 'Close average',
-            description: '5 sessions',
-            kind: _DirectionLegendKind.average,
-          ),
+          if (_showCloseAverage)
+            _DirectionLegendItem(
+              label: 'Close average',
+              description: '$_averageWindow sessions',
+              kind: _DirectionLegendKind.average,
+              color: _averageColor,
+              fillBody: false,
+            ),
         ],
       ),
     );
@@ -1103,7 +1508,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     double value,
     List<CandlestickDataPoint> displayCandles,
   ) {
-    final index = _timeDomain.nearestIndex(value, _timeSpacing);
+    final index = _activeWorkbenchTimeDomain.nearestIndex(value, _timeSpacing);
     if (_timeSpacing == FinancialTimeSpacing.ordinal &&
         (value - index).abs() > 0.35) {
       return '';
@@ -1133,6 +1538,147 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     });
   }
 
+  void _applyExample(_CandlestickExample example) {
+    setState(() {
+      _selectedExample = example;
+      _showcaseMode = example == _CandlestickExample.stockComposition
+          ? _CandlestickShowcaseMode.stock
+          : _CandlestickShowcaseMode.workbench;
+      _activeCandleIndex = null;
+
+      switch (example) {
+        case _CandlestickExample.priceAction:
+          _sessionCount = 32;
+          _rangeScale = 1;
+          _trendBias = 0;
+          _gapFrequency = _GapFrequency.occasional;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _showCloseAverage = true;
+          _averageWindow = 5;
+          break;
+        case _CandlestickExample.trend:
+          _sessionCount = 64;
+          _rangeScale = .7;
+          _trendBias = .45;
+          _gapFrequency = _GapFrequency.none;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _showCloseAverage = true;
+          _averageWindow = 10;
+          break;
+        case _CandlestickExample.volatility:
+          _sessionCount = 72;
+          _rangeScale = 2.2;
+          _trendBias = 0;
+          _gapFrequency = _GapFrequency.frequent;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _showCloseAverage = true;
+          _averageWindow = 8;
+          break;
+        case _CandlestickExample.gapsAndDoji:
+          _sessionCount = 48;
+          _rangeScale = 1.25;
+          _trendBias = -.08;
+          _gapFrequency = _GapFrequency.frequent;
+          _useDensityStressData = false;
+          _densityGroupingEnabled = false;
+          _showCloseAverage = false;
+          break;
+        case _CandlestickExample.density:
+          _useDensityStressData = true;
+          _densityGroupingEnabled = true;
+          _showCloseAverage = false;
+          break;
+        case _CandlestickExample.stockComposition:
+          _showCloseAverage = true;
+          _averageWindow = 20;
+          break;
+      }
+      if (example != _CandlestickExample.density &&
+          example != _CandlestickExample.stockComposition) {
+        _regenerateWorkbenchData();
+      }
+    });
+    if (example == _CandlestickExample.stockComposition) {
+      _stockGroupController.setViewport(_stockViewportFor(_stockRange));
+    }
+  }
+
+  void _regenerateWorkbenchData() {
+    final dataProfile = switch (_selectedExample) {
+      _CandlestickExample.trend => _CandlestickDataProfile.trend,
+      _CandlestickExample.volatility => _CandlestickDataProfile.volatility,
+      _CandlestickExample.gapsAndDoji => _CandlestickDataProfile.gapsAndDoji,
+      _ => _CandlestickDataProfile.priceAction,
+    };
+    _candles = _buildScenarioCandles(
+      profile: dataProfile,
+      count: _sessionCount,
+      rangeScale: _rangeScale,
+      trendBias: _trendBias,
+      gapFrequency: _gapFrequency,
+    );
+    _timeDomain = FinancialTimeDomain(
+      _candles.map((point) => point.timestamp!),
+    );
+    _activeCandleIndex = null;
+  }
+
+  String get _exampleDescription => switch (_selectedExample) {
+    _CandlestickExample.priceAction =>
+      'Balanced market action with rising, falling, and doji candles.',
+    _CandlestickExample.trend =>
+      'A sustained advance tests dense bodies and a longer moving average.',
+    _CandlestickExample.volatility =>
+      'Wide bodies, long wicks, and frequent gaps stress price-range handling.',
+    _CandlestickExample.gapsAndDoji =>
+      'Discontinuous opens and repeated doji make direction cues explicit.',
+    _CandlestickExample.density =>
+      '2,000 raw sessions demonstrate opt-in OHLC density grouping.',
+    _CandlestickExample.stockComposition =>
+      'Price, volume, and navigator charts share one financial time viewport.',
+  };
+
+  String get _exampleChartTitle => switch (_selectedExample) {
+    _CandlestickExample.priceAction => 'Balanced price action',
+    _CandlestickExample.trend => 'Advancing market trend',
+    _CandlestickExample.volatility => 'High-volatility sessions',
+    _CandlestickExample.gapsAndDoji => 'Opening gaps and doji',
+    _ => 'Candlestick price action',
+  };
+
+  String _exampleLabel(_CandlestickExample example) => switch (example) {
+    _CandlestickExample.priceAction => 'Price action',
+    _CandlestickExample.trend => 'Trend',
+    _CandlestickExample.volatility => 'Volatility',
+    _CandlestickExample.gapsAndDoji => 'Gaps & doji',
+    _CandlestickExample.density => 'Density',
+    _CandlestickExample.stockComposition => 'Stock composition',
+  };
+
+  IconData _exampleIcon(_CandlestickExample example) => switch (example) {
+    _CandlestickExample.priceAction => Icons.candlestick_chart,
+    _CandlestickExample.trend => Icons.trending_up,
+    _CandlestickExample.volatility => Icons.show_chart,
+    _CandlestickExample.gapsAndDoji => Icons.space_bar,
+    _CandlestickExample.density => Icons.density_medium,
+    _CandlestickExample.stockComposition => Icons.monitor_heart_outlined,
+  };
+
+  String _legendPositionLabel(LegendPosition position) => switch (position) {
+    LegendPosition.topLeft => 'Top left',
+    LegendPosition.topCenter => 'Top centre',
+    LegendPosition.topRight => 'Top right',
+    LegendPosition.centerLeft => 'Centre left',
+    LegendPosition.center => 'Centre',
+    LegendPosition.centerRight => 'Centre right',
+    LegendPosition.bottomLeft => 'Bottom left',
+    LegendPosition.bottomCenter => 'Bottom centre',
+    LegendPosition.bottomRight => 'Bottom right',
+  };
+
   void _reset() {
     setState(() {
       _bodyFillMode = CandlestickBodyFillMode.hollowRising;
@@ -1145,19 +1691,38 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _showBodyBorder = true;
       _showWicks = true;
       _showCloseAverage = true;
+      _showDirectionLegend = true;
+      _averageWindow = 5;
+      _averageStrokeWidth = 1.6;
+      _averageColor = const Color(0xFF6366F1);
       _trackingEnabled = true;
       _showTrackingTooltip = true;
       _animateUpdates = true;
+      _animateEntrance = true;
+      _entranceStagger = .85;
+      _useDensityStressData = false;
+      _densityGroupingEnabled = false;
+      _targetGroupWidth = 5;
+      _minimumPointsPerGroup = 2;
       _timeSpacing = FinancialTimeSpacing.ordinal;
+      _selectedExample = _CandlestickExample.priceAction;
+      _candlePalette = _CandlestickPalette.theme;
+      _gapFrequency = _GapFrequency.occasional;
+      _sessionCount = 32;
+      _rangeScale = 1;
+      _trendBias = 0;
+      _legendPosition = LegendPosition.topRight;
+      _legendDraggable = true;
+      _showcaseMode = _CandlestickShowcaseMode.workbench;
       _stockTimeSpacing = FinancialTimeSpacing.ordinal;
       _stockRange = _StockRangePreset.threeMonths;
       _showVolumePane = true;
-      _candles = _buildCandles();
+      _regenerateWorkbenchData();
       _revisionStep = 0;
       _activeCandleIndex = null;
     });
     _stockGroupController.setViewport(_stockViewportFor(_stockRange));
-    _optionsController.update(const ChartOptions(showLegend: false));
+    _optionsController.update(const ChartOptions(showLegend: true));
   }
 }
 
@@ -1226,17 +1791,25 @@ class _DirectionLegendItem extends StatelessWidget {
     required this.label,
     required this.description,
     required this.kind,
+    required this.color,
+    required this.fillBody,
   });
 
   final String label;
   final String description;
   final _DirectionLegendKind kind;
+  final Color color;
+  final bool fillBody;
 
   @override
   Widget build(BuildContext context) {
     final symbol = CustomPaint(
       size: const Size(24, 24),
-      painter: _DirectionLegendPainter(kind),
+      painter: _DirectionLegendPainter(
+        kind: kind,
+        color: color,
+        fillBody: fillBody,
+      ),
     );
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1467,9 +2040,15 @@ class _PerformanceMetric extends StatelessWidget {
 }
 
 class _DirectionLegendPainter extends CustomPainter {
-  const _DirectionLegendPainter(this.kind);
+  const _DirectionLegendPainter({
+    required this.kind,
+    required this.color,
+    required this.fillBody,
+  });
 
   final _DirectionLegendKind kind;
+  final Color color;
+  final bool fillBody;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1479,17 +2058,11 @@ class _DirectionLegendPainter extends CustomPainter {
         Offset(2, center.dy),
         Offset(size.width - 2, center.dy),
         Paint()
-          ..color = const Color(0xFF6366F1)
+          ..color = color
           ..strokeWidth = 2,
       );
       return;
     }
-    final color = switch (kind) {
-      _DirectionLegendKind.hollow => const Color(0xFF0F766E),
-      _DirectionLegendKind.filled => const Color(0xFFB91C1C),
-      _DirectionLegendKind.doji => const Color(0xFF475569),
-      _DirectionLegendKind.average => const Color(0xFF6366F1),
-    };
     canvas.drawLine(
       Offset(center.dx, 2),
       Offset(center.dx, size.height - 2),
@@ -1500,8 +2073,7 @@ class _DirectionLegendPainter extends CustomPainter {
     final body = kind == _DirectionLegendKind.doji
         ? Rect.fromCenter(center: center, width: 14, height: 2)
         : Rect.fromCenter(center: center, width: 10, height: 14);
-    if (kind == _DirectionLegendKind.filled ||
-        kind == _DirectionLegendKind.doji) {
+    if (fillBody) {
       canvas.drawRect(body, Paint()..color = color);
     } else {
       canvas.drawRect(
@@ -1516,10 +2088,44 @@ class _DirectionLegendPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DirectionLegendPainter oldDelegate) =>
-      oldDelegate.kind != kind;
+      oldDelegate.kind != kind ||
+      oldDelegate.color != color ||
+      oldDelegate.fillBody != fillBody;
 }
 
 enum _CandlestickShowcaseMode { workbench, stock }
+
+enum _CandlestickExample {
+  priceAction,
+  trend,
+  volatility,
+  gapsAndDoji,
+  density,
+  stockComposition,
+}
+
+enum _CandlestickDataProfile { priceAction, trend, volatility, gapsAndDoji }
+
+enum _CandlestickPalette {
+  theme('Theme default'),
+  market('Market green / red'),
+  blueOrange('Blue / orange'),
+  monochrome('High-contrast mono');
+
+  const _CandlestickPalette(this.label);
+
+  final String label;
+}
+
+enum _GapFrequency {
+  none('None'),
+  occasional('Occasional'),
+  frequent('Frequent');
+
+  const _GapFrequency(this.label);
+
+  final String label;
+}
 
 enum _StockRangePreset {
   oneMonth,
@@ -1529,6 +2135,34 @@ enum _StockRangePreset {
   oneYear,
   all,
   custom,
+}
+
+List<CandlestickDataPoint> _buildDensityCandles() {
+  final candles = <CandlestickDataPoint>[];
+  final start = DateTime.utc(2026, 1, 5, 9, 30);
+  var previousClose = 132.0;
+  for (var index = 0; index < 2000; index++) {
+    final open = previousClose;
+    final movement =
+        math.sin(index * .17) * .72 +
+        math.cos(index * .043) * .38 +
+        math.sin(index * .011) * .24;
+    final close = open + movement;
+    final high = math.max(open, close) + .35 + (index % 5) * .08;
+    final low = math.min(open, close) - .3 - (index % 4) * .07;
+    candles.add(
+      CandlestickDataPoint.atTime(
+        timestamp: start.add(Duration(minutes: index * 5)),
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        label: index % 250 == 0 ? 'Sample ${index + 1}' : null,
+      ),
+    );
+    previousClose = close;
+  }
+  return List<CandlestickDataPoint>.unmodifiable(candles);
 }
 
 List<CandlestickDataPoint> _buildStockCandles() {
@@ -1564,15 +2198,57 @@ List<CandlestickDataPoint> _buildStockCandles() {
 }
 
 List<CandlestickDataPoint> _buildCandles() {
+  return _buildScenarioCandles(
+    profile: _CandlestickDataProfile.priceAction,
+    count: 32,
+    rangeScale: 1,
+    trendBias: 0,
+    gapFrequency: _GapFrequency.occasional,
+  );
+}
+
+List<CandlestickDataPoint> _buildScenarioCandles({
+  required _CandlestickDataProfile profile,
+  required int count,
+  required double rangeScale,
+  required double trendBias,
+  required _GapFrequency gapFrequency,
+}) {
   final start = DateTime.utc(2026, 5, 4);
   var previousClose = 228.0;
-  return List<CandlestickDataPoint>.generate(32, (index) {
-    final drift = math.sin(index * 0.62) * 3.6 + math.cos(index * 0.19) * 1.8;
-    final open = previousClose + math.sin(index * 1.13) * 1.7;
-    var close = open + drift;
-    if (index == 14 || index == 25) close = open;
-    final high = math.max(open, close) + 2.2 + (index % 4) * 0.55;
-    final low = math.min(open, close) - 1.8 - (index % 3) * 0.65;
+  return List<CandlestickDataPoint>.generate(count, (index) {
+    final movement = switch (profile) {
+      _CandlestickDataProfile.priceAction =>
+        math.sin(index * .62) * 3.6 + math.cos(index * .19) * 1.8,
+      _CandlestickDataProfile.trend =>
+        1.05 + math.sin(index * .41) * 1.7 + math.cos(index * .13) * .7,
+      _CandlestickDataProfile.volatility =>
+        math.sin(index * .83) * 4.8 + math.cos(index * .27) * 3.2,
+      _CandlestickDataProfile.gapsAndDoji =>
+        math.sin(index * .54) * 2.8 + math.cos(index * .21) * 1.4,
+    };
+    final gap = switch (gapFrequency) {
+      _GapFrequency.none => 0.0,
+      _GapFrequency.occasional =>
+        index > 0 && index % 11 == 0
+            ? math.sin(index * .71) * 4.2 * rangeScale
+            : 0.0,
+      _GapFrequency.frequent =>
+        index > 0 && index % 5 == 0
+            ? math.cos(index * .63) * 5.6 * rangeScale
+            : 0.0,
+    };
+    final open = previousClose + gap;
+    var close = open + movement * rangeScale + trendBias;
+    final isDoji = switch (profile) {
+      _CandlestickDataProfile.priceAction => index == 14 || index == 25,
+      _CandlestickDataProfile.trend => index > 0 && index % 23 == 0,
+      _CandlestickDataProfile.volatility => index > 0 && index % 29 == 0,
+      _CandlestickDataProfile.gapsAndDoji => index > 0 && index % 7 == 0,
+    };
+    if (isDoji) close = open;
+    final high = math.max(open, close) + (1.6 + (index % 4) * .55) * rangeScale;
+    final low = math.min(open, close) - (1.4 + (index % 3) * .65) * rangeScale;
     final timestamp = start.add(Duration(days: index + (index ~/ 5) * 2));
     previousClose = close;
     return CandlestickDataPoint(
@@ -1619,8 +2295,27 @@ const _monthNames = [
 
 const _stockCompositionSnippet = '''
 final viewport = ChartInteractionGroupController();
+final navigatorWindow = AnnotationController(
+  initialAnnotations: [
+    RangeAnnotation(id: 'navigator-window', startX: rangeStart, endX: rangeEnd),
+  ],
+)..selectAnnotation('navigator-window');
 
-// Range buttons and navigator handles issue one host-owned command.
+// Period buttons and main-chart pan/zoom update the same selected window.
+viewport.viewportListenable.addListener(() {
+  final visible = viewport.viewport;
+  if (visible == null) return;
+  navigatorWindow.updateAnnotation(
+    'navigator-window',
+    RangeAnnotation(
+      id: 'navigator-window',
+      startX: visible.min,
+      endX: visible.max,
+    ),
+  );
+});
+
+// Period buttons and navigator handles issue one host-owned command.
 viewport.setViewport(ChartXViewport(min: rangeStart, max: rangeEnd));
 
 BravenChartPlus(
@@ -1634,23 +2329,28 @@ BravenChartPlus(
   ],
 );
 
-ValueListenableBuilder<ChartXViewport?>(
-  valueListenable: viewport.viewportListenable,
-  builder: (context, visible, _) => BravenChartPlus(
-    interactionGroupController: viewport,
-    interactionGroupOptions: const ChartInteractionGroupOptions(
-      synchronizeViewport: false,
-    ),
-    series: [AreaChartSeries(id: 'navigator', points: closes)],
-    annotations: visible == null
-        ? const []
-        : [
-            RangeAnnotation(
-              id: 'navigator-window',
-              startX: visible.min,
-              endX: visible.max,
-            ),
-          ],
+BravenChartPlus(
+  interactionGroupController: viewport,
+  interactionGroupOptions: const ChartInteractionGroupOptions(
+    synchronizeCursor: false,
+    synchronizeViewport: false,
   ),
+  annotationController: navigatorWindow,
+  persistentRangeAnnotationHandles: true,
+  onAnnotationDragUpdate: (annotation, _) {
+    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
+      // Preview the shared viewport continuously without replacing the
+      // controller-owned annotation during the active pointer gesture.
+      viewport.setViewport(ChartXViewport(min: min, max: max));
+    }
+  },
+  onAnnotationDragged: (annotation, _) {
+    if (annotation case RangeAnnotation(startX: final min?, endX: final max?)) {
+      viewport.setViewport(ChartXViewport(min: min, max: max));
+    }
+  },
+  series: [AreaChartSeries(id: 'navigator', points: closes)],
 );
 ''';
+
+const _stockNavigatorWindowId = 'navigator-window';

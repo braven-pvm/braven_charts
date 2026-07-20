@@ -100,6 +100,49 @@ void main() {
       expect(geometry.last.pointIndex, inInclusiveRange(25999, 26000));
     });
 
+    test('groups dense OHLC while retaining every represented source', () {
+      final points = [
+        _candle(x: 0, open: 10, high: 12, low: 8, close: 11),
+        _candle(x: 1, open: 11, high: 15, low: 9, close: 14),
+        _candle(x: 2, open: 14, high: 16, low: 7, close: 8),
+        _candle(x: 3, open: 8, high: 13, low: 6, close: 12),
+        _candle(x: 4, open: 12, high: 17, low: 10, close: 16),
+        _candle(x: 5, open: 16, high: 18, low: 11, close: 13),
+      ];
+      final projections = CandlestickDensityProjector.project(
+        index: CandlestickViewportIndex(points),
+        xMin: 0,
+        xMax: 5,
+        plotWidth: 10,
+        grouping: const CandlestickDensityGrouping(enabled: true),
+      );
+
+      expect(projections, hasLength(2));
+      expect(projections.first.groupKey, '0:3');
+      expect(projections.first.sourcePointIndices, [0, 1, 2]);
+      expect(projections.first.point.x, 0);
+      expect(projections.first.point.open, 10);
+      expect(projections.first.point.high, 16);
+      expect(projections.first.point.low, 7);
+      expect(projections.first.point.close, 8);
+      expect(projections.last.sourcePointIndices, [3, 4, 5]);
+    });
+
+    test('keeps the raw projection when density grouping is disabled', () {
+      final projections = CandlestickDensityProjector.project(
+        index: CandlestickViewportIndex([
+          for (var index = 0; index < 20; index++) _candle(x: index.toDouble()),
+        ]),
+        xMin: 0,
+        xMax: 19,
+        plotWidth: 10,
+        grouping: const CandlestickDensityGrouping(),
+      );
+
+      expect(projections, hasLength(20));
+      expect(projections.every((projection) => !projection.isGrouped), isTrue);
+    });
+
     test(
       'returns no geometry when the viewport is outside the source range',
       () {

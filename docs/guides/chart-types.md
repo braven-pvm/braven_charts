@@ -1,9 +1,9 @@
 # Chart types
 
-Braven Charts renders six first-class series types through
-`BravenChartPlus`: line, area, bar, scatter, Pie, and Donut. Two or more Donut
-series form the Concentric Donut composition. Line, area, bar, and scatter use
-the Cartesian layout and may share one chart. Pie and standalone Donut are
+Braven Charts renders seven first-class series types through
+`BravenChartPlus`: line, area, bar, scatter, Candlestick, Pie, and Donut. Two
+or more Donut series form the Concentric Donut composition. Line, area, bar,
+scatter, and Candlestick use the Cartesian layout. Pie and standalone Donut are
 single-series partition-radial charts; Concentric Donut is multi-series.
 
 Import only the public package entrypoint:
@@ -20,6 +20,7 @@ import 'package:braven_charts/braven_charts.dart';
 | `AreaChartSeries` | Trends where magnitude or distance from a baseline matters | interpolation, solid or gradient fill, baseline colors, path motion |
 | `BarChartSeries` | Discrete comparisons and grouped values | relative or fixed bar width |
 | `ScatterChartSeries` | Relationships, distributions, and unconnected observations | marker radius and point styling |
+| `CandlestickChartSeries` | Ordered open-high-low-close observations | body and wick geometry, direction theme, OHLC motion, density grouping |
 | `PieChartSeries` | Parts of one meaningful whole | slice geometry, labels, legend, selection |
 | `DonutChartSeries` | Parts of one whole with a meaningful center | inner radius, partial sweep, center content, selection |
 | two or more `DonutChartSeries` | Compare several independent wholes | ring allocation, weights, grouped legend, shared center |
@@ -288,6 +289,41 @@ hydrated charts, and generated Dart source. Open the public
 to compare the fixed, styling, stress, unsorted, interaction-state, bubble,
 continuous-colour, piecewise-band, and opacity presets.
 
+## Candlestick charts
+
+Candlestick uses typed, strictly X-ordered `CandlestickDataPoint` values so
+open, high, low, close, direction, timestamp, and source identity survive
+tracking, tables, artifacts, and generated Source.
+
+```dart
+CandlestickChartSeries(
+  id: 'price',
+  name: 'Price',
+  unit: 'USD',
+  points: candles,
+  candlestickStyle: const CandlestickChartStyle(
+    bodyFillMode: CandlestickBodyFillMode.hollowRising,
+    bodyWidthFactor: 0.72,
+  ),
+  animation: const CandlestickAnimationStyle(
+    mode: CandlestickAnimationMode.reveal,
+    dataUpdateMode: CandlestickDataUpdateAnimationMode.interpolate,
+  ),
+)
+```
+
+Tracking snaps to a real OHLC sample rather than interpolating financial data.
+Choose elapsed-time X values to retain market gaps or ordinal session values
+to collapse them. For dense views, opt-in `CandlestickDensityGrouping`
+aggregates first open, maximum high, minimum low, and last close while all
+Workbench and portable data remains raw.
+
+One Candlestick series may share a plot with Line, Area, and Scatter overlays.
+Volume belongs in a synchronized Bar pane with its own scale; an Area pane can
+act as a full-domain navigator. See the complete
+[Candlestick guide](../../doc/candlestick_charts.md) and runnable
+[Candlestick showcase](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts).
+
 ## Pie charts
 
 `PieChartSeries.fromMap` is the shortest safe constructor. Dart map insertion
@@ -447,8 +483,10 @@ hydration retain exact series and source-point identity. See the complete
 
 ## Mixed Cartesian charts
 
-Line, area, bar, and scatter series may share one `BravenChartPlus`. Give every
-series a unique ID. Use `yAxisConfig` or `yAxisId` when units or scales differ:
+Line, area, bar, and scatter series may share one `BravenChartPlus`. One
+Candlestick series may instead share its plot with Line, Area, and Scatter
+overlays, but not Bar or another Candlestick series. Give every series a unique
+ID. Use `yAxisConfig` or `yAxisId` when units or scales differ:
 
 ```dart
 BravenChartPlus(
@@ -477,7 +515,8 @@ explicitly instead of silently dropping or misrendering data.
 ## Convenience factories
 
 `BravenChartPlus.fromValues` accepts line, area, bar, and scatter. It rejects
-Pie and Donut because numeric values alone cannot provide accessible category labels.
+Candlestick because one numeric value cannot provide OHLC, and rejects Pie and
+Donut because numeric values alone cannot provide accessible category labels.
 
 `BravenChartPlus.fromMap` treats keys as numeric X values for Cartesian chart
 types. With `chartType: ChartType.pie` or `ChartType.donut`, keys become
@@ -521,16 +560,20 @@ semantics announce category, formatted value, share, ordinal, and state.
 
 ## Portable documents
 
-Every built-in series encodes through `ChartSeriesDocumentCodec`. Pie declares
-`series.pie`; Donut declares `series.donut`. Older readers that do not support
-the required capability reject the document rather than interpreting it as a Cartesian series. Artifact capture,
-canonical JSON, previews, hydration, and table export all preserve point
-identity and type-specific configuration.
+Every built-in series encodes through `ChartSeriesDocumentCodec`. Candlestick
+declares `series.candlestick`; Pie declares `series.pie`; Donut declares
+`series.donut`. Older readers that do not support the required capability
+reject the document rather than interpreting it as another series. Artifact
+capture, canonical JSON, previews, hydration, and table export all preserve
+point identity and type-specific configuration.
 
 ## Runnable examples
 
 - [Chart Types](https://braven-pvm.github.io/braven_charts/?page=chart-types)
-  compares all six series types.
+  compares all seven Cartesian and partition-radial series types.
+- [Candlestick Charts](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
+  demonstrates typed OHLC, spacing, motion, live revisions, grouping, the
+  Workbench, and synchronized stock composition.
 - [Pie Charts](https://braven-pvm.github.io/braven_charts/?page=pie-charts)
   demonstrates labels, geometry, linked data, capture, preview, and restore.
 - [Donut Charts](https://braven-pvm.github.io/braven_charts/?page=donut-charts)

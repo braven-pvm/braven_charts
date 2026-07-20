@@ -51,6 +51,7 @@ class CrosshairSeriesValue {
     required this.x,
     required this.y,
     required this.dataPointIndex,
+    this.sourcePointIndices = const <int>[],
     required this.isInterpolated,
     this.linkedSeriesId,
     this.isTrend = false,
@@ -75,6 +76,7 @@ class CrosshairSeriesValue {
   final double x;
   final double y;
   final int dataPointIndex;
+  final List<int> sourcePointIndices;
   final bool isInterpolated;
 
   /// For trend annotations, the ID of the data series this trend is linked to.
