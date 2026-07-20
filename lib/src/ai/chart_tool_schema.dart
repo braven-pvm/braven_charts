@@ -541,6 +541,29 @@ same radial interaction contract.
               'description':
                   'Smallest cluster count that receives an on-marker label.',
             },
+            'scatter_cluster_show_zones': {
+              'type': 'boolean',
+              'description':
+                  'Show the subtle screen-space extent represented by each Scatter cluster.',
+            },
+            'scatter_cluster_zone_opacity': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description': 'Fill opacity used by Scatter cluster zones.',
+            },
+            'scatter_cluster_drill_on_tap': {
+              'type': 'boolean',
+              'description':
+                  'Narrow the existing viewport to a cluster source extent when activated.',
+            },
+            'scatter_cluster_drill_padding': {
+              'type': 'number',
+              'minimum': 0,
+              'maximum': 1,
+              'description':
+                  'Fractional data-space padding around drill-to-cluster bounds.',
+            },
             'scatter_bin_cell_size': {
               'type': 'number',
               'minimum': 12,

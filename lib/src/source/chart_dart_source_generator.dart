@@ -711,6 +711,10 @@ class _ChartDartEmitter {
         config.labelMinimumPointCount,
         defaultValue: 2,
       );
+      _valueIf(writer, 'showZones', config.showZones, defaultValue: false);
+      _numberIf(writer, 'zoneOpacity', config.zoneOpacity, 0.08);
+      _valueIf(writer, 'drillOnTap', config.drillOnTap, defaultValue: true);
+      _numberIf(writer, 'drillPadding', config.drillPadding, 0.18);
     });
     writer.writeLine('),');
   }

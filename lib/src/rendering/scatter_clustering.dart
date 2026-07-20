@@ -17,6 +17,7 @@ class ScatterClusterGeometry {
     required this.dataXRange,
     required this.dataYRange,
     required this.radius,
+    required this.zoneBounds,
   }) : assert(sourcePointIndices.length >= 2),
        sourcePointIndices = List<int>.unmodifiable(sourcePointIndices);
 
@@ -37,6 +38,9 @@ class ScatterClusterGeometry {
 
   /// Visible cluster marker radius in logical pixels.
   final double radius;
+
+  /// Plot-local extent occupied by the source markers in this cluster.
+  final Rect zoneBounds;
 
   int get pointCount => sourcePointIndices.length;
   int get representativePointIndex => sourcePointIndices.first;
@@ -115,6 +119,10 @@ abstract final class ScatterClusterEngine {
       }
       var plotX = 0.0;
       var plotY = 0.0;
+      var minimumPlotX = double.infinity;
+      var maximumPlotX = double.negativeInfinity;
+      var minimumPlotY = double.infinity;
+      var maximumPlotY = double.negativeInfinity;
       var dataX = 0.0;
       var dataY = 0.0;
       var minimumX = double.infinity;
@@ -125,6 +133,10 @@ abstract final class ScatterClusterEngine {
       for (final member in members) {
         plotX += member.center.dx;
         plotY += member.center.dy;
+        minimumPlotX = math.min(minimumPlotX, member.center.dx);
+        maximumPlotX = math.max(maximumPlotX, member.center.dx);
+        minimumPlotY = math.min(minimumPlotY, member.center.dy);
+        maximumPlotY = math.max(maximumPlotY, member.center.dy);
         dataX += member.point.x;
         dataY += member.point.y;
         minimumX = math.min(minimumX, member.point.x);
@@ -135,6 +147,7 @@ abstract final class ScatterClusterEngine {
       }
       indices.sort();
       final count = members.length;
+      final zonePadding = math.min(6.0, config.cellSize * 0.12);
       final normalized = largestCount == config.minimumPointCount
           ? 0.0
           : math.sqrt(
@@ -151,6 +164,12 @@ abstract final class ScatterClusterEngine {
           radius:
               config.minimumRadius +
               (config.maximumRadius - config.minimumRadius) * normalized,
+          zoneBounds: Rect.fromLTRB(
+            minimumPlotX,
+            minimumPlotY,
+            maximumPlotX,
+            maximumPlotY,
+          ).inflate(zonePadding),
         ),
       );
     }

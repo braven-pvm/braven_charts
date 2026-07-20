@@ -23,6 +23,10 @@ void main() {
         'scatter_cluster_maximum_radius': 30,
         'scatter_cluster_show_labels': false,
         'scatter_cluster_label_minimum_points': 5,
+        'scatter_cluster_show_zones': true,
+        'scatter_cluster_zone_opacity': 0.14,
+        'scatter_cluster_drill_on_tap': false,
+        'scatter_cluster_drill_padding': 0.24,
       },
     });
 
@@ -38,6 +42,10 @@ void main() {
         maximumRadius: 30,
         showCountLabels: false,
         labelMinimumPointCount: 5,
+        showZones: true,
+        zoneOpacity: 0.14,
+        drillOnTap: false,
+        drillPadding: 0.24,
       ),
     );
   });
@@ -92,6 +100,8 @@ void main() {
     expect(styleProperties, contains('scatter_render_mode'));
     expect(styleProperties, contains('scatter_cluster_cell_size'));
     expect(styleProperties, contains('scatter_cluster_show_labels'));
+    expect(styleProperties, contains('scatter_cluster_show_zones'));
+    expect(styleProperties, contains('scatter_cluster_drill_on_tap'));
   });
 
   test('builds explicit Scatter hexagonal bins', () {

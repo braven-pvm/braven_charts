@@ -2361,6 +2361,8 @@ void main() {
       expect(scatter.renderMode, ScatterRenderMode.clusters);
       expect(scatter.clusterConfig.cellSize, 44);
       expect(scatter.clusterConfig.showCountLabels, isTrue);
+      expect(scatter.clusterConfig.showZones, isTrue);
+      expect(scatter.clusterConfig.drillOnTap, isTrue);
 
       tester
           .widget<EnumOption<int>>(
@@ -2382,6 +2384,16 @@ void main() {
             find.byKey(const ValueKey('scatter-cluster-count-labels')),
           )
           .onChanged(false);
+      tester
+          .widget<SliderOption>(
+            find.byKey(const ValueKey('scatter-cluster-zone-opacity')),
+          )
+          .onChanged(0.14);
+      tester
+          .widget<BoolOption>(
+            find.byKey(const ValueKey('scatter-cluster-drill-on-tap')),
+          )
+          .onChanged(false);
       await tester.pumpAndSettle();
 
       chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
@@ -2390,6 +2402,9 @@ void main() {
       expect(scatter.clusterConfig.cellSize, 60);
       expect(scatter.clusterConfig.minimumPointCount, 5);
       expect(scatter.clusterConfig.showCountLabels, isFalse);
+      expect(scatter.clusterConfig.showZones, isTrue);
+      expect(scatter.clusterConfig.zoneOpacity, 0.14);
+      expect(scatter.clusterConfig.drillOnTap, isFalse);
       expect(find.textContaining('1000 raw observations'), findsOneWidget);
       expect(find.textContaining('60px screen cells'), findsOneWidget);
 

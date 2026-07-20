@@ -1465,6 +1465,11 @@ class SeriesElement implements DataHitElement {
       category: '${cluster.pointCount} observations',
       formattedValue: '${cluster.dataCentroid.dy.toStringAsFixed(2)}$unit',
       formattedXValue: cluster.dataCentroid.dx.toStringAsFixed(2),
+      formattedXRange: _formatScatterClusterRange(cluster.dataXRange),
+      formattedYRange: _formatScatterClusterRange(
+        cluster.dataYRange,
+        suffix: unit,
+      ),
       markerColor: currentSeries.color ?? themeColor,
       ordinal: clusterIndex + 1,
       count: layout.renderedMarkerCount,
@@ -1473,6 +1478,17 @@ class SeriesElement implements DataHitElement {
       ),
       isFocused: cluster.sourcePointIndices.any(focusedPointIndices.contains),
     );
+  }
+
+  String _formatScatterClusterRange(
+    ({double minimum, double maximum}) range, {
+    String suffix = '',
+  }) {
+    final minimum = range.minimum.toStringAsFixed(2);
+    final maximum = range.maximum.toStringAsFixed(2);
+    return range.minimum == range.maximum
+        ? '$minimum$suffix'
+        : '$minimum–$maximum$suffix';
   }
 
   ChartDataHit? _scatterBinDataHitAt(
@@ -3239,6 +3255,36 @@ class SeriesElement implements DataHitElement {
     double interactionOpacity,
   ) {
     final layout = _resolveScatterClusterLayout();
+    final config = series.clusterConfig;
+    if (config.showZones && config.zoneOpacity > 0) {
+      final zoneRadius = Radius.circular(math.min(12, config.cellSize * 0.2));
+      for (final cluster in layout.clusters) {
+        final selected = cluster.sourcePointIndices.any(
+          selectedPointIndices.contains,
+        );
+        final dimmed = hasAnySelectedPoints && !selected;
+        final zoneOpacity =
+            config.zoneOpacity *
+            interactionOpacity *
+            (dimmed ? series.interactionStyle.dimmedOpacity : 1);
+        final zone = RRect.fromRectAndRadius(cluster.zoneBounds, zoneRadius);
+        canvas.drawRRect(
+          zone,
+          Paint()
+            ..color = baseColor.withValues(alpha: zoneOpacity.clamp(0, 1))
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawRRect(
+          zone,
+          Paint()
+            ..color = baseColor.withValues(
+              alpha: (zoneOpacity * 2.4).clamp(0, 0.38),
+            )
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+      }
+    }
     for (final geometry in layout.unclusteredPoints) {
       final path = Path();
       addScatterMarkerPath(
@@ -3262,7 +3308,6 @@ class SeriesElement implements DataHitElement {
       );
     }
 
-    final config = series.clusterConfig;
     for (final cluster in layout.clusters) {
       final selectedCount = cluster.sourcePointIndices
           .where(selectedPointIndices.contains)

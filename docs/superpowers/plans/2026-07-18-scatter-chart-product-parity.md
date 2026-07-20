@@ -297,7 +297,7 @@ X/Y error bars and concise live controls. Phase 3 is complete.
 
 - [x] Define explicit points/clusters/hexbin/rect-bin/density render modes.
 - [x] Implement deterministic screen-space clustering without O(n²) scans.
-- [ ] Add cluster labels, zones, tooltip summaries, and drill-to-cluster.
+- [x] Add cluster labels, zones, tooltip summaries, and drill-to-cluster.
 - [x] Implement hexagonal and rectangular 2D aggregation.
 - [x] Support count/sum/mean/min/max/proportion aggregates.
 - [x] Implement density contours and legends.
@@ -678,3 +678,16 @@ alone.
   routes. The 500,000-point mean-hexbin benchmark reduced the source to 1,682
   bins in 420.219ms. Checklist progress is 76/94 overall and 5/9 for Phase 4;
   density contours are next.
+- 2026-07-20: Completed the remaining Phase 4 cluster presentation and
+  interaction contract. Optional low-opacity cluster zones show the exact
+  screen-space extent occupied by represented source markers behind the count
+  glyph, while aggregate tooltips and assistive semantics now report X/Y means
+  and ranges. Tap activation drills the existing `ChartRenderBox` viewport to
+  the cluster's raw data bounds with configurable padding; disabling it leaves
+  normal point-selection behavior intact. Zone and drill properties round-trip
+  through artifact JSON, generated Dart, hydration, AI schema input, equality,
+  and Workbench controls. The release gate passed all 2,351 package tests and
+  all 239 example tests, clean package/example analysis, a Wasm-compatible
+  release web build, HTTP 200, and a visual review of the live Clusters route.
+  Checklist progress is 80/94 overall and 9/9 for Phase 4; dense-data modes are
+  complete and Phase 5 composition/documentation is next.

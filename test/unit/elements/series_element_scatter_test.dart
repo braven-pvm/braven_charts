@@ -95,6 +95,7 @@ void main() {
               minimumPointCount: 2,
               minimumRadius: 8,
               maximumRadius: 20,
+              showZones: true,
             ),
           ),
           transform: _transform(),
@@ -111,6 +112,9 @@ void main() {
         expect(hit.category, '2 observations');
         expect(hit.formattedXValue, '0.05');
         expect(hit.formattedValue, '0.05');
+        expect(hit.formattedXRange, '0.00–0.10');
+        expect(hit.formattedYRange, '0.00–0.10');
+        expect(hit.semanticLabel, contains('X range 0.00–0.10'));
         expect(hit.semanticLabel, contains('2 source points'));
 
         final recorder = PictureRecorder();

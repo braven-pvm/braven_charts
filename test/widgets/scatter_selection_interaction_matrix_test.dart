@@ -7,6 +7,7 @@ import 'package:braven_charts/src/models/braven_chart_controller.dart';
 import 'package:braven_charts/src/models/chart_data_point.dart';
 import 'package:braven_charts/src/models/chart_series.dart';
 import 'package:braven_charts/src/models/interaction_config.dart';
+import 'package:braven_charts/src/models/scatter_render_config.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -257,6 +258,66 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets('activating a cluster drills into its raw source extent', (
+      tester,
+    ) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 520,
+              height: 360,
+              child: BravenChartPlus(
+                bravenChartController: controller,
+                showLegend: false,
+                series: const [
+                  ScatterChartSeries(
+                    id: 'clusters',
+                    points: [
+                      ChartDataPoint(x: 1, y: 1),
+                      ChartDataPoint(x: 1.1, y: 1.1),
+                      ChartDataPoint(x: 9, y: 9),
+                    ],
+                    renderMode: ScatterRenderMode.clusters,
+                    clusterConfig: ScatterClusterConfig(
+                      cellSize: 72,
+                      showZones: true,
+                      drillOnTap: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderFinder = _chartRenderFinder();
+      var renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      final beforeXSpan =
+          renderBox.transform!.dataXMax - renderBox.transform!.dataXMin;
+      final beforeYSpan =
+          renderBox.transform!.dataYMax - renderBox.transform!.dataYMin;
+      final clusterPosition = _pointPosition(tester, 0);
+
+      await tester.tapAt(clusterPosition);
+      await tester.pump();
+
+      renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      expect(
+        renderBox.transform!.dataXMax - renderBox.transform!.dataXMin,
+        lessThan(beforeXSpan),
+      );
+      expect(
+        renderBox.transform!.dataYMax - renderBox.transform!.dataYMin,
+        lessThan(beforeYSpan),
+      );
+      expect(controller.selectedPointRefs, isEmpty);
+    });
   });
 }
 

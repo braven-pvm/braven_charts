@@ -18,6 +18,8 @@ class ChartDataHit {
     required this.point,
     required this.formattedValue,
     this.formattedXValue,
+    this.formattedXRange,
+    this.formattedYRange,
     required this.ordinal,
     required this.count,
     this.category,
@@ -167,6 +169,12 @@ class ChartDataHit {
   /// Optional preformatted X value for genuinely two-dimensional marks.
   final String? formattedXValue;
 
+  /// Optional display-ready X extent represented by an aggregate mark.
+  final String? formattedXRange;
+
+  /// Optional display-ready Y extent represented by an aggregate mark.
+  final String? formattedYRange;
+
   /// One-based visible position of this datum.
   final int ordinal;
 
@@ -188,6 +196,8 @@ class ChartDataHit {
     } else {
       if (formattedXValue != null) parts.add('X $formattedXValue');
       parts.add(formattedValue);
+      if (formattedXRange != null) parts.add('X range $formattedXRange');
+      if (formattedYRange != null) parts.add('Y range $formattedYRange');
     }
     if (share != null) {
       final display = formattedShare ?? '${(share! * 100).toStringAsFixed(1)}%';
