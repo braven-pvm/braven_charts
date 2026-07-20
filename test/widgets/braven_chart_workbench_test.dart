@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:braven_charts/braven_charts.dart';
+import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -932,6 +933,92 @@ void main() {
     expect(builds, greaterThan(1));
     expect(firstHandle, same(workbenchController));
   });
+
+  testWidgets(
+    'gives visible and context actions the same stable Workbench handle',
+    (tester) async {
+      final workbenchController = ChartWorkbenchController();
+      addTearDown(workbenchController.dispose);
+      ChartWorkbenchHandle? visibleHandle;
+      ChartWorkbenchHandle? contextHandle;
+      ChartWorkbenchHandle? overlayHandle;
+      ChartContextInvocation? invocation;
+      ChartArtifactResult<ChartArtifact>? artifactResult;
+
+      await tester.pumpWidget(
+        _host(
+          workbenchController: workbenchController,
+          actionsBuilder: (context, handle) {
+            visibleHandle = handle;
+            return const [];
+          },
+          contextActionsBuilder: (context, handle, value) {
+            contextHandle = handle;
+            invocation = value;
+            return [
+              ChartContextAction(
+                id: 'host.addToCollection',
+                label: 'Add to collection',
+                icon: Icons.collections_bookmark_outlined,
+                onSelected: () async {
+                  artifactResult = await handle.extractArtifact(
+                    const ChartArtifactExtractOptions(
+                      artifactId: 'context-action-artifact',
+                      includePreview: false,
+                    ),
+                  );
+                },
+              ),
+            ];
+          },
+          chartActionButtonBuilder: (context, handle) {
+            overlayHandle = handle;
+            return ChartOverlayAction(
+              id: 'host.addToCollection',
+              tooltip: 'Add chart to collection',
+              icon: Icons.collections_bookmark_outlined,
+              onPressed: () {},
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = tester.allRenderObjects
+          .whereType<ChartRenderBox>()
+          .single;
+      final position = renderBox.localToGlobal(
+        renderBox.plotToWidget(
+          Offset(renderBox.plotWidth / 2, renderBox.plotHeight / 2),
+        ),
+      );
+      final gesture = await tester.startGesture(
+        position,
+        kind: PointerDeviceKind.mouse,
+        buttons: kSecondaryMouseButton,
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(visibleHandle, same(workbenchController));
+      expect(contextHandle, same(workbenchController));
+      expect(contextHandle, same(visibleHandle));
+      expect(overlayHandle, same(workbenchController));
+      expect(
+        find.byKey(
+          const ValueKey('chart-overlay-action-button-host.addToCollection'),
+        ),
+        findsOneWidget,
+      );
+      expect(invocation?.source, ChartContextInvocationSource.secondaryClick);
+      expect(find.text('Add to collection'), findsOneWidget);
+
+      await tester.tap(find.text('Add to collection'));
+      await tester.pumpAndSettle();
+
+      expect(artifactResult, isA<ChartArtifactSuccess<ChartArtifact>>());
+    },
+  );
 
   testWidgets('rejects duplicate artifact extraction without changing table', (
     tester,
@@ -2002,6 +2089,8 @@ Widget _host({
   ChartDisplayMode initialDisplayMode = ChartDisplayMode.chart,
   BravenChartBuilder? chartBuilder,
   ChartWorkbenchActionsBuilder? actionsBuilder,
+  ChartWorkbenchContextActionsBuilder? contextActionsBuilder,
+  ChartWorkbenchOverlayActionBuilder? chartActionButtonBuilder,
   double splitBreakpoint = 900,
   Set<ChartDisplayMode> availableDisplayModes = const {
     ChartDisplayMode.chart,
@@ -2042,6 +2131,8 @@ Widget _host({
               (context, controller) =>
                   _chart(controller, y: chartValue, title: chartTitle),
           actionsBuilder: actionsBuilder,
+          contextActionsBuilder: contextActionsBuilder,
+          chartActionButtonBuilder: chartActionButtonBuilder,
           splitBreakpoint: splitBreakpoint,
           availableDisplayModes: availableDisplayModes,
           tableRefreshPolicy: tableRefreshPolicy,

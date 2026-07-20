@@ -312,6 +312,27 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
                   ),
                 ),
               ],
+              contextActionsBuilder: (context, handle, invocation) => [
+                ChartContextAction(
+                  id: 'showcase.addToReport',
+                  label: 'Add to report',
+                  icon: Icons.bookmark_add_outlined,
+                  shortcutLabel: 'Host action',
+                  semanticLabel: 'Add the current chart to the demo report',
+                  onSelected: () => _capture(handle),
+                ),
+              ],
+              chartActionButtonBuilder: (context, handle) => ChartOverlayAction(
+                id: 'showcase.addToReport',
+                tooltip: 'Add chart to report',
+                semanticLabel: 'Add the current chart to the demo report',
+                icon: Icons.bookmark_add_outlined,
+                enabled: !handle.isExtractingArtifact,
+                onPressed: () => _capture(handle),
+              ),
+              chartActionButtonConfig: const ChartOverlayActionButtonConfig(
+                iconSize: 18,
+              ),
               chartBuilder: (context, controller) => BravenChartPlus(
                 key: const ValueKey('workbench-mounted-chart'),
                 bravenChartController: controller,
@@ -334,6 +355,9 @@ class _ChartWorkbenchPageState extends State<ChartWorkbenchPage> {
                 yAxis: YAxisConfig(
                   position: YAxisPosition.left,
                   label: 'Value',
+                ),
+                contextMenuConfig: const ChartContextMenuConfig(
+                  enableLongPress: true,
                 ),
               ),
             ),
@@ -1009,10 +1033,10 @@ class _PointLinkingHint extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Try linked chart and table navigation'),
+                  Text('Try linked views and host actions'),
                   SizedBox(height: 4),
                   Text(
-                    'Click a data row to keep its points selected in both the chart and table. Keyboard focus previews them; Enter selects them. In the shared-X table, one row links every populated series at that X value.',
+                    'Click a data row to link its chart points. Right-click the chart, press Shift+F10, or long-press to run the same host action beside native annotation commands.',
                   ),
                 ],
               ),
@@ -1159,6 +1183,7 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
   );
   late final Listenable _metricsListenable;
   var _nextSample = 0;
+  String? _contextCaptureStatus;
 
   @override
   void initState() {
@@ -1196,6 +1221,27 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
       if (!_workbenchController.tableIsStale) break;
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
+  }
+
+  Future<void> _captureSnapshot(
+    ChartWorkbenchHandle handle, {
+    required String sourceLabel,
+  }) async {
+    final result = await handle.extractArtifact(
+      ChartArtifactExtractOptions(
+        artifactId: 'stream-context-${_nextSample - 1}',
+        includePreview: false,
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _contextCaptureStatus = switch (result) {
+        ChartArtifactSuccess<ChartArtifact>() =>
+          '$sourceLabel capture · ${result.value.document.series.length} series',
+        ChartArtifactFailure<ChartArtifact>() =>
+          '${result.error.code}: ${result.error.message}',
+      };
+    });
   }
 
   @override
@@ -1244,6 +1290,12 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
                     const Chip(
                       avatar: Icon(Icons.update_outlined, size: 16),
                       label: Text('Snapshot is stale'),
+                    ),
+                  if (_contextCaptureStatus != null)
+                    Chip(
+                      key: const ValueKey('stream-context-capture-status'),
+                      avatar: const Icon(Icons.task_alt_outlined, size: 16),
+                      label: Text(_contextCaptureStatus!),
                     ),
                 ],
               ),
@@ -1299,6 +1351,26 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
                     ),
                   ),
                 ],
+                contextActionsBuilder: (context, handle, invocation) => [
+                  ChartContextAction(
+                    id: 'showcase.captureStreamSnapshot',
+                    label: 'Capture stream snapshot',
+                    icon: Icons.camera_alt_outlined,
+                    onSelected: () => _captureSnapshot(
+                      handle,
+                      sourceLabel: invocation.source.name,
+                    ),
+                  ),
+                ],
+                chartActionButtonBuilder: (context, handle) =>
+                    ChartOverlayAction(
+                      id: 'showcase.captureStreamSnapshot',
+                      tooltip: 'Capture stream snapshot',
+                      icon: Icons.camera_alt_outlined,
+                      enabled: !handle.isExtractingArtifact,
+                      onPressed: () =>
+                          _captureSnapshot(handle, sourceLabel: 'button'),
+                    ),
                 chartBuilder: (context, controller) => BravenChartPlus(
                   bravenChartController: controller,
                   liveStreamController: _liveController,
@@ -1307,6 +1379,9 @@ class _BoundedStreamProofState extends State<_BoundedStreamProof> {
                   showLegend: false,
                   interactionConfig: const InteractionConfig(
                     enableSelection: false,
+                  ),
+                  contextMenuConfig: const ChartContextMenuConfig(
+                    enableLongPress: true,
                   ),
                   xAxisConfig: const XAxisConfig(label: 'Sample'),
                   yAxis: YAxisConfig(
@@ -1738,6 +1813,20 @@ class _UsageCard extends StatelessWidget {
               "      child: const Text('Add to report'),\n"
               '    ),\n'
               '  ],\n'
+              '  contextActionsBuilder: (context, handle, invocation) => [\n'
+              '    ChartContextAction(\n'
+              "      id: 'host.addToReport',\n"
+              "      label: 'Add to report',\n"
+              '      onSelected: () => save(handle.extractArtifact(options)),\n'
+              '    ),\n'
+              '  ],\n'
+              '  chartActionButtonBuilder: (context, handle) =>\n'
+              '      ChartOverlayAction(\n'
+              "        id: 'host.addToReport',\n"
+              "        tooltip: 'Add chart to report',\n"
+              '        icon: Icons.bookmark_add_outlined,\n'
+              '        onPressed: () => save(handle.extractArtifact(options)),\n'
+              '      ),\n'
               ');',
               style: TextStyle(fontFamily: 'monospace', fontSize: 12),
             ),

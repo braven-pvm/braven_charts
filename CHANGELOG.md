@@ -5,6 +5,30 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Typed, host-extensible native chart context actions through
+  `ChartContextAction`, `ChartContextInvocation`, renderer-neutral
+  `ChartContextHit`, and `ChartContextMenuConfig`.
+- `BravenChartWorkbench.contextActionsBuilder`, which supplies the same stable
+  `ChartWorkbenchHandle` as visible actions so a host command can safely
+  extract the current artifact from either surface.
+- An independently opt-in compact in-chart host action through
+  `ChartOverlayAction` and `ChartOverlayActionButtonConfig`, with configurable
+  placement, sizing, semantics, enabled state, Material styling, a translucent
+  theme-derived default, and direct-chart or Workbench builders using the same
+  host callback model.
+- Secondary-click, Context Menu key, Shift+F10, and opt-in touch/stylus
+  long-press entry paths with deterministic command grouping, accessible
+  keyboard navigation, 48-pixel rows, theme-derived styling, viewport
+  clamping, focus restoration, and safe async callback cleanup.
+
+### Changed
+- Browser context-menu suppression is reference-counted across mounted charts
+  and restores the previous application state only after the final chart is
+  disposed.
+
 ## 0.9.0 - 2026-07-19
 
 ### Added

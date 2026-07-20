@@ -29,6 +29,7 @@ is added to package marketing.
 | Theming | `ChartTheme` and component theme types, including radial defaults | Theming, Pie Charts, Gallery |
 | Loading and empty UX | `isLoading`, `ChartLoadingConfig`, `ChartEmptyStateConfig` | Loading States |
 | Runtime control | `BravenChartController`, `ChartController`, callbacks | Axis Slots, Annotations, Live Stream |
+| Host chart actions | Visible Workbench actions, `ChartContextAction` native menus, and configurable `ChartOverlayAction` buttons sharing one stable handle | Chart Workbench |
 | Native chart data | `ChartTableModel`, `ChartDataTable`, copy and CSV export | Chart Artifacts, Chart Workbench, Pie Charts, Polar Column |
 | Portable chart artifacts | `ChartArtifact`, canonical JSON, preview capture, hydration | Chart Artifacts, Pie Charts, Polar Column |
 | Reusable chart workbench | `BravenChartWorkbench`, resizable Split view, revision-safe linked point identity, nestable shared mode and selector scope | Chart Workbench; all chart-family guides |
