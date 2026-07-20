@@ -15,9 +15,10 @@ import '../widgets/standard_options.dart';
 /// The value summary keeps the policy-resolved datum visible in a persistent
 /// in-plot panel, independent of the crosshair tracking panel and the point
 /// tooltip. Presets cover single-series fallback, crosshair independence,
-/// multi-axis units, candlestick OHLC rows, a synchronized chart pair, and a
-/// programmatic pinning workflow; the options panel exercises placement,
-/// value policy, and the tri-state style model live.
+/// multi-axis units, candlestick OHLC rows, a synchronized chart pair, a
+/// programmatic pinning workflow, and a draggable annotation-style panel;
+/// the options panel exercises presentation, placement, value policy, and
+/// the tri-state style model live.
 class ValueSummaryPage extends StatefulWidget {
   const ValueSummaryPage({super.key});
 
@@ -27,14 +28,22 @@ class ValueSummaryPage extends StatefulWidget {
 
 class _ValueSummaryPageState extends State<ValueSummaryPage> {
   final ChartOptionsController _optionsController = ChartOptionsController();
-  final _ShowcaseSummaryController _summaryController =
-      _ShowcaseSummaryController();
+
+  /// One concrete controller drives every preset: pin/clear-pin for the
+  /// pinned workflow and the resetPlacement handshake for the draggable
+  /// annotation panel. A page-local ChangeNotifier implementation could pin,
+  /// but only [DefaultCartesianValueSummaryController] (or a subclass)
+  /// carries the reset handshake the chart consumes, so its resetPlacement
+  /// actually restores a dragged panel.
+  final DefaultCartesianValueSummaryController _summaryController =
+      DefaultCartesianValueSummaryController();
   final ChartInteractionGroupController _syncGroup =
       ChartInteractionGroupController();
   late final List<CandlestickDataPoint> _candles = _buildSummaryCandles();
 
   _SummaryPreset _preset = _SummaryPreset.line;
   _PolicyChoice _policyChoice = _PolicyChoice.presetDefault;
+  _PresentationChoice _presentationChoice = _PresentationChoice.presetDefault;
 
   // Summary options.
   bool _summaryEnabled = true;
@@ -44,6 +53,14 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   bool _showAccent = true;
   bool _announceChanges = false;
   bool _crosshairEnabled = _SummaryPreset.line.defaultCrosshair;
+
+  // Annotation presentation options (the draggable panel).
+  bool _draggable = true;
+  bool _clampToPlot = true;
+
+  /// The last placement committed through onPlacementChanged (a completed
+  /// drag, an arrow-key release, or Escape). Null until the panel is moved.
+  ChartOverlayPlacement? _committedPlacement;
 
   // Tri-state style options. Color fields hold the ChartStyleValue directly;
   // the sliders keep a plain value plus an "overridden" flag so an untouched
@@ -81,11 +98,25 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           CartesianValueSummaryValuePolicy.explicitOnly,
       };
 
+  _PresentationKind get _effectivePresentation => switch (_presentationChoice) {
+    _PresentationChoice.presetDefault => _preset.defaultPresentation,
+    _PresentationChoice.overlay => _PresentationKind.overlay,
+    _PresentationChoice.annotation => _PresentationKind.annotation,
+  };
+
   bool get _pinControlsVisible =>
       _preset != _SummaryPreset.synchronized &&
       (_effectivePolicy ==
               CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest ||
           _effectivePolicy == CartesianValueSummaryValuePolicy.explicitOnly);
+
+  /// The draggable-panel controls follow the effective presentation the way
+  /// the pinning section follows the effective policy. The synchronized
+  /// preset is excluded: its charts run without the shared controller, so
+  /// Reset Placement could not reach them.
+  bool get _annotationControlsVisible =>
+      _preset != _SummaryPreset.synchronized &&
+      _effectivePresentation == _PresentationKind.annotation;
 
   CartesianValueSummaryStyle get _summaryStyle => CartesianValueSummaryStyle(
     backgroundColor: _backgroundColor,
@@ -102,30 +133,57 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         : const ChartStyleValue.inherit(),
   );
 
-  CartesianValueSummaryConfig _summaryConfig({bool withController = true}) =>
-      CartesianValueSummaryConfig(
-        enabled: _summaryEnabled,
-        presentation: CartesianValueSummaryPresentation.overlay(
-          placement: ChartOverlayPlacement(
-            anchor: _anchor,
-            offset: Offset(_offsetX, _offsetY),
-          ),
+  CartesianValueSummaryConfig _summaryConfig({bool withController = true}) {
+    final placement = ChartOverlayPlacement(
+      anchor: _anchor,
+      offset: Offset(_offsetX, _offsetY),
+    );
+    return CartesianValueSummaryConfig(
+      enabled: _summaryEnabled,
+      presentation: switch (_effectivePresentation) {
+        _PresentationKind.overlay => CartesianValueSummaryPresentation.overlay(
+          placement: placement,
         ),
-        valuePolicy: _effectivePolicy,
-        style: _summaryStyle,
-        showSeriesAccent: _showAccent,
-        announceChanges: _announceChanges,
-        controller: withController ? _summaryController : null,
-      );
+        _PresentationKind.annotation =>
+          CartesianValueSummaryPresentation.annotation(
+            placement: placement,
+            draggable: _draggable,
+            clampToPlot: _clampToPlot,
+          ),
+      },
+      valuePolicy: _effectivePolicy,
+      style: _summaryStyle,
+      showSeriesAccent: _showAccent,
+      announceChanges: _announceChanges,
+      onPlacementChanged: _handlePlacementChanged,
+      controller: withController ? _summaryController : null,
+    );
+  }
 
   void _applyPreset(_SummaryPreset preset) {
     if (_preset == preset) return;
     setState(() {
       _preset = preset;
       _policyChoice = _PolicyChoice.presetDefault;
+      _presentationChoice = _PresentationChoice.presetDefault;
       _crosshairEnabled = preset.defaultCrosshair;
+      _draggable = true;
+      _clampToPlot = true;
+      _committedPlacement = null;
       _summaryController.clearPin();
+      _summaryController.resetPlacement();
     });
+  }
+
+  /// Records the committed placement of a completed drag, an arrow-key
+  /// release, or Escape — never the continuous preview positions.
+  void _handlePlacementChanged(ChartOverlayPlacement placement) {
+    setState(() => _committedPlacement = placement);
+  }
+
+  void _resetPlacement() {
+    setState(() => _committedPlacement = null);
+    _summaryController.resetPlacement();
   }
 
   void _resetStyle() {
@@ -172,6 +230,15 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       ? whenNone
       : 'ChartStyleValue.value() — explicit override';
 
+  static String _anchorLabel(Alignment anchor) => switch (anchor) {
+    Alignment.topLeft => 'topLeft',
+    Alignment.topRight => 'topRight',
+    Alignment.bottomLeft => 'bottomLeft',
+    Alignment.bottomRight => 'bottomRight',
+    Alignment.center => 'center',
+    _ => '$anchor',
+  };
+
   (String, int) get _pinTarget => switch (_preset) {
     _SummaryPreset.line => ('summary-speed', _speedPoints.length - 1),
     _SummaryPreset.multiSeries => ('rider-a', _riderAPoints.length - 1),
@@ -179,6 +246,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     _SummaryPreset.candlestick => ('summary-ohlc', _candles.length - 1),
     _SummaryPreset.synchronized => ('sync-speed', _syncSpeedPoints.length - 1),
     _SummaryPreset.pinned => ('summary-lactate', _lactatePoints.length - 1),
+    _SummaryPreset.draggable => ('drag-power', _dragPowerPoints.length - 1),
   };
 
   @override
@@ -283,6 +351,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             _SummaryPreset.candlestick => _buildCandlestickChart(),
             _SummaryPreset.synchronized => _buildSynchronizedPair(),
             _SummaryPreset.pinned => _buildPinnedChart(),
+            _SummaryPreset.draggable => _buildDraggableChart(),
           },
         );
       },
@@ -564,6 +633,48 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     );
   }
 
+  Widget _buildDraggableChart() {
+    return _chart(
+      key: const ValueKey('value-summary-stage-draggable'),
+      series: const [
+        AreaChartSeries(
+          id: 'drag-target',
+          name: 'Target',
+          unit: 'W',
+          points: _dragTargetPoints,
+          color: Color(0xFF10B981),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 1.6,
+          fillOpacity: 0.14,
+        ),
+        LineChartSeries(
+          id: 'drag-smoothed',
+          name: 'Smoothed',
+          unit: 'W',
+          points: _dragSmoothedPoints,
+          color: Color(0xFFF59E0B),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 2,
+        ),
+        LineChartSeries(
+          id: 'drag-power',
+          name: 'Power',
+          unit: 'W',
+          points: _dragPowerPoints,
+          color: Color(0xFF4F46E5),
+          interpolation: LineInterpolation.monotone,
+          strokeWidth: 2.4,
+        ),
+      ],
+      xAxisConfig: const XAxisConfig(label: 'Time', unit: 'min'),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.left,
+        label: 'Power',
+        unit: 'W',
+      ),
+    );
+  }
+
   // ==========================================================================
   // Options panel
   // ==========================================================================
@@ -581,6 +692,27 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             onChanged: (value) => setState(() => _summaryEnabled = value),
           ),
           const SizedBox(height: 4),
+          Text(
+            'Presentation',
+            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+          ),
+          const SizedBox(height: 4),
+          SegmentedOption<_PresentationChoice>(
+            key: const ValueKey('value-summary-presentation'),
+            value: _presentationChoice,
+            options: _PresentationChoice.values,
+            labelBuilder: (choice) => switch (choice) {
+              _PresentationChoice.presetDefault => 'Preset',
+              _PresentationChoice.overlay => 'Overlay',
+              _PresentationChoice.annotation => 'Annotation',
+            },
+            onChanged: (choice) => setState(() {
+              _presentationChoice = choice;
+              _committedPlacement = null;
+              _summaryController.resetPlacement();
+            }),
+          ),
+          const SizedBox(height: 8),
           Text(
             'Anchor corner',
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
@@ -652,6 +784,50 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
           ),
         ],
       ),
+      if (_annotationControlsVisible)
+        OptionSection(
+          title: 'Draggable Panel',
+          icon: Icons.open_with,
+          children: [
+            InfoBox(
+              key: const ValueKey('value-summary-placement-readout'),
+              message: _committedPlacement == null
+                  ? 'No committed placement yet. Drag the panel, or click it '
+                        'and nudge with the arrow keys.'
+                  : 'Committed: ${_anchorLabel(_committedPlacement!.anchor)} '
+                        'anchor, offset '
+                        '(${_committedPlacement!.offset.dx.toStringAsFixed(1)}, '
+                        '${_committedPlacement!.offset.dy.toStringAsFixed(1)}) '
+                        'px. This overrides the Anchor and Inset controls '
+                        'until you reset.',
+              type: _committedPlacement == null
+                  ? InfoBoxType.info
+                  : InfoBoxType.success,
+            ),
+            const SizedBox(height: 8),
+            BoolOption(
+              key: const ValueKey('value-summary-draggable'),
+              label: 'Draggable',
+              subtitle: 'Pointer drag plus arrow-key movement while focused',
+              value: _draggable,
+              onChanged: (value) => setState(() => _draggable = value),
+            ),
+            BoolOption(
+              key: const ValueKey('value-summary-clamp'),
+              label: 'Clamp to Plot',
+              subtitle: 'Keep the panel inside the plot on drags and resizes',
+              value: _clampToPlot,
+              onChanged: (value) => setState(() => _clampToPlot = value),
+            ),
+            const SizedBox(height: 4),
+            ActionButton(
+              key: const ValueKey('value-summary-reset-placement'),
+              label: 'Reset Placement',
+              icon: Icons.undo,
+              onPressed: _resetPlacement,
+            ),
+          ],
+        ),
       if (_pinControlsVisible)
         OptionSection(
           title: 'Pinning',
@@ -818,6 +994,7 @@ enum _SummaryPreset {
   candlestick,
   synchronized,
   pinned,
+  draggable,
 }
 
 extension on _SummaryPreset {
@@ -828,6 +1005,7 @@ extension on _SummaryPreset {
     _SummaryPreset.candlestick => 'Candlestick',
     _SummaryPreset.synchronized => 'Synchronized',
     _SummaryPreset.pinned => 'Pinned',
+    _SummaryPreset.draggable => 'Draggable',
   };
 
   IconData get icon => switch (this) {
@@ -837,6 +1015,7 @@ extension on _SummaryPreset {
     _SummaryPreset.candlestick => Icons.candlestick_chart_outlined,
     _SummaryPreset.synchronized => Icons.sync_alt,
     _SummaryPreset.pinned => Icons.push_pin_outlined,
+    _SummaryPreset.draggable => Icons.open_with,
   };
 
   String get stageTitle => switch (this) {
@@ -846,6 +1025,7 @@ extension on _SummaryPreset {
     _SummaryPreset.candlestick => 'OHLC session summary',
     _SummaryPreset.synchronized => 'Synchronized pair',
     _SummaryPreset.pinned => 'Pinned datum workflow',
+    _SummaryPreset.draggable => 'Draggable summary panel',
   };
 
   String get stageSubtitle => switch (this) {
@@ -863,6 +1043,9 @@ extension on _SummaryPreset {
           'at the shared X',
     _SummaryPreset.pinned =>
       'Pin the latest point, hover elsewhere, and watch the pin hold',
+    _SummaryPreset.draggable =>
+      'An annotation-style panel — grab it with the pointer, or click it '
+          'and use the arrow keys',
   };
 
   CartesianValueSummaryValuePolicy get defaultPolicy => switch (this) {
@@ -874,6 +1057,11 @@ extension on _SummaryPreset {
   bool get defaultCrosshair => switch (this) {
     _SummaryPreset.multiSeries => false,
     _ => true,
+  };
+
+  _PresentationKind get defaultPresentation => switch (this) {
+    _SummaryPreset.draggable => _PresentationKind.annotation,
+    _ => _PresentationKind.overlay,
   };
 
   String get guide => switch (this) {
@@ -901,6 +1089,14 @@ extension on _SummaryPreset {
           'pinnedThenTrackingThenLatest the pin wins until you clear it. '
           'Switch the policy to "Explicit pin only" to hide the panel until '
           'a pin exists.',
+    _SummaryPreset.draggable =>
+      'Hover the panel for the move cursor, then drag it anywhere in the '
+          'plot. Click the panel to focus it and nudge with the arrow keys — '
+          '1 px per press, 10 px with Shift — and press Escape to snap back '
+          'to the configured placement. Every completed drag or arrow '
+          'release commits exactly one anchor-relative placement, shown '
+          'under Draggable Panel; with Clamp to Plot on, the panel can '
+          'never leave the plot.',
   };
 }
 
@@ -913,33 +1109,10 @@ enum _PolicyChoice {
   explicitOnly,
 }
 
-/// A listenable pin controller: the package ships only the abstract
-/// [CartesianValueSummaryController] interface, so applications provide the
-/// notifying implementation.
-class _ShowcaseSummaryController extends ChangeNotifier
-    implements CartesianValueSummaryController {
-  ChartPointRef? _pinnedPoint;
+/// The two concrete presentation kinds a preset or override can select.
+enum _PresentationKind { overlay, annotation }
 
-  @override
-  ChartPointRef? get pinnedPoint => _pinnedPoint;
-
-  @override
-  void pin(ChartPointRef point) {
-    if (_pinnedPoint == point) return;
-    _pinnedPoint = point;
-    notifyListeners();
-  }
-
-  @override
-  void clearPin() {
-    if (_pinnedPoint == null) return;
-    _pinnedPoint = null;
-    notifyListeners();
-  }
-
-  @override
-  void resetPlacement() => notifyListeners();
-}
+enum _PresentationChoice { presetDefault, overlay, annotation }
 
 // ============================================================================
 // Data
@@ -1047,6 +1220,50 @@ const _syncHeartRatePoints = <ChartDataPoint>[
   ChartDataPoint(x: 16, y: 161),
   ChartDataPoint(x: 18, y: 172),
   ChartDataPoint(x: 20, y: 168),
+];
+
+/// Interval session for the draggable preset: actual power oscillates around
+/// the stepped target band while the smoothed trace lags behind.
+const _dragPowerPoints = <ChartDataPoint>[
+  ChartDataPoint(x: 0, y: 182),
+  ChartDataPoint(x: 2, y: 318),
+  ChartDataPoint(x: 4, y: 309),
+  ChartDataPoint(x: 6, y: 194),
+  ChartDataPoint(x: 8, y: 328),
+  ChartDataPoint(x: 10, y: 314),
+  ChartDataPoint(x: 12, y: 188),
+  ChartDataPoint(x: 14, y: 322),
+  ChartDataPoint(x: 16, y: 317),
+  ChartDataPoint(x: 18, y: 179),
+  ChartDataPoint(x: 20, y: 171),
+];
+
+const _dragTargetPoints = <ChartDataPoint>[
+  ChartDataPoint(x: 0, y: 200),
+  ChartDataPoint(x: 2, y: 300),
+  ChartDataPoint(x: 4, y: 300),
+  ChartDataPoint(x: 6, y: 200),
+  ChartDataPoint(x: 8, y: 300),
+  ChartDataPoint(x: 10, y: 300),
+  ChartDataPoint(x: 12, y: 200),
+  ChartDataPoint(x: 14, y: 300),
+  ChartDataPoint(x: 16, y: 300),
+  ChartDataPoint(x: 18, y: 200),
+  ChartDataPoint(x: 20, y: 200),
+];
+
+const _dragSmoothedPoints = <ChartDataPoint>[
+  ChartDataPoint(x: 0, y: 196),
+  ChartDataPoint(x: 2, y: 248),
+  ChartDataPoint(x: 4, y: 281),
+  ChartDataPoint(x: 6, y: 246),
+  ChartDataPoint(x: 8, y: 273),
+  ChartDataPoint(x: 10, y: 292),
+  ChartDataPoint(x: 12, y: 254),
+  ChartDataPoint(x: 14, y: 269),
+  ChartDataPoint(x: 16, y: 288),
+  ChartDataPoint(x: 18, y: 251),
+  ChartDataPoint(x: 20, y: 219),
 ];
 
 const _lactatePoints = <ChartDataPoint>[

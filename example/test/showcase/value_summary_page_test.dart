@@ -5,6 +5,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:braven_charts_example/showcase/pages/value_summary_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,14 +22,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> revealOption(WidgetTester tester, Finder target) async {
+  Future<void> revealOption(
+    WidgetTester tester,
+    Finder target, {
+    double delta = 120,
+  }) async {
     final optionsScrollable = find
         .descendant(
           of: find.byType(OptionsPanel),
           matching: find.byType(Scrollable),
         )
         .first;
-    await tester.scrollUntilVisible(target, 120, scrollable: optionsScrollable);
+    await tester.scrollUntilVisible(
+      target,
+      delta,
+      scrollable: optionsScrollable,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -45,6 +54,7 @@ void main() {
       'candlestick',
       'synchronized',
       'pinned',
+      'draggable',
     ]) {
       expect(
         find.byKey(ValueKey('value-summary-preset-$preset')),
@@ -135,6 +145,25 @@ void main() {
     expect(
       chart.interactionConfig?.valueSummary.valuePolicy,
       CartesianValueSummaryValuePolicy.pinnedThenTrackingThenLatest,
+    );
+
+    // Draggable: annotation presentation with drag + clamp defaults.
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-draggable')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Draggable summary panel'), findsOneWidget);
+    chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+    expect(chart.series, hasLength(3));
+    expect(
+      chart.interactionConfig?.valueSummary.valuePolicy,
+      CartesianValueSummaryValuePolicy.trackingThenLatest,
+    );
+    expect(
+      chart.interactionConfig?.valueSummary.presentation,
+      isA<CartesianValueSummaryAnnotation>()
+          .having((p) => p.draggable, 'draggable', isTrue)
+          .having((p) => p.clampToPlot, 'clampToPlot', isTrue),
     );
     expect(tester.takeException(), isNull);
   });
@@ -258,6 +287,197 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'draggable preset wires an annotation presentation to the concrete '
+    'default controller',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-draggable')),
+      );
+      await tester.pumpAndSettle();
+
+      final chart = tester.widget<BravenChartPlus>(
+        find.byType(BravenChartPlus),
+      );
+      final summary = chart.interactionConfig!.valueSummary;
+      expect(summary.enabled, isTrue);
+      expect(
+        summary.presentation,
+        isA<CartesianValueSummaryAnnotation>()
+            .having((p) => p.draggable, 'draggable', isTrue)
+            .having((p) => p.clampToPlot, 'clampToPlot', isTrue),
+      );
+      // The page's single controller is the package's concrete class: only
+      // its resetPlacement handshake can reach the chart.
+      expect(
+        summary.controller,
+        isA<DefaultCartesianValueSummaryController>(),
+      );
+      expect(summary.onPlacementChanged, isNotNull);
+
+      // The panel is painted and acquirable as a drag target.
+      final renderBox = _renderBox(tester);
+      expect(renderBox.debugValueSummaryBounds, isNot(Rect.zero));
+      expect(renderBox.valueSummaryDragTarget, isNotNull);
+
+      // The Draggable Panel controls auto-show with an empty readout, and
+      // the reset button is present.
+      final readout = find.byKey(
+        const ValueKey('value-summary-placement-readout'),
+      );
+      await revealOption(tester, readout);
+      expect(readout, findsOneWidget);
+      expect(find.textContaining('No committed placement'), findsOneWidget);
+      final reset = find.byKey(
+        const ValueKey('value-summary-reset-placement'),
+      );
+      await revealOption(tester, reset);
+      expect(reset, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('draggable and clamp toggles flow into the annotation config', (
+    tester,
+  ) async {
+    await pumpPage(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('value-summary-preset-draggable')),
+    );
+    await tester.pumpAndSettle();
+
+    CartesianValueSummaryAnnotation annotation() =>
+        tester
+                .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+                .interactionConfig!
+                .valueSummary
+                .presentation
+            as CartesianValueSummaryAnnotation;
+
+    final draggableToggle = find.byKey(
+      const ValueKey('value-summary-draggable'),
+    );
+    await revealOption(tester, draggableToggle);
+    await tester.tap(draggableToggle);
+    await tester.pumpAndSettle();
+    expect(annotation().draggable, isFalse);
+    expect(annotation().clampToPlot, isTrue);
+    // A non-draggable annotation panel is no longer a drag target.
+    expect(_renderBox(tester).valueSummaryDragTarget, isNull);
+
+    await tester.tap(draggableToggle);
+    await tester.pumpAndSettle();
+    expect(annotation().draggable, isTrue);
+
+    final clampToggle = find.byKey(const ValueKey('value-summary-clamp'));
+    await revealOption(tester, clampToggle);
+    await tester.tap(clampToggle);
+    await tester.pumpAndSettle();
+    expect(annotation().clampToPlot, isFalse);
+    expect(annotation().draggable, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'presentation override switches any preset between overlay and '
+    'annotation',
+    (tester) async {
+      await pumpPage(tester);
+
+      CartesianValueSummaryPresentation presentation() => tester
+          .widget<BravenChartPlus>(find.byType(BravenChartPlus))
+          .interactionConfig!
+          .valueSummary
+          .presentation;
+
+      // The line preset defaults to the fixed overlay.
+      expect(presentation(), isA<CartesianValueSummaryOverlay>());
+
+      final annotationSegment = find.text('Annotation');
+      await revealOption(tester, annotationSegment);
+      await tester.tap(annotationSegment);
+      await tester.pumpAndSettle();
+      expect(
+        presentation(),
+        isA<CartesianValueSummaryAnnotation>().having(
+          (p) => p.draggable,
+          'draggable',
+          isTrue,
+        ),
+      );
+      // The Draggable Panel section auto-shows with the override.
+      final readout = find.byKey(
+        const ValueKey('value-summary-placement-readout'),
+      );
+      await revealOption(tester, readout);
+      expect(readout, findsOneWidget);
+
+      // Scroll back up to the Summary section's presentation control.
+      final overlaySegment = find.text('Overlay');
+      await revealOption(tester, overlaySegment, delta: -120);
+      await tester.tap(overlaySegment);
+      await tester.pumpAndSettle();
+      expect(presentation(), isA<CartesianValueSummaryOverlay>());
+      expect(readout, findsNothing);
+
+      await tester.tap(find.text('Preset'));
+      await tester.pumpAndSettle();
+      expect(presentation(), isA<CartesianValueSummaryOverlay>());
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a committed drag fills the placement readout and Reset Placement '
+    'restores the configured position through the controller',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-draggable')),
+      );
+      await tester.pumpAndSettle();
+
+      final renderBox = _renderBox(tester);
+      expect(renderBox.debugValueSummaryBounds.topLeft, const Offset(12, 12));
+
+      final gesture = await tester.startGesture(
+        _panelCenter(tester, renderBox),
+        kind: PointerDeviceKind.mouse,
+      );
+      await gesture.moveBy(const Offset(40, 25));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // The committed placement is applied to the panel and surfaced through
+      // onPlacementChanged into the page readout: configured (12, 12) plus
+      // the drag delta, relative to the topLeft anchor.
+      expect(renderBox.debugValueSummaryBounds.topLeft, const Offset(52, 37));
+      final readout = find.byKey(
+        const ValueKey('value-summary-placement-readout'),
+      );
+      await revealOption(tester, readout);
+      expect(
+        find.textContaining('topLeft anchor, offset (52.0, 37.0)'),
+        findsOneWidget,
+      );
+
+      // Reset Placement goes through DefaultCartesianValueSummaryController:
+      // the chart-side handshake restores the configured placement, and the
+      // readout empties.
+      final reset = find.byKey(
+        const ValueKey('value-summary-reset-placement'),
+      );
+      await revealOption(tester, reset);
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(renderBox.debugValueSummaryBounds.topLeft, const Offset(12, 12));
+      expect(find.textContaining('No committed placement'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 ChartRenderBox _renderBox(WidgetTester tester) {
@@ -265,4 +485,12 @@ ChartRenderBox _renderBox(WidgetTester tester) {
     (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
   );
   return finder.evaluate().single.renderObject! as ChartRenderBox;
+}
+
+/// Screen-space center of the currently painted summary panel.
+Offset _panelCenter(WidgetTester tester, ChartRenderBox renderBox) {
+  final bounds = renderBox.debugValueSummaryBounds;
+  assert(bounds != Rect.zero, 'value summary panel is not painted');
+  return tester.getTopLeft(find.byType(BravenChartPlus)) +
+      renderBox.plotToWidget(bounds.center);
 }
