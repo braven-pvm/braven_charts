@@ -409,7 +409,7 @@ selection identity, table rows, and portable center fallback.
 
 ### Phase 2 — Polar coordinate foundation + Polar Column V1
 
-Status: complete on the review branch and ready for PR. The radial-pane geometry,
+Status: complete and merged. The radial-pane geometry,
 bidirectional polar transform, category and numeric scales, public V1 series
 and configuration, renderer, selection, native table, deterministic artifact
 and hydration, Workbench, generated source, dedicated showcase, Chart Types,
@@ -420,8 +420,8 @@ acceptance is recorded.
 Focused goldens now cover normal, compact dense, constrained partial-sweep, and
 high-contrast large-text layouts. Reduced motion resolves immediately to final
 geometry, and dense angular/direct labels thin without removing semantic or
-table data. The branch is rebased onto the published `0.9.0` mainline; PR review
-and merge remain before release.
+table data. The V1 implementation is now the mainline foundation for
+composition hardening.
 
 Deliver:
 
@@ -446,14 +446,42 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
+Status: implementation-complete on the review branch; visual acceptance was
+reopened on 2026-07-20 for full showcase styling exposure and feature-guide
+density. Slices 3.1 through 3.6 implement declaration-order layered comparison,
+grouped angular sub-bands, diverging stacks, per-category target
+ticks, pane-wide threshold arcs, and absolute lower/upper intervals for multiple
+compatible Polar Column series. Compatible series share category
+identity/order, preset, unit, pane, and one global radial scale. Grouping and
+stacking preserve full per-series rows and exact `(seriesId, pointIndex)`
+selection identity. Stacked positive and negative contributors accumulate
+independently from zero; opposite signs never cancel. Deterministic visual-only
+density caps thin angular labels, grid spokes, and direct value labels while
+preserving every mark in hit testing, semantics, tables, CSV, artifacts,
+hydration, and generated source. A 512-category benchmark guards the warm-paint
+frame budget. The hardening pass now exposes the renderer's theme, palette,
+label, grid, axis, column, reference, interval, tooltip, and selection controls
+in one live Options surface, and replaces fixed-aspect feature cards with
+content-driven compact cards. Final visual acceptance remains pending.
+
 Deliver in small slices:
 
-1. multiple compatible series;
-2. grouping;
-3. stacking with explicit positive/negative rules;
-4. thresholds/targets;
-5. errors/ranges if the polar presentation remains legible and accessible;
-6. performance and label-density limits.
+1. multiple compatible series — implemented as layered composition in 3.1;
+2. grouping — implemented as stable category sub-bands in 3.2;
+3. stacking — implemented in 3.3 with an explicit zero baseline, independent
+   positive/negative accumulators, signed automatic domains, and raw-value
+   artifact/table/source preservation;
+4. thresholds/targets — implemented in 3.4 as absolute shared-scale
+   references with automatic-domain participation, explicit-domain clipping,
+   and table/artifact/source preservation;
+5. errors/ranges — implemented in 3.5 as absolute shared-scale lower/upper
+   endpoints with radial whisker and annular-band presentations, automatic
+   domain participation, explicit-domain clipping, full table/artifact/source
+   preservation, and an explicit rejection for ambiguous stacked contributors;
+6. performance and label-density limits — implemented in 3.6 with public,
+   serialized label/grid/value-label caps, cached label eligibility, stable
+   ordinal thinning, dense-pane showcase controls, a 48-category golden, and a
+   512-category warm-paint regression benchmark.
 
 Each feature is specified in polar coordinate terms. Existing Cartesian Bar
 algorithms may share scale/domain utilities, but Cartesian geometry is not

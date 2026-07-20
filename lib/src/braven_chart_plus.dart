@@ -39,6 +39,8 @@ import 'interaction/core/interaction_mode.dart';
 import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'layout/chart_layout_kind.dart';
+import 'layout/polar_column_composition.dart';
+import 'layout/polar_column_stack_layout.dart';
 import 'layout/concentric_donut_layout.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
@@ -2609,6 +2611,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _layoutKind = ChartLayoutResolver.resolve(_resolvedChartData.allSeries);
     if (_layoutKind == ChartLayoutKind.polarAxis) {
       widget.polarChartConfig.validate();
+      PolarColumnComposition.validate(
+        _resolvedChartData.allSeries.whereType<PolarColumnChartSeries>().toList(
+          growable: false,
+        ),
+        config: widget.polarChartConfig,
+      );
     }
     if (_layoutKind == ChartLayoutKind.partitionRadial) {
       final focusRef = _radialKeyboardFocusRef;
@@ -3355,25 +3363,62 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final polarSeries = _effectiveRenderSeries
         .whereType<PolarColumnChartSeries>()
         .toList(growable: false);
-    if (polarSeries.length != 1) return const <ChartElement>[];
+    if (polarSeries.isEmpty) return const <ChartElement>[];
 
-    final series = polarSeries.single;
+    final stackLayout =
+        widget.polarChartConfig.composition.mode ==
+            PolarColumnCompositionMode.stacked
+        ? PolarColumnStackLayout.resolve(polarSeries)
+        : null;
+    final markScaleValues = stackLayout == null
+        ? <double>[
+            for (final series in polarSeries)
+              for (final point in series.points) point.y,
+          ]
+        : <double>[stackLayout.minimum, stackLayout.maximum];
+    final scaleValues = <double>[
+      ...markScaleValues,
+      for (final series in polarSeries)
+        for (final target in series.targetValues) ?target,
+      for (final series in polarSeries)
+        for (final lower in series.intervalLowerValues) ?lower,
+      for (final series in polarSeries)
+        for (final upper in series.intervalUpperValues) ?upper,
+      for (final threshold in widget.polarChartConfig.thresholds)
+        threshold.value,
+    ];
+    final theme = widget.theme ?? ChartTheme.light;
+    final seriesElements = <PolarColumnSeriesElement>[
+      for (final (index, series) in polarSeries.indexed)
+        PolarColumnSeriesElement(
+          series: series,
+          config: widget.polarChartConfig,
+          size: Size(transform.plotWidth, transform.plotHeight),
+          theme: theme,
+          seriesIndex: index,
+          seriesCount: polarSeries.length,
+          numericScaleValues: scaleValues,
+          stackStarts: stackLayout?.forSeries(series.id).starts,
+          stackEnds: stackLayout?.forSeries(series.id).ends,
+          stackExteriorEnds: stackLayout?.forSeries(series.id).exteriorEnds,
+          paintGrid: index == 0,
+          paintAxisLabels: false,
+          paintDataLabels: false,
+          preferSeriesColor: polarSeries.length > 1,
+          textScaleFactor: _textScaleFactor,
+          focusedPointIndices: {
+            for (final ref in _focusedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+          },
+          selectedPointIndices: {
+            for (final ref in _selectedPointRefs)
+              if (ref.seriesId == series.id) ref.pointIndex,
+          },
+        ),
+    ];
     return <ChartElement>[
-      PolarColumnSeriesElement(
-        series: series,
-        config: widget.polarChartConfig,
-        size: Size(transform.plotWidth, transform.plotHeight),
-        theme: widget.theme ?? ChartTheme.light,
-        textScaleFactor: _textScaleFactor,
-        focusedPointIndices: {
-          for (final ref in _focusedPointRefs)
-            if (ref.seriesId == series.id) ref.pointIndex,
-        },
-        selectedPointIndices: {
-          for (final ref in _selectedPointRefs)
-            if (ref.seriesId == series.id) ref.pointIndex,
-        },
-      ),
+      ...seriesElements,
+      PolarColumnCompositionOverlayElement(seriesElements: seriesElements),
     ];
   }
 
@@ -6036,15 +6081,23 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     if (event is! KeyDownEvent) return false;
     final interaction = _effectiveRadialInteractionConfig();
     if (!interaction.enabled || !interaction.keyboard.enabled) return false;
-    final series = _effectiveRenderSeries
+    final polarSeries = _effectiveRenderSeries
         .whereType<PolarColumnChartSeries>()
-        .firstOrNull;
-    if (series == null || series.points.isEmpty) return false;
+        .toList(growable: false);
+    if (polarSeries.isEmpty) return false;
 
     final visible = <ChartPointRef>[
-      for (var index = 0; index < series.points.length; index++)
-        ChartPointRef(seriesId: series.id, pointIndex: index),
+      for (final series in polarSeries)
+        for (var index = 0; index < series.points.length; index++)
+          ChartPointRef(seriesId: series.id, pointIndex: index),
     ];
+    PolarColumnChartSeries? seriesForRef(ChartPointRef ref) {
+      for (final series in polarSeries) {
+        if (series.id == ref.seriesId) return series;
+      }
+      return null;
+    }
+
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.arrowDown ||
         event.logicalKey == LogicalKeyboardKey.arrowLeft ||
@@ -6058,10 +6111,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           ? (forward ? 0 : visible.length - 1)
           : (current + (forward ? 1 : -1)) % visible.length;
       final nextRef = visible[next];
-      _focusPolarPoint(nextRef.pointIndex, seriesId: series.id);
+      final nextSeries = seriesForRef(nextRef)!;
+      _focusPolarPoint(nextRef.pointIndex, seriesId: nextRef.seriesId);
       interaction.onKeyboardAction?.call(
         forward ? 'focus_next_column' : 'focus_previous_column',
-        series.points[nextRef.pointIndex],
+        nextSeries.points[nextRef.pointIndex],
       );
       return true;
     }
@@ -6071,7 +6125,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       final ref = _focusedPointRefs.firstOrNull ?? visible.first;
       final renderBox =
           _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
-      final hit = renderBox?.dataHitForPointIndex(series.id, ref.pointIndex);
+      final focusedSeries = seriesForRef(ref);
+      final hit = renderBox?.dataHitForPointIndex(ref.seriesId, ref.pointIndex);
       if (hit != null) {
         _activateNonCartesianDataHit(
           hit,
@@ -6081,7 +6136,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       }
       interaction.onKeyboardAction?.call(
         'select_column',
-        series.points[ref.pointIndex],
+        focusedSeries?.points[ref.pointIndex],
       );
       return true;
     }

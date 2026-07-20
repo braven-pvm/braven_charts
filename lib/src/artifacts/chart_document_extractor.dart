@@ -14,6 +14,7 @@ import '../models/normalization_mode.dart';
 import '../models/polar_chart_config.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
+import '../layout/polar_column_composition.dart';
 import 'chart_annotation_document_codec.dart';
 import 'chart_artifact_diagnostics.dart';
 import 'chart_axis_document_codec.dart';
@@ -337,6 +338,20 @@ abstract final class ChartDocumentExtractor {
           ...annotation.requiredCapabilities,
         if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (source.polarChartConfig != null) 'chart.polar.config.v1',
+        if (source.polarChartConfig?.thresholds.isNotEmpty == true)
+          'chart.polar.thresholds.v1',
+        if (source.polarChartConfig != null &&
+            seriesDocuments
+                    .where((series) => series.type == 'polarColumn')
+                    .length >
+                1)
+          PolarColumnComposition.multipleSeriesCapability,
+        if (source.polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.grouped)
+          PolarColumnComposition.groupedSeriesCapability,
+        if (source.polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.stacked)
+          PolarColumnComposition.stackedSeriesCapability,
         if (options.concentricCenterFormatterDescriptor != null)
           'series.radial.formatters.v1',
       };

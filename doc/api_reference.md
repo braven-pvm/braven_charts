@@ -203,9 +203,29 @@ See
   keeps equal angular bandwidth and defaults to area-correct radial scaling.
 - `PolarColumnStyle` controls corner radius, opacity, border treatment, and
   direct value labels. Per-category colors may be supplied through
-  `columnColors` or point styles.
+  `columnColors` or point styles. `maximumVisibleDataLabels` places a
+  deterministic upper bound on painted value labels without removing values
+  from interaction, semantics, tables, or portable documents.
+- `PolarColumnChartSeries.targetValues` and
+  `PolarColumnTargetMarkerStyle` provide optional absolute per-category target
+  ticks. `PolarChartConfig.thresholds` accepts pane-wide `PolarThreshold`
+  reference arcs with optional labels and dash patterns.
+- `PolarColumnInterval` stores absolute lower/upper endpoints for one category.
+  `PolarColumnIntervalStyle` renders them as a radial whisker with tangential
+  caps or as a compact annular range band. Intervals are supported by
+  ordinary, layered, and grouped compositions; stacked contributors reject
+  them because cumulative placement would make the interval ambiguous.
 - `PolarChartConfig` groups the dedicated `PolarPaneConfig`,
-  `PolarCategoryAxisConfig`, and `PolarNumericAxisConfig` contracts.
+  `PolarCategoryAxisConfig`, `PolarNumericAxisConfig`, and
+  `PolarColumnCompositionConfig` contracts. The angular axis exposes
+  `maximumVisibleLabels` and `maximumVisibleGridLines`; spatial fit may show
+  fewer labels, while every category retains its exact angular band.
+- `PolarColumnCompositionMode.layered` reuses the full category band for every
+  series. `grouped` divides it into stable declaration-order sub-bands;
+  `groupInnerPadding` controls the fractional gap inside each series slot.
+- `PolarColumnCompositionMode.stacked` accumulates raw contributors in
+  declaration order. Positive and negative values use separate accumulators
+  from zero, so opposite signs never cancel in the rendered geometry.
 - `PolarRadialScaleMode.linear` maps equal value differences to equal radial
   distances; `areaCorrect` maps equal value proportions to equal annular-sector
   areas.
@@ -213,12 +233,24 @@ See
   vocabulary used by the partition-radial families without converting values
   into shares.
 
-Polar Column V1 accepts one non-empty series with finite, non-negative values.
-It cannot mix with Cartesian or partition-radial series. Its native table is
+Polar Column accepts one or more compatible, non-empty series with finite,
+signed values. Multiple series layer in declaration order, divide each
+category into grouped angular sub-bands, or form a diverging stack. They must
+share the same category labels/order, preset, and unit so they can use one
+angular axis and one numeric radial scale. Stacked explicit bounds must contain
+zero. Polar Column cannot mix with Cartesian or partition-radial series. Its
+native table is
 `# | Category | Series | Value (unit)`, and Chart/Data/Split/Source views,
 controller selection, deterministic artifacts, hydration, and generated Dart
 all preserve that value-only meaning. Artifacts declare
-`series.polar.column.v1`. See
+`series.polar.column.v1`; multi-series documents additionally declare
+`chart.polar.multiple-series.v1`, while grouped documents also declare
+`chart.polar.grouped-series.v1` and stacked documents declare
+`chart.polar.stacked-series.v1`. Documents with targets, thresholds, or
+intervals also declare `series.polar.column.targets.v1`,
+`chart.polar.thresholds.v1`, or `series.polar.column.intervals.v1`. The native
+table conditionally appends `Target (unit)` and `Lower (unit) | Upper (unit)`
+only when the corresponding data exists. See
 [Polar Column and Rose charts](polar_column_charts.md).
 
 ## Axes, normalization, and layout

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../artifacts/chart_artifact_diagnostics.dart';
@@ -1993,6 +1994,13 @@ class _ChartDartEmitter {
       writer.writeLine('polarStyle: PolarColumnStyle(');
       writer.indented(() {
         _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
+        _enumIf(
+          writer,
+          'cornerRadiusMode',
+          'PolarColumnCornerRadiusMode',
+          style.cornerRadiusMode.name,
+          defaultName: 'outerEnd',
+        );
         _numberIf(writer, 'opacity', style.opacity, 1);
         _optionalColor(writer, 'borderColor', style.borderColor);
         _numberIf(writer, 'borderWidth', style.borderWidth, 1);
@@ -2002,10 +2010,61 @@ class _ChartDartEmitter {
           style.showDataLabels,
           defaultValue: true,
         );
+        _numberIf(
+          writer,
+          'maximumVisibleDataLabels',
+          style.maximumVisibleDataLabels,
+          24,
+        );
       });
       writer.writeLine('),');
     }
     _emitRadialSelectionStyle(writer, series.selectionStyle);
+    _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
+    if (series.targetValues.isNotEmpty &&
+        (options.includeDefaultValues ||
+            series.targetMarkerStyle != const PolarColumnTargetMarkerStyle())) {
+      final target = series.targetMarkerStyle;
+      writer.writeLine('targetMarkerStyle: PolarColumnTargetMarkerStyle(');
+      writer.indented(() {
+        _optionalColor(writer, 'color', target.color);
+        _numberIf(writer, 'width', target.width, 2.5);
+        _numberIf(writer, 'lengthFactor', target.lengthFactor, 0.72);
+        _numberIf(writer, 'opacity', target.opacity, 1);
+      });
+      writer.writeLine('),');
+    }
+    _optionalNullableNumberList(
+      writer,
+      'intervalLowerValues',
+      series.intervalLowerValues,
+    );
+    _optionalNullableNumberList(
+      writer,
+      'intervalUpperValues',
+      series.intervalUpperValues,
+    );
+    if (series.hasIntervals &&
+        (options.includeDefaultValues ||
+            series.intervalStyle != const PolarColumnIntervalStyle())) {
+      final interval = series.intervalStyle;
+      writer.writeLine('intervalStyle: PolarColumnIntervalStyle(');
+      writer.indented(() {
+        _enumIf(
+          writer,
+          'display',
+          'PolarColumnIntervalDisplay',
+          interval.display.name,
+          defaultName: 'whisker',
+        );
+        _optionalColor(writer, 'color', interval.color);
+        _numberIf(writer, 'width', interval.width, 1.5);
+        _numberIf(writer, 'capLengthFactor', interval.capLengthFactor, 0.62);
+        _numberIf(writer, 'bandLengthFactor', interval.bandLengthFactor, 0.58);
+        _numberIf(writer, 'opacity', interval.opacity, 0.92);
+      });
+      writer.writeLine('),');
+    }
   }
 
   void _emitRadialSelectionStyle(
@@ -2164,6 +2223,18 @@ class _ChartDartEmitter {
             angular.showGridLines,
             defaultValue: true,
           );
+          _numberIf(
+            writer,
+            'maximumVisibleLabels',
+            angular.maximumVisibleLabels,
+            24,
+          );
+          _numberIf(
+            writer,
+            'maximumVisibleGridLines',
+            angular.maximumVisibleGridLines,
+            72,
+          );
         });
         writer.writeLine('),');
       }
@@ -2192,6 +2263,53 @@ class _ChartDartEmitter {
           );
         });
         writer.writeLine('),');
+      }
+      final composition = config.composition;
+      if (options.includeDefaultValues ||
+          composition != const PolarColumnCompositionConfig()) {
+        writer.writeLine('composition: PolarColumnCompositionConfig(');
+        writer.indented(() {
+          _enumIf(
+            writer,
+            'mode',
+            'PolarColumnCompositionMode',
+            composition.mode.name,
+            defaultName: 'layered',
+          );
+          _numberIf(
+            writer,
+            'groupInnerPadding',
+            composition.groupInnerPadding,
+            0.12,
+          );
+        });
+        writer.writeLine('),');
+      }
+      if (config.thresholds.isNotEmpty) {
+        writer.writeLine('thresholds: [');
+        writer.indented(() {
+          for (final threshold in config.thresholds) {
+            writer.writeLine('PolarThreshold(');
+            writer.indented(() {
+              writer.namedArgument(
+                'value',
+                DartSourceWriter.numberLiteral(threshold.value),
+              );
+              _optionalString(writer, 'label', threshold.label);
+              _optionalColor(writer, 'color', threshold.color);
+              _numberIf(writer, 'width', threshold.width, 1.5);
+              if (options.includeDefaultValues ||
+                  !listEquals(threshold.dashPattern, const <double>[6, 4])) {
+                writer.namedArgument(
+                  'dashPattern',
+                  '<double>[${threshold.dashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
+                );
+              }
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
       }
     });
     writer.writeLine('),');

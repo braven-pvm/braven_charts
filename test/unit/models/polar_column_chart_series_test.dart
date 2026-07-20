@@ -21,6 +21,28 @@ void main() {
       expect(series.points[1].pointStyle?.color, Colors.orange);
       expect(series.unit, 'tickets');
       expect(series.preset, PolarColumnPreset.standard);
+      expect(
+        series.polarStyle.cornerRadiusMode,
+        PolarColumnCornerRadiusMode.outerEnd,
+      );
+    });
+
+    test('copies explicit corner placement without changing other styling', () {
+      const style = PolarColumnStyle(
+        cornerRadius: 9,
+        cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
+      );
+
+      expect(
+        style.copyWith(opacity: 0.7).cornerRadiusMode,
+        style.cornerRadiusMode,
+      );
+      expect(
+        style
+            .copyWith(cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds)
+            .cornerRadiusMode,
+        PolarColumnCornerRadiusMode.bothEnds,
+      );
     });
 
     test('rose selects its named preset without changing source values', () {
@@ -33,7 +55,54 @@ void main() {
       expect(series.points.map((point) => point.y), [25, 100]);
     });
 
-    test('validates category identity, ordinals, values, and style', () {
+    test('fromMap aligns optional targets to stable category identity', () {
+      final series = PolarColumnChartSeries.fromMap(
+        id: 'actual',
+        values: const {'Search': 42, 'Social': 18, 'Partners': 27},
+        targets: const {'Partners': 30, 'Search': 40},
+        targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+          color: Colors.amber,
+          width: 3,
+          lengthFactor: 0.6,
+          opacity: 0.8,
+        ),
+      );
+
+      expect(series.targetValues, [40, null, 30]);
+      expect(series.targetValueFor(0), 40);
+      expect(series.targetValueFor(1), isNull);
+      expect(series.targetMarkerStyle.color, Colors.amber);
+      expect(series.copyWith(clearTargetValues: true).targetValues, isEmpty);
+    });
+
+    test('fromMap aligns absolute intervals to stable category identity', () {
+      final series = PolarColumnChartSeries.fromMap(
+        id: 'forecast',
+        values: const {'Search': 42, 'Social': 18, 'Partners': 27},
+        intervals: const {
+          'Partners': PolarColumnInterval(lower: 21, upper: 33),
+          'Search': PolarColumnInterval(lower: 36, upper: 49),
+        },
+        intervalStyle: const PolarColumnIntervalStyle(
+          display: PolarColumnIntervalDisplay.band,
+          color: Colors.indigo,
+          width: 2,
+          bandLengthFactor: 0.7,
+        ),
+      );
+
+      expect(series.intervalLowerValues, [36, null, 21]);
+      expect(series.intervalUpperValues, [49, null, 33]);
+      expect(
+        series.intervalFor(0),
+        const PolarColumnInterval(lower: 36, upper: 49),
+      );
+      expect(series.intervalFor(1), isNull);
+      expect(series.intervalStyle.display, PolarColumnIntervalDisplay.band);
+      expect(series.copyWith(clearIntervalValues: true).hasIntervals, isFalse);
+    });
+
+    test('validates category identity, ordinals, finite values, and style', () {
       PolarColumnChartSeries build(List<ChartDataPoint> points) =>
           PolarColumnChartSeries(id: 'polar', points: points);
 
@@ -43,7 +112,11 @@ void main() {
         throwsArgumentError,
       );
       expect(
-        () => build(const [ChartDataPoint(x: 0, y: -1, label: 'A')]),
+        build(const [ChartDataPoint(x: 0, y: -1, label: 'A')]).points.single.y,
+        -1,
+      );
+      expect(
+        () => build(const [ChartDataPoint(x: 0, y: double.nan, label: 'A')]),
         throwsArgumentError,
       );
       expect(
@@ -62,6 +135,72 @@ void main() {
           id: 'polar',
           values: const {'A': 1},
           polarStyle: const PolarColumnStyle(opacity: 1.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          polarStyle: const PolarColumnStyle(maximumVisibleDataLabels: 0),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervals: const {'Missing': PolarColumnInterval(lower: 0, upper: 2)},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervals: const {'A': PolarColumnInterval(lower: 2, upper: 1)},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries(
+          id: 'polar',
+          points: const [ChartDataPoint(x: 0, y: 1, label: 'A')],
+          intervalLowerValues: const [0],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervalStyle: const PolarColumnIntervalStyle(capLengthFactor: 0),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targets: const {'Missing': 2},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targets: const {'A': double.nan},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+            lengthFactor: 0,
+          ),
         ),
         throwsArgumentError,
       );
@@ -115,10 +254,39 @@ void main() {
       expect(config.validate, returnsNormally);
     });
 
+    test('accepts styled pane thresholds and preserves them through copy', () {
+      const threshold = PolarThreshold(
+        value: 75,
+        label: 'Capacity',
+        color: Colors.red,
+        width: 2,
+        dashPattern: <double>[4, 2],
+      );
+      const config = PolarChartConfig(thresholds: <PolarThreshold>[threshold]);
+
+      expect(config.validate, returnsNormally);
+      expect(config.copyWith(), config);
+      expect(config.thresholds.single, threshold);
+    });
+
     test('rejects invalid pane, padding, domain, and tick counts', () {
       expect(
         const PolarChartConfig(
           pane: PolarPaneConfig(sweepAngleDegrees: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          thresholds: <PolarThreshold>[PolarThreshold(value: 20, label: ' ')],
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          thresholds: <PolarThreshold>[
+            PolarThreshold(value: 20, dashPattern: <double>[4]),
+          ],
         ).validate,
         throwsArgumentError,
       );
@@ -136,6 +304,18 @@ void main() {
       );
       expect(
         const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(maximumVisibleLabels: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(maximumVisibleGridLines: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
           radialAxis: PolarNumericAxisConfig(minimum: 10, maximum: 5),
         ).validate,
         throwsArgumentError,
@@ -143,6 +323,24 @@ void main() {
       expect(
         const PolarChartConfig(
           radialAxis: PolarNumericAxisConfig(tickCount: 1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          composition: PolarColumnCompositionConfig(
+            mode: PolarColumnCompositionMode.stacked,
+          ),
+          radialAxis: PolarNumericAxisConfig(minimum: 10, maximum: 100),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          composition: PolarColumnCompositionConfig(
+            mode: PolarColumnCompositionMode.stacked,
+          ),
+          radialAxis: PolarNumericAxisConfig(minimum: -100, maximum: -10),
         ).validate,
         throwsArgumentError,
       );

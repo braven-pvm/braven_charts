@@ -282,6 +282,120 @@ void main() {
       expect(decoded, source);
     });
 
+    test('round-trips grouped Polar Column composition settings', () {
+      const source = PolarChartConfig(
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.grouped,
+          groupInnerPadding: 0.2,
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('round-trips stacked Polar Column composition settings', () {
+      const source = PolarChartConfig(
+        radialAxis: PolarNumericAxisConfig(minimum: -40, maximum: 80),
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.stacked,
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('round-trips Polar Column visual-density limits', () {
+      const source = PolarChartConfig(
+        angularAxis: PolarCategoryAxisConfig(
+          maximumVisibleLabels: 12,
+          maximumVisibleGridLines: 30,
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('defaults legacy Polar Column documents to layered composition', () {
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(
+          const PolarChartConfig(),
+        ),
+      );
+      final transported = Map<String, Object?>.from(
+        encoded.toJson() as Map<String, Object?>,
+      );
+      final polarChart = Map<String, Object?>.from(
+        transported['polarChart']! as Map<String, Object?>,
+      )..remove('composition');
+      transported['polarChart'] = polarChart;
+
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(
+          JsonValue.fromJson(transported) as JsonObjectValue,
+        ),
+      );
+
+      expect(decoded?.composition, const PolarColumnCompositionConfig());
+    });
+
+    test('defaults legacy Polar Column documents to safe density caps', () {
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(
+          const PolarChartConfig(),
+        ),
+      );
+      final transported = Map<String, Object?>.from(
+        encoded.toJson() as Map<String, Object?>,
+      );
+      final polarChart = Map<String, Object?>.from(
+        transported['polarChart']! as Map<String, Object?>,
+      );
+      final angularAxis =
+          Map<String, Object?>.from(
+              polarChart['angularAxis']! as Map<String, Object?>,
+            )
+            ..remove('maximumVisibleLabels')
+            ..remove('maximumVisibleGridLines');
+      polarChart['angularAxis'] = angularAxis;
+      transported['polarChart'] = polarChart;
+
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(
+          JsonValue.fromJson(transported) as JsonObjectValue,
+        ),
+      );
+
+      expect(decoded?.angularAxis.maximumVisibleLabels, 24);
+      expect(decoded?.angularAxis.maximumVisibleGridLines, 72);
+    });
+
     test('reports a path-specific invalid concentric radius', () {
       final result = ChartConfigurationDocumentCodec.decodeConcentricDonut(
         JsonValue.fromJson({

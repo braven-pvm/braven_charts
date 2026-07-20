@@ -4,6 +4,7 @@ import '../models/donut_chart_series.dart';
 import '../models/pie_chart_series.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_category_series.dart';
+import 'polar_column_composition.dart';
 
 /// Internal coordinate/composition family selected for a chart.
 ///
@@ -62,13 +63,7 @@ class ChartLayoutResolver {
           'Polar Column cannot be mixed with Cartesian, Pie, or Donut series',
         );
       }
-      if (polarSeries.length != 1) {
-        throw ArgumentError.value(
-          polarSeries.length,
-          'series',
-          'Polar Column V1 accepts exactly one PolarColumnChartSeries',
-        );
-      }
+      PolarColumnComposition.validate(polarSeries);
       return ChartLayoutKind.polarAxis;
     }
     if (radialSeries.isNotEmpty && allSeries.length != radialSeries.length) {

@@ -234,6 +234,9 @@ abstract final class ChartConfigurationDocumentCodec {
               'outerPadding': config.angularAxis.outerPadding,
               'showLabels': config.angularAxis.showLabels,
               'showGridLines': config.angularAxis.showGridLines,
+              'maximumVisibleLabels': config.angularAxis.maximumVisibleLabels,
+              'maximumVisibleGridLines':
+                  config.angularAxis.maximumVisibleGridLines,
             },
             'radialAxis': {
               if (config.radialAxis.minimum != null)
@@ -246,6 +249,21 @@ abstract final class ChartConfigurationDocumentCodec {
               'showLabels': config.radialAxis.showLabels,
               'showGridLines': config.radialAxis.showGridLines,
             },
+            'composition': {
+              'mode': config.composition.mode.name,
+              'groupInnerPadding': config.composition.groupInnerPadding,
+            },
+            'thresholds': [
+              for (final threshold in config.thresholds)
+                {
+                  'value': threshold.value,
+                  if (threshold.label != null) 'label': threshold.label,
+                  if (threshold.color != null)
+                    'color': threshold.color!.toARGB32(),
+                  'width': threshold.width,
+                  'dashPattern': threshold.dashPattern,
+                },
+            ],
           }, path: path),
         }),
       );
@@ -274,6 +292,14 @@ abstract final class ChartConfigurationDocumentCodec {
       final pane = _requiredMap(map, 'pane', path);
       final angular = _requiredMap(map, 'angularAxis', path);
       final radial = _requiredMap(map, 'radialAxis', path);
+      final composition = switch (map['composition']) {
+        null => null,
+        final Map value => value.cast<String, Object?>(),
+        _ => throw const _ConfigurationFormatException(
+          'Optional object field "composition" is invalid.',
+          '$path.composition',
+        ),
+      };
       final config = PolarChartConfig(
         pane: PolarPaneConfig(
           startAngleDegrees: _requiredDouble(
@@ -316,6 +342,20 @@ abstract final class ChartConfigurationDocumentCodec {
             'showGridLines',
             '$path.angularAxis',
           ),
+          maximumVisibleLabels:
+              _optionalInt(
+                angular,
+                'maximumVisibleLabels',
+                '$path.angularAxis',
+              ) ??
+              24,
+          maximumVisibleGridLines:
+              _optionalInt(
+                angular,
+                'maximumVisibleGridLines',
+                '$path.angularAxis',
+              ) ??
+              72,
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: _optionalDouble(radial, 'minimum', '$path.radialAxis'),
@@ -334,6 +374,22 @@ abstract final class ChartConfigurationDocumentCodec {
             '$path.radialAxis',
           ),
         ),
+        composition: composition == null
+            ? const PolarColumnCompositionConfig()
+            : PolarColumnCompositionConfig(
+                mode: _requiredEnum(
+                  composition,
+                  'mode',
+                  PolarColumnCompositionMode.values,
+                  '$path.composition',
+                ),
+                groupInnerPadding: _requiredDouble(
+                  composition,
+                  'groupInnerPadding',
+                  '$path.composition',
+                ),
+              ),
+        thresholds: _decodePolarThresholds(map['thresholds'], path),
       );
       config.validate();
       return ChartArtifactSuccess(value: config);
@@ -343,6 +399,60 @@ abstract final class ChartConfigurationDocumentCodec {
       return _polarConfigurationFailure(error, path);
     }
   }
+}
+
+List<PolarThreshold> _decodePolarThresholds(Object? value, String path) {
+  if (value == null) return const <PolarThreshold>[];
+  if (value is! List) {
+    throw _ConfigurationFormatException(
+      'Optional thresholds field must be a list.',
+      '$path.thresholds',
+    );
+  }
+  return <PolarThreshold>[
+    for (final (index, rawThreshold) in value.indexed)
+      _decodePolarThreshold(rawThreshold, '$path.thresholds[$index]'),
+  ];
+}
+
+PolarThreshold _decodePolarThreshold(Object? value, String path) {
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Polar threshold must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final label = map['label'];
+  if (label != null && label is! String) {
+    throw _ConfigurationFormatException(
+      'Optional threshold label must be text.',
+      '$path.label',
+    );
+  }
+  final color = map['color'];
+  if (color != null && color is! int) {
+    throw _ConfigurationFormatException(
+      'Optional threshold color must be an ARGB integer.',
+      '$path.color',
+    );
+  }
+  final rawPattern = map['dashPattern'];
+  if (rawPattern is! List || rawPattern.any((interval) => interval is! num)) {
+    throw _ConfigurationFormatException(
+      'Threshold dashPattern must be a numeric list.',
+      '$path.dashPattern',
+    );
+  }
+  return PolarThreshold(
+    value: _requiredDouble(map, 'value', path),
+    label: label as String?,
+    color: _optionalColor(color as int?),
+    width: _requiredDouble(map, 'width', path),
+    dashPattern: <double>[
+      for (final interval in rawPattern) (interval as num).toDouble(),
+    ],
+  );
 }
 
 Color? _optionalColor(int? value) => value == null ? null : Color(value);
@@ -445,6 +555,18 @@ int _requiredInt(Map<String, Object?> map, String key, String path) {
   if (value is! int) {
     throw _ConfigurationFormatException(
       'Required integer field "$key" is missing or invalid.',
+      '$path.$key',
+    );
+  }
+  return value;
+}
+
+int? _optionalInt(Map<String, Object?> map, String key, String path) {
+  final value = map[key];
+  if (value == null) return null;
+  if (value is! int) {
+    throw _ConfigurationFormatException(
+      'Optional integer field "$key" is invalid.',
       '$path.$key',
     );
   }

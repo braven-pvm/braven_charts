@@ -4,6 +4,7 @@ import 'package:braven_charts/src/axis/polar_category_scale.dart';
 import 'package:braven_charts/src/axis/polar_numeric_scale.dart';
 import 'package:braven_charts/src/layout/polar_column_geometry.dart';
 import 'package:braven_charts/src/layout/radial_pane_geometry.dart';
+import 'package:braven_charts/src/models/polar_column_chart_series.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -67,6 +68,158 @@ void main() {
       expect(geometry.marks[0].valueRadius, 48);
       expect(geometry.marks[0].sector.innerRadius, 16);
       expect(geometry.marks[0].sector.outerRadius, 48);
+    });
+
+    test('signed ordinary marks diverge inward and outward from zero', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+        innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.9,
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['Loss', 'Gain'],
+        ),
+        numericScale: PolarNumericScale(pane: pane, minimum: -10, maximum: 20),
+        values: const [-5, 10],
+      );
+
+      expect(geometry.marks[0].baseline, 0);
+      expect(
+        geometry.marks[0].valueRadius,
+        lessThan(geometry.marks[0].baselineRadius),
+      );
+      expect(
+        geometry.marks[1].valueRadius,
+        greaterThan(geometry.marks[1].baselineRadius),
+      );
+      expect(geometry.hitTest(geometry.marks[0].tooltipAnchor)?.value, -5);
+      expect(geometry.hitTest(geometry.marks[1].tooltipAnchor)?.value, 10);
+    });
+
+    test('stack endpoints preserve raw values and cumulative geometry', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['A', 'B'],
+        ),
+        numericScale: PolarNumericScale(pane: pane, minimum: -20, maximum: 30),
+        values: const [5, -7],
+        radialStarts: const [10, -4],
+        radialEnds: const [15, -11],
+      );
+
+      expect(geometry.marks[0].value, 5);
+      expect(geometry.marks[0].baseline, 10);
+      expect(geometry.marks[0].radialValue, 15);
+      expect(geometry.marks[1].value, -7);
+      expect(geometry.marks[1].baseline, -4);
+      expect(geometry.marks[1].radialValue, -11);
+      expect(geometry.marks.every((mark) => mark.isVisible), isTrue);
+    });
+
+    test('applies explicit radial corner placement modes', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.15,
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['Positive', 'Negative'],
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: -20, maximum: 40);
+
+      PolarColumnGeometry build(
+        PolarColumnCornerRadiusMode mode, {
+        List<bool>? exteriorEnds,
+      }) => PolarColumnGeometryCalculator.calculate(
+        categoryScale: categories,
+        numericScale: scale,
+        values: const [12, -8],
+        radialStarts: const [10, -4],
+        radialEnds: const [22, -12],
+        stackExteriorEnds: exteriorEnds,
+        cornerRadius: 8,
+        cornerRadiusMode: mode,
+      );
+
+      final both = build(PolarColumnCornerRadiusMode.bothEnds);
+      expect(both.marks.every((mark) => mark.sector.roundOuterCorners), isTrue);
+      expect(both.marks.every((mark) => mark.sector.roundInnerCorners), isTrue);
+
+      final outer = build(PolarColumnCornerRadiusMode.outerEnd);
+      expect(
+        outer.marks.every((mark) => mark.sector.roundOuterCorners),
+        isTrue,
+      );
+      expect(
+        outer.marks.every((mark) => !mark.sector.roundInnerCorners),
+        isTrue,
+      );
+
+      final exterior = build(
+        PolarColumnCornerRadiusMode.stackExterior,
+        exteriorEnds: const [true, true],
+      );
+      expect(exterior.marks[0].sector.roundOuterCorners, isTrue);
+      expect(exterior.marks[0].sector.roundInnerCorners, isFalse);
+      expect(exterior.marks[1].sector.roundOuterCorners, isFalse);
+      expect(exterior.marks[1].sector.roundInnerCorners, isTrue);
+
+      final internal = build(
+        PolarColumnCornerRadiusMode.stackExterior,
+        exteriorEnds: const [false, false],
+      );
+      expect(
+        internal.marks.every(
+          (mark) =>
+              !mark.sector.roundOuterCorners &&
+              !mark.sector.roundInnerCorners &&
+              mark.sector.cornerRadius == 0,
+        ),
+        isTrue,
+      );
+    });
+
+    test('divides each category into parallel grouped sub-bands', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['A', 'B'],
+        innerPadding: 0.2,
+      );
+      final values = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+
+      PolarColumnGeometry group(int index) =>
+          PolarColumnGeometryCalculator.calculate(
+            categoryScale: categories,
+            numericScale: values,
+            values: const [80, 60],
+            groupIndex: index,
+            groupCount: 3,
+            groupInnerPadding: 0.15,
+          );
+
+      final first = group(0).marks.first.band;
+      final second = group(1).marks.first.band;
+      final third = group(2).marks.first.band;
+      final slotSweep = categories.bandAt(0).sweepAngle / 3;
+
+      expect(first.sweepAngle, closeTo(slotSweep * 0.85, 1e-12));
+      expect(second.startAngle - first.startAngle, closeTo(slotSweep, 1e-12));
+      expect(third.startAngle - second.startAngle, closeTo(slotSweep, 1e-12));
+      expect(first.endAngle, lessThan(second.startAngle));
+      expect(second.endAngle, lessThan(third.startAngle));
+      expect(
+        (first.startAngle + third.endAngle) / 2,
+        closeTo(categories.bandAt(0).centerAngle, 1e-12),
+      );
     });
 
     test('uses area-correct radii for Rose geometry', () {
@@ -180,6 +333,124 @@ void main() {
       expect(geometry.marks[1].isVisible, isTrue);
     });
 
+    test('resolves absolute target arcs inside each grouped band', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.2,
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['A', 'B'],
+        innerPadding: 0.1,
+      );
+      final values = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: categories,
+        numericScale: values,
+        values: const [55, 65],
+        targetValues: const [70, null],
+        targetLengthFactor: 0.5,
+        groupIndex: 1,
+        groupCount: 2,
+        groupInnerPadding: 0.1,
+      );
+
+      expect(geometry.marks.first.targetValue, 70);
+      expect(
+        geometry.marks.first.targetRadius,
+        closeTo(values.valueToRadius(70), 1e-9),
+      );
+      expect(geometry.marks.first.targetPath, isNotNull);
+      expect(geometry.marks.last.targetValue, isNull);
+      expect(geometry.marks.last.targetPath, isNull);
+    });
+
+    test('retains out-of-domain target data without painting a marker', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: PolarNumericScale(pane: pane, minimum: 0, maximum: 10),
+        values: const [5],
+        targetValues: const [12],
+      );
+
+      expect(geometry.marks.single.targetValue, 12);
+      expect(geometry.marks.single.targetRadius, isNull);
+      expect(geometry.marks.single.targetPath, isNull);
+    });
+
+    test('resolves whisker and annular-band paths from absolute intervals', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.2,
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['A', 'B'],
+          innerPadding: 0.12,
+        ),
+        numericScale: scale,
+        values: const [55, 65],
+        intervalLowerValues: const [42, null],
+        intervalUpperValues: const [71, null],
+        intervalCapLengthFactor: 0.5,
+        intervalBandLengthFactor: 0.6,
+      );
+
+      final first = geometry.marks.first;
+      expect(first.intervalLowerValue, 42);
+      expect(first.intervalUpperValue, 71);
+      expect(first.intervalLowerRadius, closeTo(scale.valueToRadius(42), 1e-9));
+      expect(first.intervalUpperRadius, closeTo(scale.valueToRadius(71), 1e-9));
+      expect(first.intervalWhiskerPath, isNotNull);
+      expect(first.intervalBandPath, isNotNull);
+      expect(geometry.marks.last.intervalWhiskerPath, isNull);
+      expect(geometry.marks.last.intervalBandPath, isNull);
+    });
+
+    test('clips interval geometry while preserving exact source endpoints', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: 10, maximum: 20);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: scale,
+        values: const [15],
+        intervalLowerValues: const [5],
+        intervalUpperValues: const [16],
+      );
+
+      final mark = geometry.marks.single;
+      expect(mark.intervalLowerValue, 5);
+      expect(mark.intervalUpperValue, 16);
+      expect(mark.intervalLowerRadius, scale.valueToRadius(10));
+      expect(mark.intervalUpperRadius, scale.valueToRadius(16));
+      expect(mark.intervalWhiskerPath, isNotNull);
+      expect(mark.intervalBandPath, isNotNull);
+    });
+
+    test('keeps a capped marker for a zero-width interval', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: PolarNumericScale(pane: pane, minimum: 0, maximum: 100),
+        values: const [60],
+        intervalLowerValues: const [52],
+        intervalUpperValues: const [52],
+      );
+
+      final mark = geometry.marks.single;
+      expect(mark.intervalWhiskerPath, isNotNull);
+      expect(mark.intervalBandPath, isNull);
+    });
+
     test('rejects mismatched scales, values, and baselines', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
@@ -209,6 +480,43 @@ void main() {
         () => PolarColumnGeometryCalculator.calculate(
           categoryScale: categories,
           numericScale: values,
+          values: const [1, 2],
+          intervalLowerValues: const [0, 1],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          intervalLowerValues: const [2, null],
+          intervalUpperValues: const [1, null],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          targetValues: const [3],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          targetLengthFactor: 1.1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
           values: const [1],
         ),
         throwsArgumentError,
@@ -226,7 +534,8 @@ void main() {
         () => PolarColumnGeometryCalculator.calculate(
           categoryScale: categories,
           numericScale: values,
-          values: const [1, -1],
+          values: const [1, 2],
+          radialStarts: const [0, 1],
         ),
         throwsArgumentError,
       );
@@ -236,6 +545,25 @@ void main() {
           numericScale: values,
           values: const [1, 2],
           cornerRadius: double.nan,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          groupIndex: 2,
+          groupCount: 2,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          groupInnerPadding: 1,
         ),
         throwsArgumentError,
       );

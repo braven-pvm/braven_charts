@@ -93,7 +93,10 @@ class ChartDataTable extends StatefulWidget {
         theme.rowNumberWidth +
             192 +
             160 +
-            theme.seriesColumnWidth +
+            theme.seriesColumnWidth *
+                (1 +
+                    (model.hasPolarTargets ? 1 : 0) +
+                    (model.hasPolarIntervals ? 2 : 0)) +
             actionWidth,
       ChartTableProjectionKind.candlestick =>
         theme.rowNumberWidth +
@@ -935,6 +938,36 @@ class _ChartDataTableState extends State<ChartDataTable> {
             theme: tableTheme,
             numeric: true,
           ),
+          if (model.hasPolarTargets)
+            _SortHeader(
+              key: const ValueKey('chart-table-header-target'),
+              label: unit == null ? 'Target' : 'Target ($unit)',
+              columnId: 'target',
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
+          if (model.hasPolarIntervals) ...[
+            _SortHeader(
+              key: const ValueKey('chart-table-header-interval-lower'),
+              label: unit == null ? 'Lower' : 'Lower ($unit)',
+              columnId: 'intervalLower',
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
+            _SortHeader(
+              key: const ValueKey('chart-table-header-interval-upper'),
+              label: unit == null ? 'Upper' : 'Upper ($unit)',
+              columnId: 'intervalUpper',
+              width: tableTheme.seriesColumnWidth,
+              controller: _controller,
+              theme: tableTheme,
+              numeric: true,
+            ),
+          ],
         ],
       );
     }
@@ -1206,10 +1239,17 @@ class _ChartDataTableState extends State<ChartDataTable> {
       final row = polarRows[index];
       final references = List<ChartPointRef>.unmodifiable([row.reference]);
       final unitSuffix = row.unit == null ? '' : ' ${row.unit}';
+      final targetSemantics = row.targetDisplay == null
+          ? ''
+          : ', target ${row.targetDisplay}$unitSuffix';
+      final intervalSemantics =
+          row.intervalLowerDisplay == null || row.intervalUpperDisplay == null
+          ? ''
+          : ', interval ${row.intervalLowerDisplay} to ${row.intervalUpperDisplay}$unitSuffix';
       return _FocusableTableRow(
         key: ValueKey(row.rowId),
         semanticsLabel:
-            'Row ${index + 1}, ${row.category}, ${row.seriesName} series, ${row.valueDisplay}$unitSuffix, ${row.isValid ? 'valid column' : 'invalid column'}',
+            'Row ${index + 1}, ${row.category}, ${row.seriesName} series, ${row.valueDisplay}$unitSuffix$targetSemantics$intervalSemantics, ${row.isValid ? 'valid column' : 'invalid column'}',
         references: references,
         displayedPoints: displayedPoints,
         onSelectAllPoints: widget.onSelectAllPoints,
@@ -1289,6 +1329,37 @@ class _ChartDataTableState extends State<ChartDataTable> {
             color: row.colorValue == null ? null : Color(row.colorValue!),
             theme: theme,
           ),
+          if (model.hasPolarTargets)
+            _TableCell(
+              key: ValueKey('chart-table-cell-target-$index'),
+              text: row.targetDisplay ?? '—',
+              width: theme.seriesColumnWidth,
+              numeric: true,
+              invalid: row.targetRaw != null && !row.targetRaw!.isFinite,
+              theme: theme,
+            ),
+          if (model.hasPolarIntervals) ...[
+            _TableCell(
+              key: ValueKey('chart-table-cell-interval-lower-$index'),
+              text: row.intervalLowerDisplay ?? '—',
+              width: theme.seriesColumnWidth,
+              numeric: true,
+              invalid:
+                  row.intervalLowerRaw != null &&
+                  !row.intervalLowerRaw!.isFinite,
+              theme: theme,
+            ),
+            _TableCell(
+              key: ValueKey('chart-table-cell-interval-upper-$index'),
+              text: row.intervalUpperDisplay ?? '—',
+              width: theme.seriesColumnWidth,
+              numeric: true,
+              invalid:
+                  row.intervalUpperRaw != null &&
+                  !row.intervalUpperRaw!.isFinite,
+              theme: theme,
+            ),
+          ],
         ],
       );
     }
@@ -1808,6 +1879,15 @@ class _ChartDataTableState extends State<ChartDataTable> {
           right.seriesName.toLowerCase(),
         ),
         'value' => _compareNumbers(left.valueRaw, right.valueRaw),
+        'target' => _compareNullableNumbers(left.targetRaw, right.targetRaw),
+        'intervalLower' => _compareNullableNumbers(
+          left.intervalLowerRaw,
+          right.intervalLowerRaw,
+        ),
+        'intervalUpper' => _compareNullableNumbers(
+          left.intervalUpperRaw,
+          right.intervalUpperRaw,
+        ),
         _ => 0,
       };
       return _controller.sortAscending ? result : -result;

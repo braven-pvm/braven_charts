@@ -51,6 +51,48 @@ void main() {
       );
     });
 
+    test('compatible layers share one numeric domain and series colors', () {
+      final target = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'target',
+          values: const {'Search': 100, 'Social': 80},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        seriesIndex: 0,
+        numericScaleValues: const [100, 80, 64, 48],
+        paintAxisLabels: false,
+        preferSeriesColor: true,
+      );
+      final observed = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'observed',
+          values: const {'Search': 64, 'Social': 48},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        seriesIndex: 1,
+        numericScaleValues: const [100, 80, 64, 48],
+        paintGrid: false,
+        preferSeriesColor: true,
+      );
+
+      expect(target.numericScale.maximum, 100);
+      expect(observed.numericScale.maximum, 100);
+      expect(target.paintGrid, isTrue);
+      expect(target.paintAxisLabels, isFalse);
+      expect(observed.paintGrid, isFalse);
+      expect(observed.paintAxisLabels, isTrue);
+      expect(target.resolvedMarkColors.toSet(), {
+        ChartTheme.light.seriesTheme.colors[0],
+      });
+      expect(observed.resolvedMarkColors.toSet(), {
+        ChartTheme.light.seriesTheme.colors[1],
+      });
+    });
+
     test('thins dense angular labels deterministically at large text', () {
       final element = PolarColumnSeriesElement(
         series: PolarColumnChartSeries.fromMap(
@@ -76,6 +118,35 @@ void main() {
         orderedEquals(element.visibleAngularLabelIndices.toSet()),
       );
       expect(element.semanticDataHits, hasLength(16));
+    });
+
+    test('caps only painted density while preserving every mark', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'dense-capped',
+          values: {
+            for (var index = 0; index < 96; index++)
+              'Category ${index + 1}': 40 + (index % 50),
+          },
+          polarStyle: const PolarColumnStyle(maximumVisibleDataLabels: 6),
+        ),
+        config: const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(
+            maximumVisibleLabels: 8,
+            maximumVisibleGridLines: 12,
+          ),
+        ),
+        size: const Size(720, 520),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.geometry.marks, hasLength(96));
+      expect(element.semanticDataHits, hasLength(96));
+      expect(element.visibleAngularLabelIndices.length, lessThanOrEqualTo(8));
+      expect(element.visibleAngularGridIndices.length, lessThanOrEqualTo(12));
+      expect(element.visibleDataLabelIndices.length, lessThanOrEqualTo(6));
+      expect(element.visibleAngularLabelIndices.first, 0);
+      expect(element.visibleAngularGridIndices.first, 0);
     });
 
     test('rejects an invalid text scale factor', () {

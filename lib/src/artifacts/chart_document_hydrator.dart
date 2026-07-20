@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../braven_chart_plus.dart';
 import '../controllers/annotation_controller.dart';
 import '../layout/concentric_donut_layout.dart';
+import '../layout/polar_column_composition.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/braven_chart_controller.dart';
 import '../models/chart_annotation.dart';
@@ -295,7 +296,14 @@ abstract final class ChartDocumentHydrator {
     'series.donut.concentric.v1',
     'series.polarColumn',
     'series.polar.column.v1',
+    PolarColumnChartSeries.cornerRadiusModeCapability,
+    'series.polar.column.targets.v1',
+    'series.polar.column.intervals.v1',
     'chart.polar.config.v1',
+    'chart.polar.thresholds.v1',
+    PolarColumnComposition.multipleSeriesCapability,
+    PolarColumnComposition.groupedSeriesCapability,
+    PolarColumnComposition.stackedSeriesCapability,
     'series.radial.grouping.v1',
     'series.radial.grouped-variable-radius.v1',
     'series.radial.formatters.v1',
@@ -926,15 +934,126 @@ abstract final class ChartDocumentHydrator {
         [],
       );
     }
-    if (polarSeries.length != 1 || series.length != 1) {
+    if (polarSeries.isEmpty || polarSeries.length != series.length) {
       throw const _HydrationFailure(
         ChartArtifactError(
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
-              'Polar Column V1 requires exactly one Polar Column series and cannot mix chart families.',
+              'Polar configuration requires Polar Column series and cannot mix chart families.',
           path: r'$.document.configuration.polarChart',
         ),
         [],
+      );
+    }
+    if (config.thresholds.isNotEmpty &&
+        !document.requiredCapabilities.contains('chart.polar.thresholds.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Polar thresholds must declare chart.polar.thresholds.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any((series) => series.targetValues.isNotEmpty) &&
+        !document.requiredCapabilities.contains(
+          'series.polar.column.targets.v1',
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Polar Column targets must declare series.polar.column.targets.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any((series) => series.hasIntervals) &&
+        !document.requiredCapabilities.contains(
+          'series.polar.column.intervals.v1',
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Polar Column intervals must declare series.polar.column.intervals.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any(
+          (series) =>
+              series.polarStyle.cornerRadiusMode !=
+              PolarColumnCornerRadiusMode.outerEnd,
+        ) &&
+        !document.requiredCapabilities.contains(
+          PolarColumnChartSeries.cornerRadiusModeCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Non-default Polar Column corner placement must declare series.polar.column.corner-radius-mode.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.length > 1 &&
+        !document.requiredCapabilities.contains(
+          PolarColumnComposition.multipleSeriesCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Multiple Polar Column series must declare chart.polar.multiple-series.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (config.composition.mode == PolarColumnCompositionMode.grouped &&
+        !document.requiredCapabilities.contains(
+          PolarColumnComposition.groupedSeriesCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Grouped Polar Column series must declare chart.polar.grouped-series.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (config.composition.mode == PolarColumnCompositionMode.stacked &&
+        !document.requiredCapabilities.contains(
+          PolarColumnComposition.stackedSeriesCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Stacked Polar Column series must declare chart.polar.stacked-series.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    try {
+      PolarColumnComposition.validate(polarSeries, config: config);
+    } on ArgumentError catch (error) {
+      throw _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Invalid Polar Column composition: ${error.message}',
+          path: r'$.document.configuration.polarChart',
+        ),
+        const [],
       );
     }
   }

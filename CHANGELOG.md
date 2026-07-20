@@ -65,6 +65,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Range-based control surfaces can keep resize grips persistently visible and
   interactive, and draggable range bodies now expose platform `grab` and
   `grabbing` cursors instead of looking like passive chart content.
+- Compatible multi-series Polar Column compositions. Series with matching
+  categories/order, preset, and unit can either layer in declaration order or
+  divide each category into grouped angular sub-bands on one shared radial
+  scale, with series-aware pointer, keyboard, controller, table, CSV, artifact,
+  hydration, and generated-source identity.
+- `chart.polar.multiple-series.v1` capability negotiation for portable layered
+  Polar Column documents and `chart.polar.grouped-series.v1` for grouped
+  geometry, plus production-shaped layered and grouped comparison presets in
+  the public showcase.
+- Diverging stacked Polar Column composition through
+  `PolarColumnCompositionMode.stacked`. Signed source values accumulate on
+  independent positive and negative sides of an explicit zero baseline while
+  tables, CSV, controllers, artifacts, hydration, and generated Dart retain
+  the original values and series identity. Stacked documents negotiate
+  `chart.polar.stacked-series.v1`.
+- Per-category Polar Column target ticks through `targetValues` and
+  `PolarColumnTargetMarkerStyle`, plus pane-wide `PolarThreshold` reference
+  arcs. Automatic radial domains include both reference types; explicit
+  domains retain the source data while omitting out-of-range paint. Targets
+  and thresholds round-trip through tables, CSV, artifacts, hydration, and
+  generated Dart using explicit capability negotiation.
+- Absolute Polar Column uncertainty/range intervals through
+  `PolarColumnInterval` and `PolarColumnIntervalStyle`. Intervals render as
+  radial whiskers with tangential caps or compact annular bands, participate
+  in automatic radial domains, clip against explicit domains while retaining
+  exact source endpoints, and round-trip through native tables, CSV,
+  artifacts, hydration, and generated Dart. Stacked contributors reject
+  intervals because cumulative placement would make their meaning ambiguous.
+- Deterministic Polar Column density controls through
+  `PolarCategoryAxisConfig.maximumVisibleLabels`,
+  `PolarCategoryAxisConfig.maximumVisibleGridLines`, and
+  `PolarColumnStyle.maximumVisibleDataLabels`. Dense panes thin only painted
+  labels and spokes; every mark remains available to hit testing, semantics,
+  native tables, CSV, artifacts, hydration, and generated Dart source. A
+  512-category warm-paint benchmark now guards the renderer's frame budget.
+- `PolarColumnCornerRadiusMode` for rounding both radial ends, retaining the
+  original outer-radius-only treatment, or rounding only the exposed positive
+  and negative boundaries of a complete stack. Non-default modes negotiate
+  `series.polar.column.corner-radius-mode.v1` through artifacts and generated
+  source.
+
+### Fixed
+- Full-circle Polar Column grid, baseline, and threshold rings now use closed
+  circle geometry, so rotating a 360-degree pane cannot make its radial lines
+  disappear at particular start angles.
 
 ## 0.9.0 - 2026-07-19
 

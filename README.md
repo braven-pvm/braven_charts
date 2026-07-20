@@ -73,8 +73,15 @@ the composition or series level.
 ### Polar Column compositions
 
 Polar Column uses angular categories and a numeric radial scale. Standard
-columns compare radius directly, Rose uses area-correct scaling, and partial
-panes preserve the same value-only data and artifact contract.
+columns compare radius directly, Rose uses area-correct scaling, partial panes
+preserve the same value-only data contract, and compatible series can either
+layer a reference behind observed values or divide each category into grouped
+angular sub-bands or form diverging stacks on one shared scale. Per-category
+target ticks and pane-wide threshold arcs add absolute references without
+changing source values into shares. Absolute lower/upper intervals can render
+as radial whiskers or compact annular range bands. Deterministic label, value,
+and grid-spoke limits keep dense panes readable without removing marks from
+interaction, accessibility, tables, exports, artifacts, or generated source.
 
 | Channel demand | Seasonal Rose | Lifecycle arc |
 | --- | --- | --- |
@@ -146,7 +153,7 @@ workflows, styling treatments, business charts, and radial presentations.
 | --- | --- |
 | Rendering | Pure Dart on Flutter's `RenderBox`/`Canvas` pipeline, cached series layers, and no embedded JavaScript chart engine |
 | Interaction | Pointer and touch zoom, pan, X/Y scrollbars, hover tooltips, crosshairs, tracking panels, and opt-in data-X synchronization across independent Cartesian charts |
-| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories and a numeric radial scale |
+| Data series | Line and Area with explicit per-series entrance/update timing; Bar with accessible patterns, lollipop, Pareto and histogram compositions, bullet ranges and targets, and centered diverging/Likert stacks; Scatter with point styling plus independent size, colour, and opacity encodings; mixed Cartesian series; category-based Pie, Donut, and Concentric Donut charts with labels, positioned legends, solid/gradient fills, three corner treatments, variable radii, center content, partial sweeps, elevation, selection, and animation; and value-based Polar Column/Rose charts with angular categories, a signed numeric radial scale, layered/grouped/diverging stacked comparisons, category targets, pane thresholds, absolute uncertainty/range intervals, and bounded visual density |
 | Axes | Configurable X axis, multiple independent Y axes, shared axes, automatic or per-series normalization, visible-axis slots, and dedicated angular-category/radial-value Polar axes |
 | Annotations | Point, range, text, threshold, trend, chord, pin, and legend annotations with interactive editing |
 | Live data | Frame-coalesced point ingestion, bounded buffers, follow-latest viewports, pause/resume, and buffered catch-up |

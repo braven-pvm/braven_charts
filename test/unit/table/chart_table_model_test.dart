@@ -496,7 +496,7 @@ void main() {
           id: 'demand',
           name: 'Demand',
           unit: 'orders',
-          values: const {'North': 42, 'East': 68, 'South': 31},
+          values: const {'North': 42, 'East': 68, 'South': -31},
           columnColors: const {'East': Color(0xFF00A878)},
         );
         final model = ChartTableModel.fromDocument(
@@ -512,6 +512,9 @@ void main() {
         expect(model.polarRows.first.valueDisplay, '42.00');
         expect(model.polarRows.first.unit, 'orders');
         expect(model.polarRows[1].colorValue, 0xFF00A878);
+        expect(model.polarRows.last.valueRaw, -31);
+        expect(model.polarRows.last.valueDisplay, '-31.00');
+        expect(model.polarRows.last.isValid, isTrue);
         expect(model.longRows.first.xDisplay, 'North');
         expect(ChartTableExporter.headers(model), [
           '#',
@@ -520,8 +523,58 @@ void main() {
           'Value (orders)',
         ]);
         expect(ChartTableExporter.headers(model), isNot(contains('Share')));
+        expect(
+          ChartTableExporter.csvForDisplayedRows(
+            model,
+            polarRows: model.polarRows,
+          ).csv,
+          contains('-31.0'),
+        );
       },
     );
+
+    test('projects every layered Polar Column series with stable identity', () {
+      final capacity = PolarColumnChartSeries.fromMap(
+        id: 'capacity',
+        name: 'Capacity',
+        unit: 'orders',
+        values: const {'North': 90, 'South': 80},
+      );
+      final observed = PolarColumnChartSeries.fromMap(
+        id: 'observed',
+        name: 'Observed',
+        unit: 'orders',
+        values: const {'North': 62, 'South': 74},
+      );
+      final model = ChartTableModel.fromDocument(
+        _document([
+          _success(ChartSeriesDocumentCodec.encode(capacity)).value,
+          _success(ChartSeriesDocumentCodec.encode(observed)).value,
+        ]),
+      );
+
+      expect(model.projectionKind, ChartTableProjectionKind.polar);
+      expect(model.polarRows, hasLength(4));
+      expect(model.polarRows.map((row) => row.seriesName), [
+        'Capacity',
+        'Capacity',
+        'Observed',
+        'Observed',
+      ]);
+      expect(model.polarRows.map((row) => row.reference), const [
+        ChartPointRef(seriesId: 'capacity', pointIndex: 0),
+        ChartPointRef(seriesId: 'capacity', pointIndex: 1),
+        ChartPointRef(seriesId: 'observed', pointIndex: 0),
+        ChartPointRef(seriesId: 'observed', pointIndex: 1),
+      ]);
+      expect(
+        ChartTableExporter.csvForDisplayedRows(
+          model,
+          polarRows: model.polarRows,
+        ).csv,
+        allOf(contains('Capacity'), contains('Observed')),
+      );
+    });
 
     test('projects pie documents as category, value, and share rows', () {
       final pie = PieChartSeries(

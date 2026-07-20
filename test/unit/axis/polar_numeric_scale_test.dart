@@ -81,7 +81,7 @@ void main() {
       expect(scale.valueToRadius(120), pane.outerRadius);
       expect(scale.radiusToValue(0), 20);
       expect(scale.radiusToValue(120), 80);
-      expect(() => scale.valueToRadius(-1), throwsArgumentError);
+      expect(scale.valueToRadius(-1), pane.innerRadius);
     });
 
     test('derives a zero-based domain and stabilizes empty or zero data', () {
@@ -103,11 +103,24 @@ void main() {
       expect(empty.maximum, 1);
     });
 
-    test('rejects negative, non-finite, equal, or reversed domains', () {
-      expect(
-        () => PolarNumericScale(pane: pane, minimum: -1, maximum: 10),
-        throwsArgumentError,
+    test('derives signed domains around zero and round-trips values', () {
+      final signed = PolarNumericScale.fromValues(
+        pane: pane,
+        values: const [-20, 30, 10],
       );
+      final negativeOnly = PolarNumericScale.fromValues(
+        pane: pane,
+        values: const [-20, -5],
+      );
+
+      expect(signed.minimum, -20);
+      expect(signed.maximum, 30);
+      expect(signed.radiusToValue(signed.valueToRadius(-7)), closeTo(-7, 1e-9));
+      expect(negativeOnly.minimum, -20);
+      expect(negativeOnly.maximum, 0);
+    });
+
+    test('rejects non-finite, equal, or reversed domains and values', () {
       expect(
         () => PolarNumericScale(pane: pane, minimum: 10, maximum: 10),
         throwsArgumentError,
@@ -119,10 +132,6 @@ void main() {
       expect(
         () =>
             PolarNumericScale(pane: pane, minimum: 0, maximum: double.infinity),
-        throwsArgumentError,
-      );
-      expect(
-        () => PolarNumericScale.fromValues(pane: pane, values: const [1, -1]),
         throwsArgumentError,
       );
       expect(

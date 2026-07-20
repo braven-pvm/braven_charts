@@ -1167,6 +1167,8 @@ void main() {
           outerPadding: 0.08,
           showLabels: false,
           showGridLines: false,
+          maximumVisibleLabels: 9,
+          maximumVisibleGridLines: 18,
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 10,
@@ -1186,10 +1188,12 @@ void main() {
               values: const {'North': 42, 'South': 68},
               polarStyle: const PolarColumnStyle(
                 cornerRadius: 10,
+                cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds,
                 opacity: 0.75,
                 borderColor: Color(0xFF102030),
                 borderWidth: 2,
                 showDataLabels: false,
+                maximumVisibleDataLabels: 6,
               ),
               selectionStyle: const RadialSelectionStyle(
                 effect: RadialSelectionEffect.lift,
@@ -1207,7 +1211,12 @@ void main() {
       expect(generated.source, contains('preset: PolarColumnPreset.rose'));
       expect(generated.source, contains('polarStyle: PolarColumnStyle('));
       expect(generated.source, contains('cornerRadius: 10.0'));
+      expect(
+        generated.source,
+        contains('cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds'),
+      );
       expect(generated.source, contains('Color(0xFF102030)'));
+      expect(generated.source, contains('maximumVisibleDataLabels: 6'));
       expect(generated.source, contains('polarChartConfig: PolarChartConfig('));
       expect(generated.source, contains('startAngleDegrees: 20.0'));
       expect(generated.source, contains('sweepAngleDegrees: 240.0'));
@@ -1217,6 +1226,8 @@ void main() {
         contains('scaleMode: PolarRadialScaleMode.areaCorrect'),
       );
       expect(generated.source, contains('tickCount: 7'));
+      expect(generated.source, contains('maximumVisibleLabels: 9'));
+      expect(generated.source, contains('maximumVisibleGridLines: 18'));
     });
 
     test('emits portable chart selection policy', () {
@@ -1252,6 +1263,43 @@ void main() {
       );
       expect(generated.source, contains('clearOnBackgroundTap: false'));
       expect(generated.source, contains('useModifierKeys: false'));
+    });
+
+    test('emits grouped Polar Column composition settings', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            PolarColumnChartSeries.fromMap(
+              id: 'north',
+              unit: 'orders',
+              values: const {'Search': 42, 'Social': 28},
+            ),
+            additionalSeries: [
+              PolarColumnChartSeries.fromMap(
+                id: 'south',
+                unit: 'orders',
+                values: const {'Search': 36, 'Social': 31},
+              ),
+            ],
+            polarChartConfig: const PolarChartConfig(
+              composition: PolarColumnCompositionConfig(
+                mode: PolarColumnCompositionMode.grouped,
+                groupInnerPadding: 0.2,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('composition: PolarColumnCompositionConfig('),
+      );
+      expect(
+        generated.source,
+        contains('mode: PolarColumnCompositionMode.grouped'),
+      );
+      expect(generated.source, contains('groupInnerPadding: 0.2'));
     });
 
     test('returns a structured failure for an invalid variable name', () {
@@ -1344,8 +1392,21 @@ ChartDocumentSnapshot _snapshot(
               .values,
       }),
       requiredCapabilities: {
+        for (final item in [series, ...additionalSeries])
+          if (item is PolarColumnChartSeries &&
+              item.polarStyle.cornerRadiusMode !=
+                  PolarColumnCornerRadiusMode.outerEnd)
+            PolarColumnChartSeries.cornerRadiusModeCapability,
         if (concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (polarChartConfig != null) 'chart.polar.config.v1',
+        if (polarChartConfig != null && additionalSeries.isNotEmpty)
+          'chart.polar.multiple-series.v1',
+        if (polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.grouped)
+          'chart.polar.grouped-series.v1',
+        if (polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.stacked)
+          'chart.polar.stacked-series.v1',
       },
     ),
     viewState: viewState,
