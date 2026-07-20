@@ -11,9 +11,13 @@ import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_data_point.dart';
 import '../models/candlestick_density_grouping.dart';
+import '../models/cartesian_value_summary_config.dart';
+import '../models/cartesian_value_summary_style.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_data_point.dart';
+import '../models/chart_overlay_placement.dart';
 import '../models/chart_series.dart';
+import '../models/chart_style_value.dart';
 import '../models/chart_theme.dart';
 import '../models/concentric_donut_config.dart';
 import '../models/data_point_label_config.dart';
@@ -109,10 +113,11 @@ abstract final class ChartDartSourceGenerator {
         warning.code != ChartArtifactDiagnosticCodes.runtimeBindingRequired) {
       return false;
     }
-    return warning.path?.startsWith(
-          r'$.interaction.configuration.callbacks.',
-        ) ??
-        false;
+    return (warning.path?.startsWith(
+              r'$.interaction.configuration.callbacks.',
+            ) ??
+            false) ||
+        warning.path == r'$.interaction.configuration.valueSummary.content';
   }
 }
 
@@ -3522,6 +3527,7 @@ class _ChartDartEmitter {
         });
         writer.writeLine('),');
       }
+      _emitValueSummary(writer, interaction.valueSummary);
       _valueIf(
         writer,
         'showFocusBorder',
@@ -3559,6 +3565,334 @@ class _ChartDartEmitter {
     });
     writer.writeLine('),');
   }
+
+  /// Descriptor id of a runtime value-summary content builder captured in the
+  /// document, or null for automatic content.
+  ///
+  /// Hydration without runtime bindings replaces unavailable builder content
+  /// with automatic content, so the raw document — not the hydrated config —
+  /// is the reliable record that a builder was configured.
+  String? get _valueSummaryBuilderDescriptorId {
+    final Object configuration = snapshot.document.interaction.configuration
+        .toJson();
+    if (configuration is! Map) return null;
+    final summary = configuration['valueSummary'];
+    if (summary is! Map) return null;
+    final content = summary['content'];
+    if (content is! Map || content['kind'] != 'builder') return null;
+    final id = content['descriptorId'];
+    return id is String ? id : null;
+  }
+
+  void _emitValueSummary(
+    DartSourceWriter writer,
+    CartesianValueSummaryConfig config,
+  ) {
+    final builderDescriptorId = _valueSummaryBuilderDescriptorId;
+    if (!options.includeDefaultValues &&
+        builderDescriptorId == null &&
+        config == const CartesianValueSummaryConfig()) {
+      return;
+    }
+    writer.writeLine('valueSummary: CartesianValueSummaryConfig(');
+    writer.indented(() {
+      _valueIf(writer, 'enabled', config.enabled, defaultValue: false);
+      _emitValueSummaryPresentation(writer, config.presentation);
+      _enumIf(
+        writer,
+        'valuePolicy',
+        'CartesianValueSummaryValuePolicy',
+        config.valuePolicy.name,
+        defaultName: 'trackingThenLatest',
+      );
+      _emitValueSummaryContent(writer, config.content, builderDescriptorId);
+      _emitValueSummaryStyle(writer, config.style);
+      _valueIf(
+        writer,
+        'showSeriesAccent',
+        config.showSeriesAccent,
+        defaultValue: true,
+      );
+      _valueIf(
+        writer,
+        'announceChanges',
+        config.announceChanges,
+        defaultValue: false,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitValueSummaryPresentation(
+    DartSourceWriter writer,
+    CartesianValueSummaryPresentation presentation,
+  ) {
+    switch (presentation) {
+      case CartesianValueSummaryOverlay(:final placement):
+        if (!options.includeDefaultValues &&
+            presentation == const CartesianValueSummaryOverlay()) {
+          return;
+        }
+        writer.writeLine(
+          'presentation: CartesianValueSummaryPresentation.overlay(',
+        );
+        writer.indented(() => _overlayPlacementIf(writer, placement));
+        writer.writeLine('),');
+      case CartesianValueSummaryAnnotation(
+        :final placement,
+        :final draggable,
+        :final clampToPlot,
+      ):
+        if (!options.includeDefaultValues &&
+            presentation == const CartesianValueSummaryAnnotation()) {
+          writer.namedArgument(
+            'presentation',
+            'CartesianValueSummaryPresentation.annotation()',
+          );
+          return;
+        }
+        writer.writeLine(
+          'presentation: CartesianValueSummaryPresentation.annotation(',
+        );
+        writer.indented(() {
+          _overlayPlacementIf(writer, placement);
+          _valueIf(writer, 'draggable', draggable, defaultValue: false);
+          _valueIf(writer, 'clampToPlot', clampToPlot, defaultValue: true);
+        });
+        writer.writeLine('),');
+    }
+  }
+
+  void _overlayPlacementIf(
+    DartSourceWriter writer,
+    ChartOverlayPlacement placement,
+  ) {
+    if (!options.includeDefaultValues &&
+        placement == ChartOverlayPlacement.topLeft) {
+      return;
+    }
+    writer.writeLine('placement: ChartOverlayPlacement(');
+    writer.indented(() {
+      writer.namedArgument('anchor', _alignmentLiteral(placement.anchor));
+      _offsetIf(writer, 'offset', placement.offset, Offset.zero);
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitValueSummaryContent(
+    DartSourceWriter writer,
+    CartesianValueSummaryContent content,
+    String? builderDescriptorId,
+  ) {
+    final descriptorId = switch (content) {
+      CartesianValueSummaryBuilderContent(:final descriptorId) =>
+        descriptorId ?? builderDescriptorId,
+      CartesianValueSummaryAutomaticContent() => builderDescriptorId,
+    };
+    if (descriptorId != null) {
+      // A runtime builder is an omitted dependency: emit automatic content
+      // (the constructor default) with an explicit diagnostic instead of ever
+      // serializing whatever text the builder happened to render.
+      writer.writeLine(
+        '// content: CartesianValueSummaryContent.builder(...), '
+        '// Supply the runtime builder registered as "$descriptorId".',
+      );
+      _warn(
+        code: ChartSourceWarningCodes.runtimeValueOmitted,
+        message:
+            'Value summary builder content requires the runtime binding '
+            '"$descriptorId"; automatic content is emitted instead.',
+        path: r'$.interaction.configuration.valueSummary.content',
+      );
+      return;
+    }
+    final automatic = content as CartesianValueSummaryAutomaticContent;
+    if (!options.includeDefaultValues &&
+        automatic == const CartesianValueSummaryAutomaticContent()) {
+      return;
+    }
+    writer.writeLine('content: CartesianValueSummaryContent.automatic(');
+    writer.indented(() {
+      _valueIf(
+        writer,
+        'includeTrends',
+        automatic.includeTrends,
+        defaultValue: false,
+      );
+      _valueIf(
+        writer,
+        'includeHiddenSeries',
+        automatic.includeHiddenSeries,
+        defaultValue: false,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  void _emitValueSummaryStyle(
+    DartSourceWriter writer,
+    CartesianValueSummaryStyle style,
+  ) {
+    if (!options.includeDefaultValues &&
+        style == const CartesianValueSummaryStyle()) {
+      return;
+    }
+    writer.writeLine('style: CartesianValueSummaryStyle(');
+    writer.indented(() {
+      _styleValueIf<Color>(
+        writer,
+        'backgroundColor',
+        style.backgroundColor,
+        'Color',
+        DartSourceWriter.colorLiteral,
+      );
+      _styleValueIf<double>(
+        writer,
+        'backgroundOpacity',
+        style.backgroundOpacity,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
+      _styleValueIf<Color>(
+        writer,
+        'borderColor',
+        style.borderColor,
+        'Color',
+        DartSourceWriter.colorLiteral,
+      );
+      _styleValueIf<double>(
+        writer,
+        'borderWidth',
+        style.borderWidth,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
+      _styleValueIf<BorderRadius>(
+        writer,
+        'borderRadius',
+        style.borderRadius,
+        'BorderRadius',
+        _borderRadiusLiteral,
+      );
+      _styleValueIf<EdgeInsets>(
+        writer,
+        'padding',
+        style.padding,
+        'EdgeInsets',
+        _edgeInsetsLiteral,
+      );
+      _styleTextStyleValueIf(writer, 'textStyle', style.textStyle);
+      _styleTextStyleValueIf(writer, 'labelStyle', style.labelStyle);
+      _styleValueIf<Color>(
+        writer,
+        'accentColor',
+        style.accentColor,
+        'Color',
+        DartSourceWriter.colorLiteral,
+      );
+      _styleValueIf<BoxShadow>(
+        writer,
+        'shadow',
+        style.shadow,
+        'BoxShadow',
+        _boxShadowLiteral,
+      );
+      _styleValueIf<double>(
+        writer,
+        'minWidth',
+        style.minWidth,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
+      _styleValueIf<double>(
+        writer,
+        'maxWidth',
+        style.maxWidth,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
+      _styleValueIf<double>(
+        writer,
+        'rowGap',
+        style.rowGap,
+        'double',
+        DartSourceWriter.numberLiteral,
+      );
+    });
+    writer.writeLine('),');
+  }
+
+  /// Emits one tri-state style override.
+  ///
+  /// Inherit is the constructor default and is omitted; an explicit clear is
+  /// emitted as `ChartStyleValue<T>.none()` with the type argument spelled
+  /// out because there is no payload to infer it from; an explicit value is
+  /// emitted as `ChartStyleValue.value(...)` and lets the payload infer it.
+  void _styleValueIf<T>(
+    DartSourceWriter writer,
+    String name,
+    ChartStyleValue<T> value,
+    String typeArgument,
+    String Function(T payload) literal,
+  ) {
+    switch (value) {
+      case ChartStyleInherit<T>():
+        if (options.includeDefaultValues) {
+          writer.namedArgument(
+            name,
+            'ChartStyleValue<$typeArgument>.inherit()',
+          );
+        }
+      case ChartStyleNone<T>():
+        writer.namedArgument(name, 'ChartStyleValue<$typeArgument>.none()');
+      case ChartStyleExplicit<T>(:final value):
+        writer.namedArgument(name, 'ChartStyleValue.value(${literal(value)})');
+    }
+  }
+
+  void _styleTextStyleValueIf(
+    DartSourceWriter writer,
+    String name,
+    ChartStyleValue<TextStyle> value,
+  ) {
+    switch (value) {
+      case ChartStyleInherit<TextStyle>():
+        if (options.includeDefaultValues) {
+          writer.namedArgument(name, 'ChartStyleValue<TextStyle>.inherit()');
+        }
+      case ChartStyleNone<TextStyle>():
+        writer.namedArgument(name, 'ChartStyleValue<TextStyle>.none()');
+      case ChartStyleExplicit<TextStyle>(:final value):
+        writer.writeLine('$name: ChartStyleValue.value(');
+        writer.indented(() {
+          writer.writeLine('TextStyle(');
+          writer.indented(() => _emitTextStyleArguments(writer, value));
+          writer.writeLine('),');
+        });
+        writer.writeLine('),');
+    }
+  }
+
+  String _alignmentLiteral(Alignment value) {
+    if (value == Alignment.topLeft) return 'Alignment.topLeft';
+    if (value == Alignment.topCenter) return 'Alignment.topCenter';
+    if (value == Alignment.topRight) return 'Alignment.topRight';
+    if (value == Alignment.centerLeft) return 'Alignment.centerLeft';
+    if (value == Alignment.center) return 'Alignment.center';
+    if (value == Alignment.centerRight) return 'Alignment.centerRight';
+    if (value == Alignment.bottomLeft) return 'Alignment.bottomLeft';
+    if (value == Alignment.bottomCenter) return 'Alignment.bottomCenter';
+    if (value == Alignment.bottomRight) return 'Alignment.bottomRight';
+    return 'Alignment(${DartSourceWriter.numberLiteral(value.x)}, '
+        '${DartSourceWriter.numberLiteral(value.y)})';
+  }
+
+  String _boxShadowLiteral(BoxShadow value) =>
+      'BoxShadow(color: ${DartSourceWriter.colorLiteral(value.color)}, '
+      'offset: ${_offsetLiteral(value.offset)}, '
+      'blurRadius: ${DartSourceWriter.numberLiteral(value.blurRadius)}, '
+      'spreadRadius: ${DartSourceWriter.numberLiteral(value.spreadRadius)}, '
+      'blurStyle: BlurStyle.${value.blurStyle.name})';
 
   void _emitCrosshairConfig(DartSourceWriter writer, CrosshairConfig config) {
     if (!options.includeDefaultValues && config == const CrosshairConfig()) {
@@ -3891,46 +4225,45 @@ class _ChartDartEmitter {
 
   void _emitTextStyle(DartSourceWriter writer, String name, TextStyle style) {
     writer.writeLine('$name: TextStyle(');
-    writer.indented(() {
-      _optionalColor(writer, 'color', style.color);
-      _optionalColor(writer, 'backgroundColor', style.backgroundColor);
-      _optionalNumber(writer, 'fontSize', style.fontSize);
-      if (style.fontWeight != null) {
-        writer.namedArgument(
-          'fontWeight',
-          _fontWeightLiteral(style.fontWeight!),
-        );
-      }
-      if (style.fontStyle != null) {
-        writer.namedArgument('fontStyle', 'FontStyle.${style.fontStyle!.name}');
-      }
-      _optionalNumber(writer, 'letterSpacing', style.letterSpacing);
-      _optionalNumber(writer, 'wordSpacing', style.wordSpacing);
-      _optionalNumber(writer, 'height', style.height);
-      _optionalString(writer, 'fontFamily', style.fontFamily);
-      if (style.decoration != null) {
-        final decoration = _textDecorationLiteral(style.decoration!);
-        if (decoration != null) {
-          writer.namedArgument('decoration', decoration);
-        } else {
-          _warn(
-            code: ChartSourceWarningCodes.unsupportedPortableValue,
-            message:
-                'A combined text decoration was omitted. Reapply it in the generated TextStyle.',
-            path: r'$.style.textStyle.decoration',
-          );
-        }
-      }
-      _optionalColor(writer, 'decorationColor', style.decorationColor);
-      if (style.decorationStyle != null) {
-        writer.namedArgument(
-          'decorationStyle',
-          'TextDecorationStyle.${style.decorationStyle!.name}',
-        );
-      }
-      _optionalNumber(writer, 'decorationThickness', style.decorationThickness);
-    });
+    writer.indented(() => _emitTextStyleArguments(writer, style));
     writer.writeLine('),');
+  }
+
+  void _emitTextStyleArguments(DartSourceWriter writer, TextStyle style) {
+    _optionalColor(writer, 'color', style.color);
+    _optionalColor(writer, 'backgroundColor', style.backgroundColor);
+    _optionalNumber(writer, 'fontSize', style.fontSize);
+    if (style.fontWeight != null) {
+      writer.namedArgument('fontWeight', _fontWeightLiteral(style.fontWeight!));
+    }
+    if (style.fontStyle != null) {
+      writer.namedArgument('fontStyle', 'FontStyle.${style.fontStyle!.name}');
+    }
+    _optionalNumber(writer, 'letterSpacing', style.letterSpacing);
+    _optionalNumber(writer, 'wordSpacing', style.wordSpacing);
+    _optionalNumber(writer, 'height', style.height);
+    _optionalString(writer, 'fontFamily', style.fontFamily);
+    if (style.decoration != null) {
+      final decoration = _textDecorationLiteral(style.decoration!);
+      if (decoration != null) {
+        writer.namedArgument('decoration', decoration);
+      } else {
+        _warn(
+          code: ChartSourceWarningCodes.unsupportedPortableValue,
+          message:
+              'A combined text decoration was omitted. Reapply it in the generated TextStyle.',
+          path: r'$.style.textStyle.decoration',
+        );
+      }
+    }
+    _optionalColor(writer, 'decorationColor', style.decorationColor);
+    if (style.decorationStyle != null) {
+      writer.namedArgument(
+        'decorationStyle',
+        'TextDecorationStyle.${style.decorationStyle!.name}',
+      );
+    }
+    _optionalNumber(writer, 'decorationThickness', style.decorationThickness);
   }
 
   String _fontWeightLiteral(FontWeight weight) => 'FontWeight.w${weight.value}';
