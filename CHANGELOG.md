@@ -5,9 +5,15 @@ All notable changes to the braven_charts package will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.10.0-dev.1
+
+Prerelease validating the new automated release pipeline; content below is
+release-candidate material for 0.10.0.
 
 ### Added
+- Label-driven release automation: merging a PR carrying the `release` label
+  tags the version, publishes to pub.dev via OIDC trusted publishing, and
+  deploys the showcase to GitHub Pages (see `docs/releasing.md`).
 - First-class typed OHLC charts through `CandlestickDataPoint`,
   `CandlestickChartSeries`, `CandlestickChartStyle`, theme-resolved rising,
   falling, and doji presentation, viewport-aware wick/body geometry, indexed
