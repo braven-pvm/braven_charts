@@ -2193,6 +2193,27 @@ class _ChartDartEmitter {
         });
         writer.writeLine('),');
       }
+      final composition = config.composition;
+      if (options.includeDefaultValues ||
+          composition != const PolarColumnCompositionConfig()) {
+        writer.writeLine('composition: PolarColumnCompositionConfig(');
+        writer.indented(() {
+          _enumIf(
+            writer,
+            'mode',
+            'PolarColumnCompositionMode',
+            composition.mode.name,
+            defaultName: 'layered',
+          );
+          _numberIf(
+            writer,
+            'groupInnerPadding',
+            composition.groupInnerPadding,
+            0.12,
+          );
+        });
+        writer.writeLine('),');
+      }
     });
     writer.writeLine('),');
   }

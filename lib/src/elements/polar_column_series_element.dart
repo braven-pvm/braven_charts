@@ -24,6 +24,11 @@ class PolarColumnSeriesElement implements DataHitElement {
     required Size size,
     required ChartTheme theme,
     int seriesIndex = 0,
+    int seriesCount = 1,
+    Iterable<double>? numericScaleValues,
+    bool paintGrid = true,
+    bool paintAxisLabels = true,
+    bool preferSeriesColor = false,
     Set<int> focusedPointIndices = const <int>{},
     Set<int> selectedPointIndices = const <int>{},
     double revealProgress = 1,
@@ -45,6 +50,9 @@ class PolarColumnSeriesElement implements DataHitElement {
       theme: theme,
       revealProgress: revealProgress,
       textScaleFactor: textScaleFactor,
+      numericScaleValues: numericScaleValues,
+      seriesIndex: seriesIndex,
+      seriesCount: seriesCount,
     );
     return PolarColumnSeriesElement._(
       series: series,
@@ -52,6 +60,10 @@ class PolarColumnSeriesElement implements DataHitElement {
       size: size,
       theme: theme,
       seriesIndex: seriesIndex,
+      seriesCount: seriesCount,
+      paintGrid: paintGrid,
+      paintAxisLabels: paintAxisLabels,
+      preferSeriesColor: preferSeriesColor,
       focusedPointIndices: focusedPointIndices,
       selectedPointIndices: selectedPointIndices,
       revealProgress: revealProgress,
@@ -68,6 +80,10 @@ class PolarColumnSeriesElement implements DataHitElement {
     required this.size,
     required this.theme,
     required this.seriesIndex,
+    required this.seriesCount,
+    required this.paintGrid,
+    required this.paintAxisLabels,
+    required this.preferSeriesColor,
     required this.focusedPointIndices,
     required this.selectedPointIndices,
     required this.revealProgress,
@@ -86,6 +102,22 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   @override
   final int seriesIndex;
+
+  /// Number of compatible series sharing this polar pane.
+  final int seriesCount;
+
+  /// Whether this element owns the composition-wide grid layer.
+  final bool paintGrid;
+
+  /// Whether this element owns the composition-wide axis-label layer.
+  final bool paintAxisLabels;
+
+  /// Uses a stable series palette color when no explicit color is supplied.
+  ///
+  /// Single-series Polar Column keeps its category palette. Layered
+  /// compositions use one fallback color per series so the layers remain
+  /// visually identifiable.
+  final bool preferSeriesColor;
 
   final Set<int> focusedPointIndices;
   final Set<int> selectedPointIndices;
@@ -174,14 +206,15 @@ class PolarColumnSeriesElement implements DataHitElement {
     for (final (index, point) in series.points.indexed)
       point.pointStyle?.color ??
           series.color ??
-          theme.seriesTheme.colors[index % theme.seriesTheme.colors.length],
+          theme.seriesTheme.colors[(preferSeriesColor ? seriesIndex : index) %
+              theme.seriesTheme.colors.length],
   ]);
 
   @override
   void paint(Canvas canvas, Size size) {
-    _paintGrid(canvas);
+    if (paintGrid) _paintGrid(canvas);
     _paintMarks(canvas);
-    _paintAxisLabels(canvas);
+    if (paintAxisLabels) _paintAxisLabels(canvas);
   }
 
   void _paintGrid(Canvas canvas) {
@@ -487,6 +520,14 @@ class PolarColumnSeriesElement implements DataHitElement {
         size: size,
         theme: theme,
         seriesIndex: seriesIndex,
+        seriesCount: seriesCount,
+        numericScaleValues: <double>[
+          numericScale.minimum,
+          numericScale.maximum,
+        ],
+        paintGrid: paintGrid,
+        paintAxisLabels: paintAxisLabels,
+        preferSeriesColor: preferSeriesColor,
         focusedPointIndices: focusedPointIndices,
         selectedPointIndices: selectedPointIndices,
         revealProgress: revealProgress,
@@ -520,6 +561,9 @@ _PolarColumnResolvedLayout _resolveLayout({
   required ChartTheme theme,
   required double revealProgress,
   required double textScaleFactor,
+  Iterable<double>? numericScaleValues,
+  required int seriesIndex,
+  required int seriesCount,
 }) {
   config.validate();
   if (!size.width.isFinite ||
@@ -566,7 +610,7 @@ _PolarColumnResolvedLayout _resolveLayout({
           : PolarRadialScaleMode.linear);
   final numericScale = PolarNumericScale.fromValues(
     pane: pane,
-    values: series.points.map((point) => point.y),
+    values: numericScaleValues ?? series.points.map((point) => point.y),
     minimum: config.radialAxis.minimum,
     maximum: config.radialAxis.maximum,
     mode: switch (scaleMode) {
@@ -585,6 +629,13 @@ _PolarColumnResolvedLayout _resolveLayout({
     values: animatedValues,
     baseline: baseline,
     cornerRadius: series.polarStyle.cornerRadius * revealProgress,
+    groupIndex: config.composition.mode == PolarColumnCompositionMode.grouped
+        ? seriesIndex
+        : 0,
+    groupCount: config.composition.mode == PolarColumnCompositionMode.grouped
+        ? seriesCount
+        : 1,
+    groupInnerPadding: config.composition.groupInnerPadding,
   );
   final visibleAngularLabelIndices = config.angularAxis.showLabels
       ? _resolveVisibleAngularLabelIndices(

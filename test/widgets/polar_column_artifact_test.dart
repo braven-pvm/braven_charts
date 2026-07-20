@@ -157,6 +157,200 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'round-trips layered Polar Column series with explicit capability',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      final series = <PolarColumnChartSeries>[
+        PolarColumnChartSeries.fromMap(
+          id: 'capacity',
+          name: 'Capacity',
+          unit: 'orders',
+          color: const Color(0xFF94A3B8),
+          values: const {'Search': 100, 'Social': 80, 'Partners': 90},
+          polarStyle: const PolarColumnStyle(
+            opacity: 0.35,
+            showDataLabels: false,
+          ),
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'observed',
+          name: 'Observed',
+          unit: 'orders',
+          color: const Color(0xFF2563EB),
+          values: const {'Search': 64, 'Social': 48, 'Partners': 72},
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            polarChartConfig: const PolarChartConfig(),
+            series: series,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final snapshot = _snapshot(
+        controller.extractDocument(
+          const ChartDocumentExtractOptions(documentId: 'polar-comparison'),
+        ),
+      );
+      expect(snapshot.document.series, hasLength(2));
+      expect(
+        snapshot.document.requiredCapabilities,
+        contains('chart.polar.multiple-series.v1'),
+      );
+
+      final table = ChartTableModel.fromDocument(snapshot.document);
+      expect(table.projectionKind, ChartTableProjectionKind.polar);
+      expect(table.polarRows, hasLength(6));
+      expect(table.polarRows.map((row) => row.seriesId), [
+        'capacity',
+        'capacity',
+        'capacity',
+        'observed',
+        'observed',
+        'observed',
+      ]);
+      final export = ChartTableExporter.csvForDisplayedRows(
+        table,
+        polarRows: table.polarRows,
+      );
+      expect(export.csv, contains('Capacity'));
+      expect(export.csv, contains('Observed'));
+
+      final hydrated = _configuration(
+        ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      );
+      expect(hydrated.series.map((item) => item.id), ['capacity', 'observed']);
+      expect(
+        hydrated.series.every((item) => item is PolarColumnChartSeries),
+        isTrue,
+      );
+
+      final generated = ChartDartSourceGenerator.generate(snapshot);
+      expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+      final source = (generated as ChartArtifactSuccess<ChartGeneratedSource>)
+          .value
+          .source;
+      expect(
+        RegExp('PolarColumnChartSeries\\(').allMatches(source),
+        hasLength(2),
+      );
+      expect(source, contains("id: 'capacity'"));
+      expect(source, contains("id: 'observed'"));
+
+      final invalidJson = snapshot.document.toJson();
+      invalidJson['requiredCapabilities'] = snapshot
+          .document
+          .requiredCapabilities
+          .where((capability) => capability != 'chart.polar.multiple-series.v1')
+          .toList();
+      final invalid = ChartDocumentHydrator.hydrateDocument(
+        ChartDocument.fromJson(invalidJson),
+      );
+      expect(invalid, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+      expect(
+        (invalid as ChartArtifactFailure<HydratedChartConfiguration>)
+            .error
+            .message,
+        contains('chart.polar.multiple-series.v1'),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('round-trips grouped Polar Column composition', (tester) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    const config = PolarChartConfig(
+      composition: PolarColumnCompositionConfig(
+        mode: PolarColumnCompositionMode.grouped,
+        groupInnerPadding: 0.18,
+      ),
+    );
+    final series = <PolarColumnChartSeries>[
+      PolarColumnChartSeries.fromMap(
+        id: 'north',
+        name: 'North',
+        unit: 'orders',
+        values: const {'Search': 54, 'Social': 38},
+      ),
+      PolarColumnChartSeries.fromMap(
+        id: 'south',
+        name: 'South',
+        unit: 'orders',
+        values: const {'Search': 47, 'Social': 42},
+      ),
+      PolarColumnChartSeries.fromMap(
+        id: 'west',
+        name: 'West',
+        unit: 'orders',
+        values: const {'Search': 41, 'Social': 35},
+      ),
+    ];
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: config,
+          series: series,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final snapshot = _snapshot(controller.extractDocument());
+    expect(
+      snapshot.document.requiredCapabilities,
+      containsAll({
+        'chart.polar.multiple-series.v1',
+        'chart.polar.grouped-series.v1',
+      }),
+    );
+    final table = ChartTableModel.fromDocument(snapshot.document);
+    expect(table.polarRows, hasLength(6));
+    expect(table.polarRows.map((row) => row.seriesName).toSet(), {
+      'North',
+      'South',
+      'West',
+    });
+
+    final hydrated = _configuration(
+      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+    );
+    expect(hydrated.polarChartConfig, config);
+    expect(hydrated.series.map((item) => item.id), ['north', 'south', 'west']);
+
+    final generated = ChartDartSourceGenerator.generate(snapshot);
+    expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+    final source =
+        (generated as ChartArtifactSuccess<ChartGeneratedSource>).value.source;
+    expect(source, contains('PolarColumnCompositionMode.grouped'));
+    expect(source, contains('groupInnerPadding: 0.18'));
+
+    final invalidJson = snapshot.document.toJson();
+    invalidJson['requiredCapabilities'] = snapshot.document.requiredCapabilities
+        .where((capability) => capability != 'chart.polar.grouped-series.v1')
+        .toList();
+    final invalid = ChartDocumentHydrator.hydrateDocument(
+      ChartDocument.fromJson(invalidJson),
+    );
+    expect(invalid, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+    expect(
+      (invalid as ChartArtifactFailure<HydratedChartConfiguration>)
+          .error
+          .message,
+      contains('chart.polar.grouped-series.v1'),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _host(Widget child) => MaterialApp(

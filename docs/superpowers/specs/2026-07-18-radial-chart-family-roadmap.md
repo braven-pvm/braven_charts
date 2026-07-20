@@ -409,7 +409,7 @@ selection identity, table rows, and portable center fallback.
 
 ### Phase 2 — Polar coordinate foundation + Polar Column V1
 
-Status: complete on the review branch and ready for PR. The radial-pane geometry,
+Status: complete and merged. The radial-pane geometry,
 bidirectional polar transform, category and numeric scales, public V1 series
 and configuration, renderer, selection, native table, deterministic artifact
 and hydration, Workbench, generated source, dedicated showcase, Chart Types,
@@ -420,8 +420,8 @@ acceptance is recorded.
 Focused goldens now cover normal, compact dense, constrained partial-sweep, and
 high-contrast large-text layouts. Reduced motion resolves immediately to final
 geometry, and dense angular/direct labels thin without removing semantic or
-table data. The branch is rebased onto the published `0.9.0` mainline; PR review
-and merge remain before release.
+table data. The V1 implementation is now the mainline foundation for
+composition hardening.
 
 Deliver:
 
@@ -446,10 +446,17 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
+Status: active. Slices 3.1 and 3.2 add declaration-order layered comparison and
+grouped angular sub-bands for multiple compatible Polar Column series.
+Compatible series share category identity/order, preset, unit, pane, and one
+global radial scale. Grouping preserves full per-series rows and exact
+`(seriesId, pointIndex)` selection identity. Stacking remains explicitly out of
+scope until slice 3.3.
+
 Deliver in small slices:
 
-1. multiple compatible series;
-2. grouping;
+1. multiple compatible series — implemented as layered composition in 3.1;
+2. grouping — implemented as stable category sub-bands in 3.2;
 3. stacking with explicit positive/negative rules;
 4. thresholds/targets;
 5. errors/ranges if the polar presentation remains legible and accessible;

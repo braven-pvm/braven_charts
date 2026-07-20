@@ -156,19 +156,33 @@ void main() {
       expect(ChartLayoutResolver.resolve([polar]), ChartLayoutKind.polarAxis);
     });
 
-    test('rejects mixed and multi-series Polar Column compositions in V1', () {
+    test('accepts compatible layered Polar Column series', () {
       final first = PolarColumnChartSeries.fromMap(
         id: 'first',
-        values: const {'A': 1},
+        values: const {'A': 1, 'B': 2},
+        unit: 'requests',
       );
       final second = PolarColumnChartSeries.fromMap(
         id: 'second',
-        values: const {'A': 2},
+        values: const {'A': 2, 'B': 3},
+        unit: 'requests',
+      );
+
+      expect(
+        ChartLayoutResolver.resolve([first, second]),
+        ChartLayoutKind.polarAxis,
+      );
+    });
+
+    test('rejects mixed Polar Column compositions', () {
+      final polar = PolarColumnChartSeries.fromMap(
+        id: 'polar',
+        values: const {'A': 1},
       );
 
       expect(
         () => ChartLayoutResolver.resolve([
-          first,
+          polar,
           const LineChartSeries(id: 'line', points: []),
         ]),
         throwsA(
@@ -179,15 +193,59 @@ void main() {
           ),
         ),
       );
-      expect(
-        () => ChartLayoutResolver.resolve([first, second]),
-        throwsA(
-          isA<ArgumentError>().having(
-            (error) => error.message,
-            'message',
-            contains('exactly one PolarColumnChartSeries'),
-          ),
+    });
+
+    test('rejects incompatible layered Polar Column series', () {
+      final reference = PolarColumnChartSeries.fromMap(
+        id: 'reference',
+        values: const {'A': 1, 'B': 2},
+        unit: 'requests',
+      );
+
+      Matcher rejectsWith(String message) => throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          contains(message),
         ),
+      );
+
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          PolarColumnChartSeries.fromMap(
+            id: 'different-order',
+            values: const {'B': 2, 'A': 1},
+            unit: 'requests',
+          ),
+        ]),
+        rejectsWith('same categories in the same order'),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          PolarColumnChartSeries.rose(
+            id: 'different-preset',
+            values: const {'A': 2, 'B': 3},
+            unit: 'requests',
+          ),
+        ]),
+        rejectsWith('same preset'),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([
+          reference,
+          PolarColumnChartSeries.fromMap(
+            id: 'different-unit',
+            values: const {'A': 2, 'B': 3},
+            unit: 'milliseconds',
+          ),
+        ]),
+        rejectsWith('same unit'),
+      );
+      expect(
+        () => ChartLayoutResolver.resolve([reference, reference.copyWith()]),
+        rejectsWith('IDs must be unique'),
       );
     });
 
@@ -320,6 +378,38 @@ void main() {
           (error) => error.message,
           'message',
           contains('cannot be mixed'),
+        ),
+      );
+    });
+
+    testWidgets('grouped Polar Column requires multiple series at runtime', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: BravenChartPlus(
+            series: [
+              PolarColumnChartSeries.fromMap(
+                id: 'only',
+                values: const {'A': 1, 'B': 2},
+              ),
+            ],
+            polarChartConfig: const PolarChartConfig(
+              composition: PolarColumnCompositionConfig(
+                mode: PolarColumnCompositionMode.grouped,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.takeException(),
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          contains('requires at least two series'),
         ),
       );
     });

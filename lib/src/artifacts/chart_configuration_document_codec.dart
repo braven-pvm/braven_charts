@@ -246,6 +246,10 @@ abstract final class ChartConfigurationDocumentCodec {
               'showLabels': config.radialAxis.showLabels,
               'showGridLines': config.radialAxis.showGridLines,
             },
+            'composition': {
+              'mode': config.composition.mode.name,
+              'groupInnerPadding': config.composition.groupInnerPadding,
+            },
           }, path: path),
         }),
       );
@@ -274,6 +278,14 @@ abstract final class ChartConfigurationDocumentCodec {
       final pane = _requiredMap(map, 'pane', path);
       final angular = _requiredMap(map, 'angularAxis', path);
       final radial = _requiredMap(map, 'radialAxis', path);
+      final composition = switch (map['composition']) {
+        null => null,
+        final Map value => value.cast<String, Object?>(),
+        _ => throw const _ConfigurationFormatException(
+          'Optional object field "composition" is invalid.',
+          '$path.composition',
+        ),
+      };
       final config = PolarChartConfig(
         pane: PolarPaneConfig(
           startAngleDegrees: _requiredDouble(
@@ -334,6 +346,21 @@ abstract final class ChartConfigurationDocumentCodec {
             '$path.radialAxis',
           ),
         ),
+        composition: composition == null
+            ? const PolarColumnCompositionConfig()
+            : PolarColumnCompositionConfig(
+                mode: _requiredEnum(
+                  composition,
+                  'mode',
+                  PolarColumnCompositionMode.values,
+                  '$path.composition',
+                ),
+                groupInnerPadding: _requiredDouble(
+                  composition,
+                  'groupInnerPadding',
+                  '$path.composition',
+                ),
+              ),
       );
       config.validate();
       return ChartArtifactSuccess(value: config);

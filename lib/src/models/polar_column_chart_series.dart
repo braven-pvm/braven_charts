@@ -96,6 +96,9 @@ class PolarColumnStyle {
 ///
 /// Angle communicates category position. Radius communicates [ChartDataPoint.y]
 /// against an explicit numeric axis; values are not converted into Pie shares.
+/// Multiple compatible series may be layered in declaration order or grouped
+/// into stable angular sub-bands. They share category labels/order, preset,
+/// unit, and one radial scale. Stacking is a separate composition contract.
 class PolarColumnChartSeries extends ChartSeries {
   PolarColumnChartSeries({
     required super.id,

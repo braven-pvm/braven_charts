@@ -102,6 +102,9 @@ abstract final class PolarColumnGeometryCalculator {
     double? baseline,
     double cornerRadius = 0,
     bool roundInnerCorners = false,
+    int groupIndex = 0,
+    int groupCount = 1,
+    double groupInnerPadding = 0,
   }) {
     if (!identical(categoryScale.pane, numericScale.pane)) {
       throw ArgumentError(
@@ -121,6 +124,29 @@ abstract final class PolarColumnGeometryCalculator {
         cornerRadius,
         'cornerRadius',
         'Value must be finite and non-negative',
+      );
+    }
+    if (groupCount < 1) {
+      throw ArgumentError.value(
+        groupCount,
+        'groupCount',
+        'Group count must be at least one',
+      );
+    }
+    if (groupIndex < 0 || groupIndex >= groupCount) {
+      throw ArgumentError.value(
+        groupIndex,
+        'groupIndex',
+        'Group index must be inside the group count',
+      );
+    }
+    if (!groupInnerPadding.isFinite ||
+        groupInnerPadding < 0 ||
+        groupInnerPadding >= 1) {
+      throw ArgumentError.value(
+        groupInnerPadding,
+        'groupInnerPadding',
+        'Group padding must be finite and in [0, 1)',
       );
     }
 
@@ -145,7 +171,12 @@ abstract final class PolarColumnGeometryCalculator {
           'Polar Column V1 values must be finite and at least the baseline',
         );
       }
-      final band = categoryScale.bandAt(index);
+      final band = _resolveGroupBand(
+        categoryScale.bandAt(index),
+        groupIndex: groupIndex,
+        groupCount: groupCount,
+        groupInnerPadding: groupInnerPadding,
+      );
       final valueRadius = numericScale.valueToRadius(value);
       final sector = AnnularSectorGeometry(
         center: categoryScale.pane.center,
@@ -181,4 +212,21 @@ abstract final class PolarColumnGeometryCalculator {
 
     return PolarColumnGeometry._(marks: marks);
   }
+}
+
+PolarCategoryBand _resolveGroupBand(
+  PolarCategoryBand categoryBand, {
+  required int groupIndex,
+  required int groupCount,
+  required double groupInnerPadding,
+}) {
+  if (groupCount == 1) return categoryBand;
+  final slotSweep = categoryBand.sweepAngle / groupCount;
+  final gapSweep = slotSweep * groupInnerPadding;
+  return PolarCategoryBand(
+    category: categoryBand.category,
+    index: categoryBand.index,
+    startAngle: categoryBand.startAngle + slotSweep * groupIndex + gapSweep / 2,
+    sweepAngle: slotSweep - gapSweep,
+  );
 }

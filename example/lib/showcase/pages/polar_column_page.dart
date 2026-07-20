@@ -25,6 +25,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   _PolarPresentation _presentation = _PolarPresentation.standard;
   late Map<String, num> _values;
+  late Map<String, num> _comparisonValues;
+  late Map<String, num> _tertiaryValues;
   int _categoryCount = 8;
   double _startAngle = -90;
   double _sweepAngle = 360;
@@ -33,6 +35,9 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _outerRadius = 0.84;
   double _innerPadding = 0.12;
   double _outerPadding = 0.04;
+  PolarColumnCompositionMode _compositionMode =
+      PolarColumnCompositionMode.layered;
+  double _groupInnerPadding = 0.12;
   PolarRadialScaleMode _scaleMode = PolarRadialScaleMode.linear;
   int _tickCount = 5;
   bool _showAngularLabels = true;
@@ -43,6 +48,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _cornerRadius = 4;
   double _opacity = 0.94;
   String? _selectedCategory;
+  String? _selectedSeries;
 
   static const _standardValues = <String, num>{
     'Search': 86,
@@ -79,6 +85,51 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     'Renew': 79,
   };
 
+  static const _layeredObservedValues = <String, num>{
+    'Search': 72,
+    'Social': 48,
+    'Partners': 68,
+    'Email': 39,
+    'Events': 61,
+    'Direct': 83,
+  };
+
+  static const _layeredCapacityValues = <String, num>{
+    'Search': 92,
+    'Social': 70,
+    'Partners': 84,
+    'Email': 62,
+    'Events': 78,
+    'Direct': 96,
+  };
+
+  static const _groupedNorthValues = <String, num>{
+    'Search': 78,
+    'Social': 46,
+    'Partners': 64,
+    'Email': 52,
+    'Events': 70,
+    'Direct': 58,
+  };
+
+  static const _groupedSouthValues = <String, num>{
+    'Search': 62,
+    'Social': 69,
+    'Partners': 51,
+    'Email': 73,
+    'Events': 55,
+    'Direct': 82,
+  };
+
+  static const _groupedWestValues = <String, num>{
+    'Search': 54,
+    'Social': 57,
+    'Partners': 76,
+    'Email': 61,
+    'Events': 84,
+    'Direct': 67,
+  };
+
   static const _columnColors = <Color>[
     Color(0xFF2563EB),
     Color(0xFF0891B2),
@@ -102,6 +153,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   void initState() {
     super.initState();
     _values = Map<String, num>.of(_standardValues);
+    _comparisonValues = const {};
+    _tertiaryValues = const {};
   }
 
   @override
@@ -157,8 +210,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   }
 
   Widget _buildPresentationSelector(double availableWidth) {
-    final compact = availableWidth < 760;
-    final cardWidth = compact ? availableWidth : (availableWidth - 16) / 3;
+    final columns = availableWidth < 720
+        ? 1
+        : availableWidth < 900
+        ? 2
+        : 3;
+    final cardWidth = (availableWidth - (columns - 1) * 8) / columns;
     return Semantics(
       container: true,
       label: 'Choose a Polar Column presentation',
@@ -185,7 +242,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     final scheme = theme.colorScheme;
     final selection = _selectedCategory == null
         ? 'Select a column to inspect its exact category and value.'
-        : 'Selected: $_selectedCategory. Select it again or press Escape to clear.';
+        : 'Selected: ${_selectedSeries == null ? '' : '$_selectedSeries · '}$_selectedCategory. '
+              'Select it again or press Escape to clear.';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -230,6 +288,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     final isDark = theme.brightness == Brightness.dark;
     final chartTheme = isDark ? ChartTheme.dark : ChartTheme.light;
     final config = _buildPolarConfig();
+    final chartSeries = _buildSeriesList();
 
     return Card(
       key: const ValueKey('polar-column-chart-card'),
@@ -271,8 +330,34 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                       ? 'Area-correct'
                       : 'Linear radius',
                 ),
+                if (chartSeries.length > 1) ...[
+                  const SizedBox(width: 8),
+                  _MetricChip(
+                    label:
+                        _compositionMode == PolarColumnCompositionMode.grouped
+                        ? '${chartSeries.length} grouped series'
+                        : '${chartSeries.length} layered series',
+                  ),
+                ],
               ],
             ),
+            if (chartSeries.length > 1) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  for (final (index, series) in chartSeries.indexed)
+                    _SeriesKey(
+                      color:
+                          series.color ??
+                          chartTheme.seriesTheme.colors[index %
+                              chartTheme.seriesTheme.colors.length],
+                      label: _seriesKeyLabel(series, index),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             SizedBox(
               key: const ValueKey('polar-column-live-chart'),
@@ -309,7 +394,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                 onTableRowActivated: _selectTablePoints,
                 chartBuilder: (context, controller) => BravenChartPlus(
                   key: const ValueKey('polar-column-chart'),
-                  series: [_buildSeries()],
+                  series: chartSeries,
                   polarChartConfig: config,
                   bravenChartController: controller,
                   theme: chartTheme,
@@ -347,7 +432,20 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       showLabels: _showRadialLabels,
       showGridLines: _showRadialGrid,
     ),
+    composition: PolarColumnCompositionConfig(
+      mode: _compositionMode,
+      groupInnerPadding: _groupInnerPadding,
+    ),
   );
+
+  String _seriesKeyLabel(PolarColumnChartSeries series, int index) {
+    if (_presentation == _PolarPresentation.layered) {
+      return index == 0
+          ? '${series.name ?? series.id} · reference layer'
+          : '${series.name ?? series.id} · foreground layer';
+    }
+    return series.name ?? series.id;
+  }
 
   void _focusTablePoints(List<ChartPointRef> points) {
     final revision =
@@ -365,16 +463,22 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     final target = points.first;
     if (_chartController.selectedPointRefs.contains(target)) {
       _chartController.clearPointSelection();
-      setState(() => _selectedCategory = null);
+      setState(() {
+        _selectedCategory = null;
+        _selectedSeries = null;
+      });
       return;
     }
     final result = _chartController.selectPoints(points, revision: revision);
     if (result case ChartArtifactSuccess<void>()) {
-      final series = _buildSeries();
+      final series = _seriesForId(target.seriesId);
       final point = target.pointIndex < series.points.length
           ? series.points[target.pointIndex]
           : null;
-      setState(() => _selectedCategory = point?.label);
+      setState(() {
+        _selectedCategory = point?.label;
+        _selectedSeries = series.name ?? series.id;
+      });
     }
   }
 
@@ -383,10 +487,17 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     final isSelected = _chartController.selectedPointRefs.contains(
       ChartPointRef(seriesId: seriesId, pointIndex: pointIndex),
     );
-    setState(() => _selectedCategory = isSelected ? point.label : null);
+    final series = _seriesForId(seriesId);
+    setState(() {
+      _selectedCategory = isSelected ? point.label : null;
+      _selectedSeries = isSelected ? (series.name ?? series.id) : null;
+    });
   }
 
-  PolarColumnChartSeries _buildSeries() {
+  PolarColumnChartSeries _seriesForId(String seriesId) =>
+      _buildSeriesList().firstWhere((series) => series.id == seriesId);
+
+  List<PolarColumnChartSeries> _buildSeriesList() {
     final colors = <String, Color>{};
     for (final (index, category) in _values.keys.indexed) {
       colors[category] = _columnColors[index % _columnColors.length];
@@ -398,23 +509,79 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       borderWidth: 0.75,
       showDataLabels: _showValues,
     );
-    return _presentation == _PolarPresentation.rose
-        ? PolarColumnChartSeries.rose(
-            id: 'showcase-polar-column',
-            name: 'Monthly volume',
-            values: _values,
-            columnColors: colors,
-            unit: 'requests',
-            polarStyle: style,
-          )
-        : PolarColumnChartSeries.fromMap(
-            id: 'showcase-polar-column',
-            name: 'Category volume',
-            values: _values,
-            columnColors: colors,
-            unit: 'requests',
-            polarStyle: style,
-          );
+    if (_presentation == _PolarPresentation.layered) {
+      return [
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-capacity',
+          name: 'Capacity',
+          values: _comparisonValues,
+          color: const Color(0xFF94A3B8),
+          unit: 'orders',
+          polarStyle: PolarColumnStyle(
+            cornerRadius: _cornerRadius,
+            opacity: math.min(_opacity, 0.32),
+            borderColor: const Color(0xFF64748B),
+            borderWidth: 0.75,
+            showDataLabels: false,
+          ),
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-observed',
+          name: 'Observed',
+          values: _values,
+          color: const Color(0xFF2563EB),
+          unit: 'orders',
+          polarStyle: style,
+        ),
+      ];
+    }
+    if (_presentation == _PolarPresentation.grouped) {
+      return [
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-north',
+          name: 'North',
+          values: _values,
+          color: const Color(0xFF2563EB),
+          unit: 'orders',
+          polarStyle: style,
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-south',
+          name: 'South',
+          values: _comparisonValues,
+          color: const Color(0xFF0D9488),
+          unit: 'orders',
+          polarStyle: style,
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-west',
+          name: 'West',
+          values: _tertiaryValues,
+          color: const Color(0xFFF59E0B),
+          unit: 'orders',
+          polarStyle: style,
+        ),
+      ];
+    }
+    return [
+      _presentation == _PolarPresentation.rose
+          ? PolarColumnChartSeries.rose(
+              id: 'showcase-polar-column',
+              name: 'Monthly volume',
+              values: _values,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: style,
+            )
+          : PolarColumnChartSeries.fromMap(
+              id: 'showcase-polar-column',
+              name: 'Category volume',
+              values: _values,
+              columnColors: colors,
+              unit: 'requests',
+              polarStyle: style,
+            ),
+    ];
   }
 
   List<Widget> _buildOptions() => [
@@ -432,6 +599,34 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ],
     ),
+    if (_presentation == _PolarPresentation.layered ||
+        _presentation == _PolarPresentation.grouped)
+      OptionSection(
+        title: 'Series composition',
+        icon: Icons.view_week_outlined,
+        children: [
+          EnumOption<PolarColumnCompositionMode>(
+            label: 'Arrangement',
+            value: _compositionMode,
+            values: PolarColumnCompositionMode.values,
+            labelBuilder: (value) => switch (value) {
+              PolarColumnCompositionMode.layered => 'Layered',
+              PolarColumnCompositionMode.grouped => 'Grouped',
+            },
+            onChanged: (value) => setState(() => _compositionMode = value),
+          ),
+          if (_compositionMode == PolarColumnCompositionMode.grouped)
+            SliderOption(
+              label: 'Gap between series',
+              value: _groupInnerPadding,
+              min: 0,
+              max: 0.5,
+              divisions: 20,
+              decimalPlaces: 2,
+              onChanged: (value) => setState(() => _groupInnerPadding = value),
+            ),
+        ],
+      ),
     OptionSection(
       title: 'Polar pane',
       icon: Icons.radar_outlined,
@@ -600,20 +795,38 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         'Rose is area-correct',
         'The Nightingale preset maps values to annular-sector area by default.',
       ),
+      (
+        Icons.layers_outlined,
+        'Layers share one scale',
+        'Compatible series can compare observed and reference values in the same category bands.',
+      ),
+      (
+        Icons.view_week_outlined,
+        'Groups divide the band',
+        'Each series receives a stable angular sub-band while the category and radial scale stay shared.',
+      ),
     ];
     return _Section(
       eyebrow: 'FEATURE GUIDE',
       title: 'An axis-based radial chart—not a Pie chart',
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final columns = constraints.maxWidth < 720 ? 1 : 3;
+          final columns = constraints.maxWidth < 720
+              ? 1
+              : constraints.maxWidth < 900
+              ? 2
+              : 3;
           return GridView.count(
             crossAxisCount: columns,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: columns == 1 ? 3.8 : 1.8,
+            childAspectRatio: columns == 1
+                ? 3.8
+                : columns == 2
+                ? 2.25
+                : 1.55,
             children: [
               for (final item in items)
                 _FeatureCard(icon: item.$1, title: item.$2, body: item.$3),
@@ -626,20 +839,31 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   Widget _buildCodeRecipe() => const _Section(
     eyebrow: 'HOW TO USE IT',
-    title: 'Declare categories once, then configure the polar pane',
+    title: 'Group compatible series inside each category band',
     child: _CodeBlock(
-      code: '''final series = PolarColumnChartSeries.rose(
-  id: 'monthly-volume',
-  values: const {'Jan': 42, 'Feb': 58, 'Mar': 76},
-  unit: 'requests',
+      code: '''final north = PolarColumnChartSeries.fromMap(
+  id: 'north',
+  values: const {'Search': 78, 'Social': 46, 'Partners': 64},
+  unit: 'orders',
+);
+
+final south = PolarColumnChartSeries.fromMap(
+  id: 'south',
+  values: const {'Search': 62, 'Social': 69, 'Partners': 51},
+  unit: 'orders',
 );
 
 BravenChartPlus(
-  series: [series],
+  // Same categories, order, preset, and unit; one shared radial scale.
+  series: [north, south],
   polarChartConfig: const PolarChartConfig(
     pane: PolarPaneConfig(startAngleDegrees: -90),
     angularAxis: PolarCategoryAxisConfig(innerPadding: 0.12),
     radialAxis: PolarNumericAxisConfig(tickCount: 5),
+    composition: PolarColumnCompositionConfig(
+      mode: PolarColumnCompositionMode.grouped,
+      groupInnerPadding: 0.12,
+    ),
   ),
 );''',
     ),
@@ -649,6 +873,9 @@ BravenChartPlus(
     setState(() {
       _presentation = presentation;
       _selectedCategory = null;
+      _selectedSeries = null;
+      _comparisonValues = const {};
+      _tertiaryValues = const {};
       switch (presentation) {
         case _PolarPresentation.standard:
           _values = Map<String, num>.of(_standardValues);
@@ -662,6 +889,8 @@ BravenChartPlus(
           _outerPadding = 0.04;
           _scaleMode = PolarRadialScaleMode.linear;
           _cornerRadius = 4;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
         case _PolarPresentation.rose:
           _values = Map<String, num>.of(_roseValues);
           _categoryCount = _values.length;
@@ -674,6 +903,8 @@ BravenChartPlus(
           _outerPadding = 0;
           _scaleMode = PolarRadialScaleMode.areaCorrect;
           _cornerRadius = 6;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
         case _PolarPresentation.partial:
           _values = Map<String, num>.of(_partialValues);
           _categoryCount = _values.length;
@@ -686,6 +917,39 @@ BravenChartPlus(
           _outerPadding = 0.08;
           _scaleMode = PolarRadialScaleMode.linear;
           _cornerRadius = 8;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
+        case _PolarPresentation.layered:
+          _values = Map<String, num>.of(_layeredObservedValues);
+          _comparisonValues = Map<String, num>.of(_layeredCapacityValues);
+          _categoryCount = _values.length;
+          _startAngle = -90;
+          _sweepAngle = 360;
+          _clockwise = true;
+          _innerRadius = 0.12;
+          _outerRadius = 0.86;
+          _innerPadding = 0.16;
+          _outerPadding = 0.04;
+          _scaleMode = PolarRadialScaleMode.linear;
+          _cornerRadius = 5;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
+        case _PolarPresentation.grouped:
+          _values = Map<String, num>.of(_groupedNorthValues);
+          _comparisonValues = Map<String, num>.of(_groupedSouthValues);
+          _tertiaryValues = Map<String, num>.of(_groupedWestValues);
+          _categoryCount = _values.length;
+          _startAngle = -90;
+          _sweepAngle = 360;
+          _clockwise = true;
+          _innerRadius = 0.1;
+          _outerRadius = 0.88;
+          _innerPadding = 0.12;
+          _outerPadding = 0.04;
+          _scaleMode = PolarRadialScaleMode.linear;
+          _cornerRadius = 4;
+          _compositionMode = PolarColumnCompositionMode.grouped;
+          _groupInnerPadding = 0.12;
       }
     });
   }
@@ -694,14 +958,38 @@ BravenChartPlus(
     setState(() {
       _categoryCount = count;
       _selectedCategory = null;
-      _values = _randomValues(count);
+      _selectedSeries = null;
+      if (_presentation == _PolarPresentation.layered) {
+        final generated = _randomLayeredValues(count);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+      } else if (_presentation == _PolarPresentation.grouped) {
+        final generated = _randomGroupedValues(count);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
+      } else {
+        _values = _randomValues(count);
+      }
     });
   }
 
   void _regenerateValues() {
     setState(() {
       _selectedCategory = null;
-      _values = _randomValues(_categoryCount);
+      _selectedSeries = null;
+      if (_presentation == _PolarPresentation.layered) {
+        final generated = _randomLayeredValues(_categoryCount);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+      } else if (_presentation == _PolarPresentation.grouped) {
+        final generated = _randomGroupedValues(_categoryCount);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
+      } else {
+        _values = _randomValues(_categoryCount);
+      }
     });
   }
 
@@ -709,6 +997,21 @@ BravenChartPlus(
     for (var index = 0; index < count; index++)
       'Category ${index + 1}': 24 + _random.nextInt(77),
   };
+
+  (Map<String, num>, Map<String, num>) _randomLayeredValues(int count) {
+    final observed = _randomValues(count);
+    return (
+      observed,
+      {
+        for (final entry in observed.entries)
+          entry.key: entry.value + 8 + _random.nextInt(17),
+      },
+    );
+  }
+
+  (Map<String, num>, Map<String, num>, Map<String, num>) _randomGroupedValues(
+    int count,
+  ) => (_randomValues(count), _randomValues(count), _randomValues(count));
 }
 
 enum _PolarPresentation {
@@ -732,6 +1035,20 @@ enum _PolarPresentation {
     Icons.speed_outlined,
     'Lifecycle conversion',
     'A 240° pane demonstrates start angle, sweep, and annular baselines',
+  ),
+  layered(
+    'Layered comparison',
+    'Observed values over a compatible reference layer',
+    Icons.layers_outlined,
+    'Observed demand against capacity',
+    'Two compatible series share category bands and one numeric radial scale',
+  ),
+  grouped(
+    'Grouped comparison',
+    'Series sit side by side inside every category band',
+    Icons.view_week_outlined,
+    'Regional orders by channel',
+    'Three regions divide each category band and share one numeric radial scale',
   );
 
   const _PolarPresentation(
@@ -839,6 +1156,30 @@ class _MetricChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+  );
+}
+
+class _SeriesKey extends StatelessWidget {
+  const _SeriesKey({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 18,
+        height: 4,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+      const SizedBox(width: 7),
+      Text(label, style: Theme.of(context).textTheme.labelMedium),
+    ],
   );
 }
 

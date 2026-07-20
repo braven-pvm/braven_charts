@@ -1254,6 +1254,43 @@ void main() {
       expect(generated.source, contains('useModifierKeys: false'));
     });
 
+    test('emits grouped Polar Column composition settings', () {
+      final generated = _success(
+        ChartDartSourceGenerator.generate(
+          _snapshot(
+            PolarColumnChartSeries.fromMap(
+              id: 'north',
+              unit: 'orders',
+              values: const {'Search': 42, 'Social': 28},
+            ),
+            additionalSeries: [
+              PolarColumnChartSeries.fromMap(
+                id: 'south',
+                unit: 'orders',
+                values: const {'Search': 36, 'Social': 31},
+              ),
+            ],
+            polarChartConfig: const PolarChartConfig(
+              composition: PolarColumnCompositionConfig(
+                mode: PolarColumnCompositionMode.grouped,
+                groupInnerPadding: 0.2,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        generated.source,
+        contains('composition: PolarColumnCompositionConfig('),
+      );
+      expect(
+        generated.source,
+        contains('mode: PolarColumnCompositionMode.grouped'),
+      );
+      expect(generated.source, contains('groupInnerPadding: 0.2'));
+    });
+
     test('returns a structured failure for an invalid variable name', () {
       final result = ChartDartSourceGenerator.generate(
         _snapshot(
@@ -1346,6 +1383,11 @@ ChartDocumentSnapshot _snapshot(
       requiredCapabilities: {
         if (concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (polarChartConfig != null) 'chart.polar.config.v1',
+        if (polarChartConfig != null && additionalSeries.isNotEmpty)
+          'chart.polar.multiple-series.v1',
+        if (polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.grouped)
+          'chart.polar.grouped-series.v1',
       },
     ),
     viewState: viewState,

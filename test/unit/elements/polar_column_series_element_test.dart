@@ -51,6 +51,48 @@ void main() {
       );
     });
 
+    test('compatible layers share one numeric domain and series colors', () {
+      final target = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'target',
+          values: const {'Search': 100, 'Social': 80},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        seriesIndex: 0,
+        numericScaleValues: const [100, 80, 64, 48],
+        paintAxisLabels: false,
+        preferSeriesColor: true,
+      );
+      final observed = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'observed',
+          values: const {'Search': 64, 'Social': 48},
+        ),
+        config: const PolarChartConfig(),
+        size: const Size.square(320),
+        theme: ChartTheme.light,
+        seriesIndex: 1,
+        numericScaleValues: const [100, 80, 64, 48],
+        paintGrid: false,
+        preferSeriesColor: true,
+      );
+
+      expect(target.numericScale.maximum, 100);
+      expect(observed.numericScale.maximum, 100);
+      expect(target.paintGrid, isTrue);
+      expect(target.paintAxisLabels, isFalse);
+      expect(observed.paintGrid, isFalse);
+      expect(observed.paintAxisLabels, isTrue);
+      expect(target.resolvedMarkColors.toSet(), {
+        ChartTheme.light.seriesTheme.colors[0],
+      });
+      expect(observed.resolvedMarkColors.toSet(), {
+        ChartTheme.light.seriesTheme.colors[1],
+      });
+    });
+
     test('thins dense angular labels deterministically at large text', () {
       final element = PolarColumnSeriesElement(
         series: PolarColumnChartSeries.fromMap(

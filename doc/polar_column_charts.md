@@ -76,9 +76,83 @@ The `fromMap` and `rose` constructors create the required ordinal X values and
 copy each map key into the point label. The direct constructor remains useful
 when points carry metadata or explicit per-point styles.
 
-V1 accepts one non-empty series with finite, non-negative values. It rejects
-duplicate or blank category labels, unstable ordinals, Cartesian/polar mixing,
-and multi-series composition instead of guessing a layout.
+Each series must be non-empty with finite, non-negative values. The family
+rejects duplicate or blank category labels, unstable ordinals, and
+Cartesian/polar mixing instead of guessing a layout.
+
+## Layered comparison
+
+Multiple compatible series can share the same polar axes. They paint in
+declaration order, so a broad reference or capacity layer can sit behind a
+more prominent observed layer:
+
+```dart
+final capacity = PolarColumnChartSeries.fromMap(
+  id: 'capacity',
+  name: 'Capacity',
+  unit: 'orders',
+  values: const {'Search': 92, 'Social': 70, 'Partners': 84},
+  color: const Color(0xFF94A3B8),
+  polarStyle: const PolarColumnStyle(
+    opacity: 0.32,
+    showDataLabels: false,
+  ),
+);
+
+final observed = PolarColumnChartSeries.fromMap(
+  id: 'observed',
+  name: 'Observed',
+  unit: 'orders',
+  values: const {'Search': 72, 'Social': 48, 'Partners': 68},
+  color: const Color(0xFF2563EB),
+);
+
+BravenChartPlus(
+  series: [capacity, observed],
+  polarChartConfig: const PolarChartConfig(),
+);
+```
+
+Every series in the composition must have:
+
+- a unique series ID;
+- the same category labels in the same order;
+- the same `PolarColumnPreset`;
+- the same normalized unit.
+
+The scale domain is derived from every value in the composition. Grid and axis
+labels paint once, while pointer and keyboard interaction retain the selected
+series ID as well as the category index.
+
+## Grouped comparison
+
+Grouped composition keeps the same category axis and radial value scale, but
+divides every visible category band into one stable angular sub-band per
+series:
+
+```dart
+BravenChartPlus(
+  series: [north, south, west],
+  polarChartConfig: const PolarChartConfig(
+    composition: PolarColumnCompositionConfig(
+      mode: PolarColumnCompositionMode.grouped,
+      groupInnerPadding: 0.12,
+    ),
+  ),
+);
+```
+
+Series retain declaration order within every category. A
+`groupInnerPadding` of `0` fills each series slot; larger values reserve a
+fraction of each slot as a symmetric gap. The setting must be finite and in
+`[0, 1)`. It does not discard or merge source values: the table, CSV export,
+artifact, controller, and Source view retain one row and stable identity for
+every series/category pair.
+
+Use layered composition when values should occupy the same angular band, such
+as capacity behind observed volume. Use grouped composition when side-by-side
+angular comparison is the primary reading task. Both modes share one global
+radial domain. Neither mode stacks values.
 
 ## Polar pane and axes
 
@@ -210,16 +284,20 @@ resizable, revision-safe table surface as the other built-in families.
 ## Artifacts, hydration, and generated source
 
 Polar Column uses the stable artifact capability
-`series.polar.column.v1`. The document stores:
+`series.polar.column.v1`. A document with more than one compatible series also
+declares `chart.polar.multiple-series.v1`, allowing older runtimes to fail
+capability negotiation before attempting an unsupported composition. A grouped
+document additionally declares `chart.polar.grouped-series.v1`. The document
+stores:
 
 - every source category, value, color, unit, and stable point identity;
 - series preset, column style, and selection presentation;
-- pane, angular axis, and radial numeric axis configuration;
+- pane, angular axis, radial numeric axis, and composition configuration;
 - portable view state, including durable point selection when requested.
 
 `ChartArtifactJsonCodec` produces deterministic JSON and
 `ChartDocumentHydrator` restores a fresh `BravenChartPlus` with the same polar
-configuration. Unsupported multi-series or mixed-family documents fail
+configuration. Incompatible multi-series or mixed-family documents fail
 explicitly rather than hydrating as Bar or Pie.
 
 The Workbench Source view uses `ChartDartSourceGenerator`. Generated Polar
@@ -230,7 +308,8 @@ integer tick counts, and is compile-checked by the package test suite.
 
 - pointer hover resolves the exact annular-sector path and tooltip anchor;
 - pointer, table, and controller activation share durable selection;
-- arrow keys traverse stable angular category order;
+- arrow keys traverse stable angular category order across each declared
+  series;
 - Enter or Space selects the focused column;
 - Escape clears selection;
 - semantics expose category, formatted value/unit, ordinal position, focus,
@@ -246,11 +325,11 @@ Use visible category labels or a nearby explanatory table for unfamiliar
 categories. For dense cycles, keep labels short, retain meaningful units, and
 verify both compact and large-text layouts.
 
-## V1 boundaries
+## Current boundaries
 
-Polar Column V1 intentionally excludes:
+Polar Column currently excludes:
 
-- multiple Polar series, grouping, and stacking;
+- stacking (compatible layered and grouped series are supported);
 - negative or floating radial ranges;
 - targets, uncertainty intervals, and thresholds;
 - mixed Cartesian/polar plots;

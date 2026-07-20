@@ -2083,6 +2083,10 @@ class ChartRenderBox extends RenderBox {
       final priorityCompare = b.priority.compareTo(a.priority);
       if (priorityCompare != 0) return priorityCompare;
 
+      if (a is DataSeriesElement && b is DataSeriesElement) {
+        return b.seriesIndex.compareTo(a.seriesIndex);
+      }
+
       // Within same priority, RangeAnnotations should be hit-tested LAST (they're in back)
       final aIsRange = a is RangeAnnotationElement;
       final bIsRange = b is RangeAnnotationElement;
@@ -2099,7 +2103,12 @@ class ChartRenderBox extends RenderBox {
   ChartDataHit? dataHitAtWidgetPosition(Offset widgetPosition) {
     final plotPosition = widgetToPlot(widgetPosition);
     final elements = _elements.whereType<DataHitElement>().toList()
-      ..sort((a, b) => b.priority.compareTo(a.priority));
+      ..sort((a, b) {
+        final priority = b.priority.compareTo(a.priority);
+        return priority != 0
+            ? priority
+            : b.seriesIndex.compareTo(a.seriesIndex);
+      });
     for (final element in elements) {
       final hit = element.dataHitAt(plotPosition);
       if (hit != null) return hit;
@@ -2349,7 +2358,12 @@ class ChartRenderBox extends RenderBox {
     // Paint series elements only (filter out overlays, handles, etc.)
     // Series elements have priority 8, so we filter by type instead
     final seriesElements = _elements.whereType<DataSeriesElement>().toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
+      ..sort((a, b) {
+        final priority = a.priority.compareTo(b.priority);
+        return priority != 0
+            ? priority
+            : a.seriesIndex.compareTo(b.seriesIndex);
+      });
 
     // Compute per-axis bounds for multi-axis normalization (if multi-axis mode is active)
     // Checks effective axes (including inline yAxisConfig) via MultiAxisManager

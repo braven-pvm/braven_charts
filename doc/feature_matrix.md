@@ -20,7 +20,7 @@ is added to package marketing.
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
 | Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
-| Polar Column and Rose charts | `PolarColumnChartSeries`, `PolarColumnPreset`, `PolarColumnStyle`, `PolarChartConfig`, angular category axis, numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
+| Polar Column and Rose charts | one or more compatible `PolarColumnChartSeries` values, layered or grouped `PolarColumnCompositionConfig`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
@@ -48,6 +48,9 @@ second Candlestick or same-plot Bar series is rejected in V1. A Pie
 accepts exactly one `PieChartSeries`; a standalone Donut accepts one
 `DonutChartSeries`; and two or more Donut series form one Concentric Donut
 composition. Partition-radial charts have no Cartesian axes and cannot mix
-with line, area, bar, or scatter series. Polar Column accepts one
-`PolarColumnChartSeries` in V1, uses its own angular-category and radial-numeric
-axes, and cannot mix with either Cartesian or partition-radial series.
+with line, area, bar, or scatter series. Polar Column accepts one or more
+compatible series, either layered in declaration order or grouped into angular
+sub-bands, on shared angular-category and radial-numeric axes; category order,
+preset, and unit must match. It cannot mix with either Cartesian or
+partition-radial series, and stacking remains a separate future composition
+mode.

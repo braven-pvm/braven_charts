@@ -282,6 +282,49 @@ void main() {
       expect(decoded, source);
     });
 
+    test('round-trips grouped Polar Column composition settings', () {
+      const source = PolarChartConfig(
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.grouped,
+          groupInnerPadding: 0.2,
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
+    test('defaults legacy Polar Column documents to layered composition', () {
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(
+          const PolarChartConfig(),
+        ),
+      );
+      final transported = Map<String, Object?>.from(
+        encoded.toJson() as Map<String, Object?>,
+      );
+      final polarChart = Map<String, Object?>.from(
+        transported['polarChart']! as Map<String, Object?>,
+      )..remove('composition');
+      transported['polarChart'] = polarChart;
+
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(
+          JsonValue.fromJson(transported) as JsonObjectValue,
+        ),
+      );
+
+      expect(decoded?.composition, const PolarColumnCompositionConfig());
+    });
+
     test('reports a path-specific invalid concentric radius', () {
       final result = ChartConfigurationDocumentCodec.decodeConcentricDonut(
         JsonValue.fromJson({

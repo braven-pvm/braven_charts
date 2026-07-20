@@ -9,6 +9,61 @@ enum PolarRadialScaleMode {
   areaCorrect,
 }
 
+/// How multiple compatible Polar Column series share each category band.
+enum PolarColumnCompositionMode {
+  /// Every series occupies the full category band in declaration order.
+  layered,
+
+  /// Every series occupies a separate angular sub-band within the category.
+  grouped,
+}
+
+/// Plot-level composition behavior for multiple Polar Column series.
+@immutable
+class PolarColumnCompositionConfig {
+  const PolarColumnCompositionConfig({
+    this.mode = PolarColumnCompositionMode.layered,
+    this.groupInnerPadding = 0.12,
+  });
+
+  /// Angular arrangement used when more than one compatible series is present.
+  final PolarColumnCompositionMode mode;
+
+  /// Gap between grouped series as a fraction of one series sub-band.
+  ///
+  /// This is separate from [PolarCategoryAxisConfig.innerPadding], which
+  /// controls the gap between complete category bands.
+  final double groupInnerPadding;
+
+  void validate() {
+    _requireRange(
+      groupInnerPadding,
+      'composition.groupInnerPadding',
+      minimum: 0,
+      maximum: 1,
+      maximumInclusive: false,
+    );
+  }
+
+  PolarColumnCompositionConfig copyWith({
+    PolarColumnCompositionMode? mode,
+    double? groupInnerPadding,
+  }) => PolarColumnCompositionConfig(
+    mode: mode ?? this.mode,
+    groupInnerPadding: groupInnerPadding ?? this.groupInnerPadding,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnCompositionConfig &&
+          mode == other.mode &&
+          groupInnerPadding == other.groupInnerPadding;
+
+  @override
+  int get hashCode => Object.hash(mode, groupInnerPadding);
+}
+
 /// Geometry shared by every axis-based series in one polar pane.
 @immutable
 class PolarPaneConfig {
@@ -262,26 +317,33 @@ class PolarChartConfig {
     this.pane = const PolarPaneConfig(),
     this.angularAxis = const PolarCategoryAxisConfig(),
     this.radialAxis = const PolarNumericAxisConfig(),
+    this.composition = const PolarColumnCompositionConfig(),
   });
 
   final PolarPaneConfig pane;
   final PolarCategoryAxisConfig angularAxis;
   final PolarNumericAxisConfig radialAxis;
 
+  /// How compatible Polar Column series share their angular category bands.
+  final PolarColumnCompositionConfig composition;
+
   void validate() {
     pane.validate();
     angularAxis.validate();
     radialAxis.validate();
+    composition.validate();
   }
 
   PolarChartConfig copyWith({
     PolarPaneConfig? pane,
     PolarCategoryAxisConfig? angularAxis,
     PolarNumericAxisConfig? radialAxis,
+    PolarColumnCompositionConfig? composition,
   }) => PolarChartConfig(
     pane: pane ?? this.pane,
     angularAxis: angularAxis ?? this.angularAxis,
     radialAxis: radialAxis ?? this.radialAxis,
+    composition: composition ?? this.composition,
   );
 
   @override
@@ -290,10 +352,11 @@ class PolarChartConfig {
       other is PolarChartConfig &&
           pane == other.pane &&
           angularAxis == other.angularAxis &&
-          radialAxis == other.radialAxis;
+          radialAxis == other.radialAxis &&
+          composition == other.composition;
 
   @override
-  int get hashCode => Object.hash(pane, angularAxis, radialAxis);
+  int get hashCode => Object.hash(pane, angularAxis, radialAxis, composition);
 }
 
 void _requireFinite(double value, String name) {

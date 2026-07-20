@@ -1,7 +1,10 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/polar_column_series_element.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -93,6 +96,185 @@ void main() {
 
     expect(selection, hasLength(1));
     expect(selection.single.label, 'Search');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('layers compatible series on one scale in declaration order', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 360,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'target',
+                  name: 'Target',
+                  unit: 'orders',
+                  values: const {'Search': 100, 'Social': 80},
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'observed',
+                  name: 'Observed',
+                  unit: 'orders',
+                  values: const {'Search': 64, 'Social': 48},
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+              ),
+              theme: ChartTheme.light,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final elements = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .toList();
+    expect(elements, hasLength(2));
+    expect(elements.map((element) => element.series.id), [
+      'target',
+      'observed',
+    ]);
+    expect(elements.map((element) => element.numericScale.maximum).toSet(), {
+      100,
+    });
+    expect(elements.first.paintGrid, isTrue);
+    expect(elements.first.paintAxisLabels, isFalse);
+    expect(elements.last.paintGrid, isFalse);
+    expect(elements.last.paintAxisLabels, isTrue);
+
+    final hit = renderBox.dataHitAtWidgetPosition(
+      renderBox.plotToWidget(elements.last.geometry.marks.first.tooltipAnchor),
+    );
+    expect(hit?.seriesId, 'observed');
+    expect(hit?.category, 'Search');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keyboard traversal preserves series identity across layers', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 360,
+            child: BravenChartPlus(
+              key: const ValueKey('layered-polar-keyboard'),
+              bravenChartController: controller,
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'target',
+                  unit: 'orders',
+                  values: const {'Search': 100, 'Social': 80},
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'observed',
+                  unit: 'orders',
+                  values: const {'Search': 64, 'Social': 48},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final chart = find.byKey(const ValueKey('layered-polar-keyboard'));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getTopLeft(chart));
+    await mouse.moveTo(tester.getCenter(chart));
+    await tester.pump();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+
+    expect(controller.selectedPointRefs, {
+      const ChartPointRef(seriesId: 'observed', pointIndex: 0),
+    });
+    expect(tester.takeException(), isNull);
+    await mouse.removePointer();
+  });
+
+  testWidgets('groups compatible series into separate category sub-bands', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 420,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'north',
+                  unit: 'orders',
+                  values: const {'Search': 80, 'Social': 55},
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'south',
+                  unit: 'orders',
+                  values: const {'Search': 64, 'Social': 72},
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                composition: PolarColumnCompositionConfig(
+                  mode: PolarColumnCompositionMode.grouped,
+                  groupInnerPadding: 0.18,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final elements = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .toList();
+    expect(elements, hasLength(2));
+    final northMark = elements[0].geometry.marks.first;
+    final southMark = elements[1].geometry.marks.first;
+    expect(northMark.band.endAngle, lessThan(southMark.band.startAngle));
+    expect(northMark.band.centerAngle, isNot(southMark.band.centerAngle));
+    expect(elements.map((element) => element.numericScale.maximum).toSet(), {
+      80,
+    });
+
+    final northHit = renderBox.dataHitAtWidgetPosition(
+      renderBox.plotToWidget(northMark.tooltipAnchor),
+    );
+    final southHit = renderBox.dataHitAtWidgetPosition(
+      renderBox.plotToWidget(southMark.tooltipAnchor),
+    );
+    expect(northHit?.seriesId, 'north');
+    expect(southHit?.seriesId, 'south');
+    expect(northHit?.category, 'Search');
+    expect(southHit?.category, 'Search');
     expect(tester.takeException(), isNull);
   });
 

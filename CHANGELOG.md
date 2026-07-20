@@ -65,6 +65,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Range-based control surfaces can keep resize grips persistently visible and
   interactive, and draggable range bodies now expose platform `grab` and
   `grabbing` cursors instead of looking like passive chart content.
+- Compatible multi-series Polar Column compositions. Series with matching
+  categories/order, preset, and unit can either layer in declaration order or
+  divide each category into grouped angular sub-bands on one shared radial
+  scale, with series-aware pointer, keyboard, controller, table, CSV, artifact,
+  hydration, and generated-source identity.
+- `chart.polar.multiple-series.v1` capability negotiation for portable layered
+  Polar Column documents and `chart.polar.grouped-series.v1` for grouped
+  geometry, plus production-shaped layered and grouped comparison presets in
+  the public showcase.
 
 ## 0.9.0 - 2026-07-19
 

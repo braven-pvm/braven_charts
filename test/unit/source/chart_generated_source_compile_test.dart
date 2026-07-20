@@ -207,20 +207,34 @@ void main() {
   );
 
   test(
-    'generated Polar Column Dart formats and analyzes',
+    'generated grouped Polar Column Dart formats and analyzes',
     () async {
-      final series = PolarColumnChartSeries.rose(
-        id: 'demand',
-        unit: 'orders',
-        values: const {'North': 42, 'East': 68, 'South': 31},
-        polarStyle: const PolarColumnStyle(
-          cornerRadius: 8,
-          opacity: 0.85,
-          borderColor: Color(0xFF102030),
-          borderWidth: 2,
-          showDataLabels: false,
+      final series = <PolarColumnChartSeries>[
+        PolarColumnChartSeries.rose(
+          id: 'capacity',
+          unit: 'orders',
+          values: const {'North': 90, 'East': 82, 'South': 76},
+          polarStyle: const PolarColumnStyle(
+            cornerRadius: 8,
+            opacity: 0.3,
+            borderColor: Color(0xFF102030),
+            borderWidth: 2,
+            showDataLabels: false,
+          ),
         ),
-      );
+        PolarColumnChartSeries.rose(
+          id: 'demand',
+          unit: 'orders',
+          values: const {'North': 42, 'East': 68, 'South': 31},
+          polarStyle: const PolarColumnStyle(
+            cornerRadius: 8,
+            opacity: 0.85,
+            borderColor: Color(0xFF102030),
+            borderWidth: 2,
+            showDataLabels: false,
+          ),
+        ),
+      ];
       const polarConfig = PolarChartConfig(
         pane: PolarPaneConfig(
           startAngleDegrees: 15,
@@ -233,6 +247,10 @@ void main() {
           scaleMode: PolarRadialScaleMode.areaCorrect,
           tickCount: 6,
         ),
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.grouped,
+          groupInnerPadding: 0.18,
+        ),
       );
       final configuration = _success(
         ChartConfigurationDocumentCodec.encodePolarChart(polarConfig),
@@ -241,7 +259,10 @@ void main() {
         document: ChartDocument(
           documentId: 'generated-polar-compile',
           revision: 1,
-          series: [_success(ChartSeriesDocumentCodec.encode(series)).value],
+          series: [
+            for (final item in series)
+              _success(ChartSeriesDocumentCodec.encode(item)).value,
+          ],
           xAxis: _success(
             ChartAxisDocumentCodec.encodeXAxis(const XAxisConfig()),
           ).value,
@@ -259,7 +280,11 @@ void main() {
             ChartInteractionDocumentCodec.encode(const InteractionConfig()),
           ).value,
           configuration: configuration,
-          requiredCapabilities: const {'chart.polar.config.v1'},
+          requiredCapabilities: const {
+            'chart.polar.config.v1',
+            'chart.polar.multiple-series.v1',
+            'chart.polar.grouped-series.v1',
+          },
         ),
       );
       final generated = _success(

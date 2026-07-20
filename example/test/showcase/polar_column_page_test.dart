@@ -20,6 +20,8 @@ void main() {
     expect(find.text('Standard columns'), findsOneWidget);
     expect(find.text('Nightingale rose'), findsOneWidget);
     expect(find.text('Partial sweep'), findsOneWidget);
+    expect(find.text('Layered comparison'), findsOneWidget);
+    expect(find.text('Grouped comparison'), findsOneWidget);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -70,6 +72,45 @@ void main() {
     );
     expect(chart.polarChartConfig.pane.sweepAngleDegrees, 240);
     expect(chart.polarChartConfig.pane.innerRadiusFactor, 0.28);
+
+    await tester.tap(find.byKey(const ValueKey('polar-presentation-layered')));
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.series, hasLength(2));
+    expect(chart.series.map((series) => series.id), [
+      'showcase-polar-capacity',
+      'showcase-polar-observed',
+    ]);
+    expect(
+      chart.series.every((series) => series is PolarColumnChartSeries),
+      isTrue,
+    );
+    expect(chart.series.map((series) => series.unit).toSet(), {'orders'});
+
+    await tester.tap(find.byKey(const ValueKey('polar-presentation-grouped')));
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.series, hasLength(3));
+    expect(chart.series.map((series) => series.name), [
+      'North',
+      'South',
+      'West',
+    ]);
+    expect(
+      chart.polarChartConfig.composition.mode,
+      PolarColumnCompositionMode.grouped,
+    );
+    expect(chart.polarChartConfig.composition.groupInnerPadding, 0.12);
     expect(tester.takeException(), isNull);
   });
 
@@ -83,6 +124,9 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: PolarColumnPage())),
     );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('polar-presentation-grouped')));
     await tester.pumpAndSettle();
 
     final switcher = find.byKey(
@@ -113,7 +157,12 @@ void main() {
     );
     final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
     expect(table.model?.projectionKind, ChartTableProjectionKind.polar);
-    expect(table.model?.polarRows, hasLength(8));
+    expect(table.model?.polarRows, hasLength(18));
+    expect(table.model?.polarRows.map((row) => row.seriesName).toSet(), {
+      'North',
+      'South',
+      'West',
+    });
     expect(table.model?.pieRows, isEmpty);
 
     await tester.tap(
@@ -147,8 +196,12 @@ void main() {
       ChartWorkbenchSourcePhase.ready,
     );
     final source = workbench.workbenchController?.generatedSource?.source;
-    expect(source, contains('PolarColumnChartSeries('));
+    expect(
+      RegExp('PolarColumnChartSeries\\(').allMatches(source!),
+      hasLength(3),
+    );
     expect(source, contains('polarChartConfig: PolarChartConfig('));
+    expect(source, contains('PolarColumnCompositionMode.grouped'));
     expect(tester.takeException(), isNull);
   });
 }

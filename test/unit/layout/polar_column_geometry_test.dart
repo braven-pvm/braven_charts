@@ -69,6 +69,43 @@ void main() {
       expect(geometry.marks[0].sector.outerRadius, 48);
     });
 
+    test('divides each category into parallel grouped sub-bands', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['A', 'B'],
+        innerPadding: 0.2,
+      );
+      final values = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+
+      PolarColumnGeometry group(int index) =>
+          PolarColumnGeometryCalculator.calculate(
+            categoryScale: categories,
+            numericScale: values,
+            values: const [80, 60],
+            groupIndex: index,
+            groupCount: 3,
+            groupInnerPadding: 0.15,
+          );
+
+      final first = group(0).marks.first.band;
+      final second = group(1).marks.first.band;
+      final third = group(2).marks.first.band;
+      final slotSweep = categories.bandAt(0).sweepAngle / 3;
+
+      expect(first.sweepAngle, closeTo(slotSweep * 0.85, 1e-12));
+      expect(second.startAngle - first.startAngle, closeTo(slotSweep, 1e-12));
+      expect(third.startAngle - second.startAngle, closeTo(slotSweep, 1e-12));
+      expect(first.endAngle, lessThan(second.startAngle));
+      expect(second.endAngle, lessThan(third.startAngle));
+      expect(
+        (first.startAngle + third.endAngle) / 2,
+        closeTo(categories.bandAt(0).centerAngle, 1e-12),
+      );
+    });
+
     test('uses area-correct radii for Rose geometry', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
@@ -236,6 +273,25 @@ void main() {
           numericScale: values,
           values: const [1, 2],
           cornerRadius: double.nan,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          groupIndex: 2,
+          groupCount: 2,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          groupInnerPadding: 1,
         ),
         throwsArgumentError,
       );
