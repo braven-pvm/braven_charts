@@ -20,7 +20,7 @@ is added to package marketing.
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
 | Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
-| Polar Column and Rose charts | one or more compatible `PolarColumnChartSeries` values, layered or grouped `PolarColumnCompositionConfig`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
+| Polar Column and Rose charts | one or more compatible signed `PolarColumnChartSeries` values, layered, grouped, or diverging stacked `PolarColumnCompositionConfig`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |

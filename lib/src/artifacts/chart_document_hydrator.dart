@@ -299,6 +299,7 @@ abstract final class ChartDocumentHydrator {
     'chart.polar.config.v1',
     PolarColumnComposition.multipleSeriesCapability,
     PolarColumnComposition.groupedSeriesCapability,
+    PolarColumnComposition.stackedSeriesCapability,
     'series.radial.grouping.v1',
     'series.radial.grouped-variable-radius.v1',
     'series.radial.formatters.v1',
@@ -963,6 +964,20 @@ abstract final class ChartDocumentHydrator {
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
               'Grouped Polar Column series must declare chart.polar.grouped-series.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (config.composition.mode == PolarColumnCompositionMode.stacked &&
+        !document.requiredCapabilities.contains(
+          PolarColumnComposition.stackedSeriesCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Stacked Polar Column series must declare chart.polar.stacked-series.v1.',
           path: r'$.document.requiredCapabilities',
         ),
         [],

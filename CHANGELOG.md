@@ -74,6 +74,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Polar Column documents and `chart.polar.grouped-series.v1` for grouped
   geometry, plus production-shaped layered and grouped comparison presets in
   the public showcase.
+- Diverging stacked Polar Column composition through
+  `PolarColumnCompositionMode.stacked`. Signed source values accumulate on
+  independent positive and negative sides of an explicit zero baseline while
+  tables, CSV, controllers, artifacts, hydration, and generated Dart retain
+  the original values and series identity. Stacked documents negotiate
+  `chart.polar.stacked-series.v1`.
 
 ## 0.9.0 - 2026-07-19
 

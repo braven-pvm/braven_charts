@@ -40,6 +40,7 @@ import 'interaction/recognizers/priority_pan_recognizer.dart';
 import 'interaction/recognizers/priority_tap_recognizer.dart';
 import 'layout/chart_layout_kind.dart';
 import 'layout/polar_column_composition.dart';
+import 'layout/polar_column_stack_layout.dart';
 import 'layout/concentric_donut_layout.dart';
 import 'models/auto_scroll_config.dart';
 import 'models/axis_swap_mode.dart';
@@ -3364,10 +3365,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         .toList(growable: false);
     if (polarSeries.isEmpty) return const <ChartElement>[];
 
-    final scaleValues = <double>[
-      for (final series in polarSeries)
-        for (final point in series.points) point.y,
-    ];
+    final stackLayout =
+        widget.polarChartConfig.composition.mode ==
+            PolarColumnCompositionMode.stacked
+        ? PolarColumnStackLayout.resolve(polarSeries)
+        : null;
+    final scaleValues = stackLayout == null
+        ? <double>[
+            for (final series in polarSeries)
+              for (final point in series.points) point.y,
+          ]
+        : <double>[stackLayout.minimum, stackLayout.maximum];
     final theme = widget.theme ?? ChartTheme.light;
     return <ChartElement>[
       for (final (index, series) in polarSeries.indexed)
@@ -3379,6 +3387,8 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           seriesIndex: index,
           seriesCount: polarSeries.length,
           numericScaleValues: scaleValues,
+          stackStarts: stackLayout?.forSeries(series.id).starts,
+          stackEnds: stackLayout?.forSeries(series.id).ends,
           paintGrid: index == 0,
           paintAxisLabels: index == polarSeries.length - 1,
           preferSeriesColor: polarSeries.length > 1,

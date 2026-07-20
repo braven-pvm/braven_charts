@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
@@ -20,6 +21,7 @@ class PolarColumnMarkGeometry {
     required this.index,
     required this.value,
     required this.baseline,
+    required this.radialValue,
     required this.band,
     required this.baselineRadius,
     required this.valueRadius,
@@ -40,13 +42,19 @@ class PolarColumnMarkGeometry {
   /// Numeric baseline from which the mark grows.
   final double baseline;
 
+  /// Numeric radial endpoint after applying composition geometry.
+  ///
+  /// This equals [value] for an ordinary column and the cumulative stack end
+  /// for a stacked column. [value] always remains the raw source value.
+  final double radialValue;
+
   /// Angular category band occupied by this mark.
   final PolarCategoryBand band;
 
   /// Physical radius mapped from [baseline].
   final double baselineRadius;
 
-  /// Physical radius mapped from [value].
+  /// Physical radius mapped from [radialValue].
   final double valueRadius;
 
   /// Shared annular-sector primitive used for painting and hit testing.
@@ -65,7 +73,7 @@ class PolarColumnMarkGeometry {
   Rect get bounds => sector.bounds;
 
   /// Whether this mark has non-zero radial depth.
-  bool get isVisible => valueRadius - baselineRadius > _radiusEpsilon;
+  bool get isVisible => (valueRadius - baselineRadius).abs() > _radiusEpsilon;
 
   /// Whether [position] lies inside this mark's exact path.
   bool contains(Offset position) => isVisible && sector.contains(position);
@@ -93,13 +101,17 @@ class PolarColumnGeometry {
 abstract final class PolarColumnGeometryCalculator {
   /// Builds one mark per angular category.
   ///
-  /// [values] must match the category scale one-for-one. V1 grows every mark
-  /// outward from [baseline], which defaults to the numeric scale minimum.
+  /// [values] must match the category scale one-for-one. Ordinary marks grow
+  /// from zero when the domain contains it. [radialStarts] and [radialEnds]
+  /// provide cumulative endpoints for stacked composition while preserving
+  /// [values] as the raw source values.
   static PolarColumnGeometry calculate({
     required PolarCategoryScale categoryScale,
     required PolarNumericScale numericScale,
     required List<double> values,
     double? baseline,
+    List<double>? radialStarts,
+    List<double>? radialEnds,
     double cornerRadius = 0,
     bool roundInnerCorners = false,
     int groupIndex = 0,
@@ -117,6 +129,25 @@ abstract final class PolarColumnGeometryCalculator {
         'values',
         'Value count must match angular category count '
             '(${categoryScale.categories.length})',
+      );
+    }
+    if (radialStarts != null && radialStarts.length != values.length) {
+      throw ArgumentError.value(
+        radialStarts.length,
+        'radialStarts',
+        'Radial start count must match the source value count',
+      );
+    }
+    if (radialEnds != null && radialEnds.length != values.length) {
+      throw ArgumentError.value(
+        radialEnds.length,
+        'radialEnds',
+        'Radial end count must match the source value count',
+      );
+    }
+    if ((radialStarts == null) != (radialEnds == null)) {
+      throw ArgumentError(
+        'radialStarts and radialEnds must be supplied together',
       );
     }
     if (!cornerRadius.isFinite || cornerRadius < 0) {
@@ -150,7 +181,7 @@ abstract final class PolarColumnGeometryCalculator {
       );
     }
 
-    final resolvedBaseline = baseline ?? numericScale.minimum;
+    final resolvedBaseline = baseline ?? _defaultBaseline(numericScale);
     if (!resolvedBaseline.isFinite ||
         resolvedBaseline < numericScale.minimum ||
         resolvedBaseline > numericScale.maximum) {
@@ -160,15 +191,16 @@ abstract final class PolarColumnGeometryCalculator {
         'Value must be finite and inside the numeric scale domain',
       );
     }
-    final baselineRadius = numericScale.valueToRadius(resolvedBaseline);
     final marks = <PolarColumnMarkGeometry>[];
 
     for (final (index, value) in values.indexed) {
-      if (!value.isFinite || value < resolvedBaseline) {
+      final radialStart = radialStarts?[index] ?? resolvedBaseline;
+      final radialEnd = radialEnds?[index] ?? value;
+      if (!value.isFinite || !radialStart.isFinite || !radialEnd.isFinite) {
         throw ArgumentError.value(
           value,
           'values[$index]',
-          'Polar Column V1 values must be finite and at least the baseline',
+          'Polar Column source, radial start, and radial end must be finite',
         );
       }
       final band = _resolveGroupBand(
@@ -177,25 +209,29 @@ abstract final class PolarColumnGeometryCalculator {
         groupCount: groupCount,
         groupInnerPadding: groupInnerPadding,
       );
-      final valueRadius = numericScale.valueToRadius(value);
+      final baselineRadius = numericScale.valueToRadius(radialStart);
+      final valueRadius = numericScale.valueToRadius(radialEnd);
+      final innerRadius = math.min(baselineRadius, valueRadius);
+      final outerRadius = math.max(baselineRadius, valueRadius);
       final sector = AnnularSectorGeometry(
         center: categoryScale.pane.center,
-        innerRadius: baselineRadius,
-        outerRadius: valueRadius,
+        innerRadius: innerRadius,
+        outerRadius: outerRadius,
         startAngle: band.startAngle,
         sweepAngle: band.sweepAngle,
         cornerRadius: cornerRadius,
         roundInnerCorners: roundInnerCorners,
       );
-      final radialDepth = valueRadius - baselineRadius;
-      final tooltipRadius = baselineRadius + radialDepth * 0.68;
-      final labelRadius = baselineRadius + radialDepth * 0.5;
+      final radialDepth = outerRadius - innerRadius;
+      final tooltipRadius = innerRadius + radialDepth * 0.68;
+      final labelRadius = innerRadius + radialDepth * 0.5;
       marks.add(
         PolarColumnMarkGeometry._(
           category: band.category,
           index: index,
           value: value,
-          baseline: resolvedBaseline,
+          baseline: radialStart,
+          radialValue: radialEnd,
           band: band,
           baselineRadius: baselineRadius,
           valueRadius: valueRadius,
@@ -212,6 +248,11 @@ abstract final class PolarColumnGeometryCalculator {
 
     return PolarColumnGeometry._(marks: marks);
   }
+}
+
+double _defaultBaseline(PolarNumericScale scale) {
+  if (scale.minimum <= 0 && scale.maximum >= 0) return 0;
+  return scale.minimum > 0 ? scale.minimum : scale.maximum;
 }
 
 PolarCategoryBand _resolveGroupBand(

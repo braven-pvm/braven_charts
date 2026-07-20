@@ -76,9 +76,9 @@ The `fromMap` and `rose` constructors create the required ordinal X values and
 copy each map key into the point label. The direct constructor remains useful
 when points carry metadata or explicit per-point styles.
 
-Each series must be non-empty with finite, non-negative values. The family
-rejects duplicate or blank category labels, unstable ordinals, and
-Cartesian/polar mixing instead of guessing a layout.
+Each series must be non-empty with finite, signed values. The family rejects
+duplicate or blank category labels, unstable ordinals, and Cartesian/polar
+mixing instead of guessing a layout.
 
 ## Layered comparison
 
@@ -154,6 +154,46 @@ as capacity behind observed volume. Use grouped composition when side-by-side
 angular comparison is the primary reading task. Both modes share one global
 radial domain. Neither mode stacks values.
 
+## Diverging stacked comparison
+
+Stacked composition preserves the same category and series contracts while
+accumulating each raw contributor along the radial value axis:
+
+```dart
+final newAccounts = PolarColumnChartSeries.fromMap(
+  id: 'new',
+  unit: 'accounts',
+  values: const {'Search': 34, 'Social': 26, 'Partners': 31},
+);
+
+final churn = PolarColumnChartSeries.fromMap(
+  id: 'churn',
+  unit: 'accounts',
+  values: const {'Search': -13, 'Social': -21, 'Partners': -12},
+);
+
+BravenChartPlus(
+  series: [newAccounts, churn],
+  polarChartConfig: const PolarChartConfig(
+    pane: PolarPaneConfig(innerRadiusFactor: 0.14),
+    composition: PolarColumnCompositionConfig(
+      mode: PolarColumnCompositionMode.stacked,
+    ),
+  ),
+);
+```
+
+Every category has two independent accumulators that begin at zero. Positive
+values stack outward on the positive side; negative values stack toward the
+negative side. Opposite signs do not cancel or change each other's visible
+depth. Series declaration order is the stack order on each side.
+
+Automatic domains include zero and the most extreme cumulative endpoints. If
+you set explicit bounds for stacked composition, those bounds must contain
+zero. The renderer uses cumulative start/end values only for geometry: direct
+labels, tooltips, semantics, table rows, CSV, controller references, artifacts,
+and generated Dart all retain the original signed source value.
+
 ## Polar pane and axes
 
 `PolarChartConfig` groups plot-level concerns so they do not leak into Pie,
@@ -195,6 +235,10 @@ visibility, and scale mode.
 When `scaleMode` is omitted, standard Polar Column uses linear radius and the
 Rose preset uses area-correct scaling. Set an explicit minimum/maximum when
 several independently mounted charts must share a comparison domain.
+Automatic domains always include zero. Ordinary signed columns diverge from
+that zero baseline; when an ordinary explicit domain excludes zero, the mark
+uses the nearest domain edge as its baseline. Stacked explicit domains must
+contain zero.
 
 ## Nightingale/Rose preset
 
@@ -287,8 +331,8 @@ Polar Column uses the stable artifact capability
 `series.polar.column.v1`. A document with more than one compatible series also
 declares `chart.polar.multiple-series.v1`, allowing older runtimes to fail
 capability negotiation before attempting an unsupported composition. A grouped
-document additionally declares `chart.polar.grouped-series.v1`. The document
-stores:
+document additionally declares `chart.polar.grouped-series.v1`; a stacked
+document declares `chart.polar.stacked-series.v1`. The document stores:
 
 - every source category, value, color, unit, and stable point identity;
 - series preset, column style, and selection presentation;
@@ -329,8 +373,6 @@ verify both compact and large-text layouts.
 
 Polar Column currently excludes:
 
-- stacking (compatible layered and grouped series are supported);
-- negative or floating radial ranges;
 - targets, uncertainty intervals, and thresholds;
 - mixed Cartesian/polar plots;
 - zoom and pan;

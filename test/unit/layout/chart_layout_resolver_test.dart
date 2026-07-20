@@ -413,5 +413,37 @@ void main() {
         ),
       );
     });
+
+    testWidgets('stacked Polar Column requires multiple series at runtime', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: BravenChartPlus(
+            series: [
+              PolarColumnChartSeries.fromMap(
+                id: 'only',
+                values: const {'A': 1, 'B': -2},
+              ),
+            ],
+            polarChartConfig: const PolarChartConfig(
+              composition: PolarColumnCompositionConfig(
+                mode: PolarColumnCompositionMode.stacked,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.takeException(),
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          contains('requires at least two series'),
+        ),
+      );
+    });
   });
 }

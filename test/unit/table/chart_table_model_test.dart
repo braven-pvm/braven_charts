@@ -496,7 +496,7 @@ void main() {
           id: 'demand',
           name: 'Demand',
           unit: 'orders',
-          values: const {'North': 42, 'East': 68, 'South': 31},
+          values: const {'North': 42, 'East': 68, 'South': -31},
           columnColors: const {'East': Color(0xFF00A878)},
         );
         final model = ChartTableModel.fromDocument(
@@ -512,6 +512,9 @@ void main() {
         expect(model.polarRows.first.valueDisplay, '42.00');
         expect(model.polarRows.first.unit, 'orders');
         expect(model.polarRows[1].colorValue, 0xFF00A878);
+        expect(model.polarRows.last.valueRaw, -31);
+        expect(model.polarRows.last.valueDisplay, '-31.00');
+        expect(model.polarRows.last.isValid, isTrue);
         expect(model.longRows.first.xDisplay, 'North');
         expect(ChartTableExporter.headers(model), [
           '#',
@@ -520,6 +523,13 @@ void main() {
           'Value (orders)',
         ]);
         expect(ChartTableExporter.headers(model), isNot(contains('Share')));
+        expect(
+          ChartTableExporter.csvForDisplayedRows(
+            model,
+            polarRows: model.polarRows,
+          ).csv,
+          contains('-31.0'),
+        );
       },
     );
 

@@ -26,6 +26,8 @@ class PolarColumnSeriesElement implements DataHitElement {
     int seriesIndex = 0,
     int seriesCount = 1,
     Iterable<double>? numericScaleValues,
+    List<double>? stackStarts,
+    List<double>? stackEnds,
     bool paintGrid = true,
     bool paintAxisLabels = true,
     bool preferSeriesColor = false,
@@ -51,6 +53,8 @@ class PolarColumnSeriesElement implements DataHitElement {
       revealProgress: revealProgress,
       textScaleFactor: textScaleFactor,
       numericScaleValues: numericScaleValues,
+      stackStarts: stackStarts,
+      stackEnds: stackEnds,
       seriesIndex: seriesIndex,
       seriesCount: seriesCount,
     );
@@ -61,6 +65,8 @@ class PolarColumnSeriesElement implements DataHitElement {
       theme: theme,
       seriesIndex: seriesIndex,
       seriesCount: seriesCount,
+      stackStarts: stackStarts,
+      stackEnds: stackEnds,
       paintGrid: paintGrid,
       paintAxisLabels: paintAxisLabels,
       preferSeriesColor: preferSeriesColor,
@@ -81,6 +87,8 @@ class PolarColumnSeriesElement implements DataHitElement {
     required this.theme,
     required this.seriesIndex,
     required this.seriesCount,
+    required this.stackStarts,
+    required this.stackEnds,
     required this.paintGrid,
     required this.paintAxisLabels,
     required this.preferSeriesColor,
@@ -105,6 +113,12 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   /// Number of compatible series sharing this polar pane.
   final int seriesCount;
+
+  /// Cumulative numeric stack starts in stable category order.
+  final List<double>? stackStarts;
+
+  /// Cumulative numeric stack ends in stable category order.
+  final List<double>? stackEnds;
 
   /// Whether this element owns the composition-wide grid layer.
   final bool paintGrid;
@@ -133,6 +147,9 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   /// Resolved numeric scale, exposed for axis and Rose assertions.
   PolarNumericScale get numericScale => _layout.numericScale;
+
+  /// Numeric origin shared by ordinary and diverging stacked marks.
+  double get baseline => _layout.baseline;
 
   /// Angular labels that fit the resolved pane at the active text scale.
   ///
@@ -242,6 +259,23 @@ class PolarColumnSeriesElement implements DataHitElement {
               : gridPaint,
         );
       }
+    }
+
+    if (_layout.baseline > numericScale.minimum &&
+        _layout.baseline < numericScale.maximum) {
+      final radius = numericScale.valueToRadius(_layout.baseline);
+      final rect = Rect.fromCircle(center: pane.center, radius: radius);
+      final baselinePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.5, theme.axisStyle.lineWidth)
+        ..color = theme.axisStyle.lineColor;
+      canvas.drawArc(
+        rect,
+        pane.startAngle,
+        pane.signedSweepAngle,
+        false,
+        baselinePaint,
+      );
     }
 
     if (config.angularAxis.showGridLines) {
@@ -355,8 +389,8 @@ class PolarColumnSeriesElement implements DataHitElement {
       textScaleFactor,
       maxWidth: size.width,
     );
-    final radialDepth = mark.valueRadius - mark.baselineRadius;
-    final labelRadius = mark.baselineRadius + radialDepth * 0.5;
+    final radialDepth = (mark.valueRadius - mark.baselineRadius).abs();
+    final labelRadius = (mark.baselineRadius + mark.valueRadius) * 0.5;
     final tangentialWidth = mark.band.sweepAngle.abs() * labelRadius;
     return radialDepth >= textSize.height + 4 * textScaleFactor &&
         tangentialWidth >= textSize.width + 6 * textScaleFactor;
@@ -521,6 +555,8 @@ class PolarColumnSeriesElement implements DataHitElement {
         theme: theme,
         seriesIndex: seriesIndex,
         seriesCount: seriesCount,
+        stackStarts: stackStarts,
+        stackEnds: stackEnds,
         numericScaleValues: <double>[
           numericScale.minimum,
           numericScale.maximum,
@@ -545,6 +581,7 @@ class _PolarColumnResolvedLayout {
     required this.numericScale,
     required this.geometry,
     required this.visibleAngularLabelIndices,
+    required this.baseline,
   });
 
   final RadialPaneGeometry pane;
@@ -552,6 +589,7 @@ class _PolarColumnResolvedLayout {
   final PolarNumericScale numericScale;
   final PolarColumnGeometry geometry;
   final List<int> visibleAngularLabelIndices;
+  final double baseline;
 }
 
 _PolarColumnResolvedLayout _resolveLayout({
@@ -562,6 +600,8 @@ _PolarColumnResolvedLayout _resolveLayout({
   required double revealProgress,
   required double textScaleFactor,
   Iterable<double>? numericScaleValues,
+  List<double>? stackStarts,
+  List<double>? stackEnds,
   required int seriesIndex,
   required int seriesCount,
 }) {
@@ -618,16 +658,23 @@ _PolarColumnResolvedLayout _resolveLayout({
       PolarRadialScaleMode.areaCorrect => PolarNumericScaleMode.areaCorrect,
     },
   );
-  final baseline = numericScale.minimum;
-  final animatedValues = <double>[
-    for (final point in series.points)
-      baseline + (point.y - baseline) * revealProgress,
-  ];
+  final baseline = _resolveBaseline(numericScale);
+  final animatedStarts = stackStarts == null
+      ? List<double>.filled(series.points.length, baseline)
+      : [for (final value in stackStarts) value * revealProgress];
+  final animatedEnds = stackEnds == null
+      ? [
+          for (final point in series.points)
+            baseline + (point.y - baseline) * revealProgress,
+        ]
+      : [for (final value in stackEnds) value * revealProgress];
   final geometry = PolarColumnGeometryCalculator.calculate(
     categoryScale: categoryScale,
     numericScale: numericScale,
-    values: animatedValues,
+    values: [for (final point in series.points) point.y],
     baseline: baseline,
+    radialStarts: animatedStarts,
+    radialEnds: animatedEnds,
     cornerRadius: series.polarStyle.cornerRadius * revealProgress,
     groupIndex: config.composition.mode == PolarColumnCompositionMode.grouped
         ? seriesIndex
@@ -651,10 +698,16 @@ _PolarColumnResolvedLayout _resolveLayout({
     categoryScale: categoryScale,
     numericScale: numericScale,
     geometry: geometry,
+    baseline: baseline,
     visibleAngularLabelIndices: List<int>.unmodifiable(
       visibleAngularLabelIndices,
     ),
   );
+}
+
+double _resolveBaseline(PolarNumericScale scale) {
+  if (scale.minimum <= 0 && scale.maximum >= 0) return 0;
+  return scale.minimum > 0 ? scale.minimum : scale.maximum;
 }
 
 List<int> _resolveVisibleAngularLabelIndices({

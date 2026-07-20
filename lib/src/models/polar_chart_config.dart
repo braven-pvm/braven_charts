@@ -16,6 +16,11 @@ enum PolarColumnCompositionMode {
 
   /// Every series occupies a separate angular sub-band within the category.
   grouped,
+
+  /// Series accumulate radially from zero inside the complete category band.
+  ///
+  /// Positive and negative values use independent declaration-order stacks.
+  stacked,
 }
 
 /// Plot-level composition behavior for multiple Polar Column series.
@@ -239,21 +244,10 @@ class PolarNumericAxisConfig {
 
   void validate() {
     if (minimum case final value?) {
-      _requireRange(
-        value,
-        'radialAxis.minimum',
-        minimum: 0,
-        maximum: double.infinity,
-      );
+      _requireFinite(value, 'radialAxis.minimum');
     }
     if (maximum case final value?) {
-      _requireRange(
-        value,
-        'radialAxis.maximum',
-        minimum: 0,
-        maximum: double.infinity,
-        minimumInclusive: false,
-      );
+      _requireFinite(value, 'radialAxis.maximum');
     }
     if (minimum != null && maximum != null && minimum! >= maximum!) {
       throw ArgumentError.value(
@@ -332,6 +326,22 @@ class PolarChartConfig {
     angularAxis.validate();
     radialAxis.validate();
     composition.validate();
+    if (composition.mode == PolarColumnCompositionMode.stacked) {
+      if (radialAxis.minimum case final minimum? when minimum > 0) {
+        throw ArgumentError.value(
+          minimum,
+          'radialAxis.minimum',
+          'Stacked Polar Column bounds must contain the zero baseline',
+        );
+      }
+      if (radialAxis.maximum case final maximum? when maximum < 0) {
+        throw ArgumentError.value(
+          maximum,
+          'radialAxis.maximum',
+          'Stacked Polar Column bounds must contain the zero baseline',
+        );
+      }
+    }
   }
 
   PolarChartConfig copyWith({

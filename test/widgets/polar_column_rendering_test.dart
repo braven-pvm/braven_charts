@@ -278,6 +278,86 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('stacks signed contributors independently from zero', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 440,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'new',
+                  unit: 'accounts',
+                  values: const {'Search': 30, 'Social': 20},
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'expansion',
+                  unit: 'accounts',
+                  values: const {'Search': 12, 'Social': 8},
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'churn',
+                  unit: 'accounts',
+                  values: const {'Search': -15, 'Social': -24},
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                pane: PolarPaneConfig(innerRadiusFactor: 0.12),
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                composition: PolarColumnCompositionConfig(
+                  mode: PolarColumnCompositionMode.stacked,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final elements = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .toList();
+    expect(elements, hasLength(3));
+    expect(elements.map((element) => element.numericScale.minimum).toSet(), {
+      -24,
+    });
+    expect(elements.map((element) => element.numericScale.maximum).toSet(), {
+      42,
+    });
+    expect(elements.map((element) => element.baseline).toSet(), {0});
+
+    final newSearch = elements[0].geometry.marks[0];
+    final expansionSearch = elements[1].geometry.marks[0];
+    final churnSocial = elements[2].geometry.marks[1];
+    expect(newSearch.baseline, 0);
+    expect(newSearch.radialValue, 30);
+    expect(expansionSearch.baseline, 30);
+    expect(expansionSearch.radialValue, 42);
+    expect(churnSocial.baseline, 0);
+    expect(churnSocial.radialValue, -24);
+
+    for (final (mark, seriesId) in [
+      (newSearch, 'new'),
+      (expansionSearch, 'expansion'),
+      (churnSocial, 'churn'),
+    ]) {
+      final hit = renderBox.dataHitAtWidgetPosition(
+        renderBox.plotToWidget(mark.tooltipAnchor),
+      );
+      expect(hit?.seriesId, seriesId);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('honors large text while preserving complete semantic data', (
     tester,
   ) async {

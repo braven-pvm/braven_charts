@@ -708,7 +708,6 @@ List<ChartTablePolarRow> _projectPolarRows(
             point.x.asDouble.isFinite &&
             point.x.asDouble == pointIndex.toDouble() &&
             point.y.asDouble.isFinite &&
-            point.y.asDouble >= 0 &&
             point.label?.trim().isNotEmpty == true,
         colorValue:
             _validColorValue(point.pointStyle?.values['color']?.toJson()) ??

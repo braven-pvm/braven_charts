@@ -22,6 +22,7 @@ void main() {
     expect(find.text('Partial sweep'), findsOneWidget);
     expect(find.text('Layered comparison'), findsOneWidget);
     expect(find.text('Grouped comparison'), findsOneWidget);
+    expect(find.text('Stacked comparison'), findsOneWidget);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -111,6 +112,32 @@ void main() {
       PolarColumnCompositionMode.grouped,
     );
     expect(chart.polarChartConfig.composition.groupInnerPadding, 0.12);
+
+    await tester.tap(find.byKey(const ValueKey('polar-presentation-stacked')));
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.series, hasLength(3));
+    expect(chart.series.map((series) => series.name), [
+      'New accounts',
+      'Expansion',
+      'Churn',
+    ]);
+    expect(
+      chart.polarChartConfig.composition.mode,
+      PolarColumnCompositionMode.stacked,
+    );
+    expect(
+      chart.series
+          .whereType<PolarColumnChartSeries>()
+          .expand((series) => series.points)
+          .any((point) => point.y < 0),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -126,7 +153,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('polar-presentation-grouped')));
+    await tester.tap(find.byKey(const ValueKey('polar-presentation-stacked')));
     await tester.pumpAndSettle();
 
     final switcher = find.byKey(
@@ -159,10 +186,11 @@ void main() {
     expect(table.model?.projectionKind, ChartTableProjectionKind.polar);
     expect(table.model?.polarRows, hasLength(18));
     expect(table.model?.polarRows.map((row) => row.seriesName).toSet(), {
-      'North',
-      'South',
-      'West',
+      'New accounts',
+      'Expansion',
+      'Churn',
     });
+    expect(table.model?.polarRows.any((row) => row.valueRaw < 0), isTrue);
     expect(table.model?.pieRows, isEmpty);
 
     await tester.tap(
@@ -201,7 +229,8 @@ void main() {
       hasLength(3),
     );
     expect(source, contains('polarChartConfig: PolarChartConfig('));
-    expect(source, contains('PolarColumnCompositionMode.grouped'));
+    expect(source, contains('PolarColumnCompositionMode.stacked'));
+    expect(source, contains('-21.0'));
     expect(tester.takeException(), isNull);
   });
 }

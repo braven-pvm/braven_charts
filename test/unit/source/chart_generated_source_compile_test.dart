@@ -207,13 +207,13 @@ void main() {
   );
 
   test(
-    'generated grouped Polar Column Dart formats and analyzes',
+    'generated stacked Polar Column Dart formats and analyzes',
     () async {
       final series = <PolarColumnChartSeries>[
-        PolarColumnChartSeries.rose(
-          id: 'capacity',
+        PolarColumnChartSeries.fromMap(
+          id: 'new',
           unit: 'orders',
-          values: const {'North': 90, 'East': 82, 'South': 76},
+          values: const {'North': 45, 'East': 38, 'South': 41},
           polarStyle: const PolarColumnStyle(
             cornerRadius: 8,
             opacity: 0.3,
@@ -222,10 +222,10 @@ void main() {
             showDataLabels: false,
           ),
         ),
-        PolarColumnChartSeries.rose(
-          id: 'demand',
+        PolarColumnChartSeries.fromMap(
+          id: 'churn',
           unit: 'orders',
-          values: const {'North': 42, 'East': 68, 'South': 31},
+          values: const {'North': -12, 'East': -18, 'South': -9},
           polarStyle: const PolarColumnStyle(
             cornerRadius: 8,
             opacity: 0.85,
@@ -243,13 +243,13 @@ void main() {
           outerRadiusFactor: 0.9,
         ),
         radialAxis: PolarNumericAxisConfig(
-          maximum: 100,
-          scaleMode: PolarRadialScaleMode.areaCorrect,
+          minimum: -40,
+          maximum: 80,
+          scaleMode: PolarRadialScaleMode.linear,
           tickCount: 6,
         ),
         composition: PolarColumnCompositionConfig(
-          mode: PolarColumnCompositionMode.grouped,
-          groupInnerPadding: 0.18,
+          mode: PolarColumnCompositionMode.stacked,
         ),
       );
       final configuration = _success(
@@ -283,7 +283,7 @@ void main() {
           requiredCapabilities: const {
             'chart.polar.config.v1',
             'chart.polar.multiple-series.v1',
-            'chart.polar.grouped-series.v1',
+            'chart.polar.stacked-series.v1',
           },
         ),
       );

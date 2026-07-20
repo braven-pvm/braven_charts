@@ -347,6 +347,9 @@ abstract final class ChartDocumentExtractor {
         if (source.polarChartConfig?.composition.mode ==
             PolarColumnCompositionMode.grouped)
           PolarColumnComposition.groupedSeriesCapability,
+        if (source.polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.stacked)
+          PolarColumnComposition.stackedSeriesCapability,
         if (options.concentricCenterFormatterDescriptor != null)
           'series.radial.formatters.v1',
       };

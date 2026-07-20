@@ -1388,6 +1388,9 @@ ChartDocumentSnapshot _snapshot(
         if (polarChartConfig?.composition.mode ==
             PolarColumnCompositionMode.grouped)
           'chart.polar.grouped-series.v1',
+        if (polarChartConfig?.composition.mode ==
+            PolarColumnCompositionMode.stacked)
+          'chart.polar.stacked-series.v1',
       },
     ),
     viewState: viewState,

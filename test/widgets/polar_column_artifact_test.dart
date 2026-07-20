@@ -351,6 +351,102 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('round-trips diverging stacked Polar Column composition', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    const config = PolarChartConfig(
+      pane: PolarPaneConfig(innerRadiusFactor: 0.12),
+      composition: PolarColumnCompositionConfig(
+        mode: PolarColumnCompositionMode.stacked,
+      ),
+    );
+    final series = <PolarColumnChartSeries>[
+      PolarColumnChartSeries.fromMap(
+        id: 'new',
+        name: 'New',
+        unit: 'accounts',
+        values: const {'Search': 30, 'Social': 20},
+      ),
+      PolarColumnChartSeries.fromMap(
+        id: 'expansion',
+        name: 'Expansion',
+        unit: 'accounts',
+        values: const {'Search': 12, 'Social': 8},
+      ),
+      PolarColumnChartSeries.fromMap(
+        id: 'churn',
+        name: 'Churn',
+        unit: 'accounts',
+        values: const {'Search': -15, 'Social': -24},
+      ),
+    ];
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: config,
+          series: series,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final snapshot = _snapshot(controller.extractDocument());
+    expect(
+      snapshot.document.requiredCapabilities,
+      containsAll({
+        'chart.polar.multiple-series.v1',
+        'chart.polar.stacked-series.v1',
+      }),
+    );
+    final table = ChartTableModel.fromDocument(snapshot.document);
+    expect(table.polarRows, hasLength(6));
+    expect(table.polarRows.map((row) => row.valueRaw), [
+      30,
+      20,
+      12,
+      8,
+      -15,
+      -24,
+    ]);
+
+    final hydrated = _configuration(
+      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+    );
+    expect(hydrated.polarChartConfig, config);
+    expect(hydrated.series.map((item) => item.id), [
+      'new',
+      'expansion',
+      'churn',
+    ]);
+
+    final generated = ChartDartSourceGenerator.generate(snapshot);
+    expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+    final source =
+        (generated as ChartArtifactSuccess<ChartGeneratedSource>).value.source;
+    expect(source, contains('PolarColumnCompositionMode.stacked'));
+    expect(source, contains('y: -24.0'));
+
+    final invalidJson = snapshot.document.toJson();
+    invalidJson['requiredCapabilities'] = snapshot.document.requiredCapabilities
+        .where((capability) => capability != 'chart.polar.stacked-series.v1')
+        .toList();
+    final invalid = ChartDocumentHydrator.hydrateDocument(
+      ChartDocument.fromJson(invalidJson),
+    );
+    expect(invalid, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+    expect(
+      (invalid as ChartArtifactFailure<HydratedChartConfiguration>)
+          .error
+          .message,
+      contains('chart.polar.stacked-series.v1'),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _host(Widget child) => MaterialApp(

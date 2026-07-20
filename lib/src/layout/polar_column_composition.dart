@@ -5,7 +5,8 @@ import '../models/polar_column_chart_series.dart';
 ///
 /// Compatible series share category identity, preset, unit, and radial scale.
 /// Layered series reuse a category band; grouped series divide it into stable
-/// declaration-order sub-bands. Stacking remains a separate contract.
+/// declaration-order sub-bands; stacked series accumulate independently on
+/// the positive and negative sides of zero.
 abstract final class PolarColumnComposition {
   /// Capability required by artifacts containing more than one Polar Column
   /// series.
@@ -13,6 +14,9 @@ abstract final class PolarColumnComposition {
 
   /// Capability required by grouped Polar Column artifacts.
   static const groupedSeriesCapability = 'chart.polar.grouped-series.v1';
+
+  /// Capability required by stacked Polar Column artifacts.
+  static const stackedSeriesCapability = 'chart.polar.stacked-series.v1';
 
   /// Throws when [series] cannot share one polar axis system.
   static void validate(
@@ -60,12 +64,15 @@ abstract final class PolarColumnComposition {
         );
       }
     }
-    if (config?.composition.mode == PolarColumnCompositionMode.grouped &&
+    final mode = config?.composition.mode;
+    if ((mode == PolarColumnCompositionMode.grouped ||
+            mode == PolarColumnCompositionMode.stacked) &&
         series.length < 2) {
       throw ArgumentError.value(
         series.length,
         'series',
-        'Grouped Polar Column composition requires at least two series',
+        '${mode == PolarColumnCompositionMode.grouped ? 'Grouped' : 'Stacked'} '
+            'Polar Column composition requires at least two series',
       );
     }
   }

@@ -69,6 +69,58 @@ void main() {
       expect(geometry.marks[0].sector.outerRadius, 48);
     });
 
+    test('signed ordinary marks diverge inward and outward from zero', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+        innerRadiusFactor: 0.2,
+        outerRadiusFactor: 0.9,
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['Loss', 'Gain'],
+        ),
+        numericScale: PolarNumericScale(pane: pane, minimum: -10, maximum: 20),
+        values: const [-5, 10],
+      );
+
+      expect(geometry.marks[0].baseline, 0);
+      expect(
+        geometry.marks[0].valueRadius,
+        lessThan(geometry.marks[0].baselineRadius),
+      );
+      expect(
+        geometry.marks[1].valueRadius,
+        greaterThan(geometry.marks[1].baselineRadius),
+      );
+      expect(geometry.hitTest(geometry.marks[0].tooltipAnchor)?.value, -5);
+      expect(geometry.hitTest(geometry.marks[1].tooltipAnchor)?.value, 10);
+    });
+
+    test('stack endpoints preserve raw values and cumulative geometry', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['A', 'B'],
+        ),
+        numericScale: PolarNumericScale(pane: pane, minimum: -20, maximum: 30),
+        values: const [5, -7],
+        radialStarts: const [10, -4],
+        radialEnds: const [15, -11],
+      );
+
+      expect(geometry.marks[0].value, 5);
+      expect(geometry.marks[0].baseline, 10);
+      expect(geometry.marks[0].radialValue, 15);
+      expect(geometry.marks[1].value, -7);
+      expect(geometry.marks[1].baseline, -4);
+      expect(geometry.marks[1].radialValue, -11);
+      expect(geometry.marks.every((mark) => mark.isVisible), isTrue);
+    });
+
     test('divides each category into parallel grouped sub-bands', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
@@ -263,7 +315,8 @@ void main() {
         () => PolarColumnGeometryCalculator.calculate(
           categoryScale: categories,
           numericScale: values,
-          values: const [1, -1],
+          values: const [1, 2],
+          radialStarts: const [0, 1],
         ),
         throwsArgumentError,
       );

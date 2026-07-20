@@ -33,7 +33,7 @@ void main() {
       expect(series.points.map((point) => point.y), [25, 100]);
     });
 
-    test('validates category identity, ordinals, values, and style', () {
+    test('validates category identity, ordinals, finite values, and style', () {
       PolarColumnChartSeries build(List<ChartDataPoint> points) =>
           PolarColumnChartSeries(id: 'polar', points: points);
 
@@ -43,7 +43,11 @@ void main() {
         throwsArgumentError,
       );
       expect(
-        () => build(const [ChartDataPoint(x: 0, y: -1, label: 'A')]),
+        build(const [ChartDataPoint(x: 0, y: -1, label: 'A')]).points.single.y,
+        -1,
+      );
+      expect(
+        () => build(const [ChartDataPoint(x: 0, y: double.nan, label: 'A')]),
         throwsArgumentError,
       );
       expect(
@@ -143,6 +147,24 @@ void main() {
       expect(
         const PolarChartConfig(
           radialAxis: PolarNumericAxisConfig(tickCount: 1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          composition: PolarColumnCompositionConfig(
+            mode: PolarColumnCompositionMode.stacked,
+          ),
+          radialAxis: PolarNumericAxisConfig(minimum: 10, maximum: 100),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          composition: PolarColumnCompositionConfig(
+            mode: PolarColumnCompositionMode.stacked,
+          ),
+          radialAxis: PolarNumericAxisConfig(minimum: -100, maximum: -10),
         ).validate,
         throwsArgumentError,
       );

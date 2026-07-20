@@ -13,7 +13,7 @@ enum PolarNumericScaleMode {
   areaCorrect,
 }
 
-/// Maps a non-negative numeric domain into the real radii of a radial pane.
+/// Maps a numeric domain into the real radii of a radial pane.
 ///
 /// Mapping into physical radii, rather than an abstract square-root fraction,
 /// keeps [PolarNumericScaleMode.areaCorrect] statistically correct when the
@@ -36,10 +36,10 @@ class PolarNumericScale {
     );
   }
 
-  /// Derives a stable V1 domain from [values].
+  /// Derives a stable domain from [values].
   ///
-  /// The default baseline is zero. Empty and all-zero datasets use `[0, 1]`
-  /// so layout, ticks, and empty-state transitions remain finite.
+  /// Automatic domains always include zero. Empty and all-zero datasets use
+  /// `[0, 1]` so layout, ticks, and empty-state transitions remain finite.
   factory PolarNumericScale.fromValues({
     required RadialPaneGeometry pane,
     required Iterable<double> values,
@@ -49,23 +49,25 @@ class PolarNumericScale {
   }) {
     final snapshot = List<double>.unmodifiable(values);
     for (final (index, value) in snapshot.indexed) {
-      if (!value.isFinite || value < 0) {
+      if (!value.isFinite) {
         throw ArgumentError.value(
           value,
           'values[$index]',
-          'Polar Column V1 values must be finite and non-negative',
+          'Polar Column values must be finite',
         );
       }
     }
 
-    final resolvedMinimum = minimum ?? 0;
-    var resolvedMaximum = maximum;
-    if (resolvedMaximum == null) {
-      final dataMaximum = snapshot.isEmpty
-          ? resolvedMinimum
-          : snapshot.reduce(math.max);
-      resolvedMaximum = dataMaximum > resolvedMinimum
-          ? dataMaximum
+    final dataMinimum = snapshot.isEmpty ? 0.0 : snapshot.reduce(math.min);
+    final dataMaximum = snapshot.isEmpty ? 0.0 : snapshot.reduce(math.max);
+    final double resolvedMinimum = minimum ?? math.min(0.0, dataMinimum);
+    final double resolvedMaximum;
+    if (maximum != null) {
+      resolvedMaximum = maximum;
+    } else {
+      final automaticMaximum = math.max(0.0, dataMaximum);
+      resolvedMaximum = automaticMaximum > resolvedMinimum
+          ? automaticMaximum
           : resolvedMinimum + math.max(resolvedMinimum.abs() * 0.1, 1);
     }
     return PolarNumericScale(
@@ -101,7 +103,7 @@ class PolarNumericScale {
   /// Converts [value] to a physical pane radius.
   ///
   /// Finite values outside the configured domain clamp to the nearest edge.
-  /// Negative values remain invalid for Polar Column V1.
+  /// Signed values are valid when they lie on a signed radial domain.
   double valueToRadius(double value) {
     _validateValue(value);
     final normalized = ((value - minimum) / domainSpan).clamp(0.0, 1.0);
@@ -148,11 +150,11 @@ class PolarNumericScale {
 }
 
 void _validateDomain({required double minimum, required double maximum}) {
-  if (!minimum.isFinite || minimum < 0) {
+  if (!minimum.isFinite) {
     throw ArgumentError.value(
       minimum,
       'minimum',
-      'Polar Column V1 minimum must be finite and non-negative',
+      'Polar Column minimum must be finite',
     );
   }
   if (!maximum.isFinite || maximum <= minimum) {
@@ -165,11 +167,11 @@ void _validateDomain({required double minimum, required double maximum}) {
 }
 
 void _validateValue(double value) {
-  if (!value.isFinite || value < 0) {
+  if (!value.isFinite) {
     throw ArgumentError.value(
       value,
       'value',
-      'Polar Column V1 values must be finite and non-negative',
+      'Polar Column values must be finite',
     );
   }
 }

@@ -130,6 +130,33 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     'Direct': 67,
   };
 
+  static const _stackedNewValues = <String, num>{
+    'Search': 34,
+    'Social': 26,
+    'Partners': 31,
+    'Email': 19,
+    'Events': 28,
+    'Direct': 37,
+  };
+
+  static const _stackedExpansionValues = <String, num>{
+    'Search': 16,
+    'Social': 12,
+    'Partners': 18,
+    'Email': 11,
+    'Events': 15,
+    'Direct': 20,
+  };
+
+  static const _stackedChurnValues = <String, num>{
+    'Search': -13,
+    'Social': -21,
+    'Partners': -12,
+    'Email': -17,
+    'Events': -10,
+    'Direct': -15,
+  };
+
   static const _columnColors = <Color>[
     Color(0xFF2563EB),
     Color(0xFF0891B2),
@@ -334,9 +361,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                   const SizedBox(width: 8),
                   _MetricChip(
                     label:
-                        _compositionMode == PolarColumnCompositionMode.grouped
-                        ? '${chartSeries.length} grouped series'
-                        : '${chartSeries.length} layered series',
+                        '${chartSeries.length} ${switch (_compositionMode) {
+                          PolarColumnCompositionMode.layered => 'layered',
+                          PolarColumnCompositionMode.grouped => 'grouped',
+                          PolarColumnCompositionMode.stacked => 'stacked',
+                        }} series',
                   ),
                 ],
               ],
@@ -563,6 +592,34 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ];
     }
+    if (_presentation == _PolarPresentation.stacked) {
+      return [
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-new',
+          name: 'New accounts',
+          values: _values,
+          color: const Color(0xFF2563EB),
+          unit: 'accounts',
+          polarStyle: style,
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-expansion',
+          name: 'Expansion',
+          values: _comparisonValues,
+          color: const Color(0xFF0D9488),
+          unit: 'accounts',
+          polarStyle: style,
+        ),
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-churn',
+          name: 'Churn',
+          values: _tertiaryValues,
+          color: const Color(0xFFE11D48),
+          unit: 'accounts',
+          polarStyle: style,
+        ),
+      ];
+    }
     return [
       _presentation == _PolarPresentation.rose
           ? PolarColumnChartSeries.rose(
@@ -600,7 +657,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       ],
     ),
     if (_presentation == _PolarPresentation.layered ||
-        _presentation == _PolarPresentation.grouped)
+        _presentation == _PolarPresentation.grouped ||
+        _presentation == _PolarPresentation.stacked)
       OptionSection(
         title: 'Series composition',
         icon: Icons.view_week_outlined,
@@ -612,6 +670,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             labelBuilder: (value) => switch (value) {
               PolarColumnCompositionMode.layered => 'Layered',
               PolarColumnCompositionMode.grouped => 'Grouped',
+              PolarColumnCompositionMode.stacked => 'Stacked',
             },
             onChanged: (value) => setState(() => _compositionMode = value),
           ),
@@ -805,6 +864,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         'Groups divide the band',
         'Each series receives a stable angular sub-band while the category and radial scale stay shared.',
       ),
+      (
+        Icons.stacked_bar_chart_outlined,
+        'Stacks diverge from zero',
+        'Positive and negative contributors accumulate independently without cancelling each other.',
+      ),
     ];
     return _Section(
       eyebrow: 'FEATURE GUIDE',
@@ -839,30 +903,32 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   Widget _buildCodeRecipe() => const _Section(
     eyebrow: 'HOW TO USE IT',
-    title: 'Group compatible series inside each category band',
+    title: 'Stack signed contributors around an explicit zero baseline',
     child: _CodeBlock(
-      code: '''final north = PolarColumnChartSeries.fromMap(
-  id: 'north',
-  values: const {'Search': 78, 'Social': 46, 'Partners': 64},
-  unit: 'orders',
+      code: '''final newAccounts = PolarColumnChartSeries.fromMap(
+  id: 'new',
+  values: const {'Search': 34, 'Social': 26, 'Partners': 31},
+  unit: 'accounts',
 );
 
-final south = PolarColumnChartSeries.fromMap(
-  id: 'south',
-  values: const {'Search': 62, 'Social': 69, 'Partners': 51},
-  unit: 'orders',
+final churn = PolarColumnChartSeries.fromMap(
+  id: 'churn',
+  values: const {'Search': -13, 'Social': -21, 'Partners': -12},
+  unit: 'accounts',
 );
 
 BravenChartPlus(
-  // Same categories, order, preset, and unit; one shared radial scale.
-  series: [north, south],
+  // Positive and negative values stack independently from zero.
+  series: [newAccounts, churn],
   polarChartConfig: const PolarChartConfig(
-    pane: PolarPaneConfig(startAngleDegrees: -90),
+    pane: PolarPaneConfig(
+      startAngleDegrees: -90,
+      innerRadiusFactor: 0.14,
+    ),
     angularAxis: PolarCategoryAxisConfig(innerPadding: 0.12),
     radialAxis: PolarNumericAxisConfig(tickCount: 5),
     composition: PolarColumnCompositionConfig(
-      mode: PolarColumnCompositionMode.grouped,
-      groupInnerPadding: 0.12,
+      mode: PolarColumnCompositionMode.stacked,
     ),
   ),
 );''',
@@ -950,6 +1016,22 @@ BravenChartPlus(
           _cornerRadius = 4;
           _compositionMode = PolarColumnCompositionMode.grouped;
           _groupInnerPadding = 0.12;
+        case _PolarPresentation.stacked:
+          _values = Map<String, num>.of(_stackedNewValues);
+          _comparisonValues = Map<String, num>.of(_stackedExpansionValues);
+          _tertiaryValues = Map<String, num>.of(_stackedChurnValues);
+          _categoryCount = _values.length;
+          _startAngle = -90;
+          _sweepAngle = 360;
+          _clockwise = true;
+          _innerRadius = 0.14;
+          _outerRadius = 0.9;
+          _innerPadding = 0.12;
+          _outerPadding = 0.04;
+          _scaleMode = PolarRadialScaleMode.linear;
+          _cornerRadius = 4;
+          _compositionMode = PolarColumnCompositionMode.stacked;
+          _groupInnerPadding = 0.12;
       }
     });
   }
@@ -965,6 +1047,11 @@ BravenChartPlus(
         _comparisonValues = generated.$2;
       } else if (_presentation == _PolarPresentation.grouped) {
         final generated = _randomGroupedValues(count);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
+      } else if (_presentation == _PolarPresentation.stacked) {
+        final generated = _randomStackedValues(count);
         _values = generated.$1;
         _comparisonValues = generated.$2;
         _tertiaryValues = generated.$3;
@@ -984,6 +1071,11 @@ BravenChartPlus(
         _comparisonValues = generated.$2;
       } else if (_presentation == _PolarPresentation.grouped) {
         final generated = _randomGroupedValues(_categoryCount);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
+      } else if (_presentation == _PolarPresentation.stacked) {
+        final generated = _randomStackedValues(_categoryCount);
         _values = generated.$1;
         _comparisonValues = generated.$2;
         _tertiaryValues = generated.$3;
@@ -1012,6 +1104,23 @@ BravenChartPlus(
   (Map<String, num>, Map<String, num>, Map<String, num>) _randomGroupedValues(
     int count,
   ) => (_randomValues(count), _randomValues(count), _randomValues(count));
+
+  (Map<String, num>, Map<String, num>, Map<String, num>) _randomStackedValues(
+    int count,
+  ) => (
+    {
+      for (var index = 0; index < count; index++)
+        'Channel ${index + 1}': 20 + _random.nextInt(26),
+    },
+    {
+      for (var index = 0; index < count; index++)
+        'Channel ${index + 1}': 8 + _random.nextInt(15),
+    },
+    {
+      for (var index = 0; index < count; index++)
+        'Channel ${index + 1}': -(8 + _random.nextInt(18)),
+    },
+  );
 }
 
 enum _PolarPresentation {
@@ -1049,6 +1158,13 @@ enum _PolarPresentation {
     Icons.view_week_outlined,
     'Regional orders by channel',
     'Three regions divide each category band and share one numeric radial scale',
+  ),
+  stacked(
+    'Stacked comparison',
+    'Signed contributors accumulate independently from zero',
+    Icons.stacked_bar_chart_outlined,
+    'Net account movement by channel',
+    'Growth stacks outward while churn accumulates inward from zero',
   );
 
   const _PolarPresentation(

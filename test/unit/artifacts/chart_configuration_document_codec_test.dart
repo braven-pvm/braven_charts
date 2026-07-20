@@ -302,6 +302,26 @@ void main() {
       expect(decoded, source);
     });
 
+    test('round-trips stacked Polar Column composition settings', () {
+      const source = PolarChartConfig(
+        radialAxis: PolarNumericAxisConfig(minimum: -40, maximum: 80),
+        composition: PolarColumnCompositionConfig(
+          mode: PolarColumnCompositionMode.stacked,
+        ),
+      );
+
+      final encoded = _success(
+        ChartConfigurationDocumentCodec.encodePolarChart(source),
+      );
+      final transported =
+          JsonValue.fromJson(encoded.toJson()) as JsonObjectValue;
+      final decoded = _success(
+        ChartConfigurationDocumentCodec.decodePolarChart(transported),
+      );
+
+      expect(decoded, source);
+    });
+
     test('defaults legacy Polar Column documents to layered composition', () {
       final encoded = _success(
         ChartConfigurationDocumentCodec.encodePolarChart(

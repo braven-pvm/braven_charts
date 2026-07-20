@@ -92,13 +92,14 @@ class PolarColumnStyle {
   );
 }
 
-/// One non-negative, category-based series rendered against polar axes.
+/// One signed, category-based series rendered against polar axes.
 ///
 /// Angle communicates category position. Radius communicates [ChartDataPoint.y]
 /// against an explicit numeric axis; values are not converted into Pie shares.
-/// Multiple compatible series may be layered in declaration order or grouped
-/// into stable angular sub-bands. They share category labels/order, preset,
-/// unit, and one radial scale. Stacking is a separate composition contract.
+/// Multiple compatible series may be layered in declaration order, grouped
+/// into stable angular sub-bands, or stacked independently on the positive and
+/// negative sides of zero. They share category labels/order, preset, unit, and
+/// one radial scale.
 class PolarColumnChartSeries extends ChartSeries {
   PolarColumnChartSeries({
     required super.id,
@@ -226,11 +227,11 @@ class PolarColumnChartSeries extends ChartSeries {
           'Polar Column X values must be stable zero-based ordinals',
         );
       }
-      if (!point.y.isFinite || point.y < 0) {
+      if (!point.y.isFinite) {
         throw ArgumentError.value(
           point.y,
           'points[$index].y',
-          'Polar Column V1 values must be finite and non-negative',
+          'Polar Column values must be finite',
         );
       }
       final category = point.label?.trim();

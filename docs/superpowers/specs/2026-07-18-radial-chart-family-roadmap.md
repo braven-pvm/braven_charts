@@ -446,18 +446,21 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
-Status: active. Slices 3.1 and 3.2 add declaration-order layered comparison and
-grouped angular sub-bands for multiple compatible Polar Column series.
-Compatible series share category identity/order, preset, unit, pane, and one
-global radial scale. Grouping preserves full per-series rows and exact
-`(seriesId, pointIndex)` selection identity. Stacking remains explicitly out of
-scope until slice 3.3.
+Status: active. Slices 3.1 through 3.3 implement declaration-order layered
+comparison, grouped angular sub-bands, and diverging stacks for multiple
+compatible Polar Column series. Compatible series share category
+identity/order, preset, unit, pane, and one global radial scale. Grouping and
+stacking preserve full per-series rows and exact `(seriesId, pointIndex)`
+selection identity. Stacked positive and negative contributors accumulate
+independently from zero; opposite signs never cancel.
 
 Deliver in small slices:
 
 1. multiple compatible series — implemented as layered composition in 3.1;
 2. grouping — implemented as stable category sub-bands in 3.2;
-3. stacking with explicit positive/negative rules;
+3. stacking — implemented in 3.3 with an explicit zero baseline, independent
+   positive/negative accumulators, signed automatic domains, and raw-value
+   artifact/table/source preservation;
 4. thresholds/targets;
 5. errors/ranges if the polar presentation remains legible and accessible;
 6. performance and label-density limits.
