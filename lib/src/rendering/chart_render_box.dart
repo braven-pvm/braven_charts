@@ -611,6 +611,13 @@ class ChartRenderBox extends RenderBox {
   CrosshairConfig? _syncPositionCacheCrosshair;
   Offset? _syncPositionCacheValue;
 
+  // The tracking snapshot resolved while computing the synchronized cursor
+  // position (Y adjustment), retained so the same frame's paint and debug
+  // reads share one resolution instead of resolving again at the adjusted
+  // cursor. Valid only while it is identical to the resolver's current
+  // snapshot; cleared with the position cache.
+  CartesianTrackingSnapshot? _syncPositionSnapshot;
+
   Offset? get _synchronizedCursorPosition {
     final transform = _transform;
     final dataX = _synchronizedCursorX;
@@ -655,12 +662,14 @@ class ChartRenderBox extends RenderBox {
         (crosshair.mode == CrosshairMode.horizontal ||
             crosshair.mode == CrosshairMode.both) &&
         !transform.transposed;
+    _syncPositionSnapshot = null;
     if (needsLocalY) {
       final snapshot = _resolveTrackingSnapshot(
         cursorPosition: widgetPosition,
         origin: CartesianTrackingOrigin.synchronized,
         interpolateValues: crosshair.interpolateValues,
       );
+      _syncPositionSnapshot = snapshot;
       if (snapshot != null && snapshot.values.isNotEmpty) {
         final value = snapshot.values.first;
         SeriesElement? seriesElement;
@@ -711,7 +720,12 @@ class ChartRenderBox extends RenderBox {
     MultiAxisInfo? axisInfo,
   }) {
     final transform = _transform;
-    if (transform == null || _plotArea.isEmpty) return null;
+    if (transform == null || _plotArea.isEmpty) {
+      // Resolution prerequisites are gone; publish the null snapshot so
+      // consumers of the resolver never observe stale tracking state.
+      _trackingSnapshotResolver.clear();
+      return null;
+    }
     return _trackingSnapshotResolver.resolve(
       cursorPlotPosition: cursorPosition - _plotArea.topLeft,
       plotArea: _plotArea,
@@ -730,6 +744,7 @@ class ChartRenderBox extends RenderBox {
   void _invalidateTrackingResolution() {
     _trackingDataRevision++;
     _syncPositionCacheValid = false;
+    _syncPositionSnapshot = null;
   }
 
   /// Current synchronized data X for render-path verification.
@@ -750,11 +765,19 @@ class ChartRenderBox extends RenderBox {
     final cursor = _synchronizedCursorPosition;
     if (cursor == null) return null;
     final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
-    final snapshot = _resolveTrackingSnapshot(
-      cursorPosition: cursor,
-      origin: CartesianTrackingOrigin.synchronized,
-      interpolateValues: crosshair.interpolateValues,
-    );
+    // Share the resolution retained by the synchronized-position computation
+    // (the same one paint reuses) instead of resolving again at the
+    // Y-adjusted cursor.
+    final retained = _syncPositionSnapshot;
+    final snapshot =
+        (retained != null &&
+            identical(retained, _trackingSnapshotResolver.current))
+        ? retained
+        : _resolveTrackingSnapshot(
+            cursorPosition: cursor,
+            origin: CartesianTrackingOrigin.synchronized,
+            interpolateValues: crosshair.interpolateValues,
+          );
     if (snapshot == null) return null;
     final transposed = _transform?.transposed ?? false;
     return CrosshairTrackingState(
@@ -810,6 +833,12 @@ class ChartRenderBox extends RenderBox {
   @visibleForTesting
   int get debugTrackingPublishCount =>
       _trackingSnapshotResolver.debugPublishCount;
+
+  /// Total actual tracking snapshot computations (input-cache misses) on
+  /// this chart. Stationary repaints must not increment this.
+  @visibleForTesting
+  int get debugTrackingComputeCount =>
+      _trackingSnapshotResolver.debugComputeCount;
 
   // ==========================================================================
   // Lifecycle
@@ -2886,14 +2915,31 @@ class ChartRenderBox extends RenderBox {
         for (final element in seriesElements) element.series,
       ]);
       if (crosshairConfig.shouldUseTrackingMode(totalDataPoints)) {
-        trackingSnapshot = _resolveTrackingSnapshot(
-          cursorPosition: cursorPos,
-          origin: _synchronizedCursorPosition != null
-              ? CartesianTrackingOrigin.synchronized
-              : CartesianTrackingOrigin.pointer,
-          interpolateValues: crosshairConfig.interpolateValues,
-          axisInfo: multiAxisInfo,
-        );
+        final syncSnapshot = _syncPositionSnapshot;
+        if (_synchronizedCursorPosition != null &&
+            syncSnapshot != null &&
+            identical(syncSnapshot, _trackingSnapshotResolver.current)) {
+          // The synchronized-position computation already resolved this
+          // frame's snapshot: the effective cursor derives from the same
+          // sync data-X and transform, only its Y was adjusted afterwards.
+          // Reuse that resolution instead of resolving again at the
+          // Y-adjusted cursor, which would double-compute every sync frame
+          // and could ping-pong publication with Y-sensitive scatter hits.
+          trackingSnapshot = syncSnapshot;
+        } else {
+          trackingSnapshot = _resolveTrackingSnapshot(
+            cursorPosition: cursorPos,
+            origin: _synchronizedCursorPosition != null
+                ? CartesianTrackingOrigin.synchronized
+                : CartesianTrackingOrigin.pointer,
+            interpolateValues: crosshairConfig.interpolateValues,
+            axisInfo: multiAxisInfo,
+          );
+        }
+      } else {
+        // Tracking-mode gate is off: publish the null snapshot so consumers
+        // of the resolver never observe stale tracking state.
+        _trackingSnapshotResolver.clear();
       }
 
       // Delegate to CrosshairRenderer module
@@ -2913,6 +2959,11 @@ class ChartRenderBox extends RenderBox {
         trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
       );
+    } else {
+      // The crosshair gate is off (disabled, cursor gone or outside the
+      // plot, or a drag in progress): publish the null snapshot so future
+      // consumers of the resolver never observe the stale hover state.
+      _trackingSnapshotResolver.clear();
     }
 
     // Draw tooltip for hovered/tapped marker (if any)
@@ -3343,6 +3394,11 @@ class ChartRenderBox extends RenderBox {
       canvas.saveLayer(overlayBounds, Paint());
       _paintOverlayLayer(canvas, size);
       canvas.restore(); // Restore from saveLayer
+    } else {
+      // No overlay content means no tracking source either (cursor gone or
+      // crosshair gated off): publish the null snapshot so future consumers
+      // of the resolver never observe the stale hover state.
+      _trackingSnapshotResolver.clear();
     }
 
     // Paint scrollbars if enabled (outside plot area clipping)

@@ -39,14 +39,17 @@ const _transform = ChartTransform(
 
 const _plotArea = Rect.fromLTWH(0, 0, 100, 100);
 
-LineChartSeries _powerSeries({double intercept = 0}) => LineChartSeries(
+LineChartSeries _powerSeries({
+  double intercept = 0,
+  Color color = const Color(0xFF2196F3),
+}) => LineChartSeries(
   id: 'power',
   name: 'Power',
   points: [
     for (var i = 0; i <= 10; i++)
       ChartDataPoint(x: i.toDouble(), y: i * 10 + intercept),
   ],
-  color: const Color(0xFF2196F3),
+  color: color,
 );
 
 LineChartSeries _heartRateSeries() => LineChartSeries(
@@ -192,6 +195,56 @@ void main() {
       expect(resolver.publishedThisFrame, isTrue);
     });
 
+    test('invalidate() republishes even when the recomputed snapshot has the '
+        'same identity', () {
+      final resolver = CartesianTrackingSnapshotResolver();
+      final element = _element(_powerSeries());
+      final elements = <ChartElement>[element];
+
+      final first =
+          _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(first!.values.single.seriesColor, const Color(0xFF2196F3));
+      expect(resolver.debugPublishCount, 1);
+
+      // Same data values — the recomputed snapshot matches `sameIdentityAs`
+      // (identity excludes seriesColor) — but the color changed. Only a
+      // forced invalidation can surface it.
+      element.updateSeries(_powerSeries(color: const Color(0xFFFF5722)));
+      resolver.invalidate();
+      final second =
+          _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+
+      expect(identical(first, second), isFalse);
+      expect(second!.values.single.seriesColor, const Color(0xFFFF5722));
+      expect(resolver.debugPublishCount, 2);
+      expect(resolver.publishedThisFrame, isTrue);
+      expect(identical(resolver.current, second), isTrue);
+    });
+
+    test('a dataRevision bump republishes even when the recomputed snapshot '
+        'has the same identity', () {
+      final resolver = CartesianTrackingSnapshotResolver();
+      final element = _element(_powerSeries());
+      final elements = <ChartElement>[element];
+
+      final first =
+          _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(first!.values.single.seriesColor, const Color(0xFF2196F3));
+
+      element.updateSeries(_powerSeries(color: const Color(0xFFFF5722)));
+      final second = _resolve(
+        resolver,
+        cursor: const Offset(30, 50),
+        elements: elements,
+        dataRevision: 1,
+      );
+
+      expect(identical(first, second), isFalse);
+      expect(second!.values.single.seriesColor, const Color(0xFFFF5722));
+      expect(resolver.debugPublishCount, 2);
+      expect(resolver.publishedThisFrame, isTrue);
+    });
+
     test('invalidate() forces recomputation with unchanged inputs', () {
       final resolver = CartesianTrackingSnapshotResolver();
       final element = _element(_powerSeries());
@@ -208,6 +261,55 @@ void main() {
 
       expect(recomputed!.values.single.formattedY, '39');
       expect(resolver.debugPublishCount, 2);
+    });
+  });
+
+  group('CartesianTrackingSnapshotResolver compute counting', () {
+    test('debugComputeCount increments only on actual computation', () {
+      final resolver = CartesianTrackingSnapshotResolver();
+      final elements = <ChartElement>[_element(_powerSeries())];
+
+      _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(resolver.debugComputeCount, 1);
+
+      // Memoized inputs: consulted, not recomputed.
+      _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(resolver.debugComputeCount, 1);
+      expect(resolver.debugResolveCount, 2);
+
+      // Sub-datum movement recomputes but suppresses publication.
+      _resolve(resolver, cursor: const Offset(32, 50), elements: elements);
+      expect(resolver.debugComputeCount, 2);
+      expect(resolver.debugPublishCount, 1);
+    });
+  });
+
+  group('CartesianTrackingSnapshotResolver clear', () {
+    test('clear() publishes null once and resets the memoized inputs', () {
+      final resolver = CartesianTrackingSnapshotResolver();
+      final elements = <ChartElement>[_element(_powerSeries())];
+
+      final snapshot =
+          _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(snapshot, isNotNull);
+      expect(resolver.debugPublishCount, 1);
+
+      resolver.clear();
+      expect(resolver.current, isNull);
+      expect(resolver.debugPublishCount, 2);
+      expect(resolver.publishedThisFrame, isTrue);
+
+      // Idempotent: clearing an already-null snapshot publishes nothing.
+      resolver.clear();
+      expect(resolver.debugPublishCount, 2);
+      expect(resolver.publishedThisFrame, isFalse);
+
+      // The memo resets with the snapshot, so identical inputs recompute and
+      // republish instead of returning the cleared null through the cache.
+      final again =
+          _resolve(resolver, cursor: const Offset(30, 50), elements: elements);
+      expect(again, isNotNull);
+      expect(resolver.debugPublishCount, 3);
     });
   });
 

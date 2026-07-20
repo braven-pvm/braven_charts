@@ -14,11 +14,24 @@
 
 import 'dart:ui' show Color;
 
-import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
 
 import '../../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../../models/candlestick_interaction_details.dart';
 import '../../models/interaction_config.dart' show CrosshairSeriesValue;
+
+/// Number of fields declared on [CrosshairSeriesValue] that
+/// [CartesianTrackedSeriesValue.fromCrosshairValue] must copy exhaustively.
+///
+/// Field-count tripwire: adding a field to [CrosshairSeriesValue] without
+/// mirroring it on [CartesianTrackedSeriesValue] (and copying it in
+/// [CartesianTrackedSeriesValue.fromCrosshairValue]) would silently drop the
+/// value from every published tracking snapshot. The exhaustive-copy test and
+/// the field-count test in `cartesian_tracking_snapshot_test.dart` both
+/// assert this constant, so a new field forces a deliberate review of the
+/// copy chain before either test can pass again.
+@visibleForTesting
+const int crosshairSeriesValueFieldCount = 23;
 
 /// The interaction source that produced a [CartesianTrackingSnapshot].
 ///
@@ -84,6 +97,12 @@ class CartesianTrackedSeriesValue {
 
   /// Creates a tracked value from a resolved [CrosshairSeriesValue], copying
   /// every field and attaching the display-ready formatting.
+  ///
+  /// This copy must stay exhaustive over all
+  /// [crosshairSeriesValueFieldCount] fields of [CrosshairSeriesValue]
+  /// (declared in `models/interaction_config.dart`). When a field is added
+  /// there, mirror it here and on [CartesianTrackedSeriesValue], then update
+  /// the tripwire constant and its tests together.
   factory CartesianTrackedSeriesValue.fromCrosshairValue(
     CrosshairSeriesValue value, {
     required String formattedX,
@@ -254,6 +273,16 @@ class CartesianTrackingSnapshot {
   /// candlestick OHLC identity. Positional fields such as [dataX], [plotX],
   /// and [origin] are deliberately excluded so sub-pixel cursor movement over
   /// the same snapped datum suppresses re-publication.
+  ///
+  /// **Accepted marker quantization** (Slice-0 decision D10, hot-path
+  /// contract): the raw interpolated `y` is also excluded, so cursor movement
+  /// that changes an interpolated intersection Y without changing its
+  /// `formattedY` keeps the previously published snapshot — consumers reusing
+  /// its marker position render the *prior* interpolated Y until the
+  /// formatted value ticks over. Marker placement is thereby quantized to the
+  /// display precision of `formattedY`; that sub-precision drift is invisible
+  /// at tooltip precision and is the accepted cost of suppressing per-pixel
+  /// republication.
   bool sameIdentityAs(CartesianTrackingSnapshot other) {
     if (identical(this, other)) return true;
     if (values.length != other.values.length) return false;

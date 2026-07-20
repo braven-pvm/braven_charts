@@ -34,15 +34,23 @@ void main() {
       expect(renderBox.debugTrackingPublishCount, 1);
       final resolveCountAfterHover = renderBox.debugTrackingResolveCount;
       expect(resolveCountAfterHover, greaterThan(0));
+      final computeCountAfterHover = renderBox.debugTrackingComputeCount;
+      expect(computeCountAfterHover, greaterThan(0));
 
       // Three extra frames without moving the cursor: paint consults the
       // resolver each repaint, but the memoized inputs short-circuit to the
-      // identical published snapshot instance — nothing is republished.
+      // identical published snapshot instance — nothing is recomputed or
+      // republished.
       for (var frame = 0; frame < 3; frame++) {
         renderBox.markNeedsPaint();
         await tester.pump();
         expect(renderBox.debugTrackingSnapshot, same(snapshot));
         expect(renderBox.debugTrackingPublishCount, 1);
+        expect(
+          renderBox.debugTrackingComputeCount,
+          computeCountAfterHover,
+          reason: 'a stationary repaint must never recompute the snapshot',
+        );
       }
       expect(
         renderBox.debugTrackingResolveCount,
@@ -62,9 +70,78 @@ void main() {
       expect(renderBox.debugTrackingPublishCount, 1);
     },
   );
+
+  testWidgets(
+    'series color change while hovering the same datum republishes the '
+    'fresh color',
+    (tester) async {
+      await tester.pumpWidget(_host(speedColor: const Color(0xFF2196F3)));
+      await tester.pumpAndSettle();
+
+      final renderBox =
+          _chartRenderFinder().evaluate().single.renderObject!
+              as ChartRenderBox;
+      final target =
+          tester.getTopLeft(find.byType(BravenChartPlus)) +
+          renderBox.plotToWidget(renderBox.transform!.dataToPlot(4.4, 6));
+      final pointer = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(target);
+      await tester.pump();
+
+      final before = renderBox.debugTrackingSnapshot;
+      expect(before, isNotNull);
+      expect(before!.values.first.seriesColor, const Color(0xFF2196F3));
+
+      // Same hover, same snapped datum, changed series color. The forced
+      // invalidation from the series change must republish the recomputed
+      // snapshot even though its datum identity is unchanged.
+      await tester.pumpWidget(_host(speedColor: const Color(0xFFFF5722)));
+      await tester.pump();
+
+      final after = renderBox.debugTrackingSnapshot;
+      expect(after, isNotNull);
+      expect(after!.values.first.seriesColor, const Color(0xFFFF5722));
+    },
+  );
+
+  testWidgets('moving the cursor off the chart clears the published snapshot', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host());
+    await tester.pumpAndSettle();
+
+    final renderBox =
+        _chartRenderFinder().evaluate().single.renderObject! as ChartRenderBox;
+    final target =
+        tester.getTopLeft(find.byType(BravenChartPlus)) +
+        renderBox.plotToWidget(renderBox.transform!.dataToPlot(4.4, 6));
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(target);
+    await tester.pump();
+
+    expect(renderBox.debugTrackingSnapshot, isNotNull);
+    final publishCountWhileHovering = renderBox.debugTrackingPublishCount;
+
+    // Leaving the chart publishes a null snapshot exactly once, so future
+    // consumers of the resolver never observe the stale hover state.
+    await pointer.moveTo(const Offset(2, 2));
+    await tester.pump();
+
+    expect(renderBox.debugTrackingSnapshot, isNull);
+    expect(
+      renderBox.debugTrackingPublishCount,
+      publishCountWhileHovering + 1,
+    );
+  });
 }
 
-Widget _host() {
+Widget _host({Color? speedColor}) {
   return MaterialApp(
     home: Scaffold(
       body: Center(
@@ -78,10 +155,11 @@ Widget _host() {
                 displayMode: CrosshairDisplayMode.tracking,
               ),
             ),
-            series: const [
+            series: [
               LineChartSeries(
                 id: 'speed',
-                points: [
+                color: speedColor,
+                points: const [
                   ChartDataPoint(x: 0, y: 4),
                   ChartDataPoint(x: 2, y: 8),
                   ChartDataPoint(x: 4, y: 7),
@@ -90,7 +168,7 @@ Widget _host() {
                   ChartDataPoint(x: 10, y: 12),
                 ],
               ),
-              LineChartSeries(
+              const LineChartSeries(
                 id: 'power',
                 points: [
                   ChartDataPoint(x: 0, y: 2),

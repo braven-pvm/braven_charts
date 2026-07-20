@@ -277,32 +277,68 @@ void main() {
         unitLabel: 'W',
       );
 
-      expect(tracked.seriesId, source.seriesId);
-      expect(tracked.seriesName, source.seriesName);
-      expect(tracked.seriesColor, source.seriesColor);
-      expect(tracked.x, source.x);
-      expect(tracked.y, source.y);
-      expect(tracked.dataPointIndex, source.dataPointIndex);
-      expect(tracked.sourcePointIndices, source.sourcePointIndices);
-      expect(tracked.isInterpolated, source.isInterpolated);
-      expect(tracked.linkedSeriesId, source.linkedSeriesId);
-      expect(tracked.isTrend, source.isTrend);
-      expect(tracked.pointLabel, source.pointLabel);
-      expect(tracked.magnitudeValue, source.magnitudeValue);
-      expect(tracked.formattedMagnitudeValue, source.formattedMagnitudeValue);
-      expect(tracked.magnitudeLabel, source.magnitudeLabel);
-      expect(tracked.colorValue, source.colorValue);
-      expect(tracked.formattedColorValue, source.formattedColorValue);
-      expect(tracked.colorLabel, source.colorLabel);
-      expect(tracked.opacityValue, source.opacityValue);
-      expect(tracked.formattedOpacityValue, source.formattedOpacityValue);
-      expect(tracked.opacityLabel, source.opacityLabel);
-      expect(tracked.candlestick, same(candlestick));
-      expect(tracked.categoryValue, source.categoryValue);
-      expect(tracked.categoryLabel, source.categoryLabel);
+      // One named check per CrosshairSeriesValue field. The length assertion
+      // against [crosshairSeriesValueFieldCount] is the field-count tripwire:
+      // a field added to CrosshairSeriesValue cannot pass this test until it
+      // is copied by fromCrosshairValue, checked here, and the shared count
+      // is bumped deliberately.
+      final copiedFieldChecks = <String, void Function()>{
+        'seriesId': () => expect(tracked.seriesId, source.seriesId),
+        'seriesName': () => expect(tracked.seriesName, source.seriesName),
+        'seriesColor': () => expect(tracked.seriesColor, source.seriesColor),
+        'x': () => expect(tracked.x, source.x),
+        'y': () => expect(tracked.y, source.y),
+        'dataPointIndex': () =>
+            expect(tracked.dataPointIndex, source.dataPointIndex),
+        'sourcePointIndices': () =>
+            expect(tracked.sourcePointIndices, source.sourcePointIndices),
+        'isInterpolated': () =>
+            expect(tracked.isInterpolated, source.isInterpolated),
+        'linkedSeriesId': () =>
+            expect(tracked.linkedSeriesId, source.linkedSeriesId),
+        'isTrend': () => expect(tracked.isTrend, source.isTrend),
+        'pointLabel': () => expect(tracked.pointLabel, source.pointLabel),
+        'magnitudeValue': () =>
+            expect(tracked.magnitudeValue, source.magnitudeValue),
+        'formattedMagnitudeValue': () => expect(
+          tracked.formattedMagnitudeValue,
+          source.formattedMagnitudeValue,
+        ),
+        'magnitudeLabel': () =>
+            expect(tracked.magnitudeLabel, source.magnitudeLabel),
+        'colorValue': () => expect(tracked.colorValue, source.colorValue),
+        'formattedColorValue': () =>
+            expect(tracked.formattedColorValue, source.formattedColorValue),
+        'colorLabel': () => expect(tracked.colorLabel, source.colorLabel),
+        'opacityValue': () => expect(tracked.opacityValue, source.opacityValue),
+        'formattedOpacityValue': () => expect(
+          tracked.formattedOpacityValue,
+          source.formattedOpacityValue,
+        ),
+        'opacityLabel': () => expect(tracked.opacityLabel, source.opacityLabel),
+        'candlestick': () => expect(tracked.candlestick, same(candlestick)),
+        'categoryValue': () =>
+            expect(tracked.categoryValue, source.categoryValue),
+        'categoryLabel': () =>
+            expect(tracked.categoryLabel, source.categoryLabel),
+      };
+      expect(copiedFieldChecks, hasLength(crosshairSeriesValueFieldCount));
+      for (final check in copiedFieldChecks.values) {
+        check();
+      }
+
       expect(tracked.formattedX, '42.5 min');
       expect(tracked.formattedY, '318.25 W');
       expect(tracked.unitLabel, 'W');
+    });
+
+    test('field-count tripwire matches CrosshairSeriesValue', () {
+      // If this fails, the number of fields on CrosshairSeriesValue changed.
+      // Extend CartesianTrackedSeriesValue and fromCrosshairValue, add the
+      // field to the exhaustive-copy test above, and only then bump
+      // crosshairSeriesValueFieldCount (declared next to fromCrosshairValue
+      // in cartesian_tracking_snapshot.dart).
+      expect(crosshairSeriesValueFieldCount, 23);
     });
 
     test('preserves defaults for optional fields', () {

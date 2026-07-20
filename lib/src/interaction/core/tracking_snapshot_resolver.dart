@@ -52,17 +52,21 @@ import 'crosshair_tracker.dart';
 /// 2. *Identity suppression* — a recomputed snapshot whose
 ///    [CartesianTrackingSnapshot.sameIdentityAs] matches [current] keeps the
 ///    previously published instance, so sub-pixel cursor movement over the
-///    same snapped datum never republishes.
+///    same snapped datum never republishes. Forced invalidation ([invalidate]
+///    or a `dataRevision` change) bypasses this suppression: identity excludes
+///    presentation fields, so a forced recomputation always publishes fresh.
 ///
 /// [debugResolveCount] counts every [resolve] call; [debugPublishCount]
 /// counts only publications (including the transition to a null snapshot when
-/// tracking leaves the plot). Both exist so tests and benchmarks can prove
-/// the one-resolution-per-interaction-frame contract.
+/// tracking leaves the plot); [debugComputeCount] counts only actual snapshot
+/// computations (memoized cache hits do not compute). All exist so tests and
+/// benchmarks can prove the one-resolution-per-interaction-frame contract.
 @internal
 class CartesianTrackingSnapshotResolver {
   CartesianTrackingSnapshot? _current;
   int _debugResolveCount = 0;
   int _debugPublishCount = 0;
+  int _debugComputeCount = 0;
   bool _publishedThisFrame = false;
 
   // Memoized resolve inputs. Null means no memoized resolution exists.
@@ -88,11 +92,43 @@ class CartesianTrackingSnapshotResolver {
   /// transition from a snapshot to null).
   int get debugPublishCount => _debugPublishCount;
 
+  /// Number of actual snapshot computations (input-cache misses). Memoized
+  /// [resolve] calls with unchanged inputs never increment this.
+  int get debugComputeCount => _debugComputeCount;
+
   /// Clears the memoized inputs so the next [resolve] recomputes.
   ///
-  /// [current] is retained: identity suppression still applies when the
-  /// forced recomputation yields the same tracked datum and formatted values.
+  /// [current] is dropped (without publishing) so the forced recomputation
+  /// always publishes its fresh instance, even when it matches the prior
+  /// snapshot's [CartesianTrackingSnapshot.sameIdentityAs] identity. Identity
+  /// excludes presentation fields such as the series color and name, so
+  /// retaining the old instance here would keep painting stale theme state.
+  /// Identity suppression continues to apply to recomputations that were not
+  /// forced (cursor movement within the same snapped datum).
   void invalidate() {
+    _clearMemoizedInputs();
+    _current = null;
+  }
+
+  /// Publishes a null snapshot when the tracking source goes away without a
+  /// [resolve] call — the tracking-mode gate turning off, the cursor leaving
+  /// the chart, or resolution prerequisites (transform, plot area)
+  /// disappearing.
+  ///
+  /// Clearing an already-null [current] is a no-op. The memoized inputs are
+  /// reset with the snapshot so a later [resolve] with identical inputs
+  /// recomputes instead of returning the cleared null through the cache.
+  void clear() {
+    final published = _current != null;
+    if (published) {
+      _current = null;
+      _debugPublishCount++;
+    }
+    _publishedThisFrame = published;
+    _clearMemoizedInputs();
+  }
+
+  void _clearMemoizedInputs() {
     _lastCursorPlotPosition = null;
     _lastPlotArea = null;
     _lastTransform = null;
@@ -145,6 +181,13 @@ class CartesianTrackingSnapshotResolver {
       return _current;
     }
 
+    // A dataRevision change is a forced invalidation: the recomputed snapshot
+    // must be published even when its identity matches [current], because
+    // identity excludes presentation fields (series color/name, formatted X)
+    // that the revision bump may have changed.
+    final revisionForced =
+        _lastDataRevision != null && _lastDataRevision != dataRevision;
+
     _lastCursorPlotPosition = cursorPlotPosition;
     _lastPlotArea = plotArea;
     _lastTransform = transform;
@@ -153,6 +196,7 @@ class CartesianTrackingSnapshotResolver {
     _lastInterpolateValues = interpolateValues;
     _lastDataRevision = dataRevision;
 
+    _debugComputeCount++;
     final snapshot = _resolveSnapshot(
       cursorPlotPosition: cursorPlotPosition,
       plotArea: plotArea,
@@ -174,7 +218,9 @@ class CartesianTrackingSnapshotResolver {
     }
 
     final previous = _current;
-    if (previous != null && snapshot.sameIdentityAs(previous)) {
+    if (!revisionForced &&
+        previous != null &&
+        snapshot.sameIdentityAs(previous)) {
       _publishedThisFrame = false;
       return previous;
     }
