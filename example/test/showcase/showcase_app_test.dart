@@ -137,6 +137,7 @@ void main() {
 
     expect(find.text('Contribution ring'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Performance'));
     await tester.tap(find.text('Performance'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);

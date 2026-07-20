@@ -48,6 +48,7 @@ flutter build web --release --base-href /braven_charts/
 | Concentric Donut | Compare independent totals across weighted rings; resize Chart/Data/Split panes; inspect exact generated Source; test grouped or flat legends, one shared center, composition-wide lift selection, coordinated labels, and portable capture/restoration |
 | Polar Column | Compare standard linear-radius columns, an area-correct Nightingale rose, and a partial annular sweep; tune both Polar axes; then inspect the value-only native table, generated Source, and portable document |
 | Interaction | Zoom and pan with pointer, touch, toolbar, and keyboard input; compare crosshair modes, snap-to-point behavior, tracking panels, and styled tooltips |
+| Value Summary | Keep the policy-resolved datum visible in a persistent in-plot panel: latest-value fallback with no pointer, crosshair-independent tracking, multi-axis units, candlestick OHLC rows, a synchronized pair resolving locally at a shared X, programmatic pinning, and tri-state styling with truly transparent clears |
 | Annotations | Point, range, text, threshold, trend, pin, legend, and editing workflows |
 | Live Stream | Follow-latest viewports, frame-coalesced ingestion, pause/resume, buffering, and catch-up |
 | Theming | Light, dark, accessible, and custom chart themes |

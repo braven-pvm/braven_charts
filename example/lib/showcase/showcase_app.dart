@@ -28,6 +28,7 @@ import 'pages/scientific_page.dart';
 import 'pages/theming_page.dart';
 import 'pages/baseline_area_demo_page.dart';
 import 'pages/series_styling_page.dart';
+import 'pages/value_summary_page.dart';
 import 'widgets/braven_brand.dart';
 import 'widgets/chart_type_catalog.dart';
 import 'widgets/donut_gallery_cards.dart';
@@ -180,6 +181,13 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       icon: Icons.touch_app_outlined,
       selectedIcon: Icons.touch_app,
       page: InteractionPage(),
+    ),
+    const NavDestination(
+      label: 'Value Summary',
+      icon: Icons.summarize_outlined,
+      selectedIcon: Icons.summarize,
+      page: ValueSummaryPage(),
+      routeSlug: 'value-summary',
     ),
     const NavDestination(
       label: 'Annotations',
