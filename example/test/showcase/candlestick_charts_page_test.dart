@@ -39,9 +39,10 @@ void main() {
     expect(find.text('Falling'), findsOneWidget);
     expect(find.text('Doji'), findsOneWidget);
 
-    final chart = tester.widget<BravenChartPlus>(
-      find.byKey(const ValueKey('candlestick-reference-chart')),
+    final chartFinder = find.byKey(
+      const ValueKey('candlestick-reference-chart'),
     );
+    final chart = tester.widget<BravenChartPlus>(chartFinder);
     expect(chart.series, hasLength(2));
     final candles = chart.series.first as CandlestickChartSeries;
     expect(candles.points, hasLength(32));
@@ -57,6 +58,26 @@ void main() {
       chart.interactionConfig?.crosshair.displayMode,
       CrosshairDisplayMode.tracking,
     );
+    expect(chart.interactionConfig?.showFocusBorder, isTrue);
+    expect(chart.interactionConfig?.enableFocusOnHover, isFalse);
+
+    final chartFocus = tester
+        .widgetList<Focus>(
+          find.descendant(of: chartFinder, matching: find.byType(Focus)),
+        )
+        .firstWhere((focus) => focus.focusNode != null)
+        .focusNode!;
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(chartFinder));
+    await tester.pump();
+    expect(chartFocus.hasFocus, isFalse);
+
+    await mouse.down(tester.getCenter(chartFinder));
+    await mouse.up();
+    await tester.pump();
+    expect(chartFocus.hasFocus, isTrue);
     expect(tester.takeException(), isNull);
   });
 
