@@ -432,9 +432,9 @@ retaining Braven styling and Workbench behavior.
   transient second Workbench mount. The Candlestick page now uses one
   Workbench-owned controller per mounted surface, with an initial-route
   regression test.
-- Package `lib` analysis and showcase analysis are clean. All 2,239 package
-  tests and 230 showcase tests pass after the lifecycle and interactive
-  configuration work.
+- Package `lib` analysis and showcase analysis are clean. The complete 246-test
+  showcase suite passes after the lifecycle, interactive configuration, and
+  post-Scatter rebase work.
 - Release web builds pass for `/` and `/braven_charts/`, including Wasm dry
   runs. The final root release route returns HTTP 200 for both the shell and
   compiled script at
