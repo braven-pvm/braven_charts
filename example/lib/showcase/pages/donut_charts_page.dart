@@ -11,6 +11,7 @@ import '../data/radial_demo_data.dart';
 import '../widgets/options_panel.dart';
 import '../widgets/radial_option_order.dart';
 import '../widgets/radial_legend_value_card.dart';
+import '../widgets/showcase_randomizer.dart';
 import '../widgets/standard_options.dart';
 
 /// Public showcase for first-class Donut geometry and portable center content.
@@ -26,8 +27,11 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   final ChartWorkbenchController _workbenchController =
       ChartWorkbenchController();
   final math.Random _random = math.Random();
+  late final ShowcaseRandomizerController<int> _showcaseRandomizer;
 
   _DonutStory _story = _DonutStory.contribution;
+  _DonutStory _authoredStory = _DonutStory.contribution;
+  bool _playgroundActive = false;
   late Map<String, num> _values;
   late Map<String, num> _radiusValues;
   late int _categoryCount;
@@ -127,6 +131,11 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
   @override
   void initState() {
     super.initState();
+    _showcaseRandomizer = ShowcaseRandomizerController<int>(
+      initialSeed: 401,
+      generate: (seed) => seed,
+      apply: _applyRandomSeed,
+    );
     _values = Map<String, num>.of(_story.values);
     _radiusValues = Map<String, num>.of(_story.radiusValues);
     _categoryCount = _values.length;
@@ -134,6 +143,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
 
   @override
   void dispose() {
+    _showcaseRandomizer.dispose();
     _workbenchController.dispose();
     _chartController.dispose();
     super.dispose();
@@ -146,6 +156,12 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       subtitle:
           'Compare category contributions around a configurable center opening',
       optionsChildren: _buildOptions(),
+      playground: ChartPlaygroundConfig(
+        active: _playgroundActive,
+        optionsChildren: _buildPlaygroundOptions(),
+        randomizer: _showcaseRandomizer,
+      ),
+      randomizerKeyPrefix: 'donut-randomizer',
       chart: _buildWorkspace(),
     );
   }
@@ -189,6 +205,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       container: true,
       label: 'Choose a Donut geometry story',
       child: Wrap(
+        key: const ValueKey('donut-story-selector'),
         spacing: 8,
         runSpacing: 8,
         children: [
@@ -196,13 +213,13 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
             SizedBox(
               width: cardWidth,
               child: Material(
-                color: story == _story
+                color: !_playgroundActive && story == _story
                     ? theme.colorScheme.secondaryContainer
                     : theme.colorScheme.surfaceContainerLowest,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                   side: BorderSide(
-                    color: story == _story
+                    color: !_playgroundActive && story == _story
                         ? theme.colorScheme.primary
                         : theme.colorScheme.outlineVariant,
                   ),
@@ -238,7 +255,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                               ],
                             ),
                           ),
-                          if (story == _story)
+                          if (!_playgroundActive && story == _story)
                             Icon(
                               Icons.check_circle,
                               size: 18,
@@ -251,6 +268,15 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 ),
               ),
             ),
+          SizedBox(
+            width: cardWidth,
+            height: 104,
+            child: PlaygroundExampleCard(
+              key: const ValueKey('donut-playground'),
+              selected: _playgroundActive,
+              onTap: () => _setPlaygroundActive(true),
+            ),
+          ),
         ],
       ),
     );
@@ -411,8 +437,10 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     final theme = _buildChartTheme();
     return BravenChartPlus(
       key: const ValueKey('donut-showcase-chart'),
-      title: _story.chartTitle,
-      subtitle: _story.chartDescription,
+      title: _playgroundActive ? 'Donut playground' : _story.chartTitle,
+      subtitle: _playgroundActive
+          ? '${_values.length} generated categories · seed ${_showcaseRandomizer.appliedSeed ?? _showcaseRandomizer.seed}'
+          : _story.chartDescription,
       bravenChartController: controller,
       showLegend: _showLegend,
       radialLegendItemBuilder: _legendContent == _DonutLegendContent.valueCards
@@ -1118,7 +1146,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               labelBuilder: _gradientPresetName,
               onChanged: (value) => setState(() => _gradientPreset = value),
             ),
-            if (_gradientPreset != _DonutGradientPreset.solid) ...[
+            if (_playgroundActive ||
+                _gradientPreset != _DonutGradientPreset.solid) ...[
               BoolOption(
                 key: const ValueKey('donut-fixed-gradient-colors'),
                 label: 'Use fixed gradient colors',
@@ -1127,7 +1156,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                     setState(() => _useFixedGradientColors = value),
                 subtitle: 'Off derives both stops from each category color',
               ),
-              if (_useFixedGradientColors) ...[
+              if (_playgroundActive || _useFixedGradientColors) ...[
                 ColorOption(
                   key: const ValueKey('donut-gradient-start-color'),
                   label: 'Gradient start',
@@ -1171,7 +1200,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                       setState(() => _gradientEndLightnessShift = value / 100),
                 ),
               ],
-              if (_gradientPreset == _DonutGradientPreset.linear)
+              if (_playgroundActive ||
+                  _gradientPreset == _DonutGradientPreset.linear)
                 SliderOption(
                   key: const ValueKey('donut-gradient-angle'),
                   label: 'Gradient angle',
@@ -1218,7 +1248,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               decimalPlaces: 1,
               onChanged: (value) => setState(() => _borderWidth = value),
             ),
-            if (_borderWidth > 0) ...[
+            if (_playgroundActive || _borderWidth > 0) ...[
               EnumOption<_DonutBorderPreset>(
                 key: const ValueKey('donut-border-color'),
                 label: 'Border color',
@@ -1227,7 +1257,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 labelBuilder: _borderPresetName,
                 onChanged: (value) => setState(() => _borderPreset = value),
               ),
-              if (_borderPreset == _DonutBorderPreset.fixed)
+              if (_playgroundActive ||
+                  _borderPreset == _DonutBorderPreset.fixed)
                 ColorOption(
                   key: const ValueKey('donut-fixed-border-color'),
                   label: 'Fixed border',
@@ -1248,7 +1279,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _cornerRadius = value),
             ),
-            if (_cornerRadius > 0)
+            if (_playgroundActive || _cornerRadius > 0)
               EnumOption<PieCornerTreatment>(
                 key: const ValueKey('donut-corner-treatment'),
                 label: 'Corner treatment',
@@ -1269,7 +1300,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               value: _showSelectedGlow,
               onChanged: (value) => setState(() => _showSelectedGlow = value),
             ),
-            if (_showSelectedGlow) ...[
+            if (_playgroundActive || _showSelectedGlow) ...[
               EnumOption<_DonutGlowColor>(
                 key: const ValueKey('donut-glow-color'),
                 label: 'Glow color',
@@ -1384,7 +1415,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               onChanged: (value) => setState(() => _showCenterContent = value),
               subtitle: 'Portable text included in previews and artifacts',
             ),
-            if (_showCenterContent) ...[
+            if (_playgroundActive || _showCenterContent) ...[
               EnumOption<DonutCenterValueMode>(
                 label: 'Value source',
                 value: _centerValueMode,
@@ -1424,7 +1455,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               subtitle: 'Pull a slice outward or raise it towards the viewer',
               onChanged: (value) => setState(() => _selectionEffect = value),
             ),
-            if (_selectionEffect == RadialSelectionEffect.explode)
+            if (_playgroundActive ||
+                _selectionEffect == RadialSelectionEffect.explode)
               SliderOption(
                 key: const ValueKey('donut-selection-explode-offset'),
                 label: 'Selected slice offset',
@@ -1493,7 +1525,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                   ? 'Group angle and aggregate radius by the policy below'
                   : 'Render one Other slice while preserving every source row',
             ),
-            if (_groupSmallSlices) ...[
+            if (_playgroundActive || _groupSmallSlices) ...[
               SliderOption(
                 key: const ValueKey('donut-grouping-threshold'),
                 label: 'Share threshold',
@@ -1512,7 +1544,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                   });
                 },
               ),
-              if (_radiusValues.isNotEmpty)
+              if (_playgroundActive || _radiusValues.isNotEmpty)
                 EnumOption<RadialSliceRadiusAggregation>(
                   key: const ValueKey('donut-radius-aggregation'),
                   label: 'Radius aggregation',
@@ -1541,7 +1573,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               value: _showLabels,
               onChanged: (value) => setState(() => _showLabels = value),
             ),
-            if (_showLabels) ...[
+            if (_playgroundActive || _showLabels) ...[
               EnumOption<_DonutLabelLayout>(
                 key: const ValueKey('donut-label-layout'),
                 label: 'Layout',
@@ -1553,7 +1585,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 },
                 onChanged: (value) => setState(() => _labelLayout = value),
               ),
-              if (_labelLayout == _DonutLabelLayout.single) ...[
+              if (_playgroundActive ||
+                  _labelLayout == _DonutLabelLayout.single) ...[
                 EnumOption<PieDataLabelPosition>(
                   key: const ValueKey('donut-label-position'),
                   label: 'Position',
@@ -1581,7 +1614,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 labelBuilder: _calloutPresetName,
                 onChanged: (value) => setState(() => _calloutPreset = value),
               ),
-              if (_labelLayout == _DonutLabelLayout.split)
+              if (_playgroundActive || _labelLayout == _DonutLabelLayout.split)
                 EnumOption<_DonutInsideShareStyle>(
                   key: const ValueKey('donut-inside-share-style'),
                   label: 'Inside share style',
@@ -1627,7 +1660,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                 decimalPlaces: 0,
                 onChanged: (value) => setState(() => _labelPadding = value),
               ),
-              if (_labelLayout == _DonutLabelLayout.split ||
+              if (_playgroundActive ||
+                  _labelLayout == _DonutLabelLayout.split ||
                   _labelPosition == PieDataLabelPosition.inside)
                 SliderOption(
                   key: const ValueKey('donut-label-inside-offset'),
@@ -1641,7 +1675,8 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                   onChanged: (value) =>
                       setState(() => _insideLabelOffset = value),
                 ),
-              if (_labelLayout == _DonutLabelLayout.split ||
+              if (_playgroundActive ||
+                  _labelLayout == _DonutLabelLayout.split ||
                   _labelPosition == PieDataLabelPosition.outside) ...[
                 EnumOption<PieDataLabelCollisionStrategy>(
                   key: const ValueKey('donut-label-collision'),
@@ -1694,7 +1729,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
                   onChanged: (value) =>
                       setState(() => _useCustomConnectorColor = value),
                 ),
-                if (_useCustomConnectorColor)
+                if (_playgroundActive || _useCustomConnectorColor)
                   ColorOption(
                     key: const ValueKey('donut-connector-color'),
                     label: 'Connector color',
@@ -1720,7 +1755,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               value: _showLegend,
               onChanged: (value) => setState(() => _showLegend = value),
             ),
-            if (_showLegend) ...[
+            if (_playgroundActive || _showLegend) ...[
               EnumOption<_DonutLegendPreset>(
                 key: const ValueKey('donut-legend-style'),
                 label: 'Legend style',
@@ -1815,7 +1850,7 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
               subtitle:
                   'Hover, tap, legend, and table selection share one tooltip',
             ),
-            if (_showTooltips) ...[
+            if (_playgroundActive || _showTooltips) ...[
               EnumOption<_DonutTooltipPreset>(
                 key: const ValueKey('donut-tooltip-style'),
                 label: 'Tooltip style',
@@ -2277,9 +2312,143 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
     );
   }
 
-  void _selectStory(_DonutStory story) {
+  void _applyRandomSeed(int seed) {
+    if (!mounted) return;
+    final random = math.Random(seed);
+    final count = radialDemoMinimumDataPoints + random.nextInt(8);
+    final labels = List<String>.generate(
+      count,
+      (index) => 'Category ${index + 1}',
+      growable: false,
+    );
+    setState(() {
+      _values = randomRadialDistribution(
+        labels: labels,
+        total: 100,
+        random: random,
+      );
+      _radiusValues = randomRadialMetric(
+        labels: labels,
+        minimum: 0.35,
+        maximum: 1,
+        random: random,
+      );
+      _categoryCount = count;
+      _innerRadiusFactor = 0.28 + random.nextDouble() * 0.5;
+      _sweepAngleDegrees = 210 + random.nextDouble() * 150;
+      _startAngleDegrees = -180 + random.nextDouble() * 360;
+      _radiusFactor = 0.68 + random.nextDouble() * 0.28;
+      _sliceGap = random.nextDouble() * 8;
+      _cornerRadius = random.nextDouble() * 16;
+      _clockwise = random.nextBool();
+      _showLabels = random.nextBool();
+      _labelPosition = PieDataLabelPosition
+          .values[random.nextInt(PieDataLabelPosition.values.length)];
+      _labelContent = PieDataLabelContent
+          .values[random.nextInt(PieDataLabelContent.values.length)];
+      _labelCollisionStrategy = PieDataLabelCollisionStrategy
+          .values[random.nextInt(PieDataLabelCollisionStrategy.values.length)];
+      _labelMinimumShare = random.nextDouble() * 0.09;
+      _labelPadding = random.nextDouble() * 14;
+      _connectorLength = 6 + random.nextDouble() * 22;
+      _themePreset = _DonutThemePreset
+          .values[random.nextInt(_DonutThemePreset.values.length)];
+      _palette =
+          _DonutPalette.values[random.nextInt(_DonutPalette.values.length)];
+      _gradientPreset = _DonutGradientPreset
+          .values[random.nextInt(_DonutGradientPreset.values.length)];
+      _sliceOpacity = 0.58 + random.nextDouble() * 0.42;
+      _borderWidth = random.nextDouble() * 3;
+      _cornerTreatment = PieCornerTreatment
+          .values[random.nextInt(PieCornerTreatment.values.length)];
+      _showShadow = random.nextBool();
+      _showSelectedGlow = random.nextBool();
+      _showLegend = random.nextBool();
+      _legendPosition =
+          LegendPosition.values[random.nextInt(LegendPosition.values.length)];
+      _legendMarkerShape = LegendMarkerShape
+          .values[random.nextInt(LegendMarkerShape.values.length)];
+      _showTooltips = random.nextBool();
+      _tooltipPosition =
+          TooltipPosition.values[random.nextInt(TooltipPosition.values.length)];
+      _showCenterContent = random.nextBool();
+      _centerValueMode = DonutCenterValueMode
+          .values[random.nextInt(DonutCenterValueMode.values.length)];
+      _groupSmallSlices = random.nextBool();
+      _groupingMinimumShare = 0.04 + random.nextDouble() * 0.12;
+      _selectionEffect = RadialSelectionEffect
+          .values[random.nextInt(RadialSelectionEffect.values.length)];
+      _selectionExplodeOffset = random.nextDouble() * 20;
+      _selectionLiftScale = 1 + random.nextDouble() * 0.3;
+      _selectionLiftOffset = random.nextDouble() * 14;
+      _selectionBackdropBlur = random.nextDouble() * 3;
+      _animationMode = PieAnimationMode
+          .values[random.nextInt(PieAnimationMode.values.length)];
+      _dataTransitionMode = RadialDataTransitionMode
+          .values[random.nextInt(RadialDataTransitionMode.values.length)];
+      _labelLayout = _DonutLabelLayout
+          .values[random.nextInt(_DonutLabelLayout.values.length)];
+      _labelMinimumSweepDegrees = random.nextDouble() * 14;
+      _insideLabelOffset = -8 + random.nextDouble() * 16;
+      _outsideLabelOffset = random.nextDouble() * 14;
+      _connectorWidth = 0.5 + random.nextDouble() * 2.5;
+      _useCustomConnectorColor = random.nextBool();
+      _connectorColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _calloutPreset = _DonutCalloutPreset
+          .values[random.nextInt(_DonutCalloutPreset.values.length)];
+      _insideShareStyle = _DonutInsideShareStyle
+          .values[random.nextInt(_DonutInsideShareStyle.values.length)];
+      _useFixedGradientColors = random.nextBool();
+      _gradientStartColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientEndColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _gradientStartLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientEndLightnessShift = -0.25 + random.nextDouble() * 0.5;
+      _gradientAngleDegrees = -180 + random.nextDouble() * 360;
+      _borderPreset = _DonutBorderPreset
+          .values[random.nextInt(_DonutBorderPreset.values.length)];
+      _fixedBorderColor = _colorChoices[random.nextInt(_colorChoices.length)];
+      _selectedGlowColor =
+          _DonutGlowColor.values[random.nextInt(_DonutGlowColor.values.length)];
+      _selectedGlowBlur = random.nextDouble() * 24;
+      _selectedGlowSpread = random.nextDouble() * 8;
+      _selectedGlowOpacity = 0.15 + random.nextDouble() * 0.8;
+      _selectedGlowOffsetY = -8 + random.nextDouble() * 16;
+      _legendPreset = _DonutLegendPreset
+          .values[random.nextInt(_DonutLegendPreset.values.length)];
+      _legendContent = _DonutLegendContent
+          .values[random.nextInt(_DonutLegendContent.values.length)];
+      _legendOrientation = LegendOrientation
+          .values[random.nextInt(LegendOrientation.values.length)];
+      _legendMarkerSize = 6 + random.nextDouble() * 12;
+      _legendFontSize = 8 + random.nextDouble() * 8;
+      _legendOpacity = 0.35 + random.nextDouble() * 0.65;
+      _tooltipPreset = _DonutTooltipPreset
+          .values[random.nextInt(_DonutTooltipPreset.values.length)];
+      _tooltipFollowsCursor = random.nextBool();
+      _tooltipOffset = 2 + random.nextDouble() * 18;
+      _radiusAggregation = RadialSliceRadiusAggregation
+          .values[random.nextInt(RadialSliceRadiusAggregation.values.length)];
+      _centerStyle = _DonutCenterStyle
+          .values[random.nextInt(_DonutCenterStyle.values.length)];
+      _selectedCategory = null;
+      _centerActionCount = 0;
+      _clearPortableState();
+    });
+    _chartController.clearPointSelection();
+  }
+
+  void _selectStory(_DonutStory story, {bool authoredSelection = true}) {
+    if (authoredSelection) {
+      _showcaseRandomizer.pause();
+      _showcaseRandomizer.clear();
+    }
     _chartController.clearPointSelection();
     setState(() {
+      _resetStoryDefaults();
+      if (authoredSelection) {
+        _playgroundActive = false;
+        _authoredStory = story;
+      }
       _story = story;
       _values = Map<String, num>.of(story.values);
       _radiusValues = Map<String, num>.of(story.radiusValues);
@@ -2360,6 +2529,95 @@ class _DonutChartsPageState extends State<DonutChartsPage> {
       }
     });
   }
+
+  void _resetStoryDefaults() {
+    _innerRadiusFactor = 0.58;
+    _sweepAngleDegrees = 360;
+    _startAngleDegrees = -90;
+    _radiusFactor = 0.86;
+    _sliceGap = 3;
+    _cornerRadius = 8;
+    _selectionExplodeOffset = 10;
+    _selectionEffect = RadialSelectionEffect.lift;
+    _selectionLiftScale = 1.1;
+    _selectionLiftOffset = 6;
+    _selectionBackdropBlur = 1.25;
+    _animationMode = PieAnimationMode.grow;
+    _dataTransitionMode = RadialDataTransitionMode.automatic;
+    _clockwise = true;
+    _showLabels = true;
+    _labelLayout = _DonutLabelLayout.split;
+    _labelPosition = PieDataLabelPosition.outside;
+    _labelContent = PieDataLabelContent.categoryAndPercentage;
+    _labelCollisionStrategy = PieDataLabelCollisionStrategy.shiftAndHide;
+    _labelMinimumShare = 0.04;
+    _labelMinimumSweepDegrees = 0;
+    _labelPadding = 6;
+    _insideLabelOffset = 0;
+    _outsideLabelOffset = 4;
+    _connectorLength = 12;
+    _connectorWidth = 1;
+    _useCustomConnectorColor = false;
+    _connectorColor = const Color(0xFF475569);
+    _calloutPreset = _DonutCalloutPreset.plain;
+    _insideShareStyle = _DonutInsideShareStyle.darkBadge;
+    _themePreset = _DonutThemePreset.light;
+    _palette = _DonutPalette.theme;
+    _gradientPreset = _DonutGradientPreset.radial;
+    _useFixedGradientColors = false;
+    _gradientStartColor = const Color(0xFF67E8F9);
+    _gradientEndColor = const Color(0xFF1D4ED8);
+    _gradientStartLightnessShift = 0.14;
+    _gradientEndLightnessShift = -0.08;
+    _gradientAngleDegrees = -45;
+    _sliceOpacity = 1;
+    _borderWidth = 1;
+    _borderPreset = _DonutBorderPreset.darkerSlice;
+    _fixedBorderColor = const Color(0xFF334155);
+    _cornerTreatment = PieCornerTreatment.roundAll;
+    _showShadow = false;
+    _showSelectedGlow = true;
+    _selectedGlowColor = _DonutGlowColor.slice;
+    _selectedGlowBlur = 12;
+    _selectedGlowSpread = 2;
+    _selectedGlowOpacity = 0.48;
+    _selectedGlowOffsetY = 0;
+    _showLegend = true;
+    _legendPreset = _DonutLegendPreset.theme;
+    _legendContent = _DonutLegendContent.standard;
+    _legendPosition = LegendPosition.bottomCenter;
+    _legendOrientation = LegendOrientation.horizontal;
+    _legendMarkerShape = LegendMarkerShape.circle;
+    _legendMarkerSize = 10;
+    _legendFontSize = 10;
+    _legendOpacity = 1;
+    _showTooltips = true;
+    _tooltipPreset = _DonutTooltipPreset.theme;
+    _tooltipPosition = TooltipPosition.auto;
+    _tooltipFollowsCursor = false;
+    _tooltipOffset = 8;
+    _showCenterContent = true;
+    _groupSmallSlices = false;
+    _groupingMinimumShare = 0.07;
+    _radiusAggregation = RadialSliceRadiusAggregation.weightedMean;
+    _centerValueMode = DonutCenterValueMode.selectedOrTotal;
+    _centerStyle = _DonutCenterStyle.theme;
+  }
+
+  void _setPlaygroundActive(bool active) {
+    if (active == _playgroundActive) return;
+    if (active) {
+      _authoredStory = _story;
+      setState(() => _playgroundActive = true);
+      _showcaseRandomizer.generateCurrent();
+      return;
+    }
+    _showcaseRandomizer.pause();
+    _showcaseRandomizer.clear();
+    _selectStory(_authoredStory);
+  }
+
+  List<Widget> _buildPlaygroundOptions() => _buildOptions();
 
   String _themePresetName(_DonutThemePreset value) => switch (value) {
     _DonutThemePreset.light => 'Light',

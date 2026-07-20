@@ -2,6 +2,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/data/polar_showcase_randomizer.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
 import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
+import 'package:braven_charts_example/showcase/widgets/showcase_randomizer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,11 +28,8 @@ void main() {
     expect(find.text('Stacked comparison'), findsOneWidget);
     expect(find.text('Targets & thresholds'), findsOneWidget);
     expect(find.text('Ranges & uncertainty'), findsOneWidget);
-    expect(find.text('Randomized properties'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('polar-randomized-example-card')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('polar-playground')), findsOneWidget);
+    expect(find.byKey(const ValueKey('polar-randomizer-next')), findsNothing);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -182,12 +180,17 @@ void main() {
       contains('Entrance'),
     );
 
-    final randomizer = section('Property randomizer');
+    expect(panel.headerEditor, isNull);
+    await _enterPlayground(tester);
+    final playgroundPanel = tester.widget<OptionsPanel>(
+      find.byType(OptionsPanel),
+    );
+    expect(playgroundPanel.headerEditor, isA<PropertyRandomizerSection>());
+    await _openRandomizerEditor(tester);
+    expect(find.byKey(const ValueKey('polar-randomizer-seed')), findsOneWidget);
     expect(
-      randomizer.children.whereType<IntSliderOption>().map(
-        (item) => item.label,
-      ),
-      containsAll(['Seed', 'Playback interval']),
+      find.byKey(const ValueKey('polar-randomizer-playback-interval')),
+      findsOneWidget,
     );
     expect(tester.takeException(), isNull);
   });
@@ -204,8 +207,9 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('Property randomizer'), findsOneWidget);
+      await _enterPlayground(tester);
       expect(find.text('Randomize all'), findsOneWidget);
+      await _openRandomizerEditor(tester);
       final seedOption = tester.widget<IntSliderOption>(
         find.byKey(const ValueKey('polar-randomizer-seed')),
       );
@@ -213,14 +217,14 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('polar-randomizer-generate')));
       await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
 
       final generated = PolarShowcaseRandomizer.generate(317);
       expect(find.text('Generated seed 317'), findsOneWidget);
       _expectGeneratedChart(tester, generated);
 
-      await tester.tap(
-        find.byKey(const ValueKey('polar-column-randomize-all')),
-      );
+      await tester.tap(find.byKey(const ValueKey('polar-randomizer-next')));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Generated seed 318'), findsOneWidget);
       _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(318));
@@ -240,20 +244,24 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
 
+      await _enterPlayground(tester);
+      await _openRandomizerEditor(tester);
       tester
           .widget<IntSliderOption>(
             find.byKey(const ValueKey('polar-randomizer-playback-interval')),
           )
           .onChanged(2);
       await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Generated seed 48'), findsOneWidget);
-      expect(find.text('Pause sequence'), findsOneWidget);
-      expect(find.text('Playing · every 2 s'), findsOneWidget);
+      expect(find.text('Pause sequence'), findsWidgets);
+      expect(find.text('Playing seed 48'), findsNothing);
       _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(48));
 
       await tester.pump(const Duration(milliseconds: 1800));
@@ -263,16 +271,15 @@ void main() {
       _expectGeneratedChart(tester, PolarShowcaseRandomizer.generate(49));
 
       await tester.tap(
-        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
       );
       await tester.pump();
-      expect(find.text('Play sequence'), findsOneWidget);
-      expect(find.text('Paused · every 2 s'), findsOneWidget);
+      expect(find.text('Play sequence'), findsWidgets);
       await tester.pump(const Duration(seconds: 4));
       expect(find.text('Generated seed 49'), findsOneWidget);
 
       await tester.tap(
-        find.byKey(const ValueKey('polar-randomized-playback-toggle')),
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
       );
       await tester.pump();
       expect(find.text('Generated seed 50'), findsOneWidget);
@@ -281,7 +288,10 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Generated seed 50'), findsNothing);
-      expect(find.text('Play sequence'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('polar-randomizer-playback-header')),
+        findsNothing,
+      );
       await tester.pump(const Duration(seconds: 4));
       expect(find.text('Generated seed 51'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -299,18 +309,18 @@ void main() {
       const MaterialApp(home: Scaffold(body: PolarColumnPage())),
     );
     await tester.pump(const Duration(milliseconds: 300));
+    await _enterPlayground(tester);
+    final randomizer =
+        (tester.widget<OptionsPanel>(find.byType(OptionsPanel)).headerEditor!
+                as PropertyRandomizerSection)
+            .controller;
 
     final seeds = _firstSeedForEveryPresentation();
     expect(seeds.keys, PolarShowcasePresentationKind.values.toSet());
     for (final presentation in PolarShowcasePresentationKind.values) {
       final seed = seeds[presentation]!;
-      tester
-          .widget<IntSliderOption>(
-            find.byKey(const ValueKey('polar-randomizer-seed')),
-          )
-          .onChanged(seed);
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('polar-randomizer-generate')));
+      randomizer.seed = seed;
+      randomizer.generateCurrent();
       await tester.pump(const Duration(milliseconds: 350));
 
       final chart = tester.widget<BravenChartPlus>(
@@ -366,6 +376,13 @@ void main() {
       const Color(0xFF2196F3),
     );
 
+    await tester.tap(find.byKey(const ValueKey('options-panel-search-toggle')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('options-panel-search')),
+      'Category colors',
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Theme colors'));
     await tester.pumpAndSettle();
     expect(find.text('Ocean'), findsOneWidget);
@@ -907,6 +924,18 @@ void main() {
     expect(source, contains('-21.0'));
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _enterPlayground(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('polar-playground')));
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.byKey(const ValueKey('polar-randomizer-next')), findsOneWidget);
+}
+
+Future<void> _openRandomizerEditor(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('polar-randomizer-editor')));
+  await tester.pumpAndSettle();
+  expect(find.text('Property randomizer'), findsWidgets);
 }
 
 Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {
