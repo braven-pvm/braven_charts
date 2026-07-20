@@ -42,9 +42,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   int _tickCount = 5;
   bool _showAngularLabels = true;
   bool _showAngularGrid = true;
+  int _maximumAngularLabels = 24;
+  int _maximumAngularGridLines = 72;
   bool _showRadialLabels = true;
   bool _showRadialGrid = true;
   bool _showValues = true;
+  int _maximumDataLabels = 24;
   double _cornerRadius = 4;
   double _opacity = 0.94;
   bool _showTargets = true;
@@ -523,6 +526,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       outerPadding: _outerPadding,
       showLabels: _showAngularLabels,
       showGridLines: _showAngularGrid,
+      maximumVisibleLabels: _maximumAngularLabels,
+      maximumVisibleGridLines: _maximumAngularGridLines,
     ),
     radialAxis: PolarNumericAxisConfig(
       scaleMode: _scaleMode,
@@ -617,6 +622,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       borderColor: const Color(0xFF334155),
       borderWidth: 0.75,
       showDataLabels: _showValues,
+      maximumVisibleDataLabels: _maximumDataLabels,
     );
     if (_presentation == _PolarPresentation.layered) {
       return [
@@ -778,7 +784,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           label: 'Category count',
           value: _categoryCount,
           min: 3,
-          max: 16,
+          max: 96,
           suffix: 'categories',
           onChanged: _setCategoryCount,
         ),
@@ -1001,11 +1007,30 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showAngularLabels,
           onChanged: (value) => setState(() => _showAngularLabels = value),
         ),
+        if (_showAngularLabels)
+          IntSliderOption(
+            label: 'Maximum category labels',
+            value: _maximumAngularLabels,
+            min: 4,
+            max: 48,
+            suffix: 'labels',
+            onChanged: (value) => setState(() => _maximumAngularLabels = value),
+          ),
         BoolOption(
           label: 'Show angular grid',
           value: _showAngularGrid,
           onChanged: (value) => setState(() => _showAngularGrid = value),
         ),
+        if (_showAngularGrid)
+          IntSliderOption(
+            label: 'Maximum grid spokes',
+            value: _maximumAngularGridLines,
+            min: 8,
+            max: 96,
+            suffix: 'spokes',
+            onChanged: (value) =>
+                setState(() => _maximumAngularGridLines = value),
+          ),
       ],
     ),
     OptionSection(
@@ -1070,6 +1095,15 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           value: _showValues,
           onChanged: (value) => setState(() => _showValues = value),
         ),
+        if (_showValues)
+          IntSliderOption(
+            label: 'Maximum value labels',
+            value: _maximumDataLabels,
+            min: 4,
+            max: 48,
+            suffix: 'labels',
+            onChanged: (value) => setState(() => _maximumDataLabels = value),
+          ),
       ],
     ),
   ];

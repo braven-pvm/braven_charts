@@ -1167,6 +1167,8 @@ void main() {
           outerPadding: 0.08,
           showLabels: false,
           showGridLines: false,
+          maximumVisibleLabels: 9,
+          maximumVisibleGridLines: 18,
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 10,
@@ -1190,6 +1192,7 @@ void main() {
                 borderColor: Color(0xFF102030),
                 borderWidth: 2,
                 showDataLabels: false,
+                maximumVisibleDataLabels: 6,
               ),
               selectionStyle: const RadialSelectionStyle(
                 effect: RadialSelectionEffect.lift,
@@ -1208,6 +1211,7 @@ void main() {
       expect(generated.source, contains('polarStyle: PolarColumnStyle('));
       expect(generated.source, contains('cornerRadius: 10.0'));
       expect(generated.source, contains('Color(0xFF102030)'));
+      expect(generated.source, contains('maximumVisibleDataLabels: 6'));
       expect(generated.source, contains('polarChartConfig: PolarChartConfig('));
       expect(generated.source, contains('startAngleDegrees: 20.0'));
       expect(generated.source, contains('sweepAngleDegrees: 240.0'));
@@ -1217,6 +1221,8 @@ void main() {
         contains('scaleMode: PolarRadialScaleMode.areaCorrect'),
       );
       expect(generated.source, contains('tickCount: 7'));
+      expect(generated.source, contains('maximumVisibleLabels: 9'));
+      expect(generated.source, contains('maximumVisibleGridLines: 18'));
     });
 
     test('emits portable chart selection policy', () {

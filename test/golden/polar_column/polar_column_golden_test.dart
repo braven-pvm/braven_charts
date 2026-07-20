@@ -40,13 +40,20 @@ void main() {
         id: 'dense-rose',
         unit: 'events',
         values: {
-          for (var index = 0; index < 16; index++)
+          for (var index = 0; index < 48; index++)
             'Sector ${index + 1}': 18 + ((index * 13) % 37),
         },
         polarStyle: const PolarColumnStyle(
           cornerRadius: 5,
           borderWidth: 0.75,
           showDataLabels: true,
+          maximumVisibleDataLabels: 10,
+        ),
+      ),
+      config: const PolarChartConfig(
+        angularAxis: PolarCategoryAxisConfig(
+          maximumVisibleLabels: 10,
+          maximumVisibleGridLines: 24,
         ),
       ),
       title: null,

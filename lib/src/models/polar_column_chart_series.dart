@@ -251,6 +251,7 @@ class PolarColumnStyle {
     this.borderColor,
     this.borderWidth = 1,
     this.showDataLabels = true,
+    this.maximumVisibleDataLabels = 24,
   });
 
   final double cornerRadius;
@@ -258,6 +259,12 @@ class PolarColumnStyle {
   final Color? borderColor;
   final double borderWidth;
   final bool showDataLabels;
+
+  /// Maximum number of direct value labels painted for this series.
+  ///
+  /// Spatial fit may reduce the visible count further. This never removes
+  /// source values from hit testing, semantics, artifacts, or data tables.
+  final int maximumVisibleDataLabels;
 
   void validate() {
     if (!cornerRadius.isFinite || cornerRadius < 0) {
@@ -281,6 +288,13 @@ class PolarColumnStyle {
         'Value must be finite and non-negative',
       );
     }
+    if (maximumVisibleDataLabels < 1) {
+      throw ArgumentError.value(
+        maximumVisibleDataLabels,
+        'polarStyle.maximumVisibleDataLabels',
+        'Value must be positive',
+      );
+    }
   }
 
   PolarColumnStyle copyWith({
@@ -290,12 +304,15 @@ class PolarColumnStyle {
     bool clearBorderColor = false,
     double? borderWidth,
     bool? showDataLabels,
+    int? maximumVisibleDataLabels,
   }) => PolarColumnStyle(
     cornerRadius: cornerRadius ?? this.cornerRadius,
     opacity: opacity ?? this.opacity,
     borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
     borderWidth: borderWidth ?? this.borderWidth,
     showDataLabels: showDataLabels ?? this.showDataLabels,
+    maximumVisibleDataLabels:
+        maximumVisibleDataLabels ?? this.maximumVisibleDataLabels,
   );
 
   @override
@@ -306,7 +323,8 @@ class PolarColumnStyle {
           opacity == other.opacity &&
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
-          showDataLabels == other.showDataLabels;
+          showDataLabels == other.showDataLabels &&
+          maximumVisibleDataLabels == other.maximumVisibleDataLabels;
 
   @override
   int get hashCode => Object.hash(
@@ -315,6 +333,7 @@ class PolarColumnStyle {
     borderColor,
     borderWidth,
     showDataLabels,
+    maximumVisibleDataLabels,
   );
 }
 

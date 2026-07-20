@@ -2003,6 +2003,12 @@ class _ChartDartEmitter {
           style.showDataLabels,
           defaultValue: true,
         );
+        _numberIf(
+          writer,
+          'maximumVisibleDataLabels',
+          style.maximumVisibleDataLabels,
+          24,
+        );
       });
       writer.writeLine('),');
     }
@@ -2209,6 +2215,18 @@ class _ChartDartEmitter {
             'showGridLines',
             angular.showGridLines,
             defaultValue: true,
+          );
+          _numberIf(
+            writer,
+            'maximumVisibleLabels',
+            angular.maximumVisibleLabels,
+            24,
+          );
+          _numberIf(
+            writer,
+            'maximumVisibleGridLines',
+            angular.maximumVisibleGridLines,
+            72,
           );
         });
         writer.writeLine('),');

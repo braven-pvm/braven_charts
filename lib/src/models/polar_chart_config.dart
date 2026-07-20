@@ -265,6 +265,8 @@ class PolarCategoryAxisConfig {
     this.outerPadding = 0.04,
     this.showLabels = true,
     this.showGridLines = true,
+    this.maximumVisibleLabels = 24,
+    this.maximumVisibleGridLines = 72,
   });
 
   /// Gap between adjacent marks as a fraction of one category step.
@@ -275,6 +277,19 @@ class PolarCategoryAxisConfig {
 
   final bool showLabels;
   final bool showGridLines;
+
+  /// Upper bound for painted category labels before spatial thinning.
+  ///
+  /// The renderer may paint fewer labels when the active pane or text scale
+  /// cannot fit this many. Source categories, interaction, table rows, and
+  /// semantics are never removed.
+  final int maximumVisibleLabels;
+
+  /// Upper bound for painted angular grid spokes.
+  ///
+  /// This limits visual and paint density only. Every category retains its
+  /// exact angular band and interaction identity.
+  final int maximumVisibleGridLines;
 
   void validate() {
     _requireRange(
@@ -290,6 +305,20 @@ class PolarCategoryAxisConfig {
       minimum: 0,
       maximum: 1,
     );
+    if (maximumVisibleLabels < 1) {
+      throw ArgumentError.value(
+        maximumVisibleLabels,
+        'angularAxis.maximumVisibleLabels',
+        'Value must be positive',
+      );
+    }
+    if (maximumVisibleGridLines < 1) {
+      throw ArgumentError.value(
+        maximumVisibleGridLines,
+        'angularAxis.maximumVisibleGridLines',
+        'Value must be positive',
+      );
+    }
   }
 
   PolarCategoryAxisConfig copyWith({
@@ -297,11 +326,16 @@ class PolarCategoryAxisConfig {
     double? outerPadding,
     bool? showLabels,
     bool? showGridLines,
+    int? maximumVisibleLabels,
+    int? maximumVisibleGridLines,
   }) => PolarCategoryAxisConfig(
     innerPadding: innerPadding ?? this.innerPadding,
     outerPadding: outerPadding ?? this.outerPadding,
     showLabels: showLabels ?? this.showLabels,
     showGridLines: showGridLines ?? this.showGridLines,
+    maximumVisibleLabels: maximumVisibleLabels ?? this.maximumVisibleLabels,
+    maximumVisibleGridLines:
+        maximumVisibleGridLines ?? this.maximumVisibleGridLines,
   );
 
   @override
@@ -311,11 +345,19 @@ class PolarCategoryAxisConfig {
           innerPadding == other.innerPadding &&
           outerPadding == other.outerPadding &&
           showLabels == other.showLabels &&
-          showGridLines == other.showGridLines;
+          showGridLines == other.showGridLines &&
+          maximumVisibleLabels == other.maximumVisibleLabels &&
+          maximumVisibleGridLines == other.maximumVisibleGridLines;
 
   @override
-  int get hashCode =>
-      Object.hash(innerPadding, outerPadding, showLabels, showGridLines);
+  int get hashCode => Object.hash(
+    innerPadding,
+    outerPadding,
+    showLabels,
+    showGridLines,
+    maximumVisibleLabels,
+    maximumVisibleGridLines,
+  );
 }
 
 /// Radial numeric-axis behavior for Polar Column V1.

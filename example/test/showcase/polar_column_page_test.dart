@@ -33,6 +33,22 @@ void main() {
     );
     expect(chart.series.single, isA<PolarColumnChartSeries>());
     expect(chart.polarChartConfig.pane.sweepAngleDegrees, 360);
+    expect(chart.polarChartConfig.angularAxis.maximumVisibleLabels, 24);
+    expect(chart.polarChartConfig.angularAxis.maximumVisibleGridLines, 72);
+    expect(
+      (chart.series.single as PolarColumnChartSeries)
+          .polarStyle
+          .maximumVisibleDataLabels,
+      24,
+    );
+    expect(find.text('Maximum category labels'), findsOneWidget);
+    expect(find.text('Maximum grid spokes'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Maximum value labels'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Maximum value labels'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

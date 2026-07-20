@@ -2693,6 +2693,7 @@ Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
   if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
   'borderWidth': _number(style.borderWidth),
   'showDataLabels': style.showDataLabels,
+  'maximumVisibleDataLabels': style.maximumVisibleDataLabels,
 };
 
 PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
@@ -2705,6 +2706,8 @@ PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
       ),
       borderWidth: _double(value, 'borderWidth'),
       showDataLabels: _bool(value, 'showDataLabels'),
+      maximumVisibleDataLabels:
+          _optionalInt(value['maximumVisibleDataLabels']) ?? 24,
     );
 
 Map<String, Object?> _encodePolarColumnTargetMarker(

@@ -234,6 +234,9 @@ abstract final class ChartConfigurationDocumentCodec {
               'outerPadding': config.angularAxis.outerPadding,
               'showLabels': config.angularAxis.showLabels,
               'showGridLines': config.angularAxis.showGridLines,
+              'maximumVisibleLabels': config.angularAxis.maximumVisibleLabels,
+              'maximumVisibleGridLines':
+                  config.angularAxis.maximumVisibleGridLines,
             },
             'radialAxis': {
               if (config.radialAxis.minimum != null)
@@ -339,6 +342,20 @@ abstract final class ChartConfigurationDocumentCodec {
             'showGridLines',
             '$path.angularAxis',
           ),
+          maximumVisibleLabels:
+              _optionalInt(
+                angular,
+                'maximumVisibleLabels',
+                '$path.angularAxis',
+              ) ??
+              24,
+          maximumVisibleGridLines:
+              _optionalInt(
+                angular,
+                'maximumVisibleGridLines',
+                '$path.angularAxis',
+              ) ??
+              72,
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: _optionalDouble(radial, 'minimum', '$path.radialAxis'),
@@ -538,6 +555,18 @@ int _requiredInt(Map<String, Object?> map, String key, String path) {
   if (value is! int) {
     throw _ConfigurationFormatException(
       'Required integer field "$key" is missing or invalid.',
+      '$path.$key',
+    );
+  }
+  return value;
+}
+
+int? _optionalInt(Map<String, Object?> map, String key, String path) {
+  final value = map[key];
+  if (value == null) return null;
+  if (value is! int) {
+    throw _ConfigurationFormatException(
+      'Optional integer field "$key" is invalid.',
       '$path.$key',
     );
   }

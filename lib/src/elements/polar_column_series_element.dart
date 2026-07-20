@@ -59,6 +59,13 @@ class PolarColumnSeriesElement implements DataHitElement {
       seriesIndex: seriesIndex,
       seriesCount: seriesCount,
     );
+    final visibleDataLabelIndices = _resolveVisibleDataLabelIndices(
+      series: series,
+      geometry: layout.geometry,
+      size: size,
+      theme: theme,
+      textScaleFactor: textScaleFactor,
+    );
     return PolarColumnSeriesElement._(
       series: series,
       config: config,
@@ -76,12 +83,13 @@ class PolarColumnSeriesElement implements DataHitElement {
       revealProgress: revealProgress,
       textScaleFactor: textScaleFactor,
       layout: layout,
+      visibleDataLabelIndices: visibleDataLabelIndices,
       isSelected: isSelected,
       isHovered: isHovered,
     );
   }
 
-  const PolarColumnSeriesElement._({
+  PolarColumnSeriesElement._({
     required this.series,
     required this.config,
     required this.size,
@@ -98,9 +106,16 @@ class PolarColumnSeriesElement implements DataHitElement {
     required this.revealProgress,
     required this.textScaleFactor,
     required _PolarColumnResolvedLayout layout,
+    required List<int> visibleDataLabelIndices,
     required this.isSelected,
     required this.isHovered,
-  }) : _layout = layout;
+  }) : _layout = layout,
+       _visibleDataLabelIndices = List<int>.unmodifiable(
+         visibleDataLabelIndices,
+       ),
+       _visibleDataLabelIndexSet = Set<int>.unmodifiable(
+         visibleDataLabelIndices,
+       );
 
   @override
   final PolarColumnChartSeries series;
@@ -160,15 +175,15 @@ class PolarColumnSeriesElement implements DataHitElement {
   List<int> get visibleAngularLabelIndices =>
       _layout.visibleAngularLabelIndices;
 
+  /// Angular grid spokes retained after deterministic density thinning.
+  List<int> get visibleAngularGridIndices => _layout.visibleAngularGridIndices;
+
   /// Direct value labels with enough tangential and radial room to remain
   /// legible. Hidden values remain available through interaction and semantics.
-  List<int> get visibleDataLabelIndices {
-    final colors = resolvedMarkColors;
-    return List<int>.unmodifiable([
-      for (final mark in geometry.marks)
-        if (_dataLabelFits(mark, color: colors[mark.index])) mark.index,
-    ]);
-  }
+  List<int> get visibleDataLabelIndices => _visibleDataLabelIndices;
+
+  final List<int> _visibleDataLabelIndices;
+  final Set<int> _visibleDataLabelIndexSet;
 
   @override
   final bool isSelected;
@@ -328,7 +343,8 @@ class PolarColumnSeriesElement implements DataHitElement {
     }
 
     if (config.angularAxis.showGridLines) {
-      for (final band in _layout.categoryScale.bands) {
+      for (final index in visibleAngularGridIndices) {
+        final band = _layout.categoryScale.bands[index];
         final start =
             pane.center +
             Offset.fromDirection(band.startAngle, pane.innerRadius);
@@ -447,7 +463,7 @@ class PolarColumnSeriesElement implements DataHitElement {
 
     if (mark.isVisible &&
         series.polarStyle.showDataLabels &&
-        _dataLabelFits(mark, color: color)) {
+        _visibleDataLabelIndexSet.contains(mark.index)) {
       _paintText(
         canvas,
         _dataLabelText(mark),
@@ -520,21 +536,6 @@ class PolarColumnSeriesElement implements DataHitElement {
         );
         break;
     }
-  }
-
-  bool _dataLabelFits(PolarColumnMarkGeometry mark, {required Color color}) {
-    if (!series.polarStyle.showDataLabels || !mark.isVisible) return false;
-    final textSize = _measureText(
-      _dataLabelText(mark),
-      _dataLabelStyle(color),
-      textScaleFactor,
-      maxWidth: size.width,
-    );
-    final radialDepth = (mark.valueRadius - mark.baselineRadius).abs();
-    final labelRadius = (mark.baselineRadius + mark.valueRadius) * 0.5;
-    final tangentialWidth = mark.band.sweepAngle.abs() * labelRadius;
-    return radialDepth >= textSize.height + 4 * textScaleFactor &&
-        tangentialWidth >= textSize.width + 6 * textScaleFactor;
   }
 
   String _dataLabelText(PolarColumnMarkGeometry mark) =>
@@ -730,6 +731,7 @@ class _PolarColumnResolvedLayout {
     required this.numericScale,
     required this.geometry,
     required this.visibleAngularLabelIndices,
+    required this.visibleAngularGridIndices,
     required this.baseline,
   });
 
@@ -738,6 +740,7 @@ class _PolarColumnResolvedLayout {
   final PolarNumericScale numericScale;
   final PolarColumnGeometry geometry;
   final List<int> visibleAngularLabelIndices;
+  final List<int> visibleAngularGridIndices;
   final double baseline;
 }
 
@@ -846,6 +849,15 @@ _PolarColumnResolvedLayout _resolveLayout({
           size: size,
           style: theme.axisStyle.labelStyle,
           textScaleFactor: textScaleFactor,
+          maximumVisible: config.angularAxis.maximumVisibleLabels,
+        )
+      : const <int>[];
+  final visibleAngularGridIndices = config.angularAxis.showGridLines
+      ? _resolveVisibleAngularGridIndices(
+          categoryScale: categoryScale,
+          pane: pane,
+          textScaleFactor: textScaleFactor,
+          maximumVisible: config.angularAxis.maximumVisibleGridLines,
         )
       : const <int>[];
   return _PolarColumnResolvedLayout(
@@ -856,6 +868,9 @@ _PolarColumnResolvedLayout _resolveLayout({
     baseline: baseline,
     visibleAngularLabelIndices: List<int>.unmodifiable(
       visibleAngularLabelIndices,
+    ),
+    visibleAngularGridIndices: List<int>.unmodifiable(
+      visibleAngularGridIndices,
     ),
   );
 }
@@ -871,6 +886,7 @@ List<int> _resolveVisibleAngularLabelIndices({
   required Size size,
   required TextStyle style,
   required double textScaleFactor,
+  required int maximumVisible,
 }) {
   final bands = categoryScale.bands;
   if (bands.isEmpty) return const <int>[];
@@ -894,13 +910,80 @@ List<int> _resolveVisibleAngularLabelIndices({
       maximumLabelWidth * 0.55 + 8 * textScaleFactor,
     ),
   );
-  final maximumVisible = math.max(
+  final resolvedMaximumVisible = math.max(
     1,
-    math.min(bands.length, (availableArcLength / minimumSpacing).floor()),
+    math.min(
+      maximumVisible,
+      math.min(bands.length, (availableArcLength / minimumSpacing).floor()),
+    ),
   );
-  final stride = (bands.length / maximumVisible).ceil();
+  return _thinOrdinalIndices(<int>[
+    for (var index = 0; index < bands.length; index++) index,
+  ], resolvedMaximumVisible);
+}
+
+List<int> _resolveVisibleAngularGridIndices({
+  required PolarCategoryScale categoryScale,
+  required RadialPaneGeometry pane,
+  required double textScaleFactor,
+  required int maximumVisible,
+}) {
+  final count = categoryScale.bands.length;
+  if (count == 0) return const <int>[];
+  final availableArcLength = pane.sweepAngle.abs() * pane.outerRadius;
+  final spatialMaximum = math.max(
+    1,
+    (availableArcLength / math.max(4, 4 * textScaleFactor)).floor(),
+  );
+  return _thinOrdinalIndices(<int>[
+    for (var index = 0; index < count; index++) index,
+  ], math.min(maximumVisible, spatialMaximum));
+}
+
+List<int> _resolveVisibleDataLabelIndices({
+  required PolarColumnChartSeries series,
+  required PolarColumnGeometry geometry,
+  required Size size,
+  required ChartTheme theme,
+  required double textScaleFactor,
+}) {
+  if (!series.polarStyle.showDataLabels) return const <int>[];
+  final style = theme.axisStyle.labelStyle.copyWith(
+    fontWeight: FontWeight.w600,
+  );
+  final candidates = <int>[];
+  for (final mark in geometry.marks) {
+    if (!mark.isVisible) continue;
+    final radialDepth = (mark.valueRadius - mark.baselineRadius).abs();
+    final labelRadius = (mark.baselineRadius + mark.valueRadius) * 0.5;
+    final tangentialWidth = mark.band.sweepAngle.abs() * labelRadius;
+    if (radialDepth < 10 * textScaleFactor ||
+        tangentialWidth < 12 * textScaleFactor) {
+      continue;
+    }
+    final textSize = _measureText(
+      MultiAxisValueFormatter.format(value: mark.value),
+      style,
+      textScaleFactor,
+      maxWidth: size.width,
+    );
+    if (radialDepth >= textSize.height + 4 * textScaleFactor &&
+        tangentialWidth >= textSize.width + 6 * textScaleFactor) {
+      candidates.add(mark.index);
+    }
+  }
+  return _thinOrdinalIndices(
+    candidates,
+    series.polarStyle.maximumVisibleDataLabels,
+  );
+}
+
+List<int> _thinOrdinalIndices(List<int> indices, int maximumVisible) {
+  if (indices.length <= maximumVisible) return indices;
+  final stride = (indices.length / maximumVisible).ceil();
   return <int>[
-    for (var index = 0; index < bands.length; index += stride) index,
+    for (var position = 0; position < indices.length; position += stride)
+      indices[position],
   ];
 }
 

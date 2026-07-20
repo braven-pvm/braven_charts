@@ -203,7 +203,9 @@ See
   keeps equal angular bandwidth and defaults to area-correct radial scaling.
 - `PolarColumnStyle` controls corner radius, opacity, border treatment, and
   direct value labels. Per-category colors may be supplied through
-  `columnColors` or point styles.
+  `columnColors` or point styles. `maximumVisibleDataLabels` places a
+  deterministic upper bound on painted value labels without removing values
+  from interaction, semantics, tables, or portable documents.
 - `PolarColumnChartSeries.targetValues` and
   `PolarColumnTargetMarkerStyle` provide optional absolute per-category target
   ticks. `PolarChartConfig.thresholds` accepts pane-wide `PolarThreshold`
@@ -215,7 +217,9 @@ See
   them because cumulative placement would make the interval ambiguous.
 - `PolarChartConfig` groups the dedicated `PolarPaneConfig`,
   `PolarCategoryAxisConfig`, `PolarNumericAxisConfig`, and
-  `PolarColumnCompositionConfig` contracts.
+  `PolarColumnCompositionConfig` contracts. The angular axis exposes
+  `maximumVisibleLabels` and `maximumVisibleGridLines`; spatial fit may show
+  fewer labels, while every category retains its exact angular band.
 - `PolarColumnCompositionMode.layered` reuses the full category band for every
   series. `grouped` divides it into stable declaration-order sub-bands;
   `groupInnerPadding` controls the fractional gap inside each series slot.

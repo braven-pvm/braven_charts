@@ -93,6 +93,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exact source endpoints, and round-trip through native tables, CSV,
   artifacts, hydration, and generated Dart. Stacked contributors reject
   intervals because cumulative placement would make their meaning ambiguous.
+- Deterministic Polar Column density controls through
+  `PolarCategoryAxisConfig.maximumVisibleLabels`,
+  `PolarCategoryAxisConfig.maximumVisibleGridLines`, and
+  `PolarColumnStyle.maximumVisibleDataLabels`. Dense panes thin only painted
+  labels and spokes; every mark remains available to hit testing, semantics,
+  native tables, CSV, artifacts, hydration, and generated Dart source. A
+  512-category warm-paint benchmark now guards the renderer's frame budget.
 
 ## 0.9.0 - 2026-07-19
 

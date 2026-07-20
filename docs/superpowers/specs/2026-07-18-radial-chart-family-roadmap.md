@@ -446,14 +446,18 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
-Status: active. Slices 3.1 through 3.5 implement declaration-order layered
+Status: complete on the review branch. Slices 3.1 through 3.6 implement declaration-order layered
 comparison, grouped angular sub-bands, diverging stacks, per-category target
 ticks, pane-wide threshold arcs, and absolute lower/upper intervals for multiple
 compatible Polar Column series. Compatible series share category
 identity/order, preset, unit, pane, and one global radial scale. Grouping and
 stacking preserve full per-series rows and exact `(seriesId, pointIndex)`
 selection identity. Stacked positive and negative contributors accumulate
-independently from zero; opposite signs never cancel.
+independently from zero; opposite signs never cancel. Deterministic visual-only
+density caps thin angular labels, grid spokes, and direct value labels while
+preserving every mark in hit testing, semantics, tables, CSV, artifacts,
+hydration, and generated source. A 512-category benchmark guards the warm-paint
+frame budget. Final visual acceptance for slice 3.6 was recorded on 2026-07-20.
 
 Deliver in small slices:
 
@@ -469,7 +473,10 @@ Deliver in small slices:
    endpoints with radial whisker and annular-band presentations, automatic
    domain participation, explicit-domain clipping, full table/artifact/source
    preservation, and an explicit rejection for ambiguous stacked contributors;
-6. performance and label-density limits.
+6. performance and label-density limits — implemented in 3.6 with public,
+   serialized label/grid/value-label caps, cached label eligibility, stable
+   ordinal thinning, dense-pane showcase controls, a 48-category golden, and a
+   512-category warm-paint regression benchmark.
 
 Each feature is specified in polar coordinate terms. Existing Cartesian Bar
 algorithms may share scale/domain utilities, but Cartesian geometry is not

@@ -20,7 +20,7 @@ is added to package marketing.
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
 | Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
-| Polar Column and Rose charts | one or more compatible signed `PolarColumnChartSeries` values, layered, grouped, or diverging stacked `PolarColumnCompositionConfig`, per-category `targetValues` and `PolarColumnTargetMarkerStyle`, pane-wide `PolarThreshold` references, absolute `PolarColumnInterval` endpoints with whisker or annular-band `PolarColumnIntervalStyle`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
+| Polar Column and Rose charts | one or more compatible signed `PolarColumnChartSeries` values, layered, grouped, or diverging stacked `PolarColumnCompositionConfig`, per-category `targetValues` and `PolarColumnTargetMarkerStyle`, pane-wide `PolarThreshold` references, absolute `PolarColumnInterval` endpoints with whisker or annular-band `PolarColumnIntervalStyle`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, bounded visual label/spoke density, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
@@ -37,7 +37,7 @@ is added to package marketing.
 | Generated Dart source | `ChartDartSourceGenerator`, `ChartDartSourceOptions`, `ChartDisplayMode.source`, `ChartWorkbenchSourceState` | Chart Workbench; Line, Area, Bar, Scatter, Pie, Donut, Concentric Donut, and Polar Column guides |
 | Document comparison | `ChartComparisonBuilder`, explicit mapping and source-preserving CSV | Chart Workbench |
 | Serializable/tool-driven charts | `ChartConfigBuilder`, chart agent interfaces and schemas, including complete advanced `bar`, `pie`, and `donut` contracts | Bar Lab, Pie Charts, API documentation |
-| Dense-data performance | bounded buffers, viewport culling, render caches, Scatter spatial indexing and geometry-aware hit testing | Performance, Scatter Charts, Live Stream |
+| Dense-data performance | bounded buffers, viewport culling, render caches, Scatter spatial indexing and geometry-aware hit testing, Polar Column cached label eligibility and deterministic visual-density caps | Performance, Scatter Charts, Polar Column, Live Stream |
 
 ## Current boundary
 

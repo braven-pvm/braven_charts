@@ -120,6 +120,35 @@ void main() {
       expect(element.semanticDataHits, hasLength(16));
     });
 
+    test('caps only painted density while preserving every mark', () {
+      final element = PolarColumnSeriesElement(
+        series: PolarColumnChartSeries.fromMap(
+          id: 'dense-capped',
+          values: {
+            for (var index = 0; index < 96; index++)
+              'Category ${index + 1}': 40 + (index % 50),
+          },
+          polarStyle: const PolarColumnStyle(maximumVisibleDataLabels: 6),
+        ),
+        config: const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(
+            maximumVisibleLabels: 8,
+            maximumVisibleGridLines: 12,
+          ),
+        ),
+        size: const Size(720, 520),
+        theme: ChartTheme.light,
+      );
+
+      expect(element.geometry.marks, hasLength(96));
+      expect(element.semanticDataHits, hasLength(96));
+      expect(element.visibleAngularLabelIndices.length, lessThanOrEqualTo(8));
+      expect(element.visibleAngularGridIndices.length, lessThanOrEqualTo(12));
+      expect(element.visibleDataLabelIndices.length, lessThanOrEqualTo(6));
+      expect(element.visibleAngularLabelIndices.first, 0);
+      expect(element.visibleAngularGridIndices.first, 0);
+    });
+
     test('rejects an invalid text scale factor', () {
       expect(
         () => PolarColumnSeriesElement(

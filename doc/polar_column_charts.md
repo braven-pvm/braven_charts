@@ -452,14 +452,28 @@ configuration.
   and selection without describing a percentage share;
 - disabling axis labels does not remove the table or semantic data.
 - angular axis labels are thinned in stable ordinal order when the available
-  arc cannot fit every label at the active text scale;
+  arc cannot fit every label at the active text scale, with
+  `PolarCategoryAxisConfig.maximumVisibleLabels` providing an explicit upper
+  bound (24 by default);
+- angular grid spokes use the same deterministic ordinal thinning through
+  `maximumVisibleGridLines` (72 by default);
 - direct value labels render only when the mark has enough radial and
-  tangential room, while tooltips, semantics, tables, and exports retain every
+  tangential room and remain within
+  `PolarColumnStyle.maximumVisibleDataLabels` (24 by default), while tooltips,
+  semantics, tables, exports, artifacts, and generated source retain every
   value.
 
+The renderer resolves those visible-label sets once when constructing the
+series element and uses a cheap geometric fit check before measuring text.
+The regression benchmark paints a 512-category element in under one 60 Hz
+frame on the package's test host. Treat that as a deterministic regression
+envelope rather than a universal device limit; profile the target platform
+when presenting unusually dense or heavily styled panes.
+
 Use visible category labels or a nearby explanatory table for unfamiliar
-categories. For dense cycles, keep labels short, retain meaningful units, and
-verify both compact and large-text layouts.
+categories. For dense cycles, keep labels short, retain meaningful units,
+choose caps appropriate to the pane, and verify compact, large-text, table,
+keyboard, and screen-reader paths.
 
 ## Current boundaries
 

@@ -22,6 +22,8 @@ void main() {
           outerPadding: 0.1,
           showLabels: true,
           showGridLines: false,
+          maximumVisibleLabels: 11,
+          maximumVisibleGridLines: 17,
         ),
         radialAxis: PolarNumericAxisConfig(
           minimum: 0,
@@ -45,6 +47,7 @@ void main() {
           borderColor: Color(0xFF102030),
           borderWidth: 2,
           showDataLabels: false,
+          maximumVisibleDataLabels: 7,
         ),
         selectionStyle: const RadialSelectionStyle(
           effect: RadialSelectionEffect.lift,

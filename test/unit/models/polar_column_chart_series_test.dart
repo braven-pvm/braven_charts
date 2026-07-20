@@ -120,6 +120,14 @@ void main() {
         () => PolarColumnChartSeries.fromMap(
           id: 'polar',
           values: const {'A': 1},
+          polarStyle: const PolarColumnStyle(maximumVisibleDataLabels: 0),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
           intervals: const {'Missing': PolarColumnInterval(lower: 0, upper: 2)},
         ),
         throwsArgumentError,
@@ -269,6 +277,18 @@ void main() {
       expect(
         const PolarChartConfig(
           angularAxis: PolarCategoryAxisConfig(innerPadding: 1),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(maximumVisibleLabels: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          angularAxis: PolarCategoryAxisConfig(maximumVisibleGridLines: 0),
         ).validate,
         throwsArgumentError,
       );
