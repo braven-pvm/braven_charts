@@ -425,7 +425,7 @@ retaining Braven styling and Workbench behavior.
   Workbench-owned controller per mounted surface, with an initial-route
   regression test.
 - Package `lib` analysis and showcase analysis are clean. All 2,239 package
-  tests and 226 showcase tests pass after the lifecycle and interactive
+  tests and 230 showcase tests pass after the lifecycle and interactive
   configuration work.
 - Release web builds pass for `/` and `/braven_charts/`, including Wasm dry
   runs. The final root release route returns HTTP 200 for both the shell and
