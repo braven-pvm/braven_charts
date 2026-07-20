@@ -296,7 +296,9 @@ abstract final class ChartDocumentHydrator {
     'series.donut.concentric.v1',
     'series.polarColumn',
     'series.polar.column.v1',
+    'series.polar.column.targets.v1',
     'chart.polar.config.v1',
+    'chart.polar.thresholds.v1',
     PolarColumnComposition.multipleSeriesCapability,
     PolarColumnComposition.groupedSeriesCapability,
     PolarColumnComposition.stackedSeriesCapability,
@@ -937,6 +939,31 @@ abstract final class ChartDocumentHydrator {
           message:
               'Polar configuration requires Polar Column series and cannot mix chart families.',
           path: r'$.document.configuration.polarChart',
+        ),
+        [],
+      );
+    }
+    if (config.thresholds.isNotEmpty &&
+        !document.requiredCapabilities.contains('chart.polar.thresholds.v1')) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message: 'Polar thresholds must declare chart.polar.thresholds.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any((series) => series.targetValues.isNotEmpty) &&
+        !document.requiredCapabilities.contains(
+          'series.polar.column.targets.v1',
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Polar Column targets must declare series.polar.column.targets.v1.',
+          path: r'$.document.requiredCapabilities',
         ),
         [],
       );

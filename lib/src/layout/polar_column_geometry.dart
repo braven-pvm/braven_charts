@@ -25,6 +25,9 @@ class PolarColumnMarkGeometry {
     required this.band,
     required this.baselineRadius,
     required this.valueRadius,
+    required this.targetValue,
+    required this.targetRadius,
+    required this.targetPath,
     required this.sector,
     required this.tooltipAnchor,
     required this.labelAnchor,
@@ -56,6 +59,15 @@ class PolarColumnMarkGeometry {
 
   /// Physical radius mapped from [radialValue].
   final double valueRadius;
+
+  /// Optional absolute benchmark associated with this source category.
+  final double? targetValue;
+
+  /// Physical radius mapped from [targetValue].
+  final double? targetRadius;
+
+  /// Tangential benchmark marker centered inside the resolved angular band.
+  final Path? targetPath;
 
   /// Shared annular-sector primitive used for painting and hit testing.
   final AnnularSectorGeometry sector;
@@ -112,6 +124,8 @@ abstract final class PolarColumnGeometryCalculator {
     double? baseline,
     List<double>? radialStarts,
     List<double>? radialEnds,
+    List<double?> targetValues = const <double?>[],
+    double targetLengthFactor = 0.72,
     double cornerRadius = 0,
     bool roundInnerCorners = false,
     int groupIndex = 0,
@@ -148,6 +162,22 @@ abstract final class PolarColumnGeometryCalculator {
     if ((radialStarts == null) != (radialEnds == null)) {
       throw ArgumentError(
         'radialStarts and radialEnds must be supplied together',
+      );
+    }
+    if (targetValues.isNotEmpty && targetValues.length != values.length) {
+      throw ArgumentError.value(
+        targetValues.length,
+        'targetValues',
+        'Target value count must match the source value count',
+      );
+    }
+    if (!targetLengthFactor.isFinite ||
+        targetLengthFactor <= 0 ||
+        targetLengthFactor > 1) {
+      throw ArgumentError.value(
+        targetLengthFactor,
+        'targetLengthFactor',
+        'Value must be finite and in (0, 1]',
       );
     }
     if (!cornerRadius.isFinite || cornerRadius < 0) {
@@ -211,6 +241,28 @@ abstract final class PolarColumnGeometryCalculator {
       );
       final baselineRadius = numericScale.valueToRadius(radialStart);
       final valueRadius = numericScale.valueToRadius(radialEnd);
+      final targetValue = targetValues.isEmpty ? null : targetValues[index];
+      if (targetValue != null && !targetValue.isFinite) {
+        throw ArgumentError.value(
+          targetValue,
+          'targetValues[$index]',
+          'Target values must be null or finite',
+        );
+      }
+      final targetRadius =
+          targetValue == null ||
+              targetValue < numericScale.minimum ||
+              targetValue > numericScale.maximum
+          ? null
+          : numericScale.valueToRadius(targetValue);
+      final targetPath = targetRadius == null
+          ? null
+          : _targetArcPath(
+              center: categoryScale.pane.center,
+              radius: targetRadius,
+              band: band,
+              lengthFactor: targetLengthFactor,
+            );
       final innerRadius = math.min(baselineRadius, valueRadius);
       final outerRadius = math.max(baselineRadius, valueRadius);
       final sector = AnnularSectorGeometry(
@@ -235,6 +287,9 @@ abstract final class PolarColumnGeometryCalculator {
           band: band,
           baselineRadius: baselineRadius,
           valueRadius: valueRadius,
+          targetValue: targetValue,
+          targetRadius: targetRadius,
+          targetPath: targetPath,
           sector: sector,
           tooltipAnchor:
               categoryScale.pane.center +
@@ -248,6 +303,18 @@ abstract final class PolarColumnGeometryCalculator {
 
     return PolarColumnGeometry._(marks: marks);
   }
+}
+
+Path _targetArcPath({
+  required Offset center,
+  required double radius,
+  required PolarCategoryBand band,
+  required double lengthFactor,
+}) {
+  final sweep = band.sweepAngle * lengthFactor;
+  final start = band.centerAngle - sweep / 2;
+  return Path()
+    ..addArc(Rect.fromCircle(center: center, radius: radius), start, sweep);
 }
 
 double _defaultBaseline(PolarNumericScale scale) {

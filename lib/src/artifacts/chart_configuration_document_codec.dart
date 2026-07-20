@@ -250,6 +250,17 @@ abstract final class ChartConfigurationDocumentCodec {
               'mode': config.composition.mode.name,
               'groupInnerPadding': config.composition.groupInnerPadding,
             },
+            'thresholds': [
+              for (final threshold in config.thresholds)
+                {
+                  'value': threshold.value,
+                  if (threshold.label != null) 'label': threshold.label,
+                  if (threshold.color != null)
+                    'color': threshold.color!.toARGB32(),
+                  'width': threshold.width,
+                  'dashPattern': threshold.dashPattern,
+                },
+            ],
           }, path: path),
         }),
       );
@@ -361,6 +372,7 @@ abstract final class ChartConfigurationDocumentCodec {
                   '$path.composition',
                 ),
               ),
+        thresholds: _decodePolarThresholds(map['thresholds'], path),
       );
       config.validate();
       return ChartArtifactSuccess(value: config);
@@ -370,6 +382,60 @@ abstract final class ChartConfigurationDocumentCodec {
       return _polarConfigurationFailure(error, path);
     }
   }
+}
+
+List<PolarThreshold> _decodePolarThresholds(Object? value, String path) {
+  if (value == null) return const <PolarThreshold>[];
+  if (value is! List) {
+    throw _ConfigurationFormatException(
+      'Optional thresholds field must be a list.',
+      '$path.thresholds',
+    );
+  }
+  return <PolarThreshold>[
+    for (final (index, rawThreshold) in value.indexed)
+      _decodePolarThreshold(rawThreshold, '$path.thresholds[$index]'),
+  ];
+}
+
+PolarThreshold _decodePolarThreshold(Object? value, String path) {
+  if (value is! Map) {
+    throw _ConfigurationFormatException(
+      'Polar threshold must be an object.',
+      path,
+    );
+  }
+  final map = value.cast<String, Object?>();
+  final label = map['label'];
+  if (label != null && label is! String) {
+    throw _ConfigurationFormatException(
+      'Optional threshold label must be text.',
+      '$path.label',
+    );
+  }
+  final color = map['color'];
+  if (color != null && color is! int) {
+    throw _ConfigurationFormatException(
+      'Optional threshold color must be an ARGB integer.',
+      '$path.color',
+    );
+  }
+  final rawPattern = map['dashPattern'];
+  if (rawPattern is! List || rawPattern.any((interval) => interval is! num)) {
+    throw _ConfigurationFormatException(
+      'Threshold dashPattern must be a numeric list.',
+      '$path.dashPattern',
+    );
+  }
+  return PolarThreshold(
+    value: _requiredDouble(map, 'value', path),
+    label: label as String?,
+    color: _optionalColor(color as int?),
+    width: _requiredDouble(map, 'width', path),
+    dashPattern: <double>[
+      for (final interval in rawPattern) (interval as num).toDouble(),
+    ],
+  );
 }
 
 Color? _optionalColor(int? value) => value == null ? null : Color(value);

@@ -70,6 +70,8 @@ artifact, and restored order. Use stable, unique labels.
 | `unit` | Optional value unit; it does not change numeric scale semantics |
 | `preset` | `standard` or `rose` |
 | `polarStyle` | Corners, opacity, border, and direct value-label visibility |
+| `targetValues` | Optional absolute target aligned one-for-one with source categories |
+| `targetMarkerStyle` | Target color, width, opacity, and angular length |
 | `selectionStyle` | Explode or lift treatment for durable point selection |
 
 The `fromMap` and `rose` constructors create the required ordinal X values and
@@ -194,6 +196,55 @@ zero. The renderer uses cumulative start/end values only for geometry: direct
 labels, tooltips, semantics, table rows, CSV, controller references, artifacts,
 and generated Dart all retain the original signed source value.
 
+## Targets and thresholds
+
+Targets and thresholds are absolute values on the shared radial numeric axis.
+They never change a category's angular band or convert a value into a share.
+
+Use `targets` for a category-specific benchmark and `PolarThreshold` for one
+reference value that applies across the whole pane:
+
+```dart
+final actual = PolarColumnChartSeries.fromMap(
+  id: 'actual',
+  name: 'Actual',
+  unit: 'orders',
+  values: const {'Search': 74, 'Social': 56, 'Partners': 83},
+  targets: const {'Search': 78, 'Social': 62, 'Partners': 80},
+  targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+    color: Color(0xFFF59E0B),
+    width: 3,
+    lengthFactor: 0.68,
+  ),
+);
+
+BravenChartPlus(
+  series: [actual],
+  polarChartConfig: const PolarChartConfig(
+    thresholds: [
+      PolarThreshold(
+        value: 80,
+        label: 'Capacity',
+        color: Color(0xFFDC2626),
+        dashPattern: [7, 4],
+      ),
+    ],
+  ),
+);
+```
+
+`targets` may omit categories; omitted categories have no marker. Supplying an
+unknown category is rejected so a target cannot silently drift to the wrong
+column. In grouped composition, each target occupies its own series sub-band.
+In stacked composition, targets remain absolute axis references rather than
+cumulative stack contributions.
+
+Automatic radial domains include every finite target and threshold. With an
+explicit radial domain, an out-of-range reference remains available to tables,
+artifacts, and generated Source but is not painted outside the pane. Target
+ticks remain fixed when a selected column explodes or lifts, preserving the
+visual comparison.
+
 ## Polar pane and axes
 
 `PolarChartConfig` groups plot-level concerns so they do not leak into Pie,
@@ -299,11 +350,12 @@ current selected geometry.
 The native table is deliberately value-based:
 
 ```text
-# | Category | Series | Value (unit)
+# | Category | Series | Value (unit) | Target (unit)
 ```
 
-It does not invent a Share column. Sorting, row copy, full-data copy, CSV,
-focus, and activation preserve the original category/value model.
+The Target column appears only when at least one series carries target values.
+The table does not invent a Share column. Sorting, row copy, full-data copy,
+CSV, focus, and activation preserve the original category/value model.
 
 ```dart
 BravenChartWorkbench(
@@ -337,6 +389,7 @@ document declares `chart.polar.stacked-series.v1`. The document stores:
 - every source category, value, color, unit, and stable point identity;
 - series preset, column style, and selection presentation;
 - pane, angular axis, radial numeric axis, and composition configuration;
+- per-category targets, target-marker style, and pane thresholds;
 - portable view state, including durable point selection when requested.
 
 `ChartArtifactJsonCodec` produces deterministic JSON and
@@ -347,6 +400,11 @@ explicitly rather than hydrating as Bar or Pie.
 The Workbench Source view uses `ChartDartSourceGenerator`. Generated Polar
 Dart includes the public constructor, pane, both axes, styles, and literal
 integer tick counts, and is compile-checked by the package test suite.
+
+Documents containing targets declare `series.polar.column.targets.v1`.
+Documents containing pane thresholds declare `chart.polar.thresholds.v1`.
+Hydration requires those capabilities before interpreting the corresponding
+configuration.
 
 ## Interaction and accessibility
 
@@ -373,7 +431,7 @@ verify both compact and large-text layouts.
 
 Polar Column currently excludes:
 
-- targets, uncertainty intervals, and thresholds;
+- uncertainty intervals and error ranges;
 - mixed Cartesian/polar plots;
 - zoom and pan;
 - Radial Bar, Gauge, Radar, and Sunburst semantics.

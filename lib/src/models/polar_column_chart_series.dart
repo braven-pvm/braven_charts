@@ -17,6 +17,83 @@ enum PolarColumnPreset {
   rose,
 }
 
+/// Appearance of a per-category target marker on a Polar Column series.
+///
+/// Targets are absolute values on the shared radial numeric axis. They do not
+/// participate in grouped or stacked geometry and remain fixed when a column
+/// is lifted for selection, so the represented value can be compared against
+/// its benchmark.
+class PolarColumnTargetMarkerStyle {
+  const PolarColumnTargetMarkerStyle({
+    this.color,
+    this.width = 2.5,
+    this.lengthFactor = 0.72,
+    this.opacity = 1,
+  });
+
+  /// Explicit marker color. Null uses the chart focus color.
+  final Color? color;
+
+  /// Tangential marker stroke width in logical pixels.
+  final double width;
+
+  /// Fraction of the resolved category or grouped-series band occupied by the
+  /// marker.
+  final double lengthFactor;
+
+  /// Marker opacity in the inclusive range `[0, 1]`.
+  final double opacity;
+
+  void validate() {
+    if (!width.isFinite || width <= 0) {
+      throw ArgumentError.value(
+        width,
+        'targetMarkerStyle.width',
+        'Value must be finite and positive',
+      );
+    }
+    if (!lengthFactor.isFinite || lengthFactor <= 0 || lengthFactor > 1) {
+      throw ArgumentError.value(
+        lengthFactor,
+        'targetMarkerStyle.lengthFactor',
+        'Value must be finite and in (0, 1]',
+      );
+    }
+    if (!opacity.isFinite || opacity < 0 || opacity > 1) {
+      throw ArgumentError.value(
+        opacity,
+        'targetMarkerStyle.opacity',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+  }
+
+  PolarColumnTargetMarkerStyle copyWith({
+    Color? color,
+    bool clearColor = false,
+    double? width,
+    double? lengthFactor,
+    double? opacity,
+  }) => PolarColumnTargetMarkerStyle(
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    lengthFactor: lengthFactor ?? this.lengthFactor,
+    opacity: opacity ?? this.opacity,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnTargetMarkerStyle &&
+          color == other.color &&
+          width == other.width &&
+          lengthFactor == other.lengthFactor &&
+          opacity == other.opacity;
+
+  @override
+  int get hashCode => Object.hash(color, width, lengthFactor, opacity);
+}
+
 /// Mark appearance for one Polar Column series.
 class PolarColumnStyle {
   const PolarColumnStyle({
@@ -111,6 +188,8 @@ class PolarColumnChartSeries extends ChartSeries {
     this.preset = PolarColumnPreset.standard,
     this.polarStyle = const PolarColumnStyle(),
     this.selectionStyle = const RadialSelectionStyle(),
+    this.targetValues = const [],
+    this.targetMarkerStyle = const PolarColumnTargetMarkerStyle(),
   }) : super(style: SeriesStyle.polarColumn, isXOrdered: true) {
     _validate();
   }
@@ -126,6 +205,9 @@ class PolarColumnChartSeries extends ChartSeries {
     String? unit,
     PolarColumnStyle polarStyle = const PolarColumnStyle(),
     RadialSelectionStyle selectionStyle = const RadialSelectionStyle(),
+    Map<String, num?> targets = const {},
+    PolarColumnTargetMarkerStyle targetMarkerStyle =
+        const PolarColumnTargetMarkerStyle(),
   }) => PolarColumnChartSeries._fromMap(
     id: id,
     name: name,
@@ -137,6 +219,8 @@ class PolarColumnChartSeries extends ChartSeries {
     preset: PolarColumnPreset.standard,
     polarStyle: polarStyle,
     selectionStyle: selectionStyle,
+    targets: targets,
+    targetMarkerStyle: targetMarkerStyle,
   );
 
   /// Creates an equal-angle Rose/Nightingale series.
@@ -150,6 +234,9 @@ class PolarColumnChartSeries extends ChartSeries {
     String? unit,
     PolarColumnStyle polarStyle = const PolarColumnStyle(),
     RadialSelectionStyle selectionStyle = const RadialSelectionStyle(),
+    Map<String, num?> targets = const {},
+    PolarColumnTargetMarkerStyle targetMarkerStyle =
+        const PolarColumnTargetMarkerStyle(),
   }) => PolarColumnChartSeries._fromMap(
     id: id,
     name: name,
@@ -161,6 +248,8 @@ class PolarColumnChartSeries extends ChartSeries {
     preset: PolarColumnPreset.rose,
     polarStyle: polarStyle,
     selectionStyle: selectionStyle,
+    targets: targets,
+    targetMarkerStyle: targetMarkerStyle,
   );
 
   factory PolarColumnChartSeries._fromMap({
@@ -174,7 +263,19 @@ class PolarColumnChartSeries extends ChartSeries {
     required PolarColumnPreset preset,
     required PolarColumnStyle polarStyle,
     required RadialSelectionStyle selectionStyle,
+    required Map<String, num?> targets,
+    required PolarColumnTargetMarkerStyle targetMarkerStyle,
   }) {
+    final unknownTargetCategories = targets.keys
+        .where((category) => !values.containsKey(category))
+        .toList(growable: false);
+    if (unknownTargetCategories.isNotEmpty) {
+      throw ArgumentError.value(
+        unknownTargetCategories,
+        'targets',
+        'Target categories must exist in values',
+      );
+    }
     final points = <ChartDataPoint>[];
     for (final (index, entry) in values.entries.indexed) {
       final pointColor = columnColors[entry.key];
@@ -197,12 +298,28 @@ class PolarColumnChartSeries extends ChartSeries {
       preset: preset,
       polarStyle: polarStyle,
       selectionStyle: selectionStyle,
+      targetValues: targets.isEmpty
+          ? const <double?>[]
+          : [for (final category in values.keys) targets[category]?.toDouble()],
+      targetMarkerStyle: targetMarkerStyle,
     );
   }
 
   final PolarColumnPreset preset;
   final PolarColumnStyle polarStyle;
   final RadialSelectionStyle selectionStyle;
+
+  /// Optional absolute target for every category in stable point order.
+  ///
+  /// Supply either an empty list or one nullable entry per point. Null keeps a
+  /// category without a marker while preserving its point identity.
+  final List<double?> targetValues;
+
+  /// Shared appearance for this series' target markers.
+  final PolarColumnTargetMarkerStyle targetMarkerStyle;
+
+  double? targetValueFor(int pointIndex) =>
+      pointIndex < targetValues.length ? targetValues[pointIndex] : null;
 
   List<String> get categories =>
       List<String>.unmodifiable(points.map((point) => point.label!));
@@ -244,6 +361,23 @@ class PolarColumnChartSeries extends ChartSeries {
       }
     }
     polarStyle.validate();
+    if (targetValues.isNotEmpty && targetValues.length != points.length) {
+      throw ArgumentError.value(
+        targetValues.length,
+        'targetValues',
+        'Target value count must match point count (${points.length})',
+      );
+    }
+    for (final (index, target) in targetValues.indexed) {
+      if (target != null && !target.isFinite) {
+        throw ArgumentError.value(
+          target,
+          'targetValues[$index]',
+          'Target values must be null or finite',
+        );
+      }
+    }
+    targetMarkerStyle.validate();
   }
 
   @override
@@ -262,6 +396,9 @@ class PolarColumnChartSeries extends ChartSeries {
     PolarColumnPreset? preset,
     PolarColumnStyle? polarStyle,
     RadialSelectionStyle? selectionStyle,
+    List<double?>? targetValues,
+    bool clearTargetValues = false,
+    PolarColumnTargetMarkerStyle? targetMarkerStyle,
   }) {
     if (style != null && style != SeriesStyle.polarColumn) {
       throw ArgumentError.value(
@@ -293,6 +430,10 @@ class PolarColumnChartSeries extends ChartSeries {
       preset: preset ?? this.preset,
       polarStyle: polarStyle ?? this.polarStyle,
       selectionStyle: selectionStyle ?? this.selectionStyle,
+      targetValues: clearTargetValues
+          ? const <double?>[]
+          : (targetValues ?? this.targetValues),
+      targetMarkerStyle: targetMarkerStyle ?? this.targetMarkerStyle,
     );
   }
 
@@ -303,9 +444,26 @@ class PolarColumnChartSeries extends ChartSeries {
           super == other &&
           preset == other.preset &&
           polarStyle == other.polarStyle &&
-          selectionStyle == other.selectionStyle;
+          selectionStyle == other.selectionStyle &&
+          _nullableDoubleListsEqual(targetValues, other.targetValues) &&
+          targetMarkerStyle == other.targetMarkerStyle;
 
   @override
-  int get hashCode =>
-      Object.hash(super.hashCode, preset, polarStyle, selectionStyle);
+  int get hashCode => Object.hash(
+    super.hashCode,
+    preset,
+    polarStyle,
+    selectionStyle,
+    Object.hashAll(targetValues),
+    targetMarkerStyle,
+  );
+}
+
+bool _nullableDoubleListsEqual(List<double?> first, List<double?> second) {
+  if (identical(first, second)) return true;
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
 }

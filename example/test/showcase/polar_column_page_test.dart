@@ -23,6 +23,7 @@ void main() {
     expect(find.text('Layered comparison'), findsOneWidget);
     expect(find.text('Grouped comparison'), findsOneWidget);
     expect(find.text('Stacked comparison'), findsOneWidget);
+    expect(find.text('Targets & thresholds'), findsOneWidget);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -138,8 +139,82 @@ void main() {
           .any((point) => point.y < 0),
       isTrue,
     );
+
+    await tester.tap(
+      find.byKey(const ValueKey('polar-presentation-references')),
+    );
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    final referenceSeries = chart.series.single as PolarColumnChartSeries;
+    expect(referenceSeries.targetValues, [78, 62, 80, 55, 72, 88]);
+    expect(referenceSeries.targetMarkerStyle.width, 3);
+    expect(chart.polarChartConfig.thresholds.single.value, 80);
+    expect(chart.polarChartConfig.thresholds.single.label, 'Capacity');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'reference preset exposes targets in table and generated source',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('polar-presentation-references')),
+      );
+      await tester.pumpAndSettle();
+
+      final switcher = find.byKey(
+        const ValueKey('chart-workbench-mode-switcher'),
+      );
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Data')),
+      );
+      await _pumpUntil(
+        tester,
+        () =>
+            tester
+                .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
+                .workbenchController
+                ?.tableModel !=
+            null,
+      );
+      final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+      expect(table.model?.hasPolarTargets, isTrue);
+      expect(table.model?.polarRows.first.targetDisplay, '78.00');
+
+      await tester.tap(
+        find.descendant(of: switcher, matching: find.text('Source')),
+      );
+      await _pumpUntil(
+        tester,
+        () =>
+            tester
+                .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
+                .workbenchController
+                ?.generatedSource !=
+            null,
+      );
+      final workbench = tester.widget<BravenChartWorkbench>(
+        find.byType(BravenChartWorkbench),
+      );
+      final source = workbench.workbenchController?.generatedSource?.source;
+      expect(source, contains('targetValues:'));
+      expect(source, contains('PolarColumnTargetMarkerStyle('));
+      expect(source, contains('PolarThreshold('));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Workbench exposes Polar chart, value table, split, and source', (
     tester,

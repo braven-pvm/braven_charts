@@ -15,6 +15,7 @@ import '../models/chart_theme.dart';
 import '../models/polar_chart_config.dart';
 import '../models/polar_column_chart_series.dart';
 import '../models/radial_selection_style.dart';
+import '../utils/dashed_path.dart';
 
 /// Axis, grid, mark, label, and interaction element for Polar Column V1.
 class PolarColumnSeriesElement implements DataHitElement {
@@ -229,9 +230,57 @@ class PolarColumnSeriesElement implements DataHitElement {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (paintGrid) _paintGrid(canvas);
+    if (paintGrid) {
+      _paintGrid(canvas);
+      _paintThresholds(canvas);
+    }
     _paintMarks(canvas);
     if (paintAxisLabels) _paintAxisLabels(canvas);
+  }
+
+  void _paintThresholds(Canvas canvas) {
+    for (final threshold in config.thresholds) {
+      if (threshold.value < numericScale.minimum ||
+          threshold.value > numericScale.maximum) {
+        continue;
+      }
+      final color = threshold.color ?? theme.focusBorderColor;
+      final radius = numericScale.valueToRadius(threshold.value);
+      final source = Path()
+        ..addArc(
+          Rect.fromCircle(center: pane.center, radius: radius),
+          pane.startAngle,
+          pane.signedSweepAngle,
+        );
+      canvas.drawPath(
+        threshold.dashPattern.isEmpty
+            ? source
+            : createDashedPath(source, threshold.dashPattern),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = threshold.width
+          ..strokeCap = StrokeCap.round
+          ..isAntiAlias = true
+          ..color = color,
+      );
+      if (threshold.label case final label?) {
+        final labelAngle = pane.startAngle + pane.signedSweepAngle * 0.115;
+        final anchor =
+            pane.center +
+            Offset.fromDirection(labelAngle, radius) +
+            Offset.fromDirection(labelAngle, 6 * textScaleFactor);
+        _paintText(
+          canvas,
+          label,
+          anchor,
+          theme.axisStyle.labelStyle.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+          center: true,
+        );
+      }
+    }
   }
 
   void _paintGrid(Canvas canvas) {
@@ -369,6 +418,22 @@ class PolarColumnSeriesElement implements DataHitElement {
       );
     }
 
+    if (mark.targetPath case final targetPath?) {
+      final style = series.targetMarkerStyle;
+      final targetColor = style.color ?? theme.focusBorderColor;
+      canvas.drawPath(
+        targetPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = style.width
+          ..strokeCap = StrokeCap.round
+          ..isAntiAlias = true
+          ..color = targetColor.withValues(
+            alpha: targetColor.a * style.opacity,
+          ),
+      );
+    }
+
     if (series.polarStyle.showDataLabels &&
         _dataLabelFits(mark, color: color)) {
       _paintText(
@@ -474,6 +539,13 @@ class PolarColumnSeriesElement implements DataHitElement {
   ChartDataHit _dataHitForMark(PolarColumnMarkGeometry mark) {
     final point = series.points[mark.index];
     final path = _displayPath(mark);
+    final value = MultiAxisValueFormatter.format(
+      value: point.y,
+      unit: series.unit,
+    );
+    final target = mark.targetValue == null
+        ? ''
+        : ' · target ${MultiAxisValueFormatter.format(value: mark.targetValue!, unit: series.unit)}';
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: mark.index,
@@ -481,10 +553,7 @@ class PolarColumnSeriesElement implements DataHitElement {
       semanticBounds: path.getBounds(),
       point: point,
       category: mark.category,
-      formattedValue: MultiAxisValueFormatter.format(
-        value: point.y,
-        unit: series.unit,
-      ),
+      formattedValue: '$value$target',
       ordinal: mark.index + 1,
       count: geometry.marks.length,
       isSelected: selectedPointIndices.contains(mark.index),
@@ -675,6 +744,8 @@ _PolarColumnResolvedLayout _resolveLayout({
     baseline: baseline,
     radialStarts: animatedStarts,
     radialEnds: animatedEnds,
+    targetValues: series.targetValues,
+    targetLengthFactor: series.targetMarkerStyle.lengthFactor,
     cornerRadius: series.polarStyle.cornerRadius * revealProgress,
     groupIndex: config.composition.mode == PolarColumnCompositionMode.grouped
         ? seriesIndex

@@ -204,6 +204,10 @@ See
 - `PolarColumnStyle` controls corner radius, opacity, border treatment, and
   direct value labels. Per-category colors may be supplied through
   `columnColors` or point styles.
+- `PolarColumnChartSeries.targetValues` and
+  `PolarColumnTargetMarkerStyle` provide optional absolute per-category target
+  ticks. `PolarChartConfig.thresholds` accepts pane-wide `PolarThreshold`
+  reference arcs with optional labels and dash patterns.
 - `PolarChartConfig` groups the dedicated `PolarPaneConfig`,
   `PolarCategoryAxisConfig`, `PolarNumericAxisConfig`, and
   `PolarColumnCompositionConfig` contracts.
@@ -233,7 +237,9 @@ all preserve that value-only meaning. Artifacts declare
 `series.polar.column.v1`; multi-series documents additionally declare
 `chart.polar.multiple-series.v1`, while grouped documents also declare
 `chart.polar.grouped-series.v1` and stacked documents declare
-`chart.polar.stacked-series.v1`. See
+`chart.polar.stacked-series.v1`. Documents with targets or thresholds also
+declare `series.polar.column.targets.v1` or `chart.polar.thresholds.v1`. The
+native table appends `Target (unit)` only when target data exists. See
 [Polar Column and Rose charts](polar_column_charts.md).
 
 ## Axes, normalization, and layout

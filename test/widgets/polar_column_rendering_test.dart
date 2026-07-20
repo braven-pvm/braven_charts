@@ -162,6 +162,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('targets and thresholds extend the automatic radial domain', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 360,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'actual',
+                  values: const {'Search': 40, 'Social': 55},
+                  targets: const {'Search': 70, 'Social': 65},
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                thresholds: <PolarThreshold>[
+                  PolarThreshold(value: 120, label: 'Capacity'),
+                ],
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final element = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .single;
+    expect(element.numericScale.maximum, 120);
+    expect(element.geometry.marks.first.targetValue, 70);
+    expect(element.geometry.marks.first.targetPath, isNotNull);
+
+    final hit = renderBox.dataHitAtWidgetPosition(
+      renderBox.plotToWidget(element.geometry.marks.first.tooltipAnchor),
+    );
+    expect(hit?.formattedValue, contains('target 70'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('keyboard traversal preserves series identity across layers', (
     tester,
   ) async {

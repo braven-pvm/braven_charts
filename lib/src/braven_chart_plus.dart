@@ -3370,12 +3370,19 @@ class _BravenChartPlusState extends State<BravenChartPlus>
             PolarColumnCompositionMode.stacked
         ? PolarColumnStackLayout.resolve(polarSeries)
         : null;
-    final scaleValues = stackLayout == null
+    final markScaleValues = stackLayout == null
         ? <double>[
             for (final series in polarSeries)
               for (final point in series.points) point.y,
           ]
         : <double>[stackLayout.minimum, stackLayout.maximum];
+    final scaleValues = <double>[
+      ...markScaleValues,
+      for (final series in polarSeries)
+        for (final target in series.targetValues) ?target,
+      for (final threshold in widget.polarChartConfig.thresholds)
+        threshold.value,
+    ];
     final theme = widget.theme ?? ChartTheme.light;
     return <ChartElement>[
       for (final (index, series) in polarSeries.indexed)

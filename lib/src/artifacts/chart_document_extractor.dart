@@ -338,6 +338,8 @@ abstract final class ChartDocumentExtractor {
           ...annotation.requiredCapabilities,
         if (source.concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (source.polarChartConfig != null) 'chart.polar.config.v1',
+        if (source.polarChartConfig?.thresholds.isNotEmpty == true)
+          'chart.polar.thresholds.v1',
         if (source.polarChartConfig != null &&
             seriesDocuments
                     .where((series) => series.type == 'polarColumn')

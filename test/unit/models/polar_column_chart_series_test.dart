@@ -33,6 +33,26 @@ void main() {
       expect(series.points.map((point) => point.y), [25, 100]);
     });
 
+    test('fromMap aligns optional targets to stable category identity', () {
+      final series = PolarColumnChartSeries.fromMap(
+        id: 'actual',
+        values: const {'Search': 42, 'Social': 18, 'Partners': 27},
+        targets: const {'Partners': 30, 'Search': 40},
+        targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+          color: Colors.amber,
+          width: 3,
+          lengthFactor: 0.6,
+          opacity: 0.8,
+        ),
+      );
+
+      expect(series.targetValues, [40, null, 30]);
+      expect(series.targetValueFor(0), 40);
+      expect(series.targetValueFor(1), isNull);
+      expect(series.targetMarkerStyle.color, Colors.amber);
+      expect(series.copyWith(clearTargetValues: true).targetValues, isEmpty);
+    });
+
     test('validates category identity, ordinals, finite values, and style', () {
       PolarColumnChartSeries build(List<ChartDataPoint> points) =>
           PolarColumnChartSeries(id: 'polar', points: points);
@@ -66,6 +86,32 @@ void main() {
           id: 'polar',
           values: const {'A': 1},
           polarStyle: const PolarColumnStyle(opacity: 1.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targets: const {'Missing': 2},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targets: const {'A': double.nan},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+            lengthFactor: 0,
+          ),
         ),
         throwsArgumentError,
       );
@@ -119,10 +165,39 @@ void main() {
       expect(config.validate, returnsNormally);
     });
 
+    test('accepts styled pane thresholds and preserves them through copy', () {
+      const threshold = PolarThreshold(
+        value: 75,
+        label: 'Capacity',
+        color: Colors.red,
+        width: 2,
+        dashPattern: <double>[4, 2],
+      );
+      const config = PolarChartConfig(thresholds: <PolarThreshold>[threshold]);
+
+      expect(config.validate, returnsNormally);
+      expect(config.copyWith(), config);
+      expect(config.thresholds.single, threshold);
+    });
+
     test('rejects invalid pane, padding, domain, and tick counts', () {
       expect(
         const PolarChartConfig(
           pane: PolarPaneConfig(sweepAngleDegrees: 0),
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          thresholds: <PolarThreshold>[PolarThreshold(value: 20, label: ' ')],
+        ).validate,
+        throwsArgumentError,
+      );
+      expect(
+        const PolarChartConfig(
+          thresholds: <PolarThreshold>[
+            PolarThreshold(value: 20, dashPattern: <double>[4]),
+          ],
         ).validate,
         throwsArgumentError,
       );

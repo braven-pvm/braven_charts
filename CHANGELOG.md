@@ -80,6 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tables, CSV, controllers, artifacts, hydration, and generated Dart retain
   the original values and series identity. Stacked documents negotiate
   `chart.polar.stacked-series.v1`.
+- Per-category Polar Column target ticks through `targetValues` and
+  `PolarColumnTargetMarkerStyle`, plus pane-wide `PolarThreshold` reference
+  arcs. Automatic radial domains include both reference types; explicit
+  domains retain the source data while omitting out-of-range paint. Targets
+  and thresholds round-trip through tables, CSV, artifacts, hydration, and
+  generated Dart using explicit capability negotiation.
 
 ## 0.9.0 - 2026-07-19
 

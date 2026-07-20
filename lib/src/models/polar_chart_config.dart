@@ -1,4 +1,103 @@
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
+
+/// Pane-wide reference threshold on a Polar Column radial numeric axis.
+@immutable
+class PolarThreshold {
+  const PolarThreshold({
+    required this.value,
+    this.label,
+    this.color,
+    this.width = 1.5,
+    this.dashPattern = const <double>[6, 4],
+  });
+
+  /// Absolute value on the shared radial numeric scale.
+  final double value;
+
+  /// Optional compact label painted beside the reference arc.
+  final String? label;
+
+  /// Explicit line and label color. Null uses the chart focus color.
+  final Color? color;
+
+  /// Reference arc width in logical pixels.
+  final double width;
+
+  /// Alternating painted and skipped path lengths. Empty renders a solid arc.
+  final List<double> dashPattern;
+
+  void validate() {
+    if (!value.isFinite) {
+      throw ArgumentError.value(
+        value,
+        'threshold.value',
+        'Value must be finite',
+      );
+    }
+    if (label != null && label!.trim().isEmpty) {
+      throw ArgumentError.value(
+        label,
+        'threshold.label',
+        'Label must be null or visible text',
+      );
+    }
+    if (!width.isFinite || width <= 0) {
+      throw ArgumentError.value(
+        width,
+        'threshold.width',
+        'Value must be finite and positive',
+      );
+    }
+    if (dashPattern.length.isOdd) {
+      throw ArgumentError.value(
+        dashPattern,
+        'threshold.dashPattern',
+        'Dash patterns must contain painted-gap pairs',
+      );
+    }
+    for (final (index, interval) in dashPattern.indexed) {
+      if (!interval.isFinite || interval <= 0) {
+        throw ArgumentError.value(
+          interval,
+          'threshold.dashPattern[$index]',
+          'Intervals must be finite and positive',
+        );
+      }
+    }
+  }
+
+  PolarThreshold copyWith({
+    double? value,
+    String? label,
+    bool clearLabel = false,
+    Color? color,
+    bool clearColor = false,
+    double? width,
+    List<double>? dashPattern,
+  }) => PolarThreshold(
+    value: value ?? this.value,
+    label: clearLabel ? null : (label ?? this.label),
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    dashPattern: dashPattern ?? this.dashPattern,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarThreshold &&
+          value == other.value &&
+          label == other.label &&
+          color == other.color &&
+          width == other.width &&
+          listEquals(dashPattern, other.dashPattern);
+
+  @override
+  int get hashCode =>
+      Object.hash(value, label, color, width, Object.hashAll(dashPattern));
+}
 
 /// Numeric mapping used by a Polar Column radial axis.
 enum PolarRadialScaleMode {
@@ -312,6 +411,7 @@ class PolarChartConfig {
     this.angularAxis = const PolarCategoryAxisConfig(),
     this.radialAxis = const PolarNumericAxisConfig(),
     this.composition = const PolarColumnCompositionConfig(),
+    this.thresholds = const <PolarThreshold>[],
   });
 
   final PolarPaneConfig pane;
@@ -321,11 +421,17 @@ class PolarChartConfig {
   /// How compatible Polar Column series share their angular category bands.
   final PolarColumnCompositionConfig composition;
 
+  /// Pane-wide radial references drawn behind every Polar Column series.
+  final List<PolarThreshold> thresholds;
+
   void validate() {
     pane.validate();
     angularAxis.validate();
     radialAxis.validate();
     composition.validate();
+    for (final threshold in thresholds) {
+      threshold.validate();
+    }
     if (composition.mode == PolarColumnCompositionMode.stacked) {
       if (radialAxis.minimum case final minimum? when minimum > 0) {
         throw ArgumentError.value(
@@ -349,11 +455,13 @@ class PolarChartConfig {
     PolarCategoryAxisConfig? angularAxis,
     PolarNumericAxisConfig? radialAxis,
     PolarColumnCompositionConfig? composition,
+    List<PolarThreshold>? thresholds,
   }) => PolarChartConfig(
     pane: pane ?? this.pane,
     angularAxis: angularAxis ?? this.angularAxis,
     radialAxis: radialAxis ?? this.radialAxis,
     composition: composition ?? this.composition,
+    thresholds: thresholds ?? this.thresholds,
   );
 
   @override
@@ -363,10 +471,17 @@ class PolarChartConfig {
           pane == other.pane &&
           angularAxis == other.angularAxis &&
           radialAxis == other.radialAxis &&
-          composition == other.composition;
+          composition == other.composition &&
+          listEquals(thresholds, other.thresholds);
 
   @override
-  int get hashCode => Object.hash(pane, angularAxis, radialAxis, composition);
+  int get hashCode => Object.hash(
+    pane,
+    angularAxis,
+    radialAxis,
+    composition,
+    Object.hashAll(thresholds),
+  );
 }
 
 void _requireFinite(double value, String name) {

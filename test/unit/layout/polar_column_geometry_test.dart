@@ -269,6 +269,54 @@ void main() {
       expect(geometry.marks[1].isVisible, isTrue);
     });
 
+    test('resolves absolute target arcs inside each grouped band', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.2,
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['A', 'B'],
+        innerPadding: 0.1,
+      );
+      final values = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: categories,
+        numericScale: values,
+        values: const [55, 65],
+        targetValues: const [70, null],
+        targetLengthFactor: 0.5,
+        groupIndex: 1,
+        groupCount: 2,
+        groupInnerPadding: 0.1,
+      );
+
+      expect(geometry.marks.first.targetValue, 70);
+      expect(
+        geometry.marks.first.targetRadius,
+        closeTo(values.valueToRadius(70), 1e-9),
+      );
+      expect(geometry.marks.first.targetPath, isNotNull);
+      expect(geometry.marks.last.targetValue, isNull);
+      expect(geometry.marks.last.targetPath, isNull);
+    });
+
+    test('retains out-of-domain target data without painting a marker', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: PolarNumericScale(pane: pane, minimum: 0, maximum: 10),
+        values: const [5],
+        targetValues: const [12],
+      );
+
+      expect(geometry.marks.single.targetValue, 12);
+      expect(geometry.marks.single.targetRadius, isNull);
+      expect(geometry.marks.single.targetPath, isNull);
+    });
+
     test('rejects mismatched scales, values, and baselines', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
@@ -291,6 +339,24 @@ void main() {
             maximum: 10,
           ),
           values: const [1, 2],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          targetValues: const [3],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          targetLengthFactor: 1.1,
         ),
         throwsArgumentError,
       );

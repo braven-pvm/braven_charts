@@ -208,12 +208,19 @@ abstract final class ChartTableExporter {
   ) => ChartTableRowExport(
     rowId: row.rowId,
     headers: headers(model),
-    rawValues: [displayIndex + 1, row.category, row.seriesName, row.valueRaw],
+    rawValues: [
+      displayIndex + 1,
+      row.category,
+      row.seriesName,
+      row.valueRaw,
+      if (model.hasPolarTargets) row.targetRaw,
+    ],
     displayValues: [
       '${displayIndex + 1}',
       row.category,
       row.seriesName,
       row.valueDisplay,
+      if (model.hasPolarTargets) row.targetDisplay ?? 'No target',
     ],
     references: [row.reference],
   );
@@ -314,6 +321,10 @@ abstract final class ChartTableExporter {
           model.commonRadialUnit == null
               ? 'Value'
               : 'Value (${model.commonRadialUnit})',
+          if (model.hasPolarTargets)
+            model.commonRadialUnit == null
+                ? 'Target'
+                : 'Target (${model.commonRadialUnit})',
         ],
         ChartTableProjectionKind.candlestick => [
           '#',

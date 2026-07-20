@@ -447,6 +447,116 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('round-trips Polar Column targets and pane thresholds', (
+    tester,
+  ) async {
+    final controller = BravenChartController();
+    addTearDown(controller.dispose);
+    const config = PolarChartConfig(
+      thresholds: <PolarThreshold>[
+        PolarThreshold(
+          value: 80,
+          label: 'Capacity',
+          color: Color(0xFFE65100),
+          width: 2,
+          dashPattern: <double>[5, 3],
+        ),
+      ],
+    );
+    final series = PolarColumnChartSeries.fromMap(
+      id: 'actual',
+      name: 'Actual',
+      unit: 'orders',
+      values: const {'Search': 62, 'Social': 48},
+      targets: const {'Search': 70, 'Social': 50},
+      targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+        color: Color(0xFFFFB300),
+        width: 3,
+        lengthFactor: 0.65,
+        opacity: 0.9,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _host(
+        BravenChartPlus(
+          bravenChartController: controller,
+          polarChartConfig: config,
+          series: <ChartSeries>[series],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final snapshot = _snapshot(controller.extractDocument());
+    expect(
+      snapshot.document.requiredCapabilities,
+      containsAll(<String>{
+        'series.polar.column.targets.v1',
+        'chart.polar.thresholds.v1',
+      }),
+    );
+
+    final table = ChartTableModel.fromDocument(snapshot.document);
+    expect(table.hasPolarTargets, isTrue);
+    expect(table.polarRows.map((row) => row.targetDisplay), ['70.00', '50.00']);
+    final export = ChartTableExporter.csvForDisplayedRows(
+      table,
+      polarRows: table.polarRows,
+    );
+    expect(export.headers, [
+      '#',
+      'Category',
+      'Series',
+      'Value (orders)',
+      'Target (orders)',
+    ]);
+
+    final hydrated = _configuration(
+      ChartDocumentHydrator.hydrateDocument(snapshot.document),
+    );
+    expect(hydrated.polarChartConfig, config);
+    final restored = hydrated.series.single as PolarColumnChartSeries;
+    expect(restored.targetValues, series.targetValues);
+    expect(restored.targetMarkerStyle, series.targetMarkerStyle);
+
+    final generated = ChartDartSourceGenerator.generate(snapshot);
+    expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+    final source =
+        (generated as ChartArtifactSuccess<ChartGeneratedSource>).value.source;
+    expect(source, contains('targetValues: [70.0, 50.0]'));
+    expect(source, contains('PolarColumnTargetMarkerStyle('));
+    expect(source, contains("label: 'Capacity'"));
+    expect(source, contains('PolarThreshold('));
+
+    final missingTargetCapability = snapshot.document.toJson();
+    missingTargetCapability['requiredCapabilities'] = snapshot
+        .document
+        .requiredCapabilities
+        .where((capability) => capability != 'series.polar.column.targets.v1')
+        .toList();
+    expect(
+      ChartDocumentHydrator.hydrateDocument(
+        ChartDocument.fromJson(missingTargetCapability),
+      ),
+      isA<ChartArtifactFailure<HydratedChartConfiguration>>(),
+    );
+
+    final missingThresholdCapability = snapshot.document.toJson();
+    missingThresholdCapability['requiredCapabilities'] = snapshot
+        .document
+        .requiredCapabilities
+        .where((capability) => capability != 'chart.polar.thresholds.v1')
+        .toList();
+    expect(
+      ChartDocumentHydrator.hydrateDocument(
+        ChartDocument.fromJson(missingThresholdCapability),
+      ),
+      isA<ChartArtifactFailure<HydratedChartConfiguration>>(),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _host(Widget child) => MaterialApp(

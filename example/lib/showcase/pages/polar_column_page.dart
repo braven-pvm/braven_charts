@@ -47,6 +47,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   bool _showValues = true;
   double _cornerRadius = 4;
   double _opacity = 0.94;
+  bool _showTargets = true;
+  bool _showThreshold = true;
+  double _thresholdValue = 80;
+  double _targetMarkerWidth = 3;
+  double _targetMarkerLength = 0.68;
   String? _selectedCategory;
   String? _selectedSeries;
 
@@ -157,6 +162,24 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     'Direct': -15,
   };
 
+  static const _referenceActualValues = <String, num>{
+    'Search': 74,
+    'Social': 56,
+    'Partners': 83,
+    'Email': 48,
+    'Events': 69,
+    'Direct': 91,
+  };
+
+  static const _referenceTargetValues = <String, num>{
+    'Search': 78,
+    'Social': 62,
+    'Partners': 80,
+    'Email': 55,
+    'Events': 72,
+    'Direct': 88,
+  };
+
   static const _columnColors = <Color>[
     Color(0xFF2563EB),
     Color(0xFF0891B2),
@@ -241,7 +264,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ? 1
         : availableWidth < 900
         ? 2
-        : 3;
+        : 4;
     final cardWidth = (availableWidth - (columns - 1) * 8) / columns;
     return Semantics(
       container: true,
@@ -368,6 +391,10 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                         }} series',
                   ),
                 ],
+                if (_presentation == _PolarPresentation.references) ...[
+                  const SizedBox(width: 8),
+                  const _MetricChip(label: 'Targets + threshold'),
+                ],
               ],
             ),
             if (chartSeries.length > 1) ...[
@@ -465,6 +492,17 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       mode: _compositionMode,
       groupInnerPadding: _groupInnerPadding,
     ),
+    thresholds: _presentation == _PolarPresentation.references && _showThreshold
+        ? <PolarThreshold>[
+            PolarThreshold(
+              value: _thresholdValue,
+              label: 'Capacity',
+              color: const Color(0xFFDC2626),
+              width: 2,
+              dashPattern: const <double>[7, 4],
+            ),
+          ]
+        : const <PolarThreshold>[],
   );
 
   String _seriesKeyLabel(PolarColumnChartSeries series, int index) {
@@ -620,6 +658,24 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ];
     }
+    if (_presentation == _PolarPresentation.references) {
+      return [
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-actual-targets',
+          name: 'Actual versus plan',
+          values: _values,
+          targets: _showTargets ? _comparisonValues : const <String, num>{},
+          columnColors: colors,
+          unit: 'orders',
+          polarStyle: style,
+          targetMarkerStyle: PolarColumnTargetMarkerStyle(
+            color: const Color(0xFFF59E0B),
+            width: _targetMarkerWidth,
+            lengthFactor: _targetMarkerLength,
+          ),
+        ),
+      ];
+    }
     return [
       _presentation == _PolarPresentation.rose
           ? PolarColumnChartSeries.rose(
@@ -683,6 +739,57 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               divisions: 20,
               decimalPlaces: 2,
               onChanged: (value) => setState(() => _groupInnerPadding = value),
+            ),
+        ],
+      ),
+    if (_presentation == _PolarPresentation.references)
+      OptionSection(
+        title: 'Reference marks',
+        icon: Icons.flag_outlined,
+        children: [
+          BoolOption(
+            label: 'Show category targets',
+            value: _showTargets,
+            onChanged: (value) => setState(() => _showTargets = value),
+          ),
+          if (_showTargets) ...[
+            SliderOption(
+              label: 'Target marker width',
+              value: _targetMarkerWidth,
+              min: 1,
+              max: 6,
+              divisions: 20,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _targetMarkerWidth = value),
+            ),
+            SliderOption(
+              label: 'Target marker length',
+              value: _targetMarkerLength * 100,
+              min: 30,
+              max: 100,
+              divisions: 14,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _targetMarkerLength = value / 100),
+            ),
+          ],
+          BoolOption(
+            label: 'Show capacity threshold',
+            value: _showThreshold,
+            onChanged: (value) => setState(() => _showThreshold = value),
+          ),
+          if (_showThreshold)
+            SliderOption(
+              label: 'Capacity threshold',
+              value: _thresholdValue,
+              min: 40,
+              max: 110,
+              divisions: 28,
+              suffix: 'orders',
+              decimalPlaces: 0,
+              onChanged: (value) => setState(() => _thresholdValue = value),
             ),
         ],
       ),
@@ -869,6 +976,16 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         'Stacks diverge from zero',
         'Positive and negative contributors accumulate independently without cancelling each other.',
       ),
+      (
+        Icons.flag_outlined,
+        'Targets stay category-bound',
+        'Per-category target ticks keep their identity through selection, transport, tables, and source generation.',
+      ),
+      (
+        Icons.radar_outlined,
+        'Thresholds span the pane',
+        'A threshold ring communicates one absolute reference value across every angular category.',
+      ),
     ];
     return _Section(
       eyebrow: 'FEATURE GUIDE',
@@ -903,33 +1020,33 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   Widget _buildCodeRecipe() => const _Section(
     eyebrow: 'HOW TO USE IT',
-    title: 'Stack signed contributors around an explicit zero baseline',
+    title: 'Compare category values with targets and a shared threshold',
     child: _CodeBlock(
-      code: '''final newAccounts = PolarColumnChartSeries.fromMap(
-  id: 'new',
-  values: const {'Search': 34, 'Social': 26, 'Partners': 31},
-  unit: 'accounts',
-);
-
-final churn = PolarColumnChartSeries.fromMap(
-  id: 'churn',
-  values: const {'Search': -13, 'Social': -21, 'Partners': -12},
-  unit: 'accounts',
+      code: '''final volume = PolarColumnChartSeries.fromMap(
+  id: 'volume',
+  values: const {'Search': 74, 'Social': 56, 'Partners': 83},
+  targets: const {'Search': 78, 'Social': 62, 'Partners': 80},
+  unit: 'orders',
+  targetMarkerStyle: const PolarColumnTargetMarkerStyle(
+    color: Color(0xFFF59E0B),
+    width: 3,
+    lengthFactor: 0.68,
+  ),
 );
 
 BravenChartPlus(
-  // Positive and negative values stack independently from zero.
-  series: [newAccounts, churn],
+  series: [volume],
   polarChartConfig: const PolarChartConfig(
-    pane: PolarPaneConfig(
-      startAngleDegrees: -90,
-      innerRadiusFactor: 0.14,
-    ),
+    pane: PolarPaneConfig(startAngleDegrees: -90),
     angularAxis: PolarCategoryAxisConfig(innerPadding: 0.12),
     radialAxis: PolarNumericAxisConfig(tickCount: 5),
-    composition: PolarColumnCompositionConfig(
-      mode: PolarColumnCompositionMode.stacked,
-    ),
+    thresholds: [
+      PolarThreshold(
+        value: 80,
+        label: 'Capacity',
+        color: Color(0xFFDC2626),
+      ),
+    ],
   ),
 );''',
     ),
@@ -1032,6 +1149,26 @@ BravenChartPlus(
           _cornerRadius = 4;
           _compositionMode = PolarColumnCompositionMode.stacked;
           _groupInnerPadding = 0.12;
+        case _PolarPresentation.references:
+          _values = Map<String, num>.of(_referenceActualValues);
+          _comparisonValues = Map<String, num>.of(_referenceTargetValues);
+          _categoryCount = _values.length;
+          _startAngle = -90;
+          _sweepAngle = 360;
+          _clockwise = true;
+          _innerRadius = 0.12;
+          _outerRadius = 0.88;
+          _innerPadding = 0.14;
+          _outerPadding = 0.04;
+          _scaleMode = PolarRadialScaleMode.linear;
+          _cornerRadius = 5;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
+          _showTargets = true;
+          _showThreshold = true;
+          _thresholdValue = 80;
+          _targetMarkerWidth = 3;
+          _targetMarkerLength = 0.68;
       }
     });
   }
@@ -1055,6 +1192,10 @@ BravenChartPlus(
         _values = generated.$1;
         _comparisonValues = generated.$2;
         _tertiaryValues = generated.$3;
+      } else if (_presentation == _PolarPresentation.references) {
+        final generated = _randomReferenceValues(count);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
       } else {
         _values = _randomValues(count);
       }
@@ -1079,6 +1220,10 @@ BravenChartPlus(
         _values = generated.$1;
         _comparisonValues = generated.$2;
         _tertiaryValues = generated.$3;
+      } else if (_presentation == _PolarPresentation.references) {
+        final generated = _randomReferenceValues(_categoryCount);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
       } else {
         _values = _randomValues(_categoryCount);
       }
@@ -1121,6 +1266,17 @@ BravenChartPlus(
         'Channel ${index + 1}': -(8 + _random.nextInt(18)),
     },
   );
+
+  (Map<String, num>, Map<String, num>) _randomReferenceValues(int count) {
+    final actual = _randomValues(count);
+    return (
+      actual,
+      {
+        for (final entry in actual.entries)
+          entry.key: math.max(20, entry.value + _random.nextInt(19) - 9),
+      },
+    );
+  }
 }
 
 enum _PolarPresentation {
@@ -1165,6 +1321,13 @@ enum _PolarPresentation {
     Icons.stacked_bar_chart_outlined,
     'Net account movement by channel',
     'Growth stacks outward while churn accumulates inward from zero',
+  ),
+  references(
+    'Targets & thresholds',
+    'Category targets plus one pane-wide reference ring',
+    Icons.flag_outlined,
+    'Order volume against plan',
+    'Amber ticks mark category targets; the dashed ring marks shared capacity',
   );
 
   const _PolarPresentation(

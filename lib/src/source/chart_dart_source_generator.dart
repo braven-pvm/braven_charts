@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../artifacts/chart_artifact_diagnostics.dart';
@@ -2006,6 +2007,20 @@ class _ChartDartEmitter {
       writer.writeLine('),');
     }
     _emitRadialSelectionStyle(writer, series.selectionStyle);
+    _optionalNullableNumberList(writer, 'targetValues', series.targetValues);
+    if (series.targetValues.isNotEmpty &&
+        (options.includeDefaultValues ||
+            series.targetMarkerStyle != const PolarColumnTargetMarkerStyle())) {
+      final target = series.targetMarkerStyle;
+      writer.writeLine('targetMarkerStyle: PolarColumnTargetMarkerStyle(');
+      writer.indented(() {
+        _optionalColor(writer, 'color', target.color);
+        _numberIf(writer, 'width', target.width, 2.5);
+        _numberIf(writer, 'lengthFactor', target.lengthFactor, 0.72);
+        _numberIf(writer, 'opacity', target.opacity, 1);
+      });
+      writer.writeLine('),');
+    }
   }
 
   void _emitRadialSelectionStyle(
@@ -2213,6 +2228,32 @@ class _ChartDartEmitter {
           );
         });
         writer.writeLine('),');
+      }
+      if (config.thresholds.isNotEmpty) {
+        writer.writeLine('thresholds: [');
+        writer.indented(() {
+          for (final threshold in config.thresholds) {
+            writer.writeLine('PolarThreshold(');
+            writer.indented(() {
+              writer.namedArgument(
+                'value',
+                DartSourceWriter.numberLiteral(threshold.value),
+              );
+              _optionalString(writer, 'label', threshold.label);
+              _optionalColor(writer, 'color', threshold.color);
+              _numberIf(writer, 'width', threshold.width, 1.5);
+              if (options.includeDefaultValues ||
+                  !listEquals(threshold.dashPattern, const <double>[6, 4])) {
+                writer.namedArgument(
+                  'dashPattern',
+                  '<double>[${threshold.dashPattern.map(DartSourceWriter.numberLiteral).join(', ')}]',
+                );
+              }
+            });
+            writer.writeLine('),');
+          }
+        });
+        writer.writeLine('],');
       }
     });
     writer.writeLine('),');
