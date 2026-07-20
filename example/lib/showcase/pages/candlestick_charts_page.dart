@@ -50,21 +50,21 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   bool _showDirectionLegend = true;
   int _averageWindow = 5;
   double _averageStrokeWidth = 1.6;
-  Color _averageColor = const Color(0xFF6366F1);
+  Color? _averageColor = const Color(0xFF6366F1);
   bool _customDirectionColors = false;
-  Color _risingBodyColor = const Color(0xFFCCFBF1);
-  Color _fallingBodyColor = const Color(0xFFEF4444);
-  Color _dojiBodyColor = const Color(0xFF64748B);
-  Color _risingBorderColor = const Color(0xFF0F766E);
-  Color _fallingBorderColor = const Color(0xFFB91C1C);
-  Color _dojiBorderColor = const Color(0xFF475569);
-  Color _risingWickColor = const Color(0xFF0F766E);
-  Color _fallingWickColor = const Color(0xFFB91C1C);
-  Color _dojiWickColor = const Color(0xFF475569);
+  Color? _risingBodyColor = const Color(0xFFCCFBF1);
+  Color? _fallingBodyColor = const Color(0xFFEF4444);
+  Color? _dojiBodyColor = const Color(0xFF64748B);
+  Color? _risingBorderColor = const Color(0xFF0F766E);
+  Color? _fallingBorderColor = const Color(0xFFB91C1C);
+  Color? _dojiBorderColor = const Color(0xFF475569);
+  Color? _risingWickColor = const Color(0xFF0F766E);
+  Color? _fallingWickColor = const Color(0xFFB91C1C);
+  Color? _dojiWickColor = const Color(0xFF475569);
   bool _highlightLatestCandle = false;
-  Color _highlightBodyColor = const Color(0xFFFEF08A);
-  Color _highlightBorderColor = const Color(0xFFCA8A04);
-  Color _highlightWickColor = const Color(0xFFA16207);
+  Color? _highlightBodyColor = const Color(0xFFFEF08A);
+  Color? _highlightBorderColor = const Color(0xFFCA8A04);
+  Color? _highlightWickColor = const Color(0xFFA16207);
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
   bool _showPointTooltip = true;
@@ -74,12 +74,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   double _crosshairLineWidth = 1;
   bool _crosshairDashed = false;
   bool _customTrackingTheme = false;
-  Color _crosshairColor = const Color(0xFF475569);
-  Color _coordinateLabelBackgroundColor = const Color(0xFF1F2937);
-  Color _coordinateLabelTextColor = const Color(0xFFFFFFFF);
-  Color _tooltipBackgroundColor = const Color(0xF2FFFFFF);
-  Color _tooltipBorderColor = const Color(0xFF94A3B8);
-  Color _tooltipTextColor = const Color(0xFF1F2937);
+  Color? _crosshairColor = const Color(0xFF475569);
+  Color? _coordinateLabelBackgroundColor = const Color(0xFF1F2937);
+  Color? _coordinateLabelTextColor = const Color(0xFFFFFFFF);
+  Color? _tooltipBackgroundColor = const Color(0xF2FFFFFF);
+  Color? _tooltipBorderColor = const Color(0xFF94A3B8);
+  Color? _tooltipTextColor = const Color(0xFF1F2937);
   double _tooltipBorderWidth = 1;
   double _tooltipCornerRadius = 6;
   double _tooltipFontSize = 12;
@@ -1168,14 +1168,16 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   ];
 
   CrosshairStyle get _crosshairStyle => CrosshairStyle(
-    lineColor: _customTrackingTheme ? _crosshairColor : const Color(0xFF666666),
+    lineColor: _customTrackingTheme
+        ? _crosshairColor ?? const Color(0xFF666666)
+        : const Color(0xFF666666),
     lineWidth: _crosshairLineWidth,
     dashPattern: _crosshairDashed ? const [6, 4] : null,
     labelBackgroundColor: _customTrackingTheme
-        ? _coordinateLabelBackgroundColor
+        ? _coordinateLabelBackgroundColor ?? const Color(0xFF333333)
         : const Color(0xFF333333),
     labelTextColor: _customTrackingTheme
-        ? _coordinateLabelTextColor
+        ? _coordinateLabelTextColor ?? const Color(0xFFFFFFFF)
         : const Color(0xFFFFFFFF),
   );
 
@@ -1185,11 +1187,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
     followCursor: _tooltipFollowsCursor,
     style: _customTrackingTheme
         ? TooltipStyle(
-            backgroundColor: _tooltipBackgroundColor,
-            borderColor: _tooltipBorderColor,
+            backgroundColor:
+                _tooltipBackgroundColor ?? const TooltipStyle().backgroundColor,
+            borderColor:
+                _tooltipBorderColor ?? const TooltipStyle().borderColor,
             borderWidth: _tooltipBorderWidth,
             borderRadius: _tooltipCornerRadius,
-            textColor: _tooltipTextColor,
+            textColor: _tooltipTextColor ?? const TooltipStyle().textColor,
             fontSize: _tooltipFontSize,
           )
         : const TooltipStyle(),
@@ -1493,49 +1497,43 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           onChanged: (value) => setState(() => _customTrackingTheme = value),
         ),
         if (_customTrackingTheme) ...[
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-crosshair-color'),
             label: 'Crosshair colour',
             value: _crosshairColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _crosshairColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-axis-value-background'),
             label: 'Axis value background',
             value: _coordinateLabelBackgroundColor,
-            colors: _candlestickSurfaceColorChoices,
             onChanged: (value) =>
                 setState(() => _coordinateLabelBackgroundColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-axis-value-text'),
             label: 'Axis value text',
             value: _coordinateLabelTextColor,
-            colors: _candlestickTextColorChoices,
             onChanged: (value) =>
                 setState(() => _coordinateLabelTextColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-tooltip-background'),
             label: 'Tooltip background',
             value: _tooltipBackgroundColor,
-            colors: _candlestickSurfaceColorChoices,
             onChanged: (value) =>
                 setState(() => _tooltipBackgroundColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-tooltip-border-color'),
             label: 'Tooltip border',
             value: _tooltipBorderColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _tooltipBorderColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-tooltip-text-color'),
             label: 'Tooltip text',
             value: _tooltipTextColor,
-            colors: _candlestickTextColorChoices,
             onChanged: (value) => setState(() => _tooltipTextColor = value),
           ),
           SliderOption(
@@ -1712,72 +1710,63 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
         if (_customDirectionColors) ...[
           const _OptionGroupLabel('Body fills'),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-rising-body-color'),
             label: 'Rising body',
             value: _risingBodyColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _risingBodyColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-falling-body-color'),
             label: 'Falling body',
             value: _fallingBodyColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _fallingBodyColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-doji-body-color'),
             label: 'Doji body',
             value: _dojiBodyColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _dojiBodyColor = value),
           ),
           if (_showBodyBorder) ...[
             const _OptionGroupLabel('Body borders'),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-border-color'),
               label: 'Rising border',
               value: _risingBorderColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _risingBorderColor = value),
             ),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-falling-border-color'),
               label: 'Falling border',
               value: _fallingBorderColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _fallingBorderColor = value),
             ),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-doji-border-color'),
               label: 'Doji border',
               value: _dojiBorderColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _dojiBorderColor = value),
             ),
           ],
           if (_showWicks) ...[
             const _OptionGroupLabel('Wicks'),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-rising-wick-color'),
               label: 'Rising wick',
               value: _risingWickColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _risingWickColor = value),
             ),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-falling-wick-color'),
               label: 'Falling wick',
               value: _fallingWickColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _fallingWickColor = value),
             ),
-            ColorOption(
+            _AnnotationPaletteOption(
               key: const ValueKey('candlestick-doji-wick-color'),
               label: 'Doji wick',
               value: _dojiWickColor,
-              colors: _candlestickColorChoices,
               onChanged: (value) => setState(() => _dojiWickColor = value),
             ),
           ],
@@ -1790,25 +1779,22 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           onChanged: (value) => setState(() => _highlightLatestCandle = value),
         ),
         if (_highlightLatestCandle) ...[
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-highlight-body-color'),
             label: 'Highlight body',
             value: _highlightBodyColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _highlightBodyColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-highlight-border-color'),
             label: 'Highlight border',
             value: _highlightBorderColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _highlightBorderColor = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-highlight-wick-color'),
             label: 'Highlight wick',
             value: _highlightWickColor,
-            colors: _candlestickColorChoices,
             onChanged: (value) => setState(() => _highlightWickColor = value),
           ),
         ],
@@ -1925,17 +1911,10 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             suffix: 'px',
             onChanged: (value) => setState(() => _averageStrokeWidth = value),
           ),
-          ColorOption(
+          _AnnotationPaletteOption(
             key: const ValueKey('candlestick-average-color'),
             label: 'Average colour',
             value: _averageColor,
-            colors: const [
-              Color(0xFF6366F1),
-              Color(0xFF0EA5E9),
-              Color(0xFFF59E0B),
-              Color(0xFFEC4899),
-              Color(0xFF111827),
-            ],
             onChanged: (value) => setState(() => _averageColor = value),
           ),
         ],
@@ -2033,7 +2012,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               label: 'Close average',
               description: '$_averageWindow sessions',
               kind: _DirectionLegendKind.average,
-              color: _averageColor,
+              color:
+                  _averageColor ??
+                  _effectiveChartTheme().seriesTheme.colorAt(1),
               fillBody: false,
             ),
         ],
@@ -2407,6 +2388,41 @@ class _FamilyBadge extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _AnnotationPaletteOption extends StatelessWidget {
+  const _AnnotationPaletteOption({
+    required super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  }) : assert(key is ValueKey<String>);
+
+  final String label;
+  final Color? value;
+  final ValueChanged<Color?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final keyPrefix = (key! as ValueKey<String>).value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label (optional)',
+          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+        ),
+        const SizedBox(height: 8),
+        AnnotationColorPalette(
+          value: value,
+          onChanged: onChanged,
+          keyPrefix: keyPrefix,
+          customColorFallback: value,
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
 }
 
 class _OptionGroupLabel extends StatelessWidget {
@@ -2838,43 +2854,6 @@ enum _StockRangePreset {
   all,
   custom,
 }
-
-const _candlestickColorChoices = <Color>[
-  Color(0xFF0F766E),
-  Color(0xFF22C55E),
-  Color(0xFF2563EB),
-  Color(0xFF0EA5E9),
-  Color(0xFF7C3AED),
-  Color(0xFFEC4899),
-  Color(0xFFDC2626),
-  Color(0xFFF97316),
-  Color(0xFFFACC15),
-  Color(0xFF64748B),
-  Color(0xFF111827),
-  Color(0xFFFFFFFF),
-];
-
-const _candlestickSurfaceColorChoices = <Color>[
-  Color(0xFFFFFFFF),
-  Color(0xFFF8FAFC),
-  Color(0xFFFEF3C7),
-  Color(0xFFE0F2FE),
-  Color(0xFFEDE9FE),
-  Color(0xFF334155),
-  Color(0xFF1F2937),
-  Color(0xFF111827),
-];
-
-const _candlestickTextColorChoices = <Color>[
-  Color(0xFFFFFFFF),
-  Color(0xFFF8FAFC),
-  Color(0xFF1F2937),
-  Color(0xFF111827),
-  Color(0xFF2563EB),
-  Color(0xFF7C3AED),
-  Color(0xFFB91C1C),
-  Color(0xFF0F766E),
-];
 
 List<CandlestickDataPoint> _buildDensityCandles() {
   final candles = <CandlestickDataPoint>[];

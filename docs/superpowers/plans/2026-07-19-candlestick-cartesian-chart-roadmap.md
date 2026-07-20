@@ -432,7 +432,7 @@ retaining Braven styling and Workbench behavior.
   transient second Workbench mount. The Candlestick page now uses one
   Workbench-owned controller per mounted surface, with an initial-route
   regression test.
-- Package `lib` analysis and showcase analysis are clean. The complete 246-test
+- Package `lib` analysis and showcase analysis are clean. The complete 247-test
   showcase suite passes after the lifecycle, interactive configuration, and
   post-Scatter rebase work.
 - Release web builds pass for `/` and `/braven_charts/`, including Wasm dry
@@ -508,12 +508,19 @@ retaining Braven styling and Workbench behavior.
   label, and tooltip colours; tooltip border width, corner radius, and font
   size; point-tooltip position; and cursor-follow behavior. One `TooltipStyle`
   now themes both point and multi-value OHLC tracking tooltips.
+- Replaced every Candlestick-specific colour grid with the same exported
+  `AnnotationColorPalette` used by native annotation editors. Direction,
+  point-highlight, moving-average, crosshair, coordinate-label, and tooltip
+  overrides now share the leading clear action, selected-swatch toggle,
+  canonical presets, custom colour dialog, opacity support, and recent colours.
+  Each cleared value restores the active chart or interaction theme instead of
+  retaining a hidden showcase-only colour.
 - Increased compact composition height to preserve a valid plot after the
   expanded wrapping preset catalogue and options surface; focused compact and
-  full Candlestick showcase tests pass. The Candlestick suite now has 14 tests,
+  full Candlestick showcase tests pass. The Candlestick suite now has 15 tests,
   including renderer-contract assertions for custom element colours, point
-  highlighting, native animation configuration, replay, crosshair styling, and
-  tooltip styling.
+  highlighting, native animation configuration, replay, crosshair styling,
+  tooltip styling, and shared palette clear/toggle behavior.
 
 ### Still required before promotion
 
