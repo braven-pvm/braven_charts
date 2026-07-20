@@ -15,6 +15,7 @@ is added to package marketing.
 | Line charts | `LineChartSeries`, `LineInterpolation`, `PathAnimationStyle`, explicit per-series entrance/update timing, entrance replay, value interpolation, and stable boundary-topology motion | Line Charts, Chart Types, Gallery |
 | Area charts and baselines | `AreaChartSeries`, baseline and above/below fill properties, `PathAnimationStyle`, explicit per-layer timing, and synchronized value and stable boundary-topology motion | Area Charts, Baseline Fill, Gallery |
 | Bar charts | `BarChartSeries`, `BarOrientation`, horizontal multi-axis mapping, inherited RTL canvas text and semantics, `rangeStartValues`, `BarLayoutMode`, first-class diverging/Likert roles and center line, `BarChartStyle`, non-colour `BarPatternStyle`, `BarTrackStyle`, `BarLollipopStyle`, first-class `BarBulletStyle`, `ParetoChartData` mixed bar-line compositions, `HistogramChartData` continuous-sample binning, keyed entrance/update/exit `BarMotionStyle`, viewport-virtualized geometry and indexed hit testing, spatially indexed chart-wide collision-aware `BarLabelStyle`, stack totals, `BarGroupInfo` | Bar Lab Stress, Bar Lab RTL, Bar Lab Histogram, Bar Lab Pareto, Bar Lab Lollipop, Bar Lab Likert, Bar Lab Bullet, Bar Lab Patterns, Bar Lab, Chart Types, Gallery |
+| Candlestick charts | `CandlestickDataPoint`, `CandlestickChartSeries`, `CandlestickChartStyle`, `CandlestickAnimationStyle`, `CandlestickDensityGrouping`, typed OHLC tracking, ordered viewport culling, live latest-candle upsert, lossless artifacts, and Line/Area/Scatter overlays | Candlestick Charts, Chart Types |
 | Scatter plots | `ScatterChartSeries`, `ScatterMarkerStyle`, `ScatterInteractionStyle`, area-correct `ScatterSizeEncoding`, continuous or piecewise `ScatterColorEncoding`, `ScatterOpacityEncoding`, independent point channels, quantitative legends, unsorted-data culling, and point-accurate 2D interaction | Scatter Charts, Chart Types, Gallery |
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
@@ -41,7 +42,9 @@ is added to package marketing.
 ## Current boundary
 
 Cartesian charts support one configurable X axis and multiple independent Y
-axes. Multiple simultaneous X axes are not part of the public contract. A Pie
+axes. Multiple simultaneous X axes are not part of the public contract. One
+Candlestick series may share a plot with Line, Area, and Scatter overlays; a
+second Candlestick or same-plot Bar series is rejected in V1. A Pie
 accepts exactly one `PieChartSeries`; a standalone Donut accepts one
 `DonutChartSeries`; and two or more Donut series form one Concentric Donut
 composition. Partition-radial charts have no Cartesian axes and cannot mix

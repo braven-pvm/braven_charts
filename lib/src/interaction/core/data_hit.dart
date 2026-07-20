@@ -229,7 +229,7 @@ class ChartDataHit {
         'contributed to the aggregate',
       );
     }
-    if (effectiveSourcePointIndices.length > 1) {
+    if (candlestick == null && effectiveSourcePointIndices.length > 1) {
       parts.add(
         share == null
             ? '${effectiveSourcePointIndices.length} source points'

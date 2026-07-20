@@ -8,9 +8,9 @@ Braven Charts is a pure Dart charting library for Flutter applications. Chart
 rendering and interaction use a custom `RenderBox` and Flutter `Canvas`; the
 package does not embed a JavaScript charting engine.
 
-`BravenChartPlus` supports line, area, bar, scatter, mixed Cartesian series,
-Pie, Donut, multi-ring Concentric Donut, and axis-based Polar Column/Rose
-charts; multiple independent axes
+`BravenChartPlus` supports line, area, bar, scatter, typed OHLC Candlestick,
+mixed Cartesian series, Pie, Donut, multi-ring Concentric Donut, and axis-based
+Polar Column/Rose charts; multiple independent axes
 and normalization; zoom, pan, scrollbars, tracking, tooltips, and editable annotations;
 frame-coalesced live data; configurable themes and state views; chart, table,
 split, and generated Dart source modes; and portable chart artifacts. Rendering,
@@ -638,9 +638,10 @@ flutter run -d chrome
 
 The showcase is responsive: desktop uses a persistent feature rail, while
 smaller screens use a navigation drawer. It includes gallery-ready examples and
-focused pages for chart types, Pie, Donut, Concentric Donut, and Polar Column charts, interaction, tracking, annotations,
-streaming, theming, performance, multi-axis layouts, scientific data, baseline
-fills, and state UX.
+focused pages for chart types, Candlestick, Pie, Donut, Concentric Donut, and
+Polar Column charts, interaction, tracking, annotations, streaming, theming,
+performance, multi-axis layouts, scientific data, baseline fills, and state
+UX.
 
 ## Documentation
 
@@ -649,6 +650,7 @@ fills, and state UX.
 - [Public API overview](https://github.com/braven-pvm/braven_charts/blob/master/doc/api_reference.md)
 - [Line and Area charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/line_area_charts.md)
 - [Synchronized Cartesian charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/synchronized_charts.md)
+- [Candlestick charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/candlestick_charts.md)
 - [Pie charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/pie_charts.md)
 - [Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/donut_charts.md)
 - [Concentric Donut charts](https://github.com/braven-pvm/braven_charts/blob/master/doc/concentric_donut_charts.md)

@@ -131,7 +131,13 @@ class ShowcaseReviewProposal {
 
 /// Home page with adaptive navigation layout.
 class ShowcaseHome extends StatefulWidget {
-  const ShowcaseHome({super.key});
+  const ShowcaseHome({super.key, this.requestedPageOverride});
+
+  /// Test and embedder override for the initial direct-route destination.
+  ///
+  /// The hosted application leaves this null and reads `?page=` from
+  /// [Uri.base].
+  final String? requestedPageOverride;
 
   @override
   State<ShowcaseHome> createState() => _ShowcaseHomeState();
@@ -277,7 +283,8 @@ class _ShowcaseHomeState extends State<ShowcaseHome> {
       initialDisplayMode: _requestedWorkbenchMode,
     );
     _destinations = _buildDestinations();
-    final requestedPage = Uri.base.queryParameters['page'];
+    final requestedPage =
+        widget.requestedPageOverride ?? Uri.base.queryParameters['page'];
     final requestedIndex = _destinations.indexWhere(
       (destination) => destination.matchesSlug(requestedPage),
     );

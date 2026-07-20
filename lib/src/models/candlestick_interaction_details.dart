@@ -19,6 +19,7 @@ class CandlestickInteractionDetails {
     required this.changePercent,
     required this.formattedChange,
     required this.direction,
+    this.sourceCount = 1,
     this.timestamp,
     this.formattedTimestamp,
   });
@@ -27,6 +28,7 @@ class CandlestickInteractionDetails {
     CandlestickDataPoint point, {
     String? unit,
     String? formattedTimestamp,
+    int sourceCount = 1,
   }) {
     final suffix = unit == null || unit.isEmpty ? '' : ' $unit';
     String format(double value) => '${value.toStringAsFixed(2)}$suffix';
@@ -47,6 +49,7 @@ class CandlestickInteractionDetails {
       formattedChange:
           '$sign${change.toStringAsFixed(2)}$suffix ($sign${changePercent.toStringAsFixed(2)}%)',
       direction: point.direction,
+      sourceCount: sourceCount,
       timestamp: point.timestamp,
       formattedTimestamp: formattedTimestamp,
     );
@@ -64,11 +67,13 @@ class CandlestickInteractionDetails {
   final double changePercent;
   final String formattedChange;
   final CandlestickDirection direction;
+  final int sourceCount;
   final DateTime? timestamp;
   final String? formattedTimestamp;
 
   /// Complete non-colour-only OHLC announcement.
   String get semanticLabel => [
+    if (sourceCount > 1) '$sourceCount grouped candles',
     ?formattedTimestamp,
     'Open $formattedOpen',
     'High $formattedHigh',

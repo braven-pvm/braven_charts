@@ -69,4 +69,42 @@ void main() {
       'Candlestick latest upsert: ${watch.elapsedMicroseconds / 1000} ms / 10,000 revisions',
     );
   });
+
+  test('50k grouped crosshair tracking stays comfortably interactive', () {
+    final series = CandlestickChartSeries(
+      id: 'grouped-price',
+      densityGrouping: const CandlestickDensityGrouping(enabled: true),
+      points: [
+        for (var index = 0; index < 50000; index++)
+          CandlestickDataPoint(
+            x: index.toDouble(),
+            open: 100,
+            high: 102 + (index % 3),
+            low: 96 - (index % 2),
+            close: index.isEven ? 101 : 99,
+          ),
+      ],
+    );
+    final watch = Stopwatch()..start();
+    CrosshairTrackingState? lastState;
+    for (var query = 0; query < 1000; query++) {
+      lastState = CrosshairTracker.calculateTrackingState(
+        screenX: (query % 1000).toDouble(),
+        chartBounds: const Rect.fromLTWH(0, 0, 1000, 500),
+        xMin: 0,
+        xMax: 49999,
+        seriesList: [series],
+        interpolate: false,
+      );
+    }
+    watch.stop();
+
+    expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
+    expect(lastState?.seriesValues.single.sourcePointIndices.length, 250);
+    // ignore: avoid_print
+    print(
+      'Grouped Candlestick tracking: '
+      '${watch.elapsedMicroseconds / 1000} ms / 1,000 queries',
+    );
+  });
 }

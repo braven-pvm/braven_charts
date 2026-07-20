@@ -63,6 +63,10 @@ abstract class EventHandlerDelegate {
   void Function(String annotationId, ChartAnnotation updatedAnnotation)?
   get onAnnotationChanged;
 
+  /// Callback for transient annotation geometry during an active drag.
+  void Function(String annotationId, ChartAnnotation previewAnnotation)?
+  get onAnnotationDragUpdate;
+
   /// Callback for range annotation creation completion.
   void Function(double startX, double endX, double startY, double endY)?
   get onRangeCreationComplete;
@@ -534,6 +538,12 @@ class EventHandlerManager {
       );
       _delegate.markNeedsPaint();
       return;
+    }
+
+    if (event.buttons == kPrimaryMouseButton &&
+        hitElement is RangeAnnotationElement &&
+        hitElement.isDraggable) {
+      _delegate.onCursorChange?.call(SystemMouseCursors.grabbing);
     }
 
     // Per conflict resolution: Different buttons have different behaviors
@@ -1736,11 +1746,7 @@ class EventHandlerManager {
       return;
     }
 
-    _delegate.onCursorChange?.call(
-      hitElement is SeriesElement
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-    );
+    _delegate.onCursorChange?.call(_cursorForHoveredElement(hitElement));
     _delegate.coordinator.setHoveredElement(hitElement);
     _delegate.onElementHover?.call(hitElement);
     _delegate.markNeedsPaint();
@@ -2017,6 +2023,8 @@ class EventHandlerManager {
         endY: tempEndY,
       );
     }
+
+    _publishRangeAnnotationDragUpdate(_resizingAnnotation!, newBounds);
   }
 
   void _performMove(Offset currentPosition) {
@@ -2037,6 +2045,53 @@ class EventHandlerManager {
     );
 
     _movingAnnotation!.updateBounds(newBounds);
+    _publishRangeAnnotationDragUpdate(_movingAnnotation!, newBounds);
+  }
+
+  void _publishRangeAnnotationDragUpdate(
+    RangeAnnotationElement element,
+    Rect bounds,
+  ) {
+    final callback = _delegate.onAnnotationDragUpdate;
+    if (callback == null) return;
+    final seriesElements = _delegate.elements.whereType<SeriesElement>();
+    if (seriesElements.isEmpty) return;
+
+    final annotation = element.annotation;
+    final transform = seriesElements.first.transform;
+    final leftData = transform.plotToData(bounds.left, bounds.top);
+    final rightData = transform.plotToData(bounds.right, bounds.bottom);
+    double? startY;
+    double? endY;
+
+    if (annotation.startY != null || annotation.endY != null) {
+      if (_delegate.isPerSeriesMode) {
+        final plotArea = _delegate.plotArea;
+        final normalizedTopY = (plotArea.bottom - bounds.top) / plotArea.height;
+        final normalizedBottomY =
+            (plotArea.bottom - bounds.bottom) / plotArea.height;
+        final (denormalizedStartY, denormalizedEndY) = _delegate
+            .denormalizeYRange(
+              math.min(normalizedBottomY, normalizedTopY),
+              math.max(normalizedBottomY, normalizedTopY),
+            );
+        if (annotation.startY != null) startY = denormalizedStartY;
+        if (annotation.endY != null) endY = denormalizedEndY;
+      } else {
+        if (annotation.startY != null) startY = rightData.dy;
+        if (annotation.endY != null) endY = leftData.dy;
+      }
+    }
+
+    callback(
+      annotation.id,
+      annotation.copyWith(
+        startX: annotation.startX != null ? leftData.dx : null,
+        endX: annotation.endX != null ? rightData.dx : null,
+        startY: startY,
+        endY: endY,
+      ),
+    );
   }
 
   void _performPointAnnotationMove(Offset currentPosition) {
@@ -2218,5 +2273,13 @@ class EventHandlerManager {
     }
 
     return nearestValue;
+  }
+
+  MouseCursor _cursorForHoveredElement(ChartElement? element) {
+    if (element is RangeAnnotationElement && element.isDraggable) {
+      return SystemMouseCursors.grab;
+    }
+    if (element is SeriesElement) return SystemMouseCursors.click;
+    return SystemMouseCursors.basic;
   }
 }

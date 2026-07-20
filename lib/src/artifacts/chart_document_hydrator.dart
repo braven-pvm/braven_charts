@@ -275,6 +275,7 @@ abstract final class ChartDocumentHydrator {
     'series.candlestick',
     'series.candlestick.ohlc.v1',
     'series.candlestick.motion.v1',
+    'series.candlestick.density-grouping.v1',
     'series.path-dash.v1',
     'series.bar',
     'series.path-motion.v1',

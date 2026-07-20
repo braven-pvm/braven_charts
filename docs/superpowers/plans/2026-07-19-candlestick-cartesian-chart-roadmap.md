@@ -1,9 +1,10 @@
 # Candlestick Cartesian Chart — Delivery Roadmap
 
 **Date:** 2026-07-19  
-**Branch:** `research/candlestick-cartesian`  
-**Status:** Slices 1–5 complete locally; dense-data promotion work is next  
+**Branch:** `feature/candlestick-density-grouping`
+**Status:** PR #58 open; expanded interactive configuration review is in progress
 **Design:** `docs/superpowers/specs/2026-07-19-candlestick-cartesian-chart-design.md`
+**Navigator handoff:** `docs/superpowers/specs/2026-07-20-cartesian-navigator-architecture-handoff.md`
 
 ## Product outcome
 
@@ -21,10 +22,10 @@ generated Source, agentic input, showcase, and performance verification.
 |---|---|---|
 | 1 | Typed OHLC model, validation, bounds, and geometry lab | Complete locally |
 | 2 | Native Candlestick paint, theme, hit testing, and core chart route | Complete locally; pixel review approved |
-| 3 | Tracking, keyboard, semantics, temporal helpers, and motion | Complete locally; interaction review open |
+| 3 | Tracking, keyboard, semantics, temporal helpers, and motion | Complete locally |
 | 4 | Artifacts, hydration, Data/Split, Source, AI schema, and Workbench | Complete locally |
 | 5 | Range presets, navigator, ordinal sessions, and optional volume composition | Complete locally |
-| 6 | Dense-data grouping, benchmarks, E2E, docs, and release readiness | Final merge approval |
+| 6 | Dense-data grouping, benchmarks, E2E, docs, and release readiness | Interactive review in progress |
 
 No PR is opened between slices unless the user explicitly requests one. The
 review surface remains local throughout the lane.
@@ -290,7 +291,9 @@ preset exposes Source.
 - Add a stock-composition showcase built from ordinary Braven charts.
 - Add 1m, 3m, 6m, YTD, 1y, and All preset controls plus explicit date bounds.
 - Add a compact Area/Line navigator derived from close values.
-- Add draggable navigator window and handles with accessible keyboard actions.
+- Add a draggable navigator window with persistent pointer handles and live
+  viewport preview; hand native keyboard and semantics work to the dedicated
+  Cartesian navigator lane.
 - Add a public viewport command that range controls and navigator can share.
 - Synchronize main candle, optional volume Bar pane, and navigator X viewport.
 - Keep each pane's Y scale independent.
@@ -304,7 +307,7 @@ preset exposes Source.
   visible range without feedback loops.
 - Range presets resolve correctly across year boundaries and missing sessions.
 - Adding/removing the volume pane does not reset the main viewport.
-- Compact layout wraps controls and keeps handles touch accessible.
+- Compact layout wraps controls and keeps the navigator window operable.
 - The composition is explicitly documented as reusable coordination, not a
   second Candlestick renderer.
 - Session performance measurements display main, volume, and navigator cost.
@@ -328,10 +331,11 @@ retaining Braven styling and Workbench behavior.
 - Price and optional volume share only X cursor/viewport state and retain
   independent USD and volume Y domains. Removing and restoring volume leaves
   the active viewport unchanged.
-- The full-domain Area navigator visualizes the active range and exposes
-  accessible `RangeSlider` handles that drive the shared viewport. Its own
-  viewport synchronization is disabled so it never collapses to the selected
-  window.
+- The full-domain Area navigator visualizes the active range through one
+  draggable X-only range window. Its own cursor and viewport synchronization
+  are disabled so it never tracks during manipulation or collapses to the
+  selected window. Dedicated keyboard, semantics, and touch-target contracts
+  remain explicit scope for the native Cartesian navigator handoff.
 - The composition includes copyable coordination source and isolated passive
   frame instrumentation for active charts, source/visible sessions, samples,
   p95 build/raster, and frames over 16.7 ms. Diagnostics refresh no more than
@@ -349,7 +353,7 @@ retaining Braven styling and Workbench behavior.
 
 ## Slice 6 — Grouping, performance, and promotion readiness
 
-**Status:** Pending
+**Status:** Interactive review in progress; dartdoc tooling qualification recorded
 
 ### Scope
 
@@ -379,9 +383,148 @@ retaining Braven styling and Workbench behavior.
 - The final local release route remains available for user review.
 - Commit/PR occurs only after explicit user approval.
 
+### Landed in the first Slice 6 cluster
+
+- Added an opt-in `CandlestickDensityGrouping` public contract with
+  pixel-width and minimum-group-size thresholds.
+- Added a pure, globally aligned OHLC projection outside paint using first
+  open, maximum high, minimum low, and last close.
+- Carried complete raw source spans through geometry, hit testing, selection,
+  focus, crosshair tracking, tooltip values, and semantic copy.
+- Kept the immutable series points and Workbench table/export inputs raw; the
+  showcase verifies 2,000 source rows while rendering grouped candles.
+- Added portable artifact, hydration, AI-builder, and generated-Dart support
+  plus the `series.candlestick.density-grouping.v1` capability.
+- Added a focused showcase density section and a deterministic 2,000-candle
+  stress data set.
+- Added permanent 50,000-source grouping and grouped-crosshair benchmarks. On
+  the first local run, geometry averaged 0.242 ms and 1,000 grouped crosshair
+  queries completed in 8.969 ms.
+- Completed the remaining permanent performance matrix on the established
+  local benchmark environment. The authoritative combined run measured:
+  - 5,000-visible warm paint at 0.008 ms median / 0.009 ms p95;
+  - 1,000-candle animated revision and paint at 1.904 ms median / 2.995 ms p95;
+  - 5,000-visible pan/zoom regeneration at 3.822 ms median / 5.194 ms p95;
+  - three-pane cursor fanout for 1,000 moves at 2.767 ms median / 10.733 ms p95;
+  - synchronized price/volume viewport fanout at 1.666 ms median / 2.474 ms
+    p95 while the navigator remained local; and
+  - 50,000-source grouped geometry at 0.280 ms average and 1,000 grouped
+    crosshair queries in 11.442 ms.
+- Corrected the benchmark percentile helper to use the nearest-rank p95 rather
+  than treating the maximum sample as p95 for a 20-sample run.
+- Hardened the three-pane cursor microbenchmark against shared-runner
+  preemption after CI twice reported an 18 ms p95 beside a stable 4.4 ms
+  median, while an intervening identical run passed. The gate still publishes
+  1,000 synchronized cursor moves per sample and keeps the 16.667 ms budget;
+  it now measures three independent p95 trials, requires every trial median to
+  remain within budget, and uses the best uncontended p95 to distinguish
+  sustained fanout work from an operating-system scheduling stall. Five
+  consecutive local invocations and the complete two-test benchmark file pass.
+- Added and visually reviewed deterministic golden coverage for light and dark
+  themes, doji bodies, proportional irregular gaps, ordinal trading sessions,
+  the compact price/volume/navigator stock composition, and grouped density.
+- Added the public Candlestick guide, chart-type overview, feature-matrix row,
+  README support statement, and unreleased changelog. The documentation
+  distinguishes native OHLC rendering, synchronized stock composition, and
+  application-owned calendars, data feeds, indicators, and analytics.
+- Release browser testing exposed and fixed a direct-route lifecycle defect in
+  which a caller-owned `ChartWorkbenchController` could be attached to a
+  transient second Workbench mount. The Candlestick page now uses one
+  Workbench-owned controller per mounted surface, with an initial-route
+  regression test.
+- Package `lib` analysis and showcase analysis are clean. The complete 246-test
+  showcase suite passes after the lifecycle, interactive configuration, and
+  post-Scatter rebase work.
+- Release web builds pass for `/` and `/braven_charts/`, including Wasm dry
+  runs. The final root release route returns HTTP 200 for both the shell and
+  compiled script at
+  `http://127.0.0.1:8197/?page=candlestick-charts`.
+- Logged headless Chrome direct-load and same-profile refresh checks render the
+  complete reduced-motion Candlestick surface without an application
+  exception. Their 1600 x 1000 captures are byte-identical, confirming stable
+  refresh layout and final-frame rendering.
+- `dart pub publish --dry-run` reports only the expected dirty-worktree warning
+  and no package-content warning.
+- Flutter-bundled dartdoc 9.0.4 remains blocked before package diagnostics by
+  its existing internal `DocumentationComment._stripDocImports` `RangeError`.
+  The failure is tool-internal and unchanged from the prior Candlestick lane;
+  maintained analyzers remain clean.
+
+### Landed in the interactive configuration review cluster
+
+- Replaced the two-state surface switch with six wrapping, directly selectable
+  examples: balanced price action, trend, volatility, gaps and doji, density,
+  and the synchronized stock composition.
+- Added deterministic normal-data controls for 12–120 visible sessions, price
+  range, trend bias, and opening-gap frequency while retaining the existing
+  2,000-source density path and raw Workbench rows.
+- Added chart-theme and candle-palette selection, entrance and revision motion,
+  complete candle geometry and stroke controls, and palette-aware direction
+  keys.
+- Added configurable moving-average visibility, window, stroke width, and
+  colour plus built-in series-legend visibility, position, and dragging.
+- Applied shared theme, grid, axis, zoom, pan, tracking, scrollbar, palette,
+  overlay, and legend controls to the stock-composition price and volume panes
+  where the property is meaningful.
+- Collapsed the stock navigator's disconnected annotation and `RangeSlider`
+  into one selected range window: dragging its body pans the shared viewport,
+  dragging either edge zooms it, and range presets plus main-chart pan/zoom
+  update that same window through the host-owned viewport controller.
+- Navigator body and edge gestures now publish transient viewport previews on
+  every pointer move, so the price and volume panes pan or zoom while the
+  gesture remains active. The navigator opts out of cursor synchronization,
+  preventing viewport manipulation from moving the charts' tracking cursor.
+- The navigator's left and right resize grips remain visible and hit-testable
+  independently of annotation selection, while its body uses `grab` on hover
+  and `grabbing` on press to distinguish panning from edge resizing.
+- Made range-annotation resize affordances dimension-aware: the X-only stock
+  navigator now renders and hit-tests only its two side grips, while two-axis
+  ranges retain their complete eight-handle editing surface.
+- Added focused showcase tests for every example preset and the data, palette,
+  overlay, and legend wiring. The Candlestick showcase suite now has 13 passing
+  tests, including compact coverage and pointer-level navigator pan/resize
+  verification against the synchronized viewport.
+- Added dedicated interaction-detail controls for point and tracking tooltips,
+  axis-value labels, intersection markers and radius, crosshair width and dash
+  pattern, selection, keyboard navigation, and focus-border behavior.
+- Added axis-side, X-tick-density, axis-label visibility, and minimum-body-width
+  controls, all wired directly to the mounted chart rather than display-only
+  showcase state.
+- Added an accessibility-focused preset combining blue/orange hues, hollow
+  rising bodies, stronger borders and wicks, visible doji, a close average, and
+  a direction key so financial direction never relies on colour alone.
+- Added five coherent styling recipes for balanced analytical, trading-terminal,
+  accessible blue/orange, print-friendly monochrome, and latest-event emphasis
+  treatments. Recipes are starting points; every underlying geometry and colour
+  control remains independently adjustable.
+- Added opt-in per-direction body, border, and wick colour overrides plus a
+  point-level latest-candle body/border/wick highlight. The same resolved
+  colours feed the Workbench chart, direction key, and stock-composition panes.
+- Replaced binary motion switches with explicit entrance and OHLC-update modes,
+  entrance stagger, 100–1,200 ms duration, curve selection, revision magnitude,
+  and in-rail replay/revise actions wired to the mounted controller and native
+  Candlestick transition contract.
+- Added a progressive tracking-theme section covering crosshair, coordinate
+  label, and tooltip colours; tooltip border width, corner radius, and font
+  size; point-tooltip position; and cursor-follow behavior. One `TooltipStyle`
+  now themes both point and multi-value OHLC tracking tooltips.
+- Increased compact composition height to preserve a valid plot after the
+  expanded wrapping preset catalogue and options surface; focused compact and
+  full Candlestick showcase tests pass. The Candlestick suite now has 14 tests,
+  including renderer-contract assertions for custom element colours, point
+  highlighting, native animation configuration, replay, crosshair styling, and
+  tooltip styling.
+
+### Still required before promotion
+
+- User visual and interaction review of the expanded selector and control
+  surface on the live release route.
+- Re-run dartdoc when the Flutter-bundled dartdoc defect is resolved or a
+  qualified replacement toolchain is adopted before publication.
+
 ## Recommended next move
 
-Begin Slice 6 with opt-in OHLC density grouping outside paint while preserving
-raw artifacts, Data, CSV, and source references. Then qualify grouped tracking,
-three-pane fanout, E2E, documentation, and release readiness before the deferred
-full visual/browser review and explicit merge approval.
+Keep the release route available for the deferred full visual and interaction
+review. Address any review findings, re-run the affected gates, then wait for
+explicit commit/PR approval; do not start another chart-family lane from this
+worktree.

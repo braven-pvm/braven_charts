@@ -7,6 +7,7 @@ import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_data_point.dart';
+import '../models/candlestick_density_grouping.dart';
 import '../models/category_axis_config.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
@@ -352,6 +353,7 @@ class ChartConfigBuilder {
         yAxisConfig: yAxisConfig,
         candlestickStyle: _parseCandlestickStyle(chartStyle),
         animation: _parseCandlestickAnimation(chartStyle),
+        densityGrouping: _parseCandlestickDensityGrouping(chartStyle),
       ),
     };
   }
@@ -635,6 +637,16 @@ class ChartConfigBuilder {
       );
     }
   }
+
+  static CandlestickDensityGrouping _parseCandlestickDensityGrouping(
+    Map<String, dynamic>? json,
+  ) => CandlestickDensityGrouping(
+    enabled: json?['candlestick_density_grouping'] as bool? ?? false,
+    targetGroupWidth:
+        (json?['candlestick_target_group_width'] as num?)?.toDouble() ?? 5,
+    minimumPointsPerGroup:
+        (json?['candlestick_minimum_points_per_group'] as num?)?.toInt() ?? 2,
+  );
 
   static void _validateCategoryCoordinates(
     List<ChartSeries> series,

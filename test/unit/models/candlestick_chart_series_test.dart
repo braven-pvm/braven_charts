@@ -48,9 +48,19 @@ void main() {
     });
 
     test('copyWith preserves the typed invariants', () {
-      final source = CandlestickChartSeries(id: 'price', points: [_candle(1)]);
+      final source = CandlestickChartSeries(
+        id: 'price',
+        points: [_candle(1)],
+        densityGrouping: const CandlestickDensityGrouping(
+          enabled: true,
+          targetGroupWidth: 6,
+          minimumPointsPerGroup: 3,
+        ),
+      );
 
-      expect(source.copyWith(id: 'copy'), isA<CandlestickChartSeries>());
+      final copy = source.copyWith(id: 'copy');
+      expect(copy, isA<CandlestickChartSeries>());
+      expect(copy.densityGrouping, source.densityGrouping);
       expect(
         () => source.copyWith(style: SeriesStyle.line),
         throwsArgumentError,

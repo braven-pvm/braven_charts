@@ -6,6 +6,7 @@ import '../models/bar_chart_style.dart';
 import '../models/candlestick_chart_series.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_data_point.dart';
+import '../models/candlestick_density_grouping.dart';
 import '../models/chart_data_point.dart';
 import '../models/chart_series.dart';
 import '../models/data_point_label_config.dart';
@@ -157,6 +158,9 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is CandlestickChartSeries &&
                 series.animation != const CandlestickAnimationStyle())
               'series.candlestick.motion.v1',
+            if (series is CandlestickChartSeries &&
+                series.densityGrouping.enabled)
+              'series.candlestick.density-grouping.v1',
             if (series is BarChartSeries && series.barStyle.pattern != null)
               'series.bar.pattern.v1',
             if (series is BarChartSeries && series.bulletStyle != null)
@@ -578,6 +582,9 @@ abstract final class ChartSeriesDocumentCodec {
           ),
           animation: _decodeCandlestickAnimation(
             _optionalMap(style, 'candlestickAnimation'),
+          ),
+          densityGrouping: _decodeCandlestickDensityGrouping(
+            _optionalMap(style, 'candlestickDensityGrouping'),
           ),
         ),
         'pie' => PieChartSeries(
@@ -1065,6 +1072,9 @@ Map<String, Object?> _encodeSeriesStyle(
         )
         ..['candlestickAnimation'] = _encodeCandlestickAnimation(
           series.animation,
+        )
+        ..['candlestickDensityGrouping'] = _encodeCandlestickDensityGrouping(
+          series.densityGrouping,
         );
     case PieChartSeries():
       result
@@ -1273,6 +1283,25 @@ CandlestickAnimationStyle _decodeCandlestickAnimation(
           r'$.style.candlestickAnimation.dataUpdateMode',
         ) ??
         CandlestickDataUpdateAnimationMode.interpolate,
+  );
+}
+
+Map<String, Object?> _encodeCandlestickDensityGrouping(
+  CandlestickDensityGrouping grouping,
+) => {
+  'enabled': grouping.enabled,
+  'targetGroupWidth': _number(grouping.targetGroupWidth),
+  'minimumPointsPerGroup': grouping.minimumPointsPerGroup,
+};
+
+CandlestickDensityGrouping _decodeCandlestickDensityGrouping(
+  Map<String, Object?>? value,
+) {
+  if (value == null) return const CandlestickDensityGrouping();
+  return CandlestickDensityGrouping(
+    enabled: _optionalBool(value['enabled']) ?? false,
+    targetGroupWidth: _optionalDouble(value['targetGroupWidth']) ?? 5,
+    minimumPointsPerGroup: _optionalInt(value['minimumPointsPerGroup']) ?? 2,
   );
 }
 

@@ -1883,6 +1883,11 @@ void main() {
           staggerFraction: .4,
           dataUpdateMode: CandlestickDataUpdateAnimationMode.none,
         ),
+        densityGrouping: const CandlestickDensityGrouping(
+          enabled: true,
+          targetGroupWidth: 6,
+          minimumPointsPerGroup: 3,
+        ),
       );
 
       for (final storage in [
@@ -1904,6 +1909,7 @@ void main() {
             'series.candlestick',
             'series.candlestick.ohlc.v1',
             'series.candlestick.motion.v1',
+            'series.candlestick.density-grouping.v1',
           }),
         );
         expect(decoded.value, source);

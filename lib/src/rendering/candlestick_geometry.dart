@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../coordinates/chart_transform.dart';
 import '../models/candlestick_chart_style.dart';
 import '../models/candlestick_data_point.dart';
+import '../models/candlestick_density_grouping.dart';
 
 /// The source-index range that can overlap the current X viewport.
 class CandlestickVisibleRange {
@@ -17,6 +18,35 @@ class CandlestickVisibleRange {
 
   int get length => endExclusive - start;
   bool get isEmpty => length == 0;
+}
+
+/// One render-time OHLC projection and its complete raw source identity.
+class CandlestickProjection {
+  const CandlestickProjection({
+    required this.point,
+    required this.sourceStartIndex,
+    required this.sourceEndIndexExclusive,
+  }) : assert(sourceStartIndex >= 0),
+       assert(sourceEndIndexExclusive > sourceStartIndex);
+
+  final CandlestickDataPoint point;
+  final int sourceStartIndex;
+  final int sourceEndIndexExclusive;
+
+  int get sourceCount => sourceEndIndexExclusive - sourceStartIndex;
+  bool get isGrouped => sourceCount > 1;
+
+  /// Stable identity for this grouping resolution.
+  String get groupKey => '$sourceStartIndex:$sourceEndIndexExclusive';
+
+  /// Every raw point represented by this projection, in source order.
+  List<int> get sourcePointIndices => List<int>.unmodifiable(
+    List<int>.generate(
+      sourceCount,
+      (offset) => sourceStartIndex + offset,
+      growable: false,
+    ),
+  );
 }
 
 /// Immutable source index for ordered candlestick data.
@@ -111,10 +141,100 @@ class CandlestickViewportIndex {
   }
 }
 
+/// Builds density-aware OHLC projections without changing source data.
+abstract final class CandlestickDensityProjector {
+  static List<CandlestickProjection> project({
+    required CandlestickViewportIndex index,
+    required double xMin,
+    required double xMax,
+    required double plotWidth,
+    required CandlestickDensityGrouping grouping,
+    double paddingData = 0,
+  }) {
+    grouping.validate();
+    final visible = index.visibleRange(
+      xMin: xMin,
+      xMax: xMax,
+      paddingData: paddingData,
+    );
+    if (visible.isEmpty) return const [];
+
+    final maximumGroupCount = plotWidth.isFinite && plotWidth > 0
+        ? math.max(1, (plotWidth / grouping.targetGroupWidth).floor())
+        : visible.length;
+    final proposedGroupSize = (visible.length / maximumGroupCount).ceil();
+    if (!grouping.enabled ||
+        proposedGroupSize < grouping.minimumPointsPerGroup) {
+      return List<CandlestickProjection>.generate(visible.length, (offset) {
+        final sourceIndex = visible.start + offset;
+        return CandlestickProjection(
+          point: index.points[sourceIndex],
+          sourceStartIndex: sourceIndex,
+          sourceEndIndexExclusive: sourceIndex + 1,
+        );
+      }, growable: false);
+    }
+
+    final groupSize = math.max(
+      grouping.minimumPointsPerGroup,
+      proposedGroupSize,
+    );
+    final firstGroupStart = (visible.start ~/ groupSize) * groupSize;
+    final projections = <CandlestickProjection>[];
+    for (
+      var groupStart = firstGroupStart;
+      groupStart < visible.endExclusive;
+      groupStart += groupSize
+    ) {
+      final groupEnd = math.min(index.points.length, groupStart + groupSize);
+      if (groupEnd <= visible.start || groupStart >= visible.endExclusive) {
+        continue;
+      }
+      projections.add(_aggregate(index.points, groupStart, groupEnd));
+    }
+    return List<CandlestickProjection>.unmodifiable(projections);
+  }
+
+  static CandlestickProjection _aggregate(
+    List<CandlestickDataPoint> points,
+    int start,
+    int endExclusive,
+  ) {
+    final first = points[start];
+    final last = points[endExclusive - 1];
+    var high = first.high;
+    var low = first.low;
+    for (
+      var sourceIndex = start + 1;
+      sourceIndex < endExclusive;
+      sourceIndex++
+    ) {
+      final point = points[sourceIndex];
+      if (point.high > high) high = point.high;
+      if (point.low < low) low = point.low;
+    }
+    return CandlestickProjection(
+      point: CandlestickDataPoint(
+        x: first.x,
+        open: first.open,
+        high: high,
+        low: low,
+        close: last.close,
+        timestamp: first.timestamp,
+      ),
+      sourceStartIndex: start,
+      sourceEndIndexExclusive: endExclusive,
+    );
+  }
+}
+
 /// Pure plot-space geometry for one visible source candle.
 class CandlestickGeometry {
   const CandlestickGeometry({
+    required this.projectionIndex,
     required this.pointIndex,
+    required this.sourceStartIndex,
+    required this.sourceEndIndexExclusive,
     required this.point,
     required this.direction,
     required this.centerX,
@@ -129,7 +249,13 @@ class CandlestickGeometry {
     required this.hitBounds,
   });
 
+  /// Zero-based position within the current render projection.
+  final int projectionIndex;
+
+  /// First raw source index represented by this candle.
   final int pointIndex;
+  final int sourceStartIndex;
+  final int sourceEndIndexExclusive;
   final CandlestickDataPoint point;
   final CandlestickDirection direction;
   final double centerX;
@@ -142,6 +268,21 @@ class CandlestickGeometry {
   final Offset lowerWickEnd;
   final Rect paintBounds;
   final Rect hitBounds;
+
+  int get sourceCount => sourceEndIndexExclusive - sourceStartIndex;
+  bool get isGrouped => sourceCount > 1;
+  String get groupKey => '$sourceStartIndex:$sourceEndIndexExclusive';
+  List<int> get sourcePointIndices => List<int>.unmodifiable(
+    List<int>.generate(
+      sourceCount,
+      (offset) => sourceStartIndex + offset,
+      growable: false,
+    ),
+  );
+
+  bool representsSourcePoint(int sourcePointIndex) =>
+      sourcePointIndex >= sourceStartIndex &&
+      sourcePointIndex < sourceEndIndexExclusive;
 }
 
 /// Resolves visible candlestick geometry without painting or allocating style
@@ -153,10 +294,12 @@ class CandlestickGeometryEngine {
     required CandlestickViewportIndex index,
     required ChartTransform transform,
     required CandlestickChartStyle style,
+    CandlestickDensityGrouping grouping = const CandlestickDensityGrouping(),
     double devicePixelRatio = 1,
     double minimumHitTargetSize = 8,
   }) {
     style.validate();
+    grouping.validate();
     if (transform.transposed) {
       throw ArgumentError(
         'Candlestick geometry does not support transposition',
@@ -185,21 +328,49 @@ class CandlestickGeometryEngine {
       style.maxBodyWidth,
     );
     final paddingData = (bodyWidth / 2) * transform.dataPerPixelX;
-    final visible = index.visibleRange(
+    var projections = CandlestickDensityProjector.project(
+      index: index,
       xMin: transform.dataXMin,
       xMax: transform.dataXMax,
-      paddingData: paddingData,
+      plotWidth: transform.plotWidth,
+      grouping: grouping,
+      // Group sizing uses the exact viewport, matching crosshair tracking.
+      // A full aligned bucket already carries the source candle immediately
+      // before an interior viewport edge when that bucket overlaps the view.
+      paddingData: grouping.enabled ? 0 : paddingData,
     );
-    if (visible.isEmpty) return const [];
+    if (grouping.enabled && projections.every((item) => !item.isGrouped)) {
+      // When opt-in grouping does not activate at this density, preserve the
+      // legacy raw edge-body padding exactly.
+      projections = CandlestickDensityProjector.project(
+        index: index,
+        xMin: transform.dataXMin,
+        xMax: transform.dataXMax,
+        plotWidth: transform.plotWidth,
+        grouping: grouping.copyWith(enabled: false),
+        paddingData: paddingData,
+      );
+    }
+    if (projections.isEmpty) return const [];
 
-    return List<CandlestickGeometry>.generate(visible.length, (offset) {
-      final pointIndex = visible.start + offset;
+    final projectedSpacingData = _medianPositiveProjectionSpacing(projections);
+    final projectedSpacingPixels = projectedSpacingData == null
+        ? style.maxBodyWidth / style.bodyWidthFactor
+        : projectedSpacingData * transform.pixelsPerDataX;
+    final projectedBodyWidth = (projectedSpacingPixels * style.bodyWidthFactor)
+        .clamp(style.minBodyWidth, style.maxBodyWidth);
+
+    return List<CandlestickGeometry>.generate(projections.length, (offset) {
+      final projection = projections[offset];
       return _resolveOne(
-        pointIndex: pointIndex,
-        point: index.points[pointIndex],
+        projectionIndex: offset,
+        pointIndex: projection.sourceStartIndex,
+        sourceStartIndex: projection.sourceStartIndex,
+        sourceEndIndexExclusive: projection.sourceEndIndexExclusive,
+        point: projection.point,
         transform: transform,
         style: style,
-        bodyWidth: bodyWidth,
+        bodyWidth: projectedBodyWidth,
         devicePixelRatio: devicePixelRatio,
         minimumHitTargetSize: minimumHitTargetSize,
       );
@@ -207,7 +378,10 @@ class CandlestickGeometryEngine {
   }
 
   static CandlestickGeometry _resolveOne({
+    required int projectionIndex,
     required int pointIndex,
+    required int sourceStartIndex,
+    required int sourceEndIndexExclusive,
     required CandlestickDataPoint point,
     required ChartTransform transform,
     required CandlestickChartStyle style,
@@ -267,7 +441,10 @@ class CandlestickGeometryEngine {
     );
 
     return CandlestickGeometry(
+      projectionIndex: projectionIndex,
       pointIndex: pointIndex,
+      sourceStartIndex: sourceStartIndex,
+      sourceEndIndexExclusive: sourceEndIndexExclusive,
       point: point,
       direction: point.direction,
       centerX: centerX,
@@ -288,4 +465,19 @@ class CandlestickGeometryEngine {
 
   static double _align(double value, double devicePixelRatio) =>
       (value * devicePixelRatio).roundToDouble() / devicePixelRatio;
+
+  static double? _medianPositiveProjectionSpacing(
+    List<CandlestickProjection> projections,
+  ) {
+    if (projections.length < 2) return null;
+    final spacings = <double>[];
+    for (var index = 1; index < projections.length; index++) {
+      final spacing =
+          projections[index].point.x - projections[index - 1].point.x;
+      if (spacing > 0 && spacing.isFinite) spacings.add(spacing);
+    }
+    if (spacings.isEmpty) return null;
+    spacings.sort();
+    return spacings[(spacings.length - 1) >> 1];
+  }
 }

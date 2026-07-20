@@ -5,6 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('direct Candlestick route attaches one Workbench', (
+    tester,
+  ) async {
+    final pixelRatio = tester.view.devicePixelRatio;
+    tester.view.physicalSize = Size(1600 * pixelRatio, 1000 * pixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ShowcaseHome(requestedPageOverride: 'candlestick-charts'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Candlestick Charts'), findsWidgets);
+    expect(find.byType(BravenChartWorkbench), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('narrow showcase uses a drawer for the complete feature list', (
     tester,
   ) async {

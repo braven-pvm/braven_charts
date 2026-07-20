@@ -106,6 +106,7 @@ class ChartRenderBox extends RenderBox {
     this.onDataHitFocus,
     this.onEmptyAreaClick,
     this.onCursorChange,
+    this.onAnnotationDragUpdate,
     this.onAnnotationChanged,
     this.onRangeCreationComplete,
     this.onSelectionGestureComplete,
@@ -259,6 +260,12 @@ class ChartRenderBox extends RenderBox {
 
   /// Callback for cursor changes.
   final void Function(MouseCursor cursor)? onCursorChange;
+
+  /// Callback for transient annotation geometry during move or resize.
+  ///
+  /// Unlike [onAnnotationChanged], this does not commit controller state.
+  void Function(String annotationId, ChartAnnotation previewAnnotation)?
+  onAnnotationDragUpdate;
 
   /// Callback for annotation changes (e.g., after drag-to-resize).
   ///
@@ -3608,6 +3615,10 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   void Function(String, ChartAnnotation)? get onAnnotationChanged =>
       _renderBox.onAnnotationChanged;
+
+  @override
+  void Function(String, ChartAnnotation)? get onAnnotationDragUpdate =>
+      _renderBox.onAnnotationDragUpdate;
 
   @override
   void Function(double, double, double, double)? get onRangeCreationComplete =>
