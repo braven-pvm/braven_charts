@@ -51,6 +51,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   int _averageWindow = 5;
   double _averageStrokeWidth = 1.6;
   Color _averageColor = const Color(0xFF6366F1);
+  bool _customDirectionColors = false;
+  Color _risingBodyColor = const Color(0xFFCCFBF1);
+  Color _fallingBodyColor = const Color(0xFFEF4444);
+  Color _dojiBodyColor = const Color(0xFF64748B);
+  Color _risingBorderColor = const Color(0xFF0F766E);
+  Color _fallingBorderColor = const Color(0xFFB91C1C);
+  Color _dojiBorderColor = const Color(0xFF475569);
+  Color _risingWickColor = const Color(0xFF0F766E);
+  Color _fallingWickColor = const Color(0xFFB91C1C);
+  Color _dojiWickColor = const Color(0xFF475569);
+  bool _highlightLatestCandle = false;
+  Color _highlightBodyColor = const Color(0xFFFEF08A);
+  Color _highlightBorderColor = const Color(0xFFCA8A04);
+  Color _highlightWickColor = const Color(0xFFA16207);
   bool _trackingEnabled = true;
   bool _showTrackingTooltip = true;
   bool _showPointTooltip = true;
@@ -59,12 +73,28 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   double _intersectionMarkerRadius = 4;
   double _crosshairLineWidth = 1;
   bool _crosshairDashed = false;
+  bool _customTrackingTheme = false;
+  Color _crosshairColor = const Color(0xFF475569);
+  Color _coordinateLabelBackgroundColor = const Color(0xFF1F2937);
+  Color _coordinateLabelTextColor = const Color(0xFFFFFFFF);
+  Color _tooltipBackgroundColor = const Color(0xF2FFFFFF);
+  Color _tooltipBorderColor = const Color(0xFF94A3B8);
+  Color _tooltipTextColor = const Color(0xFF1F2937);
+  double _tooltipBorderWidth = 1;
+  double _tooltipCornerRadius = 6;
+  double _tooltipFontSize = 12;
+  TooltipPosition _tooltipPosition = TooltipPosition.auto;
+  bool _tooltipFollowsCursor = false;
   bool _selectionEnabled = true;
   bool _keyboardEnabled = true;
   bool _showFocusBorder = true;
-  bool _animateUpdates = true;
-  bool _animateEntrance = true;
+  CandlestickDataUpdateAnimationMode _dataUpdateAnimation =
+      CandlestickDataUpdateAnimationMode.interpolate;
+  CandlestickAnimationMode _entranceAnimation = CandlestickAnimationMode.reveal;
   double _entranceStagger = .85;
+  int _animationDurationMs = 400;
+  _CandlestickMotionCurve _motionCurve = _CandlestickMotionCurve.easeInOutCubic;
+  double _revisionMagnitude = 4.6;
   bool _useDensityStressData = false;
   bool _densityGroupingEnabled = false;
   double _targetGroupWidth = 5;
@@ -72,6 +102,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   FinancialTimeSpacing _timeSpacing = FinancialTimeSpacing.ordinal;
   _CandlestickExample _selectedExample = _CandlestickExample.priceAction;
   _CandlestickPalette _candlePalette = _CandlestickPalette.theme;
+  _CandlestickStyleRecipe _styleRecipe = _CandlestickStyleRecipe.balanced;
   _GapFrequency _gapFrequency = _GapFrequency.occasional;
   int _sessionCount = 32;
   double _rangeScale = 1;
@@ -439,18 +470,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         id: 'market-price',
         name: 'Price',
         unit: 'USD',
-        points: candles,
-        candlestickStyle: CandlestickChartStyle(
-          bodyFillMode: _bodyFillMode,
-          bodyWidthFactor: _bodyWidthFactor,
-          maxBodyWidth: _maxBodyWidth,
-          bodyBorderWidth: _bodyBorderWidth,
-          wickWidth: _wickWidth,
-          showBodyBorder: _showBodyBorder,
-          showWicks: _showWicks,
-          bodyCornerRadius: _cornerRadius,
-          minimumBodyHeight: _minimumBodyHeight,
-        ),
+        points: _styledCandles(candles),
+        candlestickStyle: _candlestickStyle,
+        animation: _candlestickAnimation,
         densityGrouping: _densityGrouping,
       ),
       if (_showCloseAverage)
@@ -493,11 +515,13 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         displayMode: CrosshairDisplayMode.tracking,
         interpolateValues: false,
         showTrackingTooltip: _showTrackingTooltip,
-        showIntersectionMarkers: true,
-        showCoordinateLabels: true,
+        showIntersectionMarkers: _showIntersectionMarkers,
+        intersectionMarkerRadius: _intersectionMarkerRadius,
+        showCoordinateLabels: _showCoordinateLabels,
+        style: _crosshairStyle,
       ),
-      tooltip: const TooltipConfig(enabled: true),
-      keyboard: const KeyboardConfig(enabled: true),
+      tooltip: _tooltipConfig,
+      keyboard: KeyboardConfig(enabled: _keyboardEnabled),
     ),
   );
 
@@ -557,8 +581,12 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         mode: CrosshairMode.vertical,
         displayMode: CrosshairDisplayMode.tracking,
         showTrackingTooltip: _showTrackingTooltip,
+        showIntersectionMarkers: _showIntersectionMarkers,
+        intersectionMarkerRadius: _intersectionMarkerRadius,
+        showCoordinateLabels: _showCoordinateLabels,
+        style: _crosshairStyle,
       ),
-      tooltip: const TooltipConfig(enabled: true),
+      tooltip: _tooltipConfig,
     ),
   );
 
@@ -1006,12 +1034,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         showIntersectionMarkers: _showIntersectionMarkers,
         intersectionMarkerRadius: _intersectionMarkerRadius,
         showCoordinateLabels: _showCoordinateLabels,
-        style: CrosshairStyle(
-          lineWidth: _crosshairLineWidth,
-          dashPattern: _crosshairDashed ? const [6, 4] : null,
-        ),
+        style: _crosshairStyle,
       ),
-      tooltip: TooltipConfig(enabled: _showPointTooltip),
+      tooltip: _tooltipConfig,
       keyboard: KeyboardConfig(enabled: _keyboardEnabled),
     ),
   );
@@ -1028,8 +1053,25 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _CandlestickPalette.blueOrange => CandlestickTheme.colorblindFriendly,
       _CandlestickPalette.monochrome => CandlestickTheme.highContrast,
     };
+    final effectiveCandlestickTheme = _customDirectionColors
+        ? candlestickTheme.copyWith(
+            risingBodyFillColor: _risingBodyColor,
+            fallingBodyFillColor: _fallingBodyColor,
+            dojiBodyFillColor: _dojiBodyColor,
+            risingBorderColor: _risingBorderColor,
+            fallingBorderColor: _fallingBorderColor,
+            dojiBorderColor: _dojiBorderColor,
+            risingWickColor: _risingWickColor,
+            fallingWickColor: _fallingWickColor,
+            dojiWickColor: _dojiWickColor,
+          )
+        : candlestickTheme;
     return base.copyWith(
-      candlestickTheme: candlestickTheme,
+      candlestickTheme: effectiveCandlestickTheme,
+      animationTheme: base.animationTheme.copyWith(
+        dataUpdateDuration: Duration(milliseconds: _animationDurationMs),
+        dataUpdateCurve: _motionCurve.curve,
+      ),
       legendStyle: base.legendStyle.copyWith(
         position: _legendPosition,
         allowDragging: _legendDraggable,
@@ -1063,28 +1105,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         id: 'reference-ohlc',
         name: 'Price',
         unit: 'USD',
-        points: candles,
-        candlestickStyle: CandlestickChartStyle(
-          bodyFillMode: _bodyFillMode,
-          bodyWidthFactor: _bodyWidthFactor,
-          minBodyWidth: _minBodyWidth,
-          maxBodyWidth: _maxBodyWidth,
-          bodyBorderWidth: _bodyBorderWidth,
-          wickWidth: _wickWidth,
-          showBodyBorder: _showBodyBorder,
-          showWicks: _showWicks,
-          bodyCornerRadius: _cornerRadius,
-          minimumBodyHeight: _minimumBodyHeight,
-        ),
-        animation: CandlestickAnimationStyle(
-          mode: _animateEntrance
-              ? CandlestickAnimationMode.reveal
-              : CandlestickAnimationMode.none,
-          staggerFraction: _entranceStagger,
-          dataUpdateMode: _animateUpdates
-              ? CandlestickDataUpdateAnimationMode.interpolate
-              : CandlestickDataUpdateAnimationMode.none,
-        ),
+        points: _styledCandles(candles),
+        candlestickStyle: _candlestickStyle,
+        animation: _candlestickAnimation,
         densityGrouping: _densityGrouping,
       ),
       if (_showCloseAverage)
@@ -1098,6 +1121,79 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
     ];
   }
+
+  CandlestickChartStyle get _candlestickStyle => CandlestickChartStyle(
+    risingBodyFillColor: _customDirectionColors ? _risingBodyColor : null,
+    fallingBodyFillColor: _customDirectionColors ? _fallingBodyColor : null,
+    dojiBodyFillColor: _customDirectionColors ? _dojiBodyColor : null,
+    risingBorderColor: _customDirectionColors ? _risingBorderColor : null,
+    fallingBorderColor: _customDirectionColors ? _fallingBorderColor : null,
+    dojiBorderColor: _customDirectionColors ? _dojiBorderColor : null,
+    risingWickColor: _customDirectionColors ? _risingWickColor : null,
+    fallingWickColor: _customDirectionColors ? _fallingWickColor : null,
+    dojiWickColor: _customDirectionColors ? _dojiWickColor : null,
+    bodyFillMode: _bodyFillMode,
+    bodyWidthFactor: _bodyWidthFactor,
+    minBodyWidth: _minBodyWidth,
+    maxBodyWidth: _maxBodyWidth,
+    bodyBorderWidth: _bodyBorderWidth,
+    wickWidth: _wickWidth,
+    showBodyBorder: _showBodyBorder,
+    showWicks: _showWicks,
+    bodyCornerRadius: _cornerRadius,
+    minimumBodyHeight: _minimumBodyHeight,
+  );
+
+  CandlestickAnimationStyle get _candlestickAnimation =>
+      CandlestickAnimationStyle(
+        mode: _entranceAnimation,
+        staggerFraction: _entranceStagger,
+        dataUpdateMode: _dataUpdateAnimation,
+      );
+
+  List<CandlestickDataPoint> _styledCandles(
+    List<CandlestickDataPoint> candles,
+  ) => [
+    for (var index = 0; index < candles.length; index++)
+      if (_highlightLatestCandle && index == candles.length - 1)
+        candles[index].copyWith(
+          candlestickStyle: CandlestickPointStyle(
+            bodyFillColor: _highlightBodyColor,
+            borderColor: _highlightBorderColor,
+            wickColor: _highlightWickColor,
+          ),
+        )
+      else
+        candles[index],
+  ];
+
+  CrosshairStyle get _crosshairStyle => CrosshairStyle(
+    lineColor: _customTrackingTheme ? _crosshairColor : const Color(0xFF666666),
+    lineWidth: _crosshairLineWidth,
+    dashPattern: _crosshairDashed ? const [6, 4] : null,
+    labelBackgroundColor: _customTrackingTheme
+        ? _coordinateLabelBackgroundColor
+        : const Color(0xFF333333),
+    labelTextColor: _customTrackingTheme
+        ? _coordinateLabelTextColor
+        : const Color(0xFFFFFFFF),
+  );
+
+  TooltipConfig get _tooltipConfig => TooltipConfig(
+    enabled: _showPointTooltip,
+    preferredPosition: _tooltipPosition,
+    followCursor: _tooltipFollowsCursor,
+    style: _customTrackingTheme
+        ? TooltipStyle(
+            backgroundColor: _tooltipBackgroundColor,
+            borderColor: _tooltipBorderColor,
+            borderWidth: _tooltipBorderWidth,
+            borderRadius: _tooltipCornerRadius,
+            textColor: _tooltipTextColor,
+            fontSize: _tooltipFontSize,
+          )
+        : const TooltipStyle(),
+  );
 
   List<Widget> _buildOptions() => [
     if (_showcaseMode == _CandlestickShowcaseMode.workbench)
@@ -1214,21 +1310,26 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               _activeCandleIndex = null;
             }),
           ),
-          BoolOption(
-            key: const ValueKey('candlestick-animate-updates'),
-            label: 'Animate OHLC revisions',
-            subtitle: 'Preserves candle identity while values move',
-            value: _animateUpdates,
-            onChanged: (value) => setState(() => _animateUpdates = value),
+        ],
+      ],
+    ),
+    if (_showcaseMode == _CandlestickShowcaseMode.workbench)
+      OptionSection(
+        title: 'Motion and revisions',
+        icon: Icons.animation_outlined,
+        children: [
+          EnumOption<CandlestickAnimationMode>(
+            key: const ValueKey('candlestick-entrance-animation'),
+            label: 'Entrance animation',
+            value: _entranceAnimation,
+            values: CandlestickAnimationMode.values,
+            labelBuilder: (value) => switch (value) {
+              CandlestickAnimationMode.none => 'None',
+              CandlestickAnimationMode.reveal => 'Ordered reveal',
+            },
+            onChanged: (value) => setState(() => _entranceAnimation = value),
           ),
-          BoolOption(
-            key: const ValueKey('candlestick-animate-entrance'),
-            label: 'Animate entrance',
-            subtitle: 'Reveal candles in session order',
-            value: _animateEntrance,
-            onChanged: (value) => setState(() => _animateEntrance = value),
-          ),
-          if (_animateEntrance)
+          if (_entranceAnimation == CandlestickAnimationMode.reveal)
             SliderOption(
               key: const ValueKey('candlestick-entrance-stagger'),
               label: 'Entrance stagger',
@@ -1239,9 +1340,67 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
               suffix: 'timeline',
               onChanged: (value) => setState(() => _entranceStagger = value),
             ),
+          EnumOption<CandlestickDataUpdateAnimationMode>(
+            key: const ValueKey('candlestick-update-animation'),
+            label: 'OHLC revision animation',
+            subtitle: 'Preserve candle identity while values change',
+            value: _dataUpdateAnimation,
+            values: CandlestickDataUpdateAnimationMode.values,
+            labelBuilder: (value) => switch (value) {
+              CandlestickDataUpdateAnimationMode.none => 'None',
+              CandlestickDataUpdateAnimationMode.interpolate => 'Interpolate',
+            },
+            onChanged: (value) => setState(() => _dataUpdateAnimation = value),
+          ),
+          IntSliderOption(
+            key: const ValueKey('candlestick-animation-duration'),
+            label: 'Animation duration',
+            value: _animationDurationMs,
+            min: 100,
+            max: 1200,
+            suffix: 'ms',
+            onChanged: (value) => setState(() => _animationDurationMs = value),
+          ),
+          EnumOption<_CandlestickMotionCurve>(
+            key: const ValueKey('candlestick-motion-curve'),
+            label: 'Motion curve',
+            value: _motionCurve,
+            values: _CandlestickMotionCurve.values,
+            labelBuilder: (value) => value.label,
+            onChanged: (value) => setState(() => _motionCurve = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-revision-magnitude'),
+            label: 'Revision magnitude',
+            value: _revisionMagnitude,
+            min: 1,
+            max: 12,
+            divisions: 22,
+            suffix: 'USD',
+            onChanged: (value) => setState(() => _revisionMagnitude = value),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('candlestick-options-replay'),
+              onPressed: _chartController.replaySeriesEntrance,
+              icon: const Icon(Icons.replay_outlined),
+              label: const Text('Replay entrance'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('candlestick-options-revise'),
+              onPressed: _reviseLatest,
+              icon: const Icon(Icons.update_outlined),
+              label: const Text('Revise latest candle'),
+            ),
+          ),
         ],
-      ],
-    ),
+      ),
     OptionSection(
       title: 'Interaction detail',
       icon: Icons.ads_click_outlined,
@@ -1288,6 +1447,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _crosshairDashed,
           onChanged: (value) => setState(() => _crosshairDashed = value),
         ),
+        EnumOption<TooltipPosition>(
+          key: const ValueKey('candlestick-tooltip-position'),
+          label: 'Point tooltip position',
+          value: _tooltipPosition,
+          values: TooltipPosition.values,
+          labelBuilder: (value) => value.name,
+          onChanged: (value) => setState(() => _tooltipPosition = value),
+        ),
+        BoolOption(
+          key: const ValueKey('candlestick-tooltip-follow-cursor'),
+          label: 'Tooltip follows cursor',
+          value: _tooltipFollowsCursor,
+          onChanged: (value) => setState(() => _tooltipFollowsCursor = value),
+        ),
         BoolOption(
           key: const ValueKey('candlestick-selection-enabled'),
           label: 'Enable candle selection',
@@ -1306,6 +1479,98 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           value: _showFocusBorder,
           onChanged: (value) => setState(() => _showFocusBorder = value),
         ),
+      ],
+    ),
+    OptionSection(
+      title: 'Tracking theme',
+      icon: Icons.colorize_outlined,
+      children: [
+        BoolOption(
+          key: const ValueKey('candlestick-custom-tracking-theme'),
+          label: 'Override tracking colours',
+          subtitle: 'Style the crosshair, coordinate labels, and both tooltips',
+          value: _customTrackingTheme,
+          onChanged: (value) => setState(() => _customTrackingTheme = value),
+        ),
+        if (_customTrackingTheme) ...[
+          ColorOption(
+            key: const ValueKey('candlestick-crosshair-color'),
+            label: 'Crosshair colour',
+            value: _crosshairColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _crosshairColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-axis-value-background'),
+            label: 'Axis value background',
+            value: _coordinateLabelBackgroundColor,
+            colors: _candlestickSurfaceColorChoices,
+            onChanged: (value) =>
+                setState(() => _coordinateLabelBackgroundColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-axis-value-text'),
+            label: 'Axis value text',
+            value: _coordinateLabelTextColor,
+            colors: _candlestickTextColorChoices,
+            onChanged: (value) =>
+                setState(() => _coordinateLabelTextColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-tooltip-background'),
+            label: 'Tooltip background',
+            value: _tooltipBackgroundColor,
+            colors: _candlestickSurfaceColorChoices,
+            onChanged: (value) =>
+                setState(() => _tooltipBackgroundColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-tooltip-border-color'),
+            label: 'Tooltip border',
+            value: _tooltipBorderColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _tooltipBorderColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-tooltip-text-color'),
+            label: 'Tooltip text',
+            value: _tooltipTextColor,
+            colors: _candlestickTextColorChoices,
+            onChanged: (value) => setState(() => _tooltipTextColor = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-tooltip-border-width'),
+            label: 'Tooltip border width',
+            value: _tooltipBorderWidth,
+            min: 0,
+            max: 4,
+            divisions: 8,
+            suffix: 'px',
+            onChanged: (value) => setState(() => _tooltipBorderWidth = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-tooltip-radius'),
+            label: 'Tooltip corner radius',
+            value: _tooltipCornerRadius,
+            min: 0,
+            max: 16,
+            divisions: 16,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _tooltipCornerRadius = value),
+          ),
+          SliderOption(
+            key: const ValueKey('candlestick-tooltip-font-size'),
+            label: 'Tooltip font size',
+            value: _tooltipFontSize,
+            min: 10,
+            max: 18,
+            divisions: 8,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _tooltipFontSize = value),
+          ),
+        ],
       ],
     ),
     if (_showcaseMode == _CandlestickShowcaseMode.workbench)
@@ -1351,6 +1616,15 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       title: 'Candle geometry',
       icon: Icons.candlestick_chart,
       children: [
+        EnumOption<_CandlestickStyleRecipe>(
+          key: const ValueKey('candlestick-style-recipe'),
+          label: 'Apply style recipe',
+          subtitle: 'Start from a coherent visual treatment, then fine-tune',
+          value: _styleRecipe,
+          values: _CandlestickStyleRecipe.values,
+          labelBuilder: (value) => value.label,
+          onChanged: _applyStyleRecipe,
+        ),
         EnumOption<_CandlestickPalette>(
           key: const ValueKey('candlestick-palette'),
           label: 'Candle palette',
@@ -1423,6 +1697,121 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
           suffix: 'px',
           onChanged: (value) => setState(() => _minimumBodyHeight = value),
         ),
+      ],
+    ),
+    OptionSection(
+      title: 'Element colours',
+      icon: Icons.palette_outlined,
+      children: [
+        BoolOption(
+          key: const ValueKey('candlestick-custom-direction-colors'),
+          label: 'Override direction colours',
+          subtitle: 'Set body, border, and wick colours for every direction',
+          value: _customDirectionColors,
+          onChanged: (value) => setState(() => _customDirectionColors = value),
+        ),
+        if (_customDirectionColors) ...[
+          const _OptionGroupLabel('Body fills'),
+          ColorOption(
+            key: const ValueKey('candlestick-rising-body-color'),
+            label: 'Rising body',
+            value: _risingBodyColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _risingBodyColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-falling-body-color'),
+            label: 'Falling body',
+            value: _fallingBodyColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _fallingBodyColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-doji-body-color'),
+            label: 'Doji body',
+            value: _dojiBodyColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _dojiBodyColor = value),
+          ),
+          if (_showBodyBorder) ...[
+            const _OptionGroupLabel('Body borders'),
+            ColorOption(
+              key: const ValueKey('candlestick-rising-border-color'),
+              label: 'Rising border',
+              value: _risingBorderColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _risingBorderColor = value),
+            ),
+            ColorOption(
+              key: const ValueKey('candlestick-falling-border-color'),
+              label: 'Falling border',
+              value: _fallingBorderColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _fallingBorderColor = value),
+            ),
+            ColorOption(
+              key: const ValueKey('candlestick-doji-border-color'),
+              label: 'Doji border',
+              value: _dojiBorderColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _dojiBorderColor = value),
+            ),
+          ],
+          if (_showWicks) ...[
+            const _OptionGroupLabel('Wicks'),
+            ColorOption(
+              key: const ValueKey('candlestick-rising-wick-color'),
+              label: 'Rising wick',
+              value: _risingWickColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _risingWickColor = value),
+            ),
+            ColorOption(
+              key: const ValueKey('candlestick-falling-wick-color'),
+              label: 'Falling wick',
+              value: _fallingWickColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _fallingWickColor = value),
+            ),
+            ColorOption(
+              key: const ValueKey('candlestick-doji-wick-color'),
+              label: 'Doji wick',
+              value: _dojiWickColor,
+              colors: _candlestickColorChoices,
+              onChanged: (value) => setState(() => _dojiWickColor = value),
+            ),
+          ],
+        ],
+        BoolOption(
+          key: const ValueKey('candlestick-highlight-latest'),
+          label: 'Highlight latest candle',
+          subtitle: 'Demonstrate a point-level body, border, and wick override',
+          value: _highlightLatestCandle,
+          onChanged: (value) => setState(() => _highlightLatestCandle = value),
+        ),
+        if (_highlightLatestCandle) ...[
+          ColorOption(
+            key: const ValueKey('candlestick-highlight-body-color'),
+            label: 'Highlight body',
+            value: _highlightBodyColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _highlightBodyColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-highlight-border-color'),
+            label: 'Highlight border',
+            value: _highlightBorderColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _highlightBorderColor = value),
+          ),
+          ColorOption(
+            key: const ValueKey('candlestick-highlight-wick-color'),
+            label: 'Highlight wick',
+            value: _highlightWickColor,
+            colors: _candlestickColorChoices,
+            onChanged: (value) => setState(() => _highlightWickColor = value),
+          ),
+        ],
       ],
     ),
     OptionSection(
@@ -1671,7 +2060,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
   void _reviseLatest() {
     final latest = _candles.last;
     _revisionStep++;
-    final closeDelta = _revisionStep.isEven ? -3.4 : 4.6;
+    final closeDelta = _revisionStep.isEven
+        ? -_revisionMagnitude * .75
+        : _revisionMagnitude;
     final close = latest.close + closeDelta;
     setState(() {
       _candles = [
@@ -1683,6 +2074,62 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         ),
       ];
       _activeCandleIndex = _candles.length - 1;
+    });
+  }
+
+  void _applyStyleRecipe(_CandlestickStyleRecipe recipe) {
+    setState(() {
+      _styleRecipe = recipe;
+      _customDirectionColors = false;
+      _highlightLatestCandle = false;
+      switch (recipe) {
+        case _CandlestickStyleRecipe.balanced:
+          _candlePalette = _CandlestickPalette.theme;
+          _bodyFillMode = CandlestickBodyFillMode.hollowRising;
+          _bodyBorderWidth = 1;
+          _wickWidth = 1;
+          _cornerRadius = 1;
+          _minimumBodyHeight = 1;
+          _averageColor = const Color(0xFF6366F1);
+          break;
+        case _CandlestickStyleRecipe.trading:
+          _candlePalette = _CandlestickPalette.market;
+          _bodyFillMode = CandlestickBodyFillMode.filled;
+          _bodyBorderWidth = 1;
+          _wickWidth = 1;
+          _cornerRadius = 0;
+          _minimumBodyHeight = 1;
+          _averageColor = const Color(0xFF0EA5E9);
+          break;
+        case _CandlestickStyleRecipe.accessible:
+          _candlePalette = _CandlestickPalette.blueOrange;
+          _bodyFillMode = CandlestickBodyFillMode.hollowRising;
+          _bodyBorderWidth = 1.8;
+          _wickWidth = 1.6;
+          _cornerRadius = 1;
+          _minimumBodyHeight = 2;
+          _averageColor = const Color(0xFF7C3AED);
+          break;
+        case _CandlestickStyleRecipe.print:
+          _candlePalette = _CandlestickPalette.monochrome;
+          _bodyFillMode = CandlestickBodyFillMode.hollowRising;
+          _bodyBorderWidth = 1.6;
+          _wickWidth = 1.4;
+          _cornerRadius = 0;
+          _minimumBodyHeight = 2;
+          _averageColor = const Color(0xFF374151);
+          break;
+        case _CandlestickStyleRecipe.event:
+          _candlePalette = _CandlestickPalette.market;
+          _bodyFillMode = CandlestickBodyFillMode.filled;
+          _bodyBorderWidth = 1.2;
+          _wickWidth = 1.2;
+          _cornerRadius = 1;
+          _minimumBodyHeight = 1.5;
+          _averageColor = const Color(0xFF6366F1);
+          _highlightLatestCandle = true;
+          break;
+      }
     });
   }
 
@@ -1865,6 +2312,20 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _averageWindow = 5;
       _averageStrokeWidth = 1.6;
       _averageColor = const Color(0xFF6366F1);
+      _customDirectionColors = false;
+      _risingBodyColor = const Color(0xFFCCFBF1);
+      _fallingBodyColor = const Color(0xFFEF4444);
+      _dojiBodyColor = const Color(0xFF64748B);
+      _risingBorderColor = const Color(0xFF0F766E);
+      _fallingBorderColor = const Color(0xFFB91C1C);
+      _dojiBorderColor = const Color(0xFF475569);
+      _risingWickColor = const Color(0xFF0F766E);
+      _fallingWickColor = const Color(0xFFB91C1C);
+      _dojiWickColor = const Color(0xFF475569);
+      _highlightLatestCandle = false;
+      _highlightBodyColor = const Color(0xFFFEF08A);
+      _highlightBorderColor = const Color(0xFFCA8A04);
+      _highlightWickColor = const Color(0xFFA16207);
       _trackingEnabled = true;
       _showTrackingTooltip = true;
       _showPointTooltip = true;
@@ -1873,12 +2334,27 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _intersectionMarkerRadius = 4;
       _crosshairLineWidth = 1;
       _crosshairDashed = false;
+      _customTrackingTheme = false;
+      _crosshairColor = const Color(0xFF475569);
+      _coordinateLabelBackgroundColor = const Color(0xFF1F2937);
+      _coordinateLabelTextColor = const Color(0xFFFFFFFF);
+      _tooltipBackgroundColor = const Color(0xF2FFFFFF);
+      _tooltipBorderColor = const Color(0xFF94A3B8);
+      _tooltipTextColor = const Color(0xFF1F2937);
+      _tooltipBorderWidth = 1;
+      _tooltipCornerRadius = 6;
+      _tooltipFontSize = 12;
+      _tooltipPosition = TooltipPosition.auto;
+      _tooltipFollowsCursor = false;
       _selectionEnabled = true;
       _keyboardEnabled = true;
       _showFocusBorder = true;
-      _animateUpdates = true;
-      _animateEntrance = true;
+      _dataUpdateAnimation = CandlestickDataUpdateAnimationMode.interpolate;
+      _entranceAnimation = CandlestickAnimationMode.reveal;
       _entranceStagger = .85;
+      _animationDurationMs = 400;
+      _motionCurve = _CandlestickMotionCurve.easeInOutCubic;
+      _revisionMagnitude = 4.6;
       _useDensityStressData = false;
       _densityGroupingEnabled = false;
       _targetGroupWidth = 5;
@@ -1886,6 +2362,7 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       _timeSpacing = FinancialTimeSpacing.ordinal;
       _selectedExample = _CandlestickExample.priceAction;
       _candlePalette = _CandlestickPalette.theme;
+      _styleRecipe = _CandlestickStyleRecipe.balanced;
       _gapFrequency = _GapFrequency.occasional;
       _sessionCount = 32;
       _rangeScale = 1;
@@ -1928,6 +2405,23 @@ class _FamilyBadge extends StatelessWidget {
         fontWeight: FontWeight.w800,
         letterSpacing: 0.4,
       ),
+    ),
+  );
+}
+
+class _OptionGroupLabel extends StatelessWidget {
+  const _OptionGroupLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    child: Text(
+      label,
+      style: Theme.of(
+        context,
+      ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
     ),
   );
 }
@@ -2301,6 +2795,30 @@ enum _CandlestickPalette {
   final String label;
 }
 
+enum _CandlestickStyleRecipe {
+  balanced('Balanced analytical'),
+  trading('Trading terminal'),
+  accessible('Accessible blue / orange'),
+  print('Print-friendly mono'),
+  event('Latest-event highlight');
+
+  const _CandlestickStyleRecipe(this.label);
+
+  final String label;
+}
+
+enum _CandlestickMotionCurve {
+  linear('Linear', Curves.linear),
+  easeOut('Ease out', Curves.easeOutCubic),
+  easeInOutCubic('Ease in / out cubic', Curves.easeInOutCubic),
+  fastOutSlowIn('Fast out / slow in', Curves.fastOutSlowIn);
+
+  const _CandlestickMotionCurve(this.label, this.curve);
+
+  final String label;
+  final Curve curve;
+}
+
 enum _GapFrequency {
   none('None'),
   occasional('Occasional'),
@@ -2320,6 +2838,43 @@ enum _StockRangePreset {
   all,
   custom,
 }
+
+const _candlestickColorChoices = <Color>[
+  Color(0xFF0F766E),
+  Color(0xFF22C55E),
+  Color(0xFF2563EB),
+  Color(0xFF0EA5E9),
+  Color(0xFF7C3AED),
+  Color(0xFFEC4899),
+  Color(0xFFDC2626),
+  Color(0xFFF97316),
+  Color(0xFFFACC15),
+  Color(0xFF64748B),
+  Color(0xFF111827),
+  Color(0xFFFFFFFF),
+];
+
+const _candlestickSurfaceColorChoices = <Color>[
+  Color(0xFFFFFFFF),
+  Color(0xFFF8FAFC),
+  Color(0xFFFEF3C7),
+  Color(0xFFE0F2FE),
+  Color(0xFFEDE9FE),
+  Color(0xFF334155),
+  Color(0xFF1F2937),
+  Color(0xFF111827),
+];
+
+const _candlestickTextColorChoices = <Color>[
+  Color(0xFFFFFFFF),
+  Color(0xFFF8FAFC),
+  Color(0xFF1F2937),
+  Color(0xFF111827),
+  Color(0xFF2563EB),
+  Color(0xFF7C3AED),
+  Color(0xFFB91C1C),
+  Color(0xFF0F766E),
+];
 
 List<CandlestickDataPoint> _buildDensityCandles() {
   final candles = <CandlestickDataPoint>[];

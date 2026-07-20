@@ -378,6 +378,140 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('wires element colours, motion, replay, and tracking theme', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CandlestickChartsPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-style-recipe')),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic recipe = tester.widget(
+      find.byKey(const ValueKey('candlestick-style-recipe')),
+    );
+    recipe.onChanged(_testEnumValue('event', recipe.values));
+    await tester.pump();
+
+    final dynamic customColours = tester.widget(
+      find.byKey(const ValueKey('candlestick-custom-direction-colors')),
+    );
+    customColours.onChanged(true);
+    await tester.pump();
+    final dynamic risingBody = tester.widget(
+      find.byKey(const ValueKey('candlestick-rising-body-color')),
+    );
+    risingBody.onChanged(const Color(0xFF2563EB));
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-custom-tracking-theme')),
+      -300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic customTracking = tester.widget(
+      find.byKey(const ValueKey('candlestick-custom-tracking-theme')),
+    );
+    customTracking.onChanged(true);
+    await tester.pump();
+    final dynamic crosshairColour = tester.widget(
+      find.byKey(const ValueKey('candlestick-crosshair-color')),
+    );
+    crosshairColour.onChanged(const Color(0xFF7C3AED));
+    final dynamic tooltipBackground = tester.widget(
+      find.byKey(const ValueKey('candlestick-tooltip-background')),
+    );
+    tooltipBackground.onChanged(const Color(0xFF111827));
+    final dynamic tooltipBorderWidth = tester.widget(
+      find.byKey(const ValueKey('candlestick-tooltip-border-width')),
+    );
+    tooltipBorderWidth.onChanged(2.0);
+    final dynamic tooltipFontSize = tester.widget(
+      find.byKey(const ValueKey('candlestick-tooltip-font-size')),
+    );
+    tooltipFontSize.onChanged(14.0);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-tooltip-position')),
+      -300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic tooltipPosition = tester.widget(
+      find.byKey(const ValueKey('candlestick-tooltip-position')),
+    );
+    tooltipPosition.onChanged(TooltipPosition.right);
+    final dynamic followCursor = tester.widget(
+      find.byKey(const ValueKey('candlestick-tooltip-follow-cursor')),
+    );
+    followCursor.onChanged(true);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('candlestick-update-animation')),
+      -300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    final dynamic updateAnimation = tester.widget(
+      find.byKey(const ValueKey('candlestick-update-animation')),
+    );
+    updateAnimation.onChanged(CandlestickDataUpdateAnimationMode.none);
+    final dynamic duration = tester.widget(
+      find.byKey(const ValueKey('candlestick-animation-duration')),
+    );
+    duration.onChanged(700);
+    final dynamic curve = tester.widget(
+      find.byKey(const ValueKey('candlestick-motion-curve')),
+    );
+    curve.onChanged(_testEnumValue('linear', curve.values));
+    await tester.pump();
+
+    final chart = tester.widget<BravenChartPlus>(
+      find.byKey(const ValueKey('candlestick-reference-chart')),
+    );
+    final series = chart.series.first as CandlestickChartSeries;
+    expect(
+      series.candlestickStyle.risingBodyFillColor,
+      const Color(0xFF2563EB),
+    );
+    expect(series.candles.last.candlestickStyle?.bodyFillColor, isNotNull);
+    expect(
+      series.animation.dataUpdateMode,
+      CandlestickDataUpdateAnimationMode.none,
+    );
+    expect(
+      chart.theme?.animationTheme.dataUpdateDuration,
+      const Duration(milliseconds: 700),
+    );
+    expect(chart.theme?.animationTheme.dataUpdateCurve, Curves.linear);
+    expect(
+      chart.interactionConfig?.crosshair.style.lineColor,
+      const Color(0xFF7C3AED),
+    );
+    expect(
+      chart.interactionConfig?.tooltip.style.backgroundColor,
+      const Color(0xFF111827),
+    );
+    expect(chart.interactionConfig?.tooltip.style.borderWidth, 2);
+    expect(chart.interactionConfig?.tooltip.style.fontSize, 14);
+    expect(
+      chart.interactionConfig?.tooltip.preferredPosition,
+      TooltipPosition.right,
+    );
+    expect(chart.interactionConfig?.tooltip.followCursor, isTrue);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('candlestick-options-replay')),
+    );
+    await tester.tap(find.byKey(const ValueKey('candlestick-options-replay')));
+    await tester.pump(const Duration(milliseconds: 32));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('switches financial time spacing and revises the latest candle', (
     tester,
   ) async {

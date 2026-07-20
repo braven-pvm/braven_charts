@@ -485,9 +485,27 @@ retaining Braven styling and Workbench behavior.
 - Added an accessibility-focused preset combining blue/orange hues, hollow
   rising bodies, stronger borders and wicks, visible doji, a close average, and
   a direction key so financial direction never relies on colour alone.
+- Added five coherent styling recipes for balanced analytical, trading-terminal,
+  accessible blue/orange, print-friendly monochrome, and latest-event emphasis
+  treatments. Recipes are starting points; every underlying geometry and colour
+  control remains independently adjustable.
+- Added opt-in per-direction body, border, and wick colour overrides plus a
+  point-level latest-candle body/border/wick highlight. The same resolved
+  colours feed the Workbench chart, direction key, and stock-composition panes.
+- Replaced binary motion switches with explicit entrance and OHLC-update modes,
+  entrance stagger, 100–1,200 ms duration, curve selection, revision magnitude,
+  and in-rail replay/revise actions wired to the mounted controller and native
+  Candlestick transition contract.
+- Added a progressive tracking-theme section covering crosshair, coordinate
+  label, and tooltip colours; tooltip border width, corner radius, and font
+  size; point-tooltip position; and cursor-follow behavior. One `TooltipStyle`
+  now themes both point and multi-value OHLC tracking tooltips.
 - Increased compact composition height to preserve a valid plot after the
   expanded wrapping preset catalogue and options surface; focused compact and
-  full Candlestick showcase tests pass.
+  full Candlestick showcase tests pass. The Candlestick suite now has 14 tests,
+  including renderer-contract assertions for custom element colours, point
+  highlighting, native animation configuration, replay, crosshair styling, and
+  tooltip styling.
 
 ### Still required before promotion
 
