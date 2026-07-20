@@ -1226,6 +1226,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   /// Currently selected series ID for Y-axis slot selection.
   String? _selectedSeriesId;
 
+  /// Cluster series whose aggregate viewport is currently being inspected.
+  String? _activeScatterClusterDrillSeriesId;
+
   final Set<ChartPointRef> _focusedPointRefs = <ChartPointRef>{};
   final Set<ChartPointRef> _selectedPointRefs = <ChartPointRef>{};
   ChartSelectionResult _lastPublishedSelectionResult =
@@ -1355,6 +1358,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         series.yAxisConfig != null ||
         (series.yAxisId != null && series.yAxisId!.isNotEmpty),
   );
+
+  bool get _showScatterClusterOverviewAction {
+    final activeSeriesId = _activeScatterClusterDrillSeriesId;
+    if (activeSeriesId == null) return false;
+    return _effectiveDataSeries.whereType<ScatterChartSeries>().any(
+      (series) =>
+          series.id == activeSeriesId &&
+          series.renderMode == ScatterRenderMode.clusters &&
+          series.clusterConfig.drillOnTap,
+    );
+  }
 
   NormalizationMode? get _effectiveNormalizationMode {
     final mode = widget.normalizationMode;
@@ -2104,6 +2118,17 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     renderBox.resetView();
+    if (_activeScatterClusterDrillSeriesId != null && mounted) {
+      setState(() => _activeScatterClusterDrillSeriesId = null);
+    }
+  }
+
+  void _returnToScatterClusterOverview() {
+    final renderBox =
+        _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
+    if (renderBox == null) return;
+    _captureStateRevision++;
+    _returnToLiveViewport(renderBox);
   }
 
   /// Called when annotation controller notifies of changes.
@@ -2589,6 +2614,13 @@ class _BravenChartPlusState extends State<BravenChartPlus>
 
     _resolvedChartData = _resolveChartData();
     _effectiveDataSeries = _resolvedChartData.renderSeries;
+    final activeDrillSeriesId = _activeScatterClusterDrillSeriesId;
+    if (activeDrillSeriesId != null &&
+        !_effectiveDataSeries.any(
+          (series) => series.id == activeDrillSeriesId,
+        )) {
+      _activeScatterClusterDrillSeriesId = null;
+    }
     final hoveredMarker = _coordinator.hoveredMarker;
     if (hoveredMarker != null) {
       ChartSeries? nextHoveredSeries;
@@ -5591,7 +5623,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       notifyViewportChanged: true,
     );
     if (changed) {
-      _captureStateRevision++;
+      setState(() {
+        _captureStateRevision++;
+        _activeScatterClusterDrillSeriesId = series.id;
+      });
       _handleViewportInteractionPulse();
     }
     return changed;
@@ -8009,6 +8044,45 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                         builder: chartActionButtonBuilder,
                         config: chartActionButtonConfig,
                         listenable: chartActionButtonListenable,
+                      ),
+                    ),
+                  if (_showScatterClusterOverviewAction)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Semantics(
+                        button: true,
+                        label: 'Return to the full cluster overview',
+                        child: OutlinedButton.icon(
+                          key: const ValueKey<String>(
+                            'scatter-cluster-back-to-overview',
+                          ),
+                          onPressed: _returnToScatterClusterOverview,
+                          icon: const Icon(Icons.arrow_back, size: 16),
+                          label: const Text('Back to overview'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: 0.94),
+                            side: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   if (donutCenterSeries.isNotEmpty &&

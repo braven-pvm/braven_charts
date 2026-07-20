@@ -1486,6 +1486,9 @@ class SeriesElement implements DataHitElement {
         cluster.dataYRange,
         suffix: unit,
       ),
+      activationHint: currentSeries.clusterConfig.drillOnTap
+          ? 'Click or tap to inspect ${cluster.pointCount} observations'
+          : null,
       markerColor: currentSeries.color ?? themeColor,
       ordinal: clusterIndex + 1,
       count: layout.renderedMarkerCount,
@@ -3300,15 +3303,6 @@ class SeriesElement implements DataHitElement {
             ..color = baseColor.withValues(alpha: zoneOpacity.clamp(0, 1))
             ..style = PaintingStyle.fill,
         );
-        canvas.drawRRect(
-          zone,
-          Paint()
-            ..color = baseColor.withValues(
-              alpha: (zoneOpacity * 2.4).clamp(0, 0.38),
-            )
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
-        );
       }
     }
     for (final geometry in layout.unclusteredPoints) {
@@ -3389,6 +3383,7 @@ class SeriesElement implements DataHitElement {
     final text = cluster.pointCount > 999
         ? '${(cluster.pointCount / 1000).toStringAsFixed(cluster.pointCount >= 10000 ? 0 : 1)}k'
         : cluster.pointCount.toString();
+    final fontSize = cluster.radius < 12 ? 9.0 : 10.5;
     final painter = TextPainter(
       text: TextSpan(
         text: text,
@@ -3396,7 +3391,8 @@ class SeriesElement implements DataHitElement {
           color: fillColor.computeLuminance() > 0.52
               ? const Color(0xFF0F172A)
               : const Color(0xFFFFFFFF),
-          fontSize: cluster.radius < 12 ? 9 : 10.5,
+          fontSize: fontSize,
+          height: 1,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -3404,9 +3400,16 @@ class SeriesElement implements DataHitElement {
       textAlign: TextAlign.center,
       maxLines: 1,
     )..layout(maxWidth: cluster.radius * 1.7);
+    // Numeral ink sits slightly above the centre of its font box. A small,
+    // radius-aware correction keeps short counts visually centred in compact
+    // markers without changing their measured or interactive geometry.
+    final opticalYOffset = cluster.radius < 12 ? 0.75 : 0.4;
     painter.paint(
       canvas,
-      cluster.center - Offset(painter.width / 2, painter.height / 2),
+      Offset(
+        cluster.center.dx - painter.width / 2,
+        cluster.center.dy - painter.height / 2 + opticalYOffset,
+      ),
     );
   }
 

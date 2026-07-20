@@ -2696,9 +2696,23 @@ class ChartRenderBox extends RenderBox {
 
     // Draw crosshair at cursor position (in widget space)
     final cursorPos = _effectiveCrosshairCursorPosition;
-    final crosshairConfig = _effectiveCrosshairConfig(
+    var crosshairConfig = _effectiveCrosshairConfig(
       _interactionConfig?.crosshair ?? const CrosshairConfig(),
     );
+    final hoveredDataHit = coordinator.hoveredMarker?.dataHit;
+    final hoveringAggregate =
+        hoveredDataHit != null &&
+        (hoveredDataHit.sourcePointIndices.length > 1 ||
+            hoveredDataHit.formattedAggregateValue != null);
+    if (hoveringAggregate) {
+      // The marker tooltip already describes the aggregate. Retain the
+      // crosshair and coordinate labels, but remove the competing tracking
+      // tooltip and intersection marker that imply a second raw datum.
+      crosshairConfig = crosshairConfig.copyWith(
+        showTrackingTooltip: false,
+        showIntersectionMarkers: false,
+      );
+    }
     final crosshairEnabled = crosshairConfig.enabled;
     if (crosshairEnabled &&
         cursorPos != null &&

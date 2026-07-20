@@ -77,12 +77,16 @@ class TooltipRenderer {
         final rangeSummary = rangeLines.isEmpty
             ? ''
             : '\n${rangeLines.join('\n')}';
+        final activationSummary = dataHit.activationHint == null
+            ? ''
+            : '\n${dataHit.activationHint}';
         return '$seriesName\n$aggregateLabel'
             '\nX mean: ${dataHit.formattedXValue ?? formatDataValue(dataHit.point.x)}'
             '\nY mean: ${dataHit.formattedValue}'
             '$rangeSummary'
             '${dataHit.formattedAggregateValue == null ? '' : '\n${dataHit.aggregateLabel ?? 'Aggregate'}: ${dataHit.formattedAggregateValue}'}'
-            '$aggregateSampleLine';
+            '$aggregateSampleLine'
+            '$activationSummary';
       }
       final sizeLine = dataHit.formattedRadiusValue == null
           ? ''

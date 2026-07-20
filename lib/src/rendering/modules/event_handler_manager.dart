@@ -1811,6 +1811,9 @@ class EventHandlerManager {
 
     final previousMarker = _delegate.coordinator.hoveredMarker;
     _delegate.coordinator.setHoveredMarker(nearestMarker);
+    if (nearestMarker?.dataHit?.activationHint != null) {
+      _delegate.onCursorChange?.call(SystemMouseCursors.click);
+    }
 
     final markerChanged =
         (previousMarker == null) != (nearestMarker == null) ||
