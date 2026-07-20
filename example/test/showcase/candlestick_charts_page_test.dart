@@ -1174,6 +1174,42 @@ void main() {
       );
       expect(price.yAxis?.unit, 'USD');
       expect(volume.yAxis?.unit, 'M');
+      expect(price.yAxis?.minWidth, 64);
+      expect(price.yAxis?.maxWidth, 64);
+      expect(volume.yAxis?.minWidth, 64);
+      expect(volume.yAxis?.maxWidth, 64);
+
+      final priceRect = tester.getRect(
+        find.byKey(const ValueKey('candlestick-stock-price-chart')),
+      );
+      final volumeRect = tester.getRect(
+        find.byKey(const ValueKey('candlestick-stock-volume-chart')),
+      );
+      final navigatorChartRect = tester.getRect(
+        find.byKey(const ValueKey('cartesian-navigator-overview')),
+      );
+      final plotLefts = [
+        priceRect.left + 64,
+        volumeRect.left + 10,
+        navigatorChartRect.left + 10,
+      ];
+      final plotRights = [
+        priceRect.right - 10,
+        volumeRect.right - 64,
+        navigatorChartRect.right - 10,
+      ];
+      for (final plotLeft in plotLefts.skip(1)) {
+        expect(plotLeft, closeTo(plotLefts.first, .01));
+      }
+      for (final plotRight in plotRights.skip(1)) {
+        expect(plotRight, closeTo(plotRights.first, .01));
+      }
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('candlestick-stock-navigator')))
+            .height,
+        lessThan(110),
+      );
       expect(
         tester
             .getSize(
