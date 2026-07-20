@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../artifacts/chart_artifact_diagnostics.dart';
 import '../artifacts/chart_document_hydrator.dart';
 import '../artifacts/chart_document_extractor.dart';
+import '../artifacts/chart_runtime_bindings.dart';
 import '../artifacts/chart_view_state.dart';
 import '../models/annotation_style.dart';
 import '../models/bar_chart_style.dart';
@@ -74,6 +75,7 @@ abstract final class ChartDartSourceGenerator {
       options: ChartHydrationOptions(
         restoreViewState: options.includeViewState,
       ),
+      runtimeBindings: ChartRuntimeBindings(formatters: options.formatters),
     );
     if (hydrated case ChartArtifactFailure<HydratedChartConfiguration>()) {
       return ChartArtifactFailure(

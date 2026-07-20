@@ -8,6 +8,14 @@ and Scatter while retaining typed open-high-low-close values.
 Open the runnable [Candlestick showcase](https://braven-pvm.github.io/braven_charts/?page=candlestick-charts)
 to prototype the options in the Chart/Data/Split/Source Workbench.
 
+The showcase is also the family test surface. Its presets cover balanced price
+action, sustained trend, volatility, gaps and doji, event annotations,
+accessible direction cues, 2,000-source density grouping, and a synchronized
+price/volume/navigator composition. The options rail exposes the mounted
+chart's data profile, geometry, direction and point colours, selection/focus
+colours, tracking and tooltip theme, motion, density grouping, axes, overlays,
+legends, and standard Cartesian behavior.
+
 ## Basic chart
 
 Use `CandlestickDataPoint` rather than reducing OHLC data to a generic `(x, y)`
@@ -132,6 +140,50 @@ percentage change, direction, timestamp, and source indices. Pointer selection,
 keyboard focus, the native data table, and restored artifacts share the same
 `ChartPointRef(seriesId, pointIndex)` identity.
 
+The showcase exposes each feedback layer independently so combinations can be
+tested without mistaking one layer for another:
+
+- **Crosshair OHLC panel** shows every tracked series at the active X value.
+- **Candle hover card** shows one directly hit candle and can follow the cursor.
+- **Pinned OHLC summary** follows the hovered or selected candle and falls back
+  to the latest candle. It can be a fixed overlay in any plot corner or a
+  native, draggable `TextAnnotation` embedded in the chart canvas.
+- **Crosshair axis values** are the compact X/Y labels attached to the axes.
+- **Crosshair intersection dot** is only a marker and does not add another
+  tooltip or value label.
+
+The showcase defaults to the crosshair panel alone. The candle hover card and
+pinned summary are opt-in, avoiding overlapping OHLC cards while still allowing
+every combination to be exercised. Price axes, pinned summaries, crosshair and
+point tooltips, metric pills, and native Workbench OHLC/change cells display two
+decimal places. The optional whole-chart focus outline is off by default; candle
+focus and selection styling remain available independently.
+
+The pinned summary resolves across the entire active X continuum, including
+the space between candle bodies. An in-between X selects the nearest complete
+trading session, with an exact midpoint tie selecting the earlier session.
+Open, high, low, and close are never interpolated into a synthetic candle;
+continuous companion series such as a moving average still interpolate at the
+same cursor X through normal Line tracking.
+
+The showcase gives both pinned-summary presentations one appearance model:
+background and opacity, border colour and width, text and accent colours,
+corner radius, inner padding, and text size. These colour controls reuse
+`AnnotationColorPalette`, including clear, selected-swatch toggle, custom
+colour, opacity, and recent-colour behavior. Clearing or toggling off the
+background or border produces a genuinely transparent surface or stroke; it
+does not silently restore the adaptive theme fallback. The overlay starts with
+a compact 168-pixel card, 8-pixel padding, and 11-pixel detail text, with the
+size controls available when more emphasis is required.
+
+The annotation presentation is a real `TextAnnotation.rich` entry in the
+chart's annotation collection. It therefore participates in native annotation
+rendering, dragging, portable artifacts, and generated Source. Its `position`
+is chart-canvas screen space, by design: dragging moves the card within the
+plot, but the card is not anchored to a price or session and does not move with
+pan or zoom. Use a point annotation when the label must remain attached to a
+specific candle instead.
+
 ## Entrance and data-update motion
 
 Candlestick entrance reveals ordered marks through the normal renderer.
@@ -187,6 +239,10 @@ overlays, such as a moving average or event markers. V1 rejects a second
 Candlestick series and same-plot Bar series so financial marks do not silently
 overlap with ambiguous layout.
 
+Candlestick also accepts the normal Cartesian annotation collection. Range,
+threshold, and point annotations retain their ordinary IDs, styling, and
+series/point references; no financial-only annotation API is required.
+
 A complete stock screen is a composition, not a second renderer:
 
 1. a Candlestick chart with optional Line/Area indicators;
@@ -208,6 +264,14 @@ signals, or portfolio analytics.
 includes timestamp, open, high, low, close, change, change percentage,
 direction, and metadata. Split is resizable and Source emits typed
 `CandlestickChartSeries` and `CandlestickDataPoint` construction.
+
+When a portable formatter descriptor resolves to an application formatter,
+provide the same `ChartFormatterRegistry` to `ChartTableOptions.formatters`
+and `ChartDartSourceOptions.formatters`. Data and Source then hydrate against
+one binding set instead of Source reporting a false unregistered-formatter
+warning. Source may still note callbacks that cannot be represented in
+portable Dart; those are explicit generation limitations, not hydration
+errors.
 
 Portable documents declare Candlestick and any enabled style, animation, or
 density-grouping capabilities. Older runtimes fail closed rather than treating

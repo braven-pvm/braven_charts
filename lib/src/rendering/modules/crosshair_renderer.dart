@@ -530,6 +530,7 @@ class CrosshairRenderer {
         plotArea: plotArea,
         theme: theme,
         dataX: trackingState.dataX,
+        fallbackDataX: _nearestDiscreteTrackingX(trackingState),
         seriesElements: seriesElements,
         xAxisConfig: xAxisConfig,
       );
@@ -564,6 +565,7 @@ class CrosshairRenderer {
         plotArea: plotArea,
         theme: theme,
         dataX: trackingState.dataX,
+        fallbackDataX: _nearestDiscreteTrackingX(trackingState),
         seriesElements: seriesElements,
         xAxisConfig: xAxisConfig,
       );
@@ -632,6 +634,7 @@ class CrosshairRenderer {
     required Rect plotArea,
     required ChartTheme? theme,
     required double dataX,
+    double? fallbackDataX,
     required List<SeriesElement> seriesElements,
     XAxisConfig? xAxisConfig,
   }) {
@@ -645,7 +648,11 @@ class CrosshairRenderer {
         const TextStyle(color: Color(0xFF000000), fontSize: 10);
     final padding = labelStyle?.padding.left ?? 4.0;
     final borderRadius = labelStyle?.borderRadius ?? 3.0;
-    final displayValue = _formatXAxisValue(dataX, xAxisConfig);
+    final displayValue = _formatXAxisValue(
+      dataX,
+      xAxisConfig,
+      fallbackValue: fallbackDataX,
+    );
     final painter = TextPainter(
       text: TextSpan(text: displayValue, style: textStyle),
       textDirection: resolveChartTextDirection(displayValue),
@@ -1367,6 +1374,7 @@ class CrosshairRenderer {
     required Rect plotArea,
     required ChartTheme? theme,
     required double dataX,
+    double? fallbackDataX,
     required List<SeriesElement> seriesElements,
     XAxisConfig? xAxisConfig,
   }) {
@@ -1386,7 +1394,11 @@ class CrosshairRenderer {
 
     final axisColor = _resolveXAxisColor(xAxisConfig, seriesElements);
 
-    final displayValue = _formatXAxisValue(dataX, xAxisConfig);
+    final displayValue = _formatXAxisValue(
+      dataX,
+      xAxisConfig,
+      fallbackValue: fallbackDataX,
+    );
 
     final xTextPainter = TextPainter(
       text: TextSpan(text: displayValue, style: textStyle),
@@ -1508,12 +1520,43 @@ class CrosshairRenderer {
     return const Color(0xFF333333);
   }
 
-  String _formatXAxisValue(double value, XAxisConfig? config) {
-    final categoryLabel = config?.categoryLabelFor(value);
-    if (categoryLabel != null) return categoryLabel;
-    if (config?.labelFormatter != null) {
-      return config!.labelFormatter!(value);
+  double? _nearestDiscreteTrackingX(CrosshairTrackingState trackingState) {
+    for (final value in trackingState.seriesValues) {
+      if (!value.isTrend &&
+          !value.isInterpolated &&
+          value.dataPointIndex >= 0) {
+        return value.x;
+      }
     }
+    return null;
+  }
+
+  String _formatXAxisValue(
+    double value,
+    XAxisConfig? config, {
+    double? fallbackValue,
+  }) {
+    String? formatConfiguredValue(double candidate) {
+      final categoryLabel = config?.categoryLabelFor(candidate);
+      if (categoryLabel != null && categoryLabel.trim().isNotEmpty) {
+        return categoryLabel;
+      }
+      final formatter = config?.labelFormatter;
+      if (formatter != null) {
+        final formatted = formatter(candidate);
+        if (formatted.trim().isNotEmpty) return formatted;
+      }
+      return null;
+    }
+
+    final configuredValue = formatConfiguredValue(value);
+    if (configuredValue != null) return configuredValue;
+
+    if (fallbackValue != null && fallbackValue != value) {
+      final fallbackLabel = formatConfiguredValue(fallbackValue);
+      if (fallbackLabel != null) return fallbackLabel;
+    }
+
     final formattedValue = _formatDataValue(value);
     return config?.unit == null
         ? formattedValue

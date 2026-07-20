@@ -1361,6 +1361,44 @@ void main() {
         r'$.sourceOptions.variableName',
       );
     });
+
+    test('uses registered formatters while hydrating generated source', () {
+      final descriptor = ChartFormatterDescriptor(
+        id: 'showcase.session',
+        fallbackPattern: 'Session {value}',
+      );
+      final snapshot = _snapshot(
+        const LineChartSeries(id: 'line', points: [ChartDataPoint(x: 0, y: 1)]),
+        xAxisFormatter: descriptor.toDocument(),
+      );
+
+      final unbound = ChartDartSourceGenerator.generate(snapshot);
+      expect(unbound, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+      expect(
+        (unbound as ChartArtifactSuccess<ChartGeneratedSource>).warnings.map(
+          (warning) => warning.code,
+        ),
+        contains(ChartArtifactDiagnosticCodes.unregisteredFormatter),
+      );
+
+      final bound = ChartDartSourceGenerator.generate(
+        snapshot,
+        options: ChartDartSourceOptions(
+          formatters: ChartFormatterRegistry(
+            customFormatters: {
+              'showcase.session': (value, _) => 'Session ${value.round()}',
+            },
+          ),
+        ),
+      );
+      expect(bound, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+      expect(
+        (bound as ChartArtifactSuccess<ChartGeneratedSource>).warnings.map(
+          (warning) => warning.code,
+        ),
+        isNot(contains(ChartArtifactDiagnosticCodes.unregisteredFormatter)),
+      );
+    });
   });
 }
 
@@ -1383,6 +1421,7 @@ ChartDocumentSnapshot _snapshot(
   ChartViewState? viewState,
   InteractionConfig interaction = const InteractionConfig(),
   Map<String, JsonObjectValue> interactionBindingDescriptors = const {},
+  JsonObjectValue? xAxisFormatter,
 }) {
   final encodedSeries = [
     for (final item in [series, ...additionalSeries])
@@ -1400,6 +1439,7 @@ ChartDocumentSnapshot _snapshot(
   );
   final encodedXAxis = ChartAxisDocumentCodec.encodeXAxis(
     const XAxisConfig(label: 'Elapsed interval'),
+    formatter: xAxisFormatter,
   );
   final encodedYAxis = ChartAxisDocumentCodec.encodeYAxis(
     YAxisConfig(position: YAxisPosition.left, label: 'Value'),

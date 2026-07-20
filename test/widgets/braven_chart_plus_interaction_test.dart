@@ -69,6 +69,92 @@ void main() {
       expect(hoveredSeriesId == null || hoveredSeriesId != null, isTrue);
     });
 
+    testWidgets(
+      'onCrosshairChanged publishes nearest Candlestick points between marks',
+      (tester) async {
+        final first = CandlestickDataPoint(
+          x: 0,
+          open: 10,
+          high: 14,
+          low: 8,
+          close: 12,
+          timestamp: DateTime.utc(2026, 7, 1),
+        );
+        final second = CandlestickDataPoint(
+          x: 10,
+          open: 12,
+          high: 18,
+          low: 11,
+          close: 17,
+          timestamp: DateTime.utc(2026, 7, 2),
+        );
+        Offset? callbackPosition;
+        List<ChartDataPoint> callbackPoints = const [];
+        double? dataXCursor;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 520,
+                height: 360,
+                child: BravenChartPlus(
+                  showLegend: false,
+                  series: [
+                    CandlestickChartSeries(
+                      id: 'price',
+                      points: [first, second],
+                    ),
+                  ],
+                  interactionConfig: InteractionConfig(
+                    enableFocusOnHover: false,
+                    onCrosshairChanged: (position, points) {
+                      callbackPosition = position;
+                      callbackPoints = points;
+                    },
+                  ),
+                  onDataXCursorChanged: (value) => dataXCursor = value,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final renderFinder = _chartRenderFinder();
+        final renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+        final element = renderBox.debugElements
+            .whereType<SeriesElement>()
+            .single;
+        final renderOrigin = tester.getTopLeft(renderFinder);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+        await mouse.addPointer(location: Offset.zero);
+
+        final secondSide =
+            renderOrigin +
+            renderBox.plotToWidget(element.dataToCurrentPlot(6, 14));
+        await mouse.moveTo(secondSide);
+        await tester.pump();
+        expect(callbackPosition, isNotNull);
+        expect(callbackPoints, [same(second)]);
+        expect(dataXCursor, closeTo(6, .01));
+
+        final firstSide =
+            renderOrigin +
+            renderBox.plotToWidget(element.dataToCurrentPlot(4, 14));
+        await mouse.moveTo(firstSide);
+        await tester.pump();
+        expect(callbackPoints, [same(first)]);
+
+        await mouse.moveTo(const Offset(1000, 800));
+        await tester.pump();
+        expect(callbackPosition, isNull);
+        expect(callbackPoints, isEmpty);
+        expect(dataXCursor, isNull);
+      },
+    );
+
     testWidgets('AutoScrollConfig is accepted', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

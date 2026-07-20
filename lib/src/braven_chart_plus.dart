@@ -229,6 +229,7 @@ class BravenChartPlus extends StatefulWidget {
     this.autoScrollConfig,
     this.onPointTap,
     this.onPointHover,
+    this.onDataXCursorChanged,
     this.onBackgroundTap,
     this.onSeriesSelected,
     this.onAnnotationTap,
@@ -284,6 +285,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -384,6 +386,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -440,6 +443,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -547,6 +551,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -601,6 +606,7 @@ class BravenChartPlus extends StatefulWidget {
     Widget Function(Object error)? errorWidget,
     void Function(ChartDataPoint point, String seriesId)? onPointTap,
     void Function(ChartDataPoint? point, String? seriesId)? onPointHover,
+    ValueChanged<double?>? onDataXCursorChanged,
     void Function(Offset position)? onBackgroundTap,
     void Function(String seriesId)? onSeriesSelected,
     void Function(ChartAnnotation annotation)? onAnnotationTap,
@@ -698,6 +704,7 @@ class BravenChartPlus extends StatefulWidget {
       errorWidget: errorWidget,
       onPointTap: onPointTap,
       onPointHover: onPointHover,
+      onDataXCursorChanged: onDataXCursorChanged,
       onBackgroundTap: onBackgroundTap,
       onSeriesSelected: onSeriesSelected,
       onAnnotationTap: onAnnotationTap,
@@ -1092,6 +1099,14 @@ class BravenChartPlus extends StatefulWidget {
 
   /// Called when a data point is hovered (desktop/web).
   final void Function(ChartDataPoint? point, String? seriesId)? onPointHover;
+
+  /// Called with the active Cartesian data-X cursor across the plot continuum.
+  ///
+  /// This is a runtime-only observation hook. It reports null when the pointer
+  /// leaves the plot and is not serialized into chart artifacts. Use
+  /// [InteractionConfig.onCrosshairChanged] when the nearest source points are
+  /// also required.
+  final ValueChanged<double?>? onDataXCursorChanged;
 
   /// Called when the chart background is tapped.
   final void Function(Offset position)? onBackgroundTap;
@@ -2042,6 +2057,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
   }
 
   void _handleLocalDataXCursorChanged(double? dataX) {
+    widget.onDataXCursorChanged?.call(dataX);
     final participant = _interactionGroupParticipant;
     if (participant == null) return;
     if (dataX == null) {
@@ -8031,10 +8047,12 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                               : null,
                           onDataXCursorChanged:
                               !isNonCartesian &&
-                                  widget.interactionGroupController != null &&
-                                  widget
-                                      .interactionGroupOptions
-                                      .synchronizeCursor
+                                  (widget.onDataXCursorChanged != null ||
+                                      (widget.interactionGroupController !=
+                                              null &&
+                                          widget
+                                              .interactionGroupOptions
+                                              .synchronizeCursor))
                               ? _handleLocalDataXCursorChanged
                               : null,
                           gridConfig: isNonCartesian ? null : widget.grid,
