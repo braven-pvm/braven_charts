@@ -1290,6 +1290,10 @@ void main() {
     );
     final hexbin = find.descendant(of: picker, matching: find.text('Hexbin'));
     final density = find.descendant(of: picker, matching: find.text('Density'));
+    final marginals = find.descendant(
+      of: picker,
+      matching: find.text('Marginals'),
+    );
 
     expect(picker, findsOneWidget);
     expect(cohorts, findsOneWidget);
@@ -1302,13 +1306,14 @@ void main() {
     expect(gridBins, findsOneWidget);
     expect(hexbin, findsOneWidget);
     expect(density, findsOneWidget);
+    expect(marginals, findsOneWidget);
     expect(
       tester.getTopLeft(selection).dy,
       greaterThan(tester.getTopLeft(cohorts).dy),
     );
     expect(
       find.descendant(of: picker, matching: find.byType(ChoiceChip)),
-      findsNWidgets(25),
+      findsNWidgets(26),
     );
     expect(
       tester.getTopLeft(lasso).dy,
@@ -2628,6 +2633,75 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('scatter Marginals composes viewport-linked X and Y histograms', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final marginals = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Marginals'),
+    );
+    await tester.ensureVisible(marginals);
+    await tester.tap(marginals);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScatterMarginalComposition), findsOneWidget);
+    expect(find.text('Height distribution'), findsOneWidget);
+    expect(find.text('Mass distribution'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-bin-count')),
+      findsOneWidget,
+    );
+    expect(find.byType(BravenChartPlus), findsNWidgets(3));
+
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('scatter-marginal-bin-count')),
+        )
+        .onChanged(16);
+    tester
+        .widget<EnumOption<HistogramValueMode>>(
+          find.byKey(const ValueKey('scatter-marginal-value-mode')),
+        )
+        .onChanged(HistogramValueMode.count);
+    await tester.pumpAndSettle();
+
+    final marginalBars = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .expand((chart) => chart.series.whereType<BarChartSeries>())
+        .toList();
+    expect(marginalBars, hasLength(2));
+    expect(marginalBars.every((series) => series.points.length == 16), isTrue);
+
+    final sourceChart = find.byKey(
+      const ValueKey('scatter-marginal-source-chart'),
+    );
+    final sourceRenderFinder = find.descendant(
+      of: sourceChart,
+      matching: find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final sourceRenderBox = tester.renderObject<ChartRenderBox>(
+      sourceRenderFinder,
+    );
+    final initialLabel = tester
+        .widget<Text>(
+          find.byKey(const ValueKey('scatter-marginal-visible-count')),
+        )
+        .data;
+    sourceRenderBox.zoomChart(2.5, animate: false);
+    await tester.pumpAndSettle();
+    final zoomedLabel = tester
+        .widget<Text>(
+          find.byKey(const ValueKey('scatter-marginal-visible-count')),
+        )
+        .data;
+
+    expect(zoomedLabel, isNot(initialLabel));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'scatter Selection links one chart point to one Workbench data row',

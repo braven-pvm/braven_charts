@@ -2026,10 +2026,16 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     final renderBox =
         _renderBoxKey.currentContext?.findRenderObject() as ChartRenderBox?;
     final transform = renderBox?.transform;
-    if (participant == null || transform == null) return;
-    participant.publishViewport(
+    if (transform == null) return;
+    participant?.publishViewport(
       ChartXViewport(min: transform.dataXMin, max: transform.dataXMax),
     );
+    widget.interactionConfig?.onViewportChanged?.call({
+      'minX': transform.dataXMin,
+      'minY': transform.dataYMin,
+      'maxX': transform.dataXMax,
+      'maxY': transform.dataYMax,
+    });
   }
 
   void _handleLocalDataXCursorChanged(double? dataX) {
@@ -8013,7 +8019,11 @@ class _BravenChartPlusState extends State<BravenChartPlus>
                           onViewportInteracted: _handleViewportInteractionPulse,
                           onViewportChanged:
                               !isNonCartesian &&
-                                  widget.interactionGroupController != null
+                                  (widget.interactionGroupController != null ||
+                                      widget
+                                              .interactionConfig
+                                              ?.onViewportChanged !=
+                                          null)
                               ? _handleViewportChanged
                               : null,
                           onDataXCursorChanged:

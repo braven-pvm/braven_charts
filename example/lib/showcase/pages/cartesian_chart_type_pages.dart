@@ -27,6 +27,13 @@ enum _SynchronizedDatasetProfile { normal, dense, stress }
 
 enum _ScatterCategoryPalette { mobility, accessible }
 
+typedef _ScatterViewport = ({
+  double xMin,
+  double xMax,
+  double yMin,
+  double yMax,
+});
+
 class LineChartsPage extends StatelessWidget {
   const LineChartsPage({super.key});
 
@@ -162,6 +169,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _scatterDensityMaximumOpacity = 0.9;
   double _scatterDensityLineWidth = 1.5;
   bool _scatterDensityShowPoints = false;
+  int _scatterMarginalBinCount = 12;
+  HistogramValueMode _scatterMarginalValueMode = HistogramValueMode.percentage;
+  double _scatterMarginalXExtent = 128;
+  double _scatterMarginalYExtent = 144;
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
@@ -588,6 +599,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         description:
             'Gaussian contours reveal concentration without replacing or mutating the source observations.',
       ),
+      _ChartTypePreset(
+        label: 'Marginals',
+        icon: Icons.space_dashboard_outlined,
+        description:
+            'Independent X and Y histograms reveal each distribution around the source Scatter chart.',
+      ),
     ],
   };
 
@@ -619,6 +636,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
 
   bool get _isScatterDensityPreset =>
       widget.family == _CartesianFamily.scatter && _presetIndex == 24;
+
+  bool get _isScatterMarginalPreset =>
+      widget.family == _CartesianFamily.scatter && _presetIndex == 25;
 
   ChartSelectionMode get _scatterSelectionMode => switch (_presetIndex) {
     16 => ChartSelectionMode.rectangle,
@@ -834,6 +854,21 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   Widget _buildChart(ChartOptions options, BravenChartController controller) {
     final baseTheme = options.theme ?? ChartTheme.light;
     final effectiveTheme = _isLineSpotlight ? ChartTheme.dark : baseTheme;
+    if (_isScatterMarginalPreset) {
+      return _ScatterMarginalExample(
+        key: ValueKey(
+          'scatter-marginals-$_scatterMarginalBinCount-${_scatterMarginalValueMode.name}',
+        ),
+        controller: controller,
+        series: _buildScatterSeries().cast<ScatterChartSeries>(),
+        theme: effectiveTheme,
+        options: options,
+        binCount: _scatterMarginalBinCount,
+        valueMode: _scatterMarginalValueMode,
+        xMarginalExtent: _scatterMarginalXExtent,
+        yMarginalExtent: _scatterMarginalYExtent,
+      );
+    }
     return BravenChartPlus(
       key: ValueKey('${widget.family.name}-chart'),
       bravenChartController: controller,
@@ -968,6 +1003,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           ? '$_scatterBinPointCount raw observations · ${_scatterBinCellSize.toStringAsFixed(0)}px ${_isScatterHexbinPreset ? 'hexagonal' : 'rectangular'} cells · ${_formatScatterBinAggregate(_scatterBinAggregate).toLowerCase()} aggregation${_scatterBinAggregate == ScatterBinAggregate.count || _scatterBinAggregate == ScatterBinAggregate.proportion ? '' : ' of ${_formatScatterBinValueSource(_scatterBinValueSource).toLowerCase()}'} · opacity shows magnitude · raw identities retained'
           : _isScatterDensityPreset
           ? '$_scatterDensityPointCount raw observations · $_scatterDensityContourCount Gaussian contours · ${_scatterDensityBandwidth.toStringAsFixed(0)}px bandwidth · relative-density interaction · raw identities retained'
+          : _isScatterMarginalPreset
+          ? '${_scatterMarginalPoints.length} athlete observations · $_scatterMarginalBinCount bins per axis · ${_formatHistogramValueMode(_scatterMarginalValueMode).toLowerCase()} values · viewport-linked X/Y marginals'
           : '$_scatterEffectiveSeriesCount series · $_scatterRawPointCount observations · ${_presetIndex == 4 ? '${_scatterMarkerWidth.toStringAsFixed(0)}×${_scatterMarkerHeight.toStringAsFixed(0)}px styled markers' : '${_markerRadius.toStringAsFixed(0)}px markers'} · ${_presetIndex == 0 || _presetIndex == 3 || _presetIndex == 4 || _presetIndex == 7 ? 'mixed shapes' : _formatMarkerShape(_scatterMarkerShape).toLowerCase()} · ${_presetIndex == 7 ? 'selection-aware states' : 'indexed 2D tracking'}',
   };
 
@@ -1001,6 +1038,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       22 => 'Support demand grid',
       23 => 'Urban pickup density',
       24 => 'Urban service concentration',
+      25 => 'Athlete profile with marginals',
       _ => _presets[_presetIndex].label,
     };
   }
@@ -1041,6 +1079,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       ? 1
       : _presetIndex == 24
       ? 1
+      : _presetIndex == 25
+      ? 3
       : _presetIndex == 5 || _presetIndex == 6
       ? _scatterSeriesCount
       : (_showSecondSeries ? 2 : 1);
@@ -1092,6 +1132,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     if (_isScatterClusterPreset) return _scatterClusterPointCount;
     if (_isScatterBinPreset) return _scatterBinPointCount;
     if (_isScatterDensityPreset) return _scatterDensityPointCount;
+    if (_isScatterMarginalPreset) return _scatterMarginalPoints.length;
     return 0;
   }
 
@@ -1122,6 +1163,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       21 => 'Feature adoption (%)',
       22 || 23 => 'East–west position',
       24 => 'East–west position',
+      25 => 'Height (cm)',
       _ => 'Input',
     },
   };
@@ -1149,6 +1191,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       21 => 'Account expansion (%)',
       22 || 23 => 'North–south position',
       24 => 'North–south position',
+      25 => 'Body mass (kg)',
       _ => 'Outcome',
     },
   };
@@ -1961,6 +2004,55 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
                 decimalPlaces: 1,
                 onChanged: (value) => setState(() => _markerRadius = value),
               ),
+          ],
+        ),
+      if (_isScatterMarginalPreset)
+        OptionSection(
+          title: 'Marginal distributions',
+          icon: Icons.space_dashboard_outlined,
+          children: [
+            IntSliderOption(
+              key: const ValueKey('scatter-marginal-bin-count'),
+              label: 'Bins per axis',
+              value: _scatterMarginalBinCount,
+              min: 4,
+              max: 24,
+              onChanged: (value) =>
+                  setState(() => _scatterMarginalBinCount = value),
+            ),
+            EnumOption<HistogramValueMode>(
+              key: const ValueKey('scatter-marginal-value-mode'),
+              label: 'Bar value',
+              value: _scatterMarginalValueMode,
+              values: HistogramValueMode.values,
+              labelBuilder: _formatHistogramValueMode,
+              onChanged: (value) =>
+                  setState(() => _scatterMarginalValueMode = value),
+            ),
+            SliderOption(
+              key: const ValueKey('scatter-marginal-x-extent'),
+              label: 'Top panel height',
+              value: _scatterMarginalXExtent,
+              min: 128,
+              max: 192,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _scatterMarginalXExtent = value),
+            ),
+            SliderOption(
+              key: const ValueKey('scatter-marginal-y-extent'),
+              label: 'Side panel width',
+              value: _scatterMarginalYExtent,
+              min: 96,
+              max: 220,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _scatterMarginalYExtent = value),
+            ),
           ],
         ),
       if (_isScatterGeneratorPreset)
@@ -3252,6 +3344,37 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ),
       ];
     }
+    if (_isScatterMarginalPreset) {
+      return [
+        ScatterChartSeries(
+          id: 'marginal-triathlon',
+          name: 'Triathlon',
+          points: _scatterTriathlon,
+          color: const Color(0xFF0EA5E9),
+          markerRadius: _markerRadius,
+          markerShape: SeriesMarkerShape.triangle,
+          isXOrdered: true,
+        ),
+        ScatterChartSeries(
+          id: 'marginal-volleyball',
+          name: 'Volleyball',
+          points: _scatterVolleyball,
+          color: const Color(0xFF6366F1),
+          markerRadius: _markerRadius,
+          markerShape: SeriesMarkerShape.square,
+          isXOrdered: true,
+        ),
+        ScatterChartSeries(
+          id: 'marginal-basketball',
+          name: 'Basketball',
+          points: _scatterBasketball,
+          color: const Color(0xFF10B981),
+          markerRadius: _markerRadius,
+          markerShape: SeriesMarkerShape.circle,
+          isXOrdered: true,
+        ),
+      ];
+    }
     if (_isScatterGeneratorPreset) {
       const colors = [
         Color(0xFF2563EB),
@@ -3444,6 +3567,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           ),
         ),
       );
+
+  List<ChartDataPoint> get _scatterMarginalPoints => [
+    ..._scatterTriathlon,
+    ..._scatterVolleyball,
+    ..._scatterBasketball,
+  ];
 
   List<ChartSeries> _buildScatterShapeSeries() {
     const shapes = [
@@ -4054,6 +4183,12 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         ScatterBinValueSource.opacityValue => 'Opacity value',
       };
 
+  String _formatHistogramValueMode(HistogramValueMode mode) => switch (mode) {
+    HistogramValueMode.count => 'Count',
+    HistogramValueMode.percentage => 'Percentage',
+    HistogramValueMode.density => 'Density',
+  };
+
   String get _scatterBinLegendLabel => switch (_scatterBinAggregate) {
     ScatterBinAggregate.count => 'Observations per bin',
     ScatterBinAggregate.proportion => 'Share of observations',
@@ -4520,6 +4655,10 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _scatterDensityMaximumOpacity = 0.9;
       _scatterDensityLineWidth = 1.5;
       _scatterDensityShowPoints = false;
+      _scatterMarginalBinCount = 12;
+      _scatterMarginalValueMode = HistogramValueMode.percentage;
+      _scatterMarginalXExtent = 128;
+      _scatterMarginalYExtent = 144;
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
@@ -5685,6 +5824,308 @@ const _synchronizedHeartRatePoints = <ChartDataPoint>[
   ChartDataPoint(x: 6.4, y: 138),
 ];
 
+class _ScatterMarginalExample extends StatefulWidget {
+  const _ScatterMarginalExample({
+    super.key,
+    required this.controller,
+    required this.series,
+    required this.theme,
+    required this.options,
+    required this.binCount,
+    required this.valueMode,
+    required this.xMarginalExtent,
+    required this.yMarginalExtent,
+  });
+
+  final BravenChartController controller;
+  final List<ScatterChartSeries> series;
+  final ChartTheme theme;
+  final ChartOptions options;
+  final int binCount;
+  final HistogramValueMode valueMode;
+  final double xMarginalExtent;
+  final double yMarginalExtent;
+
+  @override
+  State<_ScatterMarginalExample> createState() =>
+      _ScatterMarginalExampleState();
+}
+
+class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
+  _ScatterViewport? _visibleViewport;
+
+  List<ChartDataPoint> get _points => [
+    for (final series in widget.series) ...series.points,
+  ];
+
+  _ScatterViewport get _fullViewport {
+    final finite = _points.where((point) => point.isValid).toList();
+    if (finite.isEmpty) {
+      return (xMin: 0, xMax: 1, yMin: 0, yMax: 1);
+    }
+    final xMin = finite.map((point) => point.x).reduce(math.min);
+    final xMax = finite.map((point) => point.x).reduce(math.max);
+    final yMin = finite.map((point) => point.y).reduce(math.min);
+    final yMax = finite.map((point) => point.y).reduce(math.max);
+    final xPadding = math.max((xMax - xMin) * 0.04, 0.5);
+    final yPadding = math.max((yMax - yMin) * 0.06, 0.5);
+    return (
+      xMin: xMin - xPadding,
+      xMax: xMax + xPadding,
+      yMin: yMin - yPadding,
+      yMax: yMax + yPadding,
+    );
+  }
+
+  _ScatterViewport get _viewport => _visibleViewport ?? _fullViewport;
+
+  void _handleViewportChanged(Map<String, double> bounds) {
+    final next = (
+      xMin: bounds['minX']!,
+      xMax: bounds['maxX']!,
+      yMin: bounds['minY']!,
+      yMax: bounds['maxY']!,
+    );
+    if (_visibleViewport == next || !mounted) return;
+    setState(() => _visibleViewport = next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewport = _viewport;
+    final marginalData = ScatterMarginalData(
+      points: _points,
+      method: HistogramBinningMethod.fixedCount,
+      requestedBinCount: widget.binCount,
+      xMinimum: viewport.xMin,
+      xMaximum: viewport.xMax,
+      yMinimum: viewport.yMin,
+      yMaximum: viewport.yMax,
+    );
+    final xPoints = marginalData.xPointsFor(widget.valueMode);
+    final yValues = marginalData.yPointsFor(widget.valueMode).reversed.toList();
+    final yPoints = [
+      for (var index = 0; index < yValues.length; index++)
+        ChartDataPoint(
+          x: index.toDouble(),
+          y: yValues[index].y,
+          label: yValues[index].label,
+          metadata: yValues[index].metadata,
+        ),
+    ];
+
+    return ScatterMarginalComposition(
+      xMarginalExtent: widget.xMarginalExtent,
+      yMarginalExtent: widget.yMarginalExtent,
+      gap: 6,
+      xMarginal: _MarginalPanel(
+        label: 'Height distribution',
+        child: Padding(
+          padding: const EdgeInsets.only(left: 48),
+          child: _marginalChart(
+            id: 'height-marginal',
+            points: xPoints,
+            color: const Color(0xFF0EA5E9),
+            xMinimum: viewport.xMin,
+            xMaximum: viewport.xMax,
+          ),
+        ),
+      ),
+      yMarginal: _MarginalPanel(
+        label: 'Mass distribution',
+        child: _marginalChart(
+          id: 'mass-marginal',
+          points: yPoints,
+          color: const Color(0xFF10B981),
+          xMinimum: 0,
+          xMaximum: math.max(1, yPoints.length - 1).toDouble(),
+          orientation: BarOrientation.horizontal,
+        ),
+      ),
+      corner: _MarginalSummary(
+        visiblePointCount: marginalData.visiblePointCount,
+        sourcePointCount: marginalData.sourcePointCount,
+        valueMode: widget.valueMode,
+      ),
+      scatter: BravenChartPlus(
+        key: const ValueKey('scatter-marginal-source-chart'),
+        bravenChartController: widget.controller,
+        series: widget.series,
+        theme: widget.theme,
+        showLegend: widget.options.showLegend,
+        showXScrollbar: widget.options.showXScrollbar,
+        showYScrollbar: widget.options.showYScrollbar,
+        grid: GridConfig(
+          horizontal: widget.options.showGrid,
+          vertical: widget.options.showGrid,
+        ),
+        xAxisConfig: XAxisConfig(
+          label: 'Height (cm)',
+          min: _fullViewport.xMin,
+          max: _fullViewport.xMax,
+          showAxisLine: widget.options.showAxisLines,
+        ),
+        yAxis: YAxisConfig(
+          position: YAxisPosition.left,
+          label: 'Body mass (kg)',
+          min: _fullViewport.yMin,
+          max: _fullViewport.yMax,
+          showAxisLine: widget.options.showAxisLines,
+        ),
+        interactionConfig: InteractionConfig(
+          enableZoom: widget.options.enableZoom,
+          enablePan: widget.options.enablePan,
+          showXScrollbar: widget.options.showXScrollbar,
+          showYScrollbar: widget.options.showYScrollbar,
+          onViewportChanged: _handleViewportChanged,
+          crosshair: const CrosshairConfig(
+            enabled: true,
+            mode: CrosshairMode.both,
+            snapToDataPoint: true,
+            displayMode: CrosshairDisplayMode.tracking,
+          ),
+          tooltip: const TooltipConfig(enabled: true),
+        ),
+      ),
+    );
+  }
+
+  Widget _marginalChart({
+    required String id,
+    required List<ChartDataPoint> points,
+    required Color color,
+    required double xMinimum,
+    required double xMaximum,
+    BarOrientation orientation = BarOrientation.vertical,
+  }) {
+    final maximum = points.fold<double>(
+      0,
+      (current, point) => math.max(current, point.y),
+    );
+    return BravenChartPlus(
+      key: ValueKey(id),
+      series: [
+        BarChartSeries(
+          id: id,
+          name: _histogramValueLabel(widget.valueMode),
+          points: points,
+          color: color.withValues(alpha: 0.72),
+          barWidthPercent: 0.94,
+          minWidth: 1,
+          barGap: 0,
+          orientation: orientation,
+          barStyle: const BarChartStyle(
+            cornerRadius: 2,
+            cornerRadiusPolicy: BarCornerRadiusPolicy.valueEnd,
+          ),
+        ),
+      ],
+      theme: widget.theme,
+      showLegend: false,
+      grid: const GridConfig(horizontal: false, vertical: false),
+      xAxisConfig: XAxisConfig(visible: false, min: xMinimum, max: xMaximum),
+      yAxis: YAxisConfig(
+        position: YAxisPosition.hidden,
+        min: 0,
+        max: maximum <= 0 ? 1 : maximum * 1.08,
+      ),
+      interactionConfig: const InteractionConfig(
+        enableZoom: false,
+        enablePan: false,
+        crosshair: CrosshairConfig(enabled: false),
+        tooltip: TooltipConfig(enabled: true),
+      ),
+    );
+  }
+}
+
+class _MarginalPanel extends StatelessWidget {
+  const _MarginalPanel({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 2),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+class _MarginalSummary extends StatelessWidget {
+  const _MarginalSummary({
+    required this.visiblePointCount,
+    required this.sourcePointCount,
+    required this.valueMode,
+  });
+
+  final int visiblePointCount;
+  final int sourcePointCount;
+  final HistogramValueMode valueMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$visiblePointCount / $sourcePointCount',
+              key: const ValueKey('scatter-marginal-visible-count'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'points in view',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _histogramValueLabel(valueMode),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _histogramValueLabel(HistogramValueMode mode) => switch (mode) {
+  HistogramValueMode.count => 'Count',
+  HistogramValueMode.percentage => 'Share of visible points',
+  HistogramValueMode.density => 'Probability density',
+};
+
 class _ChartTypePreset {
   const _ChartTypePreset({
     required this.label,
@@ -5754,6 +6195,7 @@ class _FeatureCoverage extends StatelessWidget {
         'Rectangular 2D bins',
         'Hexagonal 2D bins',
         'Density contours',
+        'X/Y marginal histograms',
       ],
     };
     return DecoratedBox(

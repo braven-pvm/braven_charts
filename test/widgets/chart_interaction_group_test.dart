@@ -199,6 +199,61 @@ void main() {
     expect(second.transform!.dataYMin, secondYMin);
     expect(second.transform!.dataYMax, secondYMax);
   });
+
+  testWidgets('reports the complete two-dimensional viewport to callers', (
+    tester,
+  ) async {
+    Map<String, double>? reportedBounds;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 640,
+          height: 320,
+          child: BravenChartPlus(
+            showLegend: false,
+            interactionConfig: InteractionConfig(
+              onViewportChanged: (bounds) => reportedBounds = bounds,
+            ),
+            series: const [
+              ScatterChartSeries(
+                id: 'observations',
+                points: [
+                  ChartDataPoint(x: 0, y: 10),
+                  ChartDataPoint(x: 5, y: 50),
+                  ChartDataPoint(x: 10, y: 90),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final renderBox =
+        _chartRenderFinder().evaluate().single.renderObject! as ChartRenderBox;
+    renderBox.zoomChart(1.8, animate: false);
+    await tester.pump();
+
+    expect(reportedBounds, isNotNull);
+    expect(reportedBounds!.keys, containsAll(['minX', 'minY', 'maxX', 'maxY']));
+    expect(
+      reportedBounds!['minX'],
+      closeTo(renderBox.transform!.dataXMin, 1e-9),
+    );
+    expect(
+      reportedBounds!['maxX'],
+      closeTo(renderBox.transform!.dataXMax, 1e-9),
+    );
+    expect(
+      reportedBounds!['minY'],
+      closeTo(renderBox.transform!.dataYMin, 1e-9),
+    );
+    expect(
+      reportedBounds!['maxY'],
+      closeTo(renderBox.transform!.dataYMax, 1e-9),
+    );
+  });
 }
 
 Widget _host(
