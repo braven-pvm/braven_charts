@@ -207,6 +207,14 @@ class RenderOrder {
   /// Legend annotations (draggable legend boxes).
   static const int legend = 8;
 
+  /// Cartesian value summary panels (fixed overlay / annotation-style).
+  ///
+  /// Top of the overlay band: the persistent, policy-resolved value panel
+  /// must stay readable above series, annotations, controls, and legend
+  /// boxes. It still renders below the crosshair/tooltip feedback layer,
+  /// which the render box paints after all elements.
+  static const int valueSummary = 9;
+
   // ============================================================================
   // Default for unknown types
   // ============================================================================
