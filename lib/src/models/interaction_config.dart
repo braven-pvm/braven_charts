@@ -8,6 +8,7 @@ import 'dart:ui' show Color, StrokeCap;
 
 import 'package:flutter/widgets.dart' show TextStyle, Widget, BuildContext;
 
+import 'cartesian_value_summary_config.dart';
 import 'interaction_callbacks.dart';
 import 'candlestick_interaction_details.dart';
 
@@ -1101,6 +1102,7 @@ class InteractionConfig {
     this.enablePan = true,
     this.enableSelection = true,
     this.selection = const ChartSelectionConfig(),
+    this.valueSummary = const CartesianValueSummaryConfig(),
     this.showFocusBorder = false,
     this.enableFocusOnHover = true,
     this.showXScrollbar = false,
@@ -1176,6 +1178,7 @@ class InteractionConfig {
     enableZoom: false,
     enablePan: false,
     enableSelection: false,
+    valueSummary: CartesianValueSummaryConfig(enabled: false),
     showFocusBorder: false,
     enableFocusOnHover: false,
     showXScrollbar: false,
@@ -1216,6 +1219,13 @@ class InteractionConfig {
 
   /// Point acquisition and set-operation policy.
   final ChartSelectionConfig selection;
+
+  /// Cartesian value summary configuration (persistent policy-resolved
+  /// datum panel).
+  ///
+  /// Defaults to a disabled summary; enabling it never implicitly enables
+  /// the crosshair, tooltip, or axis value labels.
+  final CartesianValueSummaryConfig valueSummary;
 
   /// Whether to show focus border when chart has keyboard focus.
   final bool showFocusBorder;
@@ -1414,6 +1424,7 @@ class InteractionConfig {
     bool? enablePan,
     bool? enableSelection,
     ChartSelectionConfig? selection,
+    CartesianValueSummaryConfig? valueSummary,
     bool? showFocusBorder,
     bool? enableFocusOnHover,
     bool? showXScrollbar,
@@ -1441,6 +1452,7 @@ class InteractionConfig {
       enablePan: enablePan ?? this.enablePan,
       enableSelection: enableSelection ?? this.enableSelection,
       selection: selection ?? this.selection,
+      valueSummary: valueSummary ?? this.valueSummary,
       showFocusBorder: showFocusBorder ?? this.showFocusBorder,
       enableFocusOnHover: enableFocusOnHover ?? this.enableFocusOnHover,
       showXScrollbar: showXScrollbar ?? this.showXScrollbar,
@@ -1474,6 +1486,7 @@ class InteractionConfig {
         other.enablePan == enablePan &&
         other.enableSelection == enableSelection &&
         other.selection == selection &&
+        other.valueSummary == valueSummary &&
         other.showFocusBorder == showFocusBorder &&
         other.enableFocusOnHover == enableFocusOnHover &&
         other.showXScrollbar == showXScrollbar &&
@@ -1492,6 +1505,7 @@ class InteractionConfig {
     enablePan,
     enableSelection,
     selection,
+    valueSummary,
     showFocusBorder,
     enableFocusOnHover,
     showXScrollbar,

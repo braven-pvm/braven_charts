@@ -106,10 +106,14 @@ export 'src/models/candlestick_chart_style.dart';
 export 'src/models/candlestick_data_point.dart';
 export 'src/models/candlestick_density_grouping.dart';
 export 'src/models/candlestick_interaction_details.dart';
+export 'src/models/cartesian_value_summary_config.dart';
+export 'src/models/cartesian_value_summary_style.dart';
 export 'src/models/financial_time_domain.dart';
 // X-axis configuration uses XAxisConfig; Y-axis uses YAxisConfig.
 export 'src/models/chart_annotation.dart';
 export 'src/models/chart_context_action.dart';
+export 'src/models/chart_overlay_placement.dart';
+export 'src/models/chart_style_value.dart';
 export 'src/models/chart_data_point.dart';
 export 'src/models/data_point_label_config.dart';
 export 'src/models/series_inline_label_config.dart';
