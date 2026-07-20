@@ -1994,6 +1994,13 @@ class _ChartDartEmitter {
       writer.writeLine('polarStyle: PolarColumnStyle(');
       writer.indented(() {
         _numberIf(writer, 'cornerRadius', style.cornerRadius, 4);
+        _enumIf(
+          writer,
+          'cornerRadiusMode',
+          'PolarColumnCornerRadiusMode',
+          style.cornerRadiusMode.name,
+          defaultName: 'outerEnd',
+        );
         _numberIf(writer, 'opacity', style.opacity, 1);
         _optionalColor(writer, 'borderColor', style.borderColor);
         _numberIf(writer, 'borderWidth', style.borderWidth, 1);

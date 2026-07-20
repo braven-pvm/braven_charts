@@ -49,6 +49,8 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   bool _showValues = true;
   int _maximumDataLabels = 24;
   double _cornerRadius = 4;
+  PolarColumnCornerRadiusMode _cornerRadiusMode =
+      PolarColumnCornerRadiusMode.outerEnd;
   double _opacity = 0.94;
   bool _showTargets = true;
   bool _showThreshold = true;
@@ -61,6 +63,39 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _intervalWidth = 2;
   double _intervalCapLength = 0.62;
   double _intervalBandLength = 0.58;
+  double _intervalOpacity = 0.92;
+  _PolarThemePreset _themePreset = _PolarThemePreset.light;
+  _PolarPalette _palette = _PolarPalette.theme;
+  Color? _canvasColor;
+  Color? _axisLineColor;
+  Color? _axisLabelColor;
+  double _axisLineWidth = 1;
+  double _axisLabelSize = 12;
+  Color? _gridLineColor;
+  double _gridLineWidth = 1;
+  _PolarLinePattern _gridLinePattern = _PolarLinePattern.solid;
+  Color? _columnBorderColor;
+  double _columnBorderWidth = 0.75;
+  Color? _targetColor;
+  double _targetOpacity = 1;
+  Color? _thresholdColor;
+  double _thresholdWidth = 2;
+  _PolarLinePattern _thresholdPattern = _PolarLinePattern.dashed;
+  Color? _intervalColor;
+  bool _showTooltip = true;
+  TooltipTriggerMode _tooltipTrigger = TooltipTriggerMode.hover;
+  TooltipPosition _tooltipPosition = TooltipPosition.auto;
+  double _tooltipOffset = 8;
+  Color? _tooltipBackgroundColor;
+  Color? _tooltipTextColor;
+  Color? _tooltipBorderColor;
+  double _tooltipBorderWidth = 1;
+  double _tooltipCornerRadius = 6;
+  RadialSelectionEffect _selectionEffect = RadialSelectionEffect.explode;
+  double _selectionScale = 1.08;
+  double _selectionOffset = 6;
+  double _selectionBackdropBlur = 1.25;
+  Color? _selectionColor;
   String? _selectedCategory;
   String? _selectedSeries;
 
@@ -216,23 +251,23 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     'Direct': 103,
   };
 
-  static const _columnColors = <Color>[
+  static const _colorChoices = <Color>[
+    Color(0xFFFFFFFF),
+    Color(0xFFF8FAFC),
+    Color(0xFFE2E8F0),
+    Color(0xFF94A3B8),
+    Color(0xFF334155),
+    Color(0xFF0F172A),
+    Color(0xFF111827),
+    Color(0xFF000000),
     Color(0xFF2563EB),
     Color(0xFF0891B2),
     Color(0xFF0D9488),
     Color(0xFF16A34A),
     Color(0xFFF59E0B),
     Color(0xFFF97316),
-    Color(0xFFE11D48),
-    Color(0xFF9333EA),
-    Color(0xFF4F46E5),
-    Color(0xFF0284C7),
-    Color(0xFF059669),
-    Color(0xFFCA8A04),
     Color(0xFFDC2626),
-    Color(0xFF7C3AED),
-    Color(0xFF475569),
-    Color(0xFFDB2777),
+    Color(0xFF9333EA),
   ];
 
   @override
@@ -371,8 +406,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   Widget _buildChartCard() {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final chartTheme = isDark ? ChartTheme.dark : ChartTheme.light;
+    final chartTheme = _buildChartTheme();
     final config = _buildPolarConfig();
     final chartSeries = _buildSeriesList();
 
@@ -500,8 +534,20 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                   bravenChartController: controller,
                   theme: chartTheme,
                   showLegend: false,
-                  interactionConfig: const InteractionConfig(
-                    tooltip: TooltipConfig(enabled: true),
+                  interactionConfig: InteractionConfig(
+                    tooltip: TooltipConfig(
+                      enabled: _showTooltip,
+                      triggerMode: _tooltipTrigger,
+                      preferredPosition: _tooltipPosition,
+                      offsetFromPoint: _tooltipOffset,
+                      style: TooltipStyle(
+                        backgroundColor: _effectiveTooltipBackgroundColor,
+                        borderColor: _effectiveTooltipBorderColor,
+                        borderWidth: _tooltipBorderWidth,
+                        borderRadius: _tooltipCornerRadius,
+                        textColor: _effectiveTooltipTextColor,
+                      ),
+                    ),
                   ),
                   onPointTap: _handlePointActivation,
                 ),
@@ -544,9 +590,9 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             PolarThreshold(
               value: _thresholdValue,
               label: 'Capacity',
-              color: const Color(0xFFDC2626),
-              width: 2,
-              dashPattern: const <double>[7, 4],
+              color: _effectiveThresholdColor,
+              width: _thresholdWidth,
+              dashPattern: _thresholdPattern.pattern,
             ),
           ]
         : const <PolarThreshold>[],
@@ -612,17 +658,25 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
       _buildSeriesList().firstWhere((series) => series.id == seriesId);
 
   List<PolarColumnChartSeries> _buildSeriesList() {
+    final palette = _categoryColors;
     final colors = <String, Color>{};
     for (final (index, category) in _values.keys.indexed) {
-      colors[category] = _columnColors[index % _columnColors.length];
+      colors[category] = palette[index % palette.length];
     }
     final style = PolarColumnStyle(
       cornerRadius: _cornerRadius,
+      cornerRadiusMode: _cornerRadiusMode,
       opacity: _opacity,
-      borderColor: const Color(0xFF334155),
-      borderWidth: 0.75,
+      borderColor: _effectiveColumnBorderColor,
+      borderWidth: _columnBorderWidth,
       showDataLabels: _showValues,
       maximumVisibleDataLabels: _maximumDataLabels,
+    );
+    final selectionStyle = RadialSelectionStyle(
+      effect: _selectionEffect,
+      liftScale: _selectionScale,
+      liftOffset: _selectionOffset,
+      backdropBlur: _selectionBackdropBlur,
     );
     if (_presentation == _PolarPresentation.layered) {
       return [
@@ -630,23 +684,26 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           id: 'showcase-polar-capacity',
           name: 'Capacity',
           values: _comparisonValues,
-          color: const Color(0xFF94A3B8),
+          color: palette[1 % palette.length],
           unit: 'orders',
           polarStyle: PolarColumnStyle(
             cornerRadius: _cornerRadius,
+            cornerRadiusMode: _cornerRadiusMode,
             opacity: math.min(_opacity, 0.32),
-            borderColor: const Color(0xFF64748B),
-            borderWidth: 0.75,
+            borderColor: _effectiveColumnBorderColor,
+            borderWidth: _columnBorderWidth,
             showDataLabels: false,
           ),
+          selectionStyle: selectionStyle,
         ),
         PolarColumnChartSeries.fromMap(
           id: 'showcase-polar-observed',
           name: 'Observed',
           values: _values,
-          color: const Color(0xFF2563EB),
+          color: palette.first,
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
       ];
     }
@@ -656,25 +713,28 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           id: 'showcase-polar-north',
           name: 'North',
           values: _values,
-          color: const Color(0xFF2563EB),
+          color: palette[0],
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
         PolarColumnChartSeries.fromMap(
           id: 'showcase-polar-south',
           name: 'South',
           values: _comparisonValues,
-          color: const Color(0xFF0D9488),
+          color: palette[1 % palette.length],
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
         PolarColumnChartSeries.fromMap(
           id: 'showcase-polar-west',
           name: 'West',
           values: _tertiaryValues,
-          color: const Color(0xFFF59E0B),
+          color: palette[2 % palette.length],
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
       ];
     }
@@ -684,25 +744,28 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           id: 'showcase-polar-new',
           name: 'New accounts',
           values: _values,
-          color: const Color(0xFF2563EB),
+          color: palette[0],
           unit: 'accounts',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
         PolarColumnChartSeries.fromMap(
           id: 'showcase-polar-expansion',
           name: 'Expansion',
           values: _comparisonValues,
-          color: const Color(0xFF0D9488),
+          color: palette[1 % palette.length],
           unit: 'accounts',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
         PolarColumnChartSeries.fromMap(
           id: 'showcase-polar-churn',
           name: 'Churn',
           values: _tertiaryValues,
-          color: const Color(0xFFE11D48),
+          color: palette[2 % palette.length],
           unit: 'accounts',
           polarStyle: style,
+          selectionStyle: selectionStyle,
         ),
       ];
     }
@@ -716,10 +779,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           columnColors: colors,
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
           targetMarkerStyle: PolarColumnTargetMarkerStyle(
-            color: const Color(0xFFF59E0B),
+            color: _effectiveTargetColor,
             width: _targetMarkerWidth,
             lengthFactor: _targetMarkerLength,
+            opacity: _targetOpacity,
           ),
         ),
       ];
@@ -744,12 +809,14 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           columnColors: colors,
           unit: 'orders',
           polarStyle: style,
+          selectionStyle: selectionStyle,
           intervalStyle: PolarColumnIntervalStyle(
             display: _intervalDisplay,
+            color: _effectiveIntervalColor,
             width: _intervalWidth,
             capLengthFactor: _intervalCapLength,
             bandLengthFactor: _intervalBandLength,
-            opacity: 0.92,
+            opacity: _intervalOpacity,
           ),
         ),
       ];
@@ -763,6 +830,7 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               columnColors: colors,
               unit: 'requests',
               polarStyle: style,
+              selectionStyle: selectionStyle,
             )
           : PolarColumnChartSeries.fromMap(
               id: 'showcase-polar-column',
@@ -771,14 +839,169 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               columnColors: colors,
               unit: 'requests',
               polarStyle: style,
+              selectionStyle: selectionStyle,
             ),
     ];
   }
 
+  ChartTheme _buildChartTheme() {
+    final base = _baseChartTheme;
+    return base.copyWith(
+      backgroundColor: _effectiveCanvasColor,
+      gridStyle: base.gridStyle.copyWith(
+        majorColor: _effectiveGridLineColor,
+        majorWidth: _gridLineWidth,
+        majorDashPattern: _gridLinePattern.pattern,
+      ),
+      axisStyle: base.axisStyle.copyWith(
+        lineColor: _effectiveAxisLineColor,
+        lineWidth: _axisLineWidth,
+        tickColor: _effectiveAxisLineColor,
+        labelStyle: base.axisStyle.labelStyle.copyWith(
+          color: _effectiveAxisLabelColor,
+          fontSize: _axisLabelSize,
+        ),
+      ),
+      seriesTheme: base.seriesTheme.copyWith(colors: _categoryColors),
+      interactionTheme: base.interactionTheme.copyWith(
+        selectionColor: _effectiveSelectionColor.withValues(alpha: 0.3),
+        tooltipStyle: base.interactionTheme.tooltipStyle.copyWith(
+          textStyle: base.interactionTheme.tooltipStyle.textStyle.copyWith(
+            color: _effectiveTooltipTextColor,
+          ),
+          backgroundColor: _effectiveTooltipBackgroundColor,
+          borderColor: _effectiveTooltipBorderColor,
+          borderWidth: _tooltipBorderWidth,
+          borderRadius: _tooltipCornerRadius,
+        ),
+      ),
+      focusBorderColor: _effectiveSelectionColor,
+    );
+  }
+
+  ChartTheme get _baseChartTheme => _chartThemeForPreset(_themePreset);
+
+  Color get _effectiveCanvasColor =>
+      _canvasColor ?? _baseChartTheme.backgroundColor;
+  Color get _effectiveAxisLineColor =>
+      _axisLineColor ?? _baseChartTheme.axisStyle.lineColor;
+  Color get _effectiveAxisLabelColor =>
+      _axisLabelColor ??
+      _baseChartTheme.axisStyle.labelStyle.color ??
+      const Color(0xFF334155);
+  Color get _effectiveGridLineColor =>
+      _gridLineColor ?? _baseChartTheme.gridStyle.majorColor;
+  Color get _effectiveColumnBorderColor =>
+      _columnBorderColor ?? _baseChartTheme.axisStyle.lineColor;
+  Color get _effectiveTargetColor => _targetColor ?? const Color(0xFFF59E0B);
+  Color get _effectiveThresholdColor =>
+      _thresholdColor ?? const Color(0xFFDC2626);
+  Color get _effectiveIntervalColor =>
+      _intervalColor ?? const Color(0xFF475569);
+  Color get _effectiveTooltipBackgroundColor =>
+      _tooltipBackgroundColor ??
+      _baseChartTheme.interactionTheme.tooltipStyle.backgroundColor;
+  Color get _effectiveTooltipTextColor =>
+      _tooltipTextColor ??
+      _baseChartTheme.interactionTheme.tooltipStyle.textStyle.color ??
+      const Color(0xFF1E293B);
+  Color get _effectiveTooltipBorderColor =>
+      _tooltipBorderColor ??
+      _baseChartTheme.interactionTheme.tooltipStyle.borderColor;
+  Color get _effectiveSelectionColor =>
+      _selectionColor ?? _baseChartTheme.focusBorderColor;
+
+  ChartTheme _chartThemeForPreset(_PolarThemePreset preset) => switch (preset) {
+    _PolarThemePreset.light => ChartTheme.light,
+    _PolarThemePreset.dark => ChartTheme.dark,
+    _PolarThemePreset.corporate => ChartTheme.corporateBlue,
+    _PolarThemePreset.vibrant => ChartTheme.vibrant,
+    _PolarThemePreset.minimal => ChartTheme.minimal,
+    _PolarThemePreset.highContrast => ChartTheme.highContrast,
+    _PolarThemePreset.colorblind => ChartTheme.colorblindFriendly,
+  };
+
+  List<Color> get _categoryColors => switch (_palette) {
+    _PolarPalette.theme => List<Color>.generate(
+      math.max(8, _values.length),
+      _baseChartTheme.seriesTheme.colorAt,
+    ),
+    _PolarPalette.ocean => const [
+      Color(0xFF2563EB),
+      Color(0xFF0D9488),
+      Color(0xFF06B6D4),
+      Color(0xFF7C3AED),
+      Color(0xFF64748B),
+    ],
+    _PolarPalette.sunset => const [
+      Color(0xFFE63946),
+      Color(0xFFF77F00),
+      Color(0xFFFCBF49),
+      Color(0xFF9D4EDD),
+      Color(0xFF5A189A),
+    ],
+    _PolarPalette.earth => const [
+      Color(0xFF386641),
+      Color(0xFF6A994E),
+      Color(0xFFA7C957),
+      Color(0xFFBC6C25),
+      Color(0xFFDDA15E),
+    ],
+    _PolarPalette.monochrome => const [
+      Color(0xFF1F2937),
+      Color(0xFF374151),
+      Color(0xFF4B5563),
+      Color(0xFF6B7280),
+      Color(0xFF9CA3AF),
+    ],
+  };
+
+  void _applyThemePreset(_PolarThemePreset preset) {
+    final base = _chartThemeForPreset(preset);
+    setState(() {
+      _themePreset = preset;
+      _canvasColor = null;
+      _axisLineColor = null;
+      _axisLineWidth = base.axisStyle.lineWidth;
+      _axisLabelColor = null;
+      _axisLabelSize = base.axisStyle.labelStyle.fontSize ?? _axisLabelSize;
+      _gridLineColor = null;
+      _gridLineWidth = base.gridStyle.majorWidth;
+      _gridLinePattern = base.gridStyle.majorDashPattern.isEmpty
+          ? _PolarLinePattern.solid
+          : _PolarLinePattern.dashed;
+      _tooltipBackgroundColor = null;
+      _tooltipTextColor = null;
+      _tooltipBorderColor = null;
+      _tooltipBorderWidth = base.interactionTheme.tooltipStyle.borderWidth;
+      _tooltipCornerRadius = base.interactionTheme.tooltipStyle.borderRadius;
+      _selectionColor = null;
+    });
+  }
+
   List<Widget> _buildOptions() => [
     OptionSection(
-      title: 'Data',
-      icon: Icons.data_array_outlined,
+      title: 'Chart appearance',
+      icon: Icons.palette_outlined,
+      children: [
+        EnumOption<_PolarThemePreset>(
+          label: 'Theme preset',
+          value: _themePreset,
+          values: _PolarThemePreset.values,
+          labelBuilder: (value) => value.label,
+          onChanged: _applyThemePreset,
+        ),
+        _PolarColorOption(
+          label: 'Canvas color',
+          value: _canvasColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _canvasColor = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Categories',
+      icon: Icons.category_outlined,
       children: [
         IntSliderOption(
           label: 'Category count',
@@ -787,6 +1010,151 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           max: 96,
           suffix: 'categories',
           onChanged: _setCategoryCount,
+        ),
+        EnumOption<_PolarPalette>(
+          label: 'Category colors',
+          value: _palette,
+          values: _PolarPalette.values,
+          labelBuilder: (value) => value.label,
+          onChanged: (value) => setState(() => _palette = value),
+        ),
+        SliderOption(
+          label: 'Column gap',
+          value: _innerPadding,
+          min: 0,
+          max: 0.5,
+          divisions: 20,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _innerPadding = value),
+        ),
+        SliderOption(
+          label: 'Outer padding',
+          value: _outerPadding,
+          min: 0,
+          max: 0.35,
+          divisions: 14,
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _outerPadding = value),
+        ),
+      ],
+    ),
+    OptionSection(
+      title: 'Labels',
+      icon: Icons.label_outline,
+      children: [
+        _PolarColorOption(
+          label: 'Label color',
+          value: _axisLabelColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _axisLabelColor = value),
+        ),
+        SliderOption(
+          label: 'Label size',
+          value: _axisLabelSize,
+          min: 8,
+          max: 20,
+          divisions: 12,
+          suffix: 'px',
+          decimalPlaces: 0,
+          onChanged: (value) => setState(() => _axisLabelSize = value),
+        ),
+        BoolOption(
+          label: 'Show category labels',
+          value: _showAngularLabels,
+          onChanged: (value) => setState(() => _showAngularLabels = value),
+        ),
+        if (_showAngularLabels)
+          IntSliderOption(
+            label: 'Maximum category labels',
+            value: _maximumAngularLabels,
+            min: 4,
+            max: 48,
+            suffix: 'labels',
+            onChanged: (value) => setState(() => _maximumAngularLabels = value),
+          ),
+        BoolOption(
+          label: 'Show radial labels',
+          value: _showRadialLabels,
+          onChanged: (value) => setState(() => _showRadialLabels = value),
+        ),
+        BoolOption(
+          label: 'Show values inside columns',
+          value: _showValues,
+          onChanged: (value) => setState(() => _showValues = value),
+        ),
+        if (_showValues)
+          IntSliderOption(
+            label: 'Maximum value labels',
+            value: _maximumDataLabels,
+            min: 4,
+            max: 48,
+            suffix: 'labels',
+            onChanged: (value) => setState(() => _maximumDataLabels = value),
+          ),
+      ],
+    ),
+    OptionSection(
+      title: 'Grid & axes',
+      icon: Icons.grid_4x4_outlined,
+      children: [
+        _PolarColorOption(
+          label: 'Axis line color',
+          value: _axisLineColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _axisLineColor = value),
+        ),
+        SliderOption(
+          label: 'Axis line width',
+          value: _axisLineWidth,
+          min: 0,
+          max: 4,
+          divisions: 16,
+          suffix: 'px',
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _axisLineWidth = value),
+        ),
+        BoolOption(
+          label: 'Show angular grid',
+          value: _showAngularGrid,
+          onChanged: (value) => setState(() => _showAngularGrid = value),
+        ),
+        if (_showAngularGrid)
+          IntSliderOption(
+            label: 'Maximum grid spokes',
+            value: _maximumAngularGridLines,
+            min: 8,
+            max: 96,
+            suffix: 'spokes',
+            onChanged: (value) =>
+                setState(() => _maximumAngularGridLines = value),
+          ),
+        BoolOption(
+          label: 'Show radial grid',
+          value: _showRadialGrid,
+          onChanged: (value) => setState(() => _showRadialGrid = value),
+        ),
+        _PolarColorOption(
+          label: 'Grid line color',
+          value: _gridLineColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _gridLineColor = value),
+        ),
+        SliderOption(
+          label: 'Grid line width',
+          value: _gridLineWidth,
+          min: 0,
+          max: 4,
+          divisions: 16,
+          suffix: 'px',
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _gridLineWidth = value),
+        ),
+        EnumOption<_PolarLinePattern>(
+          label: 'Grid line pattern',
+          value: _gridLinePattern,
+          values: _PolarLinePattern.values,
+          labelBuilder: (value) => value.label,
+          onChanged: (value) => setState(() => _gridLinePattern = value),
         ),
       ],
     ),
@@ -831,6 +1199,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
             onChanged: (value) => setState(() => _showTargets = value),
           ),
           if (_showTargets) ...[
+            _PolarColorOption(
+              label: 'Target color',
+              value: _targetColor,
+              colors: _colorChoices,
+              onChanged: (value) => setState(() => _targetColor = value),
+            ),
             SliderOption(
               label: 'Target marker width',
               value: _targetMarkerWidth,
@@ -852,13 +1226,30 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               onChanged: (value) =>
                   setState(() => _targetMarkerLength = value / 100),
             ),
+            SliderOption(
+              label: 'Target opacity',
+              value: _targetOpacity * 100,
+              min: 20,
+              max: 100,
+              divisions: 16,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _targetOpacity = value / 100),
+            ),
           ],
           BoolOption(
             label: 'Show capacity threshold',
             value: _showThreshold,
             onChanged: (value) => setState(() => _showThreshold = value),
           ),
-          if (_showThreshold)
+          if (_showThreshold) ...[
+            _PolarColorOption(
+              label: 'Threshold color',
+              value: _thresholdColor,
+              colors: _colorChoices,
+              onChanged: (value) => setState(() => _thresholdColor = value),
+            ),
             SliderOption(
               label: 'Capacity threshold',
               value: _thresholdValue,
@@ -869,6 +1260,24 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _thresholdValue = value),
             ),
+            SliderOption(
+              label: 'Threshold width',
+              value: _thresholdWidth,
+              min: 0.5,
+              max: 6,
+              divisions: 22,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _thresholdWidth = value),
+            ),
+            EnumOption<_PolarLinePattern>(
+              label: 'Threshold pattern',
+              value: _thresholdPattern,
+              values: _PolarLinePattern.values,
+              labelBuilder: (value) => value.label,
+              onChanged: (value) => setState(() => _thresholdPattern = value),
+            ),
+          ],
         ],
       ),
     if (_presentation == _PolarPresentation.intervals)
@@ -891,6 +1300,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                 PolarColumnIntervalDisplay.band => 'Annular range band',
               },
               onChanged: (value) => setState(() => _intervalDisplay = value),
+            ),
+            _PolarColorOption(
+              label: 'Interval color',
+              value: _intervalColor,
+              colors: _colorChoices,
+              onChanged: (value) => setState(() => _intervalColor = value),
             ),
             SliderOption(
               label: 'Line width',
@@ -926,11 +1341,173 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                 onChanged: (value) =>
                     setState(() => _intervalBandLength = value / 100),
               ),
+            SliderOption(
+              label: 'Interval opacity',
+              value: _intervalOpacity * 100,
+              min: 20,
+              max: 100,
+              divisions: 16,
+              suffix: '%',
+              decimalPlaces: 0,
+              onChanged: (value) =>
+                  setState(() => _intervalOpacity = value / 100),
+            ),
           ],
         ],
       ),
     OptionSection(
-      title: 'Polar pane',
+      title: 'Selection',
+      icon: Icons.touch_app_outlined,
+      children: [
+        EnumOption<RadialSelectionEffect>(
+          label: 'Selected column effect',
+          value: _selectionEffect,
+          values: RadialSelectionEffect.values,
+          labelBuilder: (value) => switch (value) {
+            RadialSelectionEffect.explode => 'Move outward',
+            RadialSelectionEffect.lift => 'Lift towards viewer',
+          },
+          onChanged: (value) => setState(() => _selectionEffect = value),
+        ),
+        _PolarColorOption(
+          label: 'Selection accent',
+          value: _selectionColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _selectionColor = value),
+        ),
+        if (_selectionEffect == RadialSelectionEffect.lift) ...[
+          SliderOption(
+            label: 'Lift scale',
+            value: _selectionScale * 100,
+            min: 100,
+            max: 125,
+            divisions: 25,
+            suffix: '%',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _selectionScale = value / 100),
+          ),
+          SliderOption(
+            label: 'Lift offset',
+            value: _selectionOffset,
+            min: 0,
+            max: 24,
+            divisions: 24,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _selectionOffset = value),
+          ),
+          SliderOption(
+            label: 'Backdrop blur',
+            value: _selectionBackdropBlur,
+            min: 0,
+            max: 8,
+            divisions: 16,
+            suffix: 'px',
+            decimalPlaces: 1,
+            onChanged: (value) =>
+                setState(() => _selectionBackdropBlur = value),
+          ),
+        ] else
+          SliderOption(
+            label: 'Selection offset',
+            value: _selectionOffset,
+            min: 0,
+            max: 24,
+            divisions: 24,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _selectionOffset = value),
+          ),
+      ],
+    ),
+    OptionSection(
+      title: 'Tooltips',
+      icon: Icons.chat_bubble_outline,
+      children: [
+        BoolOption(
+          label: 'Show tooltips',
+          value: _showTooltip,
+          onChanged: (value) => setState(() => _showTooltip = value),
+        ),
+        if (_showTooltip) ...[
+          EnumOption<TooltipTriggerMode>(
+            label: 'Trigger',
+            value: _tooltipTrigger,
+            values: TooltipTriggerMode.values,
+            labelBuilder: (value) => switch (value) {
+              TooltipTriggerMode.hover => 'Hover',
+              TooltipTriggerMode.tap => 'Tap',
+              TooltipTriggerMode.both => 'Hover + tap',
+            },
+            onChanged: (value) => setState(() => _tooltipTrigger = value),
+          ),
+          EnumOption<TooltipPosition>(
+            label: 'Position',
+            value: _tooltipPosition,
+            values: TooltipPosition.values,
+            labelBuilder: (value) => switch (value) {
+              TooltipPosition.auto => 'Automatic',
+              TooltipPosition.top => 'Above',
+              TooltipPosition.bottom => 'Below',
+              TooltipPosition.left => 'Left',
+              TooltipPosition.right => 'Right',
+            },
+            onChanged: (value) => setState(() => _tooltipPosition = value),
+          ),
+          SliderOption(
+            label: 'Point offset',
+            value: _tooltipOffset,
+            min: 0,
+            max: 24,
+            divisions: 24,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _tooltipOffset = value),
+          ),
+          _PolarColorOption(
+            label: 'Background color',
+            value: _tooltipBackgroundColor,
+            colors: _colorChoices,
+            onChanged: (value) =>
+                setState(() => _tooltipBackgroundColor = value),
+          ),
+          _PolarColorOption(
+            label: 'Text color',
+            value: _tooltipTextColor,
+            colors: _colorChoices,
+            onChanged: (value) => setState(() => _tooltipTextColor = value),
+          ),
+          _PolarColorOption(
+            label: 'Border color',
+            value: _tooltipBorderColor,
+            colors: _colorChoices,
+            onChanged: (value) => setState(() => _tooltipBorderColor = value),
+          ),
+          SliderOption(
+            label: 'Border width',
+            value: _tooltipBorderWidth,
+            min: 0,
+            max: 4,
+            divisions: 16,
+            suffix: 'px',
+            decimalPlaces: 2,
+            onChanged: (value) => setState(() => _tooltipBorderWidth = value),
+          ),
+          SliderOption(
+            label: 'Corner radius',
+            value: _tooltipCornerRadius,
+            min: 0,
+            max: 18,
+            divisions: 18,
+            suffix: 'px',
+            decimalPlaces: 0,
+            onChanged: (value) => setState(() => _tooltipCornerRadius = value),
+          ),
+        ],
+      ],
+    ),
+    OptionSection(
+      title: 'Polar geometry & scale',
       icon: Icons.radar_outlined,
       children: [
         SliderOption(
@@ -978,65 +1555,6 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _outerRadius = value / 100),
         ),
-      ],
-    ),
-    OptionSection(
-      title: 'Angular categories',
-      icon: Icons.rotate_right_outlined,
-      children: [
-        SliderOption(
-          label: 'Column gap',
-          value: _innerPadding,
-          min: 0,
-          max: 0.5,
-          divisions: 20,
-          decimalPlaces: 2,
-          onChanged: (value) => setState(() => _innerPadding = value),
-        ),
-        SliderOption(
-          label: 'Outer padding',
-          value: _outerPadding,
-          min: 0,
-          max: 0.35,
-          divisions: 14,
-          decimalPlaces: 2,
-          onChanged: (value) => setState(() => _outerPadding = value),
-        ),
-        BoolOption(
-          label: 'Show category labels',
-          value: _showAngularLabels,
-          onChanged: (value) => setState(() => _showAngularLabels = value),
-        ),
-        if (_showAngularLabels)
-          IntSliderOption(
-            label: 'Maximum category labels',
-            value: _maximumAngularLabels,
-            min: 4,
-            max: 48,
-            suffix: 'labels',
-            onChanged: (value) => setState(() => _maximumAngularLabels = value),
-          ),
-        BoolOption(
-          label: 'Show angular grid',
-          value: _showAngularGrid,
-          onChanged: (value) => setState(() => _showAngularGrid = value),
-        ),
-        if (_showAngularGrid)
-          IntSliderOption(
-            label: 'Maximum grid spokes',
-            value: _maximumAngularGridLines,
-            min: 8,
-            max: 96,
-            suffix: 'spokes',
-            onChanged: (value) =>
-                setState(() => _maximumAngularGridLines = value),
-          ),
-      ],
-    ),
-    OptionSection(
-      title: 'Radial values',
-      icon: Icons.straighten_outlined,
-      children: [
         EnumOption<PolarRadialScaleMode>(
           label: 'Scale mode',
           value: _scaleMode,
@@ -1054,22 +1572,23 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           max: 8,
           onChanged: (value) => setState(() => _tickCount = value),
         ),
-        BoolOption(
-          label: 'Show radial labels',
-          value: _showRadialLabels,
-          onChanged: (value) => setState(() => _showRadialLabels = value),
-        ),
-        BoolOption(
-          label: 'Show radial grid',
-          value: _showRadialGrid,
-          onChanged: (value) => setState(() => _showRadialGrid = value),
-        ),
       ],
     ),
     OptionSection(
       title: 'Columns',
       icon: Icons.view_column_outlined,
       children: [
+        EnumOption<PolarColumnCornerRadiusMode>(
+          label: 'Corner placement',
+          value: _cornerRadiusMode,
+          values: PolarColumnCornerRadiusMode.values,
+          labelBuilder: (value) => switch (value) {
+            PolarColumnCornerRadiusMode.bothEnds => 'Both ends',
+            PolarColumnCornerRadiusMode.outerEnd => 'Outer end',
+            PolarColumnCornerRadiusMode.stackExterior => 'Stack exterior only',
+          },
+          onChanged: (value) => setState(() => _cornerRadiusMode = value),
+        ),
         SliderOption(
           label: 'Corner radius',
           value: _cornerRadius,
@@ -1090,20 +1609,22 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
           decimalPlaces: 0,
           onChanged: (value) => setState(() => _opacity = value / 100),
         ),
-        BoolOption(
-          label: 'Show values inside columns',
-          value: _showValues,
-          onChanged: (value) => setState(() => _showValues = value),
+        _PolarColorOption(
+          label: 'Column border color',
+          value: _columnBorderColor,
+          colors: _colorChoices,
+          onChanged: (value) => setState(() => _columnBorderColor = value),
         ),
-        if (_showValues)
-          IntSliderOption(
-            label: 'Maximum value labels',
-            value: _maximumDataLabels,
-            min: 4,
-            max: 48,
-            suffix: 'labels',
-            onChanged: (value) => setState(() => _maximumDataLabels = value),
-          ),
+        SliderOption(
+          label: 'Column border width',
+          value: _columnBorderWidth,
+          min: 0,
+          max: 4,
+          divisions: 16,
+          suffix: 'px',
+          decimalPlaces: 2,
+          onChanged: (value) => setState(() => _columnBorderWidth = value),
+        ),
       ],
     ),
   ];
@@ -1166,20 +1687,23 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               : constraints.maxWidth < 900
               ? 2
               : 3;
-          return GridView.count(
-            crossAxisCount: columns,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: columns == 1
-                ? 3.8
-                : columns == 2
-                ? 2.25
-                : 1.55,
+          const gap = 12.0;
+          final cardWidth =
+              (constraints.maxWidth - (columns - 1) * gap) / columns;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
             children: [
-              for (final item in items)
-                _FeatureCard(icon: item.$1, title: item.$2, body: item.$3),
+              for (final (index, item) in items.indexed)
+                SizedBox(
+                  key: ValueKey('polar-feature-card-$index'),
+                  width: cardWidth,
+                  child: _FeatureCard(
+                    icon: item.$1,
+                    title: item.$2,
+                    body: item.$3,
+                  ),
+                ),
             ],
           );
         },
@@ -1236,6 +1760,9 @@ BravenChartPlus(
       _selectedSeries = null;
       _comparisonValues = const {};
       _tertiaryValues = const {};
+      _cornerRadiusMode = presentation == _PolarPresentation.stacked
+          ? PolarColumnCornerRadiusMode.stackExterior
+          : PolarColumnCornerRadiusMode.outerEnd;
       switch (presentation) {
         case _PolarPresentation.standard:
           _values = Map<String, num>.of(_standardValues);
@@ -1504,6 +2031,43 @@ BravenChartPlus(
   }
 }
 
+enum _PolarThemePreset {
+  light('Light'),
+  dark('Dark'),
+  corporate('Corporate blue'),
+  vibrant('Vibrant'),
+  minimal('Minimal'),
+  highContrast('High contrast'),
+  colorblind('Colorblind friendly');
+
+  const _PolarThemePreset(this.label);
+
+  final String label;
+}
+
+enum _PolarPalette {
+  theme('Theme colors'),
+  ocean('Ocean'),
+  sunset('Sunset'),
+  earth('Earth'),
+  monochrome('Monochrome');
+
+  const _PolarPalette(this.label);
+
+  final String label;
+}
+
+enum _PolarLinePattern {
+  solid('Solid', <double>[]),
+  dashed('Dashed', <double>[7, 4]),
+  dotted('Dotted', <double>[2, 3]);
+
+  const _PolarLinePattern(this.label, this.pattern);
+
+  final String label;
+  final List<double> pattern;
+}
+
 enum _PolarPresentation {
   standard(
     'Standard columns',
@@ -1733,6 +2297,45 @@ class _Section extends StatelessWidget {
   }
 }
 
+class _PolarColorOption extends StatelessWidget {
+  const _PolarColorOption({
+    required this.label,
+    required this.value,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  final String label;
+  final Color? value;
+  final List<Color> colors;
+  final ValueChanged<Color?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final keyName = label
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+        ),
+        const SizedBox(height: 8),
+        ChartColorPalette(
+          value: value,
+          keyPrefix: 'polar-$keyName',
+          customColorFallback: value ?? colors.first,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
 class _FeatureCard extends StatelessWidget {
   const _FeatureCard({
     required this.icon,
@@ -1748,7 +2351,7 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest,
         border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -1757,20 +2360,30 @@ class _FeatureCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: theme.colorScheme.primary),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 19, color: theme.colorScheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
-          Text(
-            body,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.4,
+          Padding(
+            padding: const EdgeInsets.only(left: 29),
+            child: Text(
+              body,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.35,
+              ),
             ),
           ),
         ],

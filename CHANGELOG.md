@@ -100,6 +100,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   labels and spokes; every mark remains available to hit testing, semantics,
   native tables, CSV, artifacts, hydration, and generated Dart source. A
   512-category warm-paint benchmark now guards the renderer's frame budget.
+- `PolarColumnCornerRadiusMode` for rounding both radial ends, retaining the
+  original outer-radius-only treatment, or rounding only the exposed positive
+  and negative boundaries of a complete stack. Non-default modes negotiate
+  `series.polar.column.corner-radius-mode.v1` through artifacts and generated
+  source.
+
+### Fixed
+- Full-circle Polar Column grid, baseline, and threshold rings now use closed
+  circle geometry, so rotating a 360-degree pane cannot make its radial lines
+  disappear at particular start angles.
 
 ## 0.9.0 - 2026-07-19
 

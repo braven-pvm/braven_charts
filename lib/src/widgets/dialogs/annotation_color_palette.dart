@@ -1,13 +1,13 @@
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 
-/// Shared color palette used by the native annotation editors.
+/// Shared compact color palette used by chart editors and option surfaces.
 ///
 /// A null [value] means that no color override is selected. When [allowClear]
 /// is enabled, the first swatch always provides a visible way to return to
 /// that state, including after choosing a custom color.
-class AnnotationColorPalette extends StatelessWidget {
-  const AnnotationColorPalette({
+class ChartColorPalette extends StatelessWidget {
+  const ChartColorPalette({
     super.key,
     required this.value,
     required this.onChanged,
@@ -231,4 +231,20 @@ class AnnotationColorPalette extends StatelessWidget {
   bool _sameColor(Color? first, Color second) {
     return first?.toARGB32() == second.toARGB32();
   }
+}
+
+/// Compatibility name retained for native annotation editors.
+///
+/// New reusable surfaces should prefer [ChartColorPalette]. Both names render
+/// the same implementation and custom-color dialog.
+class AnnotationColorPalette extends ChartColorPalette {
+  const AnnotationColorPalette({
+    super.key,
+    required super.value,
+    required super.onChanged,
+    required super.keyPrefix,
+    super.allowClear = true,
+    super.presetOpacity = 1,
+    super.customColorFallback,
+  });
 }

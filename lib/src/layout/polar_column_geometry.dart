@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../axis/polar_category_scale.dart';
 import '../axis/polar_numeric_scale.dart';
+import '../models/polar_column_chart_series.dart';
 import 'annular_sector_geometry.dart';
 
 const double _radiusEpsilon = 1e-9;
@@ -148,6 +149,7 @@ abstract final class PolarColumnGeometryCalculator {
     double? baseline,
     List<double>? radialStarts,
     List<double>? radialEnds,
+    List<bool>? stackExteriorEnds,
     List<double?> targetValues = const <double?>[],
     double targetLengthFactor = 0.72,
     List<double?> intervalLowerValues = const <double?>[],
@@ -155,6 +157,8 @@ abstract final class PolarColumnGeometryCalculator {
     double intervalCapLengthFactor = 0.62,
     double intervalBandLengthFactor = 0.58,
     double cornerRadius = 0,
+    PolarColumnCornerRadiusMode cornerRadiusMode =
+        PolarColumnCornerRadiusMode.outerEnd,
     bool roundInnerCorners = false,
     int groupIndex = 0,
     int groupCount = 1,
@@ -190,6 +194,14 @@ abstract final class PolarColumnGeometryCalculator {
     if ((radialStarts == null) != (radialEnds == null)) {
       throw ArgumentError(
         'radialStarts and radialEnds must be supplied together',
+      );
+    }
+    if (stackExteriorEnds != null &&
+        stackExteriorEnds.length != values.length) {
+      throw ArgumentError.value(
+        stackExteriorEnds.length,
+        'stackExteriorEnds',
+        'Stack exterior flag count must match the source value count',
       );
     }
     if (targetValues.isNotEmpty && targetValues.length != values.length) {
@@ -403,14 +415,26 @@ abstract final class PolarColumnGeometryCalculator {
             );
       final innerRadius = math.min(baselineRadius, valueRadius);
       final outerRadius = math.max(baselineRadius, valueRadius);
+      final isStackExterior = stackExteriorEnds?[index] ?? true;
+      final (roundOuter, roundInner) = switch (cornerRadiusMode) {
+        PolarColumnCornerRadiusMode.bothEnds => (true, true),
+        PolarColumnCornerRadiusMode.outerEnd => (true, roundInnerCorners),
+        PolarColumnCornerRadiusMode.stackExterior =>
+          !isStackExterior
+              ? (false, false)
+              : valueRadius >= baselineRadius
+              ? (true, false)
+              : (false, true),
+      };
       final sector = AnnularSectorGeometry(
         center: categoryScale.pane.center,
         innerRadius: innerRadius,
         outerRadius: outerRadius,
         startAngle: band.startAngle,
         sweepAngle: band.sweepAngle,
-        cornerRadius: cornerRadius,
-        roundInnerCorners: roundInnerCorners,
+        cornerRadius: roundOuter || roundInner ? cornerRadius : 0,
+        roundOuterCorners: roundOuter,
+        roundInnerCorners: roundInner,
       );
       final radialDepth = outerRadius - innerRadius;
       final tooltipRadius = innerRadius + radialDepth * 0.68;

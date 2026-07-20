@@ -1,7 +1,9 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/polar_column_series_element.dart';
+import 'package:braven_charts/src/interaction/core/chart_element.dart';
 import 'package:braven_charts/src/layout/polar_column_composition.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
@@ -177,9 +179,14 @@ void main() {
       100,
     });
     expect(elements.first.paintGrid, isTrue);
-    expect(elements.first.paintAxisLabels, isFalse);
-    expect(elements.last.paintGrid, isFalse);
-    expect(elements.last.paintAxisLabels, isTrue);
+    expect(elements.skip(1).every((element) => !element.paintGrid), isTrue);
+    expect(elements.every((element) => !element.paintAxisLabels), isTrue);
+    expect(elements.every((element) => !element.paintDataLabels), isTrue);
+    final overlay = renderBox.debugElements
+        .whereType<PolarColumnCompositionOverlayElement>()
+        .single;
+    expect(overlay.seriesElements, elements);
+    expect(overlay.priority, greaterThan(elements.last.priority));
 
     final hit = renderBox.dataHitAtWidgetPosition(
       renderBox.plotToWidget(elements.last.geometry.marks.first.tooltipAnchor),
@@ -188,6 +195,448 @@ void main() {
     expect(hit?.category, 'Search');
     expect(tester.takeException(), isNull);
   });
+
+  for (final effect in RadialSelectionEffect.values) {
+    testWidgets(
+      'selected inner stacked mark paints above outer marks for ${effect.name}',
+      (tester) async {
+        final controller = BravenChartController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox.square(
+                dimension: 420,
+                child: BravenChartPlus(
+                  bravenChartController: controller,
+                  series: [
+                    PolarColumnChartSeries.fromMap(
+                      id: 'inner',
+                      unit: 'units',
+                      values: const {'Search': 18, 'Social': 16},
+                      color: Colors.green,
+                      polarStyle: const PolarColumnStyle(showDataLabels: false),
+                      selectionStyle: RadialSelectionStyle(
+                        effect: effect,
+                        liftScale: 1.12,
+                        liftOffset: 60,
+                      ),
+                    ),
+                    PolarColumnChartSeries.fromMap(
+                      id: 'middle',
+                      unit: 'units',
+                      values: const {'Search': 26, 'Social': 24},
+                      color: Colors.blue,
+                      polarStyle: const PolarColumnStyle(showDataLabels: false),
+                    ),
+                    PolarColumnChartSeries.fromMap(
+                      id: 'outer',
+                      unit: 'units',
+                      values: const {'Search': 14, 'Social': 12},
+                      color: Colors.red,
+                      polarStyle: const PolarColumnStyle(showDataLabels: false),
+                    ),
+                  ],
+                  polarChartConfig: const PolarChartConfig(
+                    angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                    radialAxis: PolarNumericAxisConfig(showLabels: false),
+                    composition: PolarColumnCompositionConfig(
+                      mode: PolarColumnCompositionMode.stacked,
+                    ),
+                  ),
+                  theme: ChartTheme.light.copyWith(
+                    gridStyle: ChartTheme.light.gridStyle.copyWith(
+                      majorColor: Colors.transparent,
+                    ),
+                    axisStyle: ChartTheme.light.axisStyle.copyWith(
+                      lineColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final revision = controller.effectiveDocumentRevision.value!;
+        final result = controller.selectPoint(
+          const ChartPointRef(seriesId: 'inner', pointIndex: 0),
+          revision: revision,
+        );
+        expect(result, isA<ChartArtifactSuccess<void>>());
+        await tester.pumpAndSettle();
+
+        final renderBox = tester.renderObject<ChartRenderBox>(
+          find.byWidgetPredicate(
+            (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+          ),
+        );
+        final elements = renderBox.debugElements
+            .whereType<PolarColumnSeriesElement>()
+            .toList();
+        final inner = elements.singleWhere(
+          (element) => element.series.id == 'inner',
+        );
+        final outer = elements.singleWhere(
+          (element) => element.series.id == 'outer',
+        );
+        final middle = elements.singleWhere(
+          (element) => element.series.id == 'middle',
+        );
+        final overlay = renderBox.debugElements
+            .whereType<PolarColumnCompositionOverlayElement>()
+            .single;
+        final paintOrder = <DataSeriesElement>[...elements, overlay]
+          ..sort((a, b) {
+            final priority = a.priority.compareTo(b.priority);
+            return priority != 0
+                ? priority
+                : a.seriesIndex.compareTo(b.seriesIndex);
+          });
+
+        expect(inner.selectedPointIndices, {0});
+        expect(inner.priority, greaterThan(outer.priority));
+        expect(paintOrder[paintOrder.length - 2], same(inner));
+        expect(paintOrder.last, same(overlay));
+
+        final selectedPoint = inner.dataHitForPointIndex(0)!.plotPosition;
+        expect(
+          middle.geometry.marks.first.path.contains(selectedPoint),
+          isTrue,
+        );
+        final rgb = await tester.runAsync(() async {
+          final recorder = ui.PictureRecorder();
+          final canvas = ui.Canvas(recorder);
+          for (final element in paintOrder) {
+            element.paint(canvas, elements.first.size);
+          }
+          final image = await recorder.endRecording().toImage(
+            elements.first.size.width.ceil(),
+            elements.first.size.height.ceil(),
+          );
+          final bytes = await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          );
+          final x = selectedPoint.dx.round().clamp(0, image.width - 1);
+          final y = selectedPoint.dy.round().clamp(0, image.height - 1);
+          final offset = (y * image.width + x) * 4;
+          final result = <int>[
+            bytes!.getUint8(offset),
+            bytes.getUint8(offset + 1),
+            bytes.getUint8(offset + 2),
+          ];
+          image.dispose();
+          return result;
+        });
+        final [red, green, blue] = rgb!;
+        expect(green, greaterThan(red + 40));
+        expect(green, greaterThan(blue + 40));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('stack exterior rounding reaches only signed terminal marks', (
+    tester,
+  ) async {
+    PolarColumnChartSeries series(
+      String id,
+      Map<String, num> values,
+      Color color,
+    ) => PolarColumnChartSeries.fromMap(
+      id: id,
+      values: values,
+      color: color,
+      polarStyle: const PolarColumnStyle(
+        cornerRadius: 10,
+        cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
+        showDataLabels: false,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 420,
+            child: BravenChartPlus(
+              series: [
+                series('first', const {'A': 10, 'B': -4}, Colors.green),
+                series('second', const {'A': -3, 'B': -6}, Colors.blue),
+                series('third', const {'A': 5, 'B': 2}, Colors.red),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                radialAxis: PolarNumericAxisConfig(showLabels: false),
+                composition: PolarColumnCompositionConfig(
+                  mode: PolarColumnCompositionMode.stacked,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final elements = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .toList();
+    final first = elements.singleWhere(
+      (element) => element.series.id == 'first',
+    );
+    final second = elements.singleWhere(
+      (element) => element.series.id == 'second',
+    );
+    final third = elements.singleWhere(
+      (element) => element.series.id == 'third',
+    );
+
+    expect(first.geometry.marks[0].sector.cornerRadius, 0);
+    expect(first.geometry.marks[1].sector.cornerRadius, 0);
+    expect(second.geometry.marks[0].sector.roundInnerCorners, isTrue);
+    expect(second.geometry.marks[0].sector.roundOuterCorners, isFalse);
+    expect(second.geometry.marks[1].sector.roundInnerCorners, isTrue);
+    expect(third.geometry.marks[0].sector.roundOuterCorners, isTrue);
+    expect(third.geometry.marks[1].sector.roundOuterCorners, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('partial-sweep grid uses one foreground composition pass', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 420,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'inner',
+                  values: const {'Search': 42, 'Social': 38, 'Email': 44},
+                  color: Colors.blue,
+                  polarStyle: const PolarColumnStyle(showDataLabels: false),
+                ),
+                PolarColumnChartSeries.fromMap(
+                  id: 'outer',
+                  values: const {'Search': 18, 'Social': 16, 'Email': 20},
+                  color: Colors.red,
+                  polarStyle: const PolarColumnStyle(showDataLabels: false),
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                pane: PolarPaneConfig(sweepAngleDegrees: 110),
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+                composition: PolarColumnCompositionConfig(
+                  mode: PolarColumnCompositionMode.stacked,
+                ),
+              ),
+              theme: ChartTheme.light.copyWith(
+                gridStyle: ChartTheme.light.gridStyle.copyWith(
+                  majorColor: Colors.green,
+                  majorWidth: 4,
+                ),
+                axisStyle: ChartTheme.light.axisStyle.copyWith(
+                  lineColor: Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final elements = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .toList();
+    final overlay = renderBox.debugElements
+        .whereType<PolarColumnCompositionOverlayElement>()
+        .single;
+
+    expect(elements, hasLength(2));
+    expect(elements.first.paintGrid, isTrue);
+    expect(elements.last.paintGrid, isFalse);
+    expect(overlay.seriesElements, elements);
+    expect(overlay.priority, greaterThan(elements.last.priority));
+    expect(elements.first.pane.sweepAngle, closeTo(110 * math.pi / 180, 1e-9));
+
+    final outer = elements.last;
+    final gridPoint =
+        outer.pane.center +
+        Offset.fromDirection(
+          outer.geometry.marks.first.band.centerAngle,
+          outer.numericScale.valueToRadius(48),
+        );
+    expect(outer.geometry.marks.first.path.contains(gridPoint), isTrue);
+    final paintOrder = <DataSeriesElement>[...elements, overlay]
+      ..sort((a, b) {
+        final priority = a.priority.compareTo(b.priority);
+        return priority != 0
+            ? priority
+            : a.seriesIndex.compareTo(b.seriesIndex);
+      });
+    final greenChannels = await tester.runAsync(() async {
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      for (final element in paintOrder) {
+        element.paint(canvas, elements.first.size);
+      }
+      final image = await recorder.endRecording().toImage(
+        elements.first.size.width.ceil(),
+        elements.first.size.height.ceil(),
+      );
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final channels = <int>[];
+      final centerX = gridPoint.dx.round();
+      final centerY = gridPoint.dy.round();
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          final x = (centerX + dx).clamp(0, image.width - 1);
+          final y = (centerY + dy).clamp(0, image.height - 1);
+          channels.add(bytes!.getUint8((y * image.width + x) * 4 + 1));
+        }
+      }
+      image.dispose();
+      return channels;
+    });
+    expect(greenChannels!.reduce(math.max), greaterThan(40));
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final startAngle in const <double>[40, 60, -135]) {
+    testWidgets(
+      'full-sweep radial grid stays closed at $startAngle degree start',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox.square(
+                dimension: 420,
+                child: BravenChartPlus(
+                  series: [
+                    PolarColumnChartSeries.fromMap(
+                      id: 'inner',
+                      values: const {'A': 45, 'B': 45, 'C': 45, 'D': 45},
+                      color: Colors.black,
+                      polarStyle: const PolarColumnStyle(showDataLabels: false),
+                    ),
+                    PolarColumnChartSeries.fromMap(
+                      id: 'outer',
+                      values: const {'A': 45, 'B': 45, 'C': 45, 'D': 45},
+                      color: Colors.black,
+                      polarStyle: const PolarColumnStyle(showDataLabels: false),
+                    ),
+                  ],
+                  polarChartConfig: PolarChartConfig(
+                    pane: PolarPaneConfig(startAngleDegrees: startAngle),
+                    angularAxis: const PolarCategoryAxisConfig(
+                      innerPadding: 0,
+                      outerPadding: 0,
+                      showLabels: false,
+                    ),
+                    radialAxis: const PolarNumericAxisConfig(
+                      tickCount: 5,
+                      showLabels: false,
+                    ),
+                    composition: const PolarColumnCompositionConfig(
+                      mode: PolarColumnCompositionMode.stacked,
+                    ),
+                  ),
+                  theme: ChartTheme.light.copyWith(
+                    gridStyle: ChartTheme.light.gridStyle.copyWith(
+                      majorColor: Colors.green,
+                      majorWidth: 4,
+                    ),
+                    axisStyle: ChartTheme.light.axisStyle.copyWith(
+                      lineColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final renderBox = tester.renderObject<ChartRenderBox>(
+          find.byWidgetPredicate(
+            (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+          ),
+        );
+        final elements = renderBox.debugElements
+            .whereType<PolarColumnSeriesElement>()
+            .toList();
+        final overlay = renderBox.debugElements
+            .whereType<PolarColumnCompositionOverlayElement>()
+            .single;
+        final paintOrder = <DataSeriesElement>[...elements, overlay]
+          ..sort((a, b) {
+            final priority = a.priority.compareTo(b.priority);
+            return priority != 0
+                ? priority
+                : a.seriesIndex.compareTo(b.seriesIndex);
+          });
+        final probeRadius = elements.first.numericScale.valueToRadius(45);
+
+        final greenChannels = await tester.runAsync(() async {
+          final recorder = ui.PictureRecorder();
+          final canvas = ui.Canvas(recorder)
+            ..drawColor(Colors.black, BlendMode.src);
+          for (final element in paintOrder) {
+            element.paint(canvas, elements.first.size);
+          }
+          final image = await recorder.endRecording().toImage(
+            elements.first.size.width.ceil(),
+            elements.first.size.height.ceil(),
+          );
+          final bytes = await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          );
+          final channels = <int>[];
+          for (final angle in const <double>[
+            0,
+            math.pi / 2,
+            math.pi,
+            math.pi * 1.5,
+          ]) {
+            final point =
+                elements.first.pane.center +
+                Offset.fromDirection(angle, probeRadius);
+            var maximum = 0;
+            for (var dy = -2; dy <= 2; dy++) {
+              for (var dx = -2; dx <= 2; dx++) {
+                final x = (point.dx.round() + dx).clamp(0, image.width - 1);
+                final y = (point.dy.round() + dy).clamp(0, image.height - 1);
+                maximum = math.max(
+                  maximum,
+                  bytes!.getUint8((y * image.width + x) * 4 + 1),
+                );
+              }
+            }
+            channels.add(maximum);
+          }
+          image.dispose();
+          return channels;
+        });
+
+        expect(greenChannels, everyElement(greaterThan(40)));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('targets and thresholds extend the automatic radial domain', (
     tester,
@@ -270,7 +719,7 @@ void main() {
     await tester.pump();
 
     final chart = find.byKey(const ValueKey('layered-polar-keyboard'));
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    final mouse = await tester.createGesture(kind: ui.PointerDeviceKind.mouse);
     await mouse.addPointer(location: tester.getTopLeft(chart));
     await mouse.moveTo(tester.getCenter(chart));
     await tester.pump();

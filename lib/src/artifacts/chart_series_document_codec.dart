@@ -211,6 +211,10 @@ abstract final class ChartSeriesDocumentCodec {
               'series.donut.variable-radius.v1',
             if (series is PolarColumnChartSeries) 'series.polar.column.v1',
             if (series is PolarColumnChartSeries &&
+                series.polarStyle.cornerRadiusMode !=
+                    PolarColumnCornerRadiusMode.outerEnd)
+              PolarColumnChartSeries.cornerRadiusModeCapability,
+            if (series is PolarColumnChartSeries &&
                 series.targetValues.isNotEmpty)
               'series.polar.column.targets.v1',
             if (series is PolarColumnChartSeries && series.hasIntervals)
@@ -2689,6 +2693,7 @@ RadialSelectionStyle _decodeRadialSelectionStyle(Map<String, Object?> value) {
 
 Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
   'cornerRadius': _number(style.cornerRadius),
+  'cornerRadiusMode': style.cornerRadiusMode.name,
   'opacity': _number(style.opacity),
   if (style.borderColor != null) 'borderColor': style.borderColor!.toARGB32(),
   'borderWidth': _number(style.borderWidth),
@@ -2699,6 +2704,13 @@ Map<String, Object?> _encodePolarColumnStyle(PolarColumnStyle style) => {
 PolarColumnStyle _decodePolarColumnStyle(Map<String, Object?> value) =>
     PolarColumnStyle(
       cornerRadius: _double(value, 'cornerRadius'),
+      cornerRadiusMode: value['cornerRadiusMode'] == null
+          ? PolarColumnCornerRadiusMode.outerEnd
+          : _enum(
+              value,
+              'cornerRadiusMode',
+              PolarColumnCornerRadiusMode.values,
+            ),
       opacity: _double(value, 'opacity'),
       borderColor: _optionalColor(
         value['borderColor'],

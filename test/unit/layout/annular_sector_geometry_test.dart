@@ -65,13 +65,25 @@ void main() {
         cornerRadius: 12,
         roundInnerCorners: false,
       );
+      final innerOnly = AnnularSectorGeometry(
+        center: const Offset(100, 100),
+        innerRadius: 40,
+        outerRadius: 90,
+        startAngle: 0,
+        sweepAngle: math.pi / 2,
+        cornerRadius: 12,
+        roundOuterCorners: false,
+      );
 
       expect(roundAll.contains(roundAll.pointAt()), isTrue);
       expect(outerOnly.contains(outerOnly.pointAt()), isTrue);
+      expect(innerOnly.contains(innerOnly.pointAt()), isTrue);
       expect(roundAll.contains(roundAll.center), isFalse);
       expect(outerOnly.contains(outerOnly.center), isFalse);
+      expect(innerOnly.contains(innerOnly.center), isFalse);
       expect(roundAll.bounds, isNot(Rect.zero));
       expect(outerOnly.bounds, isNot(Rect.zero));
+      expect(innerOnly.bounds, isNot(Rect.zero));
     });
 
     test('physical seam insets keep adjacent rounded sides parallel', () {

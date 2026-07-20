@@ -1188,6 +1188,7 @@ void main() {
               values: const {'North': 42, 'South': 68},
               polarStyle: const PolarColumnStyle(
                 cornerRadius: 10,
+                cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds,
                 opacity: 0.75,
                 borderColor: Color(0xFF102030),
                 borderWidth: 2,
@@ -1210,6 +1211,10 @@ void main() {
       expect(generated.source, contains('preset: PolarColumnPreset.rose'));
       expect(generated.source, contains('polarStyle: PolarColumnStyle('));
       expect(generated.source, contains('cornerRadius: 10.0'));
+      expect(
+        generated.source,
+        contains('cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds'),
+      );
       expect(generated.source, contains('Color(0xFF102030)'));
       expect(generated.source, contains('maximumVisibleDataLabels: 6'));
       expect(generated.source, contains('polarChartConfig: PolarChartConfig('));
@@ -1387,6 +1392,11 @@ ChartDocumentSnapshot _snapshot(
               .values,
       }),
       requiredCapabilities: {
+        for (final item in [series, ...additionalSeries])
+          if (item is PolarColumnChartSeries &&
+              item.polarStyle.cornerRadiusMode !=
+                  PolarColumnCornerRadiusMode.outerEnd)
+            PolarColumnChartSeries.cornerRadiusModeCapability,
         if (concentricDonutConfig != null) 'series.donut.concentric.v1',
         if (polarChartConfig != null) 'chart.polar.config.v1',
         if (polarChartConfig != null && additionalSeries.isNotEmpty)

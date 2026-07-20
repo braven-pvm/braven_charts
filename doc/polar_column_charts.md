@@ -259,6 +259,10 @@ Donut, or Cartesian configuration.
 - inner and outer radius factors;
 - whether marks are clipped to the allocated pane.
 
+A 360-degree pane paints radial grid, baseline, and threshold references as
+closed circles. Partial panes paint those references as arcs that follow the
+configured start angle, sweep, and direction.
+
 A full sweep uses `360`. Partial sweeps retain a real start and end boundary.
 The inner radius changes the baseline into an annular opening; it does not turn
 the chart into a Donut because angle still represents category position, not
@@ -321,6 +325,7 @@ final styled = PolarColumnChartSeries.fromMap(
   values: const {'Discover': 84, 'Trial': 73, 'Adopt': 91},
   polarStyle: const PolarColumnStyle(
     cornerRadius: 8,
+    cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
     opacity: 0.94,
     borderColor: Color(0xFF312E81),
     borderWidth: 0.8,
@@ -339,6 +344,21 @@ Per-category colors come from `columnColors` or each point's `PointStyle`.
 Otherwise the series color and chart theme palette provide deterministic
 fallbacks. Direct value labels automatically choose black or white text from
 the resolved column luminance.
+
+`PolarColumnCornerRadiusMode` makes corner placement explicit:
+
+- `bothEnds` rounds the inner- and outer-radius ends of every column;
+- `outerEnd` rounds only each mark's geometric outer-radius end and preserves
+  the original/default Polar Column appearance;
+- `stackExterior` keeps internal stacked seams square and rounds only the
+  exposed signed-stack boundary. The terminal positive contributor rounds
+  outward; the terminal negative contributor rounds inward. On a non-stacked
+  chart it rounds the value end.
+
+The corner mode, radius, and stack-terminal identity survive generated source,
+artifact transport, and hydration. A non-default mode declares
+`series.polar.column.corner-radius-mode.v1` so an older runtime cannot silently
+substitute a different shape.
 
 Selection identity is not a paint-only state. Pointer activation, keyboard
 activation, a Workbench table row, and `BravenChartController` all use the same

@@ -11,12 +11,17 @@ class PolarColumnStackSeriesLayout {
     required this.seriesId,
     required List<double> starts,
     required List<double> ends,
+    required List<bool> exteriorEnds,
   }) : starts = UnmodifiableListView(starts),
-       ends = UnmodifiableListView(ends);
+       ends = UnmodifiableListView(ends),
+       exteriorEnds = UnmodifiableListView(exteriorEnds);
 
   final String seriesId;
   final List<double> starts;
   final List<double> ends;
+
+  /// Whether this contributor owns the exposed end of its signed stack.
+  final List<bool> exteriorEnds;
 }
 
 /// Resolved positive/negative stack geometry before conversion to radii.
@@ -52,7 +57,8 @@ class PolarColumnStackLayout {
     final categoryCount = series.first.points.length;
     final positive = List<double>.filled(categoryCount, 0);
     final negative = List<double>.filled(categoryCount, 0);
-    final layouts = <PolarColumnStackSeriesLayout>[];
+    final startsBySeries = <List<double>>[];
+    final endsBySeries = <List<double>>[];
     var minimum = 0.0;
     var maximum = 0.0;
 
@@ -80,14 +86,26 @@ class PolarColumnStackLayout {
           if (end < minimum) minimum = end;
         }
       }
-      layouts.add(
+      startsBySeries.add(starts);
+      endsBySeries.add(ends);
+    }
+
+    final layouts = <PolarColumnStackSeriesLayout>[
+      for (final (seriesIndex, source) in series.indexed)
         PolarColumnStackSeriesLayout(
           seriesId: source.id,
-          starts: starts,
-          ends: ends,
+          starts: startsBySeries[seriesIndex],
+          ends: endsBySeries[seriesIndex],
+          exteriorEnds: <bool>[
+            for (final (pointIndex, point) in source.points.indexed)
+              point.y >= 0
+                  ? endsBySeries[seriesIndex][pointIndex] ==
+                        positive[pointIndex]
+                  : endsBySeries[seriesIndex][pointIndex] ==
+                        negative[pointIndex],
+          ],
         ),
-      );
-    }
+    ];
 
     return PolarColumnStackLayout._(
       series: layouts,

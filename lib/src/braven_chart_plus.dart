@@ -3388,7 +3388,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
         threshold.value,
     ];
     final theme = widget.theme ?? ChartTheme.light;
-    return <ChartElement>[
+    final seriesElements = <PolarColumnSeriesElement>[
       for (final (index, series) in polarSeries.indexed)
         PolarColumnSeriesElement(
           series: series,
@@ -3400,8 +3400,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
           numericScaleValues: scaleValues,
           stackStarts: stackLayout?.forSeries(series.id).starts,
           stackEnds: stackLayout?.forSeries(series.id).ends,
+          stackExteriorEnds: stackLayout?.forSeries(series.id).exteriorEnds,
           paintGrid: index == 0,
-          paintAxisLabels: index == polarSeries.length - 1,
+          paintAxisLabels: false,
+          paintDataLabels: false,
           preferSeriesColor: polarSeries.length > 1,
           textScaleFactor: _textScaleFactor,
           focusedPointIndices: {
@@ -3413,6 +3415,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
               if (ref.seriesId == series.id) ref.pointIndex,
           },
         ),
+    ];
+    return <ChartElement>[
+      ...seriesElements,
+      PolarColumnCompositionOverlayElement(seriesElements: seriesElements),
     ];
   }
 

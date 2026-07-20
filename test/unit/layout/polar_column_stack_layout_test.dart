@@ -20,6 +20,8 @@ void main() {
       expect(layout.forSeries('first').ends, [10, 20]);
       expect(layout.forSeries('second').starts, [10, 20]);
       expect(layout.forSeries('second').ends, [15, 27]);
+      expect(layout.forSeries('first').exteriorEnds, [false, false]);
+      expect(layout.forSeries('second').exteriorEnds, [true, true]);
       expect(layout.minimum, 0);
       expect(layout.maximum, 27);
     });
@@ -46,6 +48,9 @@ void main() {
       expect(layout.forSeries('second').ends, [-3, -10]);
       expect(layout.forSeries('third').starts, [10, 0]);
       expect(layout.forSeries('third').ends, [15, 2]);
+      expect(layout.forSeries('first').exteriorEnds, [false, false]);
+      expect(layout.forSeries('second').exteriorEnds, [true, true]);
+      expect(layout.forSeries('third').exteriorEnds, [true, true]);
       expect(layout.minimum, -10);
       expect(layout.maximum, 15);
     });

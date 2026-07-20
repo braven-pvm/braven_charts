@@ -296,6 +296,7 @@ abstract final class ChartDocumentHydrator {
     'series.donut.concentric.v1',
     'series.polarColumn',
     'series.polar.column.v1',
+    PolarColumnChartSeries.cornerRadiusModeCapability,
     'series.polar.column.targets.v1',
     'series.polar.column.intervals.v1',
     'chart.polar.config.v1',
@@ -978,6 +979,24 @@ abstract final class ChartDocumentHydrator {
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
               'Polar Column intervals must declare series.polar.column.intervals.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any(
+          (series) =>
+              series.polarStyle.cornerRadiusMode !=
+              PolarColumnCornerRadiusMode.outerEnd,
+        ) &&
+        !document.requiredCapabilities.contains(
+          PolarColumnChartSeries.cornerRadiusModeCapability,
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Non-default Polar Column corner placement must declare series.polar.column.corner-radius-mode.v1.',
           path: r'$.document.requiredCapabilities',
         ),
         [],

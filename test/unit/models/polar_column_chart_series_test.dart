@@ -21,6 +21,28 @@ void main() {
       expect(series.points[1].pointStyle?.color, Colors.orange);
       expect(series.unit, 'tickets');
       expect(series.preset, PolarColumnPreset.standard);
+      expect(
+        series.polarStyle.cornerRadiusMode,
+        PolarColumnCornerRadiusMode.outerEnd,
+      );
+    });
+
+    test('copies explicit corner placement without changing other styling', () {
+      const style = PolarColumnStyle(
+        cornerRadius: 9,
+        cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
+      );
+
+      expect(
+        style.copyWith(opacity: 0.7).cornerRadiusMode,
+        style.cornerRadiusMode,
+      );
+      expect(
+        style
+            .copyWith(cornerRadiusMode: PolarColumnCornerRadiusMode.bothEnds)
+            .cornerRadiusMode,
+        PolarColumnCornerRadiusMode.bothEnds,
+      );
     });
 
     test('rose selects its named preset without changing source values', () {

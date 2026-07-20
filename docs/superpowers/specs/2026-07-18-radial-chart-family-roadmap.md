@@ -446,8 +446,10 @@ artifact without relying on a Pie share.
 
 ### Phase 3 — Polar Column composition hardening
 
-Status: complete on the review branch. Slices 3.1 through 3.6 implement declaration-order layered
-comparison, grouped angular sub-bands, diverging stacks, per-category target
+Status: implementation-complete on the review branch; visual acceptance was
+reopened on 2026-07-20 for full showcase styling exposure and feature-guide
+density. Slices 3.1 through 3.6 implement declaration-order layered comparison,
+grouped angular sub-bands, diverging stacks, per-category target
 ticks, pane-wide threshold arcs, and absolute lower/upper intervals for multiple
 compatible Polar Column series. Compatible series share category
 identity/order, preset, unit, pane, and one global radial scale. Grouping and
@@ -457,7 +459,10 @@ independently from zero; opposite signs never cancel. Deterministic visual-only
 density caps thin angular labels, grid spokes, and direct value labels while
 preserving every mark in hit testing, semantics, tables, CSV, artifacts,
 hydration, and generated source. A 512-category benchmark guards the warm-paint
-frame budget. Final visual acceptance for slice 3.6 was recorded on 2026-07-20.
+frame budget. The hardening pass now exposes the renderer's theme, palette,
+label, grid, axis, column, reference, interval, tooltip, and selection controls
+in one live Options surface, and replaces fixed-aspect feature cards with
+content-driven compact cards. Final visual acceptance remains pending.
 
 Deliver in small slices:
 

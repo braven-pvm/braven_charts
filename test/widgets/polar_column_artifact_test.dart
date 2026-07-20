@@ -43,6 +43,7 @@ void main() {
         columnColors: const {'East': Color(0xFF00A878)},
         polarStyle: const PolarColumnStyle(
           cornerRadius: 9,
+          cornerRadiusMode: PolarColumnCornerRadiusMode.stackExterior,
           opacity: 0.82,
           borderColor: Color(0xFF102030),
           borderWidth: 2,
@@ -87,7 +88,11 @@ void main() {
       expect(snapshot.document.series.single.type, 'polarColumn');
       expect(
         snapshot.document.requiredCapabilities,
-        containsAll({'series.polar.column.v1', 'chart.polar.config.v1'}),
+        containsAll({
+          'series.polar.column.v1',
+          'chart.polar.config.v1',
+          PolarColumnChartSeries.cornerRadiusModeCapability,
+        }),
       );
       expect(
         snapshot.document.configuration.values['polarChart'],
@@ -135,6 +140,7 @@ void main() {
       final firstJson = _json(ChartArtifactJsonCodec.encode(artifact));
       final secondJson = _json(ChartArtifactJsonCodec.encode(artifact));
       expect(secondJson, firstJson);
+      expect(firstJson, contains('"cornerRadiusMode":"stackExterior"'));
 
       final hydrated = _configuration(
         ChartDocumentHydrator.hydrateJson(firstJson),
@@ -145,6 +151,30 @@ void main() {
       expect(restoredSeries.polarStyle, sourceSeries.polarStyle);
       expect(restoredSeries.selectionStyle, sourceSeries.selectionStyle);
       expect(restoredSeries.categories, sourceSeries.categories);
+
+      final invalidCornerJson = snapshot.document.toJson();
+      invalidCornerJson['requiredCapabilities'] = snapshot
+          .document
+          .requiredCapabilities
+          .where(
+            (capability) =>
+                capability != PolarColumnChartSeries.cornerRadiusModeCapability,
+          )
+          .toList();
+      final invalidCornerDocument = ChartDocumentHydrator.hydrateDocument(
+        ChartDocument.fromJson(invalidCornerJson),
+      );
+      expect(
+        invalidCornerDocument,
+        isA<ChartArtifactFailure<HydratedChartConfiguration>>(),
+      );
+      expect(
+        (invalidCornerDocument
+                as ChartArtifactFailure<HydratedChartConfiguration>)
+            .error
+            .message,
+        contains(PolarColumnChartSeries.cornerRadiusModeCapability),
+      );
 
       final restoredController = BravenChartController();
       addTearDown(restoredController.dispose);

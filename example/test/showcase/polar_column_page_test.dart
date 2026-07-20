@@ -1,5 +1,6 @@
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts_example/showcase/pages/polar_column_page.dart';
+import 'package:braven_charts_example/showcase/widgets/options_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,14 +42,268 @@ void main() {
           .maximumVisibleDataLabels,
       24,
     );
+    expect(find.text('Chart appearance'), findsOneWidget);
+    expect(find.text('Categories'), findsOneWidget);
+    expect(find.text('Category colors'), findsOneWidget);
+    expect(find.byType(ChartColorPalette), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Maximum category labels'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Maximum category labels'), findsOneWidget);
-    expect(find.text('Maximum grid spokes'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Maximum value labels'),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Maximum value labels'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Maximum grid spokes'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Maximum grid spokes'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('options are grouped by the property users are editing', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pump();
+
+    final panel = tester.widget<OptionsPanel>(find.byType(OptionsPanel));
+    OptionSection section(String title) => panel.children
+        .whereType<OptionSection>()
+        .singleWhere((candidate) => candidate.title == title);
+
+    final categories = section('Categories');
+    expect(
+      categories.children.whereType<IntSliderOption>().map(
+        (item) => item.label,
+      ),
+      contains('Category count'),
+    );
+    expect(
+      categories.children.whereType<EnumOption>().map((item) => item.label),
+      contains('Category colors'),
+    );
+    expect(
+      categories.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Column gap', 'Outer padding']),
+    );
+
+    final labels = section('Labels');
+    expect(
+      labels.children.whereType<BoolOption>().map((item) => item.label),
+      containsAll([
+        'Show category labels',
+        'Show radial labels',
+        'Show values inside columns',
+      ]),
+    );
+    final gridAndAxes = section('Grid & axes');
+    expect(
+      gridAndAxes.children.whereType<BoolOption>().map((item) => item.label),
+      containsAll(['Show angular grid', 'Show radial grid']),
+    );
+    expect(
+      gridAndAxes.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll(['Axis line width', 'Grid line width']),
+    );
+
+    final geometry = section('Polar geometry & scale');
+    expect(
+      geometry.children.whereType<SliderOption>().map((item) => item.label),
+      containsAll([
+        'Start angle',
+        'Sweep angle',
+        'Inner radius',
+        'Outer radius',
+      ]),
+    );
+    expect(
+      geometry.children.whereType<EnumOption>().map((item) => item.label),
+      contains('Scale mode'),
+    );
+    final columns = section('Columns');
+    expect(
+      columns.children.whereType<EnumOption>().map((item) => item.label),
+      contains('Corner placement'),
+    );
+    final cornerPlacement = columns.children
+        .whereType<EnumOption<PolarColumnCornerRadiusMode>>()
+        .singleWhere((item) => item.label == 'Corner placement');
+    expect(cornerPlacement.values, PolarColumnCornerRadiusMode.values);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('appearance controls drive public chart styling', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+
+    var chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(chart.theme?.backgroundColor, ChartTheme.light.backgroundColor);
+    expect(
+      chart.theme?.gridStyle.majorColor,
+      ChartTheme.light.gridStyle.majorColor,
+    );
+    expect(
+      (chart.series.single as PolarColumnChartSeries)
+          .points
+          .first
+          .pointStyle
+          ?.color,
+      const Color(0xFF2196F3),
+    );
+
+    await tester.tap(find.text('Theme colors'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ocean'), findsOneWidget);
+    expect(find.text('Sunset'), findsOneWidget);
+    expect(find.text('Earth'), findsOneWidget);
+    expect(find.text('Monochrome'), findsOneWidget);
+    await tester.tap(find.text('Ocean').last);
+    await tester.pumpAndSettle();
+
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    expect(
+      (chart.series.single as PolarColumnChartSeries)
+          .points
+          .first
+          .pointStyle
+          ?.color,
+      const Color(0xFF2563EB),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Polar colors use the shared custom color selector', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('polar-canvas-color-custom')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select Color'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Select'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Select Color'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Polar color overrides can clear or toggle back to theme defaults',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+      );
+      await tester.pumpAndSettle();
+
+      final clear = find.byKey(const ValueKey('polar-canvas-color-clear'));
+      final red = find.byKey(
+        ValueKey('polar-canvas-color-${Colors.red.toARGB32()}'),
+      );
+      expect(clear, findsOneWidget);
+
+      await tester.tap(red);
+      await tester.pump();
+      var chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      expect(chart.theme?.backgroundColor, Colors.red);
+
+      await tester.tap(red);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      expect(chart.theme?.backgroundColor, ChartTheme.light.backgroundColor);
+
+      await tester.tap(red);
+      await tester.pump();
+      await tester.tap(clear);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(
+        find.descendant(
+          of: find.byKey(const ValueKey('polar-column-live-chart')),
+          matching: find.byType(BravenChartPlus),
+        ),
+      );
+      expect(chart.theme?.backgroundColor, ChartTheme.light.backgroundColor);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('feature guide cards use compact content-driven height', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+
+    final pageScroll = find.descendant(
+      of: find.byKey(const ValueKey('polar-column-showcase-scroll')),
+      matching: find.byType(Scrollable),
+    );
+    final firstCard = find.byKey(const ValueKey('polar-feature-card-0'));
+    await tester.scrollUntilVisible(
+      firstCard,
+      500,
+      scrollable: pageScroll.first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(firstCard).height, lessThan(150));
     expect(tester.takeException(), isNull);
   });
 

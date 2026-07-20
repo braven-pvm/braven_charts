@@ -26,6 +26,25 @@ enum PolarColumnIntervalDisplay {
   band,
 }
 
+/// Determines which radial ends receive [PolarColumnStyle.cornerRadius].
+enum PolarColumnCornerRadiusMode {
+  /// Round both the inner-radius and outer-radius ends of every column.
+  bothEnds,
+
+  /// Round only the geometric outer-radius end of every column.
+  ///
+  /// This preserves the original Polar Column corner treatment and is the
+  /// default for backward-compatible documents.
+  outerEnd,
+
+  /// Round only the exposed value boundary of a complete stack.
+  ///
+  /// Internal stacked seams remain square. Positive stacks round their
+  /// outermost contributor; negative stacks round their innermost contributor.
+  /// For non-stacked charts this behaves like rounding the value end.
+  stackExterior,
+}
+
 /// Absolute lower and upper values associated with one polar category.
 ///
 /// Intervals are analytical references on the shared radial numeric scale;
@@ -247,6 +266,7 @@ class PolarColumnTargetMarkerStyle {
 class PolarColumnStyle {
   const PolarColumnStyle({
     this.cornerRadius = 4,
+    this.cornerRadiusMode = PolarColumnCornerRadiusMode.outerEnd,
     this.opacity = 1,
     this.borderColor,
     this.borderWidth = 1,
@@ -255,6 +275,9 @@ class PolarColumnStyle {
   });
 
   final double cornerRadius;
+
+  /// Placement policy for [cornerRadius].
+  final PolarColumnCornerRadiusMode cornerRadiusMode;
   final double opacity;
   final Color? borderColor;
   final double borderWidth;
@@ -299,6 +322,7 @@ class PolarColumnStyle {
 
   PolarColumnStyle copyWith({
     double? cornerRadius,
+    PolarColumnCornerRadiusMode? cornerRadiusMode,
     double? opacity,
     Color? borderColor,
     bool clearBorderColor = false,
@@ -307,6 +331,7 @@ class PolarColumnStyle {
     int? maximumVisibleDataLabels,
   }) => PolarColumnStyle(
     cornerRadius: cornerRadius ?? this.cornerRadius,
+    cornerRadiusMode: cornerRadiusMode ?? this.cornerRadiusMode,
     opacity: opacity ?? this.opacity,
     borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
     borderWidth: borderWidth ?? this.borderWidth,
@@ -320,6 +345,7 @@ class PolarColumnStyle {
       identical(this, other) ||
       other is PolarColumnStyle &&
           cornerRadius == other.cornerRadius &&
+          cornerRadiusMode == other.cornerRadiusMode &&
           opacity == other.opacity &&
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
@@ -329,6 +355,7 @@ class PolarColumnStyle {
   @override
   int get hashCode => Object.hash(
     cornerRadius,
+    cornerRadiusMode,
     opacity,
     borderColor,
     borderWidth,
@@ -346,6 +373,10 @@ class PolarColumnStyle {
 /// negative sides of zero. They share category labels/order, preset, unit, and
 /// one radial scale.
 class PolarColumnChartSeries extends ChartSeries {
+  /// Artifact capability required by non-default radial corner placement.
+  static const cornerRadiusModeCapability =
+      'series.polar.column.corner-radius-mode.v1';
+
   PolarColumnChartSeries({
     required super.id,
     super.name,

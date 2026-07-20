@@ -4,6 +4,7 @@ import 'package:braven_charts/src/axis/polar_category_scale.dart';
 import 'package:braven_charts/src/axis/polar_numeric_scale.dart';
 import 'package:braven_charts/src/layout/polar_column_geometry.dart';
 import 'package:braven_charts/src/layout/radial_pane_geometry.dart';
+import 'package:braven_charts/src/models/polar_column_chart_series.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -119,6 +120,69 @@ void main() {
       expect(geometry.marks[1].baseline, -4);
       expect(geometry.marks[1].radialValue, -11);
       expect(geometry.marks.every((mark) => mark.isVisible), isTrue);
+    });
+
+    test('applies explicit radial corner placement modes', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.15,
+      );
+      final categories = PolarCategoryScale(
+        pane: pane,
+        categories: const ['Positive', 'Negative'],
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: -20, maximum: 40);
+
+      PolarColumnGeometry build(
+        PolarColumnCornerRadiusMode mode, {
+        List<bool>? exteriorEnds,
+      }) => PolarColumnGeometryCalculator.calculate(
+        categoryScale: categories,
+        numericScale: scale,
+        values: const [12, -8],
+        radialStarts: const [10, -4],
+        radialEnds: const [22, -12],
+        stackExteriorEnds: exteriorEnds,
+        cornerRadius: 8,
+        cornerRadiusMode: mode,
+      );
+
+      final both = build(PolarColumnCornerRadiusMode.bothEnds);
+      expect(both.marks.every((mark) => mark.sector.roundOuterCorners), isTrue);
+      expect(both.marks.every((mark) => mark.sector.roundInnerCorners), isTrue);
+
+      final outer = build(PolarColumnCornerRadiusMode.outerEnd);
+      expect(
+        outer.marks.every((mark) => mark.sector.roundOuterCorners),
+        isTrue,
+      );
+      expect(
+        outer.marks.every((mark) => !mark.sector.roundInnerCorners),
+        isTrue,
+      );
+
+      final exterior = build(
+        PolarColumnCornerRadiusMode.stackExterior,
+        exteriorEnds: const [true, true],
+      );
+      expect(exterior.marks[0].sector.roundOuterCorners, isTrue);
+      expect(exterior.marks[0].sector.roundInnerCorners, isFalse);
+      expect(exterior.marks[1].sector.roundOuterCorners, isFalse);
+      expect(exterior.marks[1].sector.roundInnerCorners, isTrue);
+
+      final internal = build(
+        PolarColumnCornerRadiusMode.stackExterior,
+        exteriorEnds: const [false, false],
+      );
+      expect(
+        internal.marks.every(
+          (mark) =>
+              !mark.sector.roundOuterCorners &&
+              !mark.sector.roundInnerCorners &&
+              mark.sector.cornerRadius == 0,
+        ),
+        isTrue,
+      );
     });
 
     test('divides each category into parallel grouped sub-bands', () {
