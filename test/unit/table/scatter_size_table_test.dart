@@ -70,13 +70,13 @@ void main() {
       ChartTableAuxiliaryField.opacityValue,
     });
     expect(magnitude?.raw, 340);
-    expect(magnitude?.display, '340 k');
+    expect(magnitude?.display, '340.00 k');
     expect(magnitude?.isValid, isTrue);
     expect(colorValue?.raw, 78);
-    expect(colorValue?.display, '78 %');
+    expect(colorValue?.display, '78.00 %');
     expect(colorValue?.isValid, isTrue);
     expect(opacityValue?.raw, 86);
-    expect(opacityValue?.display, '86 %');
+    expect(opacityValue?.display, '86.00 %');
     expect(opacityValue?.isValid, isTrue);
     expect(model.series.single.categoryLabel, 'Segment');
     expect(model.hasCategoryValues, isTrue);

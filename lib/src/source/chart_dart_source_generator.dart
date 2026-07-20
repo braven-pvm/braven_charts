@@ -90,7 +90,29 @@ abstract final class ChartDartSourceGenerator {
       options: options,
     );
     final generated = emitter.generate();
-    return ChartArtifactSuccess(value: generated, warnings: success.warnings);
+    return ChartArtifactSuccess(
+      value: generated,
+      warnings: success.warnings
+          .where(
+            (warning) =>
+                !_isExpectedRuntimeInteractionOmission(snapshot, warning),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  static bool _isExpectedRuntimeInteractionOmission(
+    ChartDocumentSnapshot snapshot,
+    ChartArtifactWarning warning,
+  ) {
+    if (snapshot.document.interaction.requiredBindings.isEmpty ||
+        warning.code != ChartArtifactDiagnosticCodes.runtimeBindingRequired) {
+      return false;
+    }
+    return warning.path?.startsWith(
+          r'$.interaction.configuration.callbacks.',
+        ) ??
+        false;
   }
 }
 

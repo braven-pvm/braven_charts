@@ -60,6 +60,7 @@ class BravenChartController extends ChangeNotifier {
   void Function()? _replaySeriesEntranceHandler;
   final ValueNotifier<ChartDocumentRevision?> _effectiveDocumentRevision =
       ValueNotifier(null);
+  Object? _attachment;
   bool _disposed = false;
 
   // Slot state mirrored from MultiAxisManager (updated after every swap).
@@ -294,6 +295,7 @@ class BravenChartController extends ChangeNotifier {
 
   /// Attaches this controller to a chart state. Called by the state.
   void attach({
+    Object? attachment,
     required void Function(String) onSelect,
     required void Function(String) onDeselect,
     required void Function() onClear,
@@ -310,6 +312,7 @@ class BravenChartController extends ChangeNotifier {
     void Function()? onReplaySeriesEntrance,
     ChartDocumentRevision? effectiveDocumentRevision,
   }) {
+    _attachment = attachment;
     _selectHandler = onSelect;
     _deselectHandler = onDeselect;
     _clearHandler = onClear;
@@ -330,7 +333,12 @@ class BravenChartController extends ChangeNotifier {
   }
 
   /// Detaches from the chart state. Called in dispose.
-  void detach() {
+  ///
+  /// When [attachment] is supplied, a stale chart state cannot detach a newer
+  /// state that has already taken ownership of this controller.
+  void detach([Object? attachment]) {
+    if (attachment != null && !identical(_attachment, attachment)) return;
+    _attachment = null;
     _selectHandler = null;
     _deselectHandler = null;
     _clearHandler = null;
@@ -350,8 +358,12 @@ class BravenChartController extends ChangeNotifier {
 
   /// Publishes an effective source revision from the attached chart state.
   @internal
-  void updateEffectiveDocumentRevision(ChartDocumentRevision revision) {
+  void updateEffectiveDocumentRevision(
+    ChartDocumentRevision revision, {
+    Object? attachment,
+  }) {
     if (_disposed) return;
+    if (attachment != null && !identical(_attachment, attachment)) return;
     if (_effectiveDocumentRevision.value == revision) return;
     _effectiveDocumentRevision.value = revision;
   }
@@ -401,6 +413,7 @@ class BravenChartController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _attachment = null;
     _effectiveDocumentRevision.dispose();
     super.dispose();
   }

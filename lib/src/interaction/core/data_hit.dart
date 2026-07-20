@@ -48,6 +48,7 @@ class ChartDataHit {
     this.formattedAggregateValue,
     this.aggregateLabel,
     this.aggregateSampleCount,
+    this.activationHint,
     this.isSelected = false,
     this.isFocused = false,
   });
@@ -163,6 +164,12 @@ class ChartDataHit {
   /// Scatter metric is absent from some observations in an aggregate bin.
   final int? aggregateSampleCount;
 
+  /// Optional instruction describing the primary activation behavior.
+  ///
+  /// Aggregate renderers use this when activation performs a renderer-specific
+  /// action, such as drilling into the observations represented by a cluster.
+  final String? activationHint;
+
   /// Preformatted value including an applicable unit.
   final String formattedValue;
 
@@ -236,6 +243,7 @@ class ChartDataHit {
             : '${effectiveSourcePointIndices.length} grouped categories',
       );
     }
+    if (activationHint != null) parts.add(activationHint!);
     parts.add('${share == null ? 'point' : 'slice'} $ordinal of $count');
     parts.add(isSelected ? 'selected' : 'not selected');
     return parts.join(', ');

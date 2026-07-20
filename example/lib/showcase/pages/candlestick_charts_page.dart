@@ -2414,7 +2414,7 @@ class _AnnotationPaletteOption extends StatelessWidget {
           style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
         ),
         const SizedBox(height: 8),
-        AnnotationColorPalette(
+        ChartColorPalette(
           value: value,
           onChanged: onChanged,
           keyPrefix: keyPrefix,

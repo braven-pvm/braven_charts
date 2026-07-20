@@ -213,6 +213,21 @@ tests, deterministic showcase tests, benchmarks, and release-web verification.
 6. **Composition and release:** marginals, strip/beeswarm, documentation,
    accessibility, media, full release gate.
 
+### Implementation status — 2026-07-20
+
+| Phase | Status | Remaining gate |
+|---|---|---|
+| 1. Foundation | Ready | Keep benchmark thresholds under release review. |
+| 2. Marks and encodings | Ready | Maintain codec and artifact round-trip coverage as APIs evolve. |
+| 3. Exploration | Ready | Complete the final accessibility audit with the release gate. |
+| 4. Analysis | Ready | Complete the final documentation and source-generation audit. |
+| 5. Density | Review needed | Audit adaptive-mode advice and disclosure; complete the density performance gate. |
+| 6. Composition and release | In progress | Viewport-linked histogram, KDE density, rug, and combined marginals are implemented locally. Strip/beeswarm, docs, media, accessibility, and the full release gate remain. |
+
+The next delivery order is: finish the marginal family, add strip/beeswarm as
+composition widgets, close the Phase 5 adaptive-disclosure audit, then run the
+cross-surface release matrix and performance gate.
+
 ## Deferred and excluded
 
 - 3D Scatter is a separate chart family and is not part of this roadmap.

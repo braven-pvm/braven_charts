@@ -303,6 +303,10 @@ void main() {
       final beforeYSpan =
           renderBox.transform!.dataYMax - renderBox.transform!.dataYMin;
       final clusterPosition = _pointPosition(tester, 0);
+      const overviewActionKey = ValueKey<String>(
+        'scatter-cluster-back-to-overview',
+      );
+      expect(find.byKey(overviewActionKey), findsNothing);
 
       await tester.tapAt(clusterPosition);
       await tester.pump();
@@ -317,6 +321,24 @@ void main() {
         lessThan(beforeYSpan),
       );
       expect(controller.selectedPointRefs, isEmpty);
+
+      final overviewAction = find.byKey(overviewActionKey);
+      expect(overviewAction, findsOneWidget);
+      expect(tester.getSize(overviewAction).height, greaterThanOrEqualTo(48));
+
+      await tester.tap(overviewAction);
+      await tester.pump();
+
+      renderBox = tester.renderObject<ChartRenderBox>(renderFinder);
+      expect(
+        renderBox.transform!.dataXMax - renderBox.transform!.dataXMin,
+        closeTo(beforeXSpan, 0.0001),
+      );
+      expect(
+        renderBox.transform!.dataYMax - renderBox.transform!.dataYMin,
+        closeTo(beforeYSpan, 0.0001),
+      );
+      expect(overviewAction, findsNothing);
     });
   });
 }

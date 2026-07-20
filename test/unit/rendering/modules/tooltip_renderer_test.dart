@@ -219,6 +219,7 @@ void main() {
             ordinal: 1,
             count: 24,
             category: '4 observations',
+            activationHint: 'Click or tap to inspect 4 observations',
           );
 
           expect(
@@ -230,7 +231,12 @@ void main() {
             ),
             'Customer accounts\n4 observations\n'
             'X mean: 36.25\nY mean: 52.75 %\n'
-            'X range: 31.00–42.00\nY range: 45.00–60.00 %',
+            'X range: 31.00–42.00\nY range: 45.00–60.00 %\n'
+            'Click or tap to inspect 4 observations',
+          );
+          expect(
+            hit.semanticLabel,
+            contains('Click or tap to inspect 4 observations'),
           );
         },
       );

@@ -140,6 +140,7 @@ export 'src/models/radial_category_series.dart';
 export 'src/models/radial_legend_item.dart';
 export 'src/models/segment_style.dart';
 export 'src/models/scatter_marker_style.dart';
+export 'src/models/scatter_marginal_data.dart';
 export 'src/models/scatter_render_config.dart';
 // Note: SeriesAxisBinding is internal-only. Use ChartSeries.yAxisConfig or yAxisId instead.
 export 'src/models/streaming_config.dart';
@@ -168,7 +169,7 @@ export 'src/streaming/streaming_controller.dart';
 export 'src/widgets/dialogs/annotation_color_palette.dart'
     show ChartColorPalette;
 export 'src/widgets/chart_legend.dart';
-export 'src/widgets/dialogs/annotation_color_palette.dart';
+export 'src/widgets/scatter_marginal_composition.dart';
 // Theming
 export 'src/theming/components/animation_theme.dart';
 export 'src/theming/components/candlestick_theme.dart';

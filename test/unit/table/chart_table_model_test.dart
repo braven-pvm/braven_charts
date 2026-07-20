@@ -27,7 +27,7 @@ void main() {
       expect(model.options.rowLayout, ChartTableRowLayout.wide);
       expect(model.xColumnLabel, 'Sample');
       expect(model.wideRows, hasLength(1));
-      expect(model.wideRows.single.xDisplay, '7');
+      expect(model.wideRows.single.xDisplay, '7.00');
       expect(model.wideRows.single.cells['power']?.yDisplay, '241.44');
       expect(model.wideRows.single.cells['heart-rate']?.yDisplay, '133.75');
     });
@@ -67,6 +67,8 @@ void main() {
       expect(model.longRows.first.reference.pointIndex, 0);
       expect(model.longRows.first.xRaw, 1);
       expect(model.longRows.first.yRaw, 250);
+      expect(model.longRows.first.xDisplay, '1.00');
+      expect(model.longRows.first.yDisplay, '250.00');
       expect(model.longRows.first.unit, 'W');
       expect(model.longRows.first.label, 'Start');
       expect(model.longRows.first.metadata?.values['lap']?.toJson(), 1);
@@ -371,7 +373,7 @@ void main() {
             .cells['planned']!
             .auxiliaryValues[ChartTableAuxiliaryField.normalizedShare]
             ?.display,
-        '70',
+        '70.00',
       );
     });
 

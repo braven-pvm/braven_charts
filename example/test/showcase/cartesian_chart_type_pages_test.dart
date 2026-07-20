@@ -1290,6 +1290,10 @@ void main() {
     );
     final hexbin = find.descendant(of: picker, matching: find.text('Hexbin'));
     final density = find.descendant(of: picker, matching: find.text('Density'));
+    final marginals = find.descendant(
+      of: picker,
+      matching: find.text('Marginals'),
+    );
 
     expect(picker, findsOneWidget);
     expect(cohorts, findsOneWidget);
@@ -1302,13 +1306,14 @@ void main() {
     expect(gridBins, findsOneWidget);
     expect(hexbin, findsOneWidget);
     expect(density, findsOneWidget);
+    expect(marginals, findsOneWidget);
     expect(
       tester.getTopLeft(selection).dy,
       greaterThan(tester.getTopLeft(cohorts).dy),
     );
     expect(
       find.descendant(of: picker, matching: find.byType(ChoiceChip)),
-      findsNWidgets(25),
+      findsNWidgets(26),
     );
     expect(
       tester.getTopLeft(lasso).dy,
@@ -1482,8 +1487,7 @@ void main() {
     expect(find.text('Focus ring gap'), findsOneWidget);
 
     final selectSample = find.byKey(const ValueKey('scatter-select-sample'));
-    await tester.ensureVisible(selectSample);
-    await tester.tap(selectSample);
+    tester.widget<OutlinedButton>(selectSample).onPressed!();
     await tester.pumpAndSettle();
     chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
     final controller = chart.bravenChartController!;
@@ -1492,16 +1496,14 @@ void main() {
     });
 
     final focusSample = find.byKey(const ValueKey('scatter-focus-sample'));
-    await tester.ensureVisible(focusSample);
-    await tester.tap(focusSample);
+    tester.widget<OutlinedButton>(focusSample).onPressed!();
     await tester.pumpAndSettle();
     expect(controller.focusedPointRefs, {
       const ChartPointRef(seriesId: 'scatter-state-previous', pointIndex: 8),
     });
 
     final clear = find.byKey(const ValueKey('scatter-clear-states'));
-    await tester.ensureVisible(clear);
-    await tester.tap(clear);
+    tester.widget<TextButton>(clear).onPressed!();
     await tester.pumpAndSettle();
     expect(controller.selectedPointRefs, isEmpty);
     expect(controller.focusedPointRefs, isEmpty);
@@ -2333,9 +2335,10 @@ void main() {
     expect(find.textContaining('-0.80 correlation'), findsOneWidget);
     expect(find.textContaining('seed 44'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('scatter-generator-regenerate')),
+    final regenerate = find.byKey(
+      const ValueKey('scatter-generator-regenerate'),
     );
+    tester.widget<OutlinedButton>(regenerate).onPressed!();
     await tester.pumpAndSettle();
     expect(find.textContaining('seed 45'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -2628,6 +2631,257 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('scatter Marginals composes viewport-linked X and Y histograms', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final marginals = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Marginals'),
+    );
+    await tester.ensureVisible(marginals);
+    await tester.tap(marginals);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ScatterMarginalComposition), findsOneWidget);
+    expect(find.text('Height distribution'), findsOneWidget);
+    expect(find.text('Mass distribution'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-bin-count')),
+      findsOneWidget,
+    );
+    expect(find.byType(BravenChartPlus), findsNWidgets(3));
+    expect(find.text('Visible sample'), findsOneWidget);
+    expect(find.text('44 / 44'), findsOneWidget);
+    expect(find.text('100% in view'), findsOneWidget);
+    expect(find.text('Bars + KDE'), findsOneWidget);
+
+    tester
+        .widget<EnumOption<ScatterMarginalMode>>(
+          find.byKey(const ValueKey('scatter-marginal-mode')),
+        )
+        .onChanged(ScatterMarginalMode.histogram);
+    await tester.pumpAndSettle();
+
+    tester
+        .widget<IntSliderOption>(
+          find.byKey(const ValueKey('scatter-marginal-bin-count')),
+        )
+        .onChanged(16);
+    tester
+        .widget<EnumOption<HistogramValueMode>>(
+          find.byKey(const ValueKey('scatter-marginal-value-mode')),
+        )
+        .onChanged(HistogramValueMode.count);
+    await tester.pumpAndSettle();
+
+    final marginalBars = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .expand((chart) => chart.series.whereType<BarChartSeries>())
+        .toList();
+    expect(marginalBars, hasLength(2));
+    expect(marginalBars.every((series) => series.points.length == 16), isTrue);
+
+    final sourceChart = find.byKey(
+      const ValueKey('scatter-marginal-source-chart'),
+    );
+    final sourceRenderFinder = find.descendant(
+      of: sourceChart,
+      matching: find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final sourceRenderBox = tester.renderObject<ChartRenderBox>(
+      sourceRenderFinder,
+    );
+    final initialLabel = tester
+        .widget<Text>(
+          find.byKey(const ValueKey('scatter-marginal-visible-count')),
+        )
+        .data;
+    sourceRenderBox.zoomChart(2.5, animate: false);
+    await tester.pumpAndSettle();
+    final zoomedLabel = tester
+        .widget<Text>(
+          find.byKey(const ValueKey('scatter-marginal-visible-count')),
+        )
+        .data;
+
+    expect(zoomedLabel, isNot(initialLabel));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Marginals supports every Workbench presentation', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final marginals = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Marginals'),
+    );
+    await tester.ensureVisible(marginals);
+    await tester.tap(marginals);
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final controller = workbench.workbenchController!;
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Split')),
+    );
+    await tester.pumpAndSettle();
+    final tableError = controller.tableState.error;
+    expect(
+      controller.tableState.phase,
+      ChartWorkbenchTablePhase.ready,
+      reason: tableError == null
+          ? null
+          : '${tableError.code}: ${tableError.message} (${tableError.path})',
+    );
+    expect(find.byType(ChartDataTable), findsOneWidget);
+    expect(find.textContaining('runtime binding descriptor'), findsNothing);
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.sourceState.phase, ChartWorkbenchSourcePhase.ready);
+    expect(find.byType(ChartSourceView), findsOneWidget);
+    expect(find.textContaining('onViewportChanged is disabled'), findsNothing);
+    expect(
+      controller.generatedSource!.source,
+      contains('Runtime interaction bindings omitted:'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter feature coverage is grouped and scannable', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+
+    expect(find.byKey(const ValueKey('feature-coverage-card')), findsOneWidget);
+    expect(find.text('Scatter capabilities'), findsOneWidget);
+    expect(find.text('27 features'), findsOneWidget);
+    final coverage = find.byKey(const ValueKey('feature-coverage-card'));
+    for (final group in [
+      'marks',
+      'encodings',
+      'analysis',
+      'interaction',
+      'density',
+      'composition',
+    ]) {
+      expect(find.byKey(ValueKey('feature-group-$group')), findsOneWidget);
+    }
+    for (final label in [
+      'Marks',
+      'Encodings',
+      'Analysis',
+      'Interaction',
+      'Density',
+      'Composition',
+    ]) {
+      expect(
+        find.descendant(of: coverage, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scatter Marginals switches density and rug layers in place', (
+    tester,
+  ) async {
+    await pumpPage(tester, const ScatterChartsPage());
+    final marginals = find.descendant(
+      of: find.byKey(const ValueKey('scatter-preset-picker')),
+      matching: find.text('Marginals'),
+    );
+    await tester.ensureVisible(marginals);
+    await tester.tap(marginals);
+    await tester.pumpAndSettle();
+
+    final modeControl = find.byKey(const ValueKey('scatter-marginal-mode'));
+    tester
+        .widget<EnumOption<ScatterMarginalMode>>(modeControl)
+        .onChanged(ScatterMarginalMode.histogramAndDensity);
+    await tester.pumpAndSettle();
+
+    var marginalSeries = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .expand((chart) => chart.series)
+        .where((series) => series.id.contains('marginal'))
+        .toList();
+    expect(marginalSeries.whereType<BarChartSeries>(), hasLength(2));
+    expect(marginalSeries.whereType<LineChartSeries>(), hasLength(2));
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-bandwidth')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-value-mode')),
+      findsNothing,
+    );
+
+    tester
+        .widget<EnumOption<ScatterMarginalMode>>(modeControl)
+        .onChanged(ScatterMarginalMode.densityAndRug);
+    await tester.pumpAndSettle();
+
+    marginalSeries = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .expand((chart) => chart.series)
+        .where((series) => series.id.contains('marginal'))
+        .toList();
+    expect(marginalSeries.whereType<BarChartSeries>(), isEmpty);
+    expect(marginalSeries.whereType<LineChartSeries>(), hasLength(2));
+    final rugs = marginalSeries
+        .whereType<ScatterChartSeries>()
+        .where((series) => series.id.endsWith('-rug'))
+        .toList();
+    expect(rugs, hasLength(2));
+    expect(
+      rugs.every((series) => series.markerShape == SeriesMarkerShape.square),
+      isTrue,
+    );
+    expect(rugs.every((series) => series.markerStyle?.width == 1), isTrue);
+    expect(rugs.every((series) => series.markerStyle?.height == 8), isTrue);
+
+    tester
+        .widget<EnumOption<ScatterMarginalMode>>(modeControl)
+        .onChanged(ScatterMarginalMode.rug);
+    await tester.pumpAndSettle();
+
+    marginalSeries = tester
+        .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+        .expand((chart) => chart.series)
+        .where((series) => series.id.contains('marginal'))
+        .toList();
+    expect(marginalSeries.whereType<BarChartSeries>(), isEmpty);
+    expect(marginalSeries.whereType<LineChartSeries>(), isEmpty);
+    expect(
+      marginalSeries.whereType<ScatterChartSeries>().where(
+        (series) => series.id.endsWith('-rug'),
+      ),
+      hasLength(2),
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-bandwidth')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('scatter-marginal-bin-count')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'scatter Selection links one chart point to one Workbench data row',
@@ -3352,6 +3606,192 @@ void main() {
         );
         expect(tester.takeException(), isNull);
       }
+    },
+  );
+
+  testWidgets(
+    'Scatter appearance uses the shared palette clear and toggle behavior',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+
+      final appearanceHeader = find.text('Marker appearance');
+      await tester.ensureVisible(appearanceHeader);
+      await tester.tap(appearanceHeader);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('scatter-series-color-1-clear')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('scatter-series-color-1-custom')),
+        findsOneWidget,
+      );
+      final redSwatch = find.byKey(
+        ValueKey('scatter-series-color-1-${Colors.red.toARGB32()}'),
+      );
+      await tester.ensureVisible(redSwatch);
+      await tester.tap(redSwatch);
+      await tester.pump();
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(chart.series.first.color, Colors.red);
+
+      await tester.tap(redSwatch);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(chart.series.first.color, const Color(0xFF0EA5E9));
+
+      final fillToggle = find.byKey(
+        const ValueKey('scatter-marker-fill-toggle'),
+      );
+      await tester.ensureVisible(fillToggle);
+      await tester.tap(fillToggle);
+      await tester.pumpAndSettle();
+      final blueSwatch = find.byKey(
+        ValueKey('scatter-marker-fill-${Colors.blue.toARGB32()}'),
+      );
+      await tester.ensureVisible(blueSwatch);
+      await tester.tap(blueSwatch);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        (chart.series.first as ScatterChartSeries).markerStyle?.fillColor,
+        Colors.blue,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('scatter-marker-fill-clear')));
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        (chart.series.first as ScatterChartSeries).markerStyle?.fillColor,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Scatter canvas and interaction palettes apply and reset cleanly',
+    (tester) async {
+      await pumpPage(tester, const ScatterChartsPage());
+
+      final background = tester.widget<PaletteColorOption>(
+        find.byKey(
+          const ValueKey('scatter-background-color-option'),
+          skipOffstage: false,
+        ),
+      );
+      final grid = tester.widget<PaletteColorOption>(
+        find.byKey(
+          const ValueKey('scatter-grid-color-option'),
+          skipOffstage: false,
+        ),
+      );
+      final axes = tester.widget<PaletteColorOption>(
+        find.byKey(
+          const ValueKey('scatter-axis-color-option'),
+          skipOffstage: false,
+        ),
+      );
+      final crosshair = tester.widget<PaletteColorOption>(
+        find.byKey(
+          const ValueKey('scatter-crosshair-color-option'),
+          skipOffstage: false,
+        ),
+      );
+      background.onChanged(Colors.black);
+      grid.onChanged(Colors.orange);
+      axes.onChanged(Colors.purple);
+      crosshair.onChanged(Colors.green);
+      await tester.pump();
+
+      var chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(chart.theme?.backgroundColor, Colors.black);
+      expect(chart.theme?.gridStyle.majorColor, Colors.orange);
+      expect(chart.theme?.axisStyle.lineColor, Colors.purple);
+      expect(chart.theme?.axisStyle.tickColor, Colors.purple);
+      expect(chart.theme?.axisStyle.labelStyle.color, Colors.purple);
+      expect(chart.theme?.interactionTheme.crosshairColor, Colors.green);
+
+      final interactionToggle = tester.widget<BoolOption>(
+        find.byKey(
+          const ValueKey('scatter-interaction-color-toggle'),
+          skipOffstage: false,
+        ),
+      );
+      interactionToggle.onChanged(true);
+      await tester.pump();
+      final selection = tester.widget<PaletteColorOption>(
+        find.byKey(
+          const ValueKey('scatter-selection-color-option'),
+          skipOffstage: false,
+        ),
+      );
+      selection.onChanged(Colors.pink);
+      await tester.pump();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(
+        (chart.series.first as ScatterChartSeries)
+            .interactionStyle
+            .selectionColor,
+        Colors.pink,
+      );
+
+      await tester.tap(find.text('Reset example'));
+      await tester.pumpAndSettle();
+      chart = tester.widget<BravenChartPlus>(find.byType(BravenChartPlus));
+      expect(chart.theme?.backgroundColor, ChartTheme.light.backgroundColor);
+      expect(
+        chart.theme?.gridStyle.majorColor,
+        ChartTheme.light.gridStyle.majorColor,
+      );
+      expect(
+        chart.theme?.interactionTheme.crosshairColor,
+        ChartTheme.light.interactionTheme.crosshairColor,
+      );
+      expect(
+        (chart.series.first as ScatterChartSeries)
+            .interactionStyle
+            .selectionColor,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Scatter appearance remains usable in the compact options sheet',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: ScatterChartsPage())),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'initial compact layout');
+      await tester.tap(find.byKey(const ValueKey('chart-page-options-button')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'opening options sheet');
+
+      expect(find.text('Chart options'), findsOneWidget);
+      expect(find.text('Marker appearance'), findsOneWidget);
+      expect(find.text('Canvas colors'), findsOneWidget);
+      expect(find.text('Interaction colors'), findsOneWidget);
+
+      await tester.tap(find.text('Marker appearance'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('scatter-series-color-1-clear')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('scatter-series-color-1-custom')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: 'expanded appearance');
     },
   );
 
