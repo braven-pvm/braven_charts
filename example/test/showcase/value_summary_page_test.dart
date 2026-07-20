@@ -23,7 +23,10 @@ void main() {
 
   Future<void> revealOption(WidgetTester tester, Finder target) async {
     final optionsScrollable = find
-        .descendant(of: find.byType(OptionsPanel), matching: find.byType(Scrollable))
+        .descendant(
+          of: find.byType(OptionsPanel),
+          matching: find.byType(Scrollable),
+        )
         .first;
     await tester.scrollUntilVisible(target, 120, scrollable: optionsScrollable);
     await tester.pumpAndSettle();
@@ -136,7 +139,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('clear-background toggle drives the tri-state style', (
+  testWidgets('color palette clear affordance drives the tri-state style', (
     tester,
   ) async {
     await pumpPage(tester);
@@ -150,42 +153,69 @@ void main() {
     // Untouched: every style field inherits from the summary theme.
     expect(style().backgroundColor.isInherit, isTrue);
     expect(style().borderColor.isInherit, isTrue);
+    expect(style().accentColor.isInherit, isTrue);
     expect(style().backgroundOpacity.isInherit, isTrue);
 
-    final clearBackground = find.byKey(
-      const ValueKey('value-summary-clear-background'),
+    // The palette's leading clear swatch produces ChartStyleValue.none() — a
+    // truly transparent surface, and the panel still lays out and paints.
+    final backgroundClear = find.byKey(
+      const ValueKey('value-summary-background-color-clear'),
     );
-    await revealOption(tester, clearBackground);
-    await tester.tap(clearBackground);
+    await revealOption(tester, backgroundClear);
+    await tester.tap(backgroundClear);
     await tester.pumpAndSettle();
-
-    // Cleared: ChartStyleValue.none() — a truly transparent surface, and the
-    // panel still lays out and paints its rows.
     expect(style().backgroundColor.isNone, isTrue);
     expect(style().borderColor.isInherit, isTrue);
     expect(_renderBox(tester).debugValueSummaryBounds, isNot(Rect.zero));
     expect(_renderBox(tester).debugValueSummaryModel, isNotNull);
 
-    // Toggling back returns to inherit, not to a stale explicit color.
-    await tester.tap(clearBackground);
-    await tester.pumpAndSettle();
-    expect(style().backgroundColor.isInherit, isTrue);
-
-    // Reset restores full theme inheritance after explicit overrides.
-    await revealOption(
-      tester,
-      find.byKey(const ValueKey('value-summary-clear-border')),
+    // Picking a preset swatch promotes the field to an explicit override.
+    final blueSwatch = find.byKey(
+      ValueKey('value-summary-background-color-${Colors.blue.toARGB32()}'),
     );
-    await tester.tap(find.byKey(const ValueKey('value-summary-clear-border')));
+    await revealOption(tester, blueSwatch);
+    await tester.tap(blueSwatch);
+    await tester.pumpAndSettle();
+    expect(
+      style().backgroundColor,
+      isA<ChartStyleExplicit<Color>>().having(
+        (v) => v.value.toARGB32(),
+        'value',
+        Colors.blue.toARGB32(),
+      ),
+    );
+
+    // Tapping the selected swatch again toggles it off — back to none, never
+    // to a stale explicit color.
+    await tester.tap(blueSwatch);
+    await tester.pumpAndSettle();
+    expect(style().backgroundColor.isNone, isTrue);
+
+    // Border and accent expose the same clear affordance.
+    final borderClear = find.byKey(
+      const ValueKey('value-summary-border-color-clear'),
+    );
+    await revealOption(tester, borderClear);
+    await tester.tap(borderClear);
     await tester.pumpAndSettle();
     expect(style().borderColor.isNone, isTrue);
 
+    final accentClear = find.byKey(
+      const ValueKey('value-summary-accent-color-clear'),
+    );
+    await revealOption(tester, accentClear);
+    await tester.tap(accentClear);
+    await tester.pumpAndSettle();
+    expect(style().accentColor.isNone, isTrue);
+
+    // Reset restores full theme inheritance after explicit overrides.
     final reset = find.byKey(const ValueKey('value-summary-reset-style'));
     await revealOption(tester, reset);
     await tester.tap(reset);
     await tester.pumpAndSettle();
     expect(style().backgroundColor.isInherit, isTrue);
     expect(style().borderColor.isInherit, isTrue);
+    expect(style().accentColor.isInherit, isTrue);
     expect(tester.takeException(), isNull);
   });
 

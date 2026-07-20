@@ -50,6 +50,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   // slider still resolves through ChartStyleValue.inherit().
   ChartStyleValue<Color> _backgroundColor = const ChartStyleValue.inherit();
   ChartStyleValue<Color> _borderColor = const ChartStyleValue.inherit();
+  ChartStyleValue<Color> _accentColor = const ChartStyleValue.inherit();
   double _backgroundOpacity = 0.92;
   bool _backgroundOpacityOverridden = false;
   double _cornerRadius = 8;
@@ -89,6 +90,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
   CartesianValueSummaryStyle get _summaryStyle => CartesianValueSummaryStyle(
     backgroundColor: _backgroundColor,
     borderColor: _borderColor,
+    accentColor: _accentColor,
     backgroundOpacity: _backgroundOpacityOverridden
         ? ChartStyleValue.value(_backgroundOpacity)
         : const ChartStyleValue.inherit(),
@@ -130,6 +132,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
     setState(() {
       _backgroundColor = const ChartStyleValue.inherit();
       _borderColor = const ChartStyleValue.inherit();
+      _accentColor = const ChartStyleValue.inherit();
       _backgroundOpacity = 0.92;
       _backgroundOpacityOverridden = false;
       _cornerRadius = 8;
@@ -145,6 +148,29 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
       ChartPointRef(seriesId: seriesId, pointIndex: lastIndex),
     );
   }
+
+  /// The explicit override color, or null when the field is inherit or none.
+  /// The palette renders null as its leading clear swatch being selected.
+  static Color? _explicitColor(ChartStyleValue<Color> value) =>
+      value is ChartStyleExplicit<Color> ? value.value : null;
+
+  /// Maps a palette selection onto the tri-state model: a picked color
+  /// (preset swatch or the custom dialog, including its alpha slider) becomes
+  /// an explicit override; clearing (the leading clear swatch, or tapping the
+  /// selected swatch again) becomes [ChartStyleValue.none]. Only "Reset Style
+  /// to Theme" returns a field to [ChartStyleValue.inherit].
+  static ChartStyleValue<Color> _styleValueFor(Color? color) => color == null
+      ? const ChartStyleValue<Color>.none()
+      : ChartStyleValue<Color>.value(color);
+
+  static String _styleSubtitle(
+    ChartStyleValue<Color> value, {
+    required String whenNone,
+  }) => value.isInherit
+      ? 'ChartStyleValue.inherit() — the theme resolves it'
+      : value.isNone
+      ? whenNone
+      : 'ChartStyleValue.value() — explicit override';
 
   (String, int) get _pinTarget => switch (_preset) {
     _SummaryPreset.line => ('summary-speed', _speedPoints.length - 1),
@@ -311,10 +337,7 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
               synchronizeCursor: true,
               synchronizeViewport: true,
             ),
-      grid: GridConfig(
-        horizontal: options.showGrid,
-        vertical: false,
-      ),
+      grid: GridConfig(horizontal: options.showGrid, vertical: false),
       xAxisConfig: xAxisConfig.copyWith(showAxisLine: options.showAxisLines),
       yAxis: yAxis?.copyWith(showAxisLine: options.showAxisLines),
       interactionConfig: _interaction(
@@ -677,46 +700,41 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
         title: 'Style',
         icon: Icons.format_paint_outlined,
         children: [
-          ColorOption(
+          PaletteColorOption(
             label: 'Background color',
-            value: _backgroundColor is ChartStyleExplicit<Color>
-                ? (_backgroundColor as ChartStyleExplicit<Color>).value
-                : Colors.transparent,
-            colors: _panelColors,
-            onChanged: (color) => setState(
-              () => _backgroundColor = ChartStyleValue.value(color),
+            subtitle: _styleSubtitle(
+              _backgroundColor,
+              whenNone: 'ChartStyleValue.none() — truly transparent',
             ),
-          ),
-          BoolOption(
-            key: const ValueKey('value-summary-clear-background'),
-            label: 'Clear Background',
-            subtitle: 'ChartStyleValue.none() — truly transparent',
-            value: _backgroundColor.isNone,
-            onChanged: (clear) => setState(
-              () => _backgroundColor = clear
-                  ? const ChartStyleValue.none()
-                  : const ChartStyleValue.inherit(),
-            ),
-          ),
-          ColorOption(
-            label: 'Border color',
-            value: _borderColor is ChartStyleExplicit<Color>
-                ? (_borderColor as ChartStyleExplicit<Color>).value
-                : Colors.transparent,
-            colors: _panelColors,
+            keyPrefix: 'value-summary-background-color',
+            value: _explicitColor(_backgroundColor),
+            customColorFallback: _explicitColor(_backgroundColor),
             onChanged: (color) =>
-                setState(() => _borderColor = ChartStyleValue.value(color)),
+                setState(() => _backgroundColor = _styleValueFor(color)),
           ),
-          BoolOption(
-            key: const ValueKey('value-summary-clear-border'),
-            label: 'Clear Border',
-            subtitle: 'ChartStyleValue.none() — no stroke',
-            value: _borderColor.isNone,
-            onChanged: (clear) => setState(
-              () => _borderColor = clear
-                  ? const ChartStyleValue.none()
-                  : const ChartStyleValue.inherit(),
+          PaletteColorOption(
+            label: 'Border color',
+            subtitle: _styleSubtitle(
+              _borderColor,
+              whenNone: 'ChartStyleValue.none() — no stroke',
             ),
+            keyPrefix: 'value-summary-border-color',
+            value: _explicitColor(_borderColor),
+            customColorFallback: _explicitColor(_borderColor),
+            onChanged: (color) =>
+                setState(() => _borderColor = _styleValueFor(color)),
+          ),
+          PaletteColorOption(
+            label: 'Accent color',
+            subtitle: _styleSubtitle(
+              _accentColor,
+              whenNone: 'ChartStyleValue.none() — hides the accent marks',
+            ),
+            keyPrefix: 'value-summary-accent-color',
+            value: _explicitColor(_accentColor),
+            customColorFallback: _explicitColor(_accentColor),
+            onChanged: (color) =>
+                setState(() => _accentColor = _styleValueFor(color)),
           ),
           SliderOption(
             label: 'Background opacity',
@@ -926,17 +944,6 @@ class _ShowcaseSummaryController extends ChangeNotifier
 // ============================================================================
 // Data
 // ============================================================================
-
-const _panelColors = <Color>[
-  Color(0xFF1E2430),
-  Color(0xFF0F172A),
-  Color(0xFFFFFFFF),
-  Color(0xFFF1F5F9),
-  Color(0xFF4F46E5),
-  Color(0xFF0891B2),
-  Color(0xFF10B981),
-  Color(0xFFF59E0B),
-];
 
 const _speedPoints = <ChartDataPoint>[
   ChartDataPoint(x: 0, y: 24),
