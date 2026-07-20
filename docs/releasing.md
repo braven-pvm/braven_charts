@@ -73,6 +73,40 @@ Repo-side prerequisites (already configured):
   addition to `master` (Settings → Environments → github-pages →
   deployment branches and tags).
 
+## Package page content (README, images, screenshots)
+
+pub.dev has no separate content artifact — everything on the package page
+comes from the **published archive** of the version being viewed (default:
+latest stable; prereleases are never the default view):
+
+| Package page element | Source | Updates when |
+| --- | --- | --- |
+| Readme tab (text, image list, captions) | `README.md` in the archive | **Next publish only** |
+| Changelog tab | `CHANGELOG.md` in the archive | Next publish only |
+| Example tab | `example/` in the archive | Next publish only |
+| Screenshot gallery + package thumbnail | pubspec `screenshots:` files in the archive | Next publish only |
+| **Pixels of README images** | `raw.githubusercontent.com/.../master/doc/screenshots/...` (absolute URLs) | **Immediately on any master push** |
+| API reference | dartdoc run by pub.dev on the upload | Next publish only |
+
+Consequences:
+
+- **Refreshing an existing image** (same filename, better pixels): commit
+  the regenerated file under `doc/screenshots/` to master — every
+  version's Readme tab shows it immediately, no release needed.
+- **Changing README text/structure, captions, adding/removing images, or
+  changing the `screenshots:` gallery**: must ship in a release. Fold it
+  into the release PR so content and version publish together.
+- Because README images track master, the live page can briefly show
+  imagery ahead of the published version — acceptable at this release
+  cadence; avoid regenerating media that showcases unreleased features
+  long before their release.
+
+Constraints: max 10 pubspec screenshots, each ≤ 4 MB (converted to WebP
+server-side), first one doubles as the package thumbnail. Media
+regeneration commands and README composition rules live in
+[doc/release_checklist.md](../doc/release_checklist.md)
+(`python tool/capture_showcase_media.py`).
+
 ## Guards and failure modes
 
 | Situation | Behavior |
