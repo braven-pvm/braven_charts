@@ -2021,6 +2021,37 @@ class _ChartDartEmitter {
       });
       writer.writeLine('),');
     }
+    _optionalNullableNumberList(
+      writer,
+      'intervalLowerValues',
+      series.intervalLowerValues,
+    );
+    _optionalNullableNumberList(
+      writer,
+      'intervalUpperValues',
+      series.intervalUpperValues,
+    );
+    if (series.hasIntervals &&
+        (options.includeDefaultValues ||
+            series.intervalStyle != const PolarColumnIntervalStyle())) {
+      final interval = series.intervalStyle;
+      writer.writeLine('intervalStyle: PolarColumnIntervalStyle(');
+      writer.indented(() {
+        _enumIf(
+          writer,
+          'display',
+          'PolarColumnIntervalDisplay',
+          interval.display.name,
+          defaultName: 'whisker',
+        );
+        _optionalColor(writer, 'color', interval.color);
+        _numberIf(writer, 'width', interval.width, 1.5);
+        _numberIf(writer, 'capLengthFactor', interval.capLengthFactor, 0.62);
+        _numberIf(writer, 'bandLengthFactor', interval.bandLengthFactor, 0.58);
+        _numberIf(writer, 'opacity', interval.opacity, 0.92);
+      });
+      writer.writeLine('),');
+    }
   }
 
   void _emitRadialSelectionStyle(

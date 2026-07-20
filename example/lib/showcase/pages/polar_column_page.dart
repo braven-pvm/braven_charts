@@ -52,6 +52,12 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
   double _thresholdValue = 80;
   double _targetMarkerWidth = 3;
   double _targetMarkerLength = 0.68;
+  bool _showIntervals = true;
+  PolarColumnIntervalDisplay _intervalDisplay =
+      PolarColumnIntervalDisplay.whisker;
+  double _intervalWidth = 2;
+  double _intervalCapLength = 0.62;
+  double _intervalBandLength = 0.58;
   String? _selectedCategory;
   String? _selectedSeries;
 
@@ -178,6 +184,33 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
     'Email': 55,
     'Events': 72,
     'Direct': 88,
+  };
+
+  static const _uncertaintyValues = <String, num>{
+    'Search': 72,
+    'Social': 58,
+    'Partners': 81,
+    'Email': 46,
+    'Events': 67,
+    'Direct': 88,
+  };
+
+  static const _uncertaintyLowerValues = <String, num>{
+    'Search': 63,
+    'Social': 49,
+    'Partners': 70,
+    'Email': 38,
+    'Events': 57,
+    'Direct': 76,
+  };
+
+  static const _uncertaintyUpperValues = <String, num>{
+    'Search': 84,
+    'Social': 69,
+    'Partners': 94,
+    'Email': 56,
+    'Events': 79,
+    'Direct': 103,
   };
 
   static const _columnColors = <Color>[
@@ -394,6 +427,15 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
                 if (_presentation == _PolarPresentation.references) ...[
                   const SizedBox(width: 8),
                   const _MetricChip(label: 'Targets + threshold'),
+                ],
+                if (_presentation == _PolarPresentation.intervals) ...[
+                  const SizedBox(width: 8),
+                  _MetricChip(
+                    label:
+                        _intervalDisplay == PolarColumnIntervalDisplay.whisker
+                        ? 'Uncertainty whiskers'
+                        : 'Range bands',
+                  ),
                 ],
               ],
             ),
@@ -676,6 +718,36 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         ),
       ];
     }
+    if (_presentation == _PolarPresentation.intervals) {
+      return [
+        PolarColumnChartSeries.fromMap(
+          id: 'showcase-polar-forecast-intervals',
+          name: 'Forecast',
+          values: _values,
+          intervals: _showIntervals
+              ? {
+                  for (final category in _values.keys)
+                    if (_comparisonValues[category] case final lower?)
+                      if (_tertiaryValues[category] case final upper?)
+                        category: PolarColumnInterval(
+                          lower: lower.toDouble(),
+                          upper: upper.toDouble(),
+                        ),
+                }
+              : const <String, PolarColumnInterval>{},
+          columnColors: colors,
+          unit: 'orders',
+          polarStyle: style,
+          intervalStyle: PolarColumnIntervalStyle(
+            display: _intervalDisplay,
+            width: _intervalWidth,
+            capLengthFactor: _intervalCapLength,
+            bandLengthFactor: _intervalBandLength,
+            opacity: 0.92,
+          ),
+        ),
+      ];
+    }
     return [
       _presentation == _PolarPresentation.rose
           ? PolarColumnChartSeries.rose(
@@ -791,6 +863,64 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
               decimalPlaces: 0,
               onChanged: (value) => setState(() => _thresholdValue = value),
             ),
+        ],
+      ),
+    if (_presentation == _PolarPresentation.intervals)
+      OptionSection(
+        title: 'Uncertainty & ranges',
+        icon: Icons.vertical_align_center_outlined,
+        children: [
+          BoolOption(
+            label: 'Show intervals',
+            value: _showIntervals,
+            onChanged: (value) => setState(() => _showIntervals = value),
+          ),
+          if (_showIntervals) ...[
+            EnumOption<PolarColumnIntervalDisplay>(
+              label: 'Presentation',
+              value: _intervalDisplay,
+              values: PolarColumnIntervalDisplay.values,
+              labelBuilder: (value) => switch (value) {
+                PolarColumnIntervalDisplay.whisker => 'Whisker + caps',
+                PolarColumnIntervalDisplay.band => 'Annular range band',
+              },
+              onChanged: (value) => setState(() => _intervalDisplay = value),
+            ),
+            SliderOption(
+              label: 'Line width',
+              value: _intervalWidth,
+              min: 1,
+              max: 5,
+              divisions: 16,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) => setState(() => _intervalWidth = value),
+            ),
+            if (_intervalDisplay == PolarColumnIntervalDisplay.whisker)
+              SliderOption(
+                label: 'Cap length',
+                value: _intervalCapLength * 100,
+                min: 30,
+                max: 100,
+                divisions: 14,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _intervalCapLength = value / 100),
+              )
+            else
+              SliderOption(
+                label: 'Band width',
+                value: _intervalBandLength * 100,
+                min: 30,
+                max: 100,
+                divisions: 14,
+                suffix: '%',
+                decimalPlaces: 0,
+                onChanged: (value) =>
+                    setState(() => _intervalBandLength = value / 100),
+              ),
+          ],
         ],
       ),
     OptionSection(
@@ -986,6 +1116,11 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
         'Thresholds span the pane',
         'A threshold ring communicates one absolute reference value across every angular category.',
       ),
+      (
+        Icons.vertical_align_center_outlined,
+        'Intervals stay scale-bound',
+        'Absolute lower and upper values render as radial whiskers or compact annular range bands.',
+      ),
     ];
     return _Section(
       eyebrow: 'FEATURE GUIDE',
@@ -1020,17 +1155,25 @@ class _PolarColumnPageState extends State<PolarColumnPage> {
 
   Widget _buildCodeRecipe() => const _Section(
     eyebrow: 'HOW TO USE IT',
-    title: 'Compare category values with targets and a shared threshold',
+    title: 'Attach targets, thresholds, and absolute uncertainty intervals',
     child: _CodeBlock(
       code: '''final volume = PolarColumnChartSeries.fromMap(
   id: 'volume',
   values: const {'Search': 74, 'Social': 56, 'Partners': 83},
   targets: const {'Search': 78, 'Social': 62, 'Partners': 80},
+  intervals: const {
+    'Search': PolarColumnInterval(lower: 66, upper: 84),
+    'Social': PolarColumnInterval(lower: 48, upper: 67),
+  },
   unit: 'orders',
   targetMarkerStyle: const PolarColumnTargetMarkerStyle(
     color: Color(0xFFF59E0B),
     width: 3,
     lengthFactor: 0.68,
+  ),
+  intervalStyle: const PolarColumnIntervalStyle(
+    display: PolarColumnIntervalDisplay.whisker,
+    width: 2,
   ),
 );
 
@@ -1169,6 +1312,27 @@ BravenChartPlus(
           _thresholdValue = 80;
           _targetMarkerWidth = 3;
           _targetMarkerLength = 0.68;
+        case _PolarPresentation.intervals:
+          _values = Map<String, num>.of(_uncertaintyValues);
+          _comparisonValues = Map<String, num>.of(_uncertaintyLowerValues);
+          _tertiaryValues = Map<String, num>.of(_uncertaintyUpperValues);
+          _categoryCount = _values.length;
+          _startAngle = -90;
+          _sweepAngle = 360;
+          _clockwise = true;
+          _innerRadius = 0.12;
+          _outerRadius = 0.88;
+          _innerPadding = 0.16;
+          _outerPadding = 0.04;
+          _scaleMode = PolarRadialScaleMode.linear;
+          _cornerRadius = 5;
+          _compositionMode = PolarColumnCompositionMode.layered;
+          _groupInnerPadding = 0.12;
+          _showIntervals = true;
+          _intervalDisplay = PolarColumnIntervalDisplay.whisker;
+          _intervalWidth = 2;
+          _intervalCapLength = 0.62;
+          _intervalBandLength = 0.58;
       }
     });
   }
@@ -1196,6 +1360,11 @@ BravenChartPlus(
         final generated = _randomReferenceValues(count);
         _values = generated.$1;
         _comparisonValues = generated.$2;
+      } else if (_presentation == _PolarPresentation.intervals) {
+        final generated = _randomIntervalValues(count);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
       } else {
         _values = _randomValues(count);
       }
@@ -1224,6 +1393,11 @@ BravenChartPlus(
         final generated = _randomReferenceValues(_categoryCount);
         _values = generated.$1;
         _comparisonValues = generated.$2;
+      } else if (_presentation == _PolarPresentation.intervals) {
+        final generated = _randomIntervalValues(_categoryCount);
+        _values = generated.$1;
+        _comparisonValues = generated.$2;
+        _tertiaryValues = generated.$3;
       } else {
         _values = _randomValues(_categoryCount);
       }
@@ -1274,6 +1448,23 @@ BravenChartPlus(
       {
         for (final entry in actual.entries)
           entry.key: math.max(20, entry.value + _random.nextInt(19) - 9),
+      },
+    );
+  }
+
+  (Map<String, num>, Map<String, num>, Map<String, num>) _randomIntervalValues(
+    int count,
+  ) {
+    final values = _randomValues(count);
+    return (
+      values,
+      {
+        for (final entry in values.entries)
+          entry.key: math.max(0, entry.value - (7 + _random.nextInt(8))),
+      },
+      {
+        for (final entry in values.entries)
+          entry.key: entry.value + 7 + _random.nextInt(10),
       },
     );
   }
@@ -1328,6 +1519,13 @@ enum _PolarPresentation {
     Icons.flag_outlined,
     'Order volume against plan',
     'Amber ticks mark category targets; the dashed ring marks shared capacity',
+  ),
+  intervals(
+    'Ranges & uncertainty',
+    'Absolute lower and upper values on the shared radial scale',
+    Icons.vertical_align_center_outlined,
+    'Forecast range by channel',
+    'Whiskers and annular bands show uncertainty without changing column values',
   );
 
   const _PolarPresentation(

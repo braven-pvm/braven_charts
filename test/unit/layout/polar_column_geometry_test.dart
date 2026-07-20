@@ -317,6 +317,76 @@ void main() {
       expect(geometry.marks.single.targetPath, isNull);
     });
 
+    test('resolves whisker and annular-band paths from absolute intervals', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 240, 240),
+        innerRadiusFactor: 0.2,
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: 0, maximum: 100);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(
+          pane: pane,
+          categories: const ['A', 'B'],
+          innerPadding: 0.12,
+        ),
+        numericScale: scale,
+        values: const [55, 65],
+        intervalLowerValues: const [42, null],
+        intervalUpperValues: const [71, null],
+        intervalCapLengthFactor: 0.5,
+        intervalBandLengthFactor: 0.6,
+      );
+
+      final first = geometry.marks.first;
+      expect(first.intervalLowerValue, 42);
+      expect(first.intervalUpperValue, 71);
+      expect(first.intervalLowerRadius, closeTo(scale.valueToRadius(42), 1e-9));
+      expect(first.intervalUpperRadius, closeTo(scale.valueToRadius(71), 1e-9));
+      expect(first.intervalWhiskerPath, isNotNull);
+      expect(first.intervalBandPath, isNotNull);
+      expect(geometry.marks.last.intervalWhiskerPath, isNull);
+      expect(geometry.marks.last.intervalBandPath, isNull);
+    });
+
+    test('clips interval geometry while preserving exact source endpoints', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final scale = PolarNumericScale(pane: pane, minimum: 10, maximum: 20);
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: scale,
+        values: const [15],
+        intervalLowerValues: const [5],
+        intervalUpperValues: const [16],
+      );
+
+      final mark = geometry.marks.single;
+      expect(mark.intervalLowerValue, 5);
+      expect(mark.intervalUpperValue, 16);
+      expect(mark.intervalLowerRadius, scale.valueToRadius(10));
+      expect(mark.intervalUpperRadius, scale.valueToRadius(16));
+      expect(mark.intervalWhiskerPath, isNotNull);
+      expect(mark.intervalBandPath, isNotNull);
+    });
+
+    test('keeps a capped marker for a zero-width interval', () {
+      final pane = RadialPaneGeometry.resolve(
+        viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
+      );
+      final geometry = PolarColumnGeometryCalculator.calculate(
+        categoryScale: PolarCategoryScale(pane: pane, categories: const ['A']),
+        numericScale: PolarNumericScale(pane: pane, minimum: 0, maximum: 100),
+        values: const [60],
+        intervalLowerValues: const [52],
+        intervalUpperValues: const [52],
+      );
+
+      final mark = geometry.marks.single;
+      expect(mark.intervalWhiskerPath, isNotNull);
+      expect(mark.intervalBandPath, isNull);
+    });
+
     test('rejects mismatched scales, values, and baselines', () {
       final pane = RadialPaneGeometry.resolve(
         viewportBounds: const Rect.fromLTWH(0, 0, 200, 200),
@@ -339,6 +409,25 @@ void main() {
             maximum: 10,
           ),
           values: const [1, 2],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          intervalLowerValues: const [0, 1],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnGeometryCalculator.calculate(
+          categoryScale: categories,
+          numericScale: values,
+          values: const [1, 2],
+          intervalLowerValues: const [2, null],
+          intervalUpperValues: const [1, null],
         ),
         throwsArgumentError,
       );

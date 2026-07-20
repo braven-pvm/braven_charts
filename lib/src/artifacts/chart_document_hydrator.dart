@@ -297,6 +297,7 @@ abstract final class ChartDocumentHydrator {
     'series.polarColumn',
     'series.polar.column.v1',
     'series.polar.column.targets.v1',
+    'series.polar.column.intervals.v1',
     'chart.polar.config.v1',
     'chart.polar.thresholds.v1',
     PolarColumnComposition.multipleSeriesCapability,
@@ -963,6 +964,20 @@ abstract final class ChartDocumentHydrator {
           code: ChartArtifactDiagnosticCodes.invalidArtifact,
           message:
               'Polar Column targets must declare series.polar.column.targets.v1.',
+          path: r'$.document.requiredCapabilities',
+        ),
+        [],
+      );
+    }
+    if (polarSeries.any((series) => series.hasIntervals) &&
+        !document.requiredCapabilities.contains(
+          'series.polar.column.intervals.v1',
+        )) {
+      throw const _HydrationFailure(
+        ChartArtifactError(
+          code: ChartArtifactDiagnosticCodes.invalidArtifact,
+          message:
+              'Polar Column intervals must declare series.polar.column.intervals.v1.',
           path: r'$.document.requiredCapabilities',
         ),
         [],

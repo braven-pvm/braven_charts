@@ -17,6 +17,155 @@ enum PolarColumnPreset {
   rose,
 }
 
+/// Visual treatment for an absolute lower/upper Polar Column interval.
+enum PolarColumnIntervalDisplay {
+  /// A radial stem with tangential caps at the lower and upper endpoints.
+  whisker,
+
+  /// A compact annular band spanning the lower and upper endpoints.
+  band,
+}
+
+/// Absolute lower and upper values associated with one polar category.
+///
+/// Intervals are analytical references on the shared radial numeric scale;
+/// they are not deltas from the column value.
+class PolarColumnInterval {
+  const PolarColumnInterval({required this.lower, required this.upper});
+
+  final double lower;
+  final double upper;
+
+  void validate({String argumentName = 'interval'}) {
+    if (!lower.isFinite || !upper.isFinite) {
+      throw ArgumentError.value(
+        this,
+        argumentName,
+        'Interval endpoints must be finite',
+      );
+    }
+    if (lower > upper) {
+      throw ArgumentError.value(
+        this,
+        argumentName,
+        'Interval lower value must not exceed its upper value',
+      );
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnInterval &&
+          lower == other.lower &&
+          upper == other.upper;
+
+  @override
+  int get hashCode => Object.hash(lower, upper);
+}
+
+/// Appearance of per-category Polar Column uncertainty/range intervals.
+class PolarColumnIntervalStyle {
+  const PolarColumnIntervalStyle({
+    this.display = PolarColumnIntervalDisplay.whisker,
+    this.color,
+    this.width = 1.5,
+    this.capLengthFactor = 0.62,
+    this.bandLengthFactor = 0.58,
+    this.opacity = 0.92,
+  });
+
+  final PolarColumnIntervalDisplay display;
+
+  /// Explicit interval color. Null uses a high-contrast theme color.
+  final Color? color;
+
+  /// Stroke width for whiskers and the outline of range bands.
+  final double width;
+
+  /// Fraction of the resolved category/group band occupied by whisker caps.
+  final double capLengthFactor;
+
+  /// Fraction of the resolved category/group band occupied by a range band.
+  final double bandLengthFactor;
+
+  /// Interval opacity in the inclusive range `[0, 1]`.
+  final double opacity;
+
+  void validate() {
+    if (!width.isFinite || width <= 0) {
+      throw ArgumentError.value(
+        width,
+        'intervalStyle.width',
+        'Value must be finite and positive',
+      );
+    }
+    if (!capLengthFactor.isFinite ||
+        capLengthFactor <= 0 ||
+        capLengthFactor > 1) {
+      throw ArgumentError.value(
+        capLengthFactor,
+        'intervalStyle.capLengthFactor',
+        'Value must be finite and in (0, 1]',
+      );
+    }
+    if (!bandLengthFactor.isFinite ||
+        bandLengthFactor <= 0 ||
+        bandLengthFactor > 1) {
+      throw ArgumentError.value(
+        bandLengthFactor,
+        'intervalStyle.bandLengthFactor',
+        'Value must be finite and in (0, 1]',
+      );
+    }
+    if (!opacity.isFinite || opacity < 0 || opacity > 1) {
+      throw ArgumentError.value(
+        opacity,
+        'intervalStyle.opacity',
+        'Value must be finite and in [0, 1]',
+      );
+    }
+  }
+
+  PolarColumnIntervalStyle copyWith({
+    PolarColumnIntervalDisplay? display,
+    Color? color,
+    bool clearColor = false,
+    double? width,
+    double? capLengthFactor,
+    double? bandLengthFactor,
+    double? opacity,
+  }) => PolarColumnIntervalStyle(
+    display: display ?? this.display,
+    color: clearColor ? null : (color ?? this.color),
+    width: width ?? this.width,
+    capLengthFactor: capLengthFactor ?? this.capLengthFactor,
+    bandLengthFactor: bandLengthFactor ?? this.bandLengthFactor,
+    opacity: opacity ?? this.opacity,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PolarColumnIntervalStyle &&
+          display == other.display &&
+          color == other.color &&
+          width == other.width &&
+          capLengthFactor == other.capLengthFactor &&
+          bandLengthFactor == other.bandLengthFactor &&
+          opacity == other.opacity;
+
+  @override
+  int get hashCode => Object.hash(
+    display,
+    color,
+    width,
+    capLengthFactor,
+    bandLengthFactor,
+    opacity,
+  );
+}
+
 /// Appearance of a per-category target marker on a Polar Column series.
 ///
 /// Targets are absolute values on the shared radial numeric axis. They do not
@@ -190,6 +339,9 @@ class PolarColumnChartSeries extends ChartSeries {
     this.selectionStyle = const RadialSelectionStyle(),
     this.targetValues = const [],
     this.targetMarkerStyle = const PolarColumnTargetMarkerStyle(),
+    this.intervalLowerValues = const [],
+    this.intervalUpperValues = const [],
+    this.intervalStyle = const PolarColumnIntervalStyle(),
   }) : super(style: SeriesStyle.polarColumn, isXOrdered: true) {
     _validate();
   }
@@ -208,6 +360,8 @@ class PolarColumnChartSeries extends ChartSeries {
     Map<String, num?> targets = const {},
     PolarColumnTargetMarkerStyle targetMarkerStyle =
         const PolarColumnTargetMarkerStyle(),
+    Map<String, PolarColumnInterval> intervals = const {},
+    PolarColumnIntervalStyle intervalStyle = const PolarColumnIntervalStyle(),
   }) => PolarColumnChartSeries._fromMap(
     id: id,
     name: name,
@@ -221,6 +375,8 @@ class PolarColumnChartSeries extends ChartSeries {
     selectionStyle: selectionStyle,
     targets: targets,
     targetMarkerStyle: targetMarkerStyle,
+    intervals: intervals,
+    intervalStyle: intervalStyle,
   );
 
   /// Creates an equal-angle Rose/Nightingale series.
@@ -237,6 +393,8 @@ class PolarColumnChartSeries extends ChartSeries {
     Map<String, num?> targets = const {},
     PolarColumnTargetMarkerStyle targetMarkerStyle =
         const PolarColumnTargetMarkerStyle(),
+    Map<String, PolarColumnInterval> intervals = const {},
+    PolarColumnIntervalStyle intervalStyle = const PolarColumnIntervalStyle(),
   }) => PolarColumnChartSeries._fromMap(
     id: id,
     name: name,
@@ -250,6 +408,8 @@ class PolarColumnChartSeries extends ChartSeries {
     selectionStyle: selectionStyle,
     targets: targets,
     targetMarkerStyle: targetMarkerStyle,
+    intervals: intervals,
+    intervalStyle: intervalStyle,
   );
 
   factory PolarColumnChartSeries._fromMap({
@@ -265,6 +425,8 @@ class PolarColumnChartSeries extends ChartSeries {
     required RadialSelectionStyle selectionStyle,
     required Map<String, num?> targets,
     required PolarColumnTargetMarkerStyle targetMarkerStyle,
+    required Map<String, PolarColumnInterval> intervals,
+    required PolarColumnIntervalStyle intervalStyle,
   }) {
     final unknownTargetCategories = targets.keys
         .where((category) => !values.containsKey(category))
@@ -274,6 +436,16 @@ class PolarColumnChartSeries extends ChartSeries {
         unknownTargetCategories,
         'targets',
         'Target categories must exist in values',
+      );
+    }
+    final unknownIntervalCategories = intervals.keys
+        .where((category) => !values.containsKey(category))
+        .toList(growable: false);
+    if (unknownIntervalCategories.isNotEmpty) {
+      throw ArgumentError.value(
+        unknownIntervalCategories,
+        'intervals',
+        'Interval categories must exist in values',
       );
     }
     final points = <ChartDataPoint>[];
@@ -302,6 +474,13 @@ class PolarColumnChartSeries extends ChartSeries {
           ? const <double?>[]
           : [for (final category in values.keys) targets[category]?.toDouble()],
       targetMarkerStyle: targetMarkerStyle,
+      intervalLowerValues: intervals.isEmpty
+          ? const <double?>[]
+          : [for (final category in values.keys) intervals[category]?.lower],
+      intervalUpperValues: intervals.isEmpty
+          ? const <double?>[]
+          : [for (final category in values.keys) intervals[category]?.upper],
+      intervalStyle: intervalStyle,
     );
   }
 
@@ -317,6 +496,30 @@ class PolarColumnChartSeries extends ChartSeries {
 
   /// Shared appearance for this series' target markers.
   final PolarColumnTargetMarkerStyle targetMarkerStyle;
+
+  /// Optional absolute lower interval endpoint in stable point order.
+  final List<double?> intervalLowerValues;
+
+  /// Optional absolute upper interval endpoint in stable point order.
+  final List<double?> intervalUpperValues;
+
+  /// Shared appearance for this series' intervals.
+  final PolarColumnIntervalStyle intervalStyle;
+
+  bool get hasIntervals => intervalLowerValues.any((value) => value != null);
+
+  PolarColumnInterval? intervalFor(int pointIndex) {
+    if (pointIndex < 0 ||
+        pointIndex >= intervalLowerValues.length ||
+        pointIndex >= intervalUpperValues.length) {
+      return null;
+    }
+    final lower = intervalLowerValues[pointIndex];
+    final upper = intervalUpperValues[pointIndex];
+    return lower == null || upper == null
+        ? null
+        : PolarColumnInterval(lower: lower, upper: upper);
+  }
 
   double? targetValueFor(int pointIndex) =>
       pointIndex < targetValues.length ? targetValues[pointIndex] : null;
@@ -378,6 +581,45 @@ class PolarColumnChartSeries extends ChartSeries {
       }
     }
     targetMarkerStyle.validate();
+    if (intervalLowerValues.isEmpty != intervalUpperValues.isEmpty) {
+      throw ArgumentError(
+        'Polar Column interval lower and upper values must be supplied together',
+      );
+    }
+    if (intervalLowerValues.isNotEmpty &&
+        intervalLowerValues.length != points.length) {
+      throw ArgumentError.value(
+        intervalLowerValues.length,
+        'intervalLowerValues',
+        'Interval count must match point count (${points.length})',
+      );
+    }
+    if (intervalUpperValues.isNotEmpty &&
+        intervalUpperValues.length != points.length) {
+      throw ArgumentError.value(
+        intervalUpperValues.length,
+        'intervalUpperValues',
+        'Interval count must match point count (${points.length})',
+      );
+    }
+    for (var index = 0; index < intervalLowerValues.length; index++) {
+      final lower = intervalLowerValues[index];
+      final upper = intervalUpperValues[index];
+      if ((lower == null) != (upper == null)) {
+        throw ArgumentError.value(
+          '$lower / $upper',
+          'intervalValues[$index]',
+          'Both interval endpoints or neither must be supplied',
+        );
+      }
+      if (lower != null && upper != null) {
+        PolarColumnInterval(
+          lower: lower,
+          upper: upper,
+        ).validate(argumentName: 'intervalValues[$index]');
+      }
+    }
+    intervalStyle.validate();
   }
 
   @override
@@ -399,6 +641,10 @@ class PolarColumnChartSeries extends ChartSeries {
     List<double?>? targetValues,
     bool clearTargetValues = false,
     PolarColumnTargetMarkerStyle? targetMarkerStyle,
+    List<double?>? intervalLowerValues,
+    List<double?>? intervalUpperValues,
+    bool clearIntervalValues = false,
+    PolarColumnIntervalStyle? intervalStyle,
   }) {
     if (style != null && style != SeriesStyle.polarColumn) {
       throw ArgumentError.value(
@@ -434,6 +680,13 @@ class PolarColumnChartSeries extends ChartSeries {
           ? const <double?>[]
           : (targetValues ?? this.targetValues),
       targetMarkerStyle: targetMarkerStyle ?? this.targetMarkerStyle,
+      intervalLowerValues: clearIntervalValues
+          ? const <double?>[]
+          : (intervalLowerValues ?? this.intervalLowerValues),
+      intervalUpperValues: clearIntervalValues
+          ? const <double?>[]
+          : (intervalUpperValues ?? this.intervalUpperValues),
+      intervalStyle: intervalStyle ?? this.intervalStyle,
     );
   }
 
@@ -446,7 +699,16 @@ class PolarColumnChartSeries extends ChartSeries {
           polarStyle == other.polarStyle &&
           selectionStyle == other.selectionStyle &&
           _nullableDoubleListsEqual(targetValues, other.targetValues) &&
-          targetMarkerStyle == other.targetMarkerStyle;
+          targetMarkerStyle == other.targetMarkerStyle &&
+          _nullableDoubleListsEqual(
+            intervalLowerValues,
+            other.intervalLowerValues,
+          ) &&
+          _nullableDoubleListsEqual(
+            intervalUpperValues,
+            other.intervalUpperValues,
+          ) &&
+          intervalStyle == other.intervalStyle;
 
   @override
   int get hashCode => Object.hash(
@@ -456,6 +718,9 @@ class PolarColumnChartSeries extends ChartSeries {
     selectionStyle,
     Object.hashAll(targetValues),
     targetMarkerStyle,
+    Object.hashAll(intervalLowerValues),
+    Object.hashAll(intervalUpperValues),
+    intervalStyle,
   );
 }
 

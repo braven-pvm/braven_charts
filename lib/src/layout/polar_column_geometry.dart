@@ -28,6 +28,12 @@ class PolarColumnMarkGeometry {
     required this.targetValue,
     required this.targetRadius,
     required this.targetPath,
+    required this.intervalLowerValue,
+    required this.intervalUpperValue,
+    required this.intervalLowerRadius,
+    required this.intervalUpperRadius,
+    required this.intervalWhiskerPath,
+    required this.intervalBandPath,
     required this.sector,
     required this.tooltipAnchor,
     required this.labelAnchor,
@@ -68,6 +74,24 @@ class PolarColumnMarkGeometry {
 
   /// Tangential benchmark marker centered inside the resolved angular band.
   final Path? targetPath;
+
+  /// Exact absolute lower interval endpoint retained from the source.
+  final double? intervalLowerValue;
+
+  /// Exact absolute upper interval endpoint retained from the source.
+  final double? intervalUpperValue;
+
+  /// Visible lower endpoint after clipping to the explicit radial domain.
+  final double? intervalLowerRadius;
+
+  /// Visible upper endpoint after clipping to the explicit radial domain.
+  final double? intervalUpperRadius;
+
+  /// Radial uncertainty stem with tangential caps at in-domain endpoints.
+  final Path? intervalWhiskerPath;
+
+  /// Compact annular band spanning the visible interval.
+  final Path? intervalBandPath;
 
   /// Shared annular-sector primitive used for painting and hit testing.
   final AnnularSectorGeometry sector;
@@ -126,6 +150,10 @@ abstract final class PolarColumnGeometryCalculator {
     List<double>? radialEnds,
     List<double?> targetValues = const <double?>[],
     double targetLengthFactor = 0.72,
+    List<double?> intervalLowerValues = const <double?>[],
+    List<double?> intervalUpperValues = const <double?>[],
+    double intervalCapLengthFactor = 0.62,
+    double intervalBandLengthFactor = 0.58,
     double cornerRadius = 0,
     bool roundInnerCorners = false,
     int groupIndex = 0,
@@ -177,6 +205,45 @@ abstract final class PolarColumnGeometryCalculator {
       throw ArgumentError.value(
         targetLengthFactor,
         'targetLengthFactor',
+        'Value must be finite and in (0, 1]',
+      );
+    }
+    if (intervalLowerValues.isEmpty != intervalUpperValues.isEmpty) {
+      throw ArgumentError(
+        'Interval lower and upper values must be supplied together',
+      );
+    }
+    if (intervalLowerValues.isNotEmpty &&
+        intervalLowerValues.length != values.length) {
+      throw ArgumentError.value(
+        intervalLowerValues.length,
+        'intervalLowerValues',
+        'Interval count must match the source value count',
+      );
+    }
+    if (intervalUpperValues.isNotEmpty &&
+        intervalUpperValues.length != values.length) {
+      throw ArgumentError.value(
+        intervalUpperValues.length,
+        'intervalUpperValues',
+        'Interval count must match the source value count',
+      );
+    }
+    if (!intervalCapLengthFactor.isFinite ||
+        intervalCapLengthFactor <= 0 ||
+        intervalCapLengthFactor > 1) {
+      throw ArgumentError.value(
+        intervalCapLengthFactor,
+        'intervalCapLengthFactor',
+        'Value must be finite and in (0, 1]',
+      );
+    }
+    if (!intervalBandLengthFactor.isFinite ||
+        intervalBandLengthFactor <= 0 ||
+        intervalBandLengthFactor > 1) {
+      throw ArgumentError.value(
+        intervalBandLengthFactor,
+        'intervalBandLengthFactor',
         'Value must be finite and in (0, 1]',
       );
     }
@@ -263,6 +330,77 @@ abstract final class PolarColumnGeometryCalculator {
               band: band,
               lengthFactor: targetLengthFactor,
             );
+      final intervalLower = intervalLowerValues.isEmpty
+          ? null
+          : intervalLowerValues[index];
+      final intervalUpper = intervalUpperValues.isEmpty
+          ? null
+          : intervalUpperValues[index];
+      if ((intervalLower == null) != (intervalUpper == null)) {
+        throw ArgumentError.value(
+          '$intervalLower / $intervalUpper',
+          'intervalValues[$index]',
+          'Both interval endpoints or neither must be supplied',
+        );
+      }
+      if (intervalLower != null &&
+          intervalUpper != null &&
+          (!intervalLower.isFinite ||
+              !intervalUpper.isFinite ||
+              intervalLower > intervalUpper)) {
+        throw ArgumentError.value(
+          '$intervalLower / $intervalUpper',
+          'intervalValues[$index]',
+          'Endpoints must be finite and lower must not exceed upper',
+        );
+      }
+      final intervalOverlapsDomain =
+          intervalLower != null &&
+          intervalUpper != null &&
+          intervalUpper >= numericScale.minimum &&
+          intervalLower <= numericScale.maximum;
+      final clippedIntervalLower = intervalOverlapsDomain
+          ? intervalLower
+                .clamp(numericScale.minimum, numericScale.maximum)
+                .toDouble()
+          : null;
+      final clippedIntervalUpper = intervalOverlapsDomain
+          ? intervalUpper
+                .clamp(numericScale.minimum, numericScale.maximum)
+                .toDouble()
+          : null;
+      final intervalLowerRadius = clippedIntervalLower == null
+          ? null
+          : numericScale.valueToRadius(clippedIntervalLower);
+      final intervalUpperRadius = clippedIntervalUpper == null
+          ? null
+          : numericScale.valueToRadius(clippedIntervalUpper);
+      final intervalWhiskerPath =
+          intervalLowerRadius == null || intervalUpperRadius == null
+          ? null
+          : _intervalWhiskerPath(
+              center: categoryScale.pane.center,
+              band: band,
+              lowerRadius: intervalLowerRadius,
+              upperRadius: intervalUpperRadius,
+              capLengthFactor: intervalCapLengthFactor,
+              showLowerCap: intervalLower! >= numericScale.minimum,
+              showUpperCap: intervalUpper! <= numericScale.maximum,
+            );
+      final intervalBandPath =
+          intervalLowerRadius == null ||
+              intervalUpperRadius == null ||
+              (intervalUpperRadius - intervalLowerRadius).abs() <=
+                  _radiusEpsilon
+          ? null
+          : _intervalBandPath(
+              center: categoryScale.pane.center,
+              band: band,
+              lowerRadius: intervalLowerRadius,
+              upperRadius: intervalUpperRadius,
+              lengthFactor: intervalBandLengthFactor,
+              cornerRadius: cornerRadius,
+            );
       final innerRadius = math.min(baselineRadius, valueRadius);
       final outerRadius = math.max(baselineRadius, valueRadius);
       final sector = AnnularSectorGeometry(
@@ -290,6 +428,12 @@ abstract final class PolarColumnGeometryCalculator {
           targetValue: targetValue,
           targetRadius: targetRadius,
           targetPath: targetPath,
+          intervalLowerValue: intervalLower,
+          intervalUpperValue: intervalUpper,
+          intervalLowerRadius: intervalLowerRadius,
+          intervalUpperRadius: intervalUpperRadius,
+          intervalWhiskerPath: intervalWhiskerPath,
+          intervalBandPath: intervalBandPath,
           sector: sector,
           tooltipAnchor:
               categoryScale.pane.center +
@@ -303,6 +447,65 @@ abstract final class PolarColumnGeometryCalculator {
 
     return PolarColumnGeometry._(marks: marks);
   }
+}
+
+Path _intervalWhiskerPath({
+  required Offset center,
+  required PolarCategoryBand band,
+  required double lowerRadius,
+  required double upperRadius,
+  required double capLengthFactor,
+  required bool showLowerCap,
+  required bool showUpperCap,
+}) {
+  final innerRadius = math.min(lowerRadius, upperRadius);
+  final outerRadius = math.max(lowerRadius, upperRadius);
+  final angle = band.centerAngle;
+  final path = Path()
+    ..moveTo(
+      center.dx + math.cos(angle) * innerRadius,
+      center.dy + math.sin(angle) * innerRadius,
+    )
+    ..lineTo(
+      center.dx + math.cos(angle) * outerRadius,
+      center.dy + math.sin(angle) * outerRadius,
+    );
+  final capSweep = band.sweepAngle * capLengthFactor;
+  if (showLowerCap) {
+    path.addArc(
+      Rect.fromCircle(center: center, radius: lowerRadius),
+      angle - capSweep / 2,
+      capSweep,
+    );
+  }
+  if (showUpperCap) {
+    path.addArc(
+      Rect.fromCircle(center: center, radius: upperRadius),
+      angle - capSweep / 2,
+      capSweep,
+    );
+  }
+  return path;
+}
+
+Path _intervalBandPath({
+  required Offset center,
+  required PolarCategoryBand band,
+  required double lowerRadius,
+  required double upperRadius,
+  required double lengthFactor,
+  required double cornerRadius,
+}) {
+  final sweep = band.sweepAngle * lengthFactor;
+  return AnnularSectorGeometry(
+    center: center,
+    innerRadius: math.min(lowerRadius, upperRadius),
+    outerRadius: math.max(lowerRadius, upperRadius),
+    startAngle: band.centerAngle - sweep / 2,
+    sweepAngle: sweep,
+    cornerRadius: math.min(cornerRadius, 3),
+    roundInnerCorners: true,
+  ).path;
 }
 
 Path _targetArcPath({

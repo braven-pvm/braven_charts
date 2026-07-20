@@ -345,15 +345,47 @@ activation, a Workbench table row, and `BravenChartController` all use the same
 `ChartPointRef(seriesId, pointIndex)`. Tooltip anchors and hit paths follow the
 current selected geometry.
 
+## Uncertainty and range intervals
+
+Intervals are absolute endpoints on the same radial scale as the column. They
+do not represent deltas and do not change the source column value.
+
+```dart
+final forecast = PolarColumnChartSeries.fromMap(
+  id: 'forecast',
+  unit: 'orders',
+  values: const {'Search': 72, 'Social': 58, 'Partners': 81},
+  intervals: const {
+    'Search': PolarColumnInterval(lower: 63, upper: 84),
+    'Social': PolarColumnInterval(lower: 49, upper: 69),
+    'Partners': PolarColumnInterval(lower: 70, upper: 94),
+  },
+  intervalStyle: const PolarColumnIntervalStyle(
+    display: PolarColumnIntervalDisplay.whisker,
+    width: 2,
+    capLengthFactor: 0.62,
+  ),
+);
+```
+
+`PolarColumnIntervalDisplay.whisker` draws a radial stem with tangential caps.
+`band` draws a compact annular sector between the endpoints. Automatic domains
+include exact interval endpoints. Explicit domains clip the visible geometry
+to the pane while tables, artifacts, tooltips, and generated source retain the
+original values. Intervals are valid on ordinary, layered, and grouped
+columns. They are deliberately rejected on stacked contributors because an
+absolute source interval has no unambiguous cumulative stack position.
+
 ## Native Data and Workbench
 
 The native table is deliberately value-based:
 
 ```text
-# | Category | Series | Value (unit) | Target (unit)
+# | Category | Series | Value (unit) | Target (unit) | Lower (unit) | Upper (unit)
 ```
 
-The Target column appears only when at least one series carries target values.
+Target and interval columns appear only when at least one series carries the
+corresponding values.
 The table does not invent a Share column. Sorting, row copy, full-data copy,
 CSV, focus, and activation preserve the original category/value model.
 
@@ -389,7 +421,8 @@ document declares `chart.polar.stacked-series.v1`. The document stores:
 - every source category, value, color, unit, and stable point identity;
 - series preset, column style, and selection presentation;
 - pane, angular axis, radial numeric axis, and composition configuration;
-- per-category targets, target-marker style, and pane thresholds;
+- per-category targets, target-marker style, pane thresholds, exact lower/upper
+  intervals, and their whisker or annular-band presentation;
 - portable view state, including durable point selection when requested.
 
 `ChartArtifactJsonCodec` produces deterministic JSON and
@@ -403,6 +436,7 @@ integer tick counts, and is compile-checked by the package test suite.
 
 Documents containing targets declare `series.polar.column.targets.v1`.
 Documents containing pane thresholds declare `chart.polar.thresholds.v1`.
+Documents containing intervals declare `series.polar.column.intervals.v1`.
 Hydration requires those capabilities before interpreting the corresponding
 configuration.
 
@@ -431,7 +465,6 @@ verify both compact and large-text layouts.
 
 Polar Column currently excludes:
 
-- uncertainty intervals and error ranges;
 - mixed Cartesian/polar plots;
 - zoom and pan;
 - Radial Bar, Gauge, Radar, and Sunburst semantics.

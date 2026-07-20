@@ -20,7 +20,7 @@ is added to package marketing.
 | Pie charts | `PieChartSeries`, `PieChartStyle`, `PieChartTheme`, `PieElevationStyle`, dual inside/outside `PieDataLabelConfig`, shared explode/lift `RadialSelectionStyle` | Pie Charts, Chart Types |
 | Donut charts | `DonutChartSeries`, `DonutChartStyle`, `DonutCenterContent`, runtime center builders, partial sweeps, variable radii, and shared explode/lift `RadialSelectionStyle` | Donut Charts, Chart Types, Gallery |
 | Concentric Donut charts | two or more `DonutChartSeries`, `ConcentricDonutConfig`, composition-wide lift selection, ring-aware legends, native tables, exact generated Source, artifacts | Concentric Donut, Chart Types, Gallery |
-| Polar Column and Rose charts | one or more compatible signed `PolarColumnChartSeries` values, layered, grouped, or diverging stacked `PolarColumnCompositionConfig`, per-category `targetValues` and `PolarColumnTargetMarkerStyle`, pane-wide `PolarThreshold` references, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
+| Polar Column and Rose charts | one or more compatible signed `PolarColumnChartSeries` values, layered, grouped, or diverging stacked `PolarColumnCompositionConfig`, per-category `targetValues` and `PolarColumnTargetMarkerStyle`, pane-wide `PolarThreshold` references, absolute `PolarColumnInterval` endpoints with whisker or annular-band `PolarColumnIntervalStyle`, `PolarColumnPreset`, `PolarColumnStyle`, angular category axis, shared numeric radial axis, linear or area-correct scaling, shared explode/lift `RadialSelectionStyle` | Polar Column, Chart Types, Gallery |
 | Conditional series styling | `SegmentStyle`, series style helpers | Segment Styling, Series Styling, Gallery |
 | Multiple Y axes | `YAxisConfig`, `yAxisId`, `maxAxesPerSide`, `BravenChartController` | Multi-Axis, Axis Slots |
 | Normalization | `NormalizationMode`, `MultiAxisNormalizer`, automatic detection | Multi-Axis, Tracking Lab, Gallery |
@@ -52,6 +52,7 @@ with line, area, bar, or scatter series. Polar Column accepts one or more
 compatible series, layered in declaration order, grouped into angular
 sub-bands, or stacked with independent positive/negative accumulators, on
 shared angular-category and radial-numeric axes. Category order, preset, and
-unit must match. Targets and thresholds are absolute references on that shared
-numeric scale. Polar Column cannot mix with either Cartesian or
+unit must match. Targets, thresholds, and lower/upper intervals are absolute
+references on that shared numeric scale. Intervals are available for ordinary,
+layered, and grouped columns but not cumulative stacks. Polar Column cannot mix with either Cartesian or
 partition-radial series.

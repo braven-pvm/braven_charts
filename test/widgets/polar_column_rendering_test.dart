@@ -2,12 +2,39 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/elements/polar_column_series_element.dart';
+import 'package:braven_charts/src/layout/polar_column_composition.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('rejects absolute intervals on cumulative stacked contributors', () {
+    final intervalSeries = PolarColumnChartSeries.fromMap(
+      id: 'estimate',
+      unit: 'orders',
+      values: const {'Search': 30},
+      intervals: const {'Search': PolarColumnInterval(lower: 24, upper: 36)},
+    );
+    final contributor = PolarColumnChartSeries.fromMap(
+      id: 'increment',
+      unit: 'orders',
+      values: const {'Search': 12},
+    );
+
+    expect(
+      () => PolarColumnComposition.validate(
+        [intervalSeries, contributor],
+        config: const PolarChartConfig(
+          composition: PolarColumnCompositionConfig(
+            mode: PolarColumnCompositionMode.stacked,
+          ),
+        ),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   testWidgets('renders Polar Column through BravenChartPlus', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -403,6 +430,56 @@ void main() {
       );
       expect(hit?.seriesId, seriesId);
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders intervals and includes their endpoints in auto domain', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox.square(
+            dimension: 420,
+            child: BravenChartPlus(
+              series: [
+                PolarColumnChartSeries.fromMap(
+                  id: 'forecast',
+                  unit: 'orders',
+                  values: const {'Search': 62, 'Social': 48},
+                  intervals: const {
+                    'Search': PolarColumnInterval(lower: 54, upper: 91),
+                    'Social': PolarColumnInterval(lower: 39, upper: 57),
+                  },
+                ),
+              ],
+              polarChartConfig: const PolarChartConfig(
+                angularAxis: PolarCategoryAxisConfig(showLabels: false),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderBox = tester.renderObject<ChartRenderBox>(
+      find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ChartRenderWidget',
+      ),
+    );
+    final element = renderBox.debugElements
+        .whereType<PolarColumnSeriesElement>()
+        .single;
+    expect(element.numericScale.maximum, 91);
+    expect(
+      element.geometry.marks.every((mark) => mark.intervalWhiskerPath != null),
+      isTrue,
+    );
+    final hit = renderBox.dataHitAtWidgetPosition(
+      renderBox.plotToWidget(element.geometry.marks.first.tooltipAnchor),
+    );
+    expect(hit?.formattedValue, contains('interval 54 orders to 91 orders'));
     expect(tester.takeException(), isNull);
   });
 

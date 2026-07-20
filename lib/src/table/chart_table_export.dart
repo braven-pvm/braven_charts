@@ -214,6 +214,10 @@ abstract final class ChartTableExporter {
       row.seriesName,
       row.valueRaw,
       if (model.hasPolarTargets) row.targetRaw,
+      if (model.hasPolarIntervals) ...[
+        row.intervalLowerRaw,
+        row.intervalUpperRaw,
+      ],
     ],
     displayValues: [
       '${displayIndex + 1}',
@@ -221,6 +225,10 @@ abstract final class ChartTableExporter {
       row.seriesName,
       row.valueDisplay,
       if (model.hasPolarTargets) row.targetDisplay ?? 'No target',
+      if (model.hasPolarIntervals) ...[
+        row.intervalLowerDisplay ?? 'No lower bound',
+        row.intervalUpperDisplay ?? 'No upper bound',
+      ],
     ],
     references: [row.reference],
   );
@@ -325,6 +333,14 @@ abstract final class ChartTableExporter {
             model.commonRadialUnit == null
                 ? 'Target'
                 : 'Target (${model.commonRadialUnit})',
+          if (model.hasPolarIntervals) ...[
+            model.commonRadialUnit == null
+                ? 'Lower'
+                : 'Lower (${model.commonRadialUnit})',
+            model.commonRadialUnit == null
+                ? 'Upper'
+                : 'Upper (${model.commonRadialUnit})',
+          ],
         ],
         ChartTableProjectionKind.candlestick => [
           '#',

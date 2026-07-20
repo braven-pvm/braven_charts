@@ -53,6 +53,33 @@ void main() {
       expect(series.copyWith(clearTargetValues: true).targetValues, isEmpty);
     });
 
+    test('fromMap aligns absolute intervals to stable category identity', () {
+      final series = PolarColumnChartSeries.fromMap(
+        id: 'forecast',
+        values: const {'Search': 42, 'Social': 18, 'Partners': 27},
+        intervals: const {
+          'Partners': PolarColumnInterval(lower: 21, upper: 33),
+          'Search': PolarColumnInterval(lower: 36, upper: 49),
+        },
+        intervalStyle: const PolarColumnIntervalStyle(
+          display: PolarColumnIntervalDisplay.band,
+          color: Colors.indigo,
+          width: 2,
+          bandLengthFactor: 0.7,
+        ),
+      );
+
+      expect(series.intervalLowerValues, [36, null, 21]);
+      expect(series.intervalUpperValues, [49, null, 33]);
+      expect(
+        series.intervalFor(0),
+        const PolarColumnInterval(lower: 36, upper: 49),
+      );
+      expect(series.intervalFor(1), isNull);
+      expect(series.intervalStyle.display, PolarColumnIntervalDisplay.band);
+      expect(series.copyWith(clearIntervalValues: true).hasIntervals, isFalse);
+    });
+
     test('validates category identity, ordinals, finite values, and style', () {
       PolarColumnChartSeries build(List<ChartDataPoint> points) =>
           PolarColumnChartSeries(id: 'polar', points: points);
@@ -86,6 +113,38 @@ void main() {
           id: 'polar',
           values: const {'A': 1},
           polarStyle: const PolarColumnStyle(opacity: 1.1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervals: const {'Missing': PolarColumnInterval(lower: 0, upper: 2)},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervals: const {'A': PolarColumnInterval(lower: 2, upper: 1)},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries(
+          id: 'polar',
+          points: const [ChartDataPoint(x: 0, y: 1, label: 'A')],
+          intervalLowerValues: const [0],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PolarColumnChartSeries.fromMap(
+          id: 'polar',
+          values: const {'A': 1},
+          intervalStyle: const PolarColumnIntervalStyle(capLengthFactor: 0),
         ),
         throwsArgumentError,
       );

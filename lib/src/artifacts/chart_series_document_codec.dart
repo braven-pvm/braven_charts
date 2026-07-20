@@ -213,6 +213,8 @@ abstract final class ChartSeriesDocumentCodec {
             if (series is PolarColumnChartSeries &&
                 series.targetValues.isNotEmpty)
               'series.polar.column.targets.v1',
+            if (series is PolarColumnChartSeries && series.hasIntervals)
+              'series.polar.column.intervals.v1',
             if (series is RadialCategorySeries &&
                 series.sliceGroupingConfig != null)
               'series.radial.grouping.v1',
@@ -674,6 +676,19 @@ abstract final class ChartSeriesDocumentCodec {
               ? const PolarColumnTargetMarkerStyle()
               : _decodePolarColumnTargetMarker(
                   _map(style, 'polarTargetMarker'),
+                ),
+          intervalLowerValues: _decodeOptionalDoubleList(
+            style['polarIntervalLowerValues'],
+            r'$.style.polarIntervalLowerValues',
+          ),
+          intervalUpperValues: _decodeOptionalDoubleList(
+            style['polarIntervalUpperValues'],
+            r'$.style.polarIntervalUpperValues',
+          ),
+          intervalStyle: _optionalMap(style, 'polarIntervalStyle') == null
+              ? const PolarColumnIntervalStyle()
+              : _decodePolarColumnIntervalStyle(
+                  _map(style, 'polarIntervalStyle'),
                 ),
         ),
         final type => throw _UnsupportedModelException(
@@ -1151,7 +1166,22 @@ Map<String, Object?> _encodeSeriesStyle(
               ]
         ..['polarTargetMarker'] = series.targetValues.isEmpty
             ? null
-            : _encodePolarColumnTargetMarker(series.targetMarkerStyle);
+            : _encodePolarColumnTargetMarker(series.targetMarkerStyle)
+        ..['polarIntervalLowerValues'] = series.intervalLowerValues.isEmpty
+            ? null
+            : [
+                for (final value in series.intervalLowerValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['polarIntervalUpperValues'] = series.intervalUpperValues.isEmpty
+            ? null
+            : [
+                for (final value in series.intervalUpperValues)
+                  value == null ? null : _number(value),
+              ]
+        ..['polarIntervalStyle'] = series.hasIntervals
+            ? _encodePolarColumnIntervalStyle(series.intervalStyle)
+            : null;
     case ChartSeries():
       break;
   }
@@ -2692,6 +2722,28 @@ PolarColumnTargetMarkerStyle _decodePolarColumnTargetMarker(
   color: _optionalColor(value['color'], r'$.style.polarTargetMarker.color'),
   width: _double(value, 'width'),
   lengthFactor: _double(value, 'lengthFactor'),
+  opacity: _double(value, 'opacity'),
+);
+
+Map<String, Object?> _encodePolarColumnIntervalStyle(
+  PolarColumnIntervalStyle style,
+) => {
+  'display': style.display.name,
+  if (style.color != null) 'color': style.color!.toARGB32(),
+  'width': _number(style.width),
+  'capLengthFactor': _number(style.capLengthFactor),
+  'bandLengthFactor': _number(style.bandLengthFactor),
+  'opacity': _number(style.opacity),
+};
+
+PolarColumnIntervalStyle _decodePolarColumnIntervalStyle(
+  Map<String, Object?> value,
+) => PolarColumnIntervalStyle(
+  display: _enum(value, 'display', PolarColumnIntervalDisplay.values),
+  color: _optionalColor(value['color'], r'$.style.polarIntervalStyle.color'),
+  width: _double(value, 'width'),
+  capLengthFactor: _double(value, 'capLengthFactor'),
+  bandLengthFactor: _double(value, 'bandLengthFactor'),
   opacity: _double(value, 'opacity'),
 );
 

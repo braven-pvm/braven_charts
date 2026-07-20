@@ -264,6 +264,10 @@ class ChartTablePolarRow {
     this.colorValue,
     this.targetRaw,
     this.targetDisplay,
+    this.intervalLowerRaw,
+    this.intervalLowerDisplay,
+    this.intervalUpperRaw,
+    this.intervalUpperDisplay,
   });
 
   final String rowId;
@@ -276,6 +280,10 @@ class ChartTablePolarRow {
   final String? unit;
   final double? targetRaw;
   final String? targetDisplay;
+  final double? intervalLowerRaw;
+  final String? intervalLowerDisplay;
+  final double? intervalUpperRaw;
+  final String? intervalUpperDisplay;
   final bool isValid;
   final int? colorValue;
 }
@@ -652,6 +660,13 @@ class ChartTableModel {
       projectionKind == ChartTableProjectionKind.polar &&
       polarRows.any((row) => row.targetRaw != null);
 
+  /// Whether at least one Polar Column row carries an absolute interval.
+  bool get hasPolarIntervals =>
+      projectionKind == ChartTableProjectionKind.polar &&
+      polarRows.any(
+        (row) => row.intervalLowerRaw != null && row.intervalUpperRaw != null,
+      );
+
   /// Common unit shared by every radial series, or `null` when units differ.
   String? get commonRadialUnit {
     if ((projectionKind != ChartTableProjectionKind.pie &&
@@ -697,6 +712,16 @@ List<ChartTablePolarRow> _projectPolarRows(
   );
   final rawTargets = series.style?.values['polarTargetValues']?.toJson();
   final targetValues = rawTargets is List ? rawTargets : const <Object?>[];
+  final rawIntervalLowers = series.style?.values['polarIntervalLowerValues']
+      ?.toJson();
+  final intervalLowerValues = rawIntervalLowers is List
+      ? rawIntervalLowers
+      : const <Object?>[];
+  final rawIntervalUppers = series.style?.values['polarIntervalUpperValues']
+      ?.toJson();
+  final intervalUpperValues = rawIntervalUppers is List
+      ? rawIntervalUppers
+      : const <Object?>[];
   return [
     for (final (pointIndex, point) in points.indexed)
       ChartTablePolarRow(
@@ -721,6 +746,30 @@ List<ChartTablePolarRow> _projectPolarRows(
         targetDisplay:
             pointIndex < targetValues.length && targetValues[pointIndex] is num
             ? (targetValues[pointIndex] as num).toDouble().toStringAsFixed(2)
+            : null,
+        intervalLowerRaw:
+            pointIndex < intervalLowerValues.length &&
+                intervalLowerValues[pointIndex] is num
+            ? (intervalLowerValues[pointIndex] as num).toDouble()
+            : null,
+        intervalLowerDisplay:
+            pointIndex < intervalLowerValues.length &&
+                intervalLowerValues[pointIndex] is num
+            ? (intervalLowerValues[pointIndex] as num)
+                  .toDouble()
+                  .toStringAsFixed(2)
+            : null,
+        intervalUpperRaw:
+            pointIndex < intervalUpperValues.length &&
+                intervalUpperValues[pointIndex] is num
+            ? (intervalUpperValues[pointIndex] as num).toDouble()
+            : null,
+        intervalUpperDisplay:
+            pointIndex < intervalUpperValues.length &&
+                intervalUpperValues[pointIndex] is num
+            ? (intervalUpperValues[pointIndex] as num)
+                  .toDouble()
+                  .toStringAsFixed(2)
             : null,
         unit: unit,
         isValid:

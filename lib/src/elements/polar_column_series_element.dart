@@ -382,12 +382,17 @@ class PolarColumnSeriesElement implements DataHitElement {
   }
 
   void _paintMark(Canvas canvas, PolarColumnMarkGeometry mark, Color color) {
-    if (!mark.isVisible) return;
+    if (!mark.isVisible &&
+        mark.targetPath == null &&
+        mark.intervalWhiskerPath == null &&
+        mark.intervalBandPath == null) {
+      return;
+    }
     final selected = selectedPointIndices.contains(mark.index);
     final focused = focusedPointIndices.contains(mark.index);
     final path = _displayPath(mark);
 
-    if (selected) {
+    if (selected && mark.isVisible) {
       canvas.drawPath(
         path,
         Paint()
@@ -396,27 +401,33 @@ class PolarColumnSeriesElement implements DataHitElement {
           ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8),
       );
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true
-        ..color = color.withValues(alpha: color.a * series.polarStyle.opacity),
-    );
-    if (series.polarStyle.borderWidth > 0 || selected || focused) {
+    if (mark.isVisible) {
       canvas.drawPath(
         path,
         Paint()
-          ..style = PaintingStyle.stroke
+          ..style = PaintingStyle.fill
           ..isAntiAlias = true
-          ..strokeWidth = selected || focused
-              ? math.max(2, series.polarStyle.borderWidth)
-              : series.polarStyle.borderWidth
-          ..color = selected || focused
-              ? theme.focusBorderColor
-              : (series.polarStyle.borderColor ?? theme.axisStyle.lineColor),
+          ..color = color.withValues(
+            alpha: color.a * series.polarStyle.opacity,
+          ),
       );
+      if (series.polarStyle.borderWidth > 0 || selected || focused) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..isAntiAlias = true
+            ..strokeWidth = selected || focused
+                ? math.max(2, series.polarStyle.borderWidth)
+                : series.polarStyle.borderWidth
+            ..color = selected || focused
+                ? theme.focusBorderColor
+                : (series.polarStyle.borderColor ?? theme.axisStyle.lineColor),
+        );
+      }
     }
+
+    _paintInterval(canvas, mark);
 
     if (mark.targetPath case final targetPath?) {
       final style = series.targetMarkerStyle;
@@ -434,7 +445,8 @@ class PolarColumnSeriesElement implements DataHitElement {
       );
     }
 
-    if (series.polarStyle.showDataLabels &&
+    if (mark.isVisible &&
+        series.polarStyle.showDataLabels &&
         _dataLabelFits(mark, color: color)) {
       _paintText(
         canvas,
@@ -443,6 +455,70 @@ class PolarColumnSeriesElement implements DataHitElement {
         _dataLabelStyle(color),
         center: true,
       );
+    }
+  }
+
+  void _paintInterval(Canvas canvas, PolarColumnMarkGeometry mark) {
+    final style = series.intervalStyle;
+    final color = style.color ?? theme.axisStyle.lineColor;
+    switch (style.display) {
+      case PolarColumnIntervalDisplay.whisker:
+        final path = mark.intervalWhiskerPath;
+        if (path == null) return;
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = style.width + 2.5
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..isAntiAlias = true
+            ..color = theme.backgroundColor.withValues(alpha: 0.82),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = style.width
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..isAntiAlias = true
+            ..color = color.withValues(alpha: color.a * style.opacity),
+        );
+        break;
+      case PolarColumnIntervalDisplay.band:
+        final path = mark.intervalBandPath;
+        if (path == null) {
+          final pointPath = mark.intervalWhiskerPath;
+          if (pointPath == null) return;
+          canvas.drawPath(
+            pointPath,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = style.width
+              ..strokeCap = StrokeCap.round
+              ..strokeJoin = StrokeJoin.round
+              ..isAntiAlias = true
+              ..color = color.withValues(alpha: color.a * style.opacity),
+          );
+          return;
+        }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..isAntiAlias = true
+            ..color = color.withValues(alpha: color.a * style.opacity * 0.22),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = style.width
+            ..isAntiAlias = true
+            ..color = color.withValues(alpha: color.a * style.opacity),
+        );
+        break;
     }
   }
 
@@ -546,6 +622,10 @@ class PolarColumnSeriesElement implements DataHitElement {
     final target = mark.targetValue == null
         ? ''
         : ' · target ${MultiAxisValueFormatter.format(value: mark.targetValue!, unit: series.unit)}';
+    final interval =
+        mark.intervalLowerValue == null || mark.intervalUpperValue == null
+        ? ''
+        : ' · interval ${MultiAxisValueFormatter.format(value: mark.intervalLowerValue!, unit: series.unit)} to ${MultiAxisValueFormatter.format(value: mark.intervalUpperValue!, unit: series.unit)}';
     return ChartDataHit(
       seriesId: series.id,
       pointIndex: mark.index,
@@ -553,7 +633,7 @@ class PolarColumnSeriesElement implements DataHitElement {
       semanticBounds: path.getBounds(),
       point: point,
       category: mark.category,
-      formattedValue: '$value$target',
+      formattedValue: '$value$target$interval',
       ordinal: mark.index + 1,
       count: geometry.marks.length,
       isSelected: selectedPointIndices.contains(mark.index),
@@ -746,6 +826,10 @@ _PolarColumnResolvedLayout _resolveLayout({
     radialEnds: animatedEnds,
     targetValues: series.targetValues,
     targetLengthFactor: series.targetMarkerStyle.lengthFactor,
+    intervalLowerValues: series.intervalLowerValues,
+    intervalUpperValues: series.intervalUpperValues,
+    intervalCapLengthFactor: series.intervalStyle.capLengthFactor,
+    intervalBandLengthFactor: series.intervalStyle.bandLengthFactor,
     cornerRadius: series.polarStyle.cornerRadius * revealProgress,
     groupIndex: config.composition.mode == PolarColumnCompositionMode.grouped
         ? seriesIndex

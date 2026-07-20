@@ -24,6 +24,7 @@ void main() {
     expect(find.text('Grouped comparison'), findsOneWidget);
     expect(find.text('Stacked comparison'), findsOneWidget);
     expect(find.text('Targets & thresholds'), findsOneWidget);
+    expect(find.text('Ranges & uncertainty'), findsOneWidget);
     final chart = tester.widget<BravenChartPlus>(
       find.descendant(
         of: find.byKey(const ValueKey('polar-column-live-chart')),
@@ -155,6 +156,90 @@ void main() {
     expect(referenceSeries.targetMarkerStyle.width, 3);
     expect(chart.polarChartConfig.thresholds.single.value, 80);
     expect(chart.polarChartConfig.thresholds.single.label, 'Capacity');
+
+    await tester.tap(
+      find.byKey(const ValueKey('polar-presentation-intervals')),
+    );
+    await tester.pump();
+    chart = tester.widget<BravenChartPlus>(
+      find.descendant(
+        of: find.byKey(const ValueKey('polar-column-live-chart')),
+        matching: find.byType(BravenChartPlus),
+      ),
+    );
+    final intervalSeries = chart.series.single as PolarColumnChartSeries;
+    expect(intervalSeries.intervalLowerValues, [63, 49, 70, 38, 57, 76]);
+    expect(intervalSeries.intervalUpperValues, [84, 69, 94, 56, 79, 103]);
+    expect(
+      intervalSeries.intervalStyle.display,
+      PolarColumnIntervalDisplay.whisker,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('interval preset exposes bounds in table and generated source', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: PolarColumnPage())),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('polar-presentation-intervals')),
+    );
+    await tester.pumpAndSettle();
+
+    final switcher = find.byKey(
+      const ValueKey('chart-workbench-mode-switcher'),
+    );
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Data')),
+    );
+    await _pumpUntil(
+      tester,
+      () =>
+          tester
+              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
+              .workbenchController
+              ?.tableModel !=
+          null,
+    );
+    final table = tester.widget<ChartDataTable>(find.byType(ChartDataTable));
+    expect(table.model?.hasPolarIntervals, isTrue);
+    expect(table.model?.polarRows.first.intervalLowerDisplay, '63.00');
+    expect(table.model?.polarRows.first.intervalUpperDisplay, '84.00');
+    expect(
+      find.byKey(const ValueKey('chart-table-header-interval-lower')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('chart-table-header-interval-upper')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(of: switcher, matching: find.text('Source')),
+    );
+    await _pumpUntil(
+      tester,
+      () =>
+          tester
+              .widget<BravenChartWorkbench>(find.byType(BravenChartWorkbench))
+              .workbenchController
+              ?.generatedSource !=
+          null,
+    );
+    final workbench = tester.widget<BravenChartWorkbench>(
+      find.byType(BravenChartWorkbench),
+    );
+    final source = workbench.workbenchController?.generatedSource?.source;
+    expect(source, contains('intervalLowerValues:'));
+    expect(source, contains('intervalUpperValues:'));
+    expect(source, contains('PolarColumnIntervalStyle('));
     expect(tester.takeException(), isNull);
   });
 

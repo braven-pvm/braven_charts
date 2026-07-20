@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   domains retain the source data while omitting out-of-range paint. Targets
   and thresholds round-trip through tables, CSV, artifacts, hydration, and
   generated Dart using explicit capability negotiation.
+- Absolute Polar Column uncertainty/range intervals through
+  `PolarColumnInterval` and `PolarColumnIntervalStyle`. Intervals render as
+  radial whiskers with tangential caps or compact annular bands, participate
+  in automatic radial domains, clip against explicit domains while retaining
+  exact source endpoints, and round-trip through native tables, CSV,
+  artifacts, hydration, and generated Dart. Stacked contributors reject
+  intervals because cumulative placement would make their meaning ambiguous.
 
 ## 0.9.0 - 2026-07-19
 

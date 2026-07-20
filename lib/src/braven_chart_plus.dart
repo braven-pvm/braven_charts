@@ -3380,6 +3380,10 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       ...markScaleValues,
       for (final series in polarSeries)
         for (final target in series.targetValues) ?target,
+      for (final series in polarSeries)
+        for (final lower in series.intervalLowerValues) ?lower,
+      for (final series in polarSeries)
+        for (final upper in series.intervalUpperValues) ?upper,
       for (final threshold in widget.polarChartConfig.thresholds)
         threshold.value,
     ];

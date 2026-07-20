@@ -75,6 +75,14 @@ abstract final class PolarColumnComposition {
             'Polar Column composition requires at least two series',
       );
     }
+    if (mode == PolarColumnCompositionMode.stacked &&
+        series.any((candidate) => candidate.hasIntervals)) {
+      throw ArgumentError(
+        'Polar Column intervals are absolute shared-scale references and '
+        'cannot be attached to cumulative stacked contributors. Use layered '
+        'or grouped composition for uncertainty/range intervals.',
+      );
+    }
   }
 
   static bool _sameCategories(List<String> left, List<String> right) {

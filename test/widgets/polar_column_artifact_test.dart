@@ -557,6 +557,104 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'round-trips Polar Column intervals through every public surface',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      final series = PolarColumnChartSeries.fromMap(
+        id: 'forecast',
+        name: 'Forecast',
+        unit: 'orders',
+        values: const {'Search': 62, 'Social': 48, 'Partners': 55},
+        intervals: const {
+          'Search': PolarColumnInterval(lower: 54, upper: 73),
+          'Social': PolarColumnInterval(lower: 40, upper: 57),
+        },
+        intervalStyle: const PolarColumnIntervalStyle(
+          display: PolarColumnIntervalDisplay.band,
+          color: Color(0xFF5E35B1),
+          width: 2,
+          capLengthFactor: 0.7,
+          bandLengthFactor: 0.64,
+          opacity: 0.8,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _host(
+          BravenChartPlus(
+            bravenChartController: controller,
+            series: <ChartSeries>[series],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final snapshot = _snapshot(controller.extractDocument());
+      expect(
+        snapshot.document.requiredCapabilities,
+        contains('series.polar.column.intervals.v1'),
+      );
+
+      final table = ChartTableModel.fromDocument(snapshot.document);
+      expect(table.hasPolarIntervals, isTrue);
+      expect(table.polarRows.first.intervalLowerDisplay, '54.00');
+      expect(table.polarRows.first.intervalUpperDisplay, '73.00');
+      expect(table.polarRows.last.intervalLowerDisplay, isNull);
+      final export = ChartTableExporter.csvForDisplayedRows(
+        table,
+        polarRows: table.polarRows,
+      );
+      expect(export.headers, [
+        '#',
+        'Category',
+        'Series',
+        'Value (orders)',
+        'Lower (orders)',
+        'Upper (orders)',
+      ]);
+
+      final hydrated = _configuration(
+        ChartDocumentHydrator.hydrateDocument(snapshot.document),
+      );
+      final restored = hydrated.series.single as PolarColumnChartSeries;
+      expect(restored.intervalLowerValues, series.intervalLowerValues);
+      expect(restored.intervalUpperValues, series.intervalUpperValues);
+      expect(restored.intervalStyle, series.intervalStyle);
+
+      final generated = ChartDartSourceGenerator.generate(snapshot);
+      expect(generated, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+      final source = (generated as ChartArtifactSuccess<ChartGeneratedSource>)
+          .value
+          .source;
+      expect(source, contains('intervalLowerValues: [54.0, 40.0, null]'));
+      expect(source, contains('intervalUpperValues: [73.0, 57.0, null]'));
+      expect(source, contains('PolarColumnIntervalStyle('));
+      expect(source, contains('PolarColumnIntervalDisplay.band'));
+
+      final missingCapability = snapshot.document.toJson();
+      missingCapability['requiredCapabilities'] = snapshot
+          .document
+          .requiredCapabilities
+          .where(
+            (capability) => capability != 'series.polar.column.intervals.v1',
+          )
+          .toList();
+      final invalid = ChartDocumentHydrator.hydrateDocument(
+        ChartDocument.fromJson(missingCapability),
+      );
+      expect(invalid, isA<ChartArtifactFailure<HydratedChartConfiguration>>());
+      expect(
+        (invalid as ChartArtifactFailure<HydratedChartConfiguration>)
+            .error
+            .message,
+        contains('series.polar.column.intervals.v1'),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Widget _host(Widget child) => MaterialApp(
