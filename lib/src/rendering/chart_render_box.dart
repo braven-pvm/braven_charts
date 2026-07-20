@@ -18,9 +18,11 @@ import '../elements/pie_series_element.dart';
 import '../elements/resize_handle_element.dart';
 import '../elements/series_element.dart';
 import '../elements/simulated_annotation.dart';
+import '../interaction/core/cartesian_tracking_snapshot.dart';
 import '../interaction/core/chart_element.dart';
 import '../interaction/core/coordinator.dart';
 import '../interaction/core/crosshair_tracker.dart';
+import '../interaction/core/tracking_snapshot_resolver.dart';
 import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
@@ -463,6 +465,23 @@ class ChartRenderBox extends RenderBox {
   /// - Tracking mode with intersection markers and tooltip
   static const CrosshairRenderer _crosshairRenderer = CrosshairRenderer();
 
+  /// Single per-chart tracking resolution point.
+  ///
+  /// Resolves the crosshair tracking snapshot once per interaction frame with
+  /// input memoization and identity-based publish suppression. The paint
+  /// path, the synchronized-cursor path, and the debug hooks all consume its
+  /// published [CartesianTrackingSnapshot] instead of re-running
+  /// [CrosshairTracker.calculateTrackingState].
+  final CartesianTrackingSnapshotResolver _trackingSnapshotResolver =
+      CartesianTrackingSnapshotResolver();
+
+  /// Monotonic revision of tracked series data and axis bindings.
+  ///
+  /// Element instances and axis info are deliberately not part of the
+  /// resolver's cache key, so every path that rebuilds elements or changes
+  /// series/axis configuration bumps this revision to force re-resolution.
+  int _trackingDataRevision = 0;
+
   /// Tooltip renderer module.
   ///
   /// Handles all tooltip-related rendering:
@@ -580,28 +599,70 @@ class ChartRenderBox extends RenderBox {
     markNeedsPaint();
   }
 
+  // Memoized synchronized cursor position. The getter is consulted several
+  // times per paint frame (overlay activity check, effective config, paint
+  // guard, debug hooks); memoizing on its inputs collapses those repeated
+  // evaluations into a single computation per cursor/viewport/data change.
+  bool _syncPositionCacheValid = false;
+  double? _syncPositionCacheDataX;
+  ChartTransform? _syncPositionCacheTransform;
+  Rect? _syncPositionCachePlotArea;
+  List<ChartElement>? _syncPositionCacheElements;
+  CrosshairConfig? _syncPositionCacheCrosshair;
+  Offset? _syncPositionCacheValue;
+
   Offset? get _synchronizedCursorPosition {
     final transform = _transform;
     final dataX = _synchronizedCursorX;
     if (transform == null || dataX == null || _plotArea.isEmpty) return null;
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    if (_syncPositionCacheValid &&
+        _syncPositionCacheDataX == dataX &&
+        _syncPositionCacheTransform == transform &&
+        _syncPositionCachePlotArea == _plotArea &&
+        identical(_syncPositionCacheElements, _elements) &&
+        _syncPositionCacheCrosshair == crosshair) {
+      return _syncPositionCacheValue;
+    }
+    final position = _computeSynchronizedCursorPosition(
+      transform: transform,
+      dataX: dataX,
+      crosshair: crosshair,
+    );
+    _syncPositionCacheValid = true;
+    _syncPositionCacheDataX = dataX;
+    _syncPositionCacheTransform = transform;
+    _syncPositionCachePlotArea = _plotArea;
+    _syncPositionCacheElements = _elements;
+    _syncPositionCacheCrosshair = crosshair;
+    _syncPositionCacheValue = position;
+    return position;
+  }
+
+  Offset? _computeSynchronizedCursorPosition({
+    required ChartTransform transform,
+    required double dataX,
+    required CrosshairConfig crosshair,
+  }) {
     final plotPosition = transform.dataToPlot(dataX, transform.dataYMin);
     var widgetPosition = plotToWidget(
       transform.transposed
           ? Offset(_plotArea.width / 2, plotPosition.dy)
           : Offset(plotPosition.dx, _plotArea.height / 2),
     );
-    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
     final needsLocalY =
         crosshair.enabled &&
         (crosshair.mode == CrosshairMode.horizontal ||
             crosshair.mode == CrosshairMode.both) &&
         !transform.transposed;
     if (needsLocalY) {
-      final trackingState = _calculateSynchronizedTrackingState(
-        widgetPosition.dx,
+      final snapshot = _resolveTrackingSnapshot(
+        cursorPosition: widgetPosition,
+        origin: CartesianTrackingOrigin.synchronized,
+        interpolateValues: crosshair.interpolateValues,
       );
-      if (trackingState != null && trackingState.seriesValues.isNotEmpty) {
-        final value = trackingState.seriesValues.first;
+      if (snapshot != null && snapshot.values.isNotEmpty) {
+        final value = snapshot.values.first;
         SeriesElement? seriesElement;
         for (final candidate in _elements.whereType<SeriesElement>()) {
           if (candidate.id == value.axisSeriesId) {
@@ -638,20 +699,37 @@ class ChartRenderBox extends RenderBox {
     );
   }
 
-  CrosshairTrackingState? _calculateSynchronizedTrackingState(double screenX) {
+  /// Resolves the tracking snapshot for a widget-space cursor position
+  /// through the chart's single [CartesianTrackingSnapshotResolver].
+  ///
+  /// [axisInfo] lets the paint path reuse its already-built [MultiAxisInfo];
+  /// other callers build one on demand.
+  CartesianTrackingSnapshot? _resolveTrackingSnapshot({
+    required Offset cursorPosition,
+    required CartesianTrackingOrigin origin,
+    required bool interpolateValues,
+    MultiAxisInfo? axisInfo,
+  }) {
     final transform = _transform;
     if (transform == null || _plotArea.isEmpty) return null;
-    return CrosshairTracker.calculateTrackingState(
-      screenX: screenX,
-      chartBounds: _plotArea,
-      xMin: transform.dataXMin,
-      xMax: transform.dataXMax,
-      seriesList: _elements
-          .whereType<SeriesElement>()
-          .map((element) => element.series)
-          .toList(growable: false),
-      interpolate: _interactionConfig?.crosshair.interpolateValues ?? true,
+    return _trackingSnapshotResolver.resolve(
+      cursorPlotPosition: cursorPosition - _plotArea.topLeft,
+      plotArea: _plotArea,
+      transform: transform,
+      elements: _elements,
+      axisInfo: axisInfo ?? _buildMultiAxisInfo(),
+      origin: origin,
+      includeTrends: true,
+      interpolateValues: interpolateValues,
+      dataRevision: _trackingDataRevision,
     );
+  }
+
+  /// Signals that tracked series data or axis bindings changed, forcing the
+  /// next tracking resolution to recompute.
+  void _invalidateTrackingResolution() {
+    _trackingDataRevision++;
+    _syncPositionCacheValid = false;
   }
 
   /// Current synchronized data X for render-path verification.
@@ -663,12 +741,75 @@ class ChartRenderBox extends RenderBox {
   Offset? get debugSynchronizedCursorPosition => _synchronizedCursorPosition;
 
   /// Local rendered-path intersections used by synchronized tracking.
+  ///
+  /// Reads the shared tracking resolver (a cache hit when paint already
+  /// resolved this frame) and adapts the snapshot to the legacy
+  /// [CrosshairTrackingState] contract expected by existing tests.
   @visibleForTesting
   CrosshairTrackingState? get debugSynchronizedTrackingState {
     final cursor = _synchronizedCursorPosition;
     if (cursor == null) return null;
-    return _calculateSynchronizedTrackingState(cursor.dx);
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    final snapshot = _resolveTrackingSnapshot(
+      cursorPosition: cursor,
+      origin: CartesianTrackingOrigin.synchronized,
+      interpolateValues: crosshair.interpolateValues,
+    );
+    if (snapshot == null) return null;
+    final transposed = _transform?.transposed ?? false;
+    return CrosshairTrackingState(
+      dataX: snapshot.dataX,
+      screenX: transposed ? cursor.dy : cursor.dx,
+      seriesValues: [
+        for (final value in snapshot.values) _toCrosshairSeriesValue(value),
+      ],
+    );
   }
+
+  static CrosshairSeriesValue _toCrosshairSeriesValue(
+    CartesianTrackedSeriesValue value,
+  ) {
+    return CrosshairSeriesValue(
+      seriesId: value.seriesId,
+      seriesName: value.seriesName,
+      seriesColor: value.seriesColor,
+      x: value.x,
+      y: value.y,
+      dataPointIndex: value.dataPointIndex,
+      sourcePointIndices: value.sourcePointIndices,
+      isInterpolated: value.isInterpolated,
+      linkedSeriesId: value.linkedSeriesId,
+      isTrend: value.isTrend,
+      pointLabel: value.pointLabel,
+      magnitudeValue: value.magnitudeValue,
+      formattedMagnitudeValue: value.formattedMagnitudeValue,
+      magnitudeLabel: value.magnitudeLabel,
+      colorValue: value.colorValue,
+      formattedColorValue: value.formattedColorValue,
+      colorLabel: value.colorLabel,
+      opacityValue: value.opacityValue,
+      formattedOpacityValue: value.formattedOpacityValue,
+      opacityLabel: value.opacityLabel,
+      candlestick: value.candlestick,
+      categoryValue: value.categoryValue,
+      categoryLabel: value.categoryLabel,
+    );
+  }
+
+  /// Latest published tracking snapshot, without triggering a resolution.
+  @visibleForTesting
+  CartesianTrackingSnapshot? get debugTrackingSnapshot =>
+      _trackingSnapshotResolver.current;
+
+  /// Total [CartesianTrackingSnapshotResolver.resolve] calls on this chart.
+  @visibleForTesting
+  int get debugTrackingResolveCount =>
+      _trackingSnapshotResolver.debugResolveCount;
+
+  /// Total published tracking snapshot changes on this chart.
+  @visibleForTesting
+  int get debugTrackingPublishCount =>
+      _trackingSnapshotResolver.debugPublishCount;
 
   // ==========================================================================
   // Lifecycle
@@ -915,6 +1056,7 @@ class ChartRenderBox extends RenderBox {
     if (_primaryYAxisConfig == config) return;
     _primaryYAxisConfig = config;
     _multiAxisManager.setPrimaryYAxisConfig(config);
+    _invalidateTrackingResolution(); // Axis units feed snapshot formatting
     markNeedsLayout();
   }
 
@@ -942,6 +1084,7 @@ class ChartRenderBox extends RenderBox {
     if (_theme == theme) return;
     _theme = theme;
     _seriesCacheManager.invalidate(); // Invalidate cache - theme changed
+    _invalidateTrackingResolution(); // Tracked colors may resolve differently
     markNeedsPaint();
   }
 
@@ -1031,6 +1174,7 @@ class ChartRenderBox extends RenderBox {
   void setNormalizationMode(NormalizationMode? mode) {
     if (_multiAxisManager.setNormalizationMode(mode)) {
       _seriesCacheManager.invalidate();
+      _invalidateTrackingResolution();
       markNeedsLayout();
       markNeedsPaint();
     }
@@ -1042,6 +1186,7 @@ class ChartRenderBox extends RenderBox {
   void setSeries(List<ChartSeries>? series) {
     if (_multiAxisManager.setSeries(series)) {
       _seriesCacheManager.invalidate();
+      _invalidateTrackingResolution();
       markNeedsLayout();
       markNeedsPaint();
     }
@@ -1635,6 +1780,9 @@ class ChartRenderBox extends RenderBox {
   ///
   /// QuadTree operates in PLOT space (0,0 → plotWidth,plotHeight).
   void _rebuildSpatialIndex() {
+    // Elements are being replaced; tracked series data may have changed.
+    _invalidateTrackingResolution();
+
     if (!hasSize || _plotArea.isEmpty) {
       return;
     }
@@ -2727,6 +2875,27 @@ class ChartRenderBox extends RenderBox {
       // Use widget-provided XAxisConfig directly
       final xAxisConfig = _xAxisConfig ?? const XAxisConfig();
 
+      final seriesElements = _elements.whereType<SeriesElement>().toList();
+
+      // Resolve the frame's tracking snapshot once before painting, honoring
+      // the same tracking-mode gate the renderer applies. The resolver
+      // memoizes unchanged inputs and suppresses identity-equal publication,
+      // so stationary repaints reuse the cached snapshot.
+      CartesianTrackingSnapshot? trackingSnapshot;
+      final totalDataPoints = CrosshairTracker.getTotalPointCount([
+        for (final element in seriesElements) element.series,
+      ]);
+      if (crosshairConfig.shouldUseTrackingMode(totalDataPoints)) {
+        trackingSnapshot = _resolveTrackingSnapshot(
+          cursorPosition: cursorPos,
+          origin: _synchronizedCursorPosition != null
+              ? CartesianTrackingOrigin.synchronized
+              : CartesianTrackingOrigin.pointer,
+          interpolateValues: crosshairConfig.interpolateValues,
+          axisInfo: multiAxisInfo,
+        );
+      }
+
       // Delegate to CrosshairRenderer module
       _crosshairRenderer.paint(
         canvas: canvas,
@@ -2738,10 +2907,10 @@ class ChartRenderBox extends RenderBox {
         interactionConfig: _interactionConfig,
         crosshairConfig: crosshairConfig,
         multiAxisInfo: multiAxisInfo,
-        seriesElements: _elements.whereType<SeriesElement>().toList(),
+        seriesElements: seriesElements,
         isRangeCreationMode:
             coordinator.currentMode == InteractionMode.rangeAnnotationCreation,
-        trendElements: _elements.whereType<TrendAnnotationElement>().toList(),
+        trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
       );
     }
@@ -3525,6 +3694,7 @@ class _StreamingDelegateImpl implements StreamingDelegate {
   @override
   void invalidateSeriesCache() {
     _renderBox._seriesCacheManager.invalidate();
+    _renderBox._invalidateTrackingResolution();
   }
 
   @override
@@ -3748,6 +3918,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   @override
   void invalidateSeriesCache() {
     _renderBox._seriesCacheManager.invalidate();
+    _renderBox._invalidateTrackingResolution();
   }
 
   // ============================================================================
