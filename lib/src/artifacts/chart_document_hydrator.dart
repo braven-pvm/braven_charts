@@ -301,6 +301,7 @@ abstract final class ChartDocumentHydrator {
     'series.polar.column.intervals.v1',
     'chart.polar.config.v1',
     'chart.polar.thresholds.v1',
+    'chart.cartesian.value-summary.v1',
     PolarColumnComposition.multipleSeriesCapability,
     PolarColumnComposition.groupedSeriesCapability,
     PolarColumnComposition.stackedSeriesCapability,
