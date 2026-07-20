@@ -11,6 +11,7 @@ import 'package:flutter/gestures.dart'
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../artifacts/chart_view_state.dart' show ChartPointRef;
 import '../axis/axis.dart' as chart_axis;
 import '../coordinates/chart_transform.dart';
 import '../elements/annotation_elements.dart';
@@ -26,8 +27,10 @@ import '../interaction/core/tracking_snapshot_resolver.dart';
 import '../interaction/core/data_hit.dart';
 import '../interaction/core/element_types.dart';
 import '../interaction/core/interaction_mode.dart';
+import '../interaction/summary/value_summary_coordinator.dart';
 import '../models/axis_swap_mode.dart';
 import '../models/bar_chart_style.dart';
+import '../models/cartesian_value_summary_config.dart';
 import '../models/chart_annotation.dart';
 import '../models/chart_series.dart';
 import '../models/chart_theme.dart';
@@ -38,6 +41,7 @@ import '../models/series_axis_binding.dart';
 import '../models/x_axis_config.dart';
 import '../models/y_axis_config.dart';
 import '../streaming/streaming_buffer.dart';
+import '../theming/components/cartesian_value_summary_theme.dart';
 import '../theming/components/scrollbar_config.dart';
 import 'grid_renderer.dart';
 import 'bar_label_layout.dart';
@@ -140,6 +144,15 @@ class ChartRenderBox extends RenderBox {
     _initAnnotationDragHandler();
     _initEventHandlerManager();
     _initMultiAxisManager(normalizationMode, series);
+    _valueSummaryCoordinator = ValueSummaryCoordinator(
+      onNeedsRepaint: markNeedsPaint,
+    );
+    // Controllers are excluded from config equality; attach by reference.
+    _valueSummaryCoordinator.attachController(
+      interactionConfig?.valueSummary.controller,
+    );
+    _valueSummaryCoordinator.onPlacementChanged =
+        interactionConfig?.valueSummary.onPlacementChanged;
   }
 
   /// Initializes the MultiAxisManager with normalization mode and series.
@@ -481,6 +494,21 @@ class ChartRenderBox extends RenderBox {
   /// resolver's cache key, so every path that rebuilds elements or changes
   /// series/axis configuration bumps this revision to force re-resolution.
   int _trackingDataRevision = 0;
+
+  /// Value summary pipeline state (policy reduction, adaptation, overlay
+  /// element feeding). Owned per chart; near-free while the summary is
+  /// disabled.
+  late final ValueSummaryCoordinator _valueSummaryCoordinator;
+
+  /// Whether the value summary consumed a live pointer/synchronized tracking
+  /// resolution during the current paint frame.
+  ///
+  /// While true, the crosshair path's gate-off `clear()` calls are skipped so
+  /// they cannot wipe the resolver state (and its input memo) the summary
+  /// resolved this frame — the summary is a legitimate consumer of tracking
+  /// even when the crosshair itself is disabled. With the summary disabled
+  /// this flag is always false and every clear behaves exactly as before.
+  bool _valueSummaryTrackingActive = false;
 
   /// Tooltip renderer module.
   ///
@@ -841,6 +869,125 @@ class ChartRenderBox extends RenderBox {
       _trackingSnapshotResolver.debugComputeCount;
 
   // ==========================================================================
+  // Cartesian value summary pipeline
+  // ==========================================================================
+
+  /// Runs the value summary pipeline for the current paint frame.
+  ///
+  /// Called once per paint before the foreground element pass so the overlay
+  /// element paints this frame's policy-resolved content. Honors both the
+  /// outer [InteractionConfig.enabled] gate and the nested
+  /// `valueSummary.enabled` flag (`InteractionConfig.none()` therefore
+  /// disables the summary even when the nested config is enabled), and
+  /// suspends transient tracking during drags and pan/zoom.
+  void _updateValueSummary() {
+    final interaction = _interactionConfig;
+    final summaryConfig =
+        interaction != null &&
+            interaction.enabled &&
+            interaction.valueSummary.enabled
+        ? interaction.valueSummary
+        : null;
+    final suspended =
+        coordinator.isDragging || coordinator.isPanningOrZooming;
+
+    // Live tracking feeds every policy chain except explicitOnly. The
+    // resolution goes through the chart's shared pointer-path resolver, so
+    // when the crosshair also tracks this frame its own resolve call is an
+    // input-memo hit — one computation per frame either way.
+    CartesianTrackingSnapshot? tracking;
+    if (summaryConfig != null &&
+        summaryConfig.presentation is CartesianValueSummaryOverlay &&
+        summaryConfig.valuePolicy !=
+            CartesianValueSummaryValuePolicy.explicitOnly &&
+        !suspended) {
+      tracking = _resolveSummaryTracking();
+    }
+    _valueSummaryTrackingActive = tracking != null;
+
+    ChartPointRef? selection;
+    if (summaryConfig?.valuePolicy ==
+            CartesianValueSummaryValuePolicy.selectionThenTrackingThenLatest &&
+        _selectedTooltipSeriesId != null &&
+        _selectedTooltipPointIndex != null) {
+      selection = ChartPointRef(
+        seriesId: _selectedTooltipSeriesId!,
+        pointIndex: _selectedTooltipPointIndex!,
+      );
+    }
+
+    _valueSummaryCoordinator.update(
+      config: summaryConfig,
+      theme:
+          _theme?.cartesianValueSummaryTheme ?? CartesianValueSummaryTheme.light,
+      tracking: tracking,
+      suspended: suspended,
+      plotArea: _plotArea,
+      transform: _transform,
+      elements: _elements,
+      axisInfoBuilder: _buildMultiAxisInfo,
+      dataRevision: _trackingDataRevision,
+      textDirection: _textDirection,
+      textScale: _textScaleFactor,
+      selection: selection,
+    );
+  }
+
+  /// Resolves the summary's live tracking snapshot for this frame, or null
+  /// when no live tracking source exists (no cursor, cursor outside the
+  /// plot).
+  ///
+  /// Mirrors the crosshair paint path's source selection — the synchronized
+  /// cursor takes precedence over the local pointer, and a snapshot already
+  /// retained by the synchronized-position computation is reused instead of
+  /// re-resolving at the Y-adjusted cursor.
+  CartesianTrackingSnapshot? _resolveSummaryTracking() {
+    final cursorPos = _effectiveCrosshairCursorPosition;
+    if (cursorPos == null || !_plotArea.contains(cursorPos)) return null;
+    final syncSnapshot = _syncPositionSnapshot;
+    if (_synchronizedCursorPosition != null &&
+        syncSnapshot != null &&
+        identical(syncSnapshot, _trackingSnapshotResolver.current)) {
+      return syncSnapshot;
+    }
+    final crosshair = _interactionConfig?.crosshair ?? const CrosshairConfig();
+    return _resolveTrackingSnapshot(
+      cursorPosition: cursorPos,
+      origin: _synchronizedCursorPosition != null
+          ? CartesianTrackingOrigin.synchronized
+          : CartesianTrackingOrigin.pointer,
+      interpolateValues: crosshair.interpolateValues,
+    );
+  }
+
+  /// The value summary's policy-resolved snapshot behind the displayed
+  /// content (its origin distinguishes tracking, pinned, and fallback).
+  @visibleForTesting
+  CartesianTrackingSnapshot? get debugValueSummarySnapshot =>
+      _valueSummaryCoordinator.debugReducedSnapshot;
+
+  /// The value summary's displayed content model, or null while hidden.
+  @visibleForTesting
+  CartesianValueSummaryContentModel? get debugValueSummaryModel =>
+      _valueSummaryCoordinator.debugModel;
+
+  /// Number of value summary reduce+adapt executions. Repaints with
+  /// unchanged inputs must not increment this.
+  @visibleForTesting
+  int get debugValueSummaryReduceCount =>
+      _valueSummaryCoordinator.debugReduceCount;
+
+  /// The overlay panel's last painted bounds ([Rect.zero] while hidden).
+  @visibleForTesting
+  Rect get debugValueSummaryBounds =>
+      _valueSummaryCoordinator.debugOverlayBounds;
+
+  /// The cached series-layer picture, for zero-invalidation proofs: the
+  /// instance must stay identical across hover/tracking frames.
+  @visibleForTesting
+  ui.Picture? get debugSeriesCachePicture => _seriesCacheManager.cachedPicture;
+
+  // ==========================================================================
   // Lifecycle
   // ==========================================================================
 
@@ -860,6 +1007,7 @@ class ChartRenderBox extends RenderBox {
     _streamingManager.dispose();
     _annotationDragHandler.dispose();
     _eventHandlerManager.dispose();
+    _valueSummaryCoordinator.dispose();
     super.dispose();
   }
 
@@ -1173,6 +1321,14 @@ class ChartRenderBox extends RenderBox {
 
   /// Updates interaction configuration.
   void setInteractionConfig(InteractionConfig? config) {
+    // The value summary controller and placement callback are excluded from
+    // config equality, so they must be (re)attached by reference before the
+    // equality early-return below.
+    _valueSummaryCoordinator.attachController(
+      config?.valueSummary.controller,
+    );
+    _valueSummaryCoordinator.onPlacementChanged =
+        config?.valueSummary.onPlacementChanged;
     if (_interactionConfig == config) return;
     _interactionConfig = config;
     markNeedsPaint();
@@ -2936,9 +3092,11 @@ class ChartRenderBox extends RenderBox {
             axisInfo: multiAxisInfo,
           );
         }
-      } else {
+      } else if (!_valueSummaryTrackingActive) {
         // Tracking-mode gate is off: publish the null snapshot so consumers
-        // of the resolver never observe stale tracking state.
+        // of the resolver never observe stale tracking state. Skipped while
+        // the value summary consumed this frame's tracking resolution — the
+        // summary is a live consumer of the resolver state.
         _trackingSnapshotResolver.clear();
       }
 
@@ -2959,10 +3117,12 @@ class ChartRenderBox extends RenderBox {
         trackingSnapshot: trackingSnapshot,
         xAxisConfig: xAxisConfig,
       );
-    } else {
+    } else if (!_valueSummaryTrackingActive) {
       // The crosshair gate is off (disabled, cursor gone or outside the
       // plot, or a drag in progress): publish the null snapshot so future
       // consumers of the resolver never observe the stale hover state.
+      // Skipped while the value summary consumed this frame's tracking
+      // resolution — the summary is a live consumer of the resolver state.
       _trackingSnapshotResolver.clear();
     }
 
@@ -3196,6 +3356,13 @@ class ChartRenderBox extends RenderBox {
     // Performance: 17ms → <5ms hover latency (17x speedup!)
     // ==========================================================================
 
+    // Run the value summary pipeline before the element passes so the
+    // overlay panel paints this frame's policy-resolved content. This also
+    // performs the frame's tracking resolution when the summary consumes it,
+    // which the crosshair path below then reuses through the resolver's
+    // input memo.
+    _updateValueSummary();
+
     // Clip canvas to plot area to prevent elements from rendering over axes
     canvas.save();
     canvas.translate(_plotArea.left, _plotArea.top);
@@ -3283,15 +3450,21 @@ class ChartRenderBox extends RenderBox {
     // Only paint elements with renderOrder >= series (already painted background in Layer 0)
     // Sort by renderOrder (lower = paint first/back, higher = paint last/front)
     // NOTE: renderOrder is SEPARATE from hit test priority!
-    final foregroundElements =
-        _elements
-            .where(
-              (e) =>
-                  e is! DataSeriesElement &&
-                  e.renderOrder >= RenderOrder.series,
-            )
-            .toList()
-          ..sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
+    final foregroundElements = _elements
+        .where(
+          (e) =>
+              e is! DataSeriesElement && e.renderOrder >= RenderOrder.series,
+        )
+        .toList();
+    // The value summary overlay joins the foreground pass for paint ordering
+    // only (RenderOrder.valueSummary); it never enters _elements, the
+    // spatial index, or any hit-testing/selection flow.
+    final valueSummaryElement =
+        _valueSummaryCoordinator.overlayElementForPaint;
+    if (valueSummaryElement != null) {
+      foregroundElements.add(valueSummaryElement);
+    }
+    foregroundElements.sort((a, b) => a.renderOrder.compareTo(b.renderOrder));
 
     // Compute series bounds for annotations in perSeries mode
     // This ensures threshold lines and range annotations are positioned correctly
@@ -3394,10 +3567,12 @@ class ChartRenderBox extends RenderBox {
       canvas.saveLayer(overlayBounds, Paint());
       _paintOverlayLayer(canvas, size);
       canvas.restore(); // Restore from saveLayer
-    } else {
+    } else if (!_valueSummaryTrackingActive) {
       // No overlay content means no tracking source either (cursor gone or
       // crosshair gated off): publish the null snapshot so future consumers
-      // of the resolver never observe the stale hover state.
+      // of the resolver never observe the stale hover state. Skipped while
+      // the value summary consumed this frame's tracking resolution — the
+      // summary is a live consumer of the resolver state.
       _trackingSnapshotResolver.clear();
     }
 
