@@ -1437,6 +1437,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
       _effectiveDocumentRevision = ChartDocumentRevision.next();
       widget.bravenChartController?.updateEffectiveDocumentRevision(
         _effectiveDocumentRevision,
+        attachment: this,
       );
     }
     return _effectiveDocumentRevision;
@@ -1557,6 +1558,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     widget.bravenChartController?.attach(
+      attachment: this,
       onSelect: _handleSeriesSelected,
       onDeselect: _handleSeriesDeselected,
       onSetSeriesVisibility: _setSeriesVisibility,
@@ -1706,8 +1708,9 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     }
 
     if (widget.bravenChartController != oldWidget.bravenChartController) {
-      oldWidget.bravenChartController?.detach();
+      oldWidget.bravenChartController?.detach(this);
       widget.bravenChartController?.attach(
+        attachment: this,
         onSelect: _handleSeriesSelected,
         onDeselect: _handleSeriesDeselected,
         onSetSeriesVisibility: _setSeriesVisibility,
@@ -1887,7 +1890,7 @@ class _BravenChartPlusState extends State<BravenChartPlus>
     _internalAnnotationController?.dispose();
     widget.liveStreamController?.detachRenderBox();
     _interactionGroupParticipant?.dispose();
-    widget.bravenChartController?.detach();
+    widget.bravenChartController?.detach(this);
     _coordinator.removeListener(_onCoordinatorChanged);
     _coordinator.dispose();
     _panRecognizer.dispose();

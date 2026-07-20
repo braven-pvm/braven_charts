@@ -1302,6 +1302,48 @@ void main() {
       expect(generated.source, contains('groupInnerPadding: 0.2'));
     });
 
+    test('reports runtime callbacks once as a source limitation', () {
+      final snapshot = _snapshot(
+        const ScatterChartSeries(
+          id: 'viewport-linked',
+          points: [ChartDataPoint(x: 1, y: 2)],
+        ),
+        interaction: InteractionConfig(onViewportChanged: (_) {}),
+        interactionBindingDescriptors: {
+          ChartInteractionDocumentCodec.viewportChangedBinding: JsonObjectValue(
+            const {'id': JsonStringValue('showcase.viewportChanged')},
+          ),
+        },
+      );
+
+      final result = ChartDartSourceGenerator.generate(snapshot);
+      expect(result, isA<ChartArtifactSuccess<ChartGeneratedSource>>());
+      final success = result as ChartArtifactSuccess<ChartGeneratedSource>;
+      expect(
+        success.warnings.where(
+          (warning) =>
+              warning.code ==
+                  ChartArtifactDiagnosticCodes.runtimeBindingRequired &&
+              warning.path?.contains('onViewportChanged') == true,
+        ),
+        isEmpty,
+      );
+      expect(
+        success.value.warnings,
+        contains(
+          isA<ChartSourceWarning>().having(
+            (warning) => warning.code,
+            'code',
+            ChartSourceWarningCodes.runtimeValueOmitted,
+          ),
+        ),
+      );
+      expect(
+        success.value.source,
+        contains('Runtime interaction bindings omitted:'),
+      );
+    });
+
     test('returns a structured failure for an invalid variable name', () {
       final result = ChartDartSourceGenerator.generate(
         _snapshot(
@@ -1340,6 +1382,7 @@ ChartDocumentSnapshot _snapshot(
   String? themeReference = 'braven.light',
   ChartViewState? viewState,
   InteractionConfig interaction = const InteractionConfig(),
+  Map<String, JsonObjectValue> interactionBindingDescriptors = const {},
 }) {
   final encodedSeries = [
     for (final item in [series, ...additionalSeries])
@@ -1351,7 +1394,10 @@ ChartDocumentSnapshot _snapshot(
     theme ?? ChartTheme.light,
     reference: themeReference,
   );
-  final encodedInteraction = ChartInteractionDocumentCodec.encode(interaction);
+  final encodedInteraction = ChartInteractionDocumentCodec.encode(
+    interaction,
+    runtimeBindingDescriptors: interactionBindingDescriptors,
+  );
   final encodedXAxis = ChartAxisDocumentCodec.encodeXAxis(
     const XAxisConfig(label: 'Elapsed interval'),
   );

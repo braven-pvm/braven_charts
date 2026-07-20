@@ -170,9 +170,31 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   double _scatterDensityLineWidth = 1.5;
   bool _scatterDensityShowPoints = false;
   int _scatterMarginalBinCount = 12;
+  ScatterMarginalMode _scatterMarginalMode =
+      ScatterMarginalMode.histogramAndDensity;
   HistogramValueMode _scatterMarginalValueMode = HistogramValueMode.percentage;
+  double _scatterMarginalBandwidth = 1;
   double _scatterMarginalXExtent = 128;
   double _scatterMarginalYExtent = 144;
+  final List<Color?> _scatterSeriesColorOverrides = List<Color?>.filled(
+    6,
+    null,
+  );
+  bool _scatterFillOverrideEnabled = false;
+  Color? _scatterFillColorOverride;
+  bool _scatterOutlineOverrideEnabled = false;
+  Color? _scatterOutlineColorOverride;
+  double _scatterOutlineWidthOverride = 2;
+  bool _scatterOpacityOverrideEnabled = false;
+  double _scatterOpacityOverride = 0.82;
+  Color? _scatterBackgroundColorOverride;
+  Color? _scatterGridColorOverride;
+  Color? _scatterAxisColorOverride;
+  Color? _scatterCrosshairColorOverride;
+  bool _scatterInteractionColorOverrideEnabled = false;
+  Color? _scatterHoverColorOverride;
+  Color? _scatterSelectionColorOverride;
+  Color? _scatterFocusColorOverride;
   bool _showSecondSeries = true;
   bool _showPointLabels = false;
   bool _showBaselineFill = true;
@@ -308,6 +330,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               _isLineSynchronized ? 1660.0 : 820.0,
             (_CartesianFamily.line, false) =>
               _isLineSynchronized ? 1504.0 : 960.0,
+            (_CartesianFamily.scatter, true) => 1500.0,
             _ => constraints.maxHeight,
           };
           final contentHeight = math.max(
@@ -603,7 +626,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
         label: 'Marginals',
         icon: Icons.space_dashboard_outlined,
         description:
-            'Independent X and Y histograms reveal each distribution around the source Scatter chart.',
+            'Viewport-linked histograms, density curves, and rug marks reveal both marginal distributions.',
       ),
     ],
   };
@@ -831,6 +854,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               ChartDisplayMode.split,
               ChartDisplayMode.source,
             },
+            documentOptions: _workbenchDocumentOptions,
             sourceOptions: ChartDartSourceOptions(
               variableName: '${widget.family.name}Chart',
             ),
@@ -851,22 +875,45 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     );
   }
 
+  ChartDocumentExtractOptions get _workbenchDocumentOptions =>
+      ChartDocumentExtractOptions(
+        documentId: '${widget.family.name}-showcase',
+        includeViewState: true,
+        interactionBindingDescriptors: _isScatterMarginalPreset
+            ? {
+                ChartInteractionDocumentCodec.viewportChangedBinding:
+                    JsonObjectValue(const {
+                      'id': JsonStringValue(
+                        'showcase.scatter.marginals.viewportChanged',
+                      ),
+                    }),
+              }
+            : const {},
+      );
+
   Widget _buildChart(ChartOptions options, BravenChartController controller) {
     final baseTheme = options.theme ?? ChartTheme.light;
-    final effectiveTheme = _isLineSpotlight ? ChartTheme.dark : baseTheme;
+    final presetTheme = _isLineSpotlight ? ChartTheme.dark : baseTheme;
+    final effectiveTheme = _applyScatterThemeOverrides(presetTheme);
     if (_isScatterMarginalPreset) {
       return _ScatterMarginalExample(
         key: ValueKey(
-          'scatter-marginals-$_scatterMarginalBinCount-${_scatterMarginalValueMode.name}',
+          'scatter-marginals-$_scatterMarginalBinCount-${_scatterMarginalMode.name}-${_scatterMarginalValueMode.name}',
         ),
         controller: controller,
         series: _buildScatterSeries().cast<ScatterChartSeries>(),
         theme: effectiveTheme,
         options: options,
         binCount: _scatterMarginalBinCount,
+        marginalMode: _scatterMarginalMode,
         valueMode: _scatterMarginalValueMode,
+        bandwidthMultiplier: _scatterMarginalBandwidth,
         xMarginalExtent: _scatterMarginalXExtent,
         yMarginalExtent: _scatterMarginalYExtent,
+        xMarginalColor:
+            _scatterSeriesColorOverrides[0] ?? const Color(0xFF0EA5E9),
+        yMarginalColor:
+            _scatterSeriesColorOverrides[2] ?? const Color(0xFF10B981),
       );
     }
     return BravenChartPlus(
@@ -961,6 +1008,35 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     );
   }
 
+  ChartTheme _applyScatterThemeOverrides(ChartTheme theme) {
+    if (widget.family != _CartesianFamily.scatter) return theme;
+    final axisColor = _scatterAxisColorOverride;
+    return theme.copyWith(
+      backgroundColor: _scatterBackgroundColorOverride,
+      gridStyle: _scatterGridColorOverride == null
+          ? null
+          : theme.gridStyle.copyWith(
+              majorColor: _scatterGridColorOverride,
+              minorColor: theme.gridStyle.minorColor == null
+                  ? null
+                  : _scatterGridColorOverride!.withValues(alpha: 0.55),
+            ),
+      axisStyle: axisColor == null
+          ? null
+          : theme.axisStyle.copyWith(
+              lineColor: axisColor,
+              tickColor: axisColor,
+              labelStyle: theme.axisStyle.labelStyle.copyWith(color: axisColor),
+              titleStyle: theme.axisStyle.titleStyle.copyWith(color: axisColor),
+            ),
+      interactionTheme: _scatterCrosshairColorOverride == null
+          ? null
+          : theme.interactionTheme.copyWith(
+              crosshairColor: _scatterCrosshairColorOverride,
+            ),
+    );
+  }
+
   String get _chartSummary => switch (widget.family) {
     _CartesianFamily.line =>
       _isLineForecast
@@ -1004,7 +1080,7 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           : _isScatterDensityPreset
           ? '$_scatterDensityPointCount raw observations · $_scatterDensityContourCount Gaussian contours · ${_scatterDensityBandwidth.toStringAsFixed(0)}px bandwidth · relative-density interaction · raw identities retained'
           : _isScatterMarginalPreset
-          ? '${_scatterMarginalPoints.length} athlete observations · $_scatterMarginalBinCount bins per axis · ${_formatHistogramValueMode(_scatterMarginalValueMode).toLowerCase()} values · viewport-linked X/Y marginals'
+          ? '${_scatterMarginalPoints.length} athlete observations · ${_formatScatterMarginalMode(_scatterMarginalMode).toLowerCase()} · ${_scatterMarginalMode.showsHistogram ? '$_scatterMarginalBinCount bins per axis · ' : ''}${_scatterMarginalMode.showsDensity ? '${_scatterMarginalBandwidth.toStringAsFixed(2)}× automatic bandwidth · ' : ''}viewport-linked X/Y marginals'
           : '$_scatterEffectiveSeriesCount series · $_scatterRawPointCount observations · ${_presetIndex == 4 ? '${_scatterMarkerWidth.toStringAsFixed(0)}×${_scatterMarkerHeight.toStringAsFixed(0)}px styled markers' : '${_markerRadius.toStringAsFixed(0)}px markers'} · ${_presetIndex == 0 || _presetIndex == 3 || _presetIndex == 4 || _presetIndex == 7 ? 'mixed shapes' : _formatMarkerShape(_scatterMarkerShape).toLowerCase()} · ${_presetIndex == 7 ? 'selection-aware states' : 'indexed 2D tracking'}',
   };
 
@@ -2011,24 +2087,48 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
           title: 'Marginal distributions',
           icon: Icons.space_dashboard_outlined,
           children: [
-            IntSliderOption(
-              key: const ValueKey('scatter-marginal-bin-count'),
-              label: 'Bins per axis',
-              value: _scatterMarginalBinCount,
-              min: 4,
-              max: 24,
+            EnumOption<ScatterMarginalMode>(
+              key: const ValueKey('scatter-marginal-mode'),
+              label: 'Display',
+              value: _scatterMarginalMode,
+              values: ScatterMarginalMode.values,
+              labelBuilder: _formatScatterMarginalMode,
               onChanged: (value) =>
-                  setState(() => _scatterMarginalBinCount = value),
+                  setState(() => _scatterMarginalMode = value),
             ),
-            EnumOption<HistogramValueMode>(
-              key: const ValueKey('scatter-marginal-value-mode'),
-              label: 'Bar value',
-              value: _scatterMarginalValueMode,
-              values: HistogramValueMode.values,
-              labelBuilder: _formatHistogramValueMode,
-              onChanged: (value) =>
-                  setState(() => _scatterMarginalValueMode = value),
-            ),
+            if (_scatterMarginalMode.showsHistogram)
+              IntSliderOption(
+                key: const ValueKey('scatter-marginal-bin-count'),
+                label: 'Bins per axis',
+                value: _scatterMarginalBinCount,
+                min: 4,
+                max: 24,
+                onChanged: (value) =>
+                    setState(() => _scatterMarginalBinCount = value),
+              ),
+            if (_scatterMarginalMode == ScatterMarginalMode.histogram)
+              EnumOption<HistogramValueMode>(
+                key: const ValueKey('scatter-marginal-value-mode'),
+                label: 'Bar value',
+                value: _scatterMarginalValueMode,
+                values: HistogramValueMode.values,
+                labelBuilder: _formatHistogramValueMode,
+                onChanged: (value) =>
+                    setState(() => _scatterMarginalValueMode = value),
+              ),
+            if (_scatterMarginalMode.showsDensity)
+              SliderOption(
+                key: const ValueKey('scatter-marginal-bandwidth'),
+                label: 'Density smoothing',
+                value: _scatterMarginalBandwidth,
+                min: 0.5,
+                max: 2,
+                divisions: 12,
+                suffix: '×',
+                decimalPlaces: 2,
+                onChanged: (value) =>
+                    setState(() => _scatterMarginalBandwidth = value),
+              ),
             SliderOption(
               key: const ValueKey('scatter-marginal-x-extent'),
               label: 'Top panel height',
@@ -2701,6 +2801,8 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
             ),
           ],
         ),
+      if (widget.family == _CartesianFamily.scatter)
+        ..._buildScatterStyleSections(),
       if (!_isLineSynchronized)
         StandardChartOptions(
           controller: _optionsController,
@@ -2709,6 +2811,188 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
               !_isLineSpotlight && !_isLineForecast && !_isAreaPulse,
           showLineStyleOption: false,
         ),
+    ];
+  }
+
+  List<Widget> _buildScatterStyleSections() {
+    final theme = _optionsController.theme ?? ChartTheme.light;
+    final visibleColorSlots = math.min(_scatterEffectiveSeriesCount, 6);
+    return [
+      OptionSection(
+        title: 'Marker appearance',
+        icon: Icons.palette_outlined,
+        initiallyExpanded: false,
+        children: [
+          for (var index = 0; index < visibleColorSlots; index++)
+            PaletteColorOption(
+              key: ValueKey('scatter-series-color-${index + 1}'),
+              keyPrefix: 'scatter-series-color-${index + 1}',
+              label: visibleColorSlots == 1
+                  ? 'Series color'
+                  : 'Series ${index + 1} color',
+              subtitle: 'Clear to restore the preset color',
+              value: _scatterSeriesColorOverrides[index],
+              customColorFallback: theme.seriesTheme.colorAt(index),
+              onChanged: (value) =>
+                  setState(() => _scatterSeriesColorOverrides[index] = value),
+            ),
+          PaletteColorOption(
+            key: const ValueKey('scatter-marker-fill-override'),
+            keyPrefix: 'scatter-marker-fill',
+            label: 'Override marker fill',
+            subtitle: 'Clear to inherit each series color',
+            enabled: _scatterFillOverrideEnabled,
+            onEnabledChanged: (value) =>
+                setState(() => _scatterFillOverrideEnabled = value),
+            value: _scatterFillColorOverride,
+            customColorFallback:
+                _scatterSeriesColorOverrides.first ??
+                theme.seriesTheme.colorAt(0),
+            onChanged: (value) =>
+                setState(() => _scatterFillColorOverride = value),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('scatter-marker-outline-override'),
+            keyPrefix: 'scatter-marker-outline',
+            label: 'Override marker outline',
+            subtitle: 'Clear to use each marker’s inherited outline color',
+            enabled: _scatterOutlineOverrideEnabled,
+            onEnabledChanged: (value) =>
+                setState(() => _scatterOutlineOverrideEnabled = value),
+            value: _scatterOutlineColorOverride,
+            customColorFallback: theme.axisStyle.lineColor,
+            onChanged: (value) =>
+                setState(() => _scatterOutlineColorOverride = value),
+          ),
+          if (_scatterOutlineOverrideEnabled)
+            SliderOption(
+              key: const ValueKey('scatter-marker-outline-width'),
+              label: 'Outline width',
+              value: _scatterOutlineWidthOverride,
+              min: 0,
+              max: 6,
+              divisions: 12,
+              suffix: 'px',
+              decimalPlaces: 1,
+              onChanged: (value) =>
+                  setState(() => _scatterOutlineWidthOverride = value),
+            ),
+          BoolOption(
+            key: const ValueKey('scatter-marker-opacity-toggle'),
+            label: 'Override marker opacity',
+            subtitle: 'Apply one opacity across the active preset',
+            value: _scatterOpacityOverrideEnabled,
+            onChanged: (value) =>
+                setState(() => _scatterOpacityOverrideEnabled = value),
+          ),
+          if (_scatterOpacityOverrideEnabled)
+            SliderOption(
+              key: const ValueKey('scatter-marker-opacity-override'),
+              label: 'Marker opacity',
+              value: _scatterOpacityOverride,
+              min: 0.05,
+              max: 1,
+              divisions: 19,
+              decimalPlaces: 2,
+              onChanged: (value) =>
+                  setState(() => _scatterOpacityOverride = value),
+            ),
+        ],
+      ),
+      OptionSection(
+        title: 'Canvas colors',
+        icon: Icons.format_paint_outlined,
+        initiallyExpanded: false,
+        children: [
+          PaletteColorOption(
+            key: const ValueKey('scatter-background-color-option'),
+            keyPrefix: 'scatter-background-color',
+            label: 'Chart background',
+            subtitle: 'Clear to use the selected theme',
+            value: _scatterBackgroundColorOverride,
+            customColorFallback: theme.backgroundColor,
+            onChanged: (value) =>
+                setState(() => _scatterBackgroundColorOverride = value),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('scatter-grid-color-option'),
+            keyPrefix: 'scatter-grid-color',
+            label: 'Grid lines',
+            subtitle: 'Clear to use the selected theme',
+            value: _scatterGridColorOverride,
+            customColorFallback: theme.gridStyle.majorColor,
+            onChanged: (value) =>
+                setState(() => _scatterGridColorOverride = value),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('scatter-axis-color-option'),
+            keyPrefix: 'scatter-axis-color',
+            label: 'Axes and labels',
+            subtitle: 'Applies to lines, ticks, labels, and titles',
+            value: _scatterAxisColorOverride,
+            customColorFallback: theme.axisStyle.lineColor,
+            onChanged: (value) =>
+                setState(() => _scatterAxisColorOverride = value),
+          ),
+          PaletteColorOption(
+            key: const ValueKey('scatter-crosshair-color-option'),
+            keyPrefix: 'scatter-crosshair-color',
+            label: 'Crosshair',
+            subtitle: 'Clear to use the selected theme',
+            value: _scatterCrosshairColorOverride,
+            customColorFallback: theme.interactionTheme.crosshairColor,
+            onChanged: (value) =>
+                setState(() => _scatterCrosshairColorOverride = value),
+          ),
+        ],
+      ),
+      OptionSection(
+        title: 'Interaction colors',
+        icon: Icons.ads_click_outlined,
+        initiallyExpanded: false,
+        children: [
+          BoolOption(
+            key: const ValueKey('scatter-interaction-color-toggle'),
+            label: 'Override interaction colors',
+            subtitle: 'Customize hover, selection, and keyboard focus',
+            value: _scatterInteractionColorOverrideEnabled,
+            onChanged: (value) =>
+                setState(() => _scatterInteractionColorOverrideEnabled = value),
+          ),
+          if (_scatterInteractionColorOverrideEnabled) ...[
+            PaletteColorOption(
+              key: const ValueKey('scatter-hover-color-option'),
+              keyPrefix: 'scatter-hover-color',
+              label: 'Hover outline',
+              subtitle: 'Clear to inherit the point color',
+              value: _scatterHoverColorOverride,
+              customColorFallback: theme.interactionTheme.crosshairColor,
+              onChanged: (value) =>
+                  setState(() => _scatterHoverColorOverride = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('scatter-selection-color-option'),
+              keyPrefix: 'scatter-selection-color',
+              label: 'Selection ring',
+              subtitle: 'Clear to use the preset interaction style',
+              value: _scatterSelectionColorOverride,
+              customColorFallback: theme.interactionTheme.selectionColor,
+              onChanged: (value) =>
+                  setState(() => _scatterSelectionColorOverride = value),
+            ),
+            PaletteColorOption(
+              key: const ValueKey('scatter-focus-color-option'),
+              keyPrefix: 'scatter-focus-color',
+              label: 'Keyboard focus ring',
+              subtitle: 'Clear to inherit the point color',
+              value: _scatterFocusColorOverride,
+              customColorFallback: theme.focusBorderColor,
+              onChanged: (value) =>
+                  setState(() => _scatterFocusColorOverride = value),
+            ),
+          ],
+        ],
+      ),
     ];
   }
 
@@ -3223,6 +3507,61 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
   ];
 
   List<ChartSeries> _buildScatterSeries() {
+    final series = _buildScatterPresetSeries();
+    return [
+      for (var index = 0; index < series.length; index++)
+        _applyScatterStyleOverrides(series[index], index),
+    ];
+  }
+
+  ChartSeries _applyScatterStyleOverrides(ChartSeries source, int index) {
+    if (source is! ScatterChartSeries) return source;
+    final colorOverride = index < _scatterSeriesColorOverrides.length
+        ? _scatterSeriesColorOverrides[index]
+        : null;
+    var markerStyle = source.markerStyle;
+    if (_scatterFillOverrideEnabled ||
+        _scatterOutlineOverrideEnabled ||
+        _scatterOpacityOverrideEnabled) {
+      markerStyle ??= const ScatterMarkerStyle();
+      if (_scatterFillOverrideEnabled) {
+        markerStyle = markerStyle.copyWith(
+          fillColor: _scatterFillColorOverride,
+          clearFillColor: _scatterFillColorOverride == null,
+        );
+      }
+      if (_scatterOutlineOverrideEnabled) {
+        markerStyle = markerStyle.copyWith(
+          strokeColor: _scatterOutlineColorOverride,
+          strokeWidth: _scatterOutlineWidthOverride,
+          clearStrokeColor: _scatterOutlineColorOverride == null,
+        );
+      }
+      if (_scatterOpacityOverrideEnabled) {
+        markerStyle = markerStyle.copyWith(opacity: _scatterOpacityOverride);
+      }
+    }
+
+    var interactionStyle = source.interactionStyle;
+    if (_scatterInteractionColorOverrideEnabled) {
+      interactionStyle = interactionStyle.copyWith(
+        hoverColor: _scatterHoverColorOverride,
+        clearHoverColor: _scatterHoverColorOverride == null,
+        selectionColor: _scatterSelectionColorOverride,
+        clearSelectionColor: _scatterSelectionColorOverride == null,
+        focusColor: _scatterFocusColorOverride,
+        clearFocusColor: _scatterFocusColorOverride == null,
+      );
+    }
+
+    return source.copyWith(
+      color: colorOverride,
+      markerStyle: markerStyle,
+      interactionStyle: interactionStyle,
+    );
+  }
+
+  List<ChartSeries> _buildScatterPresetSeries() {
     if (_presetIndex == 3) return _buildScatterShapeSeries();
     if (_presetIndex == 4) return _buildScatterStylingSeries();
     if (_presetIndex == 7) return _buildScatterStateSeries();
@@ -4189,6 +4528,9 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
     HistogramValueMode.density => 'Density',
   };
 
+  String _formatScatterMarginalMode(ScatterMarginalMode mode) =>
+      _scatterMarginalModeLabel(mode);
+
   String get _scatterBinLegendLabel => switch (_scatterBinAggregate) {
     ScatterBinAggregate.count => 'Observations per bin',
     ScatterBinAggregate.proportion => 'Share of observations',
@@ -4656,9 +4998,31 @@ class _CartesianChartTypePageState extends State<_CartesianChartTypePage> {
       _scatterDensityLineWidth = 1.5;
       _scatterDensityShowPoints = false;
       _scatterMarginalBinCount = 12;
+      _scatterMarginalMode = ScatterMarginalMode.histogramAndDensity;
       _scatterMarginalValueMode = HistogramValueMode.percentage;
+      _scatterMarginalBandwidth = 1;
       _scatterMarginalXExtent = 128;
       _scatterMarginalYExtent = 144;
+      _scatterSeriesColorOverrides.fillRange(
+        0,
+        _scatterSeriesColorOverrides.length,
+        null,
+      );
+      _scatterFillOverrideEnabled = false;
+      _scatterFillColorOverride = null;
+      _scatterOutlineOverrideEnabled = false;
+      _scatterOutlineColorOverride = null;
+      _scatterOutlineWidthOverride = 2;
+      _scatterOpacityOverrideEnabled = false;
+      _scatterOpacityOverride = 0.82;
+      _scatterBackgroundColorOverride = null;
+      _scatterGridColorOverride = null;
+      _scatterAxisColorOverride = null;
+      _scatterCrosshairColorOverride = null;
+      _scatterInteractionColorOverrideEnabled = false;
+      _scatterHoverColorOverride = null;
+      _scatterSelectionColorOverride = null;
+      _scatterFocusColorOverride = null;
       _showSecondSeries = true;
       _showPointLabels = false;
       _showBaselineFill = true;
@@ -5832,9 +6196,13 @@ class _ScatterMarginalExample extends StatefulWidget {
     required this.theme,
     required this.options,
     required this.binCount,
+    required this.marginalMode,
     required this.valueMode,
+    required this.bandwidthMultiplier,
     required this.xMarginalExtent,
     required this.yMarginalExtent,
+    required this.xMarginalColor,
+    required this.yMarginalColor,
   });
 
   final BravenChartController controller;
@@ -5842,9 +6210,13 @@ class _ScatterMarginalExample extends StatefulWidget {
   final ChartTheme theme;
   final ChartOptions options;
   final int binCount;
+  final ScatterMarginalMode marginalMode;
   final HistogramValueMode valueMode;
+  final double bandwidthMultiplier;
   final double xMarginalExtent;
   final double yMarginalExtent;
+  final Color xMarginalColor;
+  final Color yMarginalColor;
 
   @override
   State<_ScatterMarginalExample> createState() =>
@@ -5902,17 +6274,24 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
       yMinimum: viewport.yMin,
       yMaximum: viewport.yMax,
     );
-    final xPoints = marginalData.xPointsFor(widget.valueMode);
-    final yValues = marginalData.yPointsFor(widget.valueMode).reversed.toList();
-    final yPoints = [
-      for (var index = 0; index < yValues.length; index++)
-        ChartDataPoint(
-          x: index.toDouble(),
-          y: yValues[index].y,
-          label: yValues[index].label,
-          metadata: yValues[index].metadata,
-        ),
-    ];
+    final histogramValueMode =
+        widget.marginalMode == ScatterMarginalMode.histogram
+        ? widget.valueMode
+        : HistogramValueMode.density;
+    final xHistogram = marginalData.xPointsFor(histogramValueMode);
+    final yHistogram = marginalData
+        .yPointsFor(histogramValueMode, invertDomain: true)
+        .reversed
+        .toList();
+    final xDensity = marginalData.xDensityPoints(
+      bandwidthMultiplier: widget.bandwidthMultiplier,
+    );
+    final yDensity = marginalData.yDensityPoints(
+      bandwidthMultiplier: widget.bandwidthMultiplier,
+      invertDomain: true,
+    );
+    final xRug = marginalData.xRugPoints();
+    final yRug = marginalData.yRugPoints(invertDomain: true);
 
     return ScatterMarginalComposition(
       xMarginalExtent: widget.xMarginalExtent,
@@ -5924,8 +6303,10 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
           padding: const EdgeInsets.only(left: 48),
           child: _marginalChart(
             id: 'height-marginal',
-            points: xPoints,
-            color: const Color(0xFF0EA5E9),
+            histogramPoints: xHistogram,
+            densityPoints: xDensity,
+            rugPoints: xRug,
+            color: widget.xMarginalColor,
             xMinimum: viewport.xMin,
             xMaximum: viewport.xMax,
           ),
@@ -5933,19 +6314,24 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
       ),
       yMarginal: _MarginalPanel(
         label: 'Mass distribution',
-        child: _marginalChart(
-          id: 'mass-marginal',
-          points: yPoints,
-          color: const Color(0xFF10B981),
-          xMinimum: 0,
-          xMaximum: math.max(1, yPoints.length - 1).toDouble(),
-          orientation: BarOrientation.horizontal,
+        child: RotatedBox(
+          quarterTurns: 1,
+          child: _marginalChart(
+            id: 'mass-marginal',
+            histogramPoints: yHistogram,
+            densityPoints: yDensity,
+            rugPoints: yRug,
+            color: widget.yMarginalColor,
+            xMinimum: -viewport.yMax,
+            xMaximum: -viewport.yMin,
+          ),
         ),
       ),
       corner: _MarginalSummary(
         visiblePointCount: marginalData.visiblePointCount,
         sourcePointCount: marginalData.sourcePointCount,
-        valueMode: widget.valueMode,
+        marginalMode: widget.marginalMode,
+        histogramValueMode: histogramValueMode,
       ),
       scatter: BravenChartPlus(
         key: const ValueKey('scatter-marginal-source-chart'),
@@ -5992,33 +6378,76 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
 
   Widget _marginalChart({
     required String id,
-    required List<ChartDataPoint> points,
+    required List<ChartDataPoint> histogramPoints,
+    required List<ChartDataPoint> densityPoints,
+    required List<ChartDataPoint> rugPoints,
     required Color color,
     required double xMinimum,
     required double xMaximum,
-    BarOrientation orientation = BarOrientation.vertical,
   }) {
-    final maximum = points.fold<double>(
+    final plottedValues = <ChartDataPoint>[
+      if (widget.marginalMode.showsHistogram) ...histogramPoints,
+      if (widget.marginalMode.showsDensity) ...densityPoints,
+    ];
+    final maximum = plottedValues.fold<double>(
       0,
       (current, point) => math.max(current, point.y),
     );
+    final resolvedMaximum = maximum <= 0 ? 1.0 : maximum;
+    final positionedRugPoints = [
+      for (final point in rugPoints)
+        ChartDataPoint(
+          x: point.x,
+          y: resolvedMaximum * 0.045,
+          metadata: point.metadata,
+        ),
+    ];
     return BravenChartPlus(
       key: ValueKey(id),
       series: [
-        BarChartSeries(
-          id: id,
-          name: _histogramValueLabel(widget.valueMode),
-          points: points,
-          color: color.withValues(alpha: 0.72),
-          barWidthPercent: 0.94,
-          minWidth: 1,
-          barGap: 0,
-          orientation: orientation,
-          barStyle: const BarChartStyle(
-            cornerRadius: 2,
-            cornerRadiusPolicy: BarCornerRadiusPolicy.valueEnd,
+        if (widget.marginalMode.showsHistogram)
+          BarChartSeries(
+            id: '$id-histogram',
+            name: _histogramValueLabel(
+              widget.marginalMode == ScatterMarginalMode.histogram
+                  ? widget.valueMode
+                  : HistogramValueMode.density,
+            ),
+            points: histogramPoints,
+            color: color,
+            barWidthPercent: 0.94,
+            minWidth: 1,
+            barGap: 0,
+            barStyle: BarChartStyle(
+              cornerRadius: 2,
+              cornerRadiusPolicy: BarCornerRadiusPolicy.valueEnd,
+              opacity: widget.marginalMode.showsDensity ? 0.28 : 0.78,
+            ),
           ),
-        ),
+        if (widget.marginalMode.showsDensity)
+          LineChartSeries(
+            id: '$id-density',
+            name: 'Density estimate',
+            points: densityPoints,
+            color: color,
+            isXOrdered: true,
+            interpolation: LineInterpolation.monotone,
+            strokeWidth: 2.25,
+          ),
+        if (widget.marginalMode.showsRug)
+          ScatterChartSeries(
+            id: '$id-rug',
+            name: 'Visible observations',
+            points: positionedRugPoints,
+            color: color,
+            markerRadius: 2,
+            markerShape: SeriesMarkerShape.square,
+            markerStyle: const ScatterMarkerStyle(
+              width: 1,
+              height: 8,
+              opacity: 0.62,
+            ),
+          ),
       ],
       theme: widget.theme,
       showLegend: false,
@@ -6027,7 +6456,7 @@ class _ScatterMarginalExampleState extends State<_ScatterMarginalExample> {
       yAxis: YAxisConfig(
         position: YAxisPosition.hidden,
         min: 0,
-        max: maximum <= 0 ? 1 : maximum * 1.08,
+        max: resolvedMaximum * 1.08,
       ),
       interactionConfig: const InteractionConfig(
         enableZoom: false,
@@ -6070,50 +6499,112 @@ class _MarginalSummary extends StatelessWidget {
   const _MarginalSummary({
     required this.visiblePointCount,
     required this.sourcePointCount,
-    required this.valueMode,
+    required this.marginalMode,
+    required this.histogramValueMode,
   });
 
   final int visiblePointCount;
   final int sourcePointCount;
-  final HistogramValueMode valueMode;
+  final ScatterMarginalMode marginalMode;
+  final HistogramValueMode histogramValueMode;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$visiblePointCount / $sourcePointCount',
-              key: const ValueKey('scatter-marginal-visible-count'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            Text(
-              'points in view',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _histogramValueLabel(valueMode),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: scheme.primary,
-                fontWeight: FontWeight.w700,
+    final visibleShare = sourcePointCount == 0
+        ? 0
+        : (visiblePointCount / sourcePointCount * 100).round();
+    final modeLabel = _marginalSummaryLabel(
+      marginalMode,
+      histogramValueMode,
+      compact: true,
+    );
+    return Semantics(
+      label:
+          '$visiblePointCount of $sourcePointCount source points visible. $modeLabel.',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.visibility_outlined,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Visible sample',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                '$visiblePointCount / $sourcePointCount',
+                key: const ValueKey('scatter-marginal-visible-count'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                '$visibleShare% in view',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.layers_outlined,
+                        size: 14,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          modeLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: scheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -6124,6 +6615,40 @@ String _histogramValueLabel(HistogramValueMode mode) => switch (mode) {
   HistogramValueMode.count => 'Count',
   HistogramValueMode.percentage => 'Share of visible points',
   HistogramValueMode.density => 'Probability density',
+};
+
+String _scatterMarginalModeLabel(ScatterMarginalMode mode) => switch (mode) {
+  ScatterMarginalMode.histogram => 'Histogram',
+  ScatterMarginalMode.density => 'Density',
+  ScatterMarginalMode.rug => 'Rug marks',
+  ScatterMarginalMode.histogramAndDensity => 'Histogram + density',
+  ScatterMarginalMode.densityAndRug => 'Density + rug',
+};
+
+String _marginalSummaryLabel(
+  ScatterMarginalMode mode,
+  HistogramValueMode histogramValueMode, {
+  bool compact = false,
+}) {
+  if (compact) {
+    return switch (mode) {
+      ScatterMarginalMode.histogram =>
+        'Bars · ${_formatMarginalValue(histogramValueMode)}',
+      ScatterMarginalMode.density => 'KDE curve',
+      ScatterMarginalMode.rug => 'Rug marks',
+      ScatterMarginalMode.histogramAndDensity => 'Bars + KDE',
+      ScatterMarginalMode.densityAndRug => 'KDE + rug',
+    };
+  }
+  return mode == ScatterMarginalMode.histogram
+      ? '${_scatterMarginalModeLabel(mode)} · ${_formatMarginalValue(histogramValueMode)}'
+      : _scatterMarginalModeLabel(mode);
+}
+
+String _formatMarginalValue(HistogramValueMode mode) => switch (mode) {
+  HistogramValueMode.count => 'Count',
+  HistogramValueMode.percentage => 'Percentage',
+  HistogramValueMode.density => 'Density',
 };
 
 class _ChartTypePreset {
@@ -6147,88 +6672,285 @@ class _FeatureCoverage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final features = switch (family) {
+    final groups = switch (family) {
       _CartesianFamily.line => const [
-        'Linear',
-        'Bezier',
-        'Monotone',
-        'Stepped',
-        'Markers',
-        'Point labels',
-        'Glow',
-        'Multi-axis',
-        'Entrance reveal',
-        'Data-update motion',
-        'Synchronized charts',
-        'Chart/data workbench',
+        _FeatureGroup(
+          id: 'geometry',
+          label: 'Geometry',
+          icon: Icons.show_chart,
+          features: ['Linear', 'Bezier', 'Monotone', 'Stepped'],
+        ),
+        _FeatureGroup(
+          id: 'presentation',
+          label: 'Presentation',
+          icon: Icons.auto_awesome_outlined,
+          features: ['Markers', 'Point labels', 'Glow', 'Multi-axis'],
+        ),
+        _FeatureGroup(
+          id: 'workflow',
+          label: 'Motion & workflow',
+          icon: Icons.motion_photos_on_outlined,
+          features: [
+            'Entrance reveal',
+            'Data-update motion',
+            'Synchronized charts',
+            'Chart/data workbench',
+          ],
+        ),
       ],
       _CartesianFamily.area => const [
-        'Layering',
-        'Fill opacity',
-        'Gradient fill',
-        'Positive/negative baseline',
-        'Interpolation',
-        'Markers',
-        'Glow',
-        'Entrance reveal',
-        'Data-update motion',
-        'Chart/data workbench',
+        _FeatureGroup(
+          id: 'fill',
+          label: 'Fill',
+          icon: Icons.area_chart_outlined,
+          features: [
+            'Layering',
+            'Fill opacity',
+            'Gradient fill',
+            'Positive/negative baseline',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'geometry',
+          label: 'Geometry',
+          icon: Icons.timeline_outlined,
+          features: ['Interpolation', 'Markers', 'Glow'],
+        ),
+        _FeatureGroup(
+          id: 'workflow',
+          label: 'Motion & workflow',
+          icon: Icons.motion_photos_on_outlined,
+          features: [
+            'Entrance reveal',
+            'Data-update motion',
+            'Chart/data workbench',
+          ],
+        ),
       ],
       _CartesianFamily.scatter => const [
-        'Multiple cohorts',
-        'Marker sizing',
-        'Marker shapes',
-        'Point styling',
-        'Quantitative opacity',
-        'Trend annotations',
-        'Robust LOESS',
-        'Confidence bands',
-        'Prediction bands',
-        'X/Y error bars',
-        'Tracking tooltips',
-        'Touch selection',
-        'Keyboard selection',
-        'Rectangle brush',
-        'Free-form lasso',
-        'Aggregate semantics',
-        'Screen-space clusters',
-        'Rectangular 2D bins',
-        'Hexagonal 2D bins',
-        'Density contours',
-        'X/Y marginal histograms',
+        _FeatureGroup(
+          id: 'marks',
+          label: 'Marks',
+          icon: Icons.category_outlined,
+          features: [
+            'Multiple cohorts',
+            'Marker sizing',
+            'Marker shapes',
+            'Point styling',
+            'Point labels',
+            'Deterministic jitter',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'encodings',
+          label: 'Encodings',
+          icon: Icons.palette_outlined,
+          features: [
+            'Bubble size',
+            'Continuous color',
+            'Risk bands',
+            'Quantitative opacity',
+            'Categories',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'analysis',
+          label: 'Analysis',
+          icon: Icons.query_stats_outlined,
+          features: [
+            'Trend annotations',
+            'Robust LOESS',
+            'Confidence bands',
+            'Prediction bands',
+            'X/Y error bars',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'interaction',
+          label: 'Interaction',
+          icon: Icons.ads_click_outlined,
+          features: [
+            'Tracking tooltips',
+            'Touch selection',
+            'Keyboard selection',
+            'Rectangle brush',
+            'Free-form lasso',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'density',
+          label: 'Density',
+          icon: Icons.blur_on_outlined,
+          features: [
+            'Aggregate semantics',
+            'Screen-space clusters',
+            'Rectangular 2D bins',
+            'Hexagonal 2D bins',
+            'Density contours',
+          ],
+        ),
+        _FeatureGroup(
+          id: 'composition',
+          label: 'Composition',
+          icon: Icons.space_dashboard_outlined,
+          features: ['X/Y marginal distributions'],
+        ),
       ],
     };
+    final featureCount = groups.fold<int>(
+      0,
+      (count, group) => count + group.features.length,
+    );
     return DecoratedBox(
+      key: const ValueKey('feature-coverage-card'),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.checklist, size: 18, color: scheme.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: features
-                    .map(
-                      (feature) => Text(
-                        feature,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
+            Row(
+              children: [
+                Icon(
+                  Icons.fact_check_outlined,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${_familyLabel(family)} capabilities',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '$featureCount features',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columnCount = constraints.maxWidth >= 1160
+                    ? groups.length
+                    : constraints.maxWidth >= 820
+                    ? math.min(3, groups.length)
+                    : constraints.maxWidth >= 520
+                    ? math.min(2, groups.length)
+                    : 1;
+                const spacing = 8.0;
+                final width =
+                    (constraints.maxWidth - spacing * (columnCount - 1)) /
+                    columnCount;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    for (final group in groups)
+                      SizedBox(
+                        width: width,
+                        child: _FeatureGroupCard(group: group),
                       ),
-                    )
-                    .toList(),
-              ),
+                  ],
+                );
+              },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _familyLabel(_CartesianFamily family) => switch (family) {
+    _CartesianFamily.line => 'Line',
+    _CartesianFamily.area => 'Area',
+    _CartesianFamily.scatter => 'Scatter',
+  };
+}
+
+class _FeatureGroup {
+  const _FeatureGroup({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.features,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final List<String> features;
+}
+
+class _FeatureGroupCard extends StatelessWidget {
+  const _FeatureGroupCard({required this.group});
+
+  final _FeatureGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Tooltip(
+      message: group.features.join('\n'),
+      child: Semantics(
+        label: '${group.label}: ${group.features.join(', ')}',
+        child: SizedBox(
+          height: 40,
+          child: DecoratedBox(
+            key: ValueKey('feature-group-${group.id}'),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Icon(group.icon, size: 16, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      group.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        '${group.features.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

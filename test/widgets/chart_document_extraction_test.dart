@@ -20,6 +20,43 @@ void main() {
   });
 
   testWidgets(
+    'outgoing chart cannot detach a replacement using the same controller',
+    (tester) async {
+      final controller = BravenChartController();
+      addTearDown(controller.dispose);
+      var replacement = false;
+      late StateSetter setHostState;
+
+      await tester.pumpWidget(
+        _host(
+          StatefulBuilder(
+            builder: (context, setState) {
+              setHostState = setState;
+              return BravenChartPlus(
+                key: ValueKey(replacement),
+                bravenChartController: controller,
+                series: [
+                  LineChartSeries(
+                    id: replacement ? 'replacement' : 'original',
+                    points: const [ChartDataPoint(x: 1, y: 10)],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      setHostState(() => replacement = true);
+      await tester.pump();
+
+      final snapshot = _success(controller.extractDocument()).value;
+      expect(snapshot.document.series.single.id, 'replacement');
+    },
+  );
+
+  testWidgets(
     'extracts widget, ChartController, AnnotationController, and view state',
     (tester) async {
       final bravenController = BravenChartController();

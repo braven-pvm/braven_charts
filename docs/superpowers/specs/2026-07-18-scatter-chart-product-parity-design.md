@@ -222,7 +222,7 @@ tests, deterministic showcase tests, benchmarks, and release-web verification.
 | 3. Exploration | Ready | Complete the final accessibility audit with the release gate. |
 | 4. Analysis | Ready | Complete the final documentation and source-generation audit. |
 | 5. Density | Review needed | Audit adaptive-mode advice and disclosure; complete the density performance gate. |
-| 6. Composition and release | In progress | X/Y histogram marginals are implemented locally. Density/rug marginals, strip/beeswarm, docs, media, accessibility, and the full release gate remain. |
+| 6. Composition and release | In progress | Viewport-linked histogram, KDE density, rug, and combined marginals are implemented locally. Strip/beeswarm, docs, media, accessibility, and the full release gate remain. |
 
 The next delivery order is: finish the marginal family, add strip/beeswarm as
 composition widgets, close the Phase 5 adaptive-disclosure audit, then run the

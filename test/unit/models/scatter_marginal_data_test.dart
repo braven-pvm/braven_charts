@@ -48,5 +48,71 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('estimates deterministic densities on both visible domains', () {
+      final data = ScatterMarginalData(
+        points: const [
+          ChartDataPoint(x: 0, y: 10),
+          ChartDataPoint(x: 1, y: 20),
+          ChartDataPoint(x: 2, y: 30),
+        ],
+        xMinimum: -5,
+        xMaximum: 7,
+        yMinimum: 0,
+        yMaximum: 40,
+      );
+
+      final xDensity = data.xDensityPoints(resolution: 241);
+      expect(xDensity, hasLength(241));
+      expect(xDensity.first.x, -5);
+      expect(xDensity.last.x, 7);
+      expect(xDensity.every((point) => point.y >= 0), isTrue);
+      expect(xDensity[120].metadata?['sampleCount'], 3);
+
+      var area = 0.0;
+      for (var index = 1; index < xDensity.length; index++) {
+        final left = xDensity[index - 1];
+        final right = xDensity[index];
+        area += (right.x - left.x) * (left.y + right.y) / 2;
+      }
+      expect(area, closeTo(1, 0.02));
+
+      final invertedY = data.yDensityPoints(resolution: 41, invertDomain: true);
+      expect(invertedY.first.x, -40);
+      expect(invertedY.last.x, 0);
+      expect(
+        invertedY.map((point) => point.x),
+        orderedEquals(invertedY.map((point) => point.x).toList()..sort()),
+      );
+    });
+
+    test('preserves one rug identity per visible sample', () {
+      final data = ScatterMarginalData(
+        points: const [
+          ChartDataPoint(x: 1, y: 10),
+          ChartDataPoint(x: 1, y: 20),
+          ChartDataPoint(x: 3, y: 30),
+        ],
+      );
+
+      expect(data.xRugPoints().map((point) => point.x), [1, 1, 3]);
+      expect(data.xRugPoints().every((point) => point.y == 0), isTrue);
+      expect(data.yRugPoints(invertDomain: true).map((point) => point.x), [
+        -30,
+        -20,
+        -10,
+      ]);
+    });
+
+    test('validates density resolution and bandwidth', () {
+      final data = ScatterMarginalData(
+        points: const [ChartDataPoint(x: 1, y: 1)],
+      );
+      expect(() => data.xDensityPoints(resolution: 1), throwsArgumentError);
+      expect(
+        () => data.xDensityPoints(bandwidthMultiplier: 0),
+        throwsArgumentError,
+      );
+    });
   });
 }

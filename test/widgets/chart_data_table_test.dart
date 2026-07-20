@@ -117,9 +117,9 @@ void main() {
     expect(find.text('Estimate target (%)'), findsOneWidget);
     expect(find.text('Estimate lower (%)'), findsOneWidget);
     expect(find.text('Estimate upper (%)'), findsOneWidget);
-    expect(find.text('12'), findsOneWidget);
-    expect(find.text('8'), findsOneWidget);
-    expect(find.text('13'), findsOneWidget);
+    expect(find.text('12.00'), findsOneWidget);
+    expect(find.text('8.00'), findsOneWidget);
+    expect(find.text('13.00'), findsOneWidget);
 
     await tester.tap(find.text('Estimate target (%)'));
     await tester.pump();
@@ -663,7 +663,7 @@ void main() {
       final xValue = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const ValueKey('chart-table-cell-x-0')),
-          matching: find.text('7'),
+          matching: find.text('7.00'),
         ),
       );
       expect(xHeader.textAlign, TextAlign.right);
@@ -735,10 +735,15 @@ void main() {
     expect(copied?.headers, ['#', 'X value', 'Power', 'Heart rate']);
     expect(find.bySemanticsLabel('Row actions'), findsOneWidget);
     expect(copied?.rawValues, [1, 1.0, 110.0, 131.0]);
-    expect(copied?.displayValues, ['1', '1', '110', '131']);
+    expect(copied?.displayValues, ['1', '1.00', '110.00', '131.00']);
     expect(copied?.references.map((item) => item.pointIndex), [1, 1]);
     expect(copiedDataset?.rows, hasLength(2));
-    expect(copiedDataset?.rows.first.displayValues, ['1', '1', '110', '131']);
+    expect(copiedDataset?.rows.first.displayValues, [
+      '1',
+      '1.00',
+      '110.00',
+      '131.00',
+    ]);
     expect(exported?.rows, hasLength(2));
     expect(exported?.rows.first.rawValues, [1, 1.0, 110.0, 131.0]);
     expect(exported?.rows.last.rawValues, [2, 2.0, 220.0, 142.0]);
@@ -764,14 +769,14 @@ void main() {
     expect(
       clipboard.text,
       '#\tX value\tPower\tHeart rate\r\n'
-      '1\t1\t110\t131\r\n'
-      '2\t2\t220\t142',
+      '1\t1.00\t110.00\t131.00\r\n'
+      '2\t2.00\t220.00\t142.00',
     );
     expect(find.text('Copied 2 rows to the clipboard.'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Copy row 1'));
     await tester.pump();
-    expect(clipboard.text, '1\t1\t110\t131');
+    expect(clipboard.text, '1\t1.00\t110.00\t131.00');
     expect(find.text('Copied row 1 to the clipboard.'), findsOneWidget);
   });
 

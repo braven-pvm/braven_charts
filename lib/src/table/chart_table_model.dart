@@ -6,7 +6,6 @@ import '../artifacts/chart_document.dart';
 import '../artifacts/chart_runtime_bindings.dart';
 import '../artifacts/chart_view_state.dart';
 import '../artifacts/json_value.dart';
-import '../models/data_point_label_config.dart';
 import 'chart_table_options.dart';
 
 /// Deprecated table-specific name for the canonical chart point identity.
@@ -1144,9 +1143,9 @@ String _displayNumber(double value, String Function(double)? formatter) {
   return formatter?.call(value) ?? _plainNumber(value);
 }
 
-String _plainNumber(double value) => value == value.truncateToDouble()
-    ? value.toInt().toString()
-    : value.toString();
+/// Consistent fallback for numeric table cells when the chart has not
+/// supplied a domain-specific formatter.
+String _plainNumber(double value) => value.toStringAsFixed(2);
 
 String _xColumnLabel(ChartAxisDocument axis) {
   final label = axis.label?.trim();
@@ -1313,7 +1312,7 @@ _auxiliaryValuesForPoint(
   if (stackValue?.share case final raw?) {
     values[ChartTableAuxiliaryField.normalizedShare] = ChartTableAuxiliaryValue(
       raw: raw,
-      display: DataPointLabelConfig.autoFormatLabelValue(raw, null),
+      display: _displayNumber(raw, null),
       isValid: raw.isFinite,
     );
   }

@@ -4,6 +4,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:braven_charts/braven_charts.dart';
 
 /// A panel for displaying configuration options.
 ///
@@ -431,6 +432,93 @@ class ColorOption extends StatelessWidget {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+/// A showcase color control backed by the same palette as annotation editors.
+///
+/// Null means "inherit from the active preset or theme". The palette provides
+/// an explicit clear swatch, clears a selected swatch when it is tapped again,
+/// and exposes the shared custom color dialog.
+class PaletteColorOption extends StatelessWidget {
+  const PaletteColorOption({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.keyPrefix,
+    this.subtitle,
+    this.enabled = true,
+    this.onEnabledChanged,
+    this.customColorFallback,
+    this.presetOpacity = 1,
+  });
+
+  final String label;
+  final String? subtitle;
+  final Color? value;
+  final ValueChanged<Color?> onChanged;
+  final String keyPrefix;
+  final bool enabled;
+  final ValueChanged<bool>? onEnabledChanged;
+  final Color? customColorFallback;
+  final double presetOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = Text(
+      this.label,
+      style: TextStyle(fontSize: 12, color: theme.hintColor),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (onEnabledChanged == null)
+            label
+          else
+            Row(
+              children: [
+                Expanded(child: label),
+                Switch(
+                  key: ValueKey('$keyPrefix-toggle'),
+                  value: enabled,
+                  onChanged: onEnabledChanged,
+                ),
+              ],
+            ),
+          if (subtitle != null)
+            Text(
+              subtitle!,
+              style: TextStyle(
+                fontSize: 10,
+                color: theme.hintColor.withValues(alpha: 0.7),
+              ),
+            ),
+          if (enabled) ...[
+            const SizedBox(height: 6),
+            ChartColorPalette(
+              value: value,
+              onChanged: onChanged,
+              keyPrefix: keyPrefix,
+              customColorFallback: customColorFallback,
+              presetOpacity: presetOpacity,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value == null ? 'Using preset color' : 'Color override active',
+              key: ValueKey('$keyPrefix-status'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

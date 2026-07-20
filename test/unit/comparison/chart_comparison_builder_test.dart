@@ -379,8 +379,8 @@ void main() {
       isTrue,
     );
     expect(export.csv, contains('Candidate · Absolute delta [derived]'));
-    expect(export.csv, contains(',100,'));
-    expect(export.csv, contains(',110,'));
+    expect(export.csv, contains(',100.00,'));
+    expect(export.csv, contains(',110.00,'));
   });
 }
 
