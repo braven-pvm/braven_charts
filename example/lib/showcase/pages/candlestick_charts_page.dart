@@ -22,6 +22,15 @@ class CandlestickChartsPage extends StatefulWidget {
 }
 
 class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
+  // Synchronized panes map shared data X independently, so visual crosshair
+  // continuity additionally requires identical horizontal plot bounds. The
+  // axisless renderer keeps 10 px per side; compensate it to the fixed 64 px
+  // financial-axis gutter used by the price and volume panes.
+  static const double _stockAxisGutter = 64;
+  static const double _stockAxislessInset = 10;
+  static const double _stockOppositeGutter =
+      _stockAxisGutter - _stockAxislessInset;
+
   static final JsonObjectValue _twoDecimalFormatter = ChartFormatterDescriptor(
     id: 'braven.number.fixed',
     arguments: {'decimals': JsonNumberValue(2)},
@@ -367,19 +376,33 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             const SizedBox(height: 8),
             Expanded(
               flex: 5,
-              child: _buildStockPriceChart(displayCandles, compact: compact),
+              child: _buildStockAxisAlignedPane(
+                key: const ValueKey('candlestick-stock-price-frame'),
+                axisPosition: _yAxisPosition,
+                child: _buildStockPriceChart(displayCandles, compact: compact),
+              ),
             ),
             if (_showVolumePane) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: compact ? 156 : 138,
-                child: _buildStockVolumeChart(displayCandles, compact: compact),
+                child: _buildStockAxisAlignedPane(
+                  key: const ValueKey('candlestick-stock-volume-frame'),
+                  axisPosition: YAxisPosition.right,
+                  child: _buildStockVolumeChart(
+                    displayCandles,
+                    compact: compact,
+                  ),
+                ),
               ),
             ],
             const SizedBox(height: 8),
             SizedBox(
-              height: compact ? 230 : 190,
-              child: _buildStockNavigator(displayCandles, compact: compact),
+              height: compact ? 168 : 128,
+              child: _buildStockAxisAlignedPane(
+                key: const ValueKey('candlestick-stock-navigator-frame'),
+                child: _buildStockNavigator(displayCandles, compact: compact),
+              ),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -540,6 +563,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
         position: _yAxisPosition,
         label: 'Price',
         unit: 'USD',
+        minWidth: _stockAxisGutter,
+        maxWidth: _stockAxisGutter,
         labelFormatter: _formatTwoDecimals,
         showAxisLine: _optionsController.options.showAxisLines,
         showTickLabels: _showYAxisLabels,
@@ -615,6 +640,8 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       position: YAxisPosition.right,
       label: 'Volume',
       unit: 'M',
+      minWidth: _stockAxisGutter,
+      maxWidth: _stockAxisGutter,
       labelFormatter: _formatTwoDecimals,
       tickCount: 3,
       showAxisLine: _optionsController.options.showAxisLines,
@@ -640,6 +667,19 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
       keyboard: KeyboardConfig(enabled: _keyboardEnabled),
     ),
   );
+
+  Widget _buildStockAxisAlignedPane({
+    required Key key,
+    required Widget child,
+    YAxisPosition? axisPosition,
+  }) {
+    final padding = switch (axisPosition) {
+      null => const EdgeInsets.symmetric(horizontal: _stockOppositeGutter),
+      YAxisPosition.right => const EdgeInsets.only(left: _stockOppositeGutter),
+      _ => const EdgeInsets.only(right: _stockOppositeGutter),
+    };
+    return Padding(key: key, padding: padding, child: child);
+  }
 
   Widget _buildStockNavigator(
     List<CandlestickDataPoint> candles, {
@@ -675,9 +715,9 @@ class _CandlestickChartsPageState extends State<CandlestickChartsPage> {
             fillOpacity: .12,
           ),
           theme: _effectiveChartTheme(),
-          style: const CartesianNavigatorStyle(
+          style: CartesianNavigatorStyle(
             borderRadius: 6,
-            handleVisualHeight: 32,
+            handleVisualHeight: compact ? 28 : 24,
           ),
           semanticLabel: 'Market session range',
           onViewportChanged: (_) {
