@@ -1021,9 +1021,14 @@ class ChartRenderBox extends RenderBox {
       _valueSummaryCoordinator.cancelAnnotationDrag();
 
   /// Grants or clears the summary panel's keyboard focus.
-  void setValueSummaryFocus(bool focused) {
-    _valueSummaryCoordinator.setAnnotationFocus(focused);
-    markNeedsSemanticsUpdate();
+  ///
+  /// Returns whether the focus state actually changed. The semantics tree
+  /// is only re-flushed on real transitions, so the per-pointer-down calls
+  /// from `EventHandlerManager` stay free while focus is steady.
+  bool setValueSummaryFocus(bool focused) {
+    final changed = _valueSummaryCoordinator.setAnnotationFocus(focused);
+    if (changed) markNeedsSemanticsUpdate();
+    return changed;
   }
 
   /// Handles a key event for the focused, draggable summary panel.
@@ -4359,7 +4364,7 @@ class _EventHandlerDelegateImpl implements EventHandlerDelegate {
   void cancelValueSummaryDrag() => _renderBox.cancelValueSummaryDrag();
 
   @override
-  void setValueSummaryFocus(bool focused) =>
+  bool setValueSummaryFocus(bool focused) =>
       _renderBox.setValueSummaryFocus(focused);
 
   // ============================================================================

@@ -78,6 +78,19 @@ void main() {
       // sync position and the retained resolution keep both counters flat.
       final snapshot = second.debugTrackingSnapshot;
       expect(snapshot, isNotNull);
+
+      // Pin the resolution target itself: the single retained resolution is
+      // the sync-position computation's (it runs at the mid-plot
+      // pre-adjustment cursor and its first tracked value FEEDS the cursor's
+      // Y adjustment; the paint path deliberately reuses it instead of
+      // re-resolving at the adjusted cursor). At dataX 5.0 the scatter
+      // series therefore resolves its mid-plot point (5, 50), never
+      // ping-ponging to the near-baseline point (5.6, 4).
+      final scatterValue = snapshot!.values.firstWhere(
+        (value) => value.seriesId == 'bubbles',
+      );
+      expect(scatterValue.x, closeTo(5.0, 1e-6));
+      expect(scatterValue.y, closeTo(50, 1e-6));
       for (var frame = 0; frame < 3; frame++) {
         second.markNeedsPaint();
         await tester.pump();

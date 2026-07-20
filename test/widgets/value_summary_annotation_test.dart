@@ -169,14 +169,21 @@ void main() {
         CartesianTrackingOrigin.pointer,
       );
 
-      // Move onto the panel and start the drag.
+      // Move onto the panel and let the deferred hover hit test flip the
+      // cursor to `move` (50ms throttle). The cursor setState triggers the
+      // first widget rebuild, which syncs the element generator version and
+      // regenerates the series picture once — capture identities after that
+      // settles so the drag itself is proven invalidation-free.
       await pointer.moveTo(_panelCenter(tester, renderBox));
+      await tester.pump(const Duration(milliseconds: 80));
       await tester.pump();
       final frozenSnapshot = renderBox.debugValueSummarySnapshot;
       final frozenModel = renderBox.debugValueSummaryModel;
       final reduceCount = renderBox.debugValueSummaryReduceCount;
       final computeCount = renderBox.debugTrackingComputeCount;
       final hoveredMarker = renderBox.coordinator.hoveredMarker;
+      final seriesPicture = renderBox.debugSeriesCachePicture;
+      expect(seriesPicture, isNotNull);
 
       await pointer.down(_panelCenter(tester, renderBox));
       await pointer.moveBy(const Offset(40, 30));
@@ -190,6 +197,10 @@ void main() {
       expect(renderBox.debugValueSummaryReduceCount, reduceCount);
       expect(renderBox.debugTrackingComputeCount, computeCount);
 
+      // The drag repaints only the feedback layer: the cached series picture
+      // instance must survive the whole gesture.
+      expect(renderBox.debugSeriesCachePicture, same(seriesPicture));
+
       // The drag never hovers or selects the data beneath the panel.
       expect(renderBox.coordinator.hoveredMarker, hoveredMarker);
       expect(renderBox.coordinator.selectedElements, isEmpty);
@@ -197,6 +208,7 @@ void main() {
       await pointer.up();
       await tester.pump();
       expect(renderBox.coordinator.selectedElements, isEmpty);
+      expect(renderBox.debugSeriesCachePicture, same(seriesPicture));
     });
 
     testWidgets('drag over data points never selects or tooltips them', (
@@ -292,6 +304,148 @@ void main() {
     });
   });
 
+  group('non-primary buttons over the panel', () {
+    testWidgets(
+      'right-click over the panel opens the context menu instead of '
+      'engaging a drag',
+      (tester) async {
+        final placements = <ChartOverlayPlacement>[];
+        await tester.pumpWidget(
+          _host(
+            interaction: _annotationInteraction(
+              onPlacementChanged: placements.add,
+            ),
+            contextActionsBuilder: (context, invocation) => [
+              ChartContextAction(
+                id: 'probe.action',
+                label: 'Panel probe action',
+                onSelected: () {},
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final renderBox = _renderBox(tester);
+        final panelBefore = renderBox.debugValueSummaryBounds.topLeft;
+
+        final gesture = await tester.startGesture(
+          _panelCenter(tester, renderBox),
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton,
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // The secondary press fell through to the chart's context-menu path.
+        expect(find.text('Panel probe action'), findsOneWidget);
+
+        // Selecting the action closes the menu; the panel neither moved nor
+        // committed a placement.
+        await tester.tap(find.text('Panel probe action'));
+        await tester.pumpAndSettle();
+        expect(renderBox.debugValueSummaryBounds.topLeft, panelBefore);
+        expect(placements, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'middle-drag over the panel pans the chart instead of moving the panel',
+      (tester) async {
+        final placements = <ChartOverlayPlacement>[];
+        await tester.pumpWidget(
+          _host(
+            interaction: _annotationInteraction(
+              onPlacementChanged: placements.add,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final renderBox = _renderBox(tester);
+        final panelBefore = renderBox.debugValueSummaryBounds.topLeft;
+        final dataXMinBefore = renderBox.transform!.dataXMin;
+
+        final middle = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+          buttons: kMiddleMouseButton,
+        );
+        addTearDown(middle.removePointer);
+        await middle.addPointer(location: Offset.zero);
+        await middle.moveTo(_panelCenter(tester, renderBox));
+        await middle.down(_panelCenter(tester, renderBox));
+        await middle.moveBy(const Offset(56, 0));
+        await tester.pump();
+        await middle.up();
+        await tester.pump();
+
+        // The middle press fell through to the exclusive pan handler.
+        expect(
+          renderBox.transform!.dataXMin,
+          isNot(closeTo(dataXMinBefore, 0.0001)),
+        );
+        // The plot-anchored panel stayed put and committed nothing.
+        expect(renderBox.debugValueSummaryBounds.topLeft, panelBefore);
+        expect(placements, isEmpty);
+      },
+    );
+  });
+
+  testWidgets('hovering the draggable panel suppresses marker hover beneath', (
+    tester,
+  ) async {
+    // First pump measures the panel, then a second pump centers it exactly
+    // on the speed datum at (4, 7). Markers are enabled so the line series
+    // actually hover-resolves data hits.
+    await tester.pumpWidget(
+      _host(
+        interaction: _annotationInteraction(),
+        showDataPointMarkers: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final renderBox = _renderBox(tester);
+    final panelSize = renderBox.debugValueSummaryBounds.size;
+    final datumPlot = renderBox.transform!.dataToPlot(4, 7);
+
+    await tester.pumpWidget(
+      _host(
+        interaction: _annotationInteraction(
+          placement: ChartOverlayPlacement(
+            anchor: Alignment.topLeft,
+            offset:
+                datumPlot -
+                Offset(panelSize.width / 2, panelSize.height / 2),
+          ),
+        ),
+        showDataPointMarkers: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(renderBox.debugValueSummaryBounds.contains(datumPlot), isTrue);
+
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(pointer.removePointer);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(_plotTarget(tester, renderBox, 4, 7));
+    // Let the deferred hover hit test run too (50ms throttle).
+    await tester.pump(const Duration(milliseconds: 80));
+
+    // The datum directly under the draggable panel must not hover-resolve:
+    // no marker highlight and no tooltip beneath the move cursor, matching
+    // the press path.
+    expect(renderBox.coordinator.hoveredMarker, isNull);
+
+    // Outside the panel, marker hover resolves normally again.
+    final outsideDatum = renderBox.transform!.dataToPlot(8, 9);
+    expect(
+      renderBox.debugValueSummaryBounds.contains(outsideDatum),
+      isFalse,
+    );
+    await pointer.moveTo(_plotTarget(tester, renderBox, 8, 9));
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(renderBox.coordinator.hoveredMarker, isNotNull);
+    expect(renderBox.coordinator.hoveredMarker!.seriesId, 'speed');
+  });
+
   testWidgets('plot resize clamps the effective placement', (tester) async {
     await tester.pumpWidget(_host(interaction: _annotationInteraction()));
     await tester.pumpAndSettle();
@@ -328,6 +482,12 @@ void main() {
     expect(clamped.bottom, lessThanOrEqualTo(smallPlot.height + 0.01));
     expect(clamped.left, greaterThanOrEqualTo(-0.01));
     expect(clamped.top, greaterThanOrEqualTo(-0.01));
+
+    // The oversized committed placement parks the panel exactly at the
+    // clamped bottom-right corner of the smaller plot — not merely
+    // somewhere inside it.
+    expect(clamped.right, closeTo(smallPlot.width, 0.01));
+    expect(clamped.bottom, closeTo(smallPlot.height, 0.01));
   });
 
   group('keyboard', () {
@@ -384,6 +544,74 @@ void main() {
         );
         expect(placements, hasLength(3));
         expect(placements.last, ChartOverlayPlacement.topLeft);
+      },
+    );
+
+    testWidgets(
+      'Escape emits only when an override or pending nudge exists',
+      (tester) async {
+        final placements = <ChartOverlayPlacement>[];
+        await tester.pumpWidget(
+          _host(
+            interaction: _annotationInteraction(
+              onPlacementChanged: placements.add,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final renderBox = _renderBox(tester);
+
+        // One mouse pointer for the whole test (multiple gestures on the
+        // same device trip the MouseTracker's add/remove pairing).
+        final pointer = await tester.createGesture(
+          kind: PointerDeviceKind.mouse,
+        );
+        addTearDown(pointer.removePointer);
+        await pointer.addPointer(location: Offset.zero);
+
+        Future<void> clickPanel() async {
+          await pointer.moveTo(_panelCenter(tester, renderBox));
+          await tester.pump();
+          await pointer.down(_panelCenter(tester, renderBox));
+          await tester.pump();
+          await pointer.up();
+          await tester.pump();
+        }
+
+        Future<void> pressEscape() async {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+          await tester.pump();
+        }
+
+        // Focused but untouched: Escape must not fabricate a commit.
+        await clickPanel();
+        await pressEscape();
+        expect(placements, isEmpty);
+        expect(
+          renderBox.debugValueSummaryBounds.topLeft,
+          const Offset(12, 12),
+        );
+
+        // After a committed drag, Escape re-syncs the host exactly once.
+        await pointer.moveTo(_panelCenter(tester, renderBox));
+        await tester.pump();
+        await pointer.down(_panelCenter(tester, renderBox));
+        await pointer.moveBy(const Offset(30, 20));
+        await tester.pump();
+        await pointer.up();
+        await tester.pump();
+        expect(placements, hasLength(1));
+
+        await clickPanel();
+        await pressEscape();
+        expect(placements, hasLength(2));
+        expect(placements.last, ChartOverlayPlacement.topLeft);
+
+        // The override is gone now: a further Escape emits nothing.
+        await clickPanel();
+        await pressEscape();
+        expect(placements, hasLength(2));
       },
     );
 
@@ -497,6 +725,22 @@ void main() {
     });
   });
 
+  testWidgets('setValueSummaryFocus reports focus transitions only', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(interaction: _annotationInteraction()));
+    await tester.pumpAndSettle();
+    final renderBox = _renderBox(tester);
+
+    // Only actual transitions report true (and re-flush semantics);
+    // steady-state repeats — one per pointer-down — are free.
+    expect(renderBox.setValueSummaryFocus(true), isTrue);
+    expect(renderBox.setValueSummaryFocus(true), isFalse);
+    expect(renderBox.setValueSummaryFocus(false), isTrue);
+    expect(renderBox.setValueSummaryFocus(false), isFalse);
+    await tester.pump();
+  });
+
   testWidgets('hovering the draggable panel shows the move cursor', (
     tester,
   ) async {
@@ -555,6 +799,8 @@ Widget _host({
   required InteractionConfig interaction,
   double width = 640,
   double height = 300,
+  ChartContextActionsBuilder? contextActionsBuilder,
+  bool showDataPointMarkers = false,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -565,9 +811,11 @@ Widget _host({
           child: BravenChartPlus(
             showLegend: false,
             interactionConfig: interaction,
+            contextActionsBuilder: contextActionsBuilder,
             series: [
               LineChartSeries(
                 id: 'speed',
+                showDataPointMarkers: showDataPointMarkers,
                 points: const [
                   ChartDataPoint(x: 0, y: 4),
                   ChartDataPoint(x: 2, y: 8),

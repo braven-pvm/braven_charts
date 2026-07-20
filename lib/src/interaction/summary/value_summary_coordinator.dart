@@ -240,14 +240,18 @@ class ValueSummaryCoordinator {
   bool get annotationFocused => _annotationFocused;
 
   /// Grants or clears the panel's keyboard focus (pointer-driven).
-  void setAnnotationFocus(bool focused) {
-    if (focused == _annotationFocused) return;
+  ///
+  /// Returns whether the focus state actually changed, so callers can limit
+  /// semantics re-flushes to real transitions.
+  bool setAnnotationFocus(bool focused) {
+    if (focused == _annotationFocused) return false;
     _annotationFocused = focused;
     if (!focused) {
       _keyboardOrigin = null;
       _keyboardNudgePending = false;
     }
     onNeedsRepaint();
+    return true;
   }
 
   /// Captures pre-drag state when `EventHandlerManager` engages a drag.
@@ -332,14 +336,21 @@ class ValueSummaryCoordinator {
 
   /// Restores the configured placement (Escape / semantic reset action).
   ///
-  /// When [emit] is true the configured placement is surfaced through
+  /// When [emit] is true and a drag override or pending keyboard nudge
+  /// actually existed, the configured placement is surfaced through
   /// `onPlacementChanged` so hosts holding a dragged placement re-sync.
+  /// An untouched panel never emits — there is nothing to re-sync, and a
+  /// spurious commit would overwrite host state with a no-op placement.
   void resetAnnotationPlacement({required bool emit}) {
+    final hadPlacementState =
+        placementOverride != null || _keyboardNudgePending;
     _keyboardOrigin = null;
     _keyboardNudgePending = false;
     placementOverride = null;
     onNeedsRepaint();
-    if (emit) onPlacementChanged?.call(_annotationConfiguredPlacement);
+    if (emit && hadPlacementState) {
+      onPlacementChanged?.call(_annotationConfiguredPlacement);
+    }
   }
 
   /// Basic assistive info for the annotation panel, or null while it is

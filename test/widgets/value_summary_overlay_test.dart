@@ -9,6 +9,7 @@ import 'package:braven_charts/braven_charts.dart';
 import 'package:braven_charts/src/rendering/chart_render_box.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -279,6 +280,128 @@ void main() {
     });
   });
 
+  testWidgets(
+    'pan and wheel zoom suspend the summary and re-reduce once on settle',
+    (tester) async {
+      await tester.pumpWidget(_host(interaction: _summaryInteraction()));
+      await tester.pumpAndSettle();
+      final renderBox = _renderBox(tester);
+      expect(renderBox.debugValueSummaryModel, isNotNull);
+
+      final panStart = _plotTarget(tester, renderBox, 5, 7);
+
+      // Middle-button pan: the displayed content is frozen for the whole
+      // gesture — same model instance, no re-reduction.
+      final middle = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+        buttons: kMiddleMouseButton,
+      );
+      addTearDown(middle.removePointer);
+      await middle.addPointer(location: Offset.zero);
+      await middle.moveTo(panStart);
+      await tester.pump();
+      final frozenModel = renderBox.debugValueSummaryModel;
+      final reduceBefore = renderBox.debugValueSummaryReduceCount;
+
+      await middle.down(panStart);
+      await middle.moveBy(const Offset(30, 0));
+      await tester.pump();
+      expect(renderBox.coordinator.isPanningOrZooming, isTrue);
+      expect(renderBox.debugValueSummaryModel, same(frozenModel));
+      expect(renderBox.debugValueSummaryReduceCount, reduceBefore);
+      await middle.moveBy(const Offset(30, 0));
+      await tester.pump();
+      expect(renderBox.debugValueSummaryModel, same(frozenModel));
+      expect(renderBox.debugValueSummaryReduceCount, reduceBefore);
+
+      // Release: exactly one re-reduction on the first settled frame, and
+      // repaints stay flat afterwards.
+      await middle.up();
+      await tester.pump();
+      expect(renderBox.coordinator.isPanningOrZooming, isFalse);
+      expect(renderBox.debugValueSummaryReduceCount, reduceBefore + 1);
+      renderBox.markNeedsPaint();
+      await tester.pump();
+      expect(renderBox.debugValueSummaryReduceCount, reduceBefore + 1);
+
+      // Shift-wheel zoom: the zooming mode freezes the content the same
+      // way until the wheel settles (the mode self-releases on a timer).
+      final modelAfterPan = renderBox.debugValueSummaryModel;
+      final reduceAfterPan = renderBox.debugValueSummaryReduceCount;
+      renderBox.coordinator.addModifierKey(LogicalKeyboardKey.shift);
+      await tester.sendEventToBinding(
+        PointerScrollEvent(
+          position: panStart,
+          scrollDelta: const Offset(0, -120),
+        ),
+      );
+      await tester.pump();
+      renderBox.coordinator.removeModifierKey(LogicalKeyboardKey.shift);
+      expect(renderBox.coordinator.isPanningOrZooming, isTrue);
+      expect(renderBox.debugValueSummaryModel, same(modelAfterPan));
+      expect(renderBox.debugValueSummaryReduceCount, reduceAfterPan);
+
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(renderBox.coordinator.isPanningOrZooming, isFalse);
+      renderBox.markNeedsPaint();
+      await tester.pump();
+      expect(renderBox.debugValueSummaryReduceCount, reduceAfterPan + 1);
+      renderBox.markNeedsPaint();
+      await tester.pump();
+      expect(renderBox.debugValueSummaryReduceCount, reduceAfterPan + 1);
+    },
+  );
+
+  testWidgets(
+    'hover through the fixed overlay still resolves markers beneath',
+    (tester) async {
+      // First pump measures the overlay, then a second pump parks it
+      // exactly over the speed datum at (4, 7). Markers are enabled so the
+      // line series actually hover-resolves data hits.
+      await tester.pumpWidget(
+        _host(
+          interaction: _summaryInteraction(),
+          showDataPointMarkers: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final renderBox = _renderBox(tester);
+      final panelSize = renderBox.debugValueSummaryBounds.size;
+      final datumPlot = renderBox.transform!.dataToPlot(4, 7);
+
+      await tester.pumpWidget(
+        _host(
+          interaction: _summaryInteraction(
+            presentation: CartesianValueSummaryPresentation.overlay(
+              placement: ChartOverlayPlacement(
+                anchor: Alignment.topLeft,
+                offset:
+                    datumPlot -
+                    Offset(panelSize.width / 2, panelSize.height / 2),
+              ),
+            ),
+          ),
+          showDataPointMarkers: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(renderBox.debugValueSummaryBounds.contains(datumPlot), isTrue);
+
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(pointer.removePointer);
+      await pointer.addPointer(location: Offset.zero);
+      await pointer.moveTo(_plotTarget(tester, renderBox, 4, 7));
+      await tester.pump(const Duration(milliseconds: 80));
+
+      // The fixed overlay is spec'd hover-transparent: the datum beneath it
+      // still hover-resolves (unlike the draggable annotation panel).
+      final marker = renderBox.coordinator.hoveredMarker;
+      expect(marker, isNotNull);
+      expect(marker!.seriesId, 'speed');
+      expect(marker.markerIndex, 2);
+    },
+  );
+
   testWidgets('hover tracking never invalidates the series picture cache', (
     tester,
   ) async {
@@ -479,6 +602,8 @@ InteractionConfig _summaryInteraction({
       CartesianValueSummaryValuePolicy.trackingThenLatest,
   CartesianValueSummaryController? controller,
   CrosshairConfig? crosshair,
+  CartesianValueSummaryPresentation presentation =
+      const CartesianValueSummaryPresentation.overlay(),
 }) {
   return InteractionConfig(
     crosshair:
@@ -493,6 +618,7 @@ InteractionConfig _summaryInteraction({
       enabled: true,
       valuePolicy: valuePolicy,
       controller: controller,
+      presentation: presentation,
     ),
   );
 }
@@ -500,6 +626,7 @@ InteractionConfig _summaryInteraction({
 Widget _host({
   required InteractionConfig interaction,
   bool shortSpeedSeries = false,
+  bool showDataPointMarkers = false,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -513,6 +640,7 @@ Widget _host({
             series: [
               LineChartSeries(
                 id: 'speed',
+                showDataPointMarkers: showDataPointMarkers,
                 points: shortSpeedSeries
                     ? const [
                         ChartDataPoint(x: 0, y: 4),

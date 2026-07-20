@@ -392,11 +392,14 @@ void main() {
           .valueSummary
           .presentation;
 
-      // The line preset defaults to the fixed overlay.
+      // The line preset defaults to the fixed overlay, and the helper line
+      // spells out the resolved kind (Value policy dropdown convention).
       expect(presentation(), isA<CartesianValueSummaryOverlay>());
 
       final annotationSegment = find.text('Annotation');
       await revealOption(tester, annotationSegment);
+      expect(find.text('Preset default'), findsOneWidget);
+      expect(find.text('currently: overlay'), findsOneWidget);
       await tester.tap(annotationSegment);
       await tester.pumpAndSettle();
       expect(
@@ -407,6 +410,7 @@ void main() {
           isTrue,
         ),
       );
+      expect(find.text('currently: annotation'), findsOneWidget);
       // The Draggable Panel section auto-shows with the override.
       final readout = find.byKey(
         const ValueKey('value-summary-placement-readout'),
@@ -420,11 +424,62 @@ void main() {
       await tester.tap(overlaySegment);
       await tester.pumpAndSettle();
       expect(presentation(), isA<CartesianValueSummaryOverlay>());
+      expect(find.text('currently: overlay'), findsOneWidget);
       expect(readout, findsNothing);
 
-      await tester.tap(find.text('Preset'));
+      await tester.tap(find.text('Preset default'));
       await tester.pumpAndSettle();
       expect(presentation(), isA<CartesianValueSummaryOverlay>());
+      expect(find.text('currently: overlay'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'synchronized preset with the Annotation override exposes no placement '
+    'or pin controls',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('value-summary-preset-synchronized')),
+      );
+      await tester.pumpAndSettle();
+
+      final annotationSegment = find.text('Annotation');
+      await revealOption(tester, annotationSegment);
+      await tester.tap(annotationSegment);
+      await tester.pumpAndSettle();
+
+      // The override took effect on both synchronized charts.
+      final charts = tester
+          .widgetList<BravenChartPlus>(find.byType(BravenChartPlus))
+          .toList();
+      expect(charts, hasLength(2));
+      for (final chart in charts) {
+        expect(
+          chart.interactionConfig?.valueSummary.presentation,
+          isA<CartesianValueSummaryAnnotation>(),
+        );
+      }
+
+      // The synchronized charts run without the page's shared controller,
+      // so the Draggable Panel and Pinning sections must stay hidden.
+      expect(
+        find.byKey(const ValueKey('value-summary-placement-readout')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('value-summary-reset-placement')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('value-summary-pin-latest')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('value-summary-clear-pin')),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     },
   );

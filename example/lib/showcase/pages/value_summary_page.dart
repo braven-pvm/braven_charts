@@ -696,13 +696,23 @@ class _ValueSummaryPageState extends State<ValueSummaryPage> {
             'Presentation',
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
           ),
+          // The resolved kind, following the Value policy dropdown's
+          // "Preset default (…)" convention: a segment label is too small to
+          // carry the resolution, so the helper line spells it out.
+          Text(
+            'currently: ${_effectivePresentation.name}',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).hintColor.withValues(alpha: 0.7),
+            ),
+          ),
           const SizedBox(height: 4),
           SegmentedOption<_PresentationChoice>(
             key: const ValueKey('value-summary-presentation'),
             value: _presentationChoice,
             options: _PresentationChoice.values,
             labelBuilder: (choice) => switch (choice) {
-              _PresentationChoice.presetDefault => 'Preset',
+              _PresentationChoice.presetDefault => 'Preset default',
               _PresentationChoice.overlay => 'Overlay',
               _PresentationChoice.annotation => 'Annotation',
             },

@@ -214,7 +214,9 @@ abstract class EventHandlerDelegate {
   void cancelValueSummaryDrag();
 
   /// Grants or clears the summary panel's keyboard focus.
-  void setValueSummaryFocus(bool focused);
+  ///
+  /// Returns whether the focus state actually changed.
+  bool setValueSummaryFocus(bool focused);
 }
 
 /// Manages all pointer event handling for the chart.
@@ -513,23 +515,25 @@ class EventHandlerManager {
     coordinator.setPressedMarker(null);
 
     // Value summary annotation panel: within its painted bounds the
-    // draggable panel wins the pointer (spec: drag begins only from the
-    // summary bounds), and a press on it must never resolve, hover, select,
-    // or tooltip the data beneath. Anywhere else the panel loses and also
-    // gives up its keyboard focus.
+    // draggable panel wins the PRIMARY pointer (spec: drag begins only from
+    // the summary bounds), and a primary press on it must never resolve,
+    // hover, select, or tooltip the data beneath. Secondary (context menu)
+    // and middle (pan) presses are not panel gestures — they fall through
+    // to the exclusive per-button handlers below. Any press that is not a
+    // primary press on the panel makes the panel give up keyboard focus.
     final summaryTarget = _delegate.valueSummaryDragTarget;
     final onSummaryPanel =
         summaryTarget != null &&
         summaryTarget.hitTest(_delegate.widgetToPlot(position));
+    final primaryOnSummaryPanel =
+        onSummaryPanel && event.buttons == kPrimaryMouseButton;
     if (summaryTarget != null) {
-      _delegate.setValueSummaryFocus(onSummaryPanel);
+      _delegate.setValueSummaryFocus(primaryOnSummaryPanel);
     }
-    if (onSummaryPanel) {
-      if (event.buttons == kPrimaryMouseButton) {
-        coordinator.startInteraction(position, element: summaryTarget);
-        _potentialDragValueSummary = summaryTarget;
-        _potentialDragValueSummaryStart = position;
-      }
+    if (primaryOnSummaryPanel) {
+      coordinator.startInteraction(position, element: summaryTarget);
+      _potentialDragValueSummary = summaryTarget;
+      _potentialDragValueSummaryStart = position;
       return;
     }
 
@@ -1909,44 +1913,56 @@ class EventHandlerManager {
     HoveredMarkerInfo? nearestMarker;
     double minDistance = snapRadius;
 
-    final seriesElements = _delegate.elements
-        .whereType<SeriesElement>()
-        .toList();
+    // The draggable summary panel owns the pointer within its painted
+    // bounds: data beneath it must not marker-highlight or tooltip under
+    // the panel's move cursor, matching the press path's suppression. The
+    // fixed overlay and a non-draggable panel never hit-test, so hover
+    // keeps resolving through them (spec).
+    final summaryTarget = _delegate.valueSummaryDragTarget;
+    final overSummaryPanel =
+        summaryTarget != null && summaryTarget.hitTest(plotPosition);
 
-    // Bars own their complete rectangle, not only the value-end marker. Prefer
-    // later-painted series so overlaid front layers receive interaction first.
-    for (final element in seriesElements.reversed) {
-      if (element.series is! BarChartSeries) continue;
-      final geometry = element.barGeometryAt(plotPosition);
-      if (geometry == null) continue;
-      nearestMarker = HoveredMarkerInfo(
-        seriesId: element.id,
-        markerIndex: geometry.pointIndex,
-        plotPosition: geometry.valueEndPoint,
-        dataHit: element.dataHitForPointIndex(geometry.pointIndex),
-      );
-      minDistance = 0;
-      break;
-    }
+    if (!overSummaryPanel) {
+      final seriesElements = _delegate.elements
+          .whereType<SeriesElement>()
+          .toList();
 
-    final dataHitElements =
-        _delegate.elements.whereType<DataHitElement>().toList()
-          ..sort((a, b) => b.priority.compareTo(a.priority));
-    for (final element in dataHitElements) {
-      if (minDistance == 0) break;
-      final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
-      if (hit == null) continue;
-      final distance = hit.share == null
-          ? (plotPosition - hit.plotPosition).distance
-          : 0.0;
-      if (distance < minDistance) {
-        minDistance = distance;
+      // Bars own their complete rectangle, not only the value-end marker.
+      // Prefer later-painted series so overlaid front layers receive
+      // interaction first.
+      for (final element in seriesElements.reversed) {
+        if (element.series is! BarChartSeries) continue;
+        final geometry = element.barGeometryAt(plotPosition);
+        if (geometry == null) continue;
         nearestMarker = HoveredMarkerInfo(
-          seriesId: hit.seriesId,
-          markerIndex: hit.pointIndex,
-          plotPosition: hit.plotPosition,
-          dataHit: hit,
+          seriesId: element.id,
+          markerIndex: geometry.pointIndex,
+          plotPosition: geometry.valueEndPoint,
+          dataHit: element.dataHitForPointIndex(geometry.pointIndex),
         );
+        minDistance = 0;
+        break;
+      }
+
+      final dataHitElements =
+          _delegate.elements.whereType<DataHitElement>().toList()
+            ..sort((a, b) => b.priority.compareTo(a.priority));
+      for (final element in dataHitElements) {
+        if (minDistance == 0) break;
+        final hit = element.dataHitAt(plotPosition, maxDistance: snapRadius);
+        if (hit == null) continue;
+        final distance = hit.share == null
+            ? (plotPosition - hit.plotPosition).distance
+            : 0.0;
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestMarker = HoveredMarkerInfo(
+            seriesId: hit.seriesId,
+            markerIndex: hit.pointIndex,
+            plotPosition: hit.plotPosition,
+            dataHit: hit,
+          );
+        }
       }
     }
 
